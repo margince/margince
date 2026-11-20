@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // tickEnv drives the public booking form with a marketing tick, one slot per call.
@@ -199,13 +200,284 @@ func TestAStoppedContactIsNotMailedAConfirmation(t *testing.T) {
 	}
 }
 
-func TestATickOnABookingMatchedToALeadMailsNothing(t *testing.T) {
-	x := newTickEnv(t)
-	email := "lead@visitor.example"
+// leadTick creates a lead holding email and returns its id.
+func (x *tickEnv) leadTick(t *testing.T, email string) string {
+	t.Helper()
+	var lead struct {
+		ID string `json:"id"`
+	}
 	if status := x.e.Call(t, "POST", "/v1/leads", AnyMap{
 		"full_name": "Lena Lead", "email": email, "source": "manual",
-	}, nil, nil); status != http.StatusCreated {
+	}, nil, &lead); status != http.StatusCreated {
 		t.Fatalf("create lead → %d", status)
 	}
+	return lead.ID
+}
+
+func (x *tickEnv) leadConsentState(t *testing.T, leadID string) string {
+	t.Helper()
+	var state string
+	if err := x.e.Owner.QueryRow(context.Background(), `
+		SELECT coalesce((SELECT state FROM contact_consent WHERE lead_id = $1 AND purpose_id = $2), 'none')`,
+		leadID, x.marketing).Scan(&state); err != nil {
+		t.Fatal(err)
+	}
+	return state
+}
+
+func TestATickOnABookingMatchedToALeadMailsOneConfirmationToItsAddress(t *testing.T) {
+	x := newTickEnv(t)
+	email := "lead@visitor.example"
+	leadID := x.leadTick(t, email)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+
+	var contactSet bool
+	var kind string
+	if err := x.e.Owner.QueryRow(context.Background(), `
+		SELECT contact_id IS NOT NULL, kind FROM confirm_token WHERE lead_id = $1`, leadID).Scan(&contactSet, &kind); err != nil {
+		t.Fatalf("the lead holds no link of its own: %v", err)
+	}
+	if contactSet || kind != "consent_confirmation" {
+		t.Errorf("link has contact=%v kind=%q, want a consent link for the lead alone", contactSet, kind)
+	}
+	if got := x.leadConsentState(t, leadID); got != "none" {
+		t.Errorf("the tick alone left the lead's marketing state %q, want none until the link is opened", got)
+	}
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+}
+
+// leadWrites counts the audit rows and consent.changed events that name the lead.
+func (x *tickEnv) leadWrites(t *testing.T, leadID string) (audits, events int) {
+	t.Helper()
+	if err := x.e.Owner.QueryRow(context.Background(), `
+		SELECT (SELECT count(*) FROM audit_log WHERE action = 'consent_grant' AND entity_id = $1),
+		       (SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'consent.changed' AND envelope::text LIKE '%'||$1||'%')`,
+		leadID).Scan(&audits, &events); err != nil {
+		t.Fatal(err)
+	}
+	return audits, events
+}
+
+func TestOpeningALeadsConfirmationGrantsItsMarketingConsentWithTheWriteShape(t *testing.T) {
+	x := newTickEnv(t)
+	email := "lead.opens@visitor.example"
+	leadID := x.leadTick(t, email)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+	auditsBefore, eventsBefore := x.leadWrites(t, leadID)
+
+	grantWithServedQuestion(t, x.e, confirmLinkToken(t, x.e))
+
+	if got := x.leadConsentState(t, leadID); got != "granted" {
+		t.Fatalf("lead marketing state after the link = %q, want granted", got)
+	}
+	var proofs int
+	if err := x.e.Owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM consent_event WHERE lead_id = $1 AND contact_id IS NULL AND purpose_id = $2
+		   AND new_state = 'granted' AND double_opt_in_confirmed_at IS NOT NULL AND issuance_trigger IS NOT NULL`,
+		leadID, x.marketing).Scan(&proofs); err != nil {
+		t.Fatal(err)
+	}
+	audits, events := x.leadWrites(t, leadID)
+	if proofs != 1 || audits != auditsBefore+1 || events != eventsBefore+1 {
+		t.Errorf("proof rows=%d new audit rows=%d new consent.changed events=%d, want 1 of each",
+			proofs, audits-auditsBefore, events-eventsBefore)
+	}
+}
+
+func TestAPromotedLeadKeepsTheMarketingGrantItsLinkEarned(t *testing.T) {
+	x := newTickEnv(t)
+	email := "lead.promoted@visitor.example"
+	leadID := x.leadTick(t, email)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+	grantWithServedQuestion(t, x.e, confirmLinkToken(t, x.e))
+
+	var promoted struct {
+		Contact struct {
+			ID string `json:"id"`
+		} `json:"contact"`
+	}
+	if status := x.e.Call(t, "POST", "/v1/leads/"+leadID+"/promote",
+		AnyMap{"trigger": "human_qualify"}, nil, &promoted); status != http.StatusOK || promoted.Contact.ID == "" {
+		t.Fatalf("promote → %d %+v", status, promoted)
+	}
+	var state string
+	if err := x.e.Owner.QueryRow(context.Background(), `
+		SELECT coalesce((SELECT state FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2), 'none')`,
+		promoted.Contact.ID, x.marketing).Scan(&state); err != nil {
+		t.Fatal(err)
+	}
+	if state != "granted" {
+		t.Errorf("the promoted contact's marketing state = %q, want the lead's grant carried", state)
+	}
+	var proofs int
+	if err := x.e.Owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM consent_event WHERE contact_id = $1 AND purpose_id = $2
+		   AND double_opt_in_confirmed_at IS NOT NULL AND issuance_trigger IS NOT NULL`,
+		promoted.Contact.ID, x.marketing).Scan(&proofs); err != nil {
+		t.Fatal(err)
+	}
+	if proofs != 1 {
+		t.Errorf("the promoted contact holds %d confirmed proofs, want the lead's copied so the grant authorizes mail", proofs)
+	}
+	x.ageLinks(t, 30)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+}
+
+func TestAnErasedLeadAddressIsNotMailedAConfirmation(t *testing.T) {
+	x := newTickEnv(t)
+	email := "erased.lead@visitor.example"
+	leadID := x.leadTick(t, email)
+	if _, err := x.e.Owner.Exec(context.Background(),
+		`INSERT INTO erasure_suppression (kind, value_hash) VALUES ('email', $1) ON CONFLICT DO NOTHING`,
+		storekit.SuppressionHash(email)); err != nil {
+		t.Fatal(err)
+	}
 	x.wantQuiet(t, email, x.book(t, email), 0, 0)
+	if got := x.leadConsentState(t, leadID); got == "granted" {
+		t.Errorf("an erased address holds marketing consent %q", got)
+	}
+}
+
+func TestAStoppedLeadIsNotMailedAConfirmation(t *testing.T) {
+	for _, kind := range []string{"marketing_objection", "processing_restriction", "subject_request"} {
+		t.Run(kind, func(t *testing.T) {
+			x := newTickEnv(t)
+			email := kind + ".lead@visitor.example"
+			leadID := x.leadTick(t, email)
+			if _, err := x.e.Owner.Exec(context.Background(), `
+				INSERT INTO communication_suppression (lead_id, kind, captured_by, decided_by_level, source)
+				VALUES ($1, $2, 'test', 'user', 'test')`, leadID, kind); err != nil {
+				t.Fatal(err)
+			}
+			x.wantQuiet(t, email, x.book(t, email), 0, 0)
+		})
+	}
+}
+
+func TestALeadWhoAlreadySubscribedIsNotMailedAgain(t *testing.T) {
+	x := newTickEnv(t)
+	email := "lead.subscribed@visitor.example"
+	leadID := x.leadTick(t, email)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+	grantWithServedQuestion(t, x.e, confirmLinkToken(t, x.e))
+	x.ageLinks(t, 30)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+	if got := x.leadConsentState(t, leadID); got != "granted" {
+		t.Errorf("lead consent after the second booking = %q, want granted", got)
+	}
+}
+
+func TestALeadWhoWithdrewIsNotAskedAgainByABooking(t *testing.T) {
+	x := newTickEnv(t)
+	email := "lead.withdrew@visitor.example"
+	leadID := x.leadTick(t, email)
+	if _, err := x.e.Owner.Exec(context.Background(), `
+		INSERT INTO contact_consent (lead_id, purpose_id, state, lawful_basis, captured_at, source)
+		VALUES ($1, $2, 'withdrawn', 'consent', now(), 'test')`, leadID, x.marketing); err != nil {
+		t.Fatal(err)
+	}
+	x.wantQuiet(t, email, x.book(t, email), 0, 0)
+}
+
+func TestTheConfirmationBudgetPerAddressHoldsForALead(t *testing.T) {
+	x := newTickEnv(t)
+	email := "lead.budget@visitor.example"
+	x.leadTick(t, email)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+	x.ageLinks(t, 1)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+	x.ageLinks(t, 7)
+	x.wantQuiet(t, email, x.book(t, email), 2, 2)
+	x.ageLinks(t, 8)
+	x.wantQuiet(t, email, x.book(t, email), 3, 3)
+	x.ageLinks(t, 15)
+	x.wantQuiet(t, email, x.book(t, email), 3, 3)
+}
+
+func TestAHardBouncedAddressIsNotMailedAConfirmationToALead(t *testing.T) {
+	x := newTickEnv(t)
+	email := "bounced.lead@visitor.example"
+	leadID := x.leadTick(t, email)
+	if _, err := x.e.Owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression (address, kind, source, captured_by, decided_by_level, recorded_through)
+		VALUES ($1, 'hard_bounce', 'delivery_report', 'system:comms', 'machine', 'machine')`, email); err != nil {
+		t.Fatal(err)
+	}
+	x.wantQuiet(t, email, x.book(t, email), 0, 0)
+	if got := x.leadConsentState(t, leadID); got == "granted" {
+		t.Errorf("a bounced address holds marketing consent %q", got)
+	}
+}
+
+func TestAContactAndALeadOnOneAddressShareTheConfirmationBudget(t *testing.T) {
+	x := newTickEnv(t)
+	email := "shared@visitor.example"
+	x.leadTick(t, email)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+
+	// The API refuses a second record on a held address. The contact sharing
+	// it is written directly, as an import predating the lead would.
+	contactID := ids.NewV7()
+	if _, err := x.e.Owner.Exec(context.Background(),
+		`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Shared Contact', 'manual', 'human:x')`,
+		contactID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.e.Owner.Exec(context.Background(),
+		`INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by) VALUES ($1, $2, 'work', true, 'manual', 'human:x')`,
+		contactID, email); err != nil {
+		t.Fatal(err)
+	}
+	x.ageLinks(t, 1)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+	x.ageLinks(t, 7)
+	x.wantQuiet(t, email, x.book(t, email), 2, 2)
+	var contactLinks int
+	if err := x.e.Owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, contactID).Scan(&contactLinks); err != nil {
+		t.Fatal(err)
+	}
+	if contactLinks != 1 {
+		t.Errorf("the contact holds %d links, want the second one", contactLinks)
+	}
+	x.ageLinks(t, 8)
+	x.wantQuiet(t, email, x.book(t, email), 3, 3)
+	x.ageLinks(t, 15)
+	x.wantQuiet(t, email, x.book(t, email), 3, 3)
+}
+
+func TestALeadsLinkIsDeadOnceTheLeadIsPromoted(t *testing.T) {
+	x := newTickEnv(t)
+	email := "lead.dead.link@visitor.example"
+	leadID := x.leadTick(t, email)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+	token := confirmLinkToken(t, x.e)
+	question := servedQuestion(t, x.e, token).Text
+
+	var promoted struct {
+		Contact struct {
+			ID string `json:"id"`
+		} `json:"contact"`
+	}
+	if status := x.e.Call(t, "POST", "/v1/leads/"+leadID+"/promote",
+		AnyMap{"trigger": "human_qualify"}, nil, &promoted); status != http.StatusOK || promoted.Contact.ID == "" {
+		t.Fatalf("promote → %d %+v", status, promoted)
+	}
+	if status := publicCall(t, x.e, "GET", "/v1/public/confirm/"+token, nil, nil, nil); status != http.StatusNotFound {
+		t.Errorf("opening the promoted lead's link → %d, want 404", status)
+	}
+	if status := publicCall(t, x.e, "POST", "/v1/public/confirm/"+token, AnyMap{
+		"marketing_choice": "granted", "marketing_wording": question,
+	}, nil, nil); status != http.StatusNotFound {
+		t.Errorf("answering the promoted lead's link → %d, want 404", status)
+	}
+	var grants int
+	if err := x.e.Owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM contact_consent WHERE purpose_id = $3 AND state = 'granted'
+		   AND (lead_id = $1 OR contact_id = $2)`, leadID, promoted.Contact.ID, x.marketing).Scan(&grants); err != nil {
+		t.Fatal(err)
+	}
+	if grants != 0 {
+		t.Errorf("a dead link left %d marketing grants on the lead or the contact", grants)
+	}
 }

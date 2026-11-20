@@ -581,7 +581,7 @@ describe("the settings dialog's access changes", () => {
     );
     await user.type(
       await screen.findByRole("textbox", { name: /Access ends on/ }),
-      "31/12/2026{Enter}",
+      "31/12/2026{Tab}",
     );
     await user.click(screen.getByRole("radio", { name: /Closed/ }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -622,7 +622,7 @@ describe("an expired room takes a later end date", () => {
     expect(screen.getByLabelText(/Room title/)).toBeDisabled();
     await user.type(
       screen.getByRole("textbox", { name: /Access ends on/ }),
-      "31/12/2026{Enter}",
+      "31/12/2026{Tab}",
     );
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 

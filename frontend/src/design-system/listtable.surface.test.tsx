@@ -551,35 +551,49 @@ describe("empty state", () => {
     ).toBeTruthy();
   });
 
+  const ownerChips: readonly ListChip[] = [
+    {
+      key: "owner_id",
+      label: "Owner",
+      allLabel: "Any owner",
+      options: [{ value: "u-9", label: "Me" }],
+    },
+  ];
+
   it("names it under the no-matches copy too, since a narrowing can be the cause", () => {
-    // The case the prop was written for is a narrowed one: a "Mine" view for a
-    // reader who owns nothing. Drawn only over the unnarrowed line, that note
-    // never appeared at all. The caller knows which emptiness a note explains.
-    // A caller whose note would blame the data source for the reader's own dial
-    // passes none.
     render(
       <ListTable
         rows={[]}
         columns={columns}
         rowKey={(row) => row.id}
         unit="rows"
-        emptyNote="You own no rows."
-        chips={[
-          {
-            key: "owner_id",
-            label: "Owner",
-            allLabel: "Any owner",
-            options: [{ value: "u-9", label: "Me" }],
-          },
-        ]}
+        emptyNote="Your role cannot narrow this list by Owner."
+        chips={ownerChips}
         chosen={{ owner_id: "u-9" }}
       />,
     );
     expect(screen.getByText("No rows match these filters.")).toBeTruthy();
-    expect(screen.getByText("You own no rows.")).toBeTruthy();
-    // Two different offers: one undoes every narrowing, the screen's own note
-    // usually undoes one.
+    expect(
+      screen.getByText("Your role cannot narrow this list by Owner."),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
+  });
+
+  it("puts a caller's empty line in place of the no-matches copy and its Clear", () => {
+    render(
+      <ListTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        emptyLine="You own no rows."
+        chips={ownerChips}
+        chosen={{ owner_id: "u-9" }}
+      />,
+    );
+    expect(screen.getByText("You own no rows.")).toBeTruthy();
+    expect(screen.queryByText(/match these filters/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
   });
 });
 

@@ -432,6 +432,8 @@ export function DealLinesEditor({
     <ConfirmModal
       open
       intent="form"
+      // Enter in the custom item field would save the lines without that item.
+      enterConfirms={false}
       onClose={onClose}
       title={t("deal.lines.editTitle")}
       confirmLabel={t("deal.lines.save")}

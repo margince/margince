@@ -45,7 +45,7 @@ type Activity = components["schemas"]["Activity"];
 
 // A reason that carries no unsubscribe surface, so the form is sendable with
 // nothing else filled in.
-const WHY_LABEL = "Active deal";
+const WHY_LABEL = "Open deal";
 
 const ACTIVITY: Activity = {
   occurred_precision: "instant",
@@ -132,7 +132,6 @@ async function composeAndSend(user: UserEvent) {
     screen.getByRole("combobox", { name: WHY_ASK }),
     WHY_LABEL,
   );
-  await screen.findByRole("button", { name: /recipients checked/i });
   await pressSend(user);
   return onClose;
 }

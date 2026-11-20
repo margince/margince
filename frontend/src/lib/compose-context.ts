@@ -96,6 +96,100 @@ export function contextOptions(t: Translator): SelectOption[] {
   ];
 }
 
+/**
+ * The five answers the composer offers. Each stands for a family of categories
+ * the engine settles from the record. A rep never has to tell an invoice
+ * notice from an account notice. "We met in person" sends as a requested
+ * follow-up, with the meeting recorded first.
+ */
+export type ComposeReason =
+  | "in_person"
+  | "requested_followup"
+  | "active_deal_followup"
+  | "customer_service"
+  | "marketing";
+
+const REASONS: readonly Readonly<{
+  value: ComposeReason;
+  label: MessageKey;
+  hint: MessageKey;
+}>[] = [
+  {
+    value: "in_person",
+    label: "compose.why.met",
+    hint: "compose.whyHint.met",
+  },
+  {
+    value: "requested_followup",
+    label: "compose.why.asked",
+    hint: "compose.whyHint.asked",
+  },
+  {
+    value: "active_deal_followup",
+    label: "compose.why.openDeal",
+    hint: "compose.whyHint.openDeal",
+  },
+  {
+    value: "customer_service",
+    label: "compose.why.customer",
+    hint: "compose.whyHint.customer",
+  },
+  {
+    value: "marketing",
+    label: "compose.why.marketing",
+    hint: "compose.whyHint.marketing",
+  },
+];
+
+/** The answers on offer. "We met in person" needs a record to note it on. */
+export function reasonOptions(
+  t: Translator,
+  canRecordMeeting: boolean,
+): SelectOption[] {
+  return REASONS.filter(
+    (reason) => canRecordMeeting || reason.value !== "in_person",
+  ).map((reason) => ({ value: reason.value, label: t(reason.label) }));
+}
+
+/** What the chosen answer does to the message, in one line. */
+export function reasonHint(reason: ComposeReason): MessageKey {
+  const found = REASONS.find((entry) => entry.value === reason);
+  return found ? found.hint : "compose.whyHint.asked";
+}
+
+/**
+ * The answer a stored category reads as. A draft saved under an older, finer
+ * category shows the family it belongs to.
+ */
+export function reasonOf(
+  context: CommunicationContext | "",
+  metInPerson: boolean,
+): ComposeReason | "" {
+  if (metInPerson) return "in_person";
+  switch (context) {
+    case "":
+      return "";
+    case "precontract_quote":
+      return "requested_followup";
+    case "invoice_or_payment":
+    case "contract_notice":
+    case "account_notice":
+      return "customer_service";
+    case "requested_followup":
+    case "active_deal_followup":
+    case "customer_service":
+    case "marketing":
+      return context;
+    default:
+      return "";
+  }
+}
+
+/** The category an answer claims. "We met in person" claims a follow-up. */
+export function contextOfReason(reason: ComposeReason): CommunicationContext {
+  return reason === "in_person" ? "requested_followup" : reason;
+}
+
 export function communicationContextLabel(
   category: string | undefined,
   t: Translator,

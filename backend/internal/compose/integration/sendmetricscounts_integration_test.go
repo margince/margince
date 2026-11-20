@@ -41,7 +41,7 @@ func TestOnlyAHumansFirstSendIsCounted(t *testing.T) {
 		return sendSeriesSum(t, p.AppEnv, everySendOutcome), sendSeriesSum(t, p.AppEnv, everyDecisionTime)
 	}
 
-	queued := `margince_email_send_outcomes_total{flow="legacy",outcome="queued"} `
+	queued := `margince_email_send_outcomes_total{outcome="queued"} `
 	queuedBefore := sendSeriesSum(t, p.AppEnv, queued)
 	outcomes, decisions := counts()
 	keyed := map[string]string{"Idempotency-Key": "first-send-once"}
@@ -57,7 +57,7 @@ func TestOnlyAHumansFirstSendIsCounted(t *testing.T) {
 		t.Errorf("a Send and its replay counted %d outcomes and %d decisions, want 1 and 1", o-outcomes, d-decisions)
 	}
 
-	scheduledSeries := `margince_email_send_outcomes_total{flow="legacy",outcome="scheduled"} `
+	scheduledSeries := `margince_email_send_outcomes_total{outcome="scheduled"} `
 	scheduledBefore := sendSeriesSum(t, p.AppEnv, scheduledSeries)
 	later := AnyMap{
 		"subject": "Monday morning", "body": "Written the night before.",

@@ -324,7 +324,6 @@ describe
 description
 destroy
 detail
-determines
 device
 dial
 dialog

@@ -291,15 +291,6 @@ type SiteTally struct {
 	ReportedAbstained   int
 }
 
-// Reliability is the fraction of this site's runs that did what their scenario
-// asked. A site with no run has no reliability rather than a perfect one.
-func (t SiteTally) Reliability() float64 {
-	if t.Runs == 0 {
-		return 0
-	}
-	return float64(t.Passed) / float64(t.Runs)
-}
-
 // RowBands is a scenario row's copy of the quality bands its case was graded
 // against, as the record file spells them.
 type RowBands struct {

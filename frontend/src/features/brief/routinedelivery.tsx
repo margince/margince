@@ -9,7 +9,7 @@ import { SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { useMe } from "../../lib/session";
-import { useTeams } from "./teams.queries";
+import { useTeams, weekTeamsFor } from "./teams.queries";
 
 type Delivery = components["schemas"]["BriefDelivery"];
 const weekdayKeys = [
@@ -46,11 +46,10 @@ export function RoutineDeliveryRows({
   // made this screen wait on the slowest read in the app.
   const reach = me.data?.team_week ?? "none";
   const selectedScope = settings.routine_mail_scope ?? "personal";
-  const teamOptions = (teams.data ?? [])
-    .filter(
-      (team) => reach === "every_team" || me.data?.teams.includes(team.id),
-    )
-    .map((team) => ({ value: team.id, label: team.name }));
+  const teamOptions = weekTeamsFor(teams.data ?? [], me.data).map((team) => ({
+    value: team.id,
+    label: team.name,
+  }));
   return (
     <>
       <SettingRow

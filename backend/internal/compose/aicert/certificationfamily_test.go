@@ -311,7 +311,7 @@ func writeAICertFamilySection(page *strings.Builder, fam aiCertFamily) {
 	page.WriteString("| Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |\n|---|---|---:|---:|---:|---:|---|\n")
 	for _, m := range fam.Models {
 		fmt.Fprintf(page, "| `%s` | `%s` | %d | %d | %d | %d | %s |\n", m.Binding.Model, m.Binding.Env,
-			m.Sites, m.Bands.Certified, m.Bands.SupportedDegraded, m.Bands.NotSupported, reliabilityCell(m.Reliability))
+			m.Sites, m.Bands.Certified, m.Bands.SupportedDegraded, m.Bands.NotSupported, aicert.ReliabilityCell(m.Passed, m.Runs))
 	}
 	page.WriteString("\n<details>\n<summary>Best model for each place</summary>\n\n")
 	page.WriteString("| Place | Best model in the family | Grade | Right in |\n|---|---|---|---|\n")

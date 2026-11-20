@@ -32,14 +32,23 @@ func TestAReviewedPackMayCiteADeclaredInstrument(t *testing.T) {
 	}
 }
 
+// A pack is refreshed against its sources at release, with no human sign-off,
+// so a draft cites its declared law as a reviewed pack does.
+func TestADraftPackMayCiteADeclaredInstrument(t *testing.T) {
+	r := citingRules()
+	r.Provenance = Provenance{}
+	if err := r.Validate(); err != nil {
+		t.Fatalf("a draft pack citing its own instrument was refused: %v", err)
+	}
+}
+
 // Each case breaks one rule of the citation contract, so a validator that
 // refused everything would not pass the case above and these together.
-func TestACitationMustNameReviewedLawWithALinkableSource(t *testing.T) {
+func TestACitationMustNameDeclaredLawWithALinkableSource(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		breakIt func(*Rules)
 	}{
-		{"a draft rule cannot cite", func(r *Rules) { r.Provenance = Provenance{} }},
 		{"an undeclared instrument", func(r *Rules) { r.Citations[0].Instrument = "Telemediengesetz" }},
 		{"an http source", func(r *Rules) { r.Citations[0].SourceURL = "http://example.org/uwg" }},
 		{"a script source", func(r *Rules) { r.Citations[0].SourceURL = "javascript:alert(1)" }},
@@ -47,7 +56,7 @@ func TestACitationMustNameReviewedLawWithALinkableSource(t *testing.T) {
 		{"no provision anywhere", func(r *Rules) { r.Instruments[0].Provision, r.Citations[0].Provision = "", "" }},
 		{"an empty code", func(r *Rules) { r.Citations[0].Code = "" }},
 		{"an unknown territory", func(r *Rules) { r.Citations[0].Territory = "sender_on_the_moon" }},
-		{"sources never checked", func(r *Rules) { r.Provenance.SourceCheckedAt = time.Time{} }},
+		{"a review of sources never checked", func(r *Rules) { r.Provenance.SourceCheckedAt = time.Time{} }},
 		{"sources checked after the review", func(r *Rules) { r.Provenance.SourceCheckedAt = reviewedOn.AddDate(0, 0, 1) }},
 		{"a review naming nobody", func(r *Rules) { r.Provenance.Reviewer = "" }},
 		{"a review due before it happened", func(r *Rules) { r.Provenance.ReviewDue = reviewedOn.AddDate(0, 0, -1) }},

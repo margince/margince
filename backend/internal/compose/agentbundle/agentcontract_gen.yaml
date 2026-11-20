@@ -44,9 +44,6 @@ info:
     GET /v1/stage-automation/report:
       release: ""
       announced_at: ""
-    GET /v1/weekly-reviews/team:
-      release: ""
-      announced_at: ""
     PATCH /v1/lead-sources/{id}:
       release: ""
       announced_at: ""
@@ -21852,11 +21849,41 @@ paths:
       summary: The question sets an outcome review can ask.
       responses:
         '200':
-          description: Every live template.
+          description: Every template, active and retired.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ActivityReviewTemplateListResponse'}
       description: The question sets an outcome review can ask.
+    post:
+      tags: [Activities]
+      operationId: createActivityReviewTemplate
+      security: [{bearerAuth: []}]
+      summary: Add the question set an outcome's reviews ask from now on.
+      description: |-
+        A closing asks one review, so an outcome has at
+        most one active template: the new one is asked from now on, and the template asked before
+        is retired in the same write. Reviews already written keep their frozen questions. A key
+        another template uses answers 409.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateActivityReviewTemplateRequest'}
+      responses:
+        '201':
+          description: Created template.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ActivityReviewTemplate'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activity-review-templates/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -21864,9 +21891,13 @@ paths:
       tags: [Activities]
       operationId: updateActivityReviewTemplate
       security: [{bearerAuth: []}]
-      summary: Edit the questions for future outcome reviews.
+      summary: Edit the questions for future outcome reviews, or retire or restore a template.
       description: |-
-        Version conflicts return 409; submitted reviews retain their frozen questions and answers.
+        Version conflicts return 409; submitted reviews
+        retain their frozen questions and answers. `active: false` retires the template: a closing
+        with that outcome asks no review until a template for it is active again. There is no
+        delete, so an old review always names a template the list still shows. `active: true`
+        makes the template the one its outcome asks and retires the one asked before.
 
         Needs the passport permission Change records.
 
@@ -22619,12 +22650,9 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamWeeklyReview
-      deprecated: true
       security: [{bearerAuth: []}]
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
-      description: |-
-        Deprecated: no screen reads the team week. The operation stays callable through
-        the notice window in the API compatibility policy.
+      description: Home, Weekly reads it when a lead or an overseer picks a team.
       parameters:
         - name: team
           in: query
@@ -42671,8 +42699,8 @@ components:
       description: |-
         The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
         for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-        Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-        review is overdue or not yet done, or the law has not taken effect or has expired. On a
+        Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+        pack's next review is overdue, or the law has not taken effect or has expired. On a
         review it is the citation shown when the refusal was assessed, never today's.
       required: [instrument, provision, source_url]
       properties:
@@ -43393,9 +43421,22 @@ components:
         updated_at: {type: string, format: date-time}
     UpdateActivityReviewTemplateRequest:
       type: object
-      required: [version, questions]
+      description: Every field but `version` is optional; an omitted one is left alone.
+      required: [version]
       properties:
         version: {type: integer, format: int64, minimum: 1, description: Last read template version.}
+        questions: {type: array, minItems: 1, items: {$ref: '#/components/schemas/ReviewQuestion'}}
+        active: {type: boolean, description: 'false retires the template; true makes it the one its outcome asks.'}
+    CreateActivityReviewTemplateRequest:
+      type: object
+      required: [label, outcome, questions]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{0,62}$'
+          description: Derived from the label when omitted.
+        label: {type: string, minLength: 1, maxLength: 120}
+        outcome: {type: string, enum: [won, lost], description: 'Which outcome the template is asked for.'}
         questions: {type: array, minItems: 1, items: {$ref: '#/components/schemas/ReviewQuestion'}}
     ActivityReviewTemplateListResponse:
       type: object
@@ -43432,6 +43473,15 @@ components:
       required: [closing_occurrence_id, submission_id, answers]
       properties:
         template_version: {type: integer, format: int64, description: 'Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.'}
+        template_key:
+          type: string
+          description: |-
+            Key of the template shown when the form opened. A template added or restored since then
+            is a different template, possibly at the same version, so a key that is not the live
+            template's returns 409. Optional: a client that omits it keeps the version-only check, so
+            a client built before this field keeps working. That client cannot tell a swap to another
+            template at the same version; its answers are still checked against the live questions,
+            and an answer to a question the live template does not ask is refused 422.
         closing_occurrence_id: {type: string, format: uuid, description: 'The closing being reviewed. Must be the one the deal is on now, else 409.'}
         submission_id: {type: string, format: uuid, description: 'The client''s own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.'}
         choice_answers: {type: object, additionalProperties: {type: array, items: {type: string}}, description: 'Selected options by question key; values must belong to the frozen question vocabulary.'}
@@ -50377,8 +50427,8 @@ components:
         reason:
           type: [string, 'null']
           description: >-
-            Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
-          enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded, behind_erasure_boundary, already_undone, not_restorable_by_this_path, record_archived, null_unwritable_by_module, not_writable_by_caller, edge_relink_unsupported, later_company_change, no_restore_snapshot, credential_not_kept, null]
+            Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
+          enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded, behind_erasure_boundary, already_undone, not_restorable_by_this_path, record_archived, null_unwritable_by_module, not_writable_by_caller, restore_archiver_required, edge_relink_unsupported, later_company_change, no_restore_snapshot, credential_not_kept, null]
         detail:
           type: [string, 'null']
           description: >-
@@ -52883,7 +52933,7 @@ components:
           description: |-
             Every warning this review is served with to this reader; a decision may name any of their
             versions and no other. `warning` is always among them. The sender of a held message is
-            also served the composer's short warning (`inline-v1`), which a decision from any other
+            also served the composer's short warning (`inline-v2`), which a decision from any other
             reader is refused for naming.
     OverrideWarning:
       type: object
@@ -53389,6 +53439,7 @@ components:
         name: {type: string, description: 'The class, e.g. `commercial_correspondence`.'}
         keep: {type: string, description: 'The ISO 8601 period the class keeps, e.g. `P6Y`.'}
         from_year_end: {type: boolean, description: 'The period counts from the end of the calendar year.'}
+        law: {type: string, description: 'The statute and article that set the period. Absent when the pack names none.'}
     RetentionFloorPolicy:
       type: object
       description: |-
@@ -56221,8 +56272,8 @@ components:
           $ref: '#/components/schemas/TeamWeekReach'
           deprecated: true
           description: |-
-            Deprecated: no screen opens the team week, and the operation it describes,
-            `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
+            Deprecated: read `team_week` from `GET /me`, which carries the same answer
+            without assembling the day.
         filter: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming, website_inquiries], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.'}
         view: {type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.'}
         summary: {$ref: '#/components/schemas/WorklistSummary'}

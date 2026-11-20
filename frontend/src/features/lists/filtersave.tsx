@@ -24,9 +24,9 @@ import type { Route } from "../../lib/router";
 import { filterStateFrom, useSaveView } from "../../lib/savedviews.queries";
 import { encode, type Node } from "../../lib/segmentpredicate";
 import {
-  DEFAULT_AUDIENCE,
   type ListAudience,
   ListAudienceFields,
+  useDefaultAudience,
 } from "./listsharing";
 
 export type SavedKind = "view" | "list";
@@ -79,7 +79,8 @@ export function SaveFilterModal({
   const createList = useCreateList();
   const [name, setName] = useState(initialName);
   const [keep, setKeep] = useState<SavedKind>(initialKeep);
-  const [audience, setAudience] = useState<ListAudience>(DEFAULT_AUDIENCE);
+  const defaultAudience = useDefaultAudience();
+  const [audience, setAudience] = useState<ListAudience>(defaultAudience);
   const [purpose, setPurpose] = useState("");
   // Every opening starts from what the caller offers and nothing typed
   // before: a create that offers the last name again is how a duplicate gets
@@ -91,7 +92,7 @@ export function SaveFilterModal({
     if (open) {
       setName(initialName);
       setKeep(initialKeep);
-      setAudience(DEFAULT_AUDIENCE);
+      setAudience(defaultAudience);
       setPurpose("");
     }
   }

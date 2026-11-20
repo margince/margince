@@ -243,7 +243,9 @@ describe("company view — the KPI row never invents a figure", () => {
     // far back any part of it reaches. The date itself is checked, not only the
     // prefix: a dropped or wrong interpolation is the failure this
     // qualification exists to prevent.
-    expect(within(strip).getByText(/1 converted, rates .*2026/)).toBeTruthy();
+    expect(
+      within(strip).getByText(/1 converted, exchange rates .*2026/),
+    ).toBeTruthy();
   });
 
   it("keeps saying the pipeline is unpriced even when a deal has stalled", async () => {

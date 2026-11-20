@@ -8,7 +8,6 @@
 // live catalog and this workspace's i18n Yes/No labels.
 
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   typedDecimalText,
@@ -24,7 +23,8 @@ import {
 import { browserZone } from "../format/timezone";
 import { isWebAddress, webUrl } from "../format/weburl";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import type { CfObject } from "../lib/customfields.logic";
+import { type CfObject, customFieldLabel } from "../lib/customfields.logic";
+import { customFieldsQuery } from "../lib/customfields.query";
 import { translatedLabel } from "../lib/labeltranslation";
 import {
   readKindRecord,
@@ -329,11 +329,6 @@ function optionLabel(field: CustomField, option: string, locale: string) {
   return translatedLabel(option, field.option_translations?.[option], locale);
 }
 
-/** A field's label as the reader sees it. */
-export function customFieldLabel(field: CustomField, locale: string): string {
-  return translatedLabel(field.label, field.label_translations, locale);
-}
-
 // customFieldDisplay in this reader's locale and Yes/No words, for either record
 // surface that reads a custom field.
 export function useCustomFieldDisplay() {
@@ -444,18 +439,7 @@ export function useObjectCustomFields(
 ): ObjectCustomFields {
   const t = useT();
   const { locale } = useLocale();
-  const query = useQuery({
-    queryKey: ["custom-fields", object],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/custom-fields", {
-        params: { query: { object } },
-      });
-      if (error) {
-        throw error;
-      }
-      return data;
-    },
-  });
+  const query = useQuery(customFieldsQuery(object));
 
   const fields = fieldsForSurface(
     query.data?.data ?? EMPTY_CUSTOM_FIELDS,

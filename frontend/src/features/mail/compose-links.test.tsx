@@ -14,11 +14,6 @@ import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { pressDraft } from "../../testing/composedraft.testkit";
-import {
-  allowedPreview,
-  isPreviewDoor,
-  previewedAddresses,
-} from "../../testing/sendpermission.testkit";
 import { installComposeClock, pressSend } from "./compose.testkit";
 import { ComposeWindow } from "./composewindow";
 
@@ -145,9 +140,6 @@ function stubRoutes(
       if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
       if (key === "GET /companies/company-1/360")
         return jsonResponse(COMPANY_VIEW);
-      if (isPreviewDoor(url.pathname)) {
-        return jsonResponse(allowedPreview(previewedAddresses(body)));
-      }
       return jsonResponse({});
     }),
   );
@@ -211,7 +203,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Related to");
     await pickBy(user, "Related to", "Deal: Acme Renewal");
     await fillBody(user);
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -253,7 +245,7 @@ describe("what a sent message files under", () => {
     expect(
       (screen.getByLabelText("Subject") as HTMLInputElement).value,
     ).toContain("ERP-27");
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -296,7 +288,7 @@ describe("what a sent message files under", () => {
     await waitFor(() => expect(subject.value).toContain("ERP-27"));
     await pickBy(user, "Related to", "Deal: Acme Renewal");
     await waitFor(() => expect(subject.value).toBe("Hello"));
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -390,7 +382,7 @@ describe("what a sent message files under", () => {
       ),
     );
     await fillBody(user);
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -418,7 +410,7 @@ describe("what a sent message files under", () => {
 
     await screen.findByLabelText("Related to");
     await fillBody(user);
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -430,7 +422,7 @@ describe("what a sent message files under", () => {
     ]);
   });
 
-  it("files under every account contact the message is addressed to, on the preview and the send", async () => {
+  it("files under every account contact the message is addressed to", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
@@ -448,20 +440,15 @@ describe("what a sent message files under", () => {
     await user.type(screen.getByLabelText("To"), "sara@acme.test");
     await user.tab();
     await fillBody(user);
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
-    const both = [
+    expect(linksOf(sent)).toEqual([
       { entity_type: "company", entity_id: "company-1" },
       { entity_type: "contact", entity_id: "per-2" },
       { entity_type: "contact", entity_id: "per-1" },
-    ];
-    expect(linksOf(sent)).toEqual(both);
-    const previews = sent.filter((r) => isPreviewDoor(r.key));
-    expect(
-      (previews.at(-1)?.body as { links?: unknown[] } | undefined)?.links,
-    ).toEqual(both);
+    ]);
   });
 
   it("files under an account contact who is only copied, once", async () => {
@@ -485,7 +472,7 @@ describe("what a sent message files under", () => {
     await user.tab();
     await user.type(screen.getByLabelText("Bcc"), "SARA@acme.test");
     await user.tab();
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -515,7 +502,7 @@ describe("what a sent message files under", () => {
     await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
     await user.type(screen.getByLabelText("Bcc"), "sara@acme.test");
     await user.tab();
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -525,7 +512,7 @@ describe("what a sent message files under", () => {
     ]);
   });
 
-  it("sends without the copied contact the sender may not attach it to, on the preview and the send", async () => {
+  it("sends without the copied contact the sender may not attach it to", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
@@ -544,19 +531,14 @@ describe("what a sent message files under", () => {
     await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
     await user.type(screen.getByLabelText("Cc"), "noah@acme.test");
     await user.tab();
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
-    const filed = [
+    expect(linksOf(sent)).toEqual([
       { entity_type: "company", entity_id: "company-1" },
       { entity_type: "contact", entity_id: "per-1" },
-    ];
-    expect(linksOf(sent)).toEqual(filed);
-    const previews = sent.filter((r) => isPreviewDoor(r.key));
-    expect(
-      (previews.at(-1)?.body as { links?: unknown[] } | undefined)?.links,
-    ).toEqual(filed);
+    ]);
   });
 
   it("keeps a deal whose id happens to match the company's", async () => {
@@ -597,7 +579,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Related to");
     await pickBy(user, "Related to", "Deal: Acme Renewal");
     await fillBody(user);
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -631,7 +613,7 @@ describe("what a sent message files under", () => {
 
     await screen.findByLabelText("Subject");
     await fillBody(user);
-    await pickBy(user, "Reason for contact", "Active deal");
+    await pickBy(user, "Reason for contact", "Open deal");
     await pressSend(user);
 
     await waitFor(() =>
@@ -752,6 +734,7 @@ describe("what a channel reply says it will be filed under", () => {
 it.each(["proj-2", ""])(
   "restores the selected project, including an explicit no-project choice: %s",
   async (projectId) => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let answerProjects: (response: Response) => void = () => {};
     const sent = stubRoutes({
       "GET /companies/company-1/360": () =>
@@ -804,11 +787,10 @@ it.each(["proj-2", ""])(
         }),
       ),
     );
+    await pressSend(user);
     await waitFor(() => {
-      const previews = sent.filter(
-        (call) => call.key === "POST /emails:preview",
-      );
-      expect(previews.at(-1)?.body).toMatchObject({
+      const sends = sent.filter((call) => call.key === "POST /emails");
+      expect(sends.at(-1)?.body).toMatchObject({
         links: [
           { entity_type: "company", entity_id: "company-1" },
           { entity_type: "contact", entity_id: "per-1" },

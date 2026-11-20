@@ -10,7 +10,7 @@ import {
   StoryProviders,
 } from "../testing/story-utils";
 import { type ListPage, ListTable, useListQuery } from "./listquery";
-import { mineEmptyNote } from "./recordlist";
+import { mineEmptyLine } from "./recordlist";
 
 // A "Mine" list for a reader who owns nothing. Its "Show all" button goes away
 // when pressed, so focus must land on the list's title.
@@ -43,7 +43,7 @@ function MineList() {
         },
       ]}
       rowKey={(row) => row.id}
-      emptyNote={mineEmptyNote({
+      emptyLine={mineEmptyLine({
         t,
         state,
         viewerId: VIEWER,
@@ -77,9 +77,12 @@ export const NothingOwned: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Show all" }),
-    );
+    const showAll = await canvas.findByRole("button", { name: "Show all" });
+    await expect(canvas.getByText("No leads owned by you.")).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Clear filters" }),
+    ).toBeNull();
+    await userEvent.click(showAll);
     await expect(canvas.getByRole("heading", { name: "Leads" })).toHaveFocus();
   },
 };

@@ -239,21 +239,6 @@ type InternalEventLegalEntityUpdated struct {
 	ChangedFields []string `json:"changed_fields"`
 }
 
-// InternalEventLegalReviewDecided Legal answered a request. An approval has already settled the deal's legal_reviewed criteria in the same transaction, so no consumer has to.
-type InternalEventLegalReviewDecided struct {
-	// Outcome approved or changes_needed.
-	Outcome string `json:"outcome"`
-}
-
-// InternalEventLegalReviewRequested A deal's side asked legal to review the deal. Entity-less, which keeps it off the subscribable set: the review's note and pack are for holders of the legal_review grant, and no webhook consumer can be held to that. The deal and the review stay on the audit row the emit points at.
-type InternalEventLegalReviewRequested struct {
-	// HasNote Whether the request carries a note for legal.
-	HasNote bool `json:"has_note"`
-}
-
-// InternalEventLegalReviewWithdrawn The deal's side took back an open request.
-type InternalEventLegalReviewWithdrawn struct{}
-
 // InternalEventMeetingInvitationUpdated The durable calendar operation changed state; consumers reread permissioned details.
 type InternalEventMeetingInvitationUpdated struct {
 	Status  string `json:"status"`
@@ -403,18 +388,6 @@ func (InternalEventLegalEntityMemberAdded) EntityType() string { return "legal_e
 func (InternalEventLegalEntityUpdated) EventType() string { return "legal_entity.updated" }
 
 func (InternalEventLegalEntityUpdated) EntityType() string { return "legal_entity" }
-
-func (InternalEventLegalReviewDecided) EventType() string { return "legal_review.decided" }
-
-func (InternalEventLegalReviewDecided) EntityType() string { return "" }
-
-func (InternalEventLegalReviewRequested) EventType() string { return "legal_review.requested" }
-
-func (InternalEventLegalReviewRequested) EntityType() string { return "" }
-
-func (InternalEventLegalReviewWithdrawn) EventType() string { return "legal_review.withdrawn" }
-
-func (InternalEventLegalReviewWithdrawn) EntityType() string { return "" }
 
 func (InternalEventMeetingInvitationUpdated) EventType() string { return "meeting_invitation.updated" }
 

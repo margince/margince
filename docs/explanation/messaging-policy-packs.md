@@ -111,11 +111,11 @@ through `backend/internal/modules/activities/draftcontent.go`.
 
 ## The citations in the warning
 
-A reviewed pack may cite the provision behind a finding or a refusal. `citationsFor` and
-`citationFor` in `backend/internal/modules/consent/citation.go` look the code up in the recipient's
-pack, for the sender's territory. They show none for a draft pack, a pack whose `review-due` has
-passed, or an instrument not yet in force or already expired. The pack still applies in each of
-those cases; only the citation is withheld.
+A pack may cite the provision behind a finding or a refusal, whether or not a review stamps it.
+`citationsFor` and `citationFor` in `backend/internal/modules/consent/citation.go` look the code up
+in the recipient's pack, for the sender's territory. They show none for an instrument not yet in
+force or already expired, or for a reviewed pack whose `review-due` has passed. The pack still
+applies in each of those cases; only the citation is withheld.
 
 ## Mail the engine sends for the pack
 

@@ -5,6 +5,7 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { type Locale, translate, useLocale } from "../../i18n";
 import {
   installFetchStub,
@@ -242,5 +243,61 @@ describe("editing a review's questions", () => {
     await user.click(first);
     expect(onPatch).not.toHaveBeenCalled();
     expect(screen.getByText("Unsaved changes")).toBeTruthy();
+  });
+});
+
+describe("adding a review template", () => {
+  function openNew(onPost = vi.fn()) {
+    installFetchStub({
+      "GET /me": meRoute({ custom_field: ["read", "create", "update"] }),
+      "POST /activity-review-templates": (body) => {
+        onPost(body);
+        return jsonResponse(template({ id: "new", system: false }), 201);
+      },
+    });
+    const close = vi.fn();
+    render(
+      <StoryProviders>
+        <ReviewTemplateEditor onClose={close} />
+      </StoryProviders>,
+    );
+    return { close, user: userEvent.setup() };
+  }
+
+  it("posts the name, the outcome it is asked for and its questions", async () => {
+    const onPost = vi.fn();
+    const { close, user } = openNew(onPost);
+    expect(
+      screen.getByRole("heading", { name: "New review template" }),
+    ).toBeTruthy();
+    const add = screen.getByRole("button", { name: "Add template" });
+    expect(add.hasAttribute("disabled")).toBe(true);
+
+    await user.type(
+      screen.getByRole("textbox", { name: /Name/ }),
+      "  Enterprise loss  ",
+    );
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Asked for" }),
+      "Lost deals",
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: /Question/ }),
+      "What did we miss?",
+    );
+    await user.click(add);
+    await vi.waitFor(() => expect(close).toHaveBeenCalled());
+    expect(onPost).toHaveBeenCalledWith({
+      label: "Enterprise loss",
+      outcome: "lost",
+      questions: [
+        expect.objectContaining({
+          label: "What did we miss?",
+          type: "text",
+          required: false,
+        }),
+      ],
+    });
   });
 });

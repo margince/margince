@@ -336,33 +336,40 @@ function DataRow<Row>({
  * The empty line has three states. What narrows the set decides the
  * sentence, and whether it is clearable decides whether Clear is offered.
  * A screen's own scope narrows the set and no button here can clear it.
+ * A caller's `line` replaces both, for a view that names its own emptiness.
  */
 export function EmptyRow({
   unit,
   narrowed,
   filtered,
   onClear,
+  line,
   emptyNote,
 }: Readonly<{
   unit: string;
   narrowed: boolean;
   filtered: boolean;
   onClear: () => void;
+  line?: ReactNode;
   emptyNote?: ReactNode;
 }>) {
   const t = useT();
   return (
     <>
-      {narrowed ? t("table.noMatches", { unit }) : t("table.none", { unit })}
-      {filtered && (
+      {line ?? (
         <>
-          {" "}
-          <ClearFilters onClear={onClear} label={t("table.clearFilters")} />
+          {narrowed
+            ? t("table.noMatches", { unit })
+            : t("table.none", { unit })}
+          {filtered && (
+            <>
+              {" "}
+              <ClearFilters onClear={onClear} label={t("table.clearFilters")} />
+            </>
+          )}
         </>
       )}
-      {/* Under either line, because which emptiness a note explains is the
-          caller's to know. A "Mine" view for a reader who owns nothing is a
-          narrowed list. */}
+      {/* Under either line: the caller knows which emptiness it explains. */}
       {emptyNote && <p className="lt-empty-note">{emptyNote}</p>}
     </>
   );
