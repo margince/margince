@@ -3,9 +3,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import {
@@ -25,6 +26,8 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { useCompanyPhrase } from "../../lib/company-phrase";
 import { isVendor, useOAuthApp, type Vendor } from "../../lib/oauth-app";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
+import { routeHash } from "../../lib/router";
+import { settingsHref } from "../../lib/settingsrouting";
 import {
   AUTHENTICATION_POLICY_KEY,
   useSaveSignInPolicy,
@@ -117,7 +120,11 @@ export function SignInMethodsCard({
     <>
       <Panel title={t("signInMethods.title")}>
         <PanelBody>
-          <PanelIntro>{t("signInMethods.sub")}</PanelIntro>
+          <PanelIntro>
+            {t("signInMethods.sub", {
+              apps: t("settings.part.authentication.apps"),
+            })}
+          </PanelIntro>
         </PanelBody>
         <QueryGate query={settings} pendingLabel={t("signInMethods.title")}>
           {(current) => {
@@ -321,7 +328,11 @@ function VendorMissingLine({ vendor }: Readonly<{ vendor: Vendor }>) {
     return (
       <MissingLine
         reason={t("signInMethods.offScreenReason.noApp", { vendor: name })}
-      />
+      >
+        <AppLink href={routeHash(settingsHref("authentication", "apps"))}>
+          {t("signInMethods.setUpApp", { vendor: name })}
+        </AppLink>
+      </MissingLine>
     );
   }
   if (vendor === "microsoft" && !app.tenant) {
@@ -336,12 +347,16 @@ function VendorMissingLine({ vendor }: Readonly<{ vendor: Vendor }>) {
   );
 }
 
-function MissingLine({ reason }: Readonly<{ reason: string }>) {
+function MissingLine({
+  reason,
+  children,
+}: Readonly<{ reason: string; children?: ReactNode }>) {
   const t = useT();
   return (
     <span className="signinmethods-status">
       <StatusBadge kind="attention" label={t("signInMethods.offScreen")} />
       <span>{reason}</span>
+      {children}
     </span>
   );
 }

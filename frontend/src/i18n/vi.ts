@@ -1828,6 +1828,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể gửi lời nhắc. Nếu quy tắc email của Margince đã chặn, thông báo của bạn sẽ nêu lý do. Hãy gửi email trực tiếp cho khách.",
   "history.field.reminder_status": "Trạng thái lời nhắc",
   "scheduling.myLink": "Liên kết đặt lịch của tôi",
+  "scheduling.setUpMyLink": "Thiết lập liên kết đặt lịch của tôi",
   "scheduling.linkIntro":
     "Một liên kết cho chữ ký email, tin nhắn và trang web. Ai cũng có thể chọn giờ trong khoảng thời gian rảnh của bạn.",
   "scheduling.copyLink": "Sao chép liên kết",
@@ -9418,7 +9419,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.signatureReviewUseLatest": "Dùng phiên bản mới nhất",
   "settings.signatureReviewKeepDraft": "Giữ bản nháp của tôi",
   "settings.signatureReviewLoading": "Đang tải chữ ký được giữ lại…",
-  "settings.signatureReviewSaved": "Đã lưu kiểm tra chữ ký",
   "settings.signatureReviewMember": "thành viên",
   "settings.signatureChoicePlain":
     "Chữ ký riêng của bạn nằm dưới mọi email bạn gửi. Nếu không có, email kết thúc bằng lời chào và tên bạn.",
@@ -9439,7 +9439,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.signatureSub":
     "Chèn vào dưới mỗi email bạn gửi, phía trên chân trang hủy đăng ký.",
   "settings.signatureLabel": "Lời kết",
-  "settings.signaturePlaceholder": "Nguyễn Minh Anh\nGradion · +84 28 123456",
+  "settings.signaturePlaceholder": "Tên của bạn\nCông ty · Điện thoại",
   "settings.signatureHint":
     "Văn bản thuần. Nếu để trống, thư sẽ kết thúc bằng lời chào và tên của bạn. AI không bao giờ tự thêm chữ ký.",
   "settings.signatureSaving": "Đang lưu…",
@@ -9457,13 +9457,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "delivery.none": "Không qua email",
   "delivery.hourLabel": "Giờ gửi email định kỳ",
   "delivery.scheduleHelp":
-    "Chọn giờ cá nhân để dùng ngày làm việc và múi giờ của bạn, trong cửa sổ gửi ba giờ. Lịch trước đây giữ nguyên cho đến khi bạn đổi.",
+    "Thời điểm gửi các email định kỳ như Bản tin sáng: trong vòng ba giờ kể từ giờ này, vào ngày làm việc và theo múi giờ của bạn. Lịch đã đặt trước đó giữ nguyên cho đến khi bạn chọn giờ ở đây.",
   "delivery.legacyTime": "Lịch buổi sáng trước đây (múi giờ báo cáo):",
   "delivery.workingStart": "Bắt đầu giờ làm việc",
   "delivery.weekdayLabel": "Ngày tổng kết tuần",
   "delivery.weekdayHelp":
-    "Nếu ngày đã chọn là ngày nghỉ, dùng ngày làm việc kế tiếp. Tuần báo cáo giữ nguyên; có thể gửi bù vào ngày làm việc sau.",
+    "Ngày gửi Tổng kết tuần. Nếu bạn không làm việc vào ngày đó, bản tổng kết đến vào ngày làm việc kế tiếp.",
   "delivery.quietLabel": "Buổi sáng ít việc",
+  "delivery.quietHelp":
+    "Buổi sáng không có gì cần xử lý sẽ không gửi email, trừ khi bạn chọn bản tóm tắt trạng thái.",
   "delivery.onlyUseful": "Chỉ khi có nội dung hữu ích",
   "delivery.quietAlso": "Cũng gửi bản tóm tắt trạng thái vào buổi sáng ít việc",
   "delivery.combineLabel": "Gộp email định kỳ",
@@ -9472,6 +9474,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "delivery.separate": "Email định kỳ riêng biệt",
   "delivery.combined": "Gộp nội dung có sẵn",
   "delivery.scopeLabel": "Phạm vi email định kỳ",
+  "delivery.scopeHelp":
+    "Email định kỳ bao gồm công việc của ai: của bạn, của một nhóm bạn xem xét, hoặc cả hai.",
   "delivery.scope.personal": "Việc của tôi",
   "delivery.scope.team": "Nhóm đã chọn",
   "delivery.scope.combined": "Việc của tôi và nhóm đã chọn",
@@ -13463,6 +13467,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auth.emailPlaceholder": "ten@example.com",
   "auth.password": "Mật khẩu",
   "auth.passwordPlaceholder": "Mật khẩu",
+  "auth.emailMissing": "Nhập địa chỉ email của bạn.",
+  "auth.emailMalformed": "Nhập địa chỉ email đầy đủ, ví dụ ten@example.com.",
+  "auth.passwordMissing": "Nhập mật khẩu của bạn.",
   "auth.passwordHint": "Từ 12 đến 256 ký tự",
   "auth.showPassword": "Hiện mật khẩu",
   "auth.hidePassword": "Ẩn mật khẩu",
@@ -13490,15 +13497,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auth.failed": "Đăng nhập không thành công",
   "auth.errCredentials":
     "Đăng nhập không thành công. Kiểm tra email và mật khẩu rồi thử lại.",
-  "auth.errRateLimited": "Quá nhiều lần thử đăng nhập. Thử lại sau.",
+  "auth.errRateLimited":
+    "Quá nhiều lần thử đăng nhập. Đợi một phút rồi thử lại.",
   "auth.errUnreachable":
     "Không thể kết nối tới Margince. Kiểm tra kết nối rồi thử lại.",
   "auth.retry": "Thử lại",
   "auth.noticeSignedOut": "Đã đăng xuất.",
   "auth.noticeSessionExpired":
     "Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.",
+  "auth.noticeResetIncomplete":
+    "Liên kết đặt mật khẩu này không đầy đủ hoặc đã được mở. Hãy yêu cầu một liên kết mới.",
   "auth.noticeOidcFailed":
-    "Đăng nhập bằng Google không thành công. Nếu bạn được mời, mở liên kết trong email mời để hoàn tất thiết lập tài khoản.",
+    "Đăng nhập qua nhà cung cấp không thành công. Nếu bạn được mời, mở liên kết trong email mời để hoàn tất thiết lập tài khoản.",
   "auth.connectionTitle": "Không thể kết nối tới Margince",
   "auth.connectionBody":
     "Kiểm tra kết nối rồi thử lại. Nếu vẫn lỗi, có thể máy chủ đang khởi động lại.",
@@ -13532,6 +13542,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "password.submit": "Lưu mật khẩu mới",
   "password.doneTitle": "Đã đổi mật khẩu",
   "password.changeFailedTitle": "Không thể đổi mật khẩu",
+  "password.currentWrong":
+    "Mật khẩu hiện tại không khớp. Kiểm tra rồi nhập lại.",
+  "password.locked":
+    "Tài khoản bị khóa do nhập sai mật khẩu quá nhiều lần. Đợi 15 phút rồi thử lại.",
+  "password.unchanged":
+    "Mật khẩu mới trùng với mật khẩu hiện tại. Chọn mật khẩu khác.",
+  "password.email":
+    "Mật khẩu mới trùng với địa chỉ email của bạn. Chọn mật khẩu khác.",
+  "password.length": "Dùng mật khẩu mới có từ 12 đến 256 ký tự.",
   "password.errorGeneric": "Không rõ nguyên nhân. Thử lại.",
   "mfa.title": "Đăng nhập hai bước",
   "mfa.body": "Mã từ ứng dụng xác thực, được hỏi sau mật khẩu.",
@@ -13625,6 +13644,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.errorNetwork":
     "Không thể kết nối tới Margince. Kiểm tra kết nối rồi thử lại.",
   "auth.forgotLink": "Quên mật khẩu?",
+  "auth.forgotAskAdmin":
+    "Quên mật khẩu? Liên hệ quản trị viên để được gửi liên kết đặt mật khẩu.",
   "auth.forgotTitle": "Đặt lại mật khẩu",
   // Two sentences, sentence-cased, with no dash. VOICE-RULE-5 forbids an em or
   // en dash anywhere in user-facing copy, and a lowercase opening mid-surface
@@ -13636,7 +13657,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auth.forgotSentBody":
     "Nếu địa chỉ đó có tài khoản, liên kết đặt lại đã được gửi. Liên kết sẽ hết hạn sau 1 giờ.",
   "auth.resetTitle": "Chọn mật khẩu mới",
-  "auth.resetSub": "Liên kết còn hiệu lực. Nhập mật khẩu mới.",
+  "auth.resetSub": "Nhập mật khẩu mới.",
   "auth.newPassword": "Mật khẩu mới",
   "auth.setNewPassword": "Đặt mật khẩu mới",
   "auth.resetFailed":
@@ -16029,6 +16050,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.companyMarkUnsupported":
     "Hãy dùng tệp PNG, JPEG, GIF, WebP, ICO hoặc SVG.",
   "settings.companyMarkTooLarge": "Hãy dùng tệp nhỏ hơn.",
+  "settings.companyMarkTooManyPixels": "Hãy dùng ảnh tối đa 8 megapixel.",
   "settings.companyMarkSvgNotDrawable":
     "Tệp SVG này có phần không thể hiển thị ở đây, hoặc không hiển thị gì. Xuất logo dưới dạng tệp PNG từ công cụ thiết kế.",
   "settings.companyMarkSvgText":
@@ -16599,7 +16621,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "signInMethods.title": "Phương thức đăng nhập",
   "signInMethods.saveFailed": "Không thể lưu thay đổi",
   "signInMethods.sub":
-    "Quản trị viên có thể tắt một nhà cung cấp nhưng không thể thêm mới. Nhà cung cấp hiện trên màn hình đăng nhập khi đã thiết lập ứng dụng tương ứng bên dưới.",
+    "Quản trị viên có thể tắt một nhà cung cấp nhưng không thể thêm mới. Nhà cung cấp hiện trên màn hình đăng nhập khi ứng dụng tương ứng đã được thiết lập trong {apps}.",
   "signInMethods.password": "Email và mật khẩu",
   "signInMethods.passwordAlways":
     "Luôn khả dụng, nên không ai bị khóa ngoài khi một phương thức khác bị tắt.",
@@ -16775,6 +16797,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "signInMethods.offScreen": "Không có trên màn hình đăng nhập",
   "signInMethods.offScreenReason.noApp":
     "Ứng dụng {vendor} chưa được thiết lập.",
+  "signInMethods.setUpApp": "Thiết lập ứng dụng {vendor}",
   "signInMethods.offScreenReason.noDirectory":
     "Ứng dụng Microsoft chưa giới hạn trong thư mục công ty bạn.",
   "signInMethods.offScreenReason.unusable":
@@ -17110,6 +17133,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "account.pictureWrongType":
     "Không thể tải ảnh lên. Hãy dùng tệp PNG, JPEG hoặc WebP.",
   "account.pictureTooLarge": "Không thể tải ảnh lên. Hãy dùng tệp tối đa 5 MB.",
+  "account.pictureTooManyPixels":
+    "Không thể tải ảnh lên. Hãy dùng ảnh tối đa 8 megapixel.",
   "account.pictureNoStorage":
     "Bản cài đặt này chưa có nơi lưu ảnh. Liên hệ quản trị viên.",
   "account.pictureUploadFailed":
@@ -23026,7 +23051,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.verdict.noExchange": "Chưa ghi nhận trao đổi nào với liên hệ này.",
   "contactCase.title": "Liên hệ có thể trùng",
   "contactCase.intro":
-    "Đánh dấu các liên hệ là cùng một người. Sau đó chọn hồ sơ giữ lại và người chịu trách nhiệm.",
+    "Đánh dấu các liên hệ là cùng một người. Sau đó chọn liên hệ được giữ lại và người chịu trách nhiệm.",
   "contactCase.loading": "Đang tải liên hệ có thể trùng…",
   "contactCase.none": "Liên hệ này không có bản trùng nào đang chờ xử lý.",
   "contactCase.settledElsewhere":
@@ -23063,8 +23088,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.merge_other": "Gộp {count} liên hệ",
   "contactCase.member.owner": "Người chịu trách nhiệm: {name}",
   "contactCase.member.unowned": "Chưa giao",
-  "contactCase.member.keep": "Giữ thông tin của hồ sơ này",
-  "contactCase.member.keepNamed": "Giữ thông tin của {name}",
+  "contactCase.member.stays": "Giữ lại {name}",
+  "contactCase.survivor.legend": "Giữ lại liên hệ nào?",
+  "contactCase.survivor.hint":
+    "Các liên hệ đã đánh dấu còn lại được gộp vào đó và lưu trữ.",
   "contactCase.member.dismissedWith":
     "Đã được đánh dấu là người khác với {names}.",
   "contactCase.notAllowed.tooLarge":
@@ -23089,12 +23116,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.field.domain": "Tên miền",
   "contactCase.field.other": "Thông tin",
   "contactCase.evidence.title": "Vì sao giống nhau",
+  "contactCase.evidence.hint":
+    "“Không phải cùng một người” chỉ áp dụng cho cặp này và cặp đó không được gợi ý nữa. Liên hệ không đánh dấu vẫn là bản trùng có thể.",
   "contactCase.evidence.pair": "{left} và {right}",
   "contactCase.evidence.different": "Người khác nhau",
   "contactCase.preview.title": "Kết quả khi gộp",
   "contactCase.preview.keeps":
     "{name} được giữ lại, do {owner} chịu trách nhiệm.",
-  "contactCase.preview.mergedTitle": "Được gộp vào",
+  "contactCase.preview.mergedTitle": "Được gộp vào và lưu trữ",
   "contactCase.preview.sharesTitle": "Giữ quyền truy cập",
   "contactCase.preview.noShares": "Không có người chịu trách nhiệm nào khác.",
   "contactCase.preview.shareWrite": "{name}, có quyền sửa",

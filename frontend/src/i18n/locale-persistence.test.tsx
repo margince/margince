@@ -1,8 +1,15 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { LocaleProvider, storedLocale, useLocale } from "./index";
+import {
+  type Locale,
+  LocaleProvider,
+  storedLocale,
+  useAccountLocale,
+  useLocale,
+} from "./index";
 
 // A language a reader picks has to survive a reload, or the switcher reads as
 // broken: the next load falls back to the browser's preference and silently
@@ -132,5 +139,99 @@ describe("a locale the server reports but this release does not ship", () => {
 
     expect(shown()).not.toBe("de-DE");
     expect(shown()).toBe("en");
+  });
+});
+
+function AccountProbe({ chosen }: Readonly<{ chosen: string }>) {
+  // Cast for the reason Probe's is: the account's language comes off the wire.
+  useAccountLocale(chosen as Locale);
+  const { locale, setLocale } = useLocale();
+  return (
+    <>
+      <span data-testid="locale">{locale}</span>
+      <button type="button" onClick={() => setLocale("de")}>
+        pick de
+      </button>
+    </>
+  );
+}
+
+// A session that ends and comes back mounts the signed-in screens again, with
+// the same account language, while the provider above them stays.
+function Remounting() {
+  const [round, setRound] = useState(0);
+  const { setLocale } = useLocale();
+  return (
+    <>
+      <AccountProbe key={round} chosen="en" />
+      <button type="button" onClick={() => setLocale("vi")}>
+        pick vi
+      </button>
+      <button type="button" onClick={() => setRound((was) => was + 1)}>
+        mount again
+      </button>
+    </>
+  );
+}
+
+// The sign-in screen this browser shows next reads storage. So it speaks the
+// language of the account last signed in here, before and after a reload.
+describe("the language of the account signed in here", () => {
+  it("becomes the stored choice that the next mount reads", () => {
+    localStorage.setItem(STORAGE_KEY, "de");
+    render(
+      <LocaleProvider>
+        <AccountProbe chosen="en" />
+      </LocaleProvider>,
+    );
+    expect(shown()).toBe("en");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("en");
+    cleanup();
+    mount();
+    expect(shown()).toBe("en");
+  });
+
+  it("does not overwrite a pick made after it was adopted", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider>
+        <AccountProbe chosen="en" />
+      </LocaleProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "pick de" }));
+    expect(shown()).toBe("de");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("de");
+    cleanup();
+    mount();
+    expect(shown()).toBe("de");
+  });
+
+  it("keeps a later pick stored when the signed-in screens mount again", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider>
+        <Remounting />
+      </LocaleProvider>,
+    );
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("en");
+    await user.click(screen.getByRole("button", { name: "pick vi" }));
+    await user.click(screen.getByRole("button", { name: "mount again" }));
+
+    expect(shown()).toBe("vi");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("vi");
+    cleanup();
+    mount();
+    expect(shown()).toBe("vi");
+  });
+
+  it("is not stored when this release does not ship it", () => {
+    localStorage.setItem(STORAGE_KEY, "de");
+    render(
+      <LocaleProvider>
+        <AccountProbe chosen="de-DE" />
+      </LocaleProvider>,
+    );
+    expect(shown()).toBe("de");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("de");
   });
 });

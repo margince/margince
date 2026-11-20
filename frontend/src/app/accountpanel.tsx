@@ -126,7 +126,7 @@ export function AccountPanel({
   const theme = useFlyout(THEME_SEAT, move);
   const help = useFlyout(HELP_SEAT, move);
   // A paused booking link is dark to every guest who holds it, so the menu
-  // that opens it says so.
+  // that opens it says so. A seat with no link yet is offered to make one.
   const booking = useSchedulingProfile().data;
   const canBook = useCanBook();
 
@@ -231,8 +231,10 @@ export function AccountPanel({
           seat={seat(BOOKING_SEAT)}
           onActivate={onDismiss}
         >
-          {t("scheduling.myLink")}
-          {booking && bookingPagePaused(booking) && (
+          {booking && !booking.slug
+            ? t("scheduling.setUpMyLink")
+            : t("scheduling.myLink")}
+          {booking?.slug && bookingPagePaused(booking) && (
             <StatusBadge
               kind="attention"
               label={t("scheduling.status.paused")}
