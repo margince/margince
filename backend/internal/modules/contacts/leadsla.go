@@ -40,6 +40,12 @@ func withPinnedSLANow(ctx context.Context, now time.Time) context.Context {
 	return context.WithValue(ctx, slaNowKey{}, now)
 }
 
+// WithReadInstant pins the instant for a caller with its own clock. The lead
+// reads built from ctx judge SLA state, evidence age and current work by it.
+func WithReadInstant(ctx context.Context, now time.Time) context.Context {
+	return withPinnedSLANow(ctx, now.UTC())
+}
+
 // slaNow is the pinned instant, or the live clock for a caller that pinned
 // none — a single-statement read has nothing to agree with.
 func slaNow(ctx context.Context) time.Time {
