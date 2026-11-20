@@ -3,6 +3,7 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
   "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
   "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
@@ -4799,6 +4800,7 @@ export const en = {
   "approval.kind.capture_counterparty": "Add contact from mail",
   "approval.kind.ownership_transfer": "Hand over a record",
   "approval.kind.contact_share": "Share a contact",
+  "approval.kind.legal_review_request": "Legal review requested",
   "approval.kind.task_due_date": "Check a due date",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
@@ -7089,6 +7091,95 @@ export const en = {
   "brief.feed.caughtUpDetail":
     "Nobody was waiting on you when Margince checked at {time}.",
   "teamweekly.pickTeam": "Choose a team",
+  "teamweekly.agenda.copied": "Copied",
+  "teamweekly.agenda.copy": "Copy agenda",
+  "teamweekly.agenda.copyFailed":
+    "Agenda was not copied. Select the list and copy it manually.",
+  "teamweekly.agenda.empty":
+    "No member’s week could be loaded for this team, so there is no agenda.",
+  "teamweekly.agenda.summary_one":
+    "{count} item for Monday, starting with {first}.",
+  "teamweekly.agenda.summary_other":
+    "{count} items for Monday, starting with {first}.",
+  "teamweekly.agenda.title": "Monday agenda",
+  "teamweekly.card.commitments": "Commitments kept",
+  "teamweekly.card.commitmentsBasis": "Due in the plan",
+  "teamweekly.card.firstResponse": "Leads answered",
+  "teamweekly.card.firstResponseBasis": "{breached} past target",
+  "teamweekly.card.meetings": "Meetings with follow-up",
+  "teamweekly.card.meetingsBasis": "Task linked before week end",
+  "teamweekly.card.noCommitments": "None due",
+  "teamweekly.card.noLeads": "None received",
+  "teamweekly.card.noMeetings": "None recorded",
+  "teamweekly.card.reps": "Members counted",
+  "teamweekly.card.repsBasis": "Full week recorded",
+  "teamweekly.card.won": "Won",
+  "teamweekly.card.wonBasis": "{lost} lost · value unavailable",
+  "teamweekly.card.wonBasisValue": "{value} · {lost} lost",
+  "teamweekly.commitmentRate":
+    "{done} of {total} due commitments were completed.",
+  "teamweekly.coverage.atRisk": "Coverage at risk against {basis}",
+  "teamweekly.coverage.basis.historical_median": "the historical median",
+  "teamweekly.coverage.basis.manager_call": "the manager’s call",
+  "teamweekly.coverage.holds": "Coverage holds against {basis}",
+  "teamweekly.coverage.month": "Month",
+  "teamweekly.coverage.notAuthorized":
+    "The call for this period could not be read when the week closed.",
+  "teamweekly.coverage.percent": "{percent} of the deal value needed",
+  "teamweekly.coverage.quarter": "Quarter",
+  "teamweekly.coverage.replan": "Replan recommended",
+  "teamweekly.coverage.title": "Deal value coverage",
+  "teamweekly.focus.close_dates_provisional": "Close dates provisional",
+  "teamweekly.focus.commitments_missed": "Plan commitments missed",
+  "teamweekly.focus.deals_at_risk": "Deal recovery",
+  "teamweekly.focus.forecast_downgrades": "Forecast downgraded",
+  "teamweekly.focus.help_requested": "Help requested",
+  "teamweekly.focus.leads_breached": "Response targets missed",
+  "teamweekly.focus.meetings_without_next_step": "Follow-up evidence missing",
+  "teamweekly.focus.no_next_step_coverage": "Next steps missing",
+  "teamweekly.focus.quiet_week": "No priority identified",
+  "teamweekly.focus.stage_regressions": "Deals moved back",
+  "teamweekly.focus.strong_week": "Strong week",
+  "teamweekly.forbidden":
+    "You can no longer open this team’s week. Team weeks open for the team’s lead and for roles that oversee every team.",
+  "teamweekly.funnel.line": "{stage} → {next}: {rep} against the team’s {team}",
+  "teamweekly.funnel.lineLast": "{stage}: {rep} against the team’s {team}",
+  "teamweekly.headline.notRecorded":
+    "Some figures were not recorded for this week and are left out.",
+  "teamweekly.headline.partial":
+    "Partial coverage. These figures cover the members counted below.",
+  "teamweekly.headline.plain": "No meetings or due commitments were recorded.",
+  "teamweekly.headline.unmeasured":
+    "No member snapshots are available for this week. Performance is not measured.",
+  "teamweekly.loading": "Loading team week…",
+  "teamweekly.meetingRate":
+    "{done} of {total} meetings had a recorded next step.",
+  "teamweekly.mine": "My week",
+  "teamweekly.movement.leads": "Leads routed",
+  "teamweekly.movement.lost": "Lost",
+  "teamweekly.movement.meetings": "Meetings held",
+  "teamweekly.movement.moved": "Advanced",
+  "teamweekly.movement.title": "Week activity",
+  "teamweekly.movement.won": "Won",
+  "teamweekly.noPriority": "No priority indicated by the recorded metrics",
+  "teamweekly.noSnapshot":
+    "No saved review is available for this team and week. Choose another week or review the team’s current work.",
+  "teamweekly.ofTotal": "{part} of {whole}",
+  "teamweekly.outcomes":
+    "{won} won · {lost} lost · {moved} deals moved · {leads} leads assigned",
+  "teamweekly.quality.accepted": "Proposals accepted",
+  "teamweekly.quality.basis": "Frozen with the week",
+  "teamweekly.quality.notMeasured": "Not measured",
+  "teamweekly.quality.rejected": "Proposals rejected",
+  "teamweekly.quality.reversals": "Automatic changes undone",
+  "teamweekly.quality.title": "Record quality",
+  "teamweekly.repsUnread_one":
+    "{count} member’s week could not be read. These figures cover the {counted} members counted.",
+  "teamweekly.repsUnread_other":
+    "{count} members’ weeks could not be read. These figures cover the {counted} members counted.",
+  "teamweekly.week": "Week starting",
+  "teamweekly.weekOf": "{team} · week of {day}",
+  "teamweekly.whose": "Whose week",
 
   "plan.loading": "Loading plan…",
   "plan.empty": "Nothing on the plan yet.",
@@ -8054,16 +8145,7 @@ export const en = {
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
-  "compose.fact.open": "Record what happened",
-  "compose.fact.title": "Record the exchange with {address}",
-  "compose.fact.scope":
-    "Records the exchange with {address} for the sending company. It does not send this email, record marketing consent or create an exception.",
-  "compose.fact.kind": "What happened?",
-  "compose.fact.request": "They asked me to write",
-  "compose.fact.quoteRequest": "They asked for this quote",
   "compose.fact.met": "Met face to face",
-  "compose.fact.note": "What was agreed?",
-  "compose.fact.save": "Record the exchange",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
   "compose.draftReply": "Draft reply",
@@ -8290,6 +8372,21 @@ export const en = {
   "compose.why.contract": "Their contract",
   "compose.why.account": "Their customer relationship",
   "compose.why.marketing": "Marketing",
+  "compose.why.met": "Met in person",
+  "compose.why.asked": "They asked for it",
+  "compose.why.openDeal": "Open deal",
+  "compose.why.customer": "Existing customer",
+  "compose.whyHint.met":
+    "Personal mail, no unsubscribe link. The meeting is saved on the contact.",
+  "compose.whyHint.asked":
+    "Personal mail, no unsubscribe link. Their request must be on record.",
+  "compose.whyHint.openDeal":
+    "Personal mail about the deal, no unsubscribe link.",
+  "compose.whyHint.customer": "Service mail, no unsubscribe link.",
+  "compose.whyHint.marketing":
+    "Adds an unsubscribe link and the company footer. Needs their consent or a past purchase.",
+  "compose.met.failed":
+    "The meeting was not saved, so nothing was sent. Try again.",
   "sendPermission.stopWithReason": "Sending needs your reason",
   "sendPermission.refused": "Message cannot be sent",
   "sendPermission.sayWhy": "Record reason for contact",
@@ -8327,19 +8424,12 @@ export const en = {
   "sendPermission.recheck": "Check again",
   "compose.sendWithReason": "Send with a reason…",
   "compose.scheduleWithReason": "Schedule with a reason…",
-  "compose.holdForCheck": "Send waits for the send check.",
   "compose.legacyFooter":
     "This server cannot send with a reason when company email details are missing. Your draft is kept. Ask an administrator to update Margince, then try again.",
-  "compose.holdRefused":
-    "Send is off. Fix what the check above names, or remove that recipient.",
-  "compose.holdWithReason":
-    "The check refused this message. Send asks for your reason, and the reason covers this one message only.",
   "sendPermission.appliesToSome_one":
     "This applies to {count} of {total} recipients.",
   "sendPermission.appliesToSome_other":
     "This applies to {count} of {total} recipients.",
-  "sendPermission.ready": "Recipients checked",
-  "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message can be sent…",
   "lawfulBasis.title": "No valid basis recorded",
   "lawfulBasis.body":
@@ -8510,16 +8600,11 @@ export const en = {
     "This message cannot be sent to {address} as it stands.",
   "compose.sendAnyway.finding.none":
     "This message cannot be sent as it stands.",
-  "compose.sendAnyway.cited": "Attention: sending to {address} may break",
   "compose.citation.law": "Law:",
-  "compose.sendAnyway.warning":
-    "The send check still blocks this message. Send anyway sends only this message and grants no permission for later ones. Your name, your reason and the message are kept in a record that cannot be edited.",
   "compose.sendAnyway.editOnly":
     "Edit the message or remove this recipient to send it.",
   "compose.sendAnyway.more_one": "{count} more finding",
   "compose.sendAnyway.more_other": "{count} more findings",
-  "compose.sendAnyway.details": "Details",
-  "compose.sendAnyway.reasonLabel": "Reason for sending",
   "compose.sendAnyway.confirm": "Send anyway",
   "compose.sendAnyway.marked": "named in the warning",
   "compose.sendAnyway.failed": "The message was not sent. Retry Send anyway.",
@@ -8529,7 +8614,6 @@ export const en = {
   "compose.sendAnyway.retry": "Retry",
   "compose.sendAnyway.unreviewed":
     "This message was not sent. Your draft is kept. Ask an admin to update Margince, then send again.",
-  "compose.reviewReference": "Review",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",
   "compose.draftUnsupportedHere":
@@ -8541,8 +8625,6 @@ export const en = {
   "compose.mailboxNotSendCapableGoto": "Reconnect your mailbox",
   "compose.sharedUnsubscribeToken":
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
-  "compose.newContact":
-    "{address} is on no record yet. Sending adds it as your contact.",
   "compose.relinkTitle": "Relink this activity",
   "compose.relinkTarget":
     "Search contacts, companies, deals, leads or projects",
@@ -8559,9 +8641,6 @@ export const en = {
   "compose.missingSubject": "Enter a subject.",
   "compose.missingBody": "Enter a message before sending.",
   "compose.missingWhy": "Select the reason for contact.",
-  "compose.reasonSwitchText":
-    "The record already shows another reason for this message.",
-  "compose.reasonSwitch": "Use “{reason}” instead",
   "compose.missingDeal": "Choose the deal this follow-up is about.",
   "compose.actionFailed": "The request failed. Retry.",
 
@@ -18452,6 +18531,16 @@ export const en = {
     "Buyer decision on a document",
   "webhooks.event.deal_room.decision_recorded.when":
     "Never sent today. Kept for receivers that still read older events.",
+  "webhooks.eventGroup.legal_reviews": "Legal reviews",
+  "webhooks.event.legal_review.requested.label": "Legal review requested",
+  "webhooks.event.legal_review.requested.when":
+    "A deal is sent to legal for review.",
+  "webhooks.event.legal_review.decided.label": "Legal review answered",
+  "webhooks.event.legal_review.decided.when":
+    "Legal approves a deal or asks for changes.",
+  "webhooks.event.legal_review.withdrawn.label": "Legal review withdrawn",
+  "webhooks.event.legal_review.withdrawn.when":
+    "A request to legal is taken back.",
   "webhooks.eventGroup.introductions": "Introductions",
   "webhooks.event.intro_request.created.label": "Introduction requested",
   "webhooks.event.intro_request.created.when":
@@ -22582,6 +22671,8 @@ export const en = {
   "legalReview.status.approved": "Approved",
   "legalReview.status.changes_needed": "Changes needed",
   "legalReview.status.withdrawn": "Withdrawn",
+  "legalReview.openQueue": "Open Legal reviews",
+  "legalReview.dismissRequest": "Dismiss",
   "legalReview.queueTitle": "Legal reviews",
   "legalReview.queueOpen": "Waiting",
   "legalReview.queueDecided": "Answered",
@@ -23609,13 +23700,6 @@ export const en = {
   "particulars.translationIntro":
     "Mail and pages in {language} show this text where you fill it in. Advertising that must be in {language} is sent only once the refusal and the advertiser contact are filled in here.",
   "particulars.objectionExample": "Example: {example}",
-  "compose.contentFinding.title": "Advertising rules for this mail",
-  "compose.contentFinding.claim":
-    "“{words}” is a claim you may make only with a proof. Add the name, number and date of the proving document to the mail.",
-  "compose.contentFinding.language":
-    "Write this mail in {language} first. Text in another language goes below it, no larger than the {language} text.",
-  "compose.contentFinding.foreignAdvertiser":
-    "Your company is not set up in {country}. A foreign company that does not operate in {country} must advertise there through an advertising business from {country}. Your company is responsible for this.",
 } as const;
 
 export type MessageKey = keyof typeof en;

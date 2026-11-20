@@ -6,12 +6,15 @@ instruments:
   - name: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
     effective: 2006-03-30
     provision: "arts. 13 and 14"
+    source-url: https://www.gov.cn/zhengce/2022-08/23/content_5722728.htm
   - name: Advertising Law of the PRC
     effective: 2015-09-01
     provision: "art. 43"
+    source-url: https://scjgj.beijing.gov.cn/cxfw/flfgcxfw/ggl/202204/t20220401_2646388.html
   - name: Personal Information Protection Law of the PRC (PIPL)
     effective: 2021-11-01
     provision: "arts. 13 and 17"
+    source-url: https://www.cac.gov.cn/2021-08/20/c_1631050028355286.htm
 reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-exceptions: []
@@ -45,6 +48,71 @@ fixtures:
   - finding: privacy_contact
     triggers: cn/fixtures/notice-without-privacy-contact.md
     clears: cn/fixtures/notice-complete.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
+    provision: "art. 13(2)"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
+    provision: "art. 13(2)"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
+    provision: "art. 13(2)"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
+    provision: "art. 13(2)"
+  - code: subject_label_missing
+    territorial-test: any_sender
+    instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
+    provision: "art. 13(3)"
+  - code: subject_prefix
+    territorial-test: any_sender
+    instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
+    provision: "art. 13(3)"
+  - code: marketing_objection
+    territorial-test: any_sender
+    instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
+    provision: "art. 14(1)"
+  - code: opted_out_after_request
+    territorial-test: any_sender
+    instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
+    provision: "art. 14(1)"
+  - code: objection_route
+    territorial-test: any_sender
+    instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
+    provision: "art. 14(2)"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
+    provision: "art. 14(2)"
+  - code: advertiser_contact
+    territorial-test: any_sender
+    instrument: "Advertising Law of the PRC"
+    provision: "art. 43(2)"
+  - code: consent_withdrawn
+    territorial-test: any_sender
+    instrument: "Personal Information Protection Law of the PRC (PIPL)"
+    provision: "art. 15"
+  - code: lawful_basis_unconfirmed
+    territorial-test: any_sender
+    instrument: "Personal Information Protection Law of the PRC (PIPL)"
+    provision: "art. 13(1)"
+  - code: no_compatible_evidence
+    territorial-test: any_sender
+    instrument: "Personal Information Protection Law of the PRC (PIPL)"
+    provision: "art. 13(1)"
+  - code: controller_identity
+    territorial-test: any_sender
+    instrument: "Personal Information Protection Law of the PRC (PIPL)"
+    provision: "art. 17(1)"
+  - code: privacy_contact
+    territorial-test: any_sender
+    instrument: "Personal Information Protection Law of the PRC (PIPL)"
+    provision: "art. 17(1)"
 ---
 
 # What Chinese law requires of an outbound message

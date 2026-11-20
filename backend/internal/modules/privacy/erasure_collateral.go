@@ -96,6 +96,9 @@ func (e *Eraser) redactSubjectActivities(ctx context.Context, tx pgx.Tx, subject
 	if err != nil {
 		return nil, nil, err
 	}
+	if err := redactSubjectLegalReviewText(ctx, tx, subject.UUID, keys.emails, keys.displayName, reason, causeContactErasure); err != nil {
+		return nil, nil, err
+	}
 	// The same floor assigns each timeline row to erasure or restricted retention.
 	activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities), floor)
 	if err != nil {

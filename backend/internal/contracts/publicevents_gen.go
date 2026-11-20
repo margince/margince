@@ -726,6 +726,9 @@ const (
 	LeadSlaBreached                       SubscribableEventType = "lead.sla_breached"
 	LeadSourceChanged                     SubscribableEventType = "lead_source.changed"
 	LeadUpdated                           SubscribableEventType = "lead.updated"
+	LegalReviewDecided                    SubscribableEventType = "legal_review.decided"
+	LegalReviewRequested                  SubscribableEventType = "legal_review.requested"
+	LegalReviewWithdrawn                  SubscribableEventType = "legal_review.withdrawn"
 	LinkedinAccountChanged                SubscribableEventType = "linkedin_account.changed"
 	LinkedinMatchDecided                  SubscribableEventType = "linkedin_match.decided"
 	LinkedinNetworkImported               SubscribableEventType = "linkedin_network.imported"
@@ -969,6 +972,12 @@ func (e SubscribableEventType) Valid() bool {
 	case LeadSourceChanged:
 		return true
 	case LeadUpdated:
+		return true
+	case LegalReviewDecided:
+		return true
+	case LegalReviewRequested:
+		return true
+	case LegalReviewWithdrawn:
 		return true
 	case LinkedinAccountChanged:
 		return true
@@ -2327,6 +2336,36 @@ type PublicEventLeadUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
+// PublicEventLegalReviewDecided Payload for legal_review.decided: legal answered a request. It carries the outcome and none of the reviewer's comments.
+type PublicEventLegalReviewDecided struct {
+	// DealId The deal under review.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// Outcome approved or changes_needed.
+	Outcome string `json:"outcome"`
+
+	// ReviewId The review that was answered.
+	ReviewId openapi_types.UUID `json:"review_id"`
+}
+
+// PublicEventLegalReviewRequested Payload for legal_review.requested: a deal's side asked legal to review the deal. It names the deal and the review and nothing the requester wrote: a receiver reads the note under its own scope.
+type PublicEventLegalReviewRequested struct {
+	// DealId The deal under review.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// ReviewId The review the request opened.
+	ReviewId openapi_types.UUID `json:"review_id"`
+}
+
+// PublicEventLegalReviewWithdrawn Payload for legal_review.withdrawn: the deal's side took back an open request.
+type PublicEventLegalReviewWithdrawn struct {
+	// DealId The deal under review.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// ReviewId The review that was taken back.
+	ReviewId openapi_types.UUID `json:"review_id"`
+}
+
 // PublicEventLinkedinAccountChanged Payload for linkedin_account.changed. A member recorded or corrected their own LinkedIn authorization (contacts/linkedinaccount.go's SaveMyLinkedInAccount). Consent to read a professional network is the same class of fact as consent.changed. So it is audited and published rather than written silently. The payload leaves out the profile URL, which is the member's own identifier. A subscriber needs to know that the authorization moved, not what their LinkedIn address is.
 type PublicEventLinkedinAccountChanged struct {
 	// Connected Whether an authorization is on record after this event.
@@ -3481,6 +3520,18 @@ func (PublicEventLeadUpdated) EventType() string { return "lead.updated" }
 
 func (PublicEventLeadUpdated) EntityType() string { return "lead" }
 
+func (PublicEventLegalReviewDecided) EventType() string { return "legal_review.decided" }
+
+func (PublicEventLegalReviewDecided) EntityType() string { return "legal_review" }
+
+func (PublicEventLegalReviewRequested) EventType() string { return "legal_review.requested" }
+
+func (PublicEventLegalReviewRequested) EntityType() string { return "legal_review" }
+
+func (PublicEventLegalReviewWithdrawn) EventType() string { return "legal_review.withdrawn" }
+
+func (PublicEventLegalReviewWithdrawn) EntityType() string { return "legal_review" }
+
 func (PublicEventLinkedinAccountChanged) EventType() string { return "linkedin_account.changed" }
 
 func (PublicEventLinkedinAccountChanged) EntityType() string { return "user" }
@@ -3829,6 +3880,9 @@ var PublicEventVersions = map[string]int{
 	"lead.updated":                              1,
 	"lead_disqualify_reason.changed":            1,
 	"lead_source.changed":                       1,
+	"legal_review.decided":                      1,
+	"legal_review.requested":                    1,
+	"legal_review.withdrawn":                    1,
 	"linkedin_account.changed":                  1,
 	"linkedin_match.decided":                    1,
 	"linkedin_network.imported":                 1,
@@ -3985,6 +4039,9 @@ var PublicEventSamples = map[string]string{
 	"lead.updated":                              "{\"changed_fields\":{}}",
 	"lead_disqualify_reason.changed":            "{\"change\":\"created\",\"label\":\"Sample label\",\"reason_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead_source.changed":                       "{\"change\":\"created\",\"key\":\"Sample key\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"legal_review.decided":                      "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"outcome\":\"Sample outcome\",\"review_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"legal_review.requested":                    "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"review_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"legal_review.withdrawn":                    "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"review_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"linkedin_account.changed":                  "{\"connected\":true,\"has_profile_url\":true}",
 	"linkedin_match.decided":                    "{\"employer_written\":true,\"profile_url_written\":true,\"title_written\":true}",
 	"linkedin_network.imported":                 "{\"imported\":1,\"rows\":1,\"skipped\":1}",

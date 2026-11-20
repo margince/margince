@@ -3,17 +3,35 @@ jurisdiction: be
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Code de droit économique / Wetboek van economisch recht"
     provision: "art. XII.13"
+    source-url: https://www.ejustice.just.fgov.be/eli/loi/2013/02/28/2013A11134/justel
   - name: "Arrêté royal du 4 avril 2003 visant à réglementer l'envoi de publicités par courrier électronique"
 fixtures:
   - finding: objection_route
     triggers: be/fixtures/advertising-without-objection-route.md
     clears: be/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Code de droit économique / Wetboek van economisch recht"
+    provision: "art. XII.13, § 1"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Code de droit économique / Wetboek van economisch recht"
+    provision: "art. XII.13, § 1"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Code de droit économique / Wetboek van economisch recht"
+    provision: "art. XII.13, § 1"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Code de droit économique / Wetboek van economisch recht"
+    provision: "art. XII.13, § 1"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Code de droit économique / Wetboek van economisch recht"
+    provision: "art. XII.13, § 2"
 ---
 
 # What Belgian law requires of an outbound message

@@ -38,13 +38,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/approvalseat"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -225,6 +226,10 @@ func (a *ApprovalNotify) announceToSeat(
 			return err
 		}
 		line := approvalNoticeFor(seat, approvalID, staged.Summary, parts, approvalNoticeTarget(staged), metadata)
+		if approvalsubject.InAppOnly(staged.Kind) {
+			_, err := a.notices.CreateTx(ctx, tx, line)
+			return err
+		}
 		return recordApprovalNotice(ctx, tx, a.notices.CreateTx, a.mail, wsID, line)
 	})
 }
@@ -295,21 +300,7 @@ func stageNoticeMail(
 func (a *ApprovalNotify) seatContext(
 	ctx context.Context, wsID, seat ids.UUID,
 ) (context.Context, bool, error) {
-	rbac, seatType, err := a.identity.EffectiveAuthority(ctx, wsID, seat)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, fmt.Errorf("resolving the seat's authority: %w", err)
-	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          principal.HumanIDPrefix + seat.String(),
-		UserID:      seat,
-		SeatType:    seatType,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	}), true, nil
+	return approvalseat.Context(ctx, a.identity, wsID, seat)
 }
 
 // approvalNoticeFor is the line one decidable seat is shown.

@@ -44,9 +44,6 @@ info:
     GET /v1/stage-automation/report:
       release: ""
       announced_at: ""
-    GET /v1/weekly-reviews/team:
-      release: ""
-      announced_at: ""
     PATCH /v1/lead-sources/{id}:
       release: ""
       announced_at: ""
@@ -22659,12 +22656,9 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamWeeklyReview
-      deprecated: true
       security: [{bearerAuth: []}]
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
-      description: |-
-        Deprecated: no screen reads the team week. The operation stays callable through
-        the notice window in the API compatibility policy.
+      description: Home, Weekly reads it when a lead or an overseer picks a team.
       parameters:
         - name: team
           in: query
@@ -42712,8 +42706,8 @@ components:
       description: |-
         The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
         for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-        Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-        review is overdue or not yet done, or the law has not taken effect or has expired. On a
+        Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+        pack's next review is overdue, or the law has not taken effect or has expired. On a
         review it is the citation shown when the refusal was assessed, never today's.
       required: [instrument, provision, source_url]
       properties:
@@ -52946,7 +52940,7 @@ components:
           description: |-
             Every warning this review is served with to this reader; a decision may name any of their
             versions and no other. `warning` is always among them. The sender of a held message is
-            also served the composer's short warning (`inline-v1`), which a decision from any other
+            also served the composer's short warning (`inline-v2`), which a decision from any other
             reader is refused for naming.
     OverrideWarning:
       type: object
@@ -53452,6 +53446,7 @@ components:
         name: {type: string, description: 'The class, e.g. `commercial_correspondence`.'}
         keep: {type: string, description: 'The ISO 8601 period the class keeps, e.g. `P6Y`.'}
         from_year_end: {type: boolean, description: 'The period counts from the end of the calendar year.'}
+        law: {type: string, description: 'The statute and article that set the period. Absent when the pack names none.'}
     RetentionFloorPolicy:
       type: object
       description: |-
@@ -56284,8 +56279,8 @@ components:
           $ref: '#/components/schemas/TeamWeekReach'
           deprecated: true
           description: |-
-            Deprecated: no screen opens the team week, and the operation it describes,
-            `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
+            Deprecated: read `team_week` from `GET /me`, which carries the same answer
+            without assembling the day.
         filter: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming, website_inquiries], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.'}
         view: {type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.'}
         summary: {$ref: '#/components/schemas/WorklistSummary'}

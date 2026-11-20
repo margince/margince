@@ -2,6 +2,10 @@
 jurisdiction: de
 version: 2
 created: 2026-09-04
+instruments:
+  - name: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
+    provision: "§ 7"
+    source-url: https://www.gesetze-im-internet.de/uwg_2004/__7.html
 record-confirmation-without-news: true
 reply-window: 8760h
 deal-follow-up-window: 4368h
@@ -29,6 +33,27 @@ fixtures:
   - finding: privacy_contact
     triggers: de/fixtures/invoice-without-privacy-contact.md
     clears: de/fixtures/invoice-without-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
+    provision: "§ 7 Abs. 2 Nr. 2"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
+    provision: "§ 7 Abs. 2 Nr. 2"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
+    provision: "§ 7 Abs. 2 Nr. 2"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
+    provision: "§ 7 Abs. 2 Nr. 2"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
+    provision: "§ 7 Abs. 2 Nr. 3 Buchst. c"
 ---
 
 # What German law requires of an outbound message

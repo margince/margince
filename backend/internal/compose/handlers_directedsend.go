@@ -79,7 +79,7 @@ func (h directedSendHandlers) DirectCommunicationSend(
 		Acknowledged:       body.Acknowledged,
 		ShownReasons:       shown,
 	})
-	sendmetrics.ObserveSendAnyway(body.WarningVersion, err)
+	sendmetrics.ObserveSendAnyway(err)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

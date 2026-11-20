@@ -3,11 +3,12 @@
 
 import { SegmentedControl } from "../../design-system/atoms";
 import { useT } from "../../i18n";
+import { WeekTeamSelect } from "./brief.teamselect";
 import { type BriefAddress, type BriefView, VIEWS } from "./brief.view";
 
 import "./brief.dials.css";
 
-// The one dial above the page: the day or the week.
+// The dials above the page: the day or the week, and on Weekly whose week.
 export function BriefDials({
   address,
   onChange,
@@ -28,6 +29,12 @@ export function BriefDials({
         }}
         onChange={(view) => onChange({ ...address, view })}
       />
+      {address.view === "weekly" && (
+        <WeekTeamSelect
+          team={address.team}
+          onChange={(team) => onChange({ ...address, team })}
+        />
+      )}
     </div>
   );
 }
