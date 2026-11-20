@@ -14,8 +14,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -23,43 +25,51 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fail("usage: mcpe2ecmd report | stamps -out FILE | newly-stale -base DIR")
+	if err := run(os.Args[1:], os.Stdout); err != nil {
+		fmt.Fprintln(os.Stderr, "mcpe2ecmd: "+err.Error())
+		os.Exit(1)
 	}
-	flags := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
+}
+
+func run(args []string, stdout io.Writer) error {
+	if len(args) < 1 {
+		return errors.New("usage: mcpe2ecmd report | stamps -door mcp|rest -out FILE | newly-stale -base DIR")
+	}
+	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	root := flags.String("root", "..", "the repository root (relative to backend/)")
 	out := flags.String("out", "", "stamps: the file to write")
 	base := flags.String("base", "", "newly-stale: the base tree's repository root")
 	door := flags.String("door", string(mcpe2e.DoorMCP), "stamps: the door the run reaches Margince through (mcp or rest)")
-	if err := flags.Parse(os.Args[2:]); err != nil {
-		fail(err.Error())
+	if err := flags.Parse(args[1:]); err != nil {
+		return err
 	}
-	switch os.Args[1] {
+	var text string
+	switch args[0] {
 	case "report":
 		lines, err := mcpe2e.Report(*root)
 		if err != nil {
-			fail(err.Error())
+			return err
 		}
-		emit(mcpe2e.Summarise(lines))
+		text = mcpe2e.Summarise(lines)
 	case "stamps":
 		if *out == "" {
-			fail("stamps needs -out")
+			return errors.New("stamps needs -out")
 		}
-		if err := mcpe2e.WriteStamps(*root, mcpe2e.Door(*door), *out); err != nil {
-			fail(err.Error())
-		}
+		return mcpe2e.WriteStamps(*root, mcpe2e.Door(*door), *out)
 	case "newly-stale":
 		if *base == "" {
-			fail("newly-stale needs -base")
+			return errors.New("newly-stale needs -base")
 		}
 		lines, err := mcpe2e.NewlyStale(*base, *root)
 		if err != nil {
-			fail(err.Error())
+			return err
 		}
-		emit(newlyStaleMarkdown(lines))
+		text = newlyStaleMarkdown(lines)
 	default:
-		fail("unknown command " + os.Args[1])
+		return errors.New("unknown command " + args[0])
 	}
+	_, err := io.WriteString(stdout, text)
+	return err
 }
 
 func newlyStaleMarkdown(lines []mcpe2e.Line) string {
@@ -76,15 +86,4 @@ func newlyStaleMarkdown(lines []mcpe2e.Line) string {
 	b.WriteString("\nThis reports and never blocks. A paid run of these cases (`make e2e-llm`) " +
 		"stamps them again; list them in the PR body if you do not run it.\n")
 	return b.String()
-}
-
-func emit(text string) {
-	if _, err := os.Stdout.WriteString(text); err != nil {
-		fail("writing the report: " + err.Error())
-	}
-}
-
-func fail(message string) {
-	fmt.Fprintln(os.Stderr, "mcpe2ecmd: "+message)
-	os.Exit(1)
 }

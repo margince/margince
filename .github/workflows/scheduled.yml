@@ -1141,7 +1141,8 @@ jobs:
                 (cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished \
                   -update-mcp-tool-coverage -count=1)
                 git add -A -- docs/reference "$verdicts"
-                python3 e2e/llm/verdictdiff.py "$OUT/llm-before" "$verdicts" > "$OUT/llm-table.md"
+                # It opens only the repository or the temp folder, so the runner's temp is named as that.
+                TMPDIR="$RUNNER_TEMP" python3 e2e/llm/verdictdiff.py "$OUT/llm-before" "$verdicts" > "$OUT/llm-table.md"
                 ;;
             esac
             git diff --cached --binary > "$OUT/$part.patch"

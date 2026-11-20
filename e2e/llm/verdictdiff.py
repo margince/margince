@@ -12,14 +12,19 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import check  # noqa: E402  — the path containment every lane script shares
+
 
 def _read(directory):
     out = {}
+    directory = check.checked_path(directory)
     if not os.path.isdir(directory):
         return out
     for file in sorted(os.listdir(directory)):
         if file.endswith(".json"):
-            with open(os.path.join(directory, file), encoding="utf-8") as handle:
+            with open(check.checked_path(os.path.join(directory, file)), encoding="utf-8") as handle:
                 verdict = json.load(handle)
             out[verdict["scenario"]] = verdict
     return out
