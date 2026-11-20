@@ -66,20 +66,25 @@ function recordAccessQuery(kind: AccessKind, id: string) {
 }
 
 /**
- * The record's owner, as the access answer names it. It observes the read the
- * panel makes, so the share screen asks for it once.
+ * The record's owner, as the access answer names it: undefined until that
+ * answer is in, null where it names none or is not asked. A failed read is
+ * null too, so the share screen offers everyone rather than no one. It
+ * observes the read the panel makes, so the share screen asks for it once.
  */
 export function useRecordOwnerId(
   kind: string,
   id: string,
   enabled: boolean,
-): string | undefined {
+): string | null | undefined {
   const accessKind = isAccessKind(kind) ? kind : undefined;
+  const asked = enabled && accessKind !== undefined;
   const query = useInfiniteQuery({
     ...recordAccessQuery(accessKind ?? "contact", id),
-    enabled: enabled && accessKind !== undefined,
+    enabled: asked,
   });
-  return accessKind ? (query.data?.pages[0]?.owner_id ?? undefined) : undefined;
+  if (!asked || query.isError) return null;
+  const answer = query.data?.pages[0];
+  return answer ? (answer.owner_id ?? null) : undefined;
 }
 
 async function fetchAccess(

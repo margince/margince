@@ -49,7 +49,7 @@ import {
   WhoCanSeePanel,
 } from "./recordaccesspanel";
 import { ShareConfirmation } from "./share.confirmation";
-import { shareCandidates } from "./share.roster";
+import { pickedToGrant, shareCandidates } from "./share.roster";
 import {
   ApprovalRequiredError,
   RevokeGrantDialog,
@@ -114,10 +114,8 @@ export function ShareScreenBody({
   } | null>(null);
 
   const ownerId = useRecordOwnerId(recordType, recordId, !contactsOnly);
-  const filteredRoster = useMemo(
-    () => shareCandidates(roster, term, ownerId),
-    [roster, term, ownerId],
-  );
+  const filteredRoster = shareCandidates(roster, term, ownerId);
+  const offered = pickedToGrant(subject, ownerId);
 
   function resetForm() {
     setTerm("");
@@ -265,9 +263,9 @@ export function ShareScreenBody({
           actions={
             <Button
               variant="primary"
-              disabled={!subject}
+              disabled={!offered}
               pending={grant.isPending}
-              onClick={() => subject && submit(subject)}
+              onClick={() => offered && submit(offered)}
               data-testid="share-grant-submit"
             >
               {subject &&

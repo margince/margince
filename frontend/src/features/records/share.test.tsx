@@ -156,6 +156,27 @@ function installBaseFetch(
   );
 }
 
+// The access answer of a contact owned by `ownerId`.
+function ownedAccess(ownerId: string): Response {
+  return jsonResponse({
+    visibility: "owner",
+    owner_id: ownerId,
+    archived: false,
+    detail: false,
+    you: {
+      can_change: true,
+      read_reasons: [{ code: "owner" }],
+      change_reasons: [{ code: "owner" }],
+    },
+    data: [],
+    page: { has_more: false, total: 0 },
+    group_counts: { owner: 0, shared: 0, team_shared: 0, everyone: 0 },
+    can_change_count: 0,
+    team_access_count: 0,
+    refresh_at: null,
+  });
+}
+
 describe("ShareScreen", () => {
   it("defaults a new team share to lasting write access and a colleague share to seven days of read access", async () => {
     installBaseFetch();
@@ -361,32 +382,32 @@ describe("ShareScreen", () => {
   });
 
   it("leaves a contact's owner out of the colleagues to share it with", async () => {
-    installBaseFetch({
-      "/contacts/c-1/access": () =>
-        jsonResponse({
-          visibility: "owner",
-          owner_id: "u-1",
-          archived: false,
-          detail: false,
-          you: {
-            can_change: true,
-            read_reasons: [{ code: "owner" }],
-            change_reasons: [{ code: "owner" }],
-          },
-          data: [],
-          page: { has_more: false, total: 0 },
-          group_counts: { owner: 0, shared: 0, team_shared: 0, everyone: 0 },
-          can_change_count: 0,
-          team_access_count: 0,
-          refresh_at: null,
-        }),
-    });
+    installBaseFetch({ "/contacts/c-1/access": () => ownedAccess("u-1") });
     render(<ShareScreen recordType="contact" recordId="c-1" />);
 
     await screen.findByRole("button", { name: /Mor Adler/ });
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull(),
     );
+  });
+
+  it("offers no colleague until the contact's owner is known", async () => {
+    let answerAccess: (response: Response) => void = () => {};
+    installBaseFetch({
+      "/contacts/c-1/access": () =>
+        new Promise<Response>((resolve) => {
+          answerAccess = resolve;
+        }),
+    });
+    render(<ShareScreen recordType="contact" recordId="c-1" />);
+
+    await screen.findByRole("button", { name: /Deal Desk/ });
+    expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Mor Adler/ })).toBeNull();
+
+    answerAccess(ownedAccess("u-1"));
+    await screen.findByRole("button", { name: /Mor Adler/ });
+    expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull();
   });
 
   // POST /record-grants is idempotent on
