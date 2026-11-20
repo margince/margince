@@ -352,7 +352,9 @@ function PlanHistory({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
               key: "reason",
               header: t("goals.history.reason"),
               grow: true,
-              render: (event) => event.reason,
+              render: (event) => (
+                <span className="goal-reason-text">{event.reason}</span>
+              ),
             },
             {
               key: "total",

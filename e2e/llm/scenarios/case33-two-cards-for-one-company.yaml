@@ -47,6 +47,7 @@
 # wrong. What is being measured is which verb goes on which record, so the
 # permission is given and the reporting obligation is kept.
 name: case33_two_cards_for_one_company
+title: Two cards for one company, and one that is gone
 criteria: [1, 2, 3]
 
 # WRITES: the author's own statement that this case changes the world. It is not

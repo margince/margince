@@ -3,6 +3,11 @@
 
 import { useLayoutEffect, useState } from "react";
 
+/** Whether a box's text runs past its height, with a pixel of rounding slack. */
+export function hidesLines(box: Element): boolean {
+  return box.scrollHeight > box.clientHeight + 1;
+}
+
 /**
  * Whether a line-clamped box hides any of its text, measured at its own width.
  * A guess by length leaves clipped text with no control to reach it. Pass the
@@ -22,7 +27,7 @@ export function useLineClamped(
     }
     let live = true;
     const measure = () => {
-      if (live) setClipped(box.scrollHeight > box.clientHeight + 1);
+      if (live) setClipped(hidesLines(box));
     };
     measure();
     // A late web font rewraps the text inside a box whose height the clamp

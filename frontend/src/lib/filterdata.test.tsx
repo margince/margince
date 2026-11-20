@@ -3,9 +3,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "../i18n";
 import { en, type MessageKey } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import {
@@ -110,9 +111,149 @@ describe("the vocabulary read", () => {
 
     await waitFor(() => expect(result.current.wanted.isSuccess).toBe(true));
     expect(result.current.unwanted.status).toBe("pending");
-    expect(seen.filter((url) => url.includes("/filters/vocabulary"))).toEqual(
-      [],
+    expect(
+      seen.filter(
+        (url) =>
+          url.includes("/filters/vocabulary") || url.includes("/custom-fields"),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("naming a custom field from its catalog", () => {
+  const TIER = {
+    name: "cf_tier",
+    type: "picklist",
+    operators: ["eq"],
+    custom: true,
+  };
+
+  // The vocabulary and the catalog as the server answers them; `labels` is the
+  // catalog's current label of cf_tier, absent when the catalog lacks the field.
+  function catalogHarness(labels: { label?: string; de?: string }) {
+    const seen: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        seen.push(url);
+        const body = url.includes("/custom-fields")
+          ? {
+              data:
+                labels.label === undefined
+                  ? []
+                  : [
+                      {
+                        column_name: "cf_tier",
+                        label: labels.label,
+                        label_translations: labels.de ? { de: labels.de } : {},
+                        object: "contact",
+                        type: "picklist",
+                      },
+                    ],
+              page: { has_more: false },
+            }
+          : {
+              resource: url.includes("resource=company")
+                ? "company"
+                : "contact",
+              fields: [...VOCAB_BODY.fields, TIER],
+            };
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
     );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    return { seen, client };
+  }
+
+  function wrapperFor(client: QueryClient, locale: "en" | "de" = "en") {
+    return ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial={locale}>{children}</LocaleProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  const t = (key: MessageKey) => en[key];
+  const tierLabel = (fields: readonly VocabularyField[] | undefined) => {
+    const tier = fields?.find((field) => field.name === "cf_tier");
+    return tier && fieldLabel(tier, t);
+  };
+
+  it("calls a custom field by the label its admin gave it", async () => {
+    const { client } = catalogHarness({ label: "Loyalty Tier" });
+    const { result } = renderHook(() => useFilterVocabulary("contact"), {
+      wrapper: wrapperFor(client),
+    });
+
+    await waitFor(() =>
+      expect(tierLabel(result.current.data?.fields)).toBe("Loyalty Tier"),
+    );
+  });
+
+  it("follows a rename once the catalog is read again", async () => {
+    const labels = { label: "Loyalty Tier" };
+    const { client } = catalogHarness(labels);
+    const { result } = renderHook(() => useFilterVocabulary("contact"), {
+      wrapper: wrapperFor(client),
+    });
+    await waitFor(() =>
+      expect(tierLabel(result.current.data?.fields)).toBe("Loyalty Tier"),
+    );
+
+    labels.label = "Customer Tier";
+    await act(() =>
+      client.invalidateQueries({ queryKey: ["custom-fields", "contact"] }),
+    );
+
+    await waitFor(() =>
+      expect(tierLabel(result.current.data?.fields)).toBe("Customer Tier"),
+    );
+  });
+
+  it("reads the label in the reader's language where the admin gave one", async () => {
+    const { client } = catalogHarness({
+      label: "Loyalty Tier",
+      de: "Treuestufe",
+    });
+    const { result } = renderHook(() => useFilterVocabulary("contact"), {
+      wrapper: wrapperFor(client, "de"),
+    });
+
+    await waitFor(() =>
+      expect(tierLabel(result.current.data?.fields)).toBe("Treuestufe"),
+    );
+  });
+
+  it("keeps the column's words for a field the catalog does not name", async () => {
+    const { client } = catalogHarness({});
+    const { result } = renderHook(() => useFilterVocabulary("contact"), {
+      wrapper: wrapperFor(client),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+      expect(client.getQueryState(["custom-fields", "contact"])?.status).toBe(
+        "success",
+      );
+    });
+    expect(tierLabel(result.current.data?.fields)).toBe("tier");
+  });
+
+  it("asks no catalog for a kind an extension declared", async () => {
+    const { seen, client } = catalogHarness({ label: "Loyalty Tier" });
+    const { result } = renderHook(
+      () => useFilterVocabulary("ext:fleet:vehicle"),
+      { wrapper: wrapperFor(client) },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(seen.filter((url) => url.includes("/custom-fields"))).toEqual([]);
   });
 });
 

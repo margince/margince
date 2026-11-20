@@ -155,6 +155,9 @@ type SARPackage struct {
 	// about somebody that they would have no other way to discover.
 	RequestSettlements   []map[string]any `json:"request_settlements"`
 	CommitmentAdmissions []map[string]any `json:"commitment_admissions"`
+	// LegalReviews is each request to legal about a deal the subject holds a stake
+	// in, with the requester's note and the reviewer's comments.
+	LegalReviews []map[string]any `json:"legal_reviews"`
 	// StageEvidence is what a model or a record concluded about a deal from the
 	// subject's messages. It carries the quoted words, whether they agreed or
 	// proposed, and how sure the writer was. Owed on ReplyJudgements' ground, because it

@@ -122,11 +122,11 @@ func TestANarrowPressBindsOnlyItsOwnPurpose(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 
-	// Two marketing purposes, neither requiring DOI: a lead subject cannot be
-	// granted a DOI purpose at all (TestLeadScopedDOIGrantIsRefused), so a
-	// plain purpose is what lets both the pressed one and its sibling be
-	// granted the same way — the only way a later denial proves the STOP
-	// bound rather than merely reflecting a grant that was never there.
+	// Two marketing purposes, neither requiring DOI: a lead cannot be granted a
+	// DOI purpose without a spent link (TestLeadScopedDOIGrantWithoutALinkIsRefused).
+	// A plain purpose lets both the pressed one and its sibling be granted the
+	// same way. Only then does a later denial prove the stop bound, rather than
+	// reflect a grant that was never there.
 	var pressed, other ids.PurposeID
 	if err := e.owner.QueryRow(ctx, `
 		INSERT INTO consent_purpose (key, label, requires_double_opt_in)

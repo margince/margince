@@ -6,6 +6,7 @@ instruments:
   - name: Personal Data Protection Act
     effective: 2012-10-01
     provision: "arts. 19 and 20"
+    source-url: https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=I0050021
 reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-exceptions: []
@@ -16,6 +17,19 @@ fixtures:
   - finding: objection_route
     triggers: tw/fixtures/advertising-without-objection-route.md
     clears: tw/fixtures/advertising-complete.md
+citations:
+  - code: marketing_objection
+    territorial-test: any_sender
+    instrument: "Personal Data Protection Act"
+    provision: "art. 20(2)"
+  - code: opted_out_after_request
+    territorial-test: any_sender
+    instrument: "Personal Data Protection Act"
+    provision: "art. 20(2)"
+  - code: objection_route
+    territorial-test: any_sender
+    instrument: "Personal Data Protection Act"
+    provision: "art. 20(3)"
 ---
 
 # What Taiwanese law requires of an outbound message

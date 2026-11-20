@@ -241,9 +241,12 @@
 }
 
 .rmap-panel {
+  min-width: 0;
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   padding: var(--space-4);
+  /* Names and route words are data, and need not hold a space to break at. */
+  overflow-wrap: anywhere;
 }
 
 .rmap-panel-title {

@@ -25,6 +25,43 @@ fixtures:
   - finding: advertiser_contact
     triggers: hk/fixtures/advertising-without-advertiser-contact.md
     clears: hk/fixtures/advertising-complete.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A"
+    provision: "s. 35E"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A"
+    provision: "s. 35E"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A"
+    provision: "s. 35E"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A"
+    provision: "s. 35E"
+  - code: marketing_objection
+    territorial-test: any_sender
+    instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A"
+    provision: "s. 35G"
+  - code: opted_out_after_request
+    territorial-test: any_sender
+    instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A"
+    provision: "s. 35G"
+  - code: advertiser_contact
+    territorial-test: any_sender
+    instrument: "Unsolicited Electronic Messages Ordinance (Cap. 593)"
+    provision: "s. 8"
+  - code: objection_route
+    territorial-test: any_sender
+    instrument: "Unsolicited Electronic Messages Ordinance (Cap. 593)"
+    provision: "s. 9"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Unsolicited Electronic Messages Ordinance (Cap. 593)"
+    provision: "s. 9"
 ---
 
 # What Hong Kong law requires of an outbound message

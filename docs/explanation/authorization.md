@@ -19,7 +19,7 @@ module code is reached by:
 
 - the REST surface (`internal/compose/server.go`),
 - the MCP tool surface (`/mcp` on the api),
-- agent runs (the runner of Surface B, acting under a passport; see [agent-surface.md](agent-surface.md)),
+- agent runs (the runner of the night helpers, acting under a passport; see [agent-surface.md](agent-surface.md)),
 - workers (retention, the job that checks data still agrees, the close date sweep, the readers of the
   outbox relay),
 - compose flows (briefs, reports, exports, enrich).

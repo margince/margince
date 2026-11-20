@@ -29,6 +29,7 @@
 # leaves the vocabulary split and every record filed under a word nobody else
 # uses.
 name: case30_a_word_for_it
+title: A word for the ones from the fair
 criteria: [1, 2]
 
 # WRITES: the author's own statement that this case changes the world. It is not

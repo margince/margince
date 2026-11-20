@@ -82,7 +82,7 @@ call. It runs a scenario near the pass line more often (see below). Then it judg
 verdict:
 
 ```text
-cold_start: certified (reliability=1.00 judge_score_p50=100 self_judged=false)
+cold_start: certified (reliability=1.00 [0.65, 1.00] judge_score_p50=100 self_judged=false)
 ```
 
 `self_judged` is `true` when the candidate and the judge are the **same model family**: from the same
@@ -183,11 +183,11 @@ sites that nothing has certified yet:
 ```text
 AI certification readiness: 1 of 36 shipped sites carry a current record.
 
-SITE                      SCOPE            STATUS   SCENARIOS  BAND       PROVIDER  MODEL             ENV        RUNS  PASSED  RELIABILITY  ACCEPTED  WRONG_ANSWER  INVALID  ABSTAINED
-agent_loop/morning_brief  single_turn      absent   -          -          -         -                 -          -     -       -            -         -             -        -
-cold_start/acts           single_turn      current  3/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
-cold_start/company        single_turn      partial  9/10       certified  gemini    gemini-3.5-flash  eu_hosted  27    27      1.00         27        0             0        0
-rate_extract/fx           full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
+SITE                      SCOPE            STATUS   SCENARIOS  BAND       PROVIDER  MODEL             ENV        RUNS  PASSED  RELIABILITY        ACCEPTED  WRONG_ANSWER  INVALID  ABSTAINED
+agent_loop/morning_brief  single_turn      absent   -          -          -         -                 -          -     -       -                  -         -             -        -
+cold_start/acts           single_turn      current  3/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00 [0.65, 1.00]  3         0             0        0
+cold_start/company        single_turn      partial  9/10       certified  gemini    gemini-3.5-flash  eu_hosted  27    27      1.00 [0.94, 1.00]  27        0             0        0
+rate_extract/fx           full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00 [0.65, 1.00]  3         0             0        0
 ```
 
 **Each row counts only its own site.** The run writes one record per task, and a task
@@ -202,9 +202,8 @@ run can be `ACCEPTED` and still fail, when the scenario asked the model to hold 
 There are four states, and each one means something different:
 
 - **`current`**: the run measured every scenario this site ships, and the stamp of each one is the stamp
-  this build makes. So the band describes the request this build sends. A stamp covers three
-  things: the scenario, the request the site builds from it, and how a run is graded. That last one is
-  the request and the rule of the grader.
+  this build makes. So the band describes the request this build sends. A stamp covers the scenario, the
+  request the site builds from it, and how a run is graded (the request and rule of the grader).
 - **`partial`**: all that the record measured is still current, but the corpus has new cases since then.
   A `partial` record is wrong about nothing; it only misses the new cases. To fix it costs only the new
   scenarios, not the whole task.
@@ -237,9 +236,8 @@ by its task stamp, and reads `-` there.
   measured either.
 
 **Every row is one (provider, model, `env`) binding.** A `certified` band lets that deployment go live,
-and says nothing about another one. That is why the binding is in the row. The report helps a human
-decide on a release, and it gates nothing. It always returns 0, because the lane it reports on is paid
-and you run it by hand.
+and says nothing about another one. The report helps a human decide on a release, and it gates nothing. It
+always returns 0, because the lane it reports on is paid and you run it by hand.
 
 A `gemini_vertex` rung with no record of its own is graded by the `gemini` record for the same model,
 under `cloud_frontier`. Vertex serves the same model on the same wire, so it gets the request
@@ -328,8 +326,10 @@ to three times, and the run takes the middle score. The band rules, the score li
 is in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go): edit it, change
 `gradingRule`, and generate again.
 
-`reliability` is the share of runs with a HardPass, and the number to watch over time. When the model
-that served a run is not the same across runs or calls, the record **does not count**.
+`reliability` is the share of runs with a HardPass. When the model that served a run is not the same across runs
+or calls, the record **does not count**. Reports print it with its range, as `0.67 [0.32, 0.89]` for 2 of 3 runs,
+from `wilsonBounds`, which the verdict also uses. Count a change as real only when the two ranges do not meet or
+the band changes. Otherwise call it "not measurable at this sample".
 
 A run is not always one model call: a site may try again, fall back, or turn a tool loop. All that the
 run is judged on and paid for is added up across all of those calls. One degraded call degrades the

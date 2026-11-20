@@ -9,18 +9,19 @@ govern it (the autonomy tiers, passports, and the one admission gate) are in
 is put together. Which actions an agent may take at all is
 [An agent does what its user does](../principles/an-agent-does-what-its-user-does.md).
 
-## Two surfaces, one gate
+## Two callers, one gate
 
 An agent reaches the tool surface in one of two ways, and both go through the same registry and the
 same admission gate. No path skips the gate.
 
-- **Surface A**: an *outside* agent over MCP (`/mcp`, Streamable HTTP on the api), acting under a passport.
-- **Surface B**: *our own* runner, the reason, act, observe loop that runs on its own (for example the
-  passes that run while the team sleeps).
+- **Your AI assistant**: an AI tool a user connects over MCP (`/mcp`, Streamable HTTP on the api),
+  acting under a passport.
+- **The night helpers**: our own runner, the reason, act, observe loop that runs on its own while the
+  team sleeps. They are part of Margince AI.
 
 Both call every action through `agents.Registry.Invoke`, which admits each call through `platform/auth`
 (**scope ∧ seat ∧ tier**) before any handler runs. A 🟢 call runs and is audited; a 🟡 call stages an
-approval that a human must confirm first. Both surfaces share the gate because both call the same
+approval that a human must confirm first. Both callers share the gate because both call the same
 registry, so nothing else has to keep them in line.
 
 Most verbs that change data run on their own (🟢). `enrich` stages for approval (🟡), because the model
@@ -71,7 +72,7 @@ when that is smaller. A human's upload keeps the route's own limit. An agent rea
 scheduled agent's tool list names any tool whose input bound is over 1 MiB. The size and type bounds
 are in [configuration.md](../reference/feature-settings.md#uploads).
 
-## The reason-act-observe loop (Surface B)
+## The reason-act-observe loop (the night helpers)
 
 The runner (`internal/modules/agents/runner/`) is where the model proposes and the tool surface decides.
 Each turn of the loop:
@@ -103,11 +104,11 @@ itself does not.
 Some acts cannot be taken back from the chat, such as a send, a merge or an archive. The contract marks
 their tool `ask_user_first`. Who acts on that mark depends on the surface.
 
-- **An MCP client (Surface A).** `DescribeForClient` (`internal/modules/agents/toollist.go`) adds a
+- **Your AI assistant, over MCP.** `DescribeForClient` (`internal/modules/agents/toollist.go`) adds a
   line to the tool's description: get the user's yes before the call, unless they asked for it. The
   server cannot check that the model asked. A change to many records also asks for its go-ahead in a
   chat form, when the client can show one ([mcp-protocol.md](../reference/mcp-protocol.md)).
-- **The runner (Surface B).** No one is there to answer, so the run is never told to ask. Its tool list
+- **The runner of the night helpers.** No one is there to answer, so the run is never told to ask. Its tool list
   carries each tool's own text, with no line from `DescribeForClient`. It calls `Registry.Invoke`
   directly, and only the MCP server sets a call up for a form. So no form can reach a run, and a change
   to many records goes ahead as it does for a client that cannot show one.

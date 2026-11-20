@@ -906,6 +906,7 @@ public.activity_review_template.trg_activity_review_template_updated CREATE TRIG
 public.activity_review_template.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_template.version integer NOT NULL gen=- def=1
 public.activity_review_template_live_key CREATE UNIQUE INDEX activity_review_template_live_key ON public.activity_review_template USING btree (key) WHERE (archived_at IS NULL)
+public.activity_review_template_one_active_per_outcome CREATE UNIQUE INDEX activity_review_template_one_active_per_outcome ON public.activity_review_template USING btree (outcome) WHERE (active AND (archived_at IS NULL))
 public.activity_review_template_pkey CREATE UNIQUE INDEX activity_review_template_pkey ON public.activity_review_template USING btree (id)
 public.activity_sales_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_sales_state.activity_sales_state_pkey PRIMARY KEY (thread_key, kind, channel_provider)
@@ -3913,7 +3914,7 @@ public.confirm_token.confirm_token_expires_after_creation CHECK ((expires_at > i
 public.confirm_token.confirm_token_hash_key UNIQUE (token_hash)
 public.confirm_token.confirm_token_kind CHECK ((kind = ANY (ARRAY['record_confirmation'::text, 'consent_confirmation'::text, 'privacy_notice'::text])))
 public.confirm_token.confirm_token_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
-public.confirm_token.confirm_token_lead_is_only_told CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice'::text)))
+public.confirm_token.confirm_token_lead_is_only_told CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice'::text) OR (kind = 'consent_confirmation'::text)))
 public.confirm_token.confirm_token_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.confirm_token.confirm_token_pkey PRIMARY KEY (id)
 public.confirm_token.confirm_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT

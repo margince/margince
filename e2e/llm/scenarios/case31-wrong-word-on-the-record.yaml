@@ -25,6 +25,7 @@
 # retirement passes it. Reaching that needs the database read back after the
 # run, which this lane does not do.
 name: case31_wrong_word_on_the_record
+title: The word that should not be on this one
 criteria: [1, 2]
 
 # WRITES: the author's own statement that this case changes the world. It is not

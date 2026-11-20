@@ -77,7 +77,7 @@ function defaultAnswer(key: string, url: URL): Response {
 }
 
 export function stubApi(
-  routes: Record<string, (body: unknown) => Response>,
+  routes: Record<string, (body: unknown) => Response | Promise<Response>>,
   captured?: Captured[],
 ) {
   vi.stubGlobal(

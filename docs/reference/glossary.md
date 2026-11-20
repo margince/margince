@@ -126,6 +126,26 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Zapier | An automation tool that can start a task when a webhook arrives. |
 | ZIP | A file format that packs many files into one. |
 
+## Words for AI in Margince
+
+AI works with Margince in two ways, and each thing in them has one word. A page for clients uses the
+word in the first column. A page for builders may keep the word in the last column, as long as its
+first use names the plain word.
+
+| Say this | It means | Not for clients | Builders may still say |
+|---|---|---|---|
+| Margince AI | The AI inside the product: its features, and the night helpers. | the AI runtime, the model runtime | AI task, router |
+| the night helpers | The scheduled agents of Margince AI that work while the team sleeps. | Surface B | agent runner |
+| your AI assistant | An AI tool that a user connects to Margince over MCP. | AI tool, outside agent, MCP client, Surface A | agent, for rights and passports |
+| feature | One kind of work Margince AI does. | "feature" for a place | task |
+| place | One spot in the product where a feature calls a model. | site, invocation site | call site |
+| job | One everyday errand an assistant does in our tests. | case, use case, scenario | scenario file |
+| test case | One example with a known right answer, for a feature. | scenario | scenario file |
+| try | One run of a test case or a job. | run | run |
+| model setup | Which model does which kind of work. | preset, binding, routing | preset (the file), binding (the stored setting) |
+| grade | Ready, usable with care, not reliable yet, or not tested. | band, verdict, certified | the three stored values |
+| test result | The stored outcome of a test, for one feature and one model, or one job and one assistant. | record, verdict file | record, verdict |
+
 ## Names without a meaning yet
 
 The pages used these names before they joined the plain-words bar. Move a name up into the table when you
@@ -149,7 +169,7 @@ write its meaning, and delete it here. A name new to the docs goes in the table,
 `Flash-Lite`, `forbidigo`, `frontend`, `FX`, `GB`, `GBP`, `gcal`, `GCM`,
 `Geist`, `Gemini`, `Gemma`, `GGUF`, `GH`, `GiB`, `gitignored`, `gitleaks`, `glob`, `go-arch-lint`,
 `GoBD`, `gofmt`, `golangci`, `golangci-lint`, `gosec`, `govulncheck`, `GPL`, `GPT`, `GPU`, `Graph`, `graphcal`,
-`grep`, `Groq`, `GUC`, `Haiku`, `Handelsbrief`, `HardPass`, `HGB`, `HMAC`, `HMAC-SHA`, `HTML`, `HTTP`, `Hà`,
+`grep`, `Groq`, `GUC`, `Handelsbrief`, `HardPass`, `HGB`, `HMAC`, `HMAC-SHA`, `HTML`, `HTTP`, `Hà`,
 `IAM`, `IANA`, `ICP`, `ID`, `id`, `idempotency`, `Idempotency-Key`, `IDs`, `IMAPS`, `Impressum`, `Insights`,
 `Inspector`, `IP`, `iPhone`, `ISO`, `Jev`, `jq`, `jsdom`, `JSON`, `JSON-LD`, `JSON-RPC`, `JSONL`,
 `JSONPath`, `K`, `KB`, `Kev`, `Keychain`, `keyvault`, `Laya`, `lcov`, `Levenshtein`, `libpq`, `Linux`,

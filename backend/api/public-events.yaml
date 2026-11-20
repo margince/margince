@@ -67,6 +67,9 @@ components:
         - deal_room.comment_posted
         - deal_room.thread_resolved
         - deal_room.decision_recorded
+        - legal_review.requested
+        - legal_review.decided
+        - legal_review.withdrawn
         - offer.created
         - offer.updated
         - offer.sent
@@ -351,6 +354,76 @@ components:
         reason:
           type: string
           description: Why the entry was voided; absent for approve and pay.
+      additionalProperties: false
+
+    PublicEventLegalReviewRequested:
+      type: object
+      x-event-type: legal_review.requested
+      x-entity-type: legal_review
+      x-version: 1
+      description: >-
+        Payload for legal_review.requested: a deal's side asked legal to review the deal.
+        It names the deal and the review and nothing the requester wrote: a receiver
+        reads the note under its own scope.
+      required:
+        - deal_id
+        - review_id
+      properties:
+        deal_id:
+          type: string
+          format: uuid
+          description: The deal under review.
+        review_id:
+          type: string
+          format: uuid
+          description: The review the request opened.
+      additionalProperties: false
+
+    PublicEventLegalReviewDecided:
+      type: object
+      x-event-type: legal_review.decided
+      x-entity-type: legal_review
+      x-version: 1
+      description: >-
+        Payload for legal_review.decided: legal answered a request. It carries the
+        outcome and none of the reviewer's comments.
+      required:
+        - deal_id
+        - review_id
+        - outcome
+      properties:
+        deal_id:
+          type: string
+          format: uuid
+          description: The deal under review.
+        review_id:
+          type: string
+          format: uuid
+          description: The review that was answered.
+        outcome:
+          type: string
+          description: approved or changes_needed.
+      additionalProperties: false
+
+    PublicEventLegalReviewWithdrawn:
+      type: object
+      x-event-type: legal_review.withdrawn
+      x-entity-type: legal_review
+      x-version: 1
+      description: >-
+        Payload for legal_review.withdrawn: the deal's side took back an open request.
+      required:
+        - deal_id
+        - review_id
+      properties:
+        deal_id:
+          type: string
+          format: uuid
+          description: The deal under review.
+        review_id:
+          type: string
+          format: uuid
+          description: The review that was taken back.
       additionalProperties: false
 
     PublicEventDealRoomOpened:

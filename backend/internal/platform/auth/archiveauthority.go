@@ -106,8 +106,12 @@ func ArchiveRuleFor(table string) (ArchiveRule, bool) {
 // RequireArchiveGrant is the up-front half of EnsureArchivable: it refuses a
 // caller who could archive no row of the table at all, before a transaction.
 func RequireArchiveGrant(ctx context.Context, r ArchiveRule) error {
-	return RequireAny(ctx, r.object, principal.ActionDelete, principal.ActionUpdate)
+	return RequireAny(ctx, r.object, archiveGrant...)
 }
+
+// archiveGrant is what an archive rule admits up front: delete, or update
+// for the row arm the rule asks later.
+var archiveGrant = []principal.Action{principal.ActionDelete, principal.ActionUpdate}
 
 // EnsureArchivable admits the archive of one row under r. It answers the
 // object grant and the row's own arm only. The caller still asks the row write

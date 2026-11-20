@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NO_URL_PARAMS, type UrlParams } from "../../lib/urlstate";
 import { addressFrom, DEFAULT_ADDRESS, paramsFor, VIEWS } from "./brief.view";
 
-// The Brief's address: which view, and which week.
+// The Brief's address: which view, which week, and on Weekly which team.
 
 function params(entries: Record<string, string>): UrlParams {
   return new Map(Object.entries(entries));
@@ -27,14 +27,19 @@ describe("the Brief's address", () => {
     expect(addressFrom(params({ view: "quarterly" })).view).toBe("morning");
   });
 
-  // Older builds had a team view. Its link opens the reader's own Brief, and
-  // the next write clears what it carried.
-  it("opens an old team link as the reader's own Brief, and clears it", () => {
+  // Weekly names a team in the address, so a lead can send the team's week.
+  // Morning has no team view, and the scope switch of older builds is gone.
+  it("keeps a team on Weekly, drops it on Morning, and clears the old scope", () => {
+    const team = { view: "weekly", team: "t-1" } as const;
+    expect(addressFrom(paramsFor(team))).toEqual(team);
     const old = params({ view: "weekly", scope: "team", team: "t-1" });
-    expect(addressFrom(old)).toEqual({ view: "weekly" });
-    expect([...paramsFor({ view: "weekly" }, old)]).toEqual([
+    expect(addressFrom(old)).toEqual(team);
+    expect([...paramsFor(addressFrom(old), old)]).toEqual([
       ["view", "weekly"],
+      ["team", "t-1"],
     ]);
+    expect(addressFrom(params({ team: "t-1" }))).toEqual({ view: "morning" });
+    expect([...paramsFor({ view: "morning", team: "t-1" })]).toEqual([]);
   });
 
   // The default is absent from the address, so a reader who changed nothing can

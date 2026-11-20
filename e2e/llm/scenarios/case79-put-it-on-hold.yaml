@@ -1,5 +1,6 @@
 # CASE 79 — A legal hold has its own action. Neither a tag nor a note holds a record.
 name: case79_put_it_on_hold
+title: Put the record on legal hold
 criteria: [1]
 writes: true
 

@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
-import { useLineClamped } from "./lineclamp";
+import { hidesLines, useLineClamped } from "./lineclamp";
 
 afterEach(() => {
   cleanup();
@@ -85,5 +85,15 @@ describe("useLineClamped", () => {
     scroll.value = 60;
     act(() => resized());
     expect(screen.getByTestId("note")).toHaveAttribute("data-clipped");
+  });
+});
+
+describe("hidesLines", () => {
+  it("allows a pixel of rounding before it calls a box's text hidden", () => {
+    const box = document.createElement("p");
+    boxHeights({ value: 41 }, 40);
+    expect(hidesLines(box)).toBe(false);
+    boxHeights({ value: 42 }, 40);
+    expect(hidesLines(box)).toBe(true);
   });
 });

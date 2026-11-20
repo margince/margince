@@ -173,9 +173,11 @@
   min-width: 0;
 }
 
-.worklist-row-facts-line > * + *::before {
-  content: "·";
-  margin-inline-end: var(--space-2);
+/* The dot ends the fact before it, as a timeline head's does (composed.css),
+   so a line that wraps never opens on a dot; a screen reader hears no dot. */
+.worklist-row-facts-line > :has(+ *)::after {
+  content: "·" / "";
+  margin-inline-start: var(--space-2);
 }
 
 .worklist-row-title {

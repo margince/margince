@@ -1,5 +1,6 @@
 # CASE 97 — A vCard file goes through the import, so a matching contact is not doubled. The user hands it over and says go.
 name: case97_import_this_card
+title: Import this contact card
 criteria: [1]
 writes: true
 

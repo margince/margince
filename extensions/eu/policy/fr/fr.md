@@ -3,18 +3,36 @@ jurisdiction: fr
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Code des postes et des communications électroniques"
     provision: "art. L34-5"
+    source-url: https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000042155961
   - name: "Loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique"
     provision: "art. 20"
 fixtures:
   - finding: objection_route
     triggers: fr/fixtures/advertising-without-objection-route.md
     clears: fr/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Code des postes et des communications électroniques"
+    provision: "art. L34-5"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Code des postes et des communications électroniques"
+    provision: "art. L34-5"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Code des postes et des communications électroniques"
+    provision: "art. L34-5"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Code des postes et des communications électroniques"
+    provision: "art. L34-5"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(4)"
 ---
 
 # What French law requires of an outbound message

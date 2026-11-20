@@ -192,7 +192,7 @@ async function fillAndSend(user: ReturnType<typeof userEvent.setup>) {
   await pickOption(
     user,
     screen.getByLabelText("Reason for contact"),
-    "Follow-up they requested",
+    "They asked for it",
   );
   await pressSend(user);
 }

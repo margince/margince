@@ -189,8 +189,8 @@ type ConsentCapturer interface {
 	// booking on somebody's behalf is not that somebody initiating contact.
 	RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID) error
 	// CaptureLeadBookingConsent records the operational grant for a booker who
-	// is a live lead. A newsletter tick is not asked about: its confirmation
-	// link is minted against a contact's own address, and a lead has none.
+	// is a live lead. A newsletter tick is asked about through the lead's own
+	// address, by the same confirmation link a contact gets.
 	CaptureLeadBookingConsent(ctx context.Context, leadID ids.LeadID, consent BookingConsent) (MarketingOutcome, error)
 }
 
