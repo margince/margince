@@ -49,7 +49,9 @@ export const Onboarding: Story = {
     );
   },
   play: async ({ canvasElement }) => {
-    const name = await within(canvasElement).findByLabelText("Company name");
+    const name = await within(canvasElement).findByRole("textbox", {
+      name: "Company name",
+    });
     await waitFor(() => expect(name).toBeVisible());
   },
 };

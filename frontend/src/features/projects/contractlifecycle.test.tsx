@@ -262,6 +262,58 @@ describe("ContractRenewModal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("refuses a notice period below zero on its field before sending", async () => {
+    const renewed = vi.fn(async () => new Response("{}", { status: 201 }));
+    stubRenewalFetch(renewed);
+    const user = userEvent.setup();
+    show(<ContractRenewModal contract={PREDECESSOR} open onClose={vi.fn()} />);
+
+    const notice = await screen.findByLabelText(/^Notice period/);
+    await user.type(notice, "-1");
+    expect(
+      await screen.findByText("Notice period (days) must be at least 0."),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Renew" }));
+
+    await waitFor(() => expect(notice).toHaveFocus());
+    expect(renewed).not.toHaveBeenCalled();
+  });
+
+  it("puts the server's refusal of a term on that term, by its label", async () => {
+    stubRenewalFetch(
+      async () =>
+        new Response(
+          JSON.stringify({
+            code: "validation_error",
+            detail: "`payment_term_days` refused",
+            details: {
+              errors: [
+                {
+                  field: "payment_term_days",
+                  code: "out_of_range",
+                  message: "`payment_term_days` refused",
+                  params: { max: "365" },
+                },
+              ],
+            },
+          }),
+          { status: 422, headers: { "Content-Type": "application/json" } },
+        ),
+    );
+    const user = userEvent.setup();
+    show(<ContractRenewModal contract={PREDECESSOR} open onClose={vi.fn()} />);
+
+    const terms = await screen.findByLabelText(/^Payment terms/);
+    await user.type(terms, "400");
+    await user.click(screen.getByRole("button", { name: "Renew" }));
+
+    expect(
+      await screen.findByText("Payment terms (days) must be at most 365."),
+    ).toBeInTheDocument();
+    expect(terms).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(/payment_term_days/)).toBeNull();
+  });
+
   // A browser's Enter submits through the form's default button, which sits in
   // the pinned foot and joins the fields' form by its `form` attribute.
   it("renews from a field's submit, through the Renew button's form", async () => {

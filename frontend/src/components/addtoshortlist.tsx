@@ -5,13 +5,16 @@
 // — or name a new one — and say why. It goes through the Shortlist's one
 // membership writer, the same one the list page and a bulk change use.
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ActionRow } from "../design-system/actionrow";
 import { AppLink } from "../design-system/applink";
 import { Button, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { useFieldFaults } from "../design-system/savepage";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
+import { recordListsKey } from "../lib/activitykeys";
 import { useCanWrite } from "../lib/capability";
 import {
   type ListRecordType,
@@ -19,14 +22,21 @@ import {
   useCreateList,
   useLists,
   useListsAvailable,
+  type useRecordLists,
 } from "../lib/lists.queries";
-import { problemMessageOf } from "../lib/problem";
+import { fieldCheckSentence, refusalSentences } from "../lib/problem";
 import { routeHash } from "../lib/router";
 
 /** The Select value that means "a Shortlist named in the box below". */
 const NEW_LIST = "__new__";
 
+// The dialog's fields, by the names its refusals carry.
+const LIST = "list";
+const NAME = "name";
+
 const ALL_LISTS_HREF = routeHash({ screen: "filters", id: "lists" });
+
+type RecordListsPage = NonNullable<ReturnType<typeof useRecordLists>["data"]>;
 
 type AddInput = Readonly<{
   choice: string;
@@ -107,6 +117,8 @@ export function AddToShortlistDialog({
   newName?: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const client = useQueryClient();
   const mayCreate = useCanWrite("list", "create");
   const shortlists = useLists({ entityType, listType: "static" });
   const create = useCreateList();
@@ -114,28 +126,72 @@ export function AddToShortlistDialog({
   const [choice, setChoice] = useState(named === "" ? "" : NEW_LIST);
   const [newName, setNewName] = useState(named);
   const [note, setNote] = useState("");
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const editable = (shortlists.data?.data ?? []).filter(
     (list) => list.can_edit && !list.archived_at,
   );
-  const failure = create.error ?? change.error;
+  // Read from the record page's own lists block, never fetched for this mark.
+  const onLists = new Set(
+    (
+      client.getQueryData<RecordListsPage>(recordListsKey(entityType, entityId))
+        ?.data ?? []
+    ).map((list) => list.id),
+  );
+  const listLabel = t("lists.shortlist");
+  const nameLabel = t("lists.name");
+  const memberRefusal = (error: unknown) =>
+    refusalSentences(
+      error,
+      t,
+      {},
+      {
+        conflict: {
+          field: LIST,
+          code: "already_on_list",
+          sentence: t("lists.alreadyOnShortlist"),
+        },
+      },
+    );
+  const nameRefusal = (error: unknown) =>
+    refusalSentences(error, t, { [NAME]: nameLabel });
+
+  function checked(input: AddInput): ReadonlyMap<string, string> {
+    const checks = new Map<string, string>();
+    if (input.choice === "") {
+      checks.set(LIST, fieldCheckSentence("required", locale, listLabel));
+    }
+    if (input.choice === NEW_LIST && input.newName.trim() === "") {
+      checks.set(NAME, fieldCheckSentence("required", locale, nameLabel));
+    }
+    return checks;
+  }
+
+  const edited = (field: string) => {
+    faults.edited(field);
+    create.reset();
+    change.reset();
+  };
 
   const add = async (input: AddInput) => {
     const listId =
       input.choice === NEW_LIST
         ? (
-            await create.mutateAsync({
-              name: input.newName.trim(),
-              entityType,
-              listType: "static",
-            })
+            await create.mutateAsync(
+              {
+                name: input.newName.trim(),
+                entityType,
+                listType: "static",
+              },
+              {
+                onError: (error) => faults.show(nameRefusal(error).byField),
+              },
+            )
           ).id
         : input.choice;
-    await change.mutateAsync({
-      listId,
-      entityType,
-      entityId,
-      note: input.note,
-    });
+    await change.mutateAsync(
+      { listId, entityType, entityId, note: input.note },
+      { onError: (error) => faults.show(memberRefusal(error).byField) },
+    );
     onClose();
   };
 
@@ -146,26 +202,34 @@ export function AddToShortlistDialog({
       intent="form"
       title={t("lists.addToShortlist")}
       confirmLabel={t("lists.add")}
-      confirmDisabled={
-        choice === "" || (choice === NEW_LIST && newName.trim() === "")
-      }
       pending={create.isPending || change.isPending}
-      error={failure ? problemMessageOf(failure, t) : null}
+      bodyRef={faultsRoot}
+      error={memberRefusal(change.error).rest ?? nameRefusal(create.error).rest}
       onConfirm={() => {
+        const input = { choice, newName, note };
+        if (faults.show(checked(input))) return;
         // A refusal is drawn from the mutations' own error state above; the
         // rejected promise has nothing left to say.
-        add({ choice, newName, note }).catch(() => undefined);
+        add(input).catch(() => undefined);
       }}
     >
-      <Field label={t("lists.shortlist")}>
+      <Field label={listLabel} error={faults.of(LIST)}>
         {(control) => (
           <Select
             {...control}
             value={choice}
-            onChange={setChoice}
+            onChange={(next) => {
+              setChoice(next);
+              edited(LIST);
+            }}
             placeholder={t("lists.pickShortlist")}
             options={[
-              ...editable.map((list) => ({ value: list.id, label: list.name })),
+              ...editable.map((list) => ({
+                value: list.id,
+                label: onLists.has(list.id)
+                  ? t("lists.alreadyOnOption", { name: list.name })
+                  : list.name,
+              })),
               ...(mayCreate
                 ? [{ value: NEW_LIST, label: t("lists.newShortlistOption") }]
                 : []),
@@ -174,12 +238,15 @@ export function AddToShortlistDialog({
         )}
       </Field>
       {choice === NEW_LIST && (
-        <Field label={t("lists.name")}>
+        <Field label={nameLabel} error={faults.of(NAME)}>
           {(control) => (
             <TextInput
               {...control}
               value={newName}
-              onChange={(event) => setNewName(event.target.value)}
+              onChange={(event) => {
+                setNewName(event.target.value);
+                edited(NAME);
+              }}
             />
           )}
         </Field>

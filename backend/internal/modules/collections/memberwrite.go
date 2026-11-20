@@ -55,9 +55,22 @@ type MemberChange struct {
 
 // ErrAlreadyMember and ErrNotMember are a change that would change nothing.
 var (
-	ErrAlreadyMember = fmt.Errorf("the record is already on this list: %w", apperrors.ErrConflict)
-	ErrNotMember     = fmt.Errorf("the record is not on this list: %w", apperrors.ErrNotFound)
+	ErrAlreadyMember error = &AlreadyMemberError{}
+	ErrNotMember           = fmt.Errorf("the record is not on this list: %w", apperrors.ErrNotFound)
 )
+
+// AlreadyMemberError refuses adding a record a Shortlist already holds. It
+// unwraps to ErrConflict, so it answers 409.
+type AlreadyMemberError struct{}
+
+func (*AlreadyMemberError) Error() string { return "the record is already on this list" }
+
+func (*AlreadyMemberError) Unwrap() error { return apperrors.ErrConflict }
+
+// MessageFault names the clash, so a screen can tell it from an archived list.
+func (e *AlreadyMemberError) MessageFault() (code, message string) {
+	return "already_on_list", e.Error()
+}
 
 // AddMember adds one record to a Shortlist in its own transaction.
 func (s *Store) AddMember(ctx context.Context, listID ids.ListID, change MemberChange) (memberRow, error) {

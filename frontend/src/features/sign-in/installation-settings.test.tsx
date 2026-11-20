@@ -210,6 +210,30 @@ describe("InstallationSettingsCard", () => {
     );
   });
 
+  it("says on a cleared Likely threshold what it takes, in percent, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<InstallationSettingsCard part="forecast" />);
+    const dialog = await openFrom(user, /edit likely threshold/i);
+    const threshold = within(dialog).getByLabelText(/likely threshold/i);
+    await user.clear(threshold);
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    expect(
+      await within(dialog).findByText(
+        "Likely threshold must be from 1% to 100%.",
+      ),
+    ).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(threshold));
+    expect(patch()).toBeNull();
+    await user.type(threshold, "80");
+    expect(
+      within(dialog).queryByText("Likely threshold must be from 1% to 100%."),
+    ).toBeNull();
+  });
+
   // The company profile owns the name; a second editor here would let the two drift.
   it("does not offer the installation name", async () => {
     const { fetchMock } = backendFor(SETTINGS_EDITOR);
@@ -490,15 +514,16 @@ describe("InstallationSettingsCard", () => {
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
     const refusal = await screen.findByText(
-      "This value is at most 64 characters.",
+      "Company time zone: at most 64 characters.",
     );
     // One occurrence, and it is the FIELD's. A refusal drawn on the input AND
     // repeated in a paragraph below states one problem twice, and the paragraph
     // is the copy a reader learns to skip — so the blanket summary carries only
     // what no field claimed.
     expect(
-      screen.getAllByText("This value is at most 64 characters."),
+      screen.getAllByText("Company time zone: at most 64 characters."),
     ).toHaveLength(1);
+    await waitFor(() => expect(document.activeElement).toBe(zone));
     expect(refusal.className).toContain("field-error");
     expect(screen.getAllByRole("alert")).toHaveLength(1);
   });
