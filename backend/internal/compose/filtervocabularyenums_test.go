@@ -105,10 +105,8 @@ func TestTheVocabularysReferenceEnumIsExactlyWhatTheEngineDeclares(t *testing.T)
 		"the contract advertises it and no id field points at it, so no field can ever report it")
 }
 
-// everyFilterableFieldType is the six custom-field types plus the two only a
-// CORE field carries. The custom half is derived from fieldcatalog.Types(), so a
-// seventh custom type joins these gates by existing rather than by somebody
-// remembering them.
+// everyFilterableFieldType is the custom-field types, derived from
+// fieldcatalog.Types(), plus the ones only a CORE field carries.
 //
 // The core-only half is listed, because there is nowhere to derive it from: a
 // custom field cannot be an id or a domain — the catalogue offers neither — so

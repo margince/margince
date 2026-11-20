@@ -196,9 +196,7 @@ func emitEnvelope(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, e
 	if err != nil {
 		return events.Envelope{}, err
 	}
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO `+TableOutbox+` (stream, envelope) VALUES ($1, $2)`,
-		staged.stream, staged.body); err != nil {
+	if err := insertEvents(ctx, tx, []stagedEvent{staged}); err != nil {
 		return events.Envelope{}, err
 	}
 	return staged.env, nil
@@ -268,7 +266,8 @@ func stageEnvelope(ctx context.Context, auditID ids.UUID, eventType, entityType 
 	return stagedEvent{stream: stream, body: body, env: env}, nil
 }
 
-// insertEvents writes staged outbox rows in one statement.
+// insertEvents is this package's INSERT into the outbox: staged rows in one
+// statement. The write-shape gate counts a function that reaches it as an emitter.
 func insertEvents(ctx context.Context, tx pgx.Tx, staged []stagedEvent) error {
 	if len(staged) == 0 {
 		return nil

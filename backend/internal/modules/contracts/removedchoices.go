@@ -14,11 +14,11 @@ import (
 )
 
 // RemoveCustomChoices clears choices an admin removed from a contract field off
-// every contract that holds one. Each goes through applyContractUpdate, the one
+// every contract that holds one. Each goes through applyContractUpdate, the
 // writer of a contract update, so it is audited and announced as an edit is.
 // Archived contracts are cleared too, because the field's CHECK covers them.
 func RemoveCustomChoices(ctx context.Context, tx pgx.Tx, column fieldcatalog.Column, removed []string) (int, error) {
-	changes, err := storekit.LockRemovedChoices(ctx, tx, contractObject, column, removed)
+	changes, err := storekit.LockRemovedChoices(ctx, tx, contractTable, column, removed)
 	if err != nil {
 		return 0, err
 	}
