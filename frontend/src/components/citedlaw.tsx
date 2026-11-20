@@ -22,18 +22,30 @@ export function CitedLaw({
   );
 }
 
-/** "Attention: sending to … may break" and the linked law. */
-export function CitedAttention({
-  address,
+/**
+ * A finding with the law it rests on in brackets, as one sentence: "No reason
+ * to contact … is on record (GDPR Art. 6(1))." The law is linked.
+ */
+export function FindingWithLaw({
+  sentence,
   provision,
-}: Readonly<{ address: string; provision: CitedProvision }>) {
-  const t = useT();
+}: Readonly<{ sentence: string; provision: CitedProvision }>) {
   return (
     <>
-      {t("compose.sendAnyway.cited", { address })}{" "}
-      <CitedLaw provision={provision} />
+      {sentence.replace(/\.\s*$/, "")} (
+      <OffsiteLink href={provision.source_url}>
+        {`${shortInstrument(provision.instrument)} ${provision.provision}`}
+      </OffsiteLink>
+      ).
     </>
   );
+}
+
+// The short name an instrument carries in its own trailing brackets, such as
+// "GDPR" for "Regulation (EU) 2016/679 (GDPR)", or the whole name without one.
+function shortInstrument(instrument: string): string {
+  const abbreviation = /\(([^()]+)\)\s*$/.exec(instrument)?.[1];
+  return abbreviation && !/\d/.test(abbreviation) ? abbreviation : instrument;
 }
 
 /**

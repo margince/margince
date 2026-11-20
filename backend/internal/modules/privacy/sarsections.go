@@ -143,8 +143,8 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 		{&pkg.Relationships, `SELECT kind, company_id, deal_id, role, started_at, ended_at
 		   FROM relationship WHERE contact_id = $1 AND archived_at IS NULL`, nil},
 		{&pkg.Deals, `SELECT d.id, d.name, d.status, d.amount_minor, d.currency
-		   FROM deal d JOIN relationship r ON r.deal_id = d.id
-		   WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $1 AND r.archived_at IS NULL`, nil},
+		   FROM deal d WHERE d.id IN (` + subjectLiveDealIDsSQL + `)`, nil},
+		sarLegalReviewSection(pkg),
 		{
 			&pkg.Leads, `SELECT l.id, l.full_name, l.email, l.title, l.company_name, l.status, l.created_at
 		   FROM lead l

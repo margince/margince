@@ -85,6 +85,7 @@ func (o *OutcomeReviews) Write(ctx context.Context, dealID ids.DealID, req crmco
 			Answers:         answersOf(req.Answers),
 			ChoiceAnswers:   reviewChoices(req.ChoiceAnswers),
 			TemplateVersion: req.TemplateVersion,
+			TemplateKey:     req.TemplateKey,
 			Body:            req.Body,
 			Source:          provenance.RecordSourceManual,
 		})

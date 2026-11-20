@@ -3,17 +3,35 @@ jurisdiction: it
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)"
     provision: "art. 130"
+    source-url: https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2003-06-30;196~art130
 consent-confirmation-needs-request: true
 fixtures:
   - finding: objection_route
     triggers: it/fixtures/advertising-without-objection-route.md
     clears: it/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)"
+    provision: "art. 130, commi 1 e 2"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)"
+    provision: "art. 130, commi 1 e 2"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)"
+    provision: "art. 130, commi 1 e 2"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)"
+    provision: "art. 130, commi 1 e 2"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)"
+    provision: "art. 130, comma 5"
 ---
 
 # What Italian law requires of an outbound message

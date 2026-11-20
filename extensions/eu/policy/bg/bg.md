@@ -3,10 +3,6 @@ jurisdiction: bg
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Закон за електронната търговия (Electronic Commerce Act)"
     provision: "чл. 6"
   - name: "Закон за електронните съобщения (Electronic Communications Act)"
@@ -15,6 +11,27 @@ fixtures:
   - finding: objection_route
     triggers: bg/fixtures/advertising-without-objection-route.md
     clears: bg/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(1)"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(1)"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(1)"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(1)"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(4)"
 ---
 
 # What Bulgarian law requires of an outbound message

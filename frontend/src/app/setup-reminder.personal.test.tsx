@@ -124,7 +124,7 @@ describe("the personal setup steps", () => {
     const { user, panel } = await openPanel(seat());
     const owner = seat().user.id;
 
-    await user.click(within(panel).getByRole("button", { name: "Read" }));
+    await user.click(within(panel).getByRole("button", { name: "Review" }));
     const dialog = await screen.findByRole("dialog", {
       name: "What Margince reads and writes",
     });
@@ -138,7 +138,7 @@ describe("the personal setup steps", () => {
       }),
     ).toBeNull();
 
-    await user.click(within(panel).getByRole("button", { name: "Read" }));
+    await user.click(within(panel).getByRole("button", { name: "Review" }));
     await user.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: "Got it",
@@ -158,7 +158,7 @@ describe("the personal setup steps", () => {
 
   it("states no absolute the product breaks", async () => {
     const { user, panel } = await openPanel(seat());
-    await user.click(within(panel).getByRole("button", { name: "Read" }));
+    await user.click(within(panel).getByRole("button", { name: "Review" }));
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).not.toMatch(/\bonly\b|nothing is sent/i);
     expect(dialog.textContent).toContain("password resets");
@@ -176,7 +176,7 @@ describe("the personal setup steps", () => {
 
   it("stands down once the member chose a zone and a language and read the permissions", async () => {
     const { user, panel } = await openPanel(seat());
-    await user.click(within(panel).getByRole("button", { name: "Read" }));
+    await user.click(within(panel).getByRole("button", { name: "Review" }));
     await user.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: "Got it",

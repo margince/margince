@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { SendMark, SendPermission } from "../components/sendpermission";
+import { SendPermission, sendStatus } from "../components/sendpermission";
 import {
   RetractAcquisitionRequest,
   RetractRecordedRequest,
@@ -28,7 +28,6 @@ import { createQueryClient } from "./queryclient";
 const clients: QueryClient[] = [];
 const fetchBefore = globalThis.fetch;
 const address = "anna@example.test";
-const readyName = "Communication status for this message: Recipients checked";
 
 afterEach(() => {
   cleanup();
@@ -46,7 +45,7 @@ function CurrentMessage({ recipient = address }: { recipient?: string }) {
   });
   return (
     <>
-      <SendMark {...permission} />
+      <output aria-label="status">{sendStatus(permission).kind}</output>
       <SendPermission {...permission} />
     </>
   );
@@ -117,9 +116,9 @@ it.each([
     if (pendingInitial) {
       await waitFor(() => expect(preview).toHaveBeenCalledTimes(1));
     } else {
-      expect(
-        await screen.findByRole("button", { name: readyName }),
-      ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByLabelText("status")).toHaveTextContent("ready"),
+      );
     }
     const user = userEvent.setup();
     await user.click(
@@ -135,7 +134,7 @@ it.each([
     expect(
       screen.getByText("Checking whether this message can be sent…"),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: readyName })).toBeNull();
+    expect(screen.getByLabelText("status")).not.toHaveTextContent("ready");
     const answerRecheck = finishRecheck;
     if (!answerRecheck) throw new Error("No preview is waiting");
     await act(async () =>
@@ -153,13 +152,13 @@ it.each([
     expect(
       await screen.findByText("No recorded reason to contact this recipient"),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: readyName })).toBeNull();
+    expect(screen.getByLabelText("status")).not.toHaveTextContent("ready");
     const answerInitial = finishInitial;
     if (!answerInitial) throw new Error("Initial preview is missing");
     await act(async () =>
       answerInitial(jsonResponse(allowedPreview([address]))),
     );
-    expect(screen.queryByRole("button", { name: readyName })).toBeNull();
+    expect(screen.getByLabelText("status")).not.toHaveTextContent("ready");
     expect(
       screen.getByText("No recorded reason to contact this recipient"),
     ).toBeInTheDocument();
@@ -205,7 +204,7 @@ it("keeps the current recipient's refusal when an older response arrives", async
   const answerOlder = finishOlder;
   if (!answerOlder) throw new Error("Older preview is missing");
   await act(async () => answerOlder(jsonResponse(allowedPreview([address]))));
-  expect(screen.queryByRole("button", { name: readyName })).toBeNull();
+  expect(screen.getByLabelText("status")).not.toHaveTextContent("ready");
   expect(
     screen.getByText("No recorded reason to contact this recipient"),
   ).toBeInTheDocument();
@@ -227,14 +226,14 @@ it("removes an earlier ready answer when its recheck fails", async () => {
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  expect(
-    await screen.findByRole("button", { name: readyName }),
-  ).toBeInTheDocument();
+  await waitFor(() =>
+    expect(screen.getByLabelText("status")).toHaveTextContent("ready"),
+  );
   await act(async () =>
     client.invalidateQueries({ queryKey: ["send-permission"] }),
   );
   expect(
     await screen.findByText(/send check did not complete/i),
   ).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: readyName })).toBeNull();
+  expect(screen.getByLabelText("status")).not.toHaveTextContent("ready");
 });

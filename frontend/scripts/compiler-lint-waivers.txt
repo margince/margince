@@ -61,7 +61,7 @@
 1 react-hooks/set-state-in-effect src/features/mail/composesend.ts
 5 react-hooks/refs src/features/mail/composetarget.ts
 1 react-hooks/set-state-in-effect src/features/mail/composetarget.ts
-6 react-hooks/refs src/features/mail/composewindow.tsx
+5 react-hooks/refs src/features/mail/composewindow.tsx
 1 react-hooks/set-state-in-effect src/features/automations/connected-agents.tsx
 1 react-hooks/set-state-in-effect src/features/contacts/contactdrawers.tsx
 2 react-hooks/refs src/features/contacts/contactpage.drawers.tsx

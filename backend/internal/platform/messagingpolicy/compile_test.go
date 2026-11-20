@@ -49,14 +49,14 @@ func TestACountryLayerCompilesToItsRules(t *testing.T) {
 
 func TestTheSourceIsRefused(t *testing.T) {
 	for name, front := range map[string]string{
-		"an unknown key":            country + "reply-windw: 720h\n",
-		"no version":                "jurisdiction: aa\ncreated: 2026-01-02\n",
-		"a misnamed country":        "jurisdiction: bb\nversion: 1\ncreated: 2026-01-02\n",
-		"an invalid obligation":     country + "frequency-cap: {messages: 0, window: 24h}\n",
-		"a prose territorial test":  country + reviewed + citation("the sender is in the EU"),
-		"no territorial test":       country + reviewed + "citations: [{code: frequency_cap_reached, instrument: Act A}]\n",
-		"an undeclared instrument":  country + reviewed + "citations: [{code: c, territorial-test: any_sender, instrument: Act Z}]\n",
-		"a citation never reviewed": country + citation("any_sender"),
+		"an unknown key":              country + "reply-windw: 720h\n",
+		"no version":                  "jurisdiction: aa\ncreated: 2026-01-02\n",
+		"a misnamed country":          "jurisdiction: bb\nversion: 1\ncreated: 2026-01-02\n",
+		"an invalid obligation":       country + "frequency-cap: {messages: 0, window: 24h}\n",
+		"a prose territorial test":    country + reviewed + citation("the sender is in the EU"),
+		"no territorial test":         country + reviewed + "citations: [{code: frequency_cap_reached, instrument: Act A}]\n",
+		"an undeclared instrument":    country + reviewed + "citations: [{code: c, territorial-test: any_sender, instrument: Act Z}]\n",
+		"a citation of no instrument": country + citation("any_sender"),
 	} {
 		if _, err := Compile(policyFS(front)); err == nil {
 			t.Errorf("%s compiled", name)
@@ -64,8 +64,9 @@ func TestTheSourceIsRefused(t *testing.T) {
 	}
 }
 
-const reviewed = "source-checked: 2026-01-03\nreviewed: 2026-01-04\nreviewer: maintainers\n" +
-	"instruments: [{name: Act A, provision: §1, source-url: https://example.org/a}]\n"
+const actA = "instruments: [{name: Act A, provision: §1, source-url: https://example.org/a}]\n"
+
+const reviewed = "source-checked: 2026-01-03\nreviewed: 2026-01-04\nreviewer: maintainers\n" + actA
 
 func citation(territory string) string {
 	return "citations: [{code: frequency_cap_reached, instrument: Act A, territorial-test: " + territory + "}]\n"
@@ -78,6 +79,18 @@ func TestADecidableTerritorialTestSelectsTheCitation(t *testing.T) {
 	}
 	if got := policy.Rules.Citations; len(got) != 1 || got[0].Territory != messaging.SenderElsewhere {
 		t.Errorf("citations %+v", got)
+	}
+}
+
+// A pack is refreshed against its sources at release, with no human sign-off,
+// so a layer with no review stamp compiles its citations.
+func TestADraftLayerCompilesItsCitations(t *testing.T) {
+	policy, err := Compile(policyFS(country + actA + citation("any_sender")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := policy.Rules.Citations; len(got) != 1 || !policy.Rules.Provenance.ReviewedAt.IsZero() {
+		t.Errorf("citations %+v, provenance %+v", got, policy.Rules.Provenance)
 	}
 }
 

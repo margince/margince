@@ -316,7 +316,7 @@ func writeAICertGlossary(page *strings.Builder) {
 	page.WriteString("| Column | What it says |\n|---|---|\n")
 	page.WriteString("| Quality | Who scores how good a test case's answers are: `judge`, a second model, or `checked mechanically`, where the case's own check sees everything a judge would and no judge is asked. |\n")
 	page.WriteString("| Runs, Passed | How many times the model was asked, and how often it did what the test case wanted. |\n")
-	page.WriteString("| Reliability | Passed divided by Runs. 1.00 is every attempt. |\n")
+	page.WriteString("| Reliability | Passed divided by Runs, then its Wilson interval in brackets, from the formula and z the verdict uses. A band reads the lower end of a site's pooled rate and the upper end of each case alone. A binding or family row is graded by no band. Treat a change as real only when the intervals do not overlap or the band changes. |\n")
 	page.WriteString("| `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back. This is a different split from pass/fail. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |\n")
 	page.WriteString("| Scenarios | How many of the site's test cases the saved result still covers, out of how many the site has today. |\n")
 	page.WriteString("| Record p50, p95 | How long answers took: the middle one, and a slow one (only 1 in 20 was slower). Both belong to the whole test run, not to the single site whose table they appear in, so a run covering several sites shows the same pair on each. |\n")
@@ -457,7 +457,7 @@ func aiCertPickCells(pick *aiCertPick) string {
 	if pick == nil {
 		return aicert.Unmeasured + " | " + aicert.Unmeasured + " | " + aicert.Unmeasured
 	}
-	return fmt.Sprintf("`%s` | `%s` | %s", pick.Binding.label(), pick.Band, reliabilityCell(pick.Reliability))
+	return fmt.Sprintf("`%s` | `%s` | %s", pick.Binding.label(), pick.Band, aicert.ReliabilityCell(pick.Passed, pick.Runs))
 }
 
 // aiCertSiteAnchor is the fragment GitHub derives from a site's heading. A site
@@ -489,7 +489,7 @@ func writeAICertBindings(page *strings.Builder, bindings []aiCertBinding) {
 		fmt.Fprintf(page, "| `%s` | `%s` | `%s` | %d | %d | %d | %d | %d | %d | %s | %s | %d | %d | %d |\n",
 			b.Binding.Provider, b.Binding.Model, b.Binding.Env, b.Sites,
 			b.SitesCurrent, b.SitesPartial, b.SitesStale,
-			b.Runs, b.Passed, reliabilityCell(b.Reliability), latencyCell(b.SlowestP95MS),
+			b.Runs, b.Passed, aicert.ReliabilityCell(b.Passed, b.Runs), latencyCell(b.SlowestP95MS),
 			b.Bands.Certified, b.Bands.SupportedDegraded, b.Bands.NotSupported)
 	}
 	page.WriteString("\n")
@@ -620,7 +620,7 @@ func writeAICertSiteRecords(page *strings.Builder, records []aiCertRecord) {
 	for _, rec := range records {
 		fmt.Fprintf(page, "| `%s`%s | `%s` | %s | `%s` | %d | %d | %s | %s | %s | %d | %d | %d | %d |\n",
 			rec.Binding.label(), siteThinkingCell(rec), rec.State, coverageCell(rec), rec.Band,
-			rec.Runs, rec.Passed, reliabilityCell(rec.Reliability),
+			rec.Runs, rec.Passed, aicert.ReliabilityCell(rec.Passed, rec.Runs),
 			latencyCell(rec.LatencyP50MS), latencyCell(rec.LatencyP95MS),
 			rec.Reported.Accepted, rec.Reported.WrongAnswer, rec.Reported.Invalid, rec.Reported.Abstained)
 	}
@@ -652,15 +652,6 @@ func latencyCell(ms *int64) string {
 		return aicert.Unmeasured
 	}
 	return strconv.FormatInt(*ms, 10) + "ms"
-}
-
-// reliabilityCell renders a pass rate, or a dash when there is nothing to
-// divide. Zero runs is not a reliability of zero.
-func reliabilityCell(rate *float64) string {
-	if rate == nil {
-		return aicert.Unmeasured
-	}
-	return strconv.FormatFloat(*rate, 'f', 2, 64)
 }
 
 // writeAICertUnclaimed names each committed record no row above could carry. A

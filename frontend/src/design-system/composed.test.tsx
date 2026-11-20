@@ -442,7 +442,7 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.getByText("€1,250")).toBeTruthy();
     expect(
       screen.getByText(
-        `Rates ${formatDayMonth("2026-10-01", "en", "Europe/Berlin")}`,
+        `Exchange rates ${formatDayMonth("2026-10-01", "en", "Europe/Berlin")}`,
       ),
     ).toBeTruthy();
     expect(screen.getByText("2 not priced")).toBeTruthy();

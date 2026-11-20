@@ -60,9 +60,9 @@ func (i Instrument) Validate() error {
 
 // Provenance is who reviewed a rule set against its sources, and when.
 //
-// Two dates that read alike and mean different things: ReviewDue passing says
-// nobody has re-read the pack in time, and the pack still applies. An
-// instrument's ExpiresFrom passing says the law itself ended. The first
+// A pack cites its law with or without a review. ReviewDue passing on a
+// reviewed pack says nobody re-read it in time, and the pack still applies.
+// An instrument's ExpiresFrom passing says the law itself ended. The first
 // silences the pack's citations; the second silences only that instrument's.
 type Provenance struct {
 	// CreatedAt is when the rule set was first written.
@@ -71,9 +71,10 @@ type Provenance struct {
 	// published texts.
 	SourceCheckedAt time.Time
 	// ReviewedAt is when a named reviewer last approved it. Zero is a draft,
-	// and a draft cannot cite.
+	// which cites like a reviewed pack.
 	ReviewedAt time.Time
-	// ReviewDue is when the next review is owed. Zero sets no due date.
+	// ReviewDue is when the next review is owed. Zero sets no due date, and a
+	// draft has none to miss.
 	ReviewDue time.Time
 	// Reviewer names who approved it, as the pack's maintainers sign.
 	Reviewer string
@@ -136,16 +137,15 @@ type Citation struct {
 	SourceURL string
 }
 
-// validateCitations refuses a citation that names no declared law, has no
-// provision or source to link, or comes from a pack nobody reviewed.
+// validateCitations refuses a citation that names no declared law, or has no
+// provision or source to link. A reviewed pack that cites must have checked
+// its sources before the review approved them.
 func (r Rules) validateCitations() error {
 	if err := r.Provenance.validate(); err != nil {
 		return err
 	}
-	if len(r.Citations) > 0 && r.Provenance.ReviewedAt.IsZero() {
-		return errors.New("the rule set cites law and records no review — a draft rule cannot cite")
-	}
-	if checked := r.Provenance.SourceCheckedAt; len(r.Citations) > 0 && (checked.IsZero() || checked.After(r.Provenance.ReviewedAt)) {
+	reviewed, checked := r.Provenance.ReviewedAt, r.Provenance.SourceCheckedAt
+	if len(r.Citations) > 0 && !reviewed.IsZero() && (checked.IsZero() || checked.After(reviewed)) {
 		return errors.New("the rule set cites law and its sources were not checked before its review")
 	}
 	cited := map[string][]Territory{}

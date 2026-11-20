@@ -572,8 +572,8 @@ func compiledRulesFiles(t *testing.T) []string {
 	return out
 }
 
-// TestACitationOfAnUnemittedCodeIsFound is the positive control. The shipped
-// packs cite nothing yet, so the test above passes on an empty corpus too.
+// TestACitationOfAnUnemittedCodeIsFound is the positive control: a probe that
+// cites a code nobody reports fails the scan the shipped packs pass.
 func TestACitationOfAnUnemittedCodeIsFound(t *testing.T) {
 	t.Parallel()
 	const src = `package probe

@@ -1,0 +1,6 @@
+{
+  "verb": "create_activity_review_template",
+  "checks": [
+    "custom_field.create"
+  ]
+}

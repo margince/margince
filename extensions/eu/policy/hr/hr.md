@@ -3,15 +3,33 @@ jurisdiction: hr
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Zakon o elektroničkim komunikacijama (NN 76/22)"
+    source-url: https://narodne-novine.nn.hr/clanci/sluzbeni/2022_07_76_1116.html
 fixtures:
   - finding: objection_route
     triggers: hr/fixtures/advertising-without-objection-route.md
     clears: hr/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)"
+    provision: "članak 50. stavak 1."
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)"
+    provision: "članak 50. stavak 1."
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)"
+    provision: "članak 50. stavak 1."
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)"
+    provision: "članak 50. stavak 1."
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)"
+    provision: "članak 50. stavak 3."
 ---
 
 # What Croatian law requires of an outbound message
