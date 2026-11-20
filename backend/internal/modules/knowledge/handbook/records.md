@@ -4,7 +4,6 @@
 Margince holds five kinds of record: contacts, companies, leads, deals and projects. [Shared record links](sharing-record-links.md) show a limited public card.
 
 ## Each record in one line
-
 - **Contact**: a single human you do business with. The sidebar calls this **Contacts**.
 - **Company**: a company you work with. The sidebar calls this **Companies**.
 - **Lead**: a possible customer you have not qualified yet, kept apart from your contacts.
@@ -113,8 +112,9 @@ The contact you kept keeps every email address, phone number and employer of bot
 
 Margince also groups contacts that may be duplicates of each other, so you can merge more than two at once. Every owner of a contact in the group finds it under **To review** in their Worklist. A contact a colleague keeps private is not in your group, and only they can merge it.
 1. Open the group: **Possible duplicates (N)** under the contact's name, or **Review** on its Worklist card.
-2. Tick the contacts that are true duplicates, and choose **Keep this record’s details** on one. The group opens with only the contact you came from ticked. **Why they look alike** says what matched for each pair. Two contacts can each look like one other contact and still be different people, so tick each one yourself.
-3. Choose the **Owner**, pick under **Which value to keep** where they differ, then press **Preview merge** and **Merge {count} contacts**.
+2. Tick the contacts that are true duplicates. Opened from a contact, the group starts with only that contact ticked; opened from a Worklist card, nothing is ticked. **Why they look alike** says what matched for each pair. **Not the same person** on a pair stops only that pair from being suggested. Two contacts can each look like one other contact and still be different people, so tick each one yourself.
+3. Under **Which contact stays?**, choose one of the ticked contacts; the others merge into it and are archived. Choose the **Owner**, pick under **Which value to keep** where they differ, then press **Preview merge** and **Merge {count} contacts**.
+
 Margince then opens the contact you kept; the first merge settles the group for every owner and cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts reads **Possible duplicates (25+)** and must be decided one pair at a time. Your own contact may merge into a colleague's, and the colleague's record and owner stay ([who may merge](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge)).
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 

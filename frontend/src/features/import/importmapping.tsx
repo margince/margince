@@ -6,8 +6,8 @@ import { Badge, Button, TableScroll } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { Select } from "../../design-system/select";
-import { formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { formatNumber, formatPercent } from "../../format/format";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { ColumnGuideButton } from "./import.guide";
 import { ImportRefusal } from "./import.notices";
 import { fieldLabelOf } from "./importfieldlabel";
@@ -99,7 +99,7 @@ export function ImportMappingTable({
                   <th scope="row" className="import__colName">
                     {column.header}
                   </th>
-                  <td className="import__fill">{fillLabel(column)}</td>
+                  <td className="import__fill">{fillLabel(column, locale)}</td>
                   <td
                     className="import__samples"
                     title={column.samples.join(", ") || undefined}
@@ -167,11 +167,11 @@ function isLink(target: ImportFormatColumn): boolean {
   return target.name !== "ref" && target.name.endsWith("_ref");
 }
 
-// fillLabel renders the rate as a percentage of the rows actually profiled.
-// Rounded to whole numbers: the decision it informs is "is this column worth
-// mapping", and nobody decides that differently at 4.2% than at 4%.
-function fillLabel(column: ImportColumn): string {
-  return `${Math.round(column.fill_rate * 100)}%`;
+// The rate as a percentage of the rows actually profiled. Whole numbers: the
+// decision it informs is "is this column worth mapping", and nobody decides
+// that differently at 4.2% than at 4%.
+function fillLabel(column: ImportColumn, locale: Locale): string {
+  return formatPercent(column.fill_rate, locale);
 }
 
 type TypedFile = Readonly<{ file: WizardFile; object: ImportObject }>;

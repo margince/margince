@@ -46,7 +46,10 @@ const criterionColumns = `id, stage_id, key, label, kind, required, hint,
 // the exception, so it is the answer a caller states rather than the one they
 // fall into. A criterion always appends — see nextCriterionPosition.
 type CreateCriterionInput struct {
-	StageID  ids.StageID
+	StageID ids.StageID
+	// MintKey asks the store to make the key from the label; Key is then
+	// ignored. Without it Key is validated as given, so an empty one is refused.
+	MintKey  bool
 	Key      string
 	Label    string
 	Kind     string
@@ -108,11 +111,13 @@ func (s *Store) CreateStageExitCriterion(
 	if err != nil {
 		return crmcontracts.StageExitCriterion{}, err
 	}
-	if err := validCriterionKey(in.Key); err != nil {
-		return crmcontracts.StageExitCriterion{}, err
-	}
 	if err := validCriterionLabel(in.Label); err != nil {
 		return crmcontracts.StageExitCriterion{}, err
+	}
+	if !in.MintKey {
+		if err := validCriterionKey(in.Key); err != nil {
+			return crmcontracts.StageExitCriterion{}, err
+		}
 	}
 	var out crmcontracts.StageExitCriterion
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
@@ -130,8 +135,10 @@ func (s *Store) CreateStageExitCriterion(
 		if err := refuseAgentOnStagesLadder(ctx, tx, in.StageID); err != nil {
 			return err
 		}
-		if err := refuseTakenCriterionKey(ctx, tx, in.StageID, in.Key); err != nil {
-			return err
+		if !in.MintKey {
+			if err := refuseTakenCriterionKey(ctx, tx, in.StageID, in.Key); err != nil {
+				return err
+			}
 		}
 		if kind == CriterionLegalReviewed {
 			if err := ensureLegalReviewOn(ctx, tx); err != nil {
@@ -142,7 +149,9 @@ func (s *Store) CreateStageExitCriterion(
 		if err != nil {
 			return err
 		}
-		id, err := insertCriterion(ctx, tx, in, kind, position)
+		id, err := insertCriterionKeyed(ctx, tx, in, kind, position, func() (string, error) {
+			return mintCriterionKey(ctx, tx, in.StageID, in.Label)
+		})
 		if err != nil {
 			return err
 		}

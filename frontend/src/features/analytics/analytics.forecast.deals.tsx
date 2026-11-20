@@ -14,6 +14,7 @@ import { QueryGate } from "../../design-system/querystates";
 import {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
+  formatAnalyticsPercentPoints,
 } from "../../format/format";
 import {
   type Locale,
@@ -34,9 +35,6 @@ import {
 
 type T = ReturnType<typeof useT>;
 
-const percent = (value: number, locale: Locale) =>
-  `${formatAnalyticsNumber(value, locale)}%`;
-
 /** One line that says how a deal's weight was made. */
 export function chanceExplanation(
   row: ForecastContribution,
@@ -46,7 +44,10 @@ export function chanceExplanation(
 ): string {
   const parts = [
     t("forecast.deals.typed", {
-      percent: percent(row.typed_probability ?? row.chance_in_use, locale),
+      percent: formatAnalyticsPercentPoints(
+        row.typed_probability ?? row.chance_in_use,
+        locale,
+      ),
     }),
   ];
   // Evidence stops at the start of today, so a deal closed today counts tomorrow.
@@ -60,12 +61,14 @@ export function chanceExplanation(
     );
   }
   parts.push(
-    t("forecast.deals.uses", { percent: percent(row.chance_in_use, locale) }),
+    t("forecast.deals.uses", {
+      percent: formatAnalyticsPercentPoints(row.chance_in_use, locale),
+    }),
   );
   if (row.applied_probability !== row.chance_in_use) {
     parts.push(
       t("forecast.deals.afterRisk", {
-        percent: percent(row.applied_probability, locale),
+        percent: formatAnalyticsPercentPoints(row.applied_probability, locale),
       }),
     );
   }

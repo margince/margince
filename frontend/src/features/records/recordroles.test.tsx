@@ -223,7 +223,7 @@ it("renames a role through its menu's dialog and retires one through its switch"
   const dialog = within(await screen.findByRole("dialog"));
   const field = dialog.getByLabelText(en["recordRoles.addLabel"]);
   expect(field).toHaveValue("Delivery lead");
-  expect(dialog.getByText("delivery_lead").tagName).toBe("CODE");
+  expect(dialog.queryByText("delivery_lead")).toBeNull();
   await user.clear(field);
   await user.type(field, "Project lead{Enter}");
   await waitFor(() =>
