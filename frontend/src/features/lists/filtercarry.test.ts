@@ -36,7 +36,9 @@ describe("the value a clause keeps when its operator changes", () => {
     expect(carriedValue("in", "eq", [], "text")).toBe("");
   });
 
-  it("moves no half-typed text into or out of a number list", () => {
+  it("carries a number, and no typed text, into or out of a number list", () => {
+    expect(carriedValue("eq", "in", 12, "number")).toEqual([12]);
+    expect(carriedValue("in", "gte", [12], "number")).toBe(12);
     expect(carriedValue("eq", "in", "1.500", "number")).toEqual([]);
     expect(carriedValue("in", "eq", ["12"], "number")).toBe("");
     expect(carriedValue("eq", "in", "abc", "currency")).toEqual([]);

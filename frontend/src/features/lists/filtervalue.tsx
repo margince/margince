@@ -8,7 +8,6 @@ import { SegmentedControl, TextInput } from "../../design-system/atoms";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
-import { TokenInput } from "../../design-system/tokeninput";
 import { formatNumber } from "../../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
@@ -27,7 +26,7 @@ import {
   MAX_DAYS_AGO,
 } from "../../lib/segmentpredicate";
 import { MoneyControl } from "./filtervalue.money";
-import { NumberValue } from "./filtervalue.number";
+import { ListValue, NumberValue } from "./filtervalue.number";
 import { RadiusValue } from "./filtervalue.radius";
 import {
   ChosenRecords,
@@ -121,12 +120,11 @@ export function ValueControl({
   }
   if (op === "in") {
     return (
-      <TokenInput
-        values={Array.isArray(value) ? value.map(String) : []}
-        onChange={(next) => onChange(next)}
-        removeLabel={(item) => t("tokenInput.remove", { value: item })}
-        aria-label={label ?? t("filters.values")}
-        placeholder={t("filters.addValue")}
+      <ListValue
+        type={type}
+        value={value}
+        onChange={onChange}
+        label={label ?? t("filters.values")}
       />
     );
   }

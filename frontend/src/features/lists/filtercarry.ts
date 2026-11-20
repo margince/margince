@@ -34,7 +34,7 @@ export function emptyValueFor(
  * The value a clause keeps when only its operator changes, where the new
  * operator's control can show it. Out of a list only a sole item carries, since
  * picking one of several is the reader's choice. On a number or money field
- * only a number enters or leaves a list: a list shows no half-typed text.
+ * only a number enters or leaves a list, as the engine compares only numbers.
  */
 export function carriedValue(
   from: FilterOp,
