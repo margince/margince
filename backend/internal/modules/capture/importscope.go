@@ -15,18 +15,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// connectionEntitySQL is the sending company of the mailbox an import came
-// from: its own connection for a shared mailbox. For a seat, the live
-// connections whose mailbox is named in delivered_by (the mark recordImportTx
-// wrote), counted only when they agree on one company. Anything unclear, or an
-// owner-less connection, leaves the import unscoped.
-var connectionEntitySQL = `coalesce(
-	(SELECT c.legal_entity_id FROM capture_connection c WHERE c.id = i.connection_id),
+// deliveringEntitySQL is the sending company of the mailboxes that delivered
+// an import, for the import row aliased row and the delivered_by marks in
+// delivered. A shared mailbox's import takes its own connection's company. A
+// seat's takes the live connections named in delivered, only when all have a
+// company and they agree on one. Anything unclear leaves the import unscoped.
+// The data task and recordImportTx both use it, so they cannot drift.
+func deliveringEntitySQL(row, delivered string) string {
+	return `coalesce(
+	(SELECT c.legal_entity_id FROM capture_connection c WHERE c.id = ` + row + `.connection_id),
 	(SELECT CASE WHEN count(DISTINCT c.legal_entity_id) = 1 AND count(*) = count(c.legal_entity_id)
 	              THEN (array_agg(c.legal_entity_id))[1] END
 	   FROM capture_connection c
-	  WHERE c.user_id = i.user_id AND c.archived_at IS NULL
-	    AND ` + storekit.MailboxSQL("c") + ` IN (SELECT split_part(mark, ':', 1) FROM unnest(i.delivered_by) mark)))`
+	  WHERE c.user_id = ` + row + `.user_id AND c.archived_at IS NULL
+	    AND ` + storekit.MailboxSQL("c") + ` IN (SELECT split_part(mark, ':', 1) FROM unnest(` + delivered + `) mark)))`
+}
+
+var connectionEntitySQL = deliveringEntitySQL("i", "i.delivered_by")
 
 // unscopedImportsSQL selects imports with no sending company whose mailbox has one.
 var unscopedImportsSQL = `FROM capture_import i WHERE i.legal_entity_id IS NULL AND ` + connectionEntitySQL + ` IS NOT NULL`
