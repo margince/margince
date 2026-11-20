@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
@@ -85,7 +86,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	if !ok {
 		return ids.UUID{}, errors.New("compose: staging a controller delivery outside workspace context")
 	}
-	mail, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	mail, err := presentControllerMailTx(ctx, tx, in.Rendered, in.Entity)
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -159,7 +160,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 // preview shows the same From, subject and text, and refuses what staging
 // would refuse.
 func (q controllerMailQueue) PresentConfirmationTx(ctx context.Context, tx pgx.Tx, in consent.ConfirmationSend) (consent.PresentedMail, error) {
-	mail, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	mail, err := presentControllerMailTx(ctx, tx, in.Rendered, in.Entity)
 	if err != nil {
 		return consent.PresentedMail{}, err
 	}
@@ -208,13 +209,13 @@ type presentedControllerMail struct {
 
 // presentControllerMailTx adds the brand the installation's mail is sent
 // under. The HTML alternative is headed by the logo or the name.
-func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered) (presentedControllerMail, error) {
+func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered, entity ids.UUID) (presentedControllerMail, error) {
 	mail := presentedControllerMail{rendered: rendered, body: rendered.Body}
 	if rendered.Language == "" && rendered.HTMLBody == "" {
 		return mail, nil
 	}
 	// The logo is read at send; one gone by then leaves the name.
-	brand, key, err := controllerLetterheadTx(ctx, tx)
+	brand, key, err := controllerLetterheadTx(ctx, tx, entity)
 	if err != nil {
 		return presentedControllerMail{}, err
 	}
@@ -234,7 +235,10 @@ func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Re
 // "This message is from" cannot name two companies. Refusing the send instead
 // would withhold a notice the law owes the subject over a branding setting. The
 // company logo stays only while the company is the controller.
-func controllerLetterheadTx(ctx context.Context, tx pgx.Tx) (string, string, error) {
+func controllerLetterheadTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (string, string, error) {
+	if further, name, key, err := furtherEntityLetterheadTx(ctx, tx, entity); err != nil || further {
+		return name, key, err
+	}
 	brand, key, err := letterheadNameTx(ctx, tx)
 	if err != nil {
 		return "", "", err
@@ -268,4 +272,25 @@ func controllerExpiry(expiry time.Time) *time.Time {
 		return nil
 	}
 	return &expiry
+}
+
+// furtherEntityLetterheadTx is the legal name and logo of the further legal
+// entity a controller mail goes out for. further is false for the default
+// entity and for none, which keep the installation's letterhead.
+func furtherEntityLetterheadTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (further bool, name, key string, err error) {
+	if entity.IsZero() {
+		return false, "", "", nil
+	}
+	identity, _, err := contacts.ResolveLegalEntity(ctx, tx, ids.From[ids.LegalEntityKind](entity))
+	if err != nil || identity.IsDefault {
+		return false, "", "", err
+	}
+	name = identity.DisplayName
+	if identity.LegalName != nil && *identity.LegalName != "" {
+		name = *identity.LegalName
+	}
+	if identity.LogoObjectKey != nil {
+		key = *identity.LogoObjectKey
+	}
+	return true, name, key, nil
 }

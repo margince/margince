@@ -141,7 +141,11 @@ func (s *Store) renderConfirmMail(
 	if err != nil {
 		return Rendered{}, "", err
 	}
-	rendered, err = s.controllerView(ctx, tx, rendered, category, in.recipient)
+	who := ruleSubject{Kind: entityContact, ID: in.contactID.String()}
+	if !in.leadID.IsZero() {
+		who = ruleSubject{Kind: entityLead, ID: in.leadID.String()}
+	}
+	rendered, err = s.controllerView(ctx, tx, rendered, category, in.recipient, who)
 	return rendered, category, err
 }
 

@@ -275,7 +275,7 @@ func (s *Store) prepareAcknowledgementTx(
 	if err != nil {
 		return err
 	}
-	rendered, err = s.controllerView(ctx, tx, rendered, category, address)
+	rendered, err = s.controllerView(ctx, tx, rendered, category, address, ruleSubject{Kind: sub.entityType, ID: sub.id.String()})
 	if err != nil {
 		return err
 	}

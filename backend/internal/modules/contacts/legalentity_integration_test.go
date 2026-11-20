@@ -368,3 +368,32 @@ func TestTheDefaultEntityReadsTheAnchorCompany(t *testing.T) {
 		t.Errorf("setting the default entity's own country gave %+v (%v), want de beside the anchor's name", updated, err)
 	}
 }
+
+// TestAStoredDefaultCountryIsNeverRead: a country stored on the default entity
+// before its country became the installation's is not what any reader sees.
+//
+// Mutation: drop the nil in scanLegalEntity and this fails.
+func TestAStoredDefaultCountryIsNeverRead(t *testing.T) {
+	e := setupPromoteConsent(t)
+	id := defaultEntity(t, e)
+	ctx := context.Background()
+	if _, err := e.owner.Exec(ctx, `UPDATE legal_entity SET country = 'de' WHERE is_default`); err != nil {
+		t.Fatalf("store a country on the default: %v", err)
+	}
+	tx, err := e.owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+	identity, _, err := ResolveLegalEntity(ctx, tx, id)
+	if err != nil {
+		t.Fatalf("reading the default entity: %v", err)
+	}
+	if identity.Country != nil {
+		t.Errorf("the default entity reads country %q, want none: it follows the installation", *identity.Country)
+	}
+}

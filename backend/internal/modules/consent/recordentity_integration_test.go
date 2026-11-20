@@ -11,6 +11,7 @@ package consent
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/subjectrightsrules"
 	pubjurisdiction "github.com/margince/margince/backend/pkg/extension/jurisdiction"
@@ -120,5 +122,16 @@ func TestTheContactOwnersEntityAnswersForTheRecord(t *testing.T) {
 	}
 	if entity != branch {
 		t.Errorf("Margince's own mail goes out for %v, want the branch %v", entity, branch)
+	}
+	var body string
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		rendered, err := e.store.controllerView(e.ctx, tx, Rendered{Body: "Please confirm."}, commsauthz.CategoryRecordConfirmation, e.address, who)
+		body = rendered.Body
+		return err
+	}); err != nil {
+		t.Fatalf("rendering the mail: %v", err)
+	}
+	if !strings.Contains(body, "Branch Ltd") {
+		t.Errorf("the mail reads %q, want it sent as Branch Ltd", body)
 	}
 }
