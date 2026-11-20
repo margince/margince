@@ -88,6 +88,9 @@ export function isRadiusOperand(value: unknown): value is RadiusOperand {
   );
 }
 
+/** A century of days: mirrors storekit's `MaxRelativeDays`, which refuses more. */
+export const MAX_DAYS_AGO = 36600;
+
 export function isRelativeDate(value: unknown): value is RelativeDate {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -98,7 +101,8 @@ export function isRelativeDate(value: unknown): value is RelativeDate {
     keys.length === 1 &&
     typeof days === "number" &&
     Number.isInteger(days) &&
-    days >= 0
+    days >= 0 &&
+    days <= MAX_DAYS_AGO
   );
 }
 

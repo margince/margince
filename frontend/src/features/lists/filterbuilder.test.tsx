@@ -565,6 +565,21 @@ describe("editing the tree", () => {
     expect(after.and[0].value).toBe("");
   });
 
+  it("keeps a count of days when only the operator changes", async () => {
+    const user = userEvent.setup();
+    const week = { days_ago: 7 };
+    render(
+      <Harness start={newGroup("and", [newLeaf("created_at", "eq", week)])} />,
+    );
+    const operator = screen.getByRole("combobox", { name: "Operator" });
+    await pickOption(user, operator, "is on or after");
+    expect(wire().and[0]).toMatchObject({ op: "gte", value: week });
+    expect(screen.getByRole("textbox", { name: /days before/ })).toHaveProperty(
+      "value",
+      "7",
+    );
+  });
+
   it("starts a yes/no field on the arm its control shows", async () => {
     resetIDsForTest();
     const user = userEvent.setup();

@@ -27,33 +27,10 @@ import {
   removeNode,
   replaceNode,
 } from "../../lib/segmentpredicate";
+import { carriedValue, emptyValueFor } from "./filtercarry";
 import { ownLeaf } from "./filterproposal";
 import { operatorKey } from "./filtersentence";
 import { ValueControl } from "./filtervalue";
-
-/**
- * The value a clause starts with when its field or operator changes.
- *
- * It is deliberately the EMPTY one for its shape rather than a guess: an operand
- * this screen invented would be a filter the human did not write, and the count
- * would move before they had said anything. `isComplete` then holds the preview
- * back until they fill it in, which is the whole reason an empty value is safe to
- * put in the tree.
- *
- * A boolean operand, on `exists` or a yes/no field, is the exception: its
- * two-way control always shows one arm pressed, and every boolean is complete.
- * So it starts at `true`, the arm shown, and the row never shows a choice the
- * tree does not hold.
- */
-function emptyValueFor(
-  op: FilterOp,
-  type: VocabularyField["type"] | undefined,
-): LeafValue {
-  if (op === "in") {
-    return [];
-  }
-  return op === "exists" || type === "boolean" ? true : "";
-}
 
 /**
  * One picker group as options, in the order a reader scans them: by the word
@@ -200,7 +177,12 @@ export function ClauseRow({
           edit((found) => ({
             ...found,
             op: nextOp as FilterOp,
-            value: emptyValueFor(nextOp as FilterOp, chosen?.type),
+            value: carriedValue(
+              found.op,
+              nextOp as FilterOp,
+              found.value,
+              chosen?.type,
+            ),
           }))
         }
         aria-label={t("filters.operator")}

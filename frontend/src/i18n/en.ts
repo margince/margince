@@ -19669,6 +19669,8 @@ export const en = {
   "filters.date.daysAgo": "Days ago",
   "filters.date.mode": "How the date is given",
   "filters.date.daysAgoCount": "{field}: days before today",
+  "filters.date.daysAgoInvalid":
+    "Enter a whole number of days from 0 to {max}.",
   "filters.saveListConfirm": "Save list",
   "filters.propose.label": "Describe the {records} you want",
   "filters.propose.hint":

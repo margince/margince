@@ -19343,6 +19343,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.date.mode": "C\u00e1ch nh\u1eadp ng\u00e0y",
   "filters.date.daysAgoCount":
     "{field}: s\u1ed1 ng\u00e0y tr\u01b0\u1edbc h\u00f4m nay",
+  "filters.date.daysAgoInvalid": "Nhập số ngày là số nguyên từ 0 đến {max}.",
   "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
   "filters.propose.label": "Mô tả {records} cần tìm",
   "filters.propose.hint":

@@ -19870,6 +19870,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",
   "filters.date.daysAgoCount": "{field}: Tage vor heute",
+  "filters.date.daysAgoInvalid":
+    "Gib eine ganze Zahl von 0 bis {max} Tagen ein.",
   "filters.saveListConfirm": "Liste speichern",
   "filters.propose.label": "Beschreibe die {records}, die du suchst",
   "filters.propose.hint":
