@@ -48,11 +48,11 @@ or a list of fields does not tell you what you are confirming.
 ## Answering approvals
 
 ### How do I approve an action in Margince?
-To approve a proposed change in Margince, open **Home** and show the **Worklist**. Find the approval row and choose **Decide**, then **Accept**. The open card on **Home** shows the proposal too, and its **View details** answers it.
+To approve a proposed change in Margince, open **Home** and show the **Worklist**. Find the approval row and choose **Decide**, then **Approve**. The open card on **Home** shows the proposal too, and its **View details** answers it.
 1. Open **Home** and choose **Show Worklist** if it is hidden.
 2. Open the **Decisions** tab to see only approvals.
 3. On the row, choose **Decide**. The **Your decision** panel opens.
-4. Read the proposal and its evidence, then choose **Accept**.
+4. Read the proposal and its evidence, then choose **Approve** (**Approve email** for an email).
 
 If it edited a record, the **Applied** message offers **Undo on record** to reverse it from the record's history; a sent email has no undo.
 When an agent asked to run the change itself, approving only lets that agent run it. The message then reads "Approved. Waiting for the agent to run it." and offers no undo, because nothing has changed yet.
@@ -248,11 +248,11 @@ changes says nothing about mail you send out.
 Turning a switch off sends that kind back to your approvals, where the rest of
 this page applies.
 
-## Deciding: accept, edit or reject
+## Deciding: approve, edit or reject
 
 An approval has three answers.
 
-**Accept.** Margince applies the change and records it in the audit log. When
+**Approve.** Margince applies the change and records it in the audit log. When
 it changed a record, the message that appears offers **Undo on
 record**, which opens that record's history to reverse it. A kind that sends
 mail or names no record has nothing to put back, so it offers no undo. A new
@@ -381,7 +381,7 @@ yourself.
    proposal was read from, word for word.
    Read them before you answer. A proposal is a reading of what somebody said,
    and the lines are how you check it.
-9. **Accept** to create the task, or **Reject**. An accepted proposal becomes an
+9. **Create task** to create the task, or **Reject**. An accepted proposal becomes an
    ordinary task on the contact and on their company.
 
 It does not send anything or create tasks without your approval. Reading the
