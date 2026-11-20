@@ -3139,6 +3139,8 @@ export const en = {
     "Your access could not be read. Reload the page to check it again.",
   "contact.attachRefused":
     "You can only read this contact. Ask its owner for write access.",
+  "record.attachRefused":
+    "You can only read this record. Ask its owner for write access.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
@@ -6398,6 +6400,17 @@ export const en = {
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
+  "legalEntities.defaultCountry":
+    "Country: {country}. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultCountryNone":
+    "No country set. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultCountryLink": "Change it under Jurisdiction",
+  "jurisdiction.entities.title": "Legal entities",
+  "jurisdiction.entities.lead":
+    "Each company’s country sets the law for the mail its team sends and the contacts it owns.",
+  "jurisdiction.entities.default": "{country}, the selection above",
+  "jurisdiction.entities.none": "No country set",
+  "jurisdiction.entities.edit": "Change legal entities",
   "legalEntities.edit": "Edit",
   "legalEntities.archive": "Archive",
   "legalEntities.editTitle": "Edit {name}",
@@ -6441,9 +6454,6 @@ export const en = {
   "legalEntities.logoEmpty": "Drop an image here or choose one",
   "legalEntities.logoRemove": "Remove logo",
   "legalEntities.countryPlaceholder": "Choose a country",
-  "legalEntities.countryInstallation": "The installation’s country",
-  "legalEntities.countryInstallationHint":
-    "Leave it on the installation’s country unless this company is established elsewhere.",
   "legalEntities.archiveTitle": "Archive {name}?",
   "legalEntities.archiveBody":
     "It leaves this list, and nobody can be assigned to it any more.",
@@ -11852,6 +11862,21 @@ export const en = {
   "privacy.purposeDoiBadge": "Double opt-in",
   "privacy.purposesLoading": "Loading purposes…",
   "privacy.purposesEmpty": "No purposes registered yet.",
+  "privacy.purposeClass": "Class",
+  "privacy.purposeClass.businessCorrespondence": "Correspondence",
+  "privacy.purposeClass.transactional": "Transactional",
+  "privacy.purposeClass.marketing": "Marketing",
+  "privacy.purposeClass.phoneOutreach": "Phone outreach",
+  "privacy.purposeClass.undefined": "Not defined",
+  "privacy.purposeSends": "Sent in {days} days",
+  "privacy.purposeSendsSub":
+    "Each mail names its purpose and may say what kind of mail it is. Margince checks that against the record before it sends. These counts cover the last {days} days. Kind not borne out counts mail whose stated kind the record did not support, such as a newsletter sent as customer service.",
+  "privacy.purposeSendsLoading": "Counting sent mail…",
+  "privacy.purposeSendsEmpty":
+    "No mail named a purpose in the last {days} days.",
+  "privacy.purposeDisputed": "Kind not borne out",
+  "privacy.purposeUnknown": "No known purpose",
+  "privacy.purposeSendsTable": "Mail sent per purpose",
   "privacy.customerNotices": "Existing customers",
   "privacy.customerNoticesSub":
     "In Germany you may send advertising for similar products to a customer without consent, if they were told when you collected their address that they can object. Declare here where and when you told them. Customers who bought from that entity in that period then receive your newsletters with an opt-out link.",
@@ -15931,6 +15956,12 @@ export const en = {
   "users.handover.deactivateNote":
     "Deactivating moves none of them. Hand them over first, or later from this menu.",
   "users.handover.done": "{records} handed over to {name}.",
+  "users.handover.draftsNote":
+    "Saved email drafts move only after {name} is deactivated. If the colleague you pick already has a draft in the same place, theirs stays and the one from {name} is deleted.",
+  "users.handover.draftsDiscarded_one":
+    "{count} saved email draft was deleted, because {name} already had a draft in the same place.",
+  "users.handover.draftsDiscarded_other":
+    "{count} saved email drafts were deleted, because {name} already had a draft in the same place.",
   "users.handover.nothingMoved": "Nothing was left to hand over.",
   "users.handover.left":
     "Still with {name}: {records}. You may not change these.",
@@ -15952,6 +15983,8 @@ export const en = {
   "users.handover.handoffs_other": "{count} pending handoffs",
   "users.handover.responsibilities_one": "{count} record responsibility",
   "users.handover.responsibilities_other": "{count} record responsibilities",
+  "users.handover.drafts_one": "{count} saved email draft",
+  "users.handover.drafts_other": "{count} saved email drafts",
   "users.handover.lists_one": "{count} list",
   "users.handover.lists_other": "{count} lists",
   "users.removeMfa": "Remove two-step sign-in",

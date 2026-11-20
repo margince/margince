@@ -148,9 +148,10 @@ type subjectAsk struct {
 }
 
 // subjectAskTx finds the contact's own request without writing anything. The
-// mail is the installation's own, so the default legal entity is the sender.
+// mail is the installation's own, sent for the entity that answers for the
+// record (recordEntityTx).
 func subjectAskTx(ctx context.Context, tx pgx.Tx, who subject, address string) (subjectAsk, error) {
-	entity, err := storekit.LegalEntityOf(ctx, tx, ids.UUID{})
+	entity, err := recordEntityTx(ctx, tx, ruleSubject{Kind: who.entityType, ID: who.id.String()})
 	if err != nil {
 		return subjectAsk{}, err
 	}

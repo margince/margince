@@ -64,7 +64,7 @@ func (g *GraphEdgeGen) HandleBatch(ctx context.Context, envs []events.Envelope) 
 					seenArrival[key] = true
 					arrivals = append(arrivals, env)
 				}
-			} else if refoldsActivity(env.Type) && !seenActivity[id] {
+			} else if refoldsActivity(env) && !seenActivity[id] {
 				seenActivity[id] = true
 				activityIDs = append(activityIDs, id)
 			}

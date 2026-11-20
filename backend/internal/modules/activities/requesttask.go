@@ -266,7 +266,7 @@ func emailRequestTaskInput(source crmcontracts.Activity, links []ActivityLinkInp
 		SystemText: metadata,
 		Kind:       string(crmcontracts.ActivityKindTask), Subject: &subject, OccurredAt: &asOf, AssigneeID: &assignee,
 		SourceSystem: &sourceSystem, SourceID: &sourceID, SourceActivityID: &messageID,
-		Source: EmailRequestTaskSource, Origin: OriginSystemRemediation, Links: links,
+		Source: EmailRequestTaskSource, Origin: OriginSystemRemediation, Links: links, continues: &messageID,
 	}
 	if !shared {
 		in.VisibleOnlyTo(userID)

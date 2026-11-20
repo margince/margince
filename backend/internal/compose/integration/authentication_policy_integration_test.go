@@ -37,6 +37,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -154,7 +156,12 @@ func TestRequireSSORoundTripsThroughThePolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the login gate's SSO read: %v", err)
 	}
-	requireMFA, err := store.MFARequired(loginCtx)
+	var requireMFA bool
+	err = e.DB().Tx(loginCtx, func(tx pgx.Tx) error {
+		var readErr error
+		requireMFA, readErr = store.MFARequired(loginCtx, tx)
+		return readErr
+	})
 	if err != nil {
 		t.Fatalf("the login gate's MFA read: %v", err)
 	}

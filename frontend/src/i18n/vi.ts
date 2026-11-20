@@ -3135,6 +3135,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không đọc được quyền truy cập của bạn. Tải lại trang để kiểm tra lại.",
   "contact.attachRefused":
     "Bạn chỉ có quyền xem liên hệ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
+  "record.attachRefused":
+    "Bạn chỉ có quyền xem hồ sơ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
   "record.logActivityRefused":
     "Bạn không có quyền ghi nhận hoạt động trên hồ sơ này.",
   "record.share": "Chia sẻ",
@@ -6263,6 +6265,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.displayName": "Tên",
   "legalEntities.legalName": "Tên pháp lý",
   "legalEntities.country": "Quốc gia",
+  "legalEntities.defaultCountry":
+    "Quốc gia: {country}. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultCountryNone":
+    "Chưa đặt quốc gia. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultCountryLink": "Đổi ở mục Khu vực pháp lý",
+  "jurisdiction.entities.title": "Pháp nhân",
+  "jurisdiction.entities.lead":
+    "Quốc gia của mỗi công ty quyết định luật áp dụng cho thư nhân viên gửi và hồ sơ họ phụ trách.",
+  "jurisdiction.entities.default": "{country}, theo lựa chọn ở trên",
+  "jurisdiction.entities.none": "Chưa đặt quốc gia",
+  "jurisdiction.entities.edit": "Đổi pháp nhân",
   "legalEntities.edit": "Sửa",
   "legalEntities.archive": "Lưu trữ",
   "legalEntities.editTitle": "Sửa {name}",
@@ -6306,9 +6319,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.logoEmpty": "Thả ảnh vào đây hoặc chọn ảnh",
   "legalEntities.logoRemove": "Gỡ logo",
   "legalEntities.countryPlaceholder": "Chọn quốc gia",
-  "legalEntities.countryInstallation": "Quốc gia của bản cài đặt",
-  "legalEntities.countryInstallationHint":
-    "Giữ quốc gia của bản cài đặt, trừ khi công ty này đặt trụ sở ở nơi khác.",
   "legalEntities.archiveTitle": "Lưu trữ {name}?",
   "legalEntities.archiveBody":
     "Pháp nhân này rời khỏi danh sách và không ai được gán vào nữa.",
@@ -11589,6 +11599,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeDoiBadge": "Xác nhận kép",
   "privacy.purposesLoading": "Đang tải mục đích…",
   "privacy.purposesEmpty": "Chưa có mục đích nào.",
+  "privacy.purposeClass": "Loại",
+  "privacy.purposeClass.businessCorrespondence": "Thư từ công việc",
+  "privacy.purposeClass.transactional": "Giao dịch",
+  "privacy.purposeClass.marketing": "Tiếp thị",
+  "privacy.purposeClass.phoneOutreach": "Liên hệ qua điện thoại",
+  "privacy.purposeClass.undefined": "Chưa định nghĩa",
+  "privacy.purposeSends": "Đã gửi trong {days} ngày",
+  "privacy.purposeSendsSub":
+    "Mỗi thư ghi mục đích và có thể nói thư thuộc loại gì. Margince đối chiếu điều đó với hồ sơ trước khi gửi. Số liệu tính cho {days} ngày qua. “Loại không được xác nhận” đếm các thư mà hồ sơ không xác nhận loại đã nêu, ví dụ một bản tin được gửi như chăm sóc khách hàng.",
+  "privacy.purposeSendsLoading": "Đang đếm thư đã gửi…",
+  "privacy.purposeSendsEmpty":
+    "Không có thư nào ghi mục đích trong {days} ngày qua.",
+  "privacy.purposeDisputed": "Loại không được xác nhận",
+  "privacy.purposeUnknown": "Không có mục đích đã biết",
+  "privacy.purposeSendsTable": "Thư đã gửi theo mục đích",
   "privacy.customerNotices": "Khách hàng hiện có",
   "privacy.customerNoticesSub":
     "Ở Đức, bạn có thể gửi quảng cáo về sản phẩm tương tự cho khách hàng mà không cần đồng ý, nếu khi thu thập địa chỉ bạn đã báo cho họ rằng họ có thể từ chối. Hãy ghi ở đây bạn đã báo ở đâu và khi nào. Khách hàng đã mua của pháp nhân đó trong khoảng thời gian này sẽ nhận bản tin của bạn kèm liên kết hủy đăng ký.",
@@ -15613,6 +15638,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.deactivateNote":
     "Vô hiệu hóa không chuyển hồ sơ nào. Hãy bàn giao trước, hoặc sau đó từ menu này.",
   "users.handover.done": "Đã bàn giao {records} cho {name}.",
+  "users.handover.draftsNote":
+    "Bản nháp email đã lưu chỉ được chuyển sau khi {name} bị vô hiệu hóa. Nếu đồng nghiệp bạn chọn đã có bản nháp ở cùng chỗ, bản của họ được giữ và bản của {name} bị xóa.",
+  "users.handover.draftsDiscarded_one":
+    "Đã xóa {count} bản nháp email đã lưu, vì {name} đã có bản nháp ở cùng chỗ.",
+  "users.handover.draftsDiscarded_other":
+    "Đã xóa {count} bản nháp email đã lưu, vì {name} đã có bản nháp ở cùng chỗ.",
   "users.handover.nothingMoved": "Không còn gì để bàn giao.",
   "users.handover.left":
     "Vẫn ở chỗ {name}: {records}. Bạn không được thay đổi những hồ sơ này.",
@@ -15634,6 +15665,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.handoffs_other": "{count} lượt bàn giao đang chờ",
   "users.handover.responsibilities_one": "{count} trách nhiệm đối với hồ sơ",
   "users.handover.responsibilities_other": "{count} trách nhiệm đối với hồ sơ",
+  "users.handover.drafts_one": "{count} bản nháp email đã lưu",
+  "users.handover.drafts_other": "{count} bản nháp email đã lưu",
   "users.handover.lists_one": "{count} danh sách",
   "users.handover.lists_other": "{count} danh sách",
   "users.removeMfa": "Gỡ đăng nhập hai bước",

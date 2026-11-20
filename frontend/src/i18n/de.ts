@@ -3234,6 +3234,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
     "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
+  "record.attachRefused":
+    "Du kannst diesen Datensatz nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -6435,6 +6437,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
+  "legalEntities.defaultCountry":
+    "Land: {country}. Die Standardfirma folgt dem Rechtsraum der Installation.",
+  "legalEntities.defaultCountryNone":
+    "Kein Land gesetzt. Die Standardfirma folgt dem Rechtsraum der Installation.",
+  "legalEntities.defaultCountryLink": "Unter Rechtsraum ändern",
+  "jurisdiction.entities.title": "Firmen",
+  "jurisdiction.entities.lead":
+    "Das Land jeder Firma bestimmt das Recht für die Mails ihrer Leute und die Datensätze, die sie verantworten.",
+  "jurisdiction.entities.default": "{country}, die Auswahl oben",
+  "jurisdiction.entities.none": "Kein Land gesetzt",
+  "jurisdiction.entities.edit": "Firmen ändern",
   "legalEntities.edit": "Bearbeiten",
   "legalEntities.archive": "Archivieren",
   "legalEntities.editTitle": "{name} bearbeiten",
@@ -6478,9 +6491,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.logoEmpty": "Bild hier ablegen oder auswählen",
   "legalEntities.logoRemove": "Logo entfernen",
   "legalEntities.countryPlaceholder": "Land auswählen",
-  "legalEntities.countryInstallation": "Land der Installation",
-  "legalEntities.countryInstallationHint":
-    "Lass das Land der Installation stehen, außer dieses Unternehmen hat seinen Sitz anderswo.",
   "legalEntities.archiveTitle": "{name} archivieren?",
   "legalEntities.archiveBody":
     "Er verschwindet aus dieser Liste, und niemand kann ihm mehr zugeordnet werden.",
@@ -11911,6 +11921,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
   "privacy.purposesEmpty": "Noch keine Zwecke registriert.",
+  "privacy.purposeClass": "Art",
+  "privacy.purposeClass.businessCorrespondence": "Korrespondenz",
+  "privacy.purposeClass.transactional": "Transaktional",
+  "privacy.purposeClass.marketing": "Werbung",
+  "privacy.purposeClass.phoneOutreach": "Telefonische Ansprache",
+  "privacy.purposeClass.undefined": "Nicht definiert",
+  "privacy.purposeSends": "Gesendet in {days} Tagen",
+  "privacy.purposeSendsSub":
+    "Jede Mail nennt ihren Zweck und kann sagen, welche Art Mail sie ist. Margince prüft das vor dem Senden an den Daten. Die Zahlen gelten für die letzten {days} Tage. „Art nicht belegt“ zählt Mails, deren genannte Art die Daten nicht stützen, etwa einen Newsletter, der als Kundenservice gesendet wurde.",
+  "privacy.purposeSendsLoading": "Gesendete Mails werden gezählt …",
+  "privacy.purposeSendsEmpty":
+    "In den letzten {days} Tagen hat keine Mail einen Zweck genannt.",
+  "privacy.purposeDisputed": "Art nicht belegt",
+  "privacy.purposeUnknown": "Kein bekannter Zweck",
+  "privacy.purposeSendsTable": "Gesendete Mails je Zweck",
   "privacy.customerNotices": "Bestandskunden",
   "privacy.customerNoticesSub":
     "In Deutschland darfst du Kunden ohne Einwilligung Werbung für ähnliche Produkte schicken, wenn du sie beim Erheben der Adresse auf ihr Widerspruchsrecht hingewiesen hast. Trage hier ein, wo und wann du den Hinweis gegeben hast. Kunden, die in diesem Zeitraum bei dieser Gesellschaft gekauft haben, erhalten dann deine Newsletter mit Abmeldelink.",
@@ -16046,6 +16071,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.deactivateNote":
     "Beim Deaktivieren wird nichts davon verschoben. Übergib es vorher oder später über dieses Menü.",
   "users.handover.done": "{records} an {name} übergeben.",
+  "users.handover.draftsNote":
+    "Gespeicherte E-Mail-Entwürfe werden erst verschoben, wenn {name} deaktiviert ist. Hat das Mitglied, das du wählst, schon einen Entwurf an derselben Stelle, bleibt dieser, und der von {name} wird gelöscht.",
+  "users.handover.draftsDiscarded_one":
+    "{count} gespeicherter E-Mail-Entwurf wurde gelöscht, weil {name} an derselben Stelle schon einen Entwurf hatte.",
+  "users.handover.draftsDiscarded_other":
+    "{count} gespeicherte E-Mail-Entwürfe wurden gelöscht, weil {name} an derselben Stelle schon einen Entwurf hatte.",
   "users.handover.nothingMoved": "Es war nichts mehr zu übergeben.",
   "users.handover.left":
     "Noch bei {name}: {records}. Diese darfst du nicht ändern.",
@@ -16067,6 +16098,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.handoffs_other": "{count} offene Übergaben",
   "users.handover.responsibilities_one": "{count} Datensatzverantwortung",
   "users.handover.responsibilities_other": "{count} Datensatzverantwortungen",
+  "users.handover.drafts_one": "{count} gespeicherter E-Mail-Entwurf",
+  "users.handover.drafts_other": "{count} gespeicherte E-Mail-Entwürfe",
   "users.handover.lists_one": "{count} Liste",
   "users.handover.lists_other": "{count} Listen",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",

@@ -11221,7 +11221,10 @@ paths:
       description: |
         A draft is the composer's state, kept so that closing it does not lose a message. It
         is not an activity, not a scheduled send and never on a timeline, and only the seat
-        that wrote it can read it. There is at most one per author and anchor.
+        that wrote it can read, change or discard it: not a colleague, an admin, or an agent
+        acting for someone else. There is at most one per author and anchor. Once the author has
+        left, a handover of their work (`handOverUserWork`) moves their drafts to the colleague
+        who takes over, who from then on is the only one who reads them.
 
         The AI drafting routes still persist nothing. A draft exists because the rep's composer
         saved one here, or because an agent acting for the rep drafted a first message to a
@@ -27446,6 +27449,45 @@ paths:
               schema: { $ref: '#/components/schemas/ConsentPurpose' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /consent-purposes/send-counts:
+    get:
+      tags: [Compliance]
+      operationId: listConsentPurposeSendCounts
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: How many messages went out under each declared consent purpose, and how many the record disputes.
+      description: |
+        Needs `consent_config:read`. A send names a consent purpose, and may claim what kind of
+        message it is. The send engine records, for every message it stages, what was claimed and
+        what the record bore out. This read counts those staged messages per purpose in the window,
+        most sent first.
+
+        `disputed` counts the messages whose claimed kind differs from the one the engine resolved:
+        for example a campaign claimed as customer service with nothing on record behind it. That is
+        where a mislabelled send shows.
+
+        A key that names no live purpose, and a message that named none, count under the purpose
+        key `unknown`, without a class. The answer holds at most 200 entries.
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 366, default: 30 }
+          description: How many days back the window reaches from now.
+      responses:
+        '200':
+          description: The send counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, days]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/ConsentPurposeSendCount' } }
+                  days: { type: integer, description: 'The window the counts cover.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /existing-customer-notices:
     get:
       tags: [Compliance]
@@ -29928,7 +29970,7 @@ paths:
       summary: Count the live records a member still owns.
       description: |
         How many live leads, contacts, companies, deals and projects the member owns that the
-        caller can see. For a member who left, it also counts the contacts and companies only
+        caller can see, and how many composer drafts they saved (a count only). For a member who left, it also counts the contacts and companies only
         they can see (captured and never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
         this to say what would be left behind. Works for any non-archived member, deactivated or
         not, because work is best handed over before the account is closed.
@@ -29957,7 +29999,12 @@ paths:
         in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
         owner (an active human seat that can write), else `422`
         with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
-        caller may not change stays with the member. Automations and deal-room stewardships are not moved.
+        caller may not change stays with the member. For a member who left, their saved composer
+        drafts move too, and from then on only the new holder reads them. Where the new holder
+        already has a draft in the same place, theirs stays and the member's is discarded, counted
+        in `mail_draft_discarded`. An active member keeps every draft, and so does a draft a
+        scheduled or held message still waits on; both count in `left`. Automations and deal-room
+        stewardships are not moved.
       x-mcp-tool: { verb: hand_over_user_work, router: change_access, action: hand_over_work, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -58454,7 +58501,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task, webhook, list, sdr_handoff, record_assignment]
+      required: [lead, contact, company, deal, project, task, webhook, list, sdr_handoff, record_assignment, mail_draft]
       properties:
         lead: { type: integer, minimum: 0 }
         contact: { type: integer, minimum: 0 }
@@ -58466,6 +58513,7 @@ components:
         list: { type: integer, minimum: 0, description: Live lists owned by the member. }
         sdr_handoff: { type: integer, minimum: 0, description: Waiting prospect handoffs assigned to the member. }
         record_assignment: { type: integer, minimum: 0, description: Current user responsibilities on records. }
+        mail_draft: { type: integer, minimum: 0, description: 'Unsent messages the member saved in the composer. Only the count is shown; the words stay readable by the author alone until a handover moves them.' }
 
     UserHandover:
       type: object
@@ -58481,10 +58529,11 @@ components:
 
     UserHandoverResult:
       type: object
-      required: [moved, left]
+      required: [moved, left, mail_draft_discarded]
       properties:
         moved: { $ref: '#/components/schemas/HandoverCounts' }
         left: { $ref: '#/components/schemas/HandoverCounts' }
+        mail_draft_discarded: { type: integer, minimum: 0, description: "The member's saved drafts deleted because the receiver already had a draft in the same place." }
 
     BulkRecordType:
       type: string
@@ -62054,6 +62103,7 @@ components:
             objected, so naming one here is refused (422 `invalid`).
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -62085,6 +62135,7 @@ components:
             `invalid`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -62548,9 +62599,11 @@ components:
             allowed.
         marketing_purpose:
           type: string
+          maxLength: 200
           description: Which marketing purpose, when the context is `marketing`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             The deprecated purpose key, when the composer still has one. It authorizes
             nothing on its own, and it is accepted here for one reason: the SEND still
@@ -62612,8 +62665,10 @@ components:
           allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
         marketing_purpose:
           type: string
+          maxLength: 200
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             The deprecated purpose key, when the composer still has one. It authorizes
             nothing on its own, and it is accepted here for one reason: the SEND still
@@ -63039,6 +63094,7 @@ components:
             objected, so naming one here is refused (422 `invalid`).
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -63070,6 +63126,7 @@ components:
             `invalid`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -63159,6 +63216,7 @@ components:
             objected, so naming one here is refused (422 `invalid`).
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -63177,6 +63235,7 @@ components:
           description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -75572,11 +75631,27 @@ components:
         requires_double_opt_in: { type: boolean, default: false, description: 'When true, a grant is only effective after a confirmed DOI event (German email norm).' }
         class:
           type: string
-          enum: [business_correspondence, transactional, marketing, phone_outreach]
-          x-extensible-enum: true
+          allOf: [{ $ref: '#/components/schemas/ConsentPurposeClass' }]
           description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
         frequency: { $ref: '#/components/schemas/ConsentPurposeFrequency' }
         created_at: { type: string, format: date-time }
+
+    ConsentPurposeClass:
+      type: string
+      enum: [business_correspondence, transactional, marketing, phone_outreach]
+      x-extensible-enum: true
+      description: Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
+
+    ConsentPurposeSendCount:
+      type: object
+      required: [purpose_key, sends, disputed]
+      properties:
+        purpose_key: { type: string, description: 'The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none.' }
+        class:
+          allOf: [{ $ref: '#/components/schemas/ConsentPurposeClass' }]
+          description: The purpose's class. Absent under `unknown`.
+        sends: { type: integer, description: 'Messages staged under this purpose in the window.' }
+        disputed: { type: integer, description: 'Of those, the messages whose claimed kind differs from the kind the record bore out.' }
 
     ConsentPurposeFrequency:
       type: string

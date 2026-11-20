@@ -79,6 +79,14 @@ function backend(
     if (request.url.endsWith("/me")) {
       return jsonResponse(meFixture({ allow }));
     }
+    if (request.url.endsWith("/installation/jurisdiction")) {
+      return jsonResponse({
+        selected: "de",
+        available: [],
+        deadlines: [],
+        documents: [],
+      });
+    }
     const refusal = Object.entries(refuse).find(([path]) =>
       request.url.endsWith(path),
     );
@@ -298,9 +306,13 @@ it("offers the default only the fields it keeps itself", async () => {
       name: en["legalEntities.signatureTemplate"],
     }),
   ).toBeNull();
+  // Its country is the installation's jurisdiction, shown and never edited here.
   expect(
-    within(dialog).getByRole("combobox", { name: /Country/ }),
-  ).toHaveTextContent(en["legalEntities.countryInstallation"]);
+    within(dialog).queryByRole("combobox", { name: /Country/ }),
+  ).toBeNull();
+  expect(
+    await within(dialog).findByText(/The default company follows/),
+  ).toBeInTheDocument();
 });
 
 it("never offers to archive the default entity", async () => {
