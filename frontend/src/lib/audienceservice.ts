@@ -13,7 +13,7 @@
 // Two copies of one decision drift, and the drift shows up as a control that
 // reports the wrong outcome.
 
-import type { QueryKey } from "@tanstack/react-query";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
@@ -73,16 +73,13 @@ export function useThreadAudience(options: {
       );
       return { threadKey: variables.threadKey, outcome: data ?? null };
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ["system-health"] });
       queryClient.invalidateQueries({ queryKey: ["capture-health"] });
-      for (const queryKey of options.invalidate(result)) {
-        queryClient.invalidateQueries({ queryKey });
-      }
       // Every read that could be drawing one of the changed messages, not the
       // ones the answer names: the outcome names ACTIVITIES and the client is
       // never told which records they are filed against.
-      queryClient.invalidateQueries({ predicate: showsAMessage });
+      await refreshMessageReads(queryClient, options.invalidate(result));
       options.onSettled?.(result);
     },
   });
@@ -124,15 +121,33 @@ export function useMessageAudience(options: {
         }),
       );
     },
-    onSuccess: () => {
-      for (const queryKey of options.invalidate()) {
-        queryClient.invalidateQueries({ queryKey });
-      }
+    onSuccess: async () => {
       // The message's own canonical read and every timeline it appears on. One
       // message is filed against several records, so the caller's screen is
       // never the whole answer — and it is not the caller's to remember either.
-      queryClient.invalidateQueries({ predicate: showsAMessage });
+      await refreshMessageReads(queryClient, options.invalidate());
       options.onSettled?.();
     },
   });
+}
+
+/**
+ * Re-reads what shows a message's audience, and resolves once the reads on
+ * screen hold the new answer.
+ *
+ * The write's answer is an Activity, not the access block a message draws, so
+ * it cannot stand in for the read. Awaiting the refetch keeps the control
+ * pending until then; reporting the write done first left the open message
+ * saying its old audience for as long as the refetch took.
+ */
+async function refreshMessageReads(
+  queryClient: QueryClient,
+  callerKeys: QueryKey[],
+): Promise<void> {
+  await Promise.all([
+    ...callerKeys.map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey }),
+    ),
+    queryClient.invalidateQueries({ predicate: showsAMessage }),
+  ]);
 }
