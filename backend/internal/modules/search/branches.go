@@ -153,7 +153,8 @@ func (b searchBranch) identifierMatch(alias string, identifierPos identifierBind
 	if arm == everyIdentifier {
 		return b.identifier.MatchSQL(pos, alias+".id")
 	}
-	return fmt.Sprintf("(%s OR (%s) IS NOT NULL)", b.identifier.ExactSQL(pos, alias+".id"), b.identifierEvidence(alias, identifierPos))
+	exact, prefix := b.identifierTiers(alias, identifierPos)
+	return fmt.Sprintf("(%s OR %s OR %s)", b.identifier.ExactSQL(pos, alias+".id"), exact, prefix)
 }
 
 // unrankedScoreCeiling is the most a row that only contains an identifier can
@@ -181,15 +182,20 @@ func (b searchBranch) identifierEvidence(alias string, identifierPos identifierB
 	if b.identifier.Table == "" {
 		return "NULL::text"
 	}
-	whole := identifierPos.position(false)
-	exact := b.identifier.ExactSQL(whole, alias+".id")
-	prefix := b.identifier.PrefixSQL(whole, alias+".id")
-	if b.identifier != storekit.CompanyDomains {
-		if !identifierPos.addressPrefix {
-			prefix = sqlFalse
-		}
-	}
+	exact, prefix := b.identifierTiers(alias, identifierPos)
 	return fmt.Sprintf("CASE WHEN %s THEN 'exact' WHEN %s THEN 'prefix' ELSE NULL END", exact, prefix)
+}
+
+// identifierTiers are the predicates behind each identifier tier. Spelled as
+// plain disjuncts, the primary key can serve them in a bitmap union.
+func (b searchBranch) identifierTiers(alias string, identifierPos identifierBinder) (exact, prefix string) {
+	whole := identifierPos.position(false)
+	exact = b.identifier.ExactSQL(whole, alias+".id")
+	prefix = b.identifier.PrefixSQL(whole, alias+".id")
+	if b.identifier != storekit.CompanyDomains && !identifierPos.addressPrefix {
+		prefix = sqlFalse
+	}
+	return exact, prefix
 }
 
 func (b searchBranch) ownScore(alias, score string, identifierPos identifierBinder) string {

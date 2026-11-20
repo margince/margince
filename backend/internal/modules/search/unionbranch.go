@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode"
 )
 
 // unionBranch is one element of the search union.
@@ -60,8 +61,7 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 }
 
 // withOwnMatches gives every identifier branch its own rows, for a grouped page
-// of plain words. A negated word ranks rows the query refuses, so the ceiling
-// holds only for a query without operators.
+// of one plain word (plainWord).
 func withOwnMatches(ctx context.Context, branches []unionBranch, q branchQuery, arg func(any) int) error {
 	for i, union := range branches {
 		branch, found := branchFor(union.entity)
@@ -88,11 +88,6 @@ func branchSelect(ctx context.Context, branch searchBranch, q branchQuery, arm i
 	// in typedquery.go — including the parse configurations each entity
 	// uses and the rule that only the fragment widens.
 	tsquery := matchExpression(branch.entity, q.headPos, q.tailPos, q.hasFragment)
-	if arm == rankedIdentifier && q.hasFragment {
-		// The whole-word bonus parses the fragment as the match does not, so a
-		// row it lifts is an own row too.
-		tsquery = fmt.Sprintf("(%s || (%s))", tsquery, simpleWholeWords(q.tailPos))
-	}
 
 	snippet, err := branch.excerpt(ctx, arg)
 	if err != nil {
@@ -149,7 +144,7 @@ func searchUnion(ctx context.Context, in Input, query string, types []string, ar
 	if err != nil {
 		return nil, err
 	}
-	if in.PerType != nil && !carriesOperators(query) {
+	if in.PerType != nil && plainWord(query) {
 		if err := withOwnMatches(ctx, branches, q, arg); err != nil {
 			return nil, err
 		}
@@ -167,4 +162,15 @@ func searchUnion(ctx context.Context, in Input, query string, types []string, ar
 		branches = append(branches, unionBranch{sql: extension})
 	}
 	return branches, nil
+}
+
+// plainWord reports a query of one word made of letters and digits alone. For
+// it, a row the text rank or the whole-word bonus scores is one the name index
+// matches. More words, an apostrophe or an operator each break that, and a
+// row found only by a contained address could then outscore an own match.
+func plainWord(query string) bool {
+	words := strings.Fields(query)
+	return len(words) == 1 && !strings.ContainsFunc(words[0], func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.IsMark(r)
+	})
 }

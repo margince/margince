@@ -33,7 +33,7 @@ func TestAGroupedPageKeepsEachTypesRankedHits(t *testing.T) {
 	e := integration.Setup(t)
 	seedGroupedCorpus(t, e)
 	store := search.NewStore(e.DB())
-	queries := []string{"co", "ang", "contract", "zeb", "quinn@oz", "ozebra.example", "cora alpha", "cobalt or zeb"}
+	queries := []string{"co", "ang", "contract", "zeb", "quinn@oz", "ozebra.example", "cora alpha", "cobalt or zeb", "o'rei"}
 	for _, query := range queries {
 		for _, perType := range []int{3, 8} {
 			grouped, err := store.Search(e.Admin(), paletteInput(query, &perType, nil))
@@ -127,13 +127,19 @@ func seedGroupedCorpus(t *testing.T, e *integration.Env) {
 		seedContact(t, e, fmt.Sprintf("Cora %c", 'A'+i), fmt.Sprintf("cora%d@north.example", i))
 		seedCompany(t, e, fmt.Sprintf("Cobalt %c", 'A'+i), fmt.Sprintf("cobalt%d.example", i))
 		seedLead(t, e, fmt.Sprintf("Corey %c", 'A'+i), fmt.Sprintf("corey%d@south.example", i))
+		seedContact(t, e, fmt.Sprintf("O Reid %c", 'A'+i), fmt.Sprintf("reid%d@east.example", i))
 	}
+	// "o'rei" matches the O Reids by name, while Ana's address and her whole
+	// word "orei" put her first: a page filled by the O Reids must still read her.
+	seedContact(t, e, "Ana Orei", "ana@orei.example")
 	seedContact(t, e, "Cora Alpha", "cora.alpha@north.example")
 	for name, email := range map[string]string{
 		"Yara Quill": "yara@mekong-controls.example", "Lin Wang": "lin.wang@north.example",
 		"Mei Zhang": "mei.zhang@west.example", "Tom Ruiz": "tom@contracts-hub.example",
 		"Zeb Ono": "zeb@ono.example", "Zebulon Ray": "ray@ray.example",
 		"Quinn Hale": "quinn@ozebra.example", "Rhea Moss": "rhea@kazeb.example",
+		"Nova Alpha": "nova@north.example", "Tim OReilly": "tim@media.example",
+		"Ida Rhys": "ida@oreilly-books.example",
 	} {
 		seedContact(t, e, name, email)
 	}
