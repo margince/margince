@@ -234,10 +234,9 @@ func (r leadRefs) applyTo(l *crmcontracts.Lead) {
 	l.ProjectId = uuidPtr(r.project)
 	l.ProductId = uuidPtr(r.product)
 	l.PromotedContactId = uuidPtr(r.promoted)
-	// What separates a merged-away lead from a disqualified one. Both are
-	// archived and neither carries a promoted_contact_id, so without this the
-	// page can only see that the lead ended — and it said "Disqualified",
-	// which claims a human judged the lead not worth pursuing.
+	// MergedIntoId tells a merged-away lead from a disqualified one: both are
+	// archived with no promoted contact. Without it the page says
+	// "Disqualified", which claims a human judged the lead not worth pursuing.
 	l.MergedIntoId = uuidPtr(r.mergedInto)
 	l.FromContactId = uuidPtr(r.fromContact)
 	l.CompanyId = uuidPtr(r.company)
