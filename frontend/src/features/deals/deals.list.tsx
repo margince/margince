@@ -148,6 +148,7 @@ function DealCreateAction({
   return (
     <CreateAction
       label={t("create.deal")}
+      requires={{ object: "deal", action: "create" }}
       invalidate="deals"
       screen="deals"
       create={createDeal}

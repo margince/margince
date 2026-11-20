@@ -204,24 +204,31 @@ export function DealBulkBar({
           setOutcomes([]);
           onDone([]);
         }}
+        childrenRequire={{ object: "deal", action: "update" }}
       >
-        <Select
-          aria-label={t("deals.bulkStage")}
-          value={stageId}
-          placeholder={t("deals.bulkStagePick")}
-          disabled={move.isPending}
-          onChange={setStageId}
-          options={openStages.map((stage) => ({
-            value: stage.id,
-            label: stage.name,
-          }))}
-        />
-        <Button
-          disabled={move.isPending || deals.length === 0 || stageId === ""}
-          onClick={moveStage}
-        >
-          {t("deals.bulkMove")}
-        </Button>
+        {(reasonId) => (
+          <>
+            <Select
+              aria-label={t("deals.bulkStage")}
+              value={stageId}
+              placeholder={t("deals.bulkStagePick")}
+              disabled={move.isPending || reasonId !== undefined}
+              aria-describedby={reasonId}
+              onChange={setStageId}
+              options={openStages.map((stage) => ({
+                value: stage.id,
+                label: stage.name,
+              }))}
+            />
+            <Button
+              disabled={move.isPending || deals.length === 0 || stageId === ""}
+              reasonId={reasonId}
+              onClick={moveStage}
+            >
+              {t("deals.bulkMove")}
+            </Button>
+          </>
+        )}
       </BulkVerbs>
       {failed.length > 0 && (
         <ErrorLine inline>

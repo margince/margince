@@ -16,11 +16,14 @@ import {
 export function ShortlistVerb({
   recordType,
   disabled,
+  reasonId,
   exclude,
   onPick,
 }: Readonly<{
   recordType: ListRecordType;
   disabled: boolean;
+  /** The bar's sentence saying why a Shortlist change is refused, when it is. */
+  reasonId?: string;
   /** A Shortlist not to offer: the one the rows are already shown on. */
   exclude?: string;
   onPick: (list: Readonly<{ id: string; name: string }>) => void;
@@ -42,7 +45,8 @@ export function ShortlistVerb({
       aria-label={t("bulk.addToShortlist")}
       value=""
       placeholder={t("bulk.addToShortlist")}
-      disabled={disabled}
+      disabled={disabled || reasonId !== undefined}
+      aria-describedby={reasonId}
       onChange={(id) => {
         const list = editable.find((candidate) => candidate.id === id);
         if (list) {

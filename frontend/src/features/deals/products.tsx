@@ -299,19 +299,18 @@ export function ProductsAdmin() {
       className="listsection"
       title={t("product.title")}
       titleAction={
-        canCreate ? (
-          <CreateAction
-            label={t("product.new")}
-            invalidate="products"
-            // `stay`: a fresh product has no page of its own to open. The list
-            // it joins is already on screen.
-            screen="settings"
-            stay
-            create={createProduct}
-            fields={fields}
-            conflict={skuTaken}
-          />
-        ) : undefined
+        <CreateAction
+          label={t("product.new")}
+          requires={{ object: "product", action: "create" }}
+          invalidate="products"
+          // `stay`: a fresh product has no page of its own to open. The list
+          // it joins is already on screen.
+          screen="settings"
+          stay
+          create={createProduct}
+          fields={fields}
+          conflict={skuTaken}
+        />
       }
     >
       <PanelBody className="listsection-intro">

@@ -52,6 +52,32 @@ export const READS_DESTINATIONS: GrantSpec = {
   sales_target: ["read"],
 };
 
+const WRITE: readonly RbacAction[] = ["read", "create", "update", "delete"];
+
+/** Every verb on each record kind and on activities: a seat a create admits. */
+export const WRITES_RECORDS: GrantSpec = {
+  contact: WRITE,
+  company: WRITE,
+  lead: WRITE,
+  deal: WRITE,
+  project: WRITE,
+  activity: WRITE,
+};
+
+/**
+ * Answers `/me` in `client` with a full seat holding `WRITES_RECORDS`, for a
+ * suite about what a write does rather than about who may make it.
+ */
+export function seedWriter<
+  C extends { setQueryData: (key: string[], data: MeResponse) => unknown },
+>(client: C): C {
+  client.setQueryData(
+    ["me"],
+    meFixture({ rowScope: "all", allow: WRITES_RECORDS }),
+  );
+  return client;
+}
+
 /** The zone the fixture user stores, for fixtures that need a zone string. */
 export const FIXTURE_TIMEZONE = "Europe/Berlin";
 

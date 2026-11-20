@@ -3117,7 +3117,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.notYoursToChange":
     "Bạn không có quyền sửa công ty này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "record.actionRefused":
-    "Bạn không có quyền dùng mục này. Liên hệ quản trị viên để được cấp thêm quyền.",
+    "Vai trò của bạn không bao gồm thao tác này. Liên hệ quản trị viên để được cấp thêm quyền.",
+  "record.accessUnknown":
+    "Không đọc được quyền truy cập của bạn. Tải lại trang để kiểm tra lại.",
   "contact.attachRefused":
     "Bạn chỉ có quyền xem liên hệ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
   "record.logActivityRefused":
@@ -3142,6 +3144,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "share.ceiling.noWider": "không rộng hơn",
   "share.ceiling.post": ".",
   "share.unknownRecord": "Không thể chia sẻ hồ sơ này.",
+  "share.missingRecord":
+    "Hồ sơ này không tồn tại hoặc chưa được chia sẻ với bạn.",
   "share.grantAccess": "Cấp quyền truy cập",
   "share.subject": "Thành viên hoặc nhóm",
   "share.holdsRead": "Có quyền đọc",
@@ -14093,10 +14097,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.home.seatLabel": "Tài khoản của bạn",
   "settings.home.seat.full": "Tài khoản đầy đủ quyền: được thay đổi",
   "settings.home.seat.read": "Tài khoản chỉ xem: chỉ được xem",
-  "settings.home.reachLabel": "Hồ sơ được phép xem",
-  "settings.home.reach.own": "Hồ sơ của riêng bạn",
-  "settings.home.reach.team": "Hồ sơ của nhóm bạn",
+  "settings.home.reachLabel": "Hồ sơ bạn được thay đổi",
+  "settings.home.reach.none": "Không có",
+  "settings.home.reach.own": "Của riêng bạn",
+  "settings.home.reach.team": "Của bạn và nhóm bạn",
   "settings.home.reach.all": "Mọi hồ sơ trong công ty",
+  "settings.home.readLabel": "Hồ sơ bạn được đọc",
+  "settings.home.read.some":
+    "Mọi {kinds}, trừ hồ sơ riêng tư của đồng nghiệp chưa chia sẻ với bạn",
+  "settings.home.read.none": "Không có",
   "settings.home.access": "Quy\u1ec1n truy c\u1eadp c\u1ee7a b\u1ea1n",
   "settings.home.accessLoading": "Đang tải quyền truy cập…",
   "settings.boundary.deniedTitle": "Không có quyền truy cập trang cài đặt này",
@@ -14794,7 +14803,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "license.check.failed":
     "Không thể đọc lại token giấy phép. Kết quả trước vẫn giữ nguyên, và nhật ký máy chủ ghi lý do.",
   "license.counting":
-    "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa, kể cả trợ lý AI. Tài khoản chỉ xem không giới hạn và không được tính.",
+    "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa. Trợ lý AI và tài khoản chỉ xem không được tính.",
   "settings.rates.fxTitle": "Tỷ giá",
   "settings.rates.fxIntro":
     "Tỷ giá quy đổi số tiền ngoại tệ sang loại tiền cơ sở. Tỷ giá mới có hiệu lực từ hôm nay trở đi. Chỉ được chọn ngày trong quá khứ nếu ngày đó trước tỷ giá đầu tiên của loại tiền. Tỷ giá đã có hiệu lực không bao giờ thay đổi.",
@@ -15180,7 +15189,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roles.renameSubmit": "Lưu tên",
   "roles.scopeTitle": "Thành viên được thay đổi hồ sơ của ai",
   "roles.scopeSub":
-    "Liên hệ, công ty, lead và deal vẫn đọc được với mọi vai trò có quyền đọc. Mục này quyết định thành viên được thay đổi gì và thấy dự án nào.",
+    "Mọi vai trò có quyền đọc liên hệ, công ty, lead, deal và dự án đều đọc được tất cả. Mục này quyết định thành viên được thay đổi hồ sơ nào trong số đó.",
   "roles.scope.own": "Của chính họ",
   "roles.scope.ownSub": "Hồ sơ mà thành viên là người chịu trách nhiệm.",
   "roles.scope.team": "Của nhóm họ",
@@ -15385,8 +15394,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.notArchived": "Không thể chuyển nhóm vào kho lưu trữ",
   "users.teamNotChanged": "Không thể thay đổi thành viên nhóm",
   "users.access.title": "Quyền truy cập của người dùng",
-  "users.access.identity":
-    "Đọc mọi liên hệ, công ty, lead và deal của cả công ty.",
+  "users.access.reads": "Đọc mọi {kinds} của cả công ty.",
+  "users.access.readsNone": "Không đọc hồ sơ nào.",
+  "users.access.writesNone": "Không thay đổi hồ sơ nào.",
   "users.access.writesAll": "Sửa mọi hồ sơ.",
   "users.access.writesTeam":
     "Sửa hồ sơ của chính mình và của các nhóm {teams}.",
