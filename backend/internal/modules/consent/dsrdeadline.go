@@ -93,15 +93,21 @@ func receivedAtFor(stated *time.Time, now time.Time) (time.Time, error) {
 
 // dueAtFor settles the stored deadline against the computed one. An absent
 // date takes the computed one. A later date is refused, because it would
-// show a request as on time on a day it is already late. An earlier date is
-// the officer's choice and is marked as such.
-func dueAtFor(stated *time.Time, computed time.Time, rule string) (due time.Time, overridden bool, err error) {
+// show a request as on time on a day it is already late. A date before the
+// request arrived is refused, because the request would be overdue from its
+// first second. Any other earlier date is the officer's choice and is marked
+// as such.
+func dueAtFor(stated *time.Time, received, computed time.Time, rule string) (due time.Time, overridden bool, err error) {
 	if stated == nil {
 		return computed, false, nil
 	}
 	if stated.After(computed) {
 		return time.Time{}, false, &ValidationError{Field: fieldDueAt, Reason: fmt.Sprintf(
 			"later than the statutory deadline %s (%s); choose that date or an earlier one", computed.UTC().Format(time.RFC3339), rule)}
+	}
+	if stated.Before(received) {
+		return time.Time{}, false, &ValidationError{Field: fieldDueAt, Reason: fmt.Sprintf(
+			"before the request arrived at %s; choose the day it arrived or a later one", received.UTC().Format(time.RFC3339))}
 	}
 	return *stated, !stated.Equal(computed), nil
 }

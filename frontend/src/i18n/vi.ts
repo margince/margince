@@ -14898,8 +14898,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Để trống nếu là hôm nay. Yêu cầu ghi nhận muộn vẫn giữ thời hạn theo ngày nhận thực tế.",
   "privacy.earlierDue": "Thời hạn sớm hơn",
   "privacy.earlierDueHint":
-    "Không bắt buộc. Chỉ chấp nhận ngày trước thời hạn ở trên.",
+    "Không bắt buộc. Một ngày từ ngày nhận yêu cầu đến thời hạn ở trên.",
   "privacy.earlierDueTooLate": "Chọn ngày trước {date}.",
+  "privacy.earlierDueTooEarly": "Chọn ngày {date} hoặc sau đó.",
   "privacy.dueRule": "Quy tắc thời hạn",
   "privacy.dueRuleUnknown": "Nhập tay trước khi thời hạn được tính tự động",
   "privacy.dueOverridden": "Đặt sớm hơn quy tắc",

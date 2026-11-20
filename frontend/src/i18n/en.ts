@@ -15229,8 +15229,9 @@ export const en = {
     "Leave empty for today. A request logged late keeps the deadline its real arrival gives it.",
   "privacy.earlierDue": "Earlier deadline",
   "privacy.earlierDueHint":
-    "Optional. Only a date before the deadline above is accepted.",
+    "Optional. A day from the one the request arrived on up to the deadline above.",
   "privacy.earlierDueTooLate": "Choose a date before {date}.",
+  "privacy.earlierDueTooEarly": "Choose a date on or after {date}.",
   "privacy.dueRule": "Deadline rule",
   "privacy.dueRuleUnknown": "Typed by hand before deadlines were worked out",
   "privacy.dueOverridden": "Set earlier than the rule gives",

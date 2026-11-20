@@ -101,6 +101,26 @@ func TestADeadlineLaterThanTheComputedOneIsRefused(t *testing.T) {
 	}
 }
 
+// A deadline before the request arrived would make it overdue from its first
+// second. It is refused; a deadline on the day it arrived is kept.
+func TestADeadlineBeforeTheRequestArrivedIsRefused(t *testing.T) {
+	e := setupDSR(t)
+	received := time.Date(2026, time.October, 1, 9, 0, 0, 0, time.UTC)
+	at := received.Format(time.RFC3339)
+	status, _, field := e.file(t, e.handlers(),
+		`{"kind":"erasure","subject_ref":"typo@dsr.test","received_at":"`+at+`","due_at":"2020-01-01T23:59:59Z"}`)
+	if status != http.StatusUnprocessableEntity || field != fieldDueAt {
+		t.Fatalf("a due_at years before received_at → %d naming %q, want 422 naming due_at", status, field)
+	}
+
+	sameDay := received.Add(14 * time.Hour)
+	status, stored, _ := e.file(t, e.handlers(),
+		`{"kind":"erasure","subject_ref":"day@dsr.test","received_at":"`+at+`","due_at":"`+sameDay.Format(time.RFC3339)+`"}`)
+	if status != http.StatusCreated || !stored.DueAt.Equal(sameDay) {
+		t.Fatalf("a due_at later on the day it arrived → %d due %s, want it stored", status, stored.DueAt)
+	}
+}
+
 // A request cannot have arrived in the future: that would grant days the
 // subject is not owed.
 func TestARequestReceivedInTheFutureIsRefused(t *testing.T) {

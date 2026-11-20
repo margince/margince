@@ -15317,8 +15317,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für heute leer lassen. Eine spät erfasste Anfrage behält die Frist ihres tatsächlichen Eingangs.",
   "privacy.earlierDue": "Frühere Frist",
   "privacy.earlierDueHint":
-    "Optional. Nur ein Datum vor der Frist oben wird angenommen.",
+    "Optional. Ein Tag ab dem Eingang der Anfrage bis zur Frist oben.",
   "privacy.earlierDueTooLate": "Wähle ein Datum vor dem {date}.",
+  "privacy.earlierDueTooEarly": "Wähle den {date} oder ein späteres Datum.",
   "privacy.dueRule": "Fristregel",
   "privacy.dueRuleUnknown":
     "Manuell eingetragen, bevor Fristen berechnet wurden",
