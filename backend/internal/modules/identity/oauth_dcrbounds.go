@@ -87,12 +87,13 @@ func deleteUnusedSelfMadeClients(ctx context.Context, tx pgx.Tx, limit int, olde
 		args["older_secs"] = olderThan.Seconds()
 	}
 	tag, err := tx.Exec(ctx, `
-		DELETE FROM oauth_client WHERE id IN (
+		WITH picked AS MATERIALIZED (
 		       SELECT c.id FROM oauth_client c
 		        WHERE `+unusedSelfMadeClient+`
 		          AND (@older_secs::float8 IS NULL OR c.created_at < now() - make_interval(secs => @older_secs::float8))
 		        ORDER BY c.created_at, c.id LIMIT @limit
 		          FOR UPDATE SKIP LOCKED)
+		DELETE FROM oauth_client WHERE id IN (SELECT id FROM picked)
 		   AND NOT EXISTS (SELECT 1 FROM oauth_grant g WHERE g.client_id = oauth_client.client_id)`, args)
 	if err != nil {
 		return 0, err

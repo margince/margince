@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// liftedAgentCallKindList is every tool kind that ran at once for an agent
-// acting as its user when the withdrawal task shipped, one per line. It is
+// liftedAgentCallKindList holds, one per line, the tool kinds that ran at once
+// for an agent acting as its user when the withdrawal task shipped. It is
 // frozen: a shipped task withdraws the same kinds on every upgrade, whatever
 // waits since.
 //

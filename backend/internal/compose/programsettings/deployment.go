@@ -41,9 +41,9 @@ var (
 		Key: "mcp.client_registration.metadata_document", Env: "MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT", Type: config.Bool, Default: config.Some(true), Roles: apiOnly,
 		Doc: "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > AI tool access says.",
 	})
-	// The bounds on clients that made themselves (registration or a metadata
-	// document) and that no consent has used: how many may exist, and how long
-	// one is kept.
+	// The bounds on clients that made themselves, by registration or a metadata
+	// document, and that no consent has used. They set how many may exist and
+	// how long one is kept.
 	MCPUnusedClientLimit = config.Define(config.Spec[int]{
 		Key: "mcp.client_registration.unused_limit", Env: "MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_LIMIT", Type: config.Int,
 		Default: config.Some(identity.DefaultUnusedDynamicClientCap), Validate: atLeastOne, Roles: apiOnly,
