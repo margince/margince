@@ -133,7 +133,7 @@ export function scopeName(
   t: Translator,
 ): string | null {
   if (scope.kind === "workspace") {
-    return t("analytics.share.populationCompany");
+    return t("analytics.scope.workspace");
   }
   return scope.label ?? null;
 }

@@ -365,7 +365,7 @@ source file, key and value. Placeholders are removed before the word rules run.
 | Spacing | Two spaces in a row |
 | No exclamation marks | Any `!` |
 | Imperative with -e | A short du imperative as a whole word, in lower case or with a capital: leg, schreib, prüf, markier, zieh, füg, trag, schick, geh, mach, frag, sag, verschieb, setz, bleib |
-| Share is teilen | freigeben, Freigabe or a separated frei in a value whose English says share, shares, shared or sharing and does not say approve |
+| Share is teilen | freigeben or Freigabe in any case or compound, or "gib … frei", in a value whose English says share, shares, shared or sharing and does not say approve |
 | "Bitte" only before a recovery step | Read on the raw value. "bitte" in any case, unless it opens a sentence (at the start, or after a period, question mark, exclamation mark, colon or `}` and a space) straight before versuche, lade or wende, or in the four outsider families before versuchen Sie, laden Sie or wenden Sie; a second one in a value; one in a value with no sentence period |
 | Abbreviations | z. B., d. h., usw., u. a., ggf., bzgl., bzw., inkl., ca., Tg., with or without the inner space |
 | No contractions | ’s or 's straight after a letter |

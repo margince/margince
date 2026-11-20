@@ -310,15 +310,22 @@ const SHORT_IMPERATIVE = word(
 // not approve, the German says teilen.
 const SHARE_IN_ENGLISH = /\bshar(?:e|es|ed|ing)\b/i;
 const APPROVE_IN_ENGLISH = /\bapprov/i;
-const APPROVE_IN_GERMAN = new RegExp(
-  `frei(?:ge|zu)?g[ei]b|Freigabe|(?<![${LETTER}])frei(?![${LETTER}])`,
-);
+// Any case, so a sentence-initial "Freigeben" and a compound "Kontofreigabe"
+// count. The split verb ("gibt … frei") is read as one, and the adjective frei
+// alone is not the verb.
+const APPROVE_IN_GERMAN = [
+  /frei(?:ge|zu)?g[ei]b|freigabe/i,
+  new RegExp(
+    `(?<![${LETTER}])(?:gib|gibt|gebe|geben|gab|gaben)(?![${LETTER}])[^.?!]*(?<![${LETTER}])frei(?![${LETTER}])`,
+    "i",
+  ),
+];
 
 function sharesWithTheApprovalWord(english: string, german: string): boolean {
   return (
     SHARE_IN_ENGLISH.test(english) &&
     !APPROVE_IN_ENGLISH.test(english) &&
-    APPROVE_IN_GERMAN.test(german)
+    APPROVE_IN_GERMAN.some((approval) => approval.test(german))
   );
 }
 

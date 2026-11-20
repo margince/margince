@@ -265,10 +265,14 @@ export function formatHours(hours: number, locale: Locale): string {
  * where "41.7%" claims a precision a count of scanned messages does not have.
  * A rate that carries a real fraction is `formatFinePercent`'s job.
  */
-export function formatPercent(fraction: number, locale: Locale): string {
+export function formatPercent(
+  fraction: number,
+  locale: Locale,
+  fractionDigits = 0,
+): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "percent",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: fractionDigits,
   }).format(fraction);
 }
 

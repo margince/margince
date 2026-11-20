@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Fragment, useContext, useRef } from "react";
 import { formatNumber, formatPercent } from "../format/format";
-import { type Locale, translatePlural, useLocale, useT } from "../i18n";
+import { translatePlural, useLocale, useT } from "../i18n";
 import { AnsweredSearch } from "./answeredsearch";
 import { Button, OptionCount } from "./atoms";
 import { ColumnTotals, largestStageTotal } from "./boardtotals";
@@ -183,11 +183,6 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
   unpricedCount?: number | null;
 };
 
-/** A stage's win chance, written as a deal card writes its own. */
-function stageChance(money: BoardMoneyColumn, locale: Locale): string {
-  return formatPercent(money.probabilityPct / 100, locale);
-}
-
 type BoardHandlers<Record extends BoardRecord> = {
   countLabel?: (count: number) => string;
   /**
@@ -311,6 +306,9 @@ function BoardLayout<Record extends BoardRecord>({
       <div className="board" ref={board}>
         {columns.map((column) => {
           const money = moneyFor(column);
+          // Written as a deal card writes its own chance.
+          const chance =
+            money && formatPercent(money.probabilityPct / 100, locale);
           const dealCount = column.count ?? column.deals.length;
           const countHidden =
             column.count === null || (!money && column.sumHidden);
@@ -376,9 +374,7 @@ function BoardLayout<Record extends BoardRecord>({
                 >
                   <OptionCount count={dealCount} />
                 </span>
-                {money && (
-                  <span className="prob">{stageChance(money, locale)}</span>
-                )}
+                {money && <span className="prob">{chance}</span>}
               </div>
               {/* The stage's money leads the sub. The count is in the head;
                   a screen reader gets it here with its unit, as "12 deals". */}

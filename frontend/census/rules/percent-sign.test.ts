@@ -16,6 +16,8 @@ const GLUED = [
   "const c = <span>{formatNumber(x, locale)}%</span>;",
   'const d = formatNumber(x, locale) + "%";',
   "const e = `${fmt.formatNumber(x, locale)}%`;",
+  'const f = `${formatNumber(x, locale)}${unit === "percent" ? "%" : ""}`;',
+  'const g = `${formatNumber(x, locale)}${"%"}`;',
 ] as const;
 
 // What the gate leaves alone: a style length, and a formatter that sets the

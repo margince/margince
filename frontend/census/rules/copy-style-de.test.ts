@@ -60,18 +60,29 @@ describe("the de copy checks, over planted catalogs", () => {
         source: "de.ts",
         catalog: {
           "a.share": "Für dich freigegeben",
+          "a.opens": "Freigeben für das Team",
+          "a.compound": "Keine Kontofreigabe vorhanden",
+          "a.split": "Gib die Kontakte für das Team frei.",
           "a.approve": "Wird erst nach einer Freigabe geteilt.",
+          "a.free": "Geteilt, die Zeit bleibt frei.",
           "a.ok": "Mit dir geteilt",
         },
         english: {
           "a.share": "Shared with me",
+          "a.opens": "Share with the team",
+          "a.compound": "No account sharing",
+          "a.split": "Share the contacts with the team.",
           "a.approve": "This share takes effect only after approval.",
+          "a.free": "Shared, and the time stays free.",
           "a.ok": "Shared with me",
         },
       },
     ]).filter((line) => line.startsWith("says teilen"));
     expect(shared).toEqual([
       'says teilen where the English says share: de.ts a.share: "Für dich freigegeben"',
+      'says teilen where the English says share: de.ts a.opens: "Freigeben für das Team"',
+      'says teilen where the English says share: de.ts a.compound: "Keine Kontofreigabe vorhanden"',
+      'says teilen where the English says share: de.ts a.split: "Gib die Kontakte für das Team frei."',
     ]);
   });
 

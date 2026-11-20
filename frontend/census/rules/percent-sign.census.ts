@@ -32,12 +32,33 @@ function isFormatterCall(node: ts.Node): boolean {
 
 const opensWithPercent = (text: string) => /^\s?%/.test(text);
 
-function gluesAPercent(node: ts.Node): boolean {
-  if (ts.isTemplateSpan(node)) {
-    return (
-      isFormatterCall(node.expression) && opensWithPercent(node.literal.text)
-    );
+// The next span's expression puts the sign on: a string, or a conditional
+// whose one branch is the sign.
+function suppliesAPercent(node: ts.Expression): boolean {
+  if (ts.isParenthesizedExpression(node)) {
+    return suppliesAPercent(node.expression);
   }
+  if (ts.isStringLiteralLike(node)) return opensWithPercent(node.text);
+  if (ts.isConditionalExpression(node)) {
+    return suppliesAPercent(node.whenTrue) || suppliesAPercent(node.whenFalse);
+  }
+  return false;
+}
+
+function spanGluesAPercent(span: ts.TemplateSpan): boolean {
+  if (!isFormatterCall(span.expression)) return false;
+  if (opensWithPercent(span.literal.text)) return true;
+  const spans = span.parent.templateSpans;
+  const next = spans[spans.indexOf(span) + 1];
+  return (
+    span.literal.text.trim() === "" &&
+    next !== undefined &&
+    suppliesAPercent(next.expression)
+  );
+}
+
+function gluesAPercent(node: ts.Node): boolean {
+  if (ts.isTemplateSpan(node)) return spanGluesAPercent(node);
   if (
     ts.isBinaryExpression(node) &&
     node.operatorToken.kind === ts.SyntaxKind.PlusToken

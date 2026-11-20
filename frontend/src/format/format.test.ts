@@ -611,6 +611,12 @@ describe("a percent in the reader's locale", () => {
     expect(formatAnalyticsPercentPoints(40, locale)).toBe(written);
   });
 
+  it("keeps a rate's decimals when asked for them", () => {
+    expect(formatPercent(7.7 / 100, "de", 2)).toBe("7,7\u00a0%");
+    expect(formatPercent(7.7 / 100, "en", 2)).toBe("7.7%");
+    expect(formatPercent(0.077, "en")).toBe("8%");
+  });
+
   it("keeps the analytics marks for a rounded or tiny figure", () => {
     expect(formatAnalyticsPercentPoints(12.4, "de")).toBe("≈12\u00a0%");
     expect(formatAnalyticsPercentPoints(0.2, "en")).toBe("<1%");

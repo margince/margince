@@ -3400,7 +3400,7 @@
   "analytics.outcomesOwnLensOnly": "Mục này đo hồ sơ của một thành viên. Các mục rộng hơn bao gồm phần còn lại của phạm vi.",
   "analytics.readingLoading": "Đang tải",
   "analytics.readingUnavailable": "Không khả dụng",
-  "analytics.share.populationCompany": "Cả công ty",
+  "analytics.scope.workspace": "Cả công ty",
   "analytics.frame": "Tính đến {asOf} · {zone}",
   "review.unlinkedSignal": "Nhu cầu mua chưa có cơ hội bán hàng",
   "review.colFinding": "Phát hiện",

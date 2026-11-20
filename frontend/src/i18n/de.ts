@@ -4037,14 +4037,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleOnlyYou": "Nur dich",
   "co.aside.visibleOnly": "Nur {owner}",
   "co.aside.visibleOnlyOwner": "Nur die verantwortliche Person",
-  "co.aside.visibleYouAndShared_one": "Dich · geteilt mit {count}",
-  "co.aside.visibleYouAndShared_other": "Dich · geteilt mit {count}",
-  "co.aside.visibleOwnerAndShared_one": "{owner} · geteilt mit {count}",
-  "co.aside.visibleOwnerAndShared_other": "{owner} · geteilt mit {count}",
+  "co.aside.visibleYouAndShared_one": "Dich · {count} geteilter Zugriff",
+  "co.aside.visibleYouAndShared_other": "Dich · {count} geteilte Zugriffe",
+  "co.aside.visibleOwnerAndShared_one": "{owner} · {count} geteilter Zugriff",
+  "co.aside.visibleOwnerAndShared_other": "{owner} · {count} geteilte Zugriffe",
   "co.aside.visibleTheOwnerAndShared_one":
-    "Die verantwortliche Person · geteilt mit {count}",
+    "Die verantwortliche Person · {count} geteilter Zugriff",
   "co.aside.visibleTheOwnerAndShared_other":
-    "Die verantwortliche Person · geteilt mit {count}",
+    "Die verantwortliche Person · {count} geteilte Zugriffe",
   "co.aside.vatId": "USt-IdNr.",
   "co.strip.unanswered": "Unbeantwortet",
   "co.strip.engagement.never_contacted": "Nie kontaktiert",
@@ -9262,7 +9262,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.quietSince": "Ruhig seit",
   "analytics.nothingQuiet": "Kein Projekt in Umsetzung ist verstummt.",
   "analytics.noProjectsYet":
-    "Noch keine Projekte. Erstelle unter Projekte mit „Neues Projekt“ eines. Ein gewonnener Deal setzt sein Projekt auf „In Umsetzung“.",
+    "Noch keine Projekte. Erstelle eines unter Projekte mit „Neues Projekt“. Ein gewonnener Deal setzt sein Projekt auf „In Umsetzung“.",
   "analytics.coverageSub": "Verbindungsstatus bei der letzten Prüfung.",
   "analytics.covSource": "Quelle",
   "analytics.covState": "Status",
@@ -9377,6 +9377,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.share.listCreated": "Erstellt am {date}",
   "analytics.share.listExpires": "Läuft am {date} ab",
   "analytics.share.populationCompany": "Gesamtes Unternehmen",
+  "analytics.scope.workspace": "Gesamtes Unternehmen",
   "analytics.share.populationTeam": "Team",
   "analytics.share.populationOwner": "Teammitglied",
   "analytics.share.closeTitle": "Diesen Link schließen?",
@@ -10868,7 +10869,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.reason.company_name_empty":
     "Der zugeordnete Anzeigename ist leer, daher benennt die Zeile kein Unternehmen.",
   "import.reason.contact_duplicate_found":
-    "Jemand, der zu dieser Zeile passt, ist bereits im CRM. Eine Zeile mit einer bereits vergebenen Adresse wird abgelehnt, ein ähnlicher Treffer wird erstellt, und das Paar wird zur Prüfung bereitgestellt.",
+    "Jemand, der zu dieser Zeile passt, ist bereits im CRM. Eine Zeile mit einer bereits vergebenen Adresse wird abgelehnt, bei einem ähnlichen Treffer wird der Datensatz erstellt und das Paar zur Prüfung bereitgestellt.",
   "import.reason.contact_duplicate_skipped":
     "Jemand, der zu dieser Zeile passt, ist bereits im CRM, und dieser Lauf soll Duplikate überspringen.",
   "import.reason.contact_email_held":
@@ -12641,7 +12642,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "heldThreads.from": "Von Datum",
   "heldThreads.to": "Bis Datum",
   "heldThreads.browse": "Neueste Unterhaltungen ansehen",
-  "heldThreads.preview": "Ansehen und Teilen ändern",
+  "heldThreads.preview": "Ansehen und festlegen, mit wem geteilt wird",
   "heldThreads.loadMore": "Mehr laden",
   "senders.search": "Adresse, Name oder Domain suchen",
   "senders.decisionFilter": "Entscheidung",
@@ -23612,7 +23613,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.effect.senderReview":
     "Neue Kontakte und ihre E-Mails fehlen möglicherweise unter Kontakte.",
   "health.effect.heldMail":
-    "Das Team sieht diese Gespräche erst, wenn das Mitglied mit dem Postfach sie teilt.",
+    "Das Team sieht diese Gespräche erst, wenn das Mitglied, dem das Postfach gehört, sie teilt.",
   "health.effect.unreadMail":
     "E-Mails aus dem gemeldeten Zeitraum fehlen möglicherweise im CRM. Spätere E-Mails können weiter ankommen; stelle den Zeitraum wieder her, bevor du dem Verlauf vertraust.",
   "health.effect.captureRepair":

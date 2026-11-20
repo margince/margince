@@ -3400,7 +3400,7 @@
   "analytics.outcomesOwnLensOnly": "Dieser Bereich misst die Datensätze eines einzelnen Nutzerkontos. Die breiteren Bereiche decken den Rest der Sicht ab.",
   "analytics.readingLoading": "Wird geladen",
   "analytics.readingUnavailable": "Nicht verfügbar",
-  "analytics.share.populationCompany": "Gesamtes Unternehmen",
+  "analytics.scope.workspace": "Gesamtes Unternehmen",
   "analytics.frame": "Stand {asOf} · {zone}",
   "review.unlinkedSignal": "Kaufinteresse ohne Deal",
   "review.colFinding": "Befund",

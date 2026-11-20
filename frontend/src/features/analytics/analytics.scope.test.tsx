@@ -116,7 +116,7 @@ describe("the population control", () => {
     await userEvent.click(await screen.findByRole("combobox"));
     expect(
       screen.getByRole("option", {
-        name: de["analytics.share.populationCompany"],
+        name: de["analytics.scope.workspace"],
       }),
     ).toBeTruthy();
     expect(screen.getByRole("option", { name: "North" })).toBeTruthy();

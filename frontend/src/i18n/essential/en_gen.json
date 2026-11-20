@@ -3400,7 +3400,7 @@
   "analytics.outcomesOwnLensOnly": "This section measures one user’s records. Wider sections cover the rest of the lens.",
   "analytics.readingLoading": "Loading",
   "analytics.readingUnavailable": "Unavailable",
-  "analytics.share.populationCompany": "Whole company",
+  "analytics.scope.workspace": "Whole company",
   "analytics.frame": "As of {asOf} · {zone}",
   "review.unlinkedSignal": "Buying interest without a deal",
   "review.colFinding": "Finding",
