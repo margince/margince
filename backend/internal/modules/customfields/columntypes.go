@@ -9,6 +9,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+// columnText is the storage type of every type held as plain text.
+const columnText = "text"
+
 // sqlType maps a validated field type to its storage type
 // (CUSTOM-FIELDS-PARAM-4). A number is numeric and round-trips as a string,
 // never a float. A currency is bigint minor units, and its ISO-4217 code lives
@@ -16,7 +19,7 @@ import (
 func sqlType(fieldType string) (string, error) {
 	switch fieldType {
 	case TypeText:
-		return "text", nil
+		return columnText, nil
 	case TypeNumber:
 		return "numeric", nil
 	case TypeDate:
@@ -26,11 +29,11 @@ func sqlType(fieldType string) (string, error) {
 	case TypeMultiselect:
 		return "text[]", nil
 	case TypePicklist:
-		return "text", nil
+		return columnText, nil
 	case TypeBoolean:
 		return "boolean", nil
 	case TypeRecord, TypeURL:
-		return "text", nil
+		return columnText, nil
 	default:
 		return "", fmt.Errorf("customfields: unsupported type %q", fieldType)
 	}
