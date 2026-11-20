@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/extcapability"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -81,7 +82,7 @@ type extensionRuntimeBinding struct {
 	captureSink *capture.Sink
 	// models and blob are what a unit's Models and Objects reach, bound by
 	// BindExtensionModels and BindExtensionObjects; nil, the capability refuses by name.
-	models completer
+	models func(ai.Task) completer
 	blob   blobstore.Store
 }
 
@@ -455,8 +456,9 @@ func (s callSecrets) DeleteUser(ctx context.Context, userID extension.UserID, ke
 	return s.inner.DeleteUser(ctx, userID, key)
 }
 
-// BindExtensionModels records the lane a unit's Models reaches; nil leaves it refusing.
-func BindExtensionModels(lane completer) {
+// BindExtensionModels records how a unit's Models reach the lane of a declared
+// task; nil leaves it refusing.
+func BindExtensionModels(lane func(ai.Task) completer) {
 	extensionRuntimeDeps.mu.Lock()
 	defer extensionRuntimeDeps.mu.Unlock()
 	extensionRuntimeDeps.models = lane

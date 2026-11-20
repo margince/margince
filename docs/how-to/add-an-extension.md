@@ -244,7 +244,7 @@ answers it as `422 validation_error`, with your sentence as the message. `extens
 
 You declare an operation in a **contract fragment** under `extensions/<name>/api/`. The **file name names the
 core contract it adds to**. `api/crm.yaml` adds to `backend/api/crm.yaml`, and `api/jobs.yaml` adds to the job
-contract. `gen-composition` merges them into `build/composition/api/`. The operator manifest, the generated
+contract, and `api/ai-tasks.yaml` adds the unit's AI tasks (see [what an extension can use from the core](../reference/extension-capabilities.md)). `gen-composition` merges them into `build/composition/api/`. The operator manifest, the generated
 client types, the mounted routes and the docs all read the merged document.
 
 Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss them:

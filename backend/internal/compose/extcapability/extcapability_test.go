@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/extcapability"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -38,11 +39,11 @@ func TestAModelCallTheGateRefusesNeverReachesTheLane(t *testing.T) {
 	t.Parallel()
 	l := &lane{}
 	models := extcapability.Models{
-		Lane: l, Unit: "u",
+		Lane: laneFor(l), Unit: "u",
 		Gate:  func(context.Context) (context.Context, error) { return nil, errRefused },
-		Trace: func(context.Context) error { t.Error("a refused call was traced"); return nil },
+		Trace: func(context.Context, ai.Task) error { t.Error("a refused call was traced"); return nil },
 	}
-	if _, err := models.Complete(context.Background(), oneMessage); !errors.Is(err, errRefused) {
+	if _, err := models.Complete(context.Background(), askTask, oneMessage); !errors.Is(err, errRefused) {
 		t.Fatalf("err = %v, want the gate's refusal", err)
 	}
 	if l.calls != 0 {
@@ -53,13 +54,13 @@ func TestAModelCallTheGateRefusesNeverReachesTheLane(t *testing.T) {
 func TestAModelCallThatPassesTheGateIsTracedThenAnswered(t *testing.T) {
 	t.Parallel()
 	l, traced := &lane{}, 0
-	models := extcapability.Models{Lane: l, Unit: "u", Gate: allow, Trace: func(context.Context) error { traced++; return nil }}
-	text, err := models.Complete(context.Background(), oneMessage)
+	models := extcapability.Models{Lane: laneFor(l), Unit: "u", Gate: allow, Trace: func(context.Context, ai.Task) error { traced++; return nil }}
+	text, err := models.Complete(context.Background(), askTask, oneMessage)
 	if err != nil || text != "ok" || traced != 1 || l.calls != 1 {
 		t.Errorf("Complete = %q, %v; traced %d, lane %d; want ok, nil, 1, 1", text, err, traced, l.calls)
 	}
 	models.Lane = nil
-	if _, err := models.Complete(context.Background(), oneMessage); !errors.Is(err, extcapability.ErrModelsUnwired) {
+	if _, err := models.Complete(context.Background(), askTask, oneMessage); !errors.Is(err, extcapability.ErrModelsUnwired) {
 		t.Errorf("no lane bound: err = %v, want ErrModelsUnwired", err)
 	}
 }
@@ -70,7 +71,7 @@ func TestADeclarationRemovedDuringTheCallStopsTheCallBeforeTheLane(t *testing.T)
 	t.Parallel()
 	l, asked := &lane{}, 0
 	models := extcapability.Models{
-		Lane: l, Unit: "u",
+		Lane: laneFor(l), Unit: "u",
 		Gate: func(ctx context.Context) (context.Context, error) {
 			asked++
 			if asked > 1 {
@@ -78,9 +79,9 @@ func TestADeclarationRemovedDuringTheCallStopsTheCallBeforeTheLane(t *testing.T)
 			}
 			return ctx, nil
 		},
-		Trace: func(context.Context) error { return nil },
+		Trace: func(context.Context, ai.Task) error { return nil },
 	}
-	if _, err := models.Complete(context.Background(), oneMessage); !errors.Is(err, errRefused) {
+	if _, err := models.Complete(context.Background(), askTask, oneMessage); !errors.Is(err, errRefused) {
 		t.Fatalf("err = %v, want the second check's refusal", err)
 	}
 	if l.calls != 0 {

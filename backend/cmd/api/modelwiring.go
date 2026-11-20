@@ -90,7 +90,7 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	}
 	path, state, profile, err := modelPathFor(ctx, cfg, spec, pool, log)
 	if err == nil && path != nil {
-		compose.BindExtensionModels(path.ExtensionCall)
+		compose.BindExtensionModels(path.ExtensionTask)
 	}
 	return path, state, profile, err
 }

@@ -77,8 +77,12 @@ const (
 
 // Models is the unit's door to the installation's AI models.
 type Models interface {
-	// Complete answers one request. It returns ErrNotDeclared unless the unit
-	// declares CapabilityModels, and ErrInvalid for a request with no messages,
-	// an unknown role or an unknown record type.
-	Complete(ctx context.Context, req CompleteRequest) (string, error)
+	// Complete answers one request for one of the unit's declared AI tasks. Task
+	// is the key the unit's api/ai-tasks.yaml gives it, ext_<unit>_<task>.
+	//
+	// It returns ErrNotDeclared unless the unit declares CapabilityModels and the
+	// task. A job tick or a bus delivery may call a background task only, and is
+	// refused with ErrForbidden for an interactive one. It returns ErrInvalid for
+	// a request with no messages, an unknown role or an unknown record type.
+	Complete(ctx context.Context, task string, req CompleteRequest) (string, error)
 }

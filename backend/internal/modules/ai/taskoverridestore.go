@@ -60,7 +60,7 @@ func (s *RoutingStore) PreviewTaskOverrides(ctx context.Context, next TaskOverri
 	if faults := faultsOf(transport, next.refusedAgainst(stored)); len(faults) > 0 {
 		out.Errors = faults.toContract()
 	}
-	for _, task := range AllTasks() {
+	for _, task := range RoutedTasks() {
 		out.Effective[task] = next.Effective(task)
 	}
 	return out, nil

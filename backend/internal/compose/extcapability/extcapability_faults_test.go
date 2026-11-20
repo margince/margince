@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/extcapability"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -36,19 +37,19 @@ func (failingStore) Delete(context.Context, string) error { return errBoundary }
 
 func TestAModelCallReportsEachWayTheLaneOrTheTraceCanFail(t *testing.T) {
 	t.Parallel()
-	traceDown := func(context.Context) error { return errBoundary }
-	traceOK := func(context.Context) error { return nil }
+	traceDown := func(context.Context, ai.Task) error { return errBoundary }
+	traceOK := func(context.Context, ai.Task) error { return nil }
 	for name, tc := range map[string]struct {
 		models extcapability.Models
 		req    extension.CompleteRequest
 		want   error
 	}{
-		"restricted contact": {extcapability.Models{Lane: failingLane{model.ErrSubjectRestricted}, Gate: allow, Trace: traceOK}, oneMessage, extension.ErrForbidden},
-		"lane fault":         {extcapability.Models{Lane: failingLane{errBoundary}, Gate: allow, Trace: traceOK}, oneMessage, extcapability.ErrModelFailed},
-		"trace fault":        {extcapability.Models{Lane: &lane{}, Gate: allow, Trace: traceDown}, oneMessage, errBoundary},
-		"invalid request":    {extcapability.Models{Lane: &lane{}, Gate: allow, Trace: traceOK}, extension.CompleteRequest{}, extension.ErrInvalid},
+		"restricted contact": {extcapability.Models{Unit: "u", Lane: laneFor(failingLane{model.ErrSubjectRestricted}), Gate: allow, Trace: traceOK}, oneMessage, extension.ErrForbidden},
+		"lane fault":         {extcapability.Models{Unit: "u", Lane: laneFor(failingLane{errBoundary}), Gate: allow, Trace: traceOK}, oneMessage, extcapability.ErrModelFailed},
+		"trace fault":        {extcapability.Models{Unit: "u", Lane: laneFor(&lane{}), Gate: allow, Trace: traceDown}, oneMessage, errBoundary},
+		"invalid request":    {extcapability.Models{Unit: "u", Lane: laneFor(&lane{}), Gate: allow, Trace: traceOK}, extension.CompleteRequest{}, extension.ErrInvalid},
 	} {
-		if _, err := tc.models.Complete(context.Background(), tc.req); !errors.Is(err, tc.want) {
+		if _, err := tc.models.Complete(context.Background(), askTask, tc.req); !errors.Is(err, tc.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, tc.want)
 		}
 	}

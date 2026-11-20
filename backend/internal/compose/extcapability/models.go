@@ -39,18 +39,25 @@ type Lane interface {
 	Complete(ctx context.Context, req model.Request) (model.Response, error)
 }
 
-// Models is extension.Models over a lane. Gate checks the unit's declaration and
-// returns the invocation's context. Trace writes the audit row before the call.
+// Models is extension.Models over the lanes of the declared tasks. Gate checks
+// the unit's declaration and returns the invocation's context. Trace writes the
+// audit row before the call. Unattended is true for a job tick or a bus delivery,
+// which may call a background task only.
 type Models struct {
-	Lane  Lane
-	Unit  string
-	Gate  func(context.Context) (context.Context, error)
-	Trace func(context.Context) error
+	Lane       func(ai.Task) Lane
+	Unit       string
+	Unattended bool
+	Gate       func(context.Context) (context.Context, error)
+	Trace      func(context.Context, ai.Task) error
 }
 
-// Complete answers one request through the lane.
-func (m Models) Complete(ctx context.Context, req extension.CompleteRequest) (string, error) {
+// Complete answers one request through the lane of one declared task.
+func (m Models) Complete(ctx context.Context, name string, req extension.CompleteRequest) (string, error) {
 	ctx, err := m.Gate(ctx)
+	if err != nil {
+		return "", err
+	}
+	task, err := m.admit(name)
 	if err != nil {
 		return "", err
 	}
@@ -58,10 +65,15 @@ func (m Models) Complete(ctx context.Context, req extension.CompleteRequest) (st
 	if err != nil {
 		return "", err
 	}
-	if m.Lane == nil {
+	ctx = withSubject(ctx, task, req)
+	var lane Lane
+	if m.Lane != nil {
+		lane = m.Lane(task)
+	}
+	if lane == nil {
 		return "", ErrModelsUnwired
 	}
-	if err := m.Trace(ctx); err != nil {
+	if err := m.Trace(ctx, task); err != nil {
 		return "", err
 	}
 	// Asked again after the trace write, the slow step before the call, so a
@@ -69,24 +81,56 @@ func (m Models) Complete(ctx context.Context, req extension.CompleteRequest) (st
 	if _, err := m.Gate(ctx); err != nil {
 		return "", err
 	}
-	resp, err := m.Lane.Complete(ctx, modelReq)
+	resp, err := lane.Complete(ctx, modelReq)
 	switch {
 	case errors.Is(err, model.ErrSubjectRestricted):
 		return "", fmt.Errorf("%w: a contact this request carries is under a restriction of processing", extension.ErrForbidden)
 	case errors.Is(err, model.ErrAttachmentUnsupported):
 		return "", fmt.Errorf("%w: the model for this tier cannot read one of the attachments; ask for another tier", extension.ErrInvalid)
 	case err != nil:
-		slog.ErrorContext(ctx, "extcapability: an extension model call failed", "err", err, "unit", m.Unit)
+		slog.ErrorContext(ctx, "extcapability: an extension model call failed", "err", err, "unit", m.Unit, "task", name)
 		return "", ErrModelFailed
 	}
 	return resp.Text, nil
 }
 
+// admit finds the task the unit named among the tasks it declared. A task of
+// another unit or of the core answers the same as an unknown one, so a unit
+// cannot learn which tasks exist.
+func (m Models) admit(name string) (ai.Task, error) {
+	task := ai.Task(name)
+	if unit, ok := ai.ExtensionTaskUnit(task); !ok || unit != m.Unit {
+		return "", fmt.Errorf("%w: declare the task %q in the unit's api/ai-tasks.yaml", extension.ErrNotDeclared, name)
+	}
+	if m.Unattended && !ai.IsBackground(task) {
+		return "", fmt.Errorf("%w: a job tick or a bus delivery calls background tasks only, and %q is interactive", extension.ErrForbidden, name)
+	}
+	return task, nil
+}
+
+// withSubject names the record on the call log when the request names one. A
+// request that names several records, or none, leaves the subject empty.
+func withSubject(ctx context.Context, task ai.Task, req extension.CompleteRequest) context.Context {
+	if len(req.About) == 0 {
+		slog.InfoContext(ctx, "extcapability: an extension model call holds no contact data",
+			"task", string(task), "reason", req.NoContactData)
+		return ctx
+	}
+	if len(req.About) != 1 {
+		return ctx
+	}
+	id, err := ids.Parse(req.About[0].ID)
+	if err != nil {
+		return ctx
+	}
+	return ai.WithSubject(ctx, ids.Ref{Type: req.About[0].Type, ID: id}, "")
+}
+
 // Trace writes the system_log row that names the unit beside the call's
 // correlation id, which the router's call record carries too. It commits before
 // the call, so a unit cannot spend and roll the trace away.
-func Trace(ctx context.Context, pool *pgxpool.Pool, unit string) error {
-	detail := map[string]any{"extension": unit, "task": string(ai.TaskExtensionCall)}
+func Trace(ctx context.Context, pool *pgxpool.Pool, unit string, task ai.Task) error {
+	detail := map[string]any{"extension": unit, "task": string(task)}
 	if cid, ok := principal.CorrelationID(ctx); ok {
 		detail["correlation_id"] = cid.String()
 	}

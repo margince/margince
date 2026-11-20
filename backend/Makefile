@@ -860,6 +860,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		echo "gen: approval reading catalog not regenerated (no frontend toolchain); fe-drift checks it"; \
 	fi
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(COMPOSITION_FLAGS)
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -validate -contract ../build/composition/api/ai-tasks.yaml
 	$(GOWORK_ROOT) $(GO) generate ./internal/contracts
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-stubs
