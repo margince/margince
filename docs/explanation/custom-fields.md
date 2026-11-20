@@ -158,21 +158,28 @@ because the `CHECK` covers them. It runs in the same schema-pool transaction as 
 advisory lock and before the `CHECK` is rebuilt. A `picklist` value becomes `NULL`. A `multiselect` keeps
 its other choices in their order, and one left with none becomes `NULL`.
 
+Removing a choice changes records, so the caller also needs the grant to update the field's object. Before
+the clear, the edit takes the `ACCESS EXCLUSIVE` lock the `ALTER` needs. So no record can take a removed
+choice between the clear and the `CHECK`.
+
 Each record module owns its table, so it does the clearing. `customfields` holds a `ChoiceRemover` for
 each object, and compose injects them (`CustomFieldChoiceRemovers` in
-`internal/compose/customfieldchoices.go`). Each remover calls `storekit.ClearRemovedChoices` with its own
-table and its own `<object>.updated` payload. That helper runs one `UPDATE` over the rows that hold a
-removed choice. It writes one audit row per record, in statements of 1000, and one event per record. It
-refuses a column the catalog does not list on that table with that type. The table ownership gate counts
+`internal/compose/customfieldchoices.go`). Most removers call `storekit.ClearRemovedChoices` with their own
+table and their own `<object>.updated` payload. That helper locks the rows that hold a removed choice and
+updates them. It writes the update, the audit rows and the events in one statement each per 1000 records.
+The contract remover takes the locked rows from `storekit.LockRemovedChoices` and writes each through
+`applyContractUpdate`, the one writer of a contract update. Both refuse a column the catalog does not list
+on that table with that type. The table ownership gate counts
 `ClearRemovedChoices` as a write by the module that calls it.
 
 The cost grows with the records that hold the choice. The `ALTER` already reads the whole table to check
 the new `CHECK`. The 2-second `lock_timeout` covers the row locks too, so a record being edited answers
 the retryable `ErrTableBusy`. A record that holds the choice and still belongs to a member who has left is
-refused by the retired-member trigger. The edit then answers 409 and names the hand-over.
+refused by the retired-member trigger, and an activity under a retention hold refuses any change. The edit
+then answers 409 and names the reason.
 
 The answer carries `records_changed`. `GET /custom-fields/{id}/choices` answers how many records hold
-each choice before the edit, and the **Edit choices** dialog shows those counts and the total a save
+each choice before the edit, for a reader of the field and its object, and the **Edit choices** dialog shows those counts and the total a save
 clears. A Live List whose filter names the removed choice keeps evaluating, because a filter leaf does not
 refuse a value outside the set at read time (`storekit.RefuseUnknownPicklistValues` runs only when a
 filter is saved). It matches no record by that choice. Saving a picklist filter that still names the choice is refused until the
