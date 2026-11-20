@@ -5,22 +5,26 @@
 
 package capture
 
-// A mailbox or calendar connected before connections carried a sending company
-// must count as a connection for the send guard once the installation has a
-// second legal entity. The guard reads the stored company of the mail or
-// meeting, so the company has to reach every import: through the connect, the
-// reconnect and the one-off correction of older imports.
+// A mailbox connected before connections carried a sending company must still
+// count for the send guard when the installation has two legal entities.
+// The guard reads the stored company of each mail and meeting. So the company
+// must reach every import, through connect, reconnect and the one-off correction.
 
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/importscopes"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -37,9 +41,8 @@ type companyEnv struct {
 	defaultEntity, branch ids.UUID
 }
 
-// twoCompanies is an installation with a second legal entity, Rep1 in the
-// default one and Rep3 in the branch, whose mailbox connection predates the
-// sending company.
+// twoCompanies is an installation with two legal entities. Rep1 is in the
+// default one, Rep3 in the branch, and Rep1's connection has no company.
 func twoCompanies(t *testing.T) companyEnv {
 	t.Helper()
 	env := newCaptureEnv(t)
@@ -208,4 +211,72 @@ func TestMeetingsFromACalendarConnectedBeforeTheScopeCountForItsOwnersCompany(t 
 	}
 	requireGuard(t, e, e.Rep1, guest, "owner, meeting after the correction", "allowed")
 	requireGuard(t, e, e.Rep3, guest, "colleague of another company", "unknown")
+}
+
+// An import takes the company of the live connection that delivered it. A seat
+// with mailboxes in two companies is scoped by the mailbox named in delivered_by,
+// and stays unscoped when both delivered it or the mailbox has no company.
+func TestTheImportScopeTaskFollowsTheDeliveringMailboxAndGuessesNone(t *testing.T) {
+	c := twoCompanies(t)
+	e := c.e
+	for label, entity := range map[string]ids.UUID{"first@scope.test": c.branch, "second@scope.test": c.defaultEntity} {
+		exec(t, e, `INSERT INTO capture_connection (provider, user_id, status, credential_ref, account_label, legal_entity_id)
+			VALUES ('gmail', $1, 'connected', 'vault:test', $2, $3)`, e.Rep1, label, entity)
+	}
+	exec(t, e, `INSERT INTO capture_connection (provider, user_id, status, credential_ref, account_label)
+		VALUES ('gmail', $1, 'connected', 'vault:test', 'other@scope.test')`, e.Rep3)
+	mark := func(user ids.UUID, label string) string {
+		var out string
+		if err := e.Owner.QueryRow(context.Background(), `SELECT `+storekit.MailboxMarkSQL("c")+` FROM capture_connection c WHERE user_id=$1 AND account_label=$2`, user, label).Scan(&out); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	first, second := mark(e.Rep1, "first@scope.test"), mark(e.Rep1, "second@scope.test")
+
+	type planted struct {
+		name      string
+		seat      ids.UUID
+		delivered []string
+		entity    *ids.UUID
+		want      *ids.UUID
+	}
+	cases := []planted{
+		{name: "second mailbox", seat: e.Rep1, delivered: []string{second}, want: &c.defaultEntity},
+		{name: "first mailbox", seat: e.Rep1, delivered: []string{first}, want: &c.branch},
+		{name: "both mailboxes of two companies", seat: e.Rep1, delivered: []string{first, second}},
+		{name: "mailbox with no company", seat: e.Rep3, delivered: []string{mark(e.Rep3, "other@scope.test")}},
+		{name: "already scoped", seat: e.Rep1, delivered: []string{second}, entity: &c.branch, want: &c.branch},
+	}
+	for _, p := range cases {
+		activity := ids.NewV7()
+		exec(t, e, `INSERT INTO activity(id,kind,subject,occurred_at,source,captured_by) VALUES($1,'email',$2,'2026-10-01T09:00:00Z','gmail','human:x')`, activity, p.name)
+		exec(t, e, `INSERT INTO capture_import(activity_id,user_id,delivered_by,legal_entity_id) VALUES($1,$2,$3,$4)`, activity, p.seat, p.delivered, p.entity)
+	}
+
+	now := clocktest.Now(t)
+	engine, err := datatask.New(e.Pool, []datatask.Task{importscopes.DataTask()}, "test", func() time.Time { return now }, func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	if err := engine.Seed(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		outcome, err := engine.Execute(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		now = now.Add(outcome.Wait)
+	}
+	for _, p := range cases {
+		var got *ids.UUID
+		if err := e.Owner.QueryRow(context.Background(), `SELECT i.legal_entity_id FROM capture_import i JOIN activity a ON a.id = i.activity_id WHERE a.subject = $1`, p.name).Scan(&got); err != nil {
+			t.Fatal(err)
+		}
+		if (p.want == nil) != (got == nil) || (got != nil && *got != *p.want) {
+			t.Errorf("%s: company %v, want %v", p.name, got, p.want)
+		}
+	}
 }

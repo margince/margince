@@ -279,8 +279,8 @@ type connectionUpsert struct {
 }
 
 // grantSet is what a grant writes over a row it lands on. A label the
-// connector could not read keeps the one the row holds, and a row that never
-// had a sending company gets its owner's, so a reconnect cannot leave it unscoped.
+// connector could not read keeps the one the row holds. A row with no sending
+// company gets its owner's, so a reconnect cannot leave it unscoped.
 var grantSet = `credential_ref = @ref, auth = NULL, status = 'connected', archived_at = NULL, connected_at = now(),
 	share_acknowledged_at = COALESCE(capture_connection.share_acknowledged_at, now()),
 	account_label = COALESCE(@label, capture_connection.account_label), provider_scopes = @provider_scopes,
