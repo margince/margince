@@ -52,7 +52,7 @@ func visibleCompanySQL(ctx context.Context, alias string, arg func(any) int) (st
 const partnerColumns = `company_id, cert_status, partner_kinds, margin_tier,
 	certified_staff, retention_rate, relationship_stage, next_step, next_step_due_at,
 	served_segments, partner_fit_score, partner_fit_score_computed,
-	partner_fit_override_reason, relationship_health::text, last_contact_at,
+	partner_fit_override_reason,
 	version, created_at, updated_at, archived_at,
 	activated_at, activation_basis, activated_by, activation_lead_id, activation_deal_id`
 
@@ -70,16 +70,14 @@ type partnerRow struct {
 	// The ADR-0053 Commercial Judgement pair (formulas §17): a non-nil
 	// FitOverrideReason marks FitScore human-set; the machine value is then
 	// retained in FitScoreComputed instead of overwriting FitScore.
-	FitScore           *int16
-	FitScoreComputed   *int16
-	FitOverrideReason  *string
-	RelationshipHealth *string // numeric(3,2) rendered ::text — no float touches it
-	LastContactAt      *time.Time
-	Version            int64
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	ArchivedAt         *time.Time
-	Activation         partnerActivation
+	FitScore          *int16
+	FitScoreComputed  *int16
+	FitOverrideReason *string
+	Version           int64
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	ArchivedAt        *time.Time
+	Activation        partnerActivation
 }
 
 // partnerActivation is the stamp that lets a partner stand on a stage meaning
@@ -97,7 +95,7 @@ func scanPartner(r pgx.Row) (partnerRow, error) {
 	err := r.Scan(&p.CompanyID, &p.CertStatus, &p.PartnerKinds, &p.MarginTier,
 		&p.CertifiedStaff, &p.RetentionRate, &p.RelationshipStage, &p.NextStep, &p.NextStepDueAt,
 		&p.ServedSegments, &p.FitScore, &p.FitScoreComputed, &p.FitOverrideReason,
-		&p.RelationshipHealth, &p.LastContactAt, &p.Version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
+		&p.Version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
 		&p.Activation.At, &p.Activation.Basis, &p.Activation.By, &p.Activation.LeadID, &p.Activation.DealID)
 	return p, err
 }

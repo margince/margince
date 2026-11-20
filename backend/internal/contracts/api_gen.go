@@ -6280,6 +6280,7 @@ func (e Company360SuggestionActionKind) Valid() bool {
 // Defines values for Company360SuggestionKind.
 const (
 	Company360SuggestionKindCommitmentUnmet    Company360SuggestionKind = "commitment_unmet"
+	Company360SuggestionKindGoneDormant        Company360SuggestionKind = "gone_dormant"
 	Company360SuggestionKindLifecycleConflict  Company360SuggestionKind = "lifecycle_conflict"
 	Company360SuggestionKindNeedRaised         Company360SuggestionKind = "need_raised"
 	Company360SuggestionKindNoNextStep         Company360SuggestionKind = "no_next_step"
@@ -6293,6 +6294,8 @@ const (
 func (e Company360SuggestionKind) Valid() bool {
 	switch e {
 	case Company360SuggestionKindCommitmentUnmet:
+		return true
+	case Company360SuggestionKindGoneDormant:
 		return true
 	case Company360SuggestionKindLifecycleConflict:
 		return true
@@ -12541,6 +12544,30 @@ func (e DomainQuestionSuggestionBasis) Valid() bool {
 	case DomainQuestionSuggestionBasisNameTwin:
 		return true
 	case DomainQuestionSuggestionBasisRedirectTarget:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DormancyRung.
+const (
+	DormancyRungActive  DormancyRung = "active"
+	DormancyRungCooling DormancyRung = "cooling"
+	DormancyRungDormant DormancyRung = "dormant"
+	DormancyRungStale   DormancyRung = "stale"
+)
+
+// Valid indicates whether the value is a known member of the DormancyRung enum.
+func (e DormancyRung) Valid() bool {
+	switch e {
+	case DormancyRungActive:
+		return true
+	case DormancyRungCooling:
+		return true
+	case DormancyRungDormant:
+		return true
+	case DormancyRungStale:
 		return true
 	default:
 		return false
@@ -41769,6 +41796,9 @@ type Company360StateStrip struct {
 		TotalBasisValueMinorBase *int `json:"total_basis_value_minor_base,omitempty"`
 	} `json:"contracts,omitempty"`
 
+	// Dormancy How cold the account has gone, read from its stored `last_activity_at`.
+	Dormancy *DormancyReading `json:"dormancy,omitempty"`
+
 	// Engagement Null when the caller has no activity grant — not assessed, as distinct from never contacted.
 	Engagement *struct {
 		LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
@@ -41780,7 +41810,7 @@ type Company360StateStrip struct {
 		// LastOutboundPrecision How to read `last_outbound_at`, from the activity it names. Absent when that is null.
 		LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
-		// State PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
+		// State PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting. `dormant` is the dormancy ladder's `dormant` or `stale` rung, so the strip and `dormancy` cannot disagree either.
 		State Company360StateStripEngagementState `json:"state"`
 	} `json:"engagement,omitempty"`
 
@@ -41801,7 +41831,7 @@ type Company360StateStripAccountLifecycle string
 // Company360StateStripAccountRelationshipTypes defines model for Company360StateStrip.Account.RelationshipTypes.
 type Company360StateStripAccountRelationshipTypes string
 
-// Company360StateStripEngagementState PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
+// Company360StateStripEngagementState PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting. `dormant` is the dormancy ladder's `dormant` or `stale` rung, so the strip and `dormancy` cannot disagree either.
 type Company360StateStripEngagementState string
 
 // Company360StateStripSignalSeverity defines model for Company360StateStrip.Signal.Severity.
@@ -41878,7 +41908,7 @@ type Company360Suggestion struct {
 	// suggestions to recognize it, so a value it cannot match stores nothing.
 	Fingerprint string `json:"fingerprint"`
 
-	// Kind The four RULE kinds, computed from the account's records with no model:
+	// Kind The five RULE kinds, computed from the account's records with no model:
 	//
 	// `no_reply` — an outbound message on a thread nobody answered.
 	// `stalled_deal` — an open deal idle past the 60-day stall window.
@@ -41887,6 +41917,11 @@ type Company360Suggestion struct {
 	// filed under: a `contract_ended` signal stands while the record still reads as a live
 	// customer or an open opportunity. The page states the conflict rather than resolving
 	// it, because which of the two is wrong is a judgment only the reader can make.
+	// `gone_dormant` — the account is on the `dormant` or `stale` rung of the dormancy ladder
+	// and has an owner. Its `add_task` action prepares a follow-up task for that owner. One
+	// silent stretch raises it once: its fingerprint is the stored `last_activity_at`, so a
+	// dismissal holds until new activity starts a new stretch. An installation switches it
+	// off with `contacts.dormancy_follow_up_enabled`.
 	//
 	// The four READ kinds, which only the account scan raises — each from words the
 	// model read in the account's own exchanges, quoted on the citation so the reader
@@ -41927,7 +41962,7 @@ type Company360Suggestion struct {
 // `add_task` — write the step named in `task`, through `POST /tasks`.
 type Company360SuggestionActionKind string
 
-// Company360SuggestionKind The four RULE kinds, computed from the account's records with no model:
+// Company360SuggestionKind The five RULE kinds, computed from the account's records with no model:
 //
 // `no_reply` — an outbound message on a thread nobody answered.
 // `stalled_deal` — an open deal idle past the 60-day stall window.
@@ -41936,6 +41971,11 @@ type Company360SuggestionActionKind string
 // filed under: a `contract_ended` signal stands while the record still reads as a live
 // customer or an open opportunity. The page states the conflict rather than resolving
 // it, because which of the two is wrong is a judgment only the reader can make.
+// `gone_dormant` — the account is on the `dormant` or `stale` rung of the dormancy ladder
+// and has an owner. Its `add_task` action prepares a follow-up task for that owner. One
+// silent stretch raises it once: its fingerprint is the stored `last_activity_at`, so a
+// dismissal holds until new activity starts a new stretch. An installation switches it
+// off with `contacts.dormancy_follow_up_enabled`.
 //
 // The four READ kinds, which only the account scan raises — each from words the
 // model read in the account's own exchanges, quoted on the citation so the reader
@@ -50203,6 +50243,35 @@ type DomainQuestionSuggestion struct {
 // - `redirect_target`: the site redirects to a domain this company already owns.
 // - `contact_employer`: a sender already has this company as their current employer.
 type DomainQuestionSuggestionBasis string
+
+// DormancyReading Where one account stands on the dormancy ladder, with the facts that put it there.
+type DormancyReading struct {
+	// LadderDays The silent days on which `cooling`, `dormant` and `stale` begin, so a reader can see the rule.
+	LadderDays []int `json:"ladder_days"`
+
+	// LastActivityAt The account's stored last activity the rung is counted from. Null when it has none.
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// NoActivity True when the account has no activity recorded at all, which is why it reads as `stale`.
+	NoActivity bool `json:"no_activity"`
+
+	// Rung How cold an account has gone, counted in calendar days of the installation zone since its
+	// stored `last_activity_at`. `active` before the first day of the ladder, `cooling` from it,
+	// `dormant` from the second and `stale` from the third. The days are the installation's
+	// `contacts.dormancy_days` setting, 30, 60 and 90 by default. An account with no activity at
+	// all is `stale`.
+	Rung DormancyRung `json:"rung"`
+
+	// SilentDays Calendar days from `last_activity_at` to today in the installation zone. 0 when there is no activity.
+	SilentDays int `json:"silent_days" minimum:"0"`
+}
+
+// DormancyRung How cold an account has gone, counted in calendar days of the installation zone since its
+// stored `last_activity_at`. `active` before the first day of the ladder, `cooling` from it,
+// `dormant` from the second and `stale` from the third. The days are the installation's
+// `contacts.dormancy_days` setting, 30, 60 and 90 by default. An account with no activity at
+// all is `stale`.
+type DormancyRung string
 
 // DraftContentFinding defines model for DraftContentFinding.
 type DraftContentFinding struct {
@@ -59993,8 +60062,7 @@ type Partner struct {
 	CreatedAt time.Time          `json:"created_at"`
 
 	// GateMetrics Program gate metrics (certified seats, CSAT, ...).
-	GateMetrics   *map[string]interface{} `json:"gate_metrics,omitempty"`
-	LastContactAt *time.Time              `json:"last_contact_at,omitempty"`
+	GateMetrics *map[string]interface{} `json:"gate_metrics,omitempty"`
 
 	// MarginTier The partner's margin tier; the allowed values are in the table's CHECK constraint.
 	MarginTier *PartnerMarginTier `json:"margin_tier,omitempty"`
@@ -60025,9 +60093,6 @@ type Partner struct {
 	// PartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	PartnerRole *PartnerPartnerRole `json:"partner_role,omitempty"`
-
-	// RelationshipHealth Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.
-	RelationshipHealth *string `json:"relationship_health,omitempty"`
 
 	// RelationshipStage The key of the stage from `/partner-stages` the partner stands on.
 	RelationshipStage *string   `json:"relationship_stage,omitempty"`
@@ -76985,6 +77050,11 @@ type ListCompaniesParams struct {
 
 	// PartnerStageMeaning Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise).
 	PartnerStageMeaning *PartnerStageMeaning `form:"partner_stage_meaning,omitempty" json:"partner_stage_meaning,omitempty"`
+
+	// Dormancy Companies on this rung of the dormancy ladder today, read from the stored
+	// `last_activity_at` by the same rule the company page's `state_strip.dormancy` uses.
+	// `stale` includes companies with no activity at all.
+	Dormancy *DormancyRung `form:"dormancy,omitempty" json:"dormancy,omitempty"`
 
 	// SourceSystem Companies that came from this outside system, matched exactly. Send `source_id`
 	// too to find the one company holding that id there. A company the caller cannot
@@ -122418,6 +122488,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_stage_meaning"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_stage_meaning", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "dormancy" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "dormancy", r.URL.Query(), &params.Dormancy, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "dormancy"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "dormancy", Err: err})
 		}
 		return
 	}

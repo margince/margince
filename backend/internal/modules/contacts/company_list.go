@@ -10,6 +10,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -95,6 +97,8 @@ type ListCompaniesInput struct {
 	MemberOf *ids.UUID
 	// Partner narrows to companies whose live partner programme matches.
 	Partner partnerProgramFilter
+	// Dormancy narrows to the companies on one rung of the dormancy ladder.
+	Dormancy *string
 }
 
 // companyListFields is the company list's core sortable
@@ -199,7 +203,7 @@ func companyCommonFilters(in ListCompaniesInput) listFilters {
 // ListCompanies answers one page of accounts under the caller's row scope,
 // filtered by the dials the contract declares and ordered by the shared sort.
 func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crmcontracts.Company, storekit.Page, error) {
-	return listPage(ctx, s, in.Sort, in.Limit, companyListSpec(in))
+	return listPage(ctx, s, in.Sort, in.Limit, companyListSpec(in, s.clock()))
 }
 
 // ListCompaniesTx is ListCompanies inside a caller-opened transaction. Same
@@ -209,20 +213,36 @@ func (s *Store) ListCompaniesTx(ctx context.Context, tx pgx.Tx, in ListCompanies
 	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	recs, page, err := listPageTx(ctx, tx, in.Sort, storekit.ClampLimit(in.Limit), active.cols, companyListSpec(in))
+	spec := companyListSpec(in, s.clock())
+	ctx, err := spec.prepare(ctx, tx)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	recs, page, err := listPageTx(ctx, tx, in.Sort, storekit.ClampLimit(in.Limit), active.cols, spec)
 	if recs == nil {
 		recs = []crmcontracts.Company{}
 	}
 	return recs, page, err
 }
 
-func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
+func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontracts.Company] {
 	shared := companyCommonFilters(in)
+	// The ladder is the installation's setting, read in the page's own
+	// transaction before the filters render.
+	var ladder dormancy.Ladder
 	return listPageSpec[crmcontracts.Company]{
 		entity:    companyEntity,
 		firstPage: in.Cursor == nil || *in.Cursor == "",
-		columns:   func(context.Context, func(any) int) (string, error) { return companyColumns, nil },
-		fields:    companyListFields,
+		prepare: func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
+			if in.Dormancy == nil {
+				return ctx, nil
+			}
+			policy, err := DormancyPolicyTx(ctx, tx)
+			ladder = policy.Ladder
+			return ctx, err
+		},
+		columns: func(context.Context, func(any) int) (string, error) { return companyColumns, nil },
+		fields:  companyListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			where, err := shared.clauses(ctx, active, sorted, arg)
 			if err != nil {
@@ -255,6 +275,13 @@ func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 			}
 			if partner != "" {
 				where = append(where, partner)
+			}
+			if in.Dormancy != nil {
+				clause, err := dormancyClause(*in.Dormancy, ladder, now, arg)
+				if err != nil {
+					return nil, err
+				}
+				where = append(where, clause)
 			}
 			return appendCompanyEnumClauses(where, in, arg)
 		},
@@ -386,4 +413,15 @@ func appendCompanyLinkClauses(
 		where = append(where, clause)
 	}
 	return where
+}
+
+// dormancyClause narrows to the companies on one rung today, by the window the
+// company page's reading agrees with (dormancy.Ladder.WindowOf).
+func dormancyClause(rung string, ladder dormancy.Ladder, now time.Time, arg func(any) int) (string, error) {
+	if !slices.Contains(dormancy.Rungs(), dormancy.Rung(rung)) {
+		return "", httperr.Validation("dormancy", "not_a_known_value",
+			"filter by active, cooling, dormant or stale, or leave the parameter off")
+	}
+	asOf := fmt.Sprintf("$%d::timestamptz", arg(now))
+	return ladder.WindowOf(dormancy.Rung(rung)).SQL("company.last_activity_at", asOf), nil
 }

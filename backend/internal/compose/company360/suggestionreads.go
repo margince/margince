@@ -271,6 +271,7 @@ type suggestionInputs struct {
 	open                pipeline
 	contractStrip       contractStrip
 	scheduled           bool
+	dormancy            dormancyInputs
 }
 
 // advisable reports whether this caller can be advised at all. Neither input
@@ -333,6 +334,11 @@ func gatherSuggestionInputs(
 	in.contractEndedSource = facts.ContractEndedSource
 	in.lifecycle = heading.lifecycle
 	in.companyName = heading.name
+	dormant, err := readDormancyInputs(ctx, tx, heading, now, loc)
+	if err != nil {
+		return suggestionInputs{}, err
+	}
+	in.dormancy = dormant
 	return in, nil
 }
 
@@ -342,6 +348,9 @@ func gatherSuggestionInputs(
 type companyHeading struct {
 	lifecycle string
 	name      string
+	// owner and lastActivity feed the dormancy ladder and its follow-up.
+	owner        *ids.UUID
+	lastActivity *time.Time
 }
 
 // readCompanyHeading takes it from the company row, for the caller
@@ -352,13 +361,12 @@ func readCompanyHeading(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 ) (companyHeading, error) {
 	var lifecycle *string
-	var name string
+	out := companyHeading{}
 	if err := tx.QueryRow(ctx,
-		`SELECT lifecycle, display_name FROM company WHERE id = $1`, companyID,
-	).Scan(&lifecycle, &name); err != nil {
+		`SELECT lifecycle, display_name, owner_id, last_activity_at FROM company WHERE id = $1`, companyID,
+	).Scan(&lifecycle, &out.name, &out.owner, &out.lastActivity); err != nil {
 		return companyHeading{}, fmt.Errorf("read the account's stage and name: %w", err)
 	}
-	out := companyHeading{name: name}
 	if lifecycle != nil {
 		out.lifecycle = *lifecycle
 	}
@@ -370,7 +378,8 @@ func readCompanyHeading(
 //
 // The order below IS the spec's evaluation order and the states are mutually
 // exclusive — the first match wins, so a silent account reads as dormant rather
-// than as whichever side happened to write last a year ago.
+// than as whichever side happened to write last a year ago. Dormant is the
+// dormancy ladder's cold rungs, so the strip and the ladder cannot disagree.
 //
 // waiting_on_them reuses noReplyDays rather than restating it, which is what
 // makes the strip and the no_reply suggestion beneath it agree by construction
@@ -381,7 +390,7 @@ func engagementState(in suggestionInputs, now time.Time) crmcontracts.Company360
 	}
 	age := now.Sub(in.newest.At)
 	switch {
-	case age > engagementDormantDays*24*time.Hour:
+	case in.dormancy.reading.Rung.Cold():
 		return "dormant"
 	case in.newest.awaitsThem() && age >= noReplyDays*24*time.Hour:
 		return "waiting_on_them"
@@ -390,9 +399,3 @@ func engagementState(in suggestionInputs, now time.Time) crmcontracts.Company360
 	}
 	return "active"
 }
-
-// engagementDormantDays (PO-PARAM-4) is where "whose move is it" stops being a
-// useful question. Past it the distinction is not actionable, and a strip still
-// saying "waiting on them" after a quarter would be advising a reply to a
-// conversation nobody remembers.
-const engagementDormantDays = 90

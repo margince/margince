@@ -54,6 +54,7 @@ Records, deals and mail in Margince, by page:
 - How do I create and send an offer (a quote)? → [Offers and the rate card](offers-and-products.md)
 - How do I ask legal to review a deal, or make a stage wait for legal? → [Legal review](legal-review.md)
 - How do I set up a partner, or credit and pay a partner's commission? → [Partners and commission](partners.md)
+- Which companies have gone quiet, and who is asked to follow up? → [Companies that have gone quiet](quiet-companies.md)
 - What is on a project page, and how do I start delivery? → [Leads, deals and projects](leads-deals-and-projects.md)
 - How do I send or schedule an email? → [Writing and sending mail](sending-mail.md)
 - Where is my Worklist, and how do I snooze or pin? → [Your day](your-day.md)
@@ -191,6 +192,9 @@ Records, deals and mail in Margince, by page:
   seats, and the six roles. Why reading a customer record ignores row scope,
   and who can see one record. Teams, sharing, inviting and removing colleagues,
   and what a refusal looks like.
+- [Companies that have gone quiet](quiet-companies.md): the active, cooling,
+  dormant and stale steps, the filter on **Companies**, and the suggestion to
+  get back in touch.
 - [Relationships, introductions and research](relationships-and-research.md):
   who here already knows somebody, and how that is measured. Asking a colleague
   for a warm introduction, and the four answers they can give. What a website

@@ -904,7 +904,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `capture_thread_verdict_deal_clock`: `AFTER INSERT OR DELETE OR UPDATE OF kind, status, thread_key, user_id FOR EACH ROW EXECUTE FUNCTION trg_thread_verdict_deal_clock()`
+- `capture_thread_verdict_clocks`: `AFTER INSERT OR DELETE OR UPDATE OF kind, status, thread_key, user_id FOR EACH ROW EXECUTE FUNCTION trg_thread_verdict_clocks()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "status": 20000, "thread_key": 20000, "seen_addresses": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"kind":20000,"seen_addresses":20000,"status":20000,"thread_key":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "status": 20000, "thread_key": 20000, "seen_addresses": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"kind":20000,"seen_addresses":20000,"status":20000,"thread_key":20000}')`
 

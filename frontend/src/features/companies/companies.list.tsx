@@ -57,6 +57,7 @@ import {
   useSavedViewTabs,
 } from "../lists/savedviews";
 import type { Company } from "./companies";
+import { DORMANCY_LABELS, DORMANCY_RUNGS } from "./companyactivity";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
 import { displayHost } from "./companyheader";
 import { partnerMarkText } from "./companymarks";
@@ -361,6 +362,17 @@ export function CompaniesScreen({
                 text: label,
               })),
             ],
+          },
+          {
+            // The server's dormancy ladder, read from each company's last
+            // activity by the rule the company page uses.
+            key: "dormancy",
+            label: "company.dormancy",
+            allLabel: "company.filterDormancyAll",
+            options: DORMANCY_RUNGS.map((value) => ({
+              value,
+              label: labelFor(DORMANCY_LABELS, value),
+            })),
           },
         ]}
         dataViews={savedViews}

@@ -872,6 +872,29 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "dormancy_days": {
+          "description": "Silent days after which an account reads as cooling, dormant and stale, in that order.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer"
+          },
+          "default": [
+            30,
+            60,
+            90
+          ]
+        },
+        "dormancy_follow_up_enabled": {
+          "description": "Suggest a follow-up task to the owner of an account that has gone dormant or stale.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
         "first_response_enabled": {
           "description": "Track a first-response target on every lead.",
           "type": [

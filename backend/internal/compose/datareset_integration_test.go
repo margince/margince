@@ -362,12 +362,12 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	// folded into the entry above, because this map is keyed on the PAIR for the
 	// reason its own comment gives — a table-keyed entry would ratify the next
 	// DELETE trigger on activity_link sight unseen, including one that blocks.
-	"activity_link activity_link_project_last_activity":        "a clock-maintenance trigger, not a guard: it recomputes project.last_activity_at for the project the deleted link filed the activity against and refuses no delete; `project` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them",
-	"capture_thread_verdict capture_thread_verdict_deal_clock": "a clock-maintenance trigger, not a guard: when a deleted verdict was a personal hold it recomputes last_activity_at for the deals its thread reached and refuses no delete; `deal` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them",
-	"activity settlement_evidence_share":                       settlementEvidenceShare,
-	"activity_participant settlement_evidence_share":           settlementEvidenceShare,
-	"activity_link settlement_evidence_share":                  settlementEvidenceShare,
-	"contact_email settlement_evidence_share":                  settlementEvidenceShare,
+	"activity_link activity_link_project_last_activity":    "a clock-maintenance trigger, not a guard: it recomputes project.last_activity_at for the project the deleted link filed the activity against and refuses no delete; `project` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them",
+	"capture_thread_verdict capture_thread_verdict_clocks": "a clock-maintenance trigger, not a guard: when a deleted verdict was a personal hold it recomputes last_activity_at for the deals and companies its thread reached and refuses no delete; `deal` and `company` are not preserved, so the sweep deletes those rows too and the recompute is discarded with them",
+	"activity settlement_evidence_share":                   settlementEvidenceShare,
+	"activity_participant settlement_evidence_share":       settlementEvidenceShare,
+	"activity_link settlement_evidence_share":              settlementEvidenceShare,
+	"contact_email settlement_evidence_share":              settlementEvidenceShare,
 
 	"activity deleted_mail_clears_reply_settled":            replySettledClear,
 	"activity_participant participant_clears_reply_settled": replySettledClear,

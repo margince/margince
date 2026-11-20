@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package companyclockrefold refolds the stored company clocks when who works
-// at a company changes without a write. It runs once after the upgrade that
-// made the clock read current employment like the account-reach walk. It runs
-// again whenever a departure day arrives.
+// Package companyclockrefold refolds the stored company clocks when the clock's
+// rule changed, or when who works at a company changes without a write. Its
+// data tasks run once after the upgrades that changed the rule. RefoldEnded
+// runs whenever a departure day arrives.
 package companyclockrefold
 
 import (
@@ -27,41 +27,58 @@ import (
 // stall the writes queued behind them.
 const batch = 200
 
-// DataTask walks the companies by id and refolds each stored clock that no
-// longer matches its folded value. A refolded company leaves the selection.
+// DataTask refolds the company clocks stored before the clock read current
+// employment like the account-reach walk.
 func DataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1795101500_company_clock_reads_current_employment", Version: 2,
 		Title:    systemtext.Literal("datatask.title.core.1795101500_company_clock_reads_current_employment"),
 		Requires: []string{"core/1795101710"},
-		Steps: []datatask.Step{{
-			Name: "companies", Limit: batch, MinLimit: 10,
-			Audit: datatask.AuditPolicy{Reason: "the last-activity triggers move the same derived clock without an audit"},
-			Estimate: func(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
-				if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
-					return 0, false, err
-				}
-				count, err := storekit.CountClockRecords(ctx, q, storekit.ClockCompanies, maximum)
-				return min(count, maximum), count > maximum, err
-			},
-			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				if err := auth.RequireSystem(ctx); err != nil {
-					return datatask.BatchOut{}, err
-				}
-				after, err := datatask.UUIDCursor(in.Cursor)
-				if err != nil {
-					return datatask.BatchOut{}, err
-				}
-				inspected, selected, err := storekit.ClockPage(ctx, tx, storekit.ClockCompanies, storekit.ClockNotFolded, after, in.Limit)
-				if err != nil {
-					return datatask.BatchOut{}, err
-				}
-				if err := Refold(ctx, tx, selected); err != nil {
-					return datatask.BatchOut{}, err
-				}
-				return datatask.AdvanceUUID(in, inspected, len(selected))
-			},
-		}},
+		Steps:    []datatask.Step{refoldStep()},
+	}
+}
+
+// PersonalMailTask refolds the company clocks stored before personal mail
+// stopped counting (relstrength.NotPersonalSQL).
+func PersonalMailTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795157896_company_clock_counts_no_personal_mail", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795157896_company_clock_counts_no_personal_mail"),
+		Requires: []string{"core/1795157896"},
+		Steps:    []datatask.Step{refoldStep()},
+	}
+}
+
+// refoldStep walks the companies by id and refolds each stored clock that no
+// longer matches its folded value. A refolded company leaves the selection.
+func refoldStep() datatask.Step {
+	return datatask.Step{
+		Name: "companies", Limit: batch, MinLimit: 10,
+		Audit: datatask.AuditPolicy{Reason: "the last-activity triggers move the same derived clock without an audit"},
+		Estimate: func(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
+			if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
+				return 0, false, err
+			}
+			count, err := storekit.CountClockRecords(ctx, q, storekit.ClockCompanies, maximum)
+			return min(count, maximum), count > maximum, err
+		},
+		Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+			if err := auth.RequireSystem(ctx); err != nil {
+				return datatask.BatchOut{}, err
+			}
+			after, err := datatask.UUIDCursor(in.Cursor)
+			if err != nil {
+				return datatask.BatchOut{}, err
+			}
+			inspected, selected, err := storekit.ClockPage(ctx, tx, storekit.ClockCompanies, storekit.ClockNotFolded, after, in.Limit)
+			if err != nil {
+				return datatask.BatchOut{}, err
+			}
+			if err := Refold(ctx, tx, selected); err != nil {
+				return datatask.BatchOut{}, err
+			}
+			return datatask.AdvanceUUID(in, inspected, len(selected))
+		},
 	}
 }
 

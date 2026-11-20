@@ -54,6 +54,15 @@ var recencyFloor = []string{
 // not about the deal moves its clock.
 var dealClockFunctions = []string{"last_activity_of_deal", "last_activity_of_deal_activity"}
 
+// companyClockFunctions refuse personal mail in every arm
+// (relstrength.NotPersonalSQL), so a personal thread never keeps an account
+// warm. Their arm through a deal reads relstrength.DealEvidenceSQL, as the deal
+// clock does.
+var companyClockFunctions = []string{"last_activity_of_company", "last_activity_of_company_activity"}
+
+// companyDealArm is the join that marks a company clock's arm through a deal.
+const companyDealArm = "JOIN activity_link l ON l.deal_id = d.id"
+
 // recencyFunctionRe finds a recency function's definition or its drop, by the
 // prefix every one carries. A dropped function is not live, so it leaves the
 // census. Case and line breaks are free in SQL, so neither may hide one.
@@ -122,6 +131,9 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 			t.Errorf("%s: %d activity arm(s) but only %d audience filter(s) — a "+
 				"replacement copied from a stale definition dropped one",
 				name, arms, audience)
+		}
+		if slices.Contains(companyClockFunctions, name) {
+			checkCompanyClockEvidence(t, name, body, arms)
 		}
 	}
 }
@@ -286,5 +298,24 @@ func TestWrittenByHumanCarriesTheOriginRule(t *testing.T) {
 	if !strings.Contains(relstrength.WrittenByHumanSQL("a"), relstrength.OriginIsEngagementSQL("a")) {
 		t.Error("relstrength.WrittenByHumanSQL no longer carries OriginIsEngagementSQL, so a recency " +
 			"reader that calls it counts work the product filed about the record")
+	}
+}
+
+// checkCompanyClockEvidence requires the personal-mail refusal in every arm of
+// a company clock, and the deal evidence rule in each arm through a deal.
+func checkCompanyClockEvidence(t *testing.T, name, body string, arms int) {
+	t.Helper()
+	if personal := strings.Count(body, relstrength.NotPersonalSQL("a")); personal < arms {
+		t.Errorf("%s: %d activity arm(s) but only %d relstrength.NotPersonalSQL clause(s), so personal mail "+
+			"keeps the account warm. Replace the function in a new migration with %q in every arm",
+			name, arms, personal, relstrength.NotPersonalSQL("a"))
+	}
+	dealArms := strings.Count(body, companyDealArm)
+	if dealArms == 0 {
+		t.Errorf("%s: no arm through a deal found, so the census cannot check its deal evidence", name)
+	}
+	if evidence := strings.Count(body, relstrength.DealEvidenceSQL("a", "l.deal_id")); evidence < dealArms {
+		t.Errorf("%s: %d arm(s) through a deal but only %d relstrength.DealEvidenceSQL clause(s), so a link "+
+			"marked not about the deal still warms its company through the deal", name, dealArms, evidence)
 	}
 }

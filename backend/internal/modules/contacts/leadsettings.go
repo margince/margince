@@ -96,7 +96,7 @@ const settingsAuditVerb = "update"
 
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {
-	return append(LeadSettingsSurface(), SignatureTemplate, SharedMergeReviews)
+	return append(LeadSettingsSurface(), SignatureTemplate, SharedMergeReviews, DormancyDays, DormancyFollowUpEnabled)
 }
 
 // LeadSettingsSurface are the settings GET /leads/settings carries.

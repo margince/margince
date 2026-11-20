@@ -348,6 +348,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
+| `contacts.dormancy_days` | `MARGINCE_CONTACTS_DORMANCY_DAYS` | — | `list<int>`, stored | `30,60,90` | api, worker | Silent days after which an account reads as cooling, dormant and stale, in that order. |
+| `contacts.dormancy_follow_up_enabled` | `MARGINCE_CONTACTS_DORMANCY_FOLLOW_UP_ENABLED` | — | `bool`, stored | `true` | api, worker | Suggest a follow-up task to the owner of an account that has gone dormant or stale. |
 | `contacts.first_response_enabled` | `MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED` | — | `bool`, stored | `false` | api, worker | Track a first-response target on every lead. |
 | `contacts.first_response_target_minutes` | `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | — | `int`, `15` to `10080`, stored | `240` | api, worker | Minutes a lead may wait for its first real response once its clock starts. |
 | `contacts.shared_merge_reviews` | `MARGINCE_CONTACTS_SHARED_MERGE_REVIEWS` | — | `bool`, stored | `false` | api, worker | Let any owner of a possible duplicate merge the whole case, keeping the other owners' access to the remaining contact through a record grant. |

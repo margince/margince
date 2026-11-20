@@ -9,8 +9,13 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+func onRung(rung dormancy.Rung) dormancyInputs {
+	return dormancyInputs{reading: dormancy.Reading{Rung: rung}}
+}
 
 // PO-F-4's five states, in the order that keeps them mutually exclusive. The
 // order is the point: a silent account must read as dormant rather than as
@@ -43,16 +48,16 @@ func TestEngagementStateAnswersWhoseMoveItIs(t *testing.T) {
 		{"exactly at the waiting threshold", suggestionInputs{
 			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(7 * day)},
 		}, "waiting_on_them"},
-		// Dormancy outranks direction: after a quarter, whose move it is stops
-		// being a question anyone can act on.
-		{"silent for four months, we wrote last", suggestionInputs{
-			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(120 * day)},
+		// The ladder's cold rungs outrank direction: once an account is dormant,
+		// whose move it is stops being a question anyone can act on.
+		{"dormant on the ladder, we wrote last", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(70 * day)}, dormancy: onRung(dormancy.Dormant),
 		}, "dormant"},
-		{"silent for four months, they wrote last", suggestionInputs{
-			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(120 * day)},
+		{"stale on the ladder, they wrote last", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(120 * day)}, dormancy: onRung(dormancy.Stale),
 		}, "dormant"},
-		{"just inside dormancy", suggestionInputs{
-			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(89 * day)},
+		{"cooling on the ladder", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(59 * day)}, dormancy: onRung(dormancy.Cooling),
 		}, "waiting_on_us"},
 		// A message with no recorded direction cannot say whose move it is. It
 		// still proves contact happened, so the account is not "never contacted".

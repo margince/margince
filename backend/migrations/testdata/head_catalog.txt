@@ -2721,8 +2721,8 @@ public.capture_test_mailbox_sent_pkey CREATE UNIQUE INDEX capture_test_mailbox_s
 public.capture_test_mailbox_sent_user_message_unique CREATE UNIQUE INDEX capture_test_mailbox_sent_user_message_unique ON public.capture_test_mailbox_sent USING btree (user_id, message_id)
 public.capture_thread_verdict acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_thread_verdict.attempts integer NOT NULL gen=- def=0
+public.capture_thread_verdict.capture_thread_verdict_clocks CREATE TRIGGER capture_thread_verdict_clocks AFTER INSERT OR DELETE OR UPDATE OF kind, status, thread_key, user_id ON public.capture_thread_verdict FOR EACH ROW EXECUTE FUNCTION trg_thread_verdict_clocks()
 public.capture_thread_verdict.capture_thread_verdict_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
-public.capture_thread_verdict.capture_thread_verdict_deal_clock CREATE TRIGGER capture_thread_verdict_deal_clock AFTER INSERT OR DELETE OR UPDATE OF kind, status, thread_key, user_id ON public.capture_thread_verdict FOR EACH ROW EXECUTE FUNCTION trg_thread_verdict_deal_clock()
 public.capture_thread_verdict.capture_thread_verdict_first_activity_id_fkey FOREIGN KEY (first_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.capture_thread_verdict.capture_thread_verdict_pkey PRIMARY KEY (id)
 public.capture_thread_verdict.capture_thread_verdict_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text])))
@@ -6872,6 +6872,11 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       FROM activity_link l
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
+       AND (coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=a.thread_key
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))
        AND a.origin NOT IN ('system_remediation', 'system_notice')
        AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE l.company_id = cid
@@ -6882,6 +6887,11 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity_link l ON l.deal_id = d.id
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
+       AND ((coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=a.thread_key
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure'))) AND NOT EXISTS (SELECT 1 FROM activity_link judged WHERE judged.activity_id = a.id AND judged.deal_id = l.deal_id AND judged.deal_relevance IN ('unrelated', 'uncertain')))
        AND a.origin NOT IN ('system_remediation', 'system_notice')
        AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE d.company_id = cid
@@ -6892,6 +6902,11 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity_link l ON l.contact_id = r.contact_id
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
+       AND (coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=a.thread_key
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))
        AND a.origin NOT IN ('system_remediation', 'system_notice')
        AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE r.company_id = cid
@@ -6908,6 +6923,11 @@ public.last_activity_of_company_activity(aid uuid, oid uuid) secdef=false cfg=- 
       FROM activity_link l
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
+       AND (coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=a.thread_key
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))
        AND a.origin NOT IN ('system_remediation', 'system_notice')
        AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE l.activity_id = aid AND l.company_id = oid
@@ -6918,6 +6938,11 @@ public.last_activity_of_company_activity(aid uuid, oid uuid) secdef=false cfg=- 
       JOIN activity_link l ON l.deal_id = d.id
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
+       AND ((coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=a.thread_key
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure'))) AND NOT EXISTS (SELECT 1 FROM activity_link judged WHERE judged.activity_id = a.id AND judged.deal_id = l.deal_id AND judged.deal_relevance IN ('unrelated', 'uncertain')))
        AND a.origin NOT IN ('system_remediation', 'system_notice')
        AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE l.activity_id = aid AND d.company_id = oid
@@ -6928,6 +6953,11 @@ public.last_activity_of_company_activity(aid uuid, oid uuid) secdef=false cfg=- 
       JOIN activity_link l ON l.contact_id = r.contact_id
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
+       AND (coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=a.thread_key
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))
        AND a.origin NOT IN ('system_remediation', 'system_notice')
        AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE l.activity_id = aid AND r.company_id = oid
@@ -8113,7 +8143,6 @@ public.partner.company_id uuid NOT NULL gen=- def=-
 public.partner.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner.id uuid NOT NULL gen=- def=uuidv7()
 public.partner.joined_at date gen=- def=-
-public.partner.last_contact_at timestamp with time zone gen=- def=-
 public.partner.margin_tier text gen=- def=-
 public.partner.next_step text gen=- def=-
 public.partner.next_step_due_at date gen=- def=-
@@ -8133,11 +8162,9 @@ public.partner.partner_partner_fit_score_check CHECK (((partner_fit_score IS NUL
 public.partner.partner_partner_fit_score_computed_check CHECK (((partner_fit_score_computed IS NULL) OR ((partner_fit_score_computed >= 0) AND (partner_fit_score_computed <= 100))))
 public.partner.partner_partner_kinds_check CHECK ((partner_kinds <@ ARRAY['hosting'::text, 'consulting'::text, 'strategic'::text, 'referral'::text]))
 public.partner.partner_pkey PRIMARY KEY (id)
-public.partner.partner_relationship_health_check CHECK (((relationship_health IS NULL) OR ((relationship_health >= (0)::numeric) AND (relationship_health <= (1)::numeric))))
 public.partner.partner_relationship_stage_fkey FOREIGN KEY (relationship_stage) REFERENCES partner_stage(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.partner.partner_retention_rate_check CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100))))
 public.partner.partner_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.partner.relationship_health numeric(3,2) gen=- def=-
 public.partner.relationship_stage text NOT NULL gen=- def=-
 public.partner.renews_at date gen=- def=-
 public.partner.retention_rate smallint gen=- def=-
@@ -8819,18 +8846,25 @@ public.record_stored_object_intent(requested_kind text, requested_key text) secd
         RAISE EXCEPTION 'The stored file has expired; upload it again' USING ERRCODE = '55000';
     END IF;
 END;
-public.refresh_deal_clocks_of_thread(key text, seat uuid) secdef=false cfg=- acl=- 
+public.refresh_clocks_of_thread(key text, seat uuid) secdef=false cfg=- acl=- 
 DECLARE
-  l record;
+  reached record;
 BEGIN
-  FOR l IN
-     SELECT DISTINCT link.deal_id FROM activity a
-       JOIN capture_import i ON i.activity_id = a.id AND i.user_id = seat
-       JOIN activity_link link ON link.activity_id = a.id
-      WHERE a.thread_key = key AND key <> '' AND link.deal_id IS NOT NULL
-      ORDER BY link.deal_id
+  FOR reached IN
+     WITH links AS (
+       SELECT link.contact_id, link.deal_id, link.company_id FROM activity a
+         JOIN capture_import i ON i.activity_id = a.id AND i.user_id = seat
+         JOIN activity_link link ON link.activity_id = a.id
+        WHERE a.thread_key = key AND key <> ''
+     )
+     SELECT reach.kind, reach.id FROM last_activity_reach(
+         ARRAY(SELECT contact_id FROM links WHERE contact_id IS NOT NULL),
+         ARRAY(SELECT deal_id FROM links WHERE deal_id IS NOT NULL),
+         ARRAY(SELECT company_id FROM links WHERE company_id IS NOT NULL)) reach
+      WHERE reach.kind IN ('company', 'deal')
+      ORDER BY reach.kind, reach.id
   LOOP
-    PERFORM refresh_last_activity_for_link(NULL, l.deal_id, NULL);
+    PERFORM move_last_activity(reached.kind::regclass, reached.id);
   END LOOP;
 END;
 
@@ -10655,7 +10689,7 @@ BEGIN
 	END IF;
 	RETURN NEW;
 END 
-public.trg_thread_verdict_deal_clock() secdef=false cfg=- acl=- 
+public.trg_thread_verdict_clocks() secdef=false cfg=- acl=- 
 DECLARE
   was_personal boolean := false;
   is_personal boolean := false;
@@ -10671,10 +10705,10 @@ BEGIN
     RETURN NULL;
   END IF;
   IF was_personal THEN
-    PERFORM refresh_deal_clocks_of_thread(OLD.thread_key, OLD.user_id);
+    PERFORM refresh_clocks_of_thread(OLD.thread_key, OLD.user_id);
   END IF;
   IF is_personal THEN
-    PERFORM refresh_deal_clocks_of_thread(NEW.thread_key, NEW.user_id);
+    PERFORM refresh_clocks_of_thread(NEW.thread_key, NEW.user_id);
   END IF;
   RETURN NULL;
 END;
