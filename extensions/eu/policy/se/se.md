@@ -3,16 +3,34 @@ jurisdiction: se
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Marknadsföringslagen (2008:486)"
     provision: "19–20 §§"
+    source-url: https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/marknadsforingslag-2008486_sfs-2008-486/
 fixtures:
   - finding: objection_route
     triggers: se/fixtures/advertising-without-objection-route.md
     clears: se/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Marknadsföringslagen (2008:486)"
+    provision: "19 § första stycket"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Marknadsföringslagen (2008:486)"
+    provision: "19 § första stycket"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Marknadsföringslagen (2008:486)"
+    provision: "19 § första stycket"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Marknadsföringslagen (2008:486)"
+    provision: "19 § första stycket"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Marknadsföringslagen (2008:486)"
+    provision: "20 §"
 ---
 
 # What Swedish law requires of an outbound message

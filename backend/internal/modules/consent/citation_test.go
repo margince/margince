@@ -18,9 +18,6 @@ var (
 	reviewDue = citedOn.AddDate(1, 0, 0)
 	lawEnds   = citedOn.AddDate(0, 6, 0)
 	lawStarts = citedOn.AddDate(0, 2, 0)
-	// reviewTomorrow dates a review the day after the lookups below that ask
-	// before it.
-	reviewTomorrow = citedOn.AddDate(0, 1, 1)
 )
 
 // citingPacks registers two packs that cite the same refusal code under
@@ -48,11 +45,11 @@ var citingPacks = sync.OnceValue(func() [3]jurisdiction.Code {
 			{Code: commsauthz.ReasonFrequencyCapReached, Instrument: "Act A", Provision: "§5"},
 		},
 	})
-	tomorrow := reviewed
-	tomorrow.ReviewedAt = reviewTomorrow
+	// A draft names a due date and no review, so the date binds nothing.
+	draft := messagingrules.Provenance{ReviewDue: citedOn}
 	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: "kd", Version: 1, Instruments: instruments, Provenance: tomorrow,
-		Citations: []messagingrules.Citation{{Code: commsauthz.ReasonFrequencyCapReached, Instrument: "Act A"}},
+		Jurisdiction: "kd", Version: 1, Instruments: instruments, Provenance: draft,
+		Citations: []messagingrules.Citation{{Code: commsauthz.ReasonFrequencyCapReached, Instrument: "Act A", Provision: "§7"}},
 	})
 	return [3]jurisdiction.Code{"ka", "kb", "kd"}
 })
@@ -60,7 +57,7 @@ var citingPacks = sync.OnceValue(func() [3]jurisdiction.Code {
 func TestACitationIsResolvedAgainstTheRecipientsPackAndSender(t *testing.T) {
 	t.Parallel()
 	packs := citingPacks()
-	a, b, reviewedLater := packs[0], packs[1], packs[2]
+	a, b, draft := packs[0], packs[1], packs[2]
 	soon := citedOn.AddDate(0, 1, 0)
 	for _, tc := range []struct {
 		name      string
@@ -125,14 +122,9 @@ func TestACitationIsResolvedAgainstTheRecipientsPackAndSender(t *testing.T) {
 			citationShown, "§2",
 		},
 		{
-			"a review dated tomorrow approves nothing today", commsauthz.ReasonFrequencyCapReached,
-			citationContext{Recipient: RecipientCountry{Code: reviewedLater}, At: soon},
-			citationNotYetReviewed, "",
-		},
-		{
-			"the same pack cites once its review instant has come", commsauthz.ReasonFrequencyCapReached,
-			citationContext{Recipient: RecipientCountry{Code: reviewedLater}, At: reviewTomorrow},
-			citationShown, "§1",
+			"a draft pack with no review cites its law", commsauthz.ReasonFrequencyCapReached,
+			citationContext{Recipient: RecipientCountry{Code: draft}, At: soon},
+			citationShown, "§7",
 		},
 		{
 			"a law not yet in force is not", commsauthz.ReasonConsentWithdrawn,

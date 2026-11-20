@@ -3,17 +3,35 @@ jurisdiction: pl
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej"
     provision: "art. 398"
+    source-url: https://eli.gov.pl/eli/DU/2024/1221/ogl
 marketing-exceptions: []
 fixtures:
   - finding: objection_route
     triggers: pl/fixtures/advertising-without-objection-route.md
     clears: pl/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej"
+    provision: "art. 398 ust. 1"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej"
+    provision: "art. 398 ust. 1"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej"
+    provision: "art. 398 ust. 1"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej"
+    provision: "art. 398 ust. 1"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(4)"
 ---
 
 # What Polish law requires of an outbound message

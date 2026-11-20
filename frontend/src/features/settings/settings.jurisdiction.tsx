@@ -386,6 +386,7 @@ function EffectsPanel({
               key: `class-${retentionClass.name}`,
               term: t("jurisdiction.effects.class"),
               value: floorText(retentionClass, locale, t),
+              note: retentionClass.law,
             })),
           ]}
         />

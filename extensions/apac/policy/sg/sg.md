@@ -25,6 +25,51 @@ fixtures:
   - finding: subject_prefix
     triggers: sg/fixtures/advertising-without-label.md
     clears: sg/fixtures/advertising-complete.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Personal Data Protection Act 2012"
+    provision: "s. 13"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Personal Data Protection Act 2012"
+    provision: "s. 13"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Personal Data Protection Act 2012"
+    provision: "s. 13"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Personal Data Protection Act 2012"
+    provision: "s. 13"
+  - code: consent_withdrawn
+    territorial-test: any_sender
+    instrument: "Personal Data Protection Act 2012"
+    provision: "s. 16"
+  - code: subject_label_missing
+    territorial-test: any_sender
+    instrument: "Spam Control Act 2007"
+    provision: "Second Schedule, para. 3(1)(b)"
+  - code: subject_prefix
+    territorial-test: any_sender
+    instrument: "Spam Control Act 2007"
+    provision: "Second Schedule, para. 3(1)(b)"
+  - code: objection_route
+    territorial-test: any_sender
+    instrument: "Spam Control Act 2007"
+    provision: "Second Schedule, para. 2(1)"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Spam Control Act 2007"
+    provision: "Second Schedule, para. 2(1)"
+  - code: marketing_objection
+    territorial-test: any_sender
+    instrument: "Spam Control Act 2007"
+    provision: "Second Schedule, para. 2(7)"
+  - code: opted_out_after_request
+    territorial-test: any_sender
+    instrument: "Spam Control Act 2007"
+    provision: "Second Schedule, para. 2(7)"
 ---
 
 # What Singapore law requires of an outbound message

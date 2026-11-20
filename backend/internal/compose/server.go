@@ -89,7 +89,6 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames()).
 		WithInstallationDescribed(installationDescribed(anchor)).
 		WithInstallationBrand(installationBrand(anchor)).
-		WithInlineSendReview(activities.InlineSendReviewFor(StoredConfig(pool))).
 		WithEntityMembership(anchor.AssignLegalEntityMemberTx)
 
 	// The transport directory, loaded on the REAL assembly path rather than in

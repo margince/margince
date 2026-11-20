@@ -53,7 +53,7 @@ describe("a saved draft put back whole", () => {
     expect(screen.getByText("seat-pricing.pdf")).toBeTruthy();
     expect(
       screen.getByRole("combobox", { name: "Reason for contact" }).textContent,
-    ).toContain("Follow-up they requested");
+    ).toContain("They asked for it");
     expect(screen.getByRole("button", { name: "Schedule send" })).toBeTruthy();
     expect(screen.getByText(/^Sends /)).toBeTruthy();
     // What came back is what the draft holds, so nothing is written again.
@@ -158,7 +158,7 @@ describe("a composer opened with a caller's own words", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Reason for contact" }),
-      "Follow-up they requested",
+      "They asked for it",
     );
 
     await pressSend(user);
