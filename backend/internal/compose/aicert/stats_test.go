@@ -55,3 +55,19 @@ func TestIdenticalScoresStillCarryTheJudgesDoubt(t *testing.T) {
 		t.Errorf("three scores of 71 against a bar of 70 reached %s on the judge alone", got)
 	}
 }
+
+// The printed interval against hand-computed Wilson values at the verdict's z.
+func TestTheReliabilityCellPrintsTheWilsonInterval(t *testing.T) {
+	for _, c := range []struct {
+		passed, runs int
+		want         string
+	}{
+		{2, 3, "0.67 [0.32, 0.89]"},
+		{27, 30, "0.90 [0.81, 0.95]"},
+		{0, 0, Unmeasured},
+	} {
+		if got := ReliabilityCell(c.passed, c.runs); got != c.want {
+			t.Errorf("%d of %d prints %q, want %q", c.passed, c.runs, got, c.want)
+		}
+	}
+}
