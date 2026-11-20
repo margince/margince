@@ -23024,7 +23024,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.verdict.noExchange": "Chưa ghi nhận trao đổi nào với liên hệ này.",
   "contactCase.title": "Liên hệ có thể trùng",
   "contactCase.intro":
-    "Đánh dấu các liên hệ là cùng một người. Sau đó chọn hồ sơ giữ lại và người chịu trách nhiệm.",
+    "Đánh dấu các liên hệ là cùng một người. Sau đó chọn liên hệ được giữ lại và người chịu trách nhiệm.",
   "contactCase.loading": "Đang tải liên hệ có thể trùng…",
   "contactCase.none": "Liên hệ này không có bản trùng nào đang chờ xử lý.",
   "contactCase.settledElsewhere":
@@ -23061,8 +23061,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.merge_other": "Gộp {count} liên hệ",
   "contactCase.member.owner": "Người chịu trách nhiệm: {name}",
   "contactCase.member.unowned": "Chưa giao",
-  "contactCase.member.keep": "Giữ thông tin của hồ sơ này",
-  "contactCase.member.keepNamed": "Giữ thông tin của {name}",
+  "contactCase.member.stays": "Giữ lại {name}",
+  "contactCase.survivor.legend": "Giữ lại liên hệ nào?",
+  "contactCase.survivor.hint":
+    "Các liên hệ đã đánh dấu còn lại được gộp vào đó và lưu trữ.",
   "contactCase.member.dismissedWith":
     "Đã được đánh dấu là người khác với {names}.",
   "contactCase.notAllowed.tooLarge":
@@ -23087,12 +23089,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.field.domain": "Tên miền",
   "contactCase.field.other": "Thông tin",
   "contactCase.evidence.title": "Vì sao giống nhau",
+  "contactCase.evidence.hint":
+    "“Không phải cùng một người” chỉ áp dụng cho cặp này và cặp đó không được gợi ý nữa. Liên hệ không đánh dấu vẫn là bản trùng có thể.",
   "contactCase.evidence.pair": "{left} và {right}",
   "contactCase.evidence.different": "Người khác nhau",
   "contactCase.preview.title": "Kết quả khi gộp",
   "contactCase.preview.keeps":
     "{name} được giữ lại, do {owner} chịu trách nhiệm.",
-  "contactCase.preview.mergedTitle": "Được gộp vào",
+  "contactCase.preview.mergedTitle": "Được gộp vào và lưu trữ",
   "contactCase.preview.sharesTitle": "Giữ quyền truy cập",
   "contactCase.preview.noShares": "Không có người chịu trách nhiệm nào khác.",
   "contactCase.preview.shareWrite": "{name}, có quyền sửa",

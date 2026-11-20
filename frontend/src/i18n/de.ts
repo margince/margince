@@ -23652,7 +23652,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mit diesem Kontakt ist noch kein Austausch erfasst.",
   "contactCase.title": "Mögliche Duplikate",
   "contactCase.intro":
-    "Markiere die Kontakte, die dieselbe Person sind. Wähle dann, welcher Datensatz bleibt und wer verantwortlich ist.",
+    "Markiere die Kontakte, die dieselbe Person sind. Wähle dann, welcher Kontakt bleibt und wer verantwortlich ist.",
   "contactCase.loading": "Mögliche Duplikate werden geladen…",
   "contactCase.none": "Für diesen Kontakt gibt es keine offenen Duplikate.",
   "contactCase.settledElsewhere":
@@ -23690,8 +23690,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.merge_other": "{count} Kontakte zusammenführen",
   "contactCase.member.owner": "Verantwortlich: {name}",
   "contactCase.member.unowned": "Niemand verantwortlich",
-  "contactCase.member.keep": "Angaben dieses Datensatzes behalten",
-  "contactCase.member.keepNamed": "Angaben von {name} behalten",
+  "contactCase.member.stays": "{name} bleibt",
+  "contactCase.survivor.legend": "Welcher Kontakt bleibt?",
+  "contactCase.survivor.hint":
+    "Die anderen markierten Kontakte werden darin zusammengeführt und archiviert.",
   "contactCase.member.dismissedWith": "Als andere Person als {names} markiert.",
   "contactCase.notAllowed.tooLarge":
     "Diese Gruppe ist zu groß, um sie auf einmal zusammenzuführen. Entscheide die Paare unten einzeln.",
@@ -23716,11 +23718,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.field.domain": "Domain",
   "contactCase.field.other": "Angabe",
   "contactCase.evidence.title": "Warum sie sich ähneln",
+  "contactCase.evidence.hint":
+    "„Nicht dieselbe Person“ gilt nur für dieses Paar und es wird nicht mehr vorgeschlagen. Ein nicht markierter Kontakt bleibt ein mögliches Duplikat.",
   "contactCase.evidence.pair": "{left} und {right}",
   "contactCase.evidence.different": "Verschiedene Personen",
   "contactCase.preview.title": "Was das Zusammenführen bewirkt",
   "contactCase.preview.keeps": "{name} bleibt, verantwortlich ist {owner}.",
-  "contactCase.preview.mergedTitle": "Darin zusammengeführt",
+  "contactCase.preview.mergedTitle": "Darin zusammengeführt und archiviert",
   "contactCase.preview.sharesTitle": "Behält Zugriff",
   "contactCase.preview.noShares": "Keine weitere verantwortliche Person.",
   "contactCase.preview.shareWrite": "{name}, darf bearbeiten",
