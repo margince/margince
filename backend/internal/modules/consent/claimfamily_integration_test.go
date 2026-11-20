@@ -54,8 +54,8 @@ func TestAMarketingClaimHasNoSiblings(t *testing.T) {
 }
 
 // A narrow claim never widens to the broad one. An invoice claim with no
-// invoice behind it, to a contact at a customer, stays an unsupported invoice
-// claim: the customer relationship is no evidence about this invoice.
+// invoice behind it stays an unsupported invoice claim, even to a contact at a
+// customer. The customer relationship is no evidence about this invoice.
 //
 // Mutation: let validateFamily try every family member and this fails.
 func TestANarrowClaimNeverSettlesOnTheBroadOne(t *testing.T) {
