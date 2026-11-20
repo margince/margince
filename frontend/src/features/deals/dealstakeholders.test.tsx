@@ -30,6 +30,7 @@ const stakeholder = {
   deal_id: DEAL,
   contact_id: CONTACT,
   role: "champion",
+  can_archive: true,
   is_current_primary: false,
   source: "manual",
   captured_by: "human:u-1",

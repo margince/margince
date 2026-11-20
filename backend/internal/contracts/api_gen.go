@@ -62948,6 +62948,9 @@ type RejectVoiceDraftRequest struct {
 type Relationship struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
+	// CanArchive List reads only. Whether the caller may archive this edge, answered by the rule the archive itself applies.
+	CanArchive *bool `json:"can_archive,omitempty"`
+
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string             `json:"captured_by,omitempty"`
 	CompanyId  *openapi_types.UUID `json:"company_id,omitempty"`
