@@ -142,7 +142,7 @@ type jsonSchema struct {
 	// writes them. CarriesFreeText reads them.
 	Const json.RawMessage `json:"const,omitempty"`
 	//nolint:tagliatelle // x-extensible-enum is the contract's own schema extension
-	ExtensibleEnum bool `json:"x-extensible-enum,omitempty"`
+	ExtensibleEnum openEnum `json:"x-extensible-enum,omitempty"`
 	//nolint:tagliatelle // anyOf is JSON Schema's own member name
 	AnyOf []*jsonSchema `json:"anyOf,omitempty"`
 	//nolint:tagliatelle // oneOf is JSON Schema's own member name
@@ -163,6 +163,25 @@ type jsonSchema struct {
 // reader that could not parse that would report a perfectly good schema as
 // unreadable and withhold structured content from every call to that tool. The
 // deriver only ever emits the schema arm, for a map's values.
+// openEnum reads x-extensible-enum in both of the contract's forms: `true`
+// beside an enum, or the list of known values on a string that takes others.
+// Either form says the value is open.
+type openEnum bool
+
+func (o *openEnum) UnmarshalJSON(raw []byte) error {
+	var open bool
+	if err := json.Unmarshal(raw, &open); err == nil {
+		*o = openEnum(open)
+		return nil
+	}
+	var known []string
+	if err := json.Unmarshal(raw, &known); err != nil {
+		return fmt.Errorf("x-extensible-enum is neither a boolean nor a list of values: %w", err)
+	}
+	*o = true
+	return nil
+}
+
 type additionalProperties struct {
 	// Closed is set when the member was a boolean. false means no member beyond
 	// the declared ones is allowed; true is the default and says nothing.

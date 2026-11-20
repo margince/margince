@@ -134,3 +134,22 @@ func TestCarriesFreeTextReadsWhatAValueCanHold(t *testing.T) {
 		}
 	}
 }
+
+// The contract writes x-extensible-enum as `true` beside an enum, and as the
+// list of known values on a string that takes others. A schema in either form
+// must parse, or every reader of a served output schema fails on it.
+func TestBothFormsOfAnOpenEnumParseAsOpen(t *testing.T) {
+	for _, raw := range []string{
+		`{"type":"string","enum":["a"],"x-extensible-enum":true}`,
+		`{"type":"string","x-extensible-enum":["contacts","deals"]}`,
+	} {
+		var node jsonSchema
+		if err := json.Unmarshal([]byte(raw), &node); err != nil {
+			t.Errorf("%s does not parse: %v", raw, err)
+			continue
+		}
+		if !node.ExtensibleEnum {
+			t.Errorf("%s parsed as a closed enum", raw)
+		}
+	}
+}

@@ -35,7 +35,7 @@ func (s *jsonSchema) carriesFreeText() bool {
 		return true
 	case len(s.AnyOf)+len(s.OneOf)+len(s.AllOf)+len(s.PrefixItems)+len(s.PatternProperties) > 0:
 		return true
-	case (len(s.Enum) > 0 || len(s.Const) > 0) && !s.ExtensibleEnum:
+	case (len(s.Enum) > 0 || len(s.Const) > 0) && !bool(s.ExtensibleEnum):
 		return false
 	}
 	switch s.Type {
