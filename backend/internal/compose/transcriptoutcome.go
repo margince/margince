@@ -227,6 +227,8 @@ func (said transcriptCopy) failureSentence(failure activities.TranscriptFailure)
 		return said.Say(transcriptWords.Missing)
 	case activities.TranscriptFailureNoModel:
 		return said.Say(transcriptWords.NoModel)
+	case activities.TranscriptFailureUnanswered:
+		return said.Say(transcriptWords.Unanswered)
 	default:
 		return said.Say(transcriptWords.Refused)
 	}

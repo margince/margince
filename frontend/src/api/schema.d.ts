@@ -978,7 +978,9 @@ export interface paths {
          *     8,388,608 bytes is refused with `413` before it is read. The reading runs inside
          *     the request. `422` with code `no_cards` means the photo shows no business card, and `422`
          *     with `not_readable` means the configured model cannot read photos or the reply could not
-         *     be used. `501` means the installation has no model configured.
+         *     be used. `501` means the installation has no model configured. `503` means the model did
+         *     not read it: `ai_allowance_used_up` when the monthly AI allowance is spent, a
+         *     `provider_*` code when the AI provider is blocked, and `assistant_unavailable` otherwise.
          */
         post: operations["importCardPhoto"];
         delete?: never;
@@ -65862,6 +65864,15 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description The installation has no model configured to read photos. */
             501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The model did not read the photo (`code: ai_allowance_used_up`, `provider_out_of_credit`, `provider_unauthorized`, `provider_unavailable` or `assistant_unavailable`). */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

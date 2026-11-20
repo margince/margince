@@ -807,6 +807,11 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '503':
+          description: 'The model did not read the photo (`code: ai_allowance_used_up`, `provider_out_of_credit`, `provider_unauthorized`, `provider_unavailable` or `assistant_unavailable`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
   /contacts/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'

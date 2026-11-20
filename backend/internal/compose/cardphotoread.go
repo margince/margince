@@ -19,6 +19,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -221,7 +222,9 @@ func cardPhotoReader(lane ai.ImageLane) contacts.CardPhotoReader {
 				Message: fmt.Sprintf("The photo shows more than %d cards. Photograph fewer cards at a time.", contacts.CardPhotoMaxCards),
 			}
 		case err != nil:
-			return nil, err
+			// The contacts handler cannot import the mapper, so the lane's
+			// "no answer" reaches it already phrased for the reader.
+			return nil, modelfailure.Refusal(ctx, err)
 		case len(cards) == 0:
 			return nil, &contacts.CardPhotoRefusal{Code: "no_cards", Message: noCardsMessage(dropped)}
 		}

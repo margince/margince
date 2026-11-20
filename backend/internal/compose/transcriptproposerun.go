@@ -41,9 +41,36 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 }
 
 func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID) error {
-	if _, err := store.BeginTranscriptRead(ctx, readID, activities.TranscriptReadLease); err != nil {
+	claim, err := store.BeginTranscriptRead(ctx, readID, activities.TranscriptReadLease)
+	if err != nil {
 		return err
 	}
+	if err := p.readClaimed(ctx, store, readID, activityID); err != nil {
+		return p.retryable(ctx, store, claim, err)
+	}
+	return nil
+}
+
+// retryable hands the reading back before handing the job its fault, as
+// DocumentExtractor.retryable does and for its reason: a reading left running
+// is refused to the job's next try as somebody else's, and that try ends as
+// success with the rep watching "reading…".
+func (p *TranscriptProposer) retryable(
+	ctx context.Context, store transcriptReadStore, claim activities.TranscriptRead, cause error,
+) error {
+	if claim.StartedAt == nil {
+		return cause
+	}
+	if err := store.ReleaseTranscriptRead(ctx, claim.ID, *claim.StartedAt); err != nil {
+		p.log.WarnContext(ctx, "could not release a transcript reading being retried",
+			"transcript_read_id", claim.ID, "error", err)
+	}
+	return cause
+}
+
+// readClaimed is one reading of a claimed run. Every error it returns is the
+// job's to retry, and readTranscript hands the reading back before it does.
+func (p *TranscriptProposer) readClaimed(ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID) error {
 	reading, err := store.ReadTranscript(ctx, activityID)
 	if err != nil {
 		if failure, terminal := unreadableTranscript(err); terminal {

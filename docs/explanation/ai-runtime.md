@@ -209,6 +209,19 @@ are a website read (`site_read`), a company scan (`company_scan`), and a Voice-D
 named here by the table each sits in. The queue job kind that resumes the first two is spelled
 differently (`site_deep_read`, `account_scan`); the third is `voice_build`.
 
+Every other background job waits in the queue itself. A worker that gets the deferral, or a
+`ProviderDownError`, back from the router hands it to River, and the wrapper every worker is
+registered through (`sessionBudgetWorker`, `compose/sessionbudget.go`) turns it into a snooze until
+`NextAttemptAt` or `RetryAfter`. River counts no attempt for a snooze, so the job keeps its tries
+and runs when the budget or the provider is back. A transcript reading or a document reading goes
+back to `queued` while its job sleeps. A scheduled agent run is not a queue job: it ends with its
+own reason, that the monthly AI allowance is used up or the provider is unavailable, and the next
+scheduled occurrence starts clean.
+
+An HTTP route a person waits on cannot wait for a month. `compose/modelfailure` answers the
+deferral as a 503 with the code `ai_allowance_used_up`, and a blocked provider with a `provider_*`
+code.
+
 Each carrier has its own predicate for work the budget holds back (`contacts.BudgetDeferredSiteReads`,
 `companyscan.BudgetDeferredScans`, `ai.BudgetDeferredVoiceBuilds`). None of them counts work waiting on
 a provider. Its count is what the list of waiting work under Settings → AI shows. That list is gated on

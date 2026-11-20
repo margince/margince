@@ -34,6 +34,7 @@ type sessionBudgetWorker[T river.JobArgs] struct {
 	work        jobs.WorkOnly[T]
 	slots       chan struct{}
 	withContext func(context.Context) context.Context
+	now         func() time.Time
 }
 
 func (w sessionBudgetWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
@@ -44,7 +45,10 @@ func (w sessionBudgetWorker[T]) Work(ctx context.Context, job *river.Job[T]) err
 		ctx = context.WithValue(ctx, sessionBudgetKey{}, w.slots)
 	}
 	ctx = database.WithSessionBudget(ctx, takeSessionSlot)
-	return jobs.FaultForKind(ctx, job.Args.Kind(), w.work.Work(ctx, job))
+	// Every registered worker passes here, so a "not now" from the router that
+	// a worker hands back sleeps rather than spends one of the job's tries.
+	err := snoozeWhileDeferred(w.work.Work(ctx, job), w.now())
+	return jobs.FaultForKind(ctx, job.Args.Kind(), err)
 }
 
 // Limit pinned connections before borrowing, so lock holders cannot exhaust the pool.

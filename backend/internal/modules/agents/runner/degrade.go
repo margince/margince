@@ -29,6 +29,10 @@ const (
 		"the server log carries the provider's own message"
 	reasonModelWithheld = "model declined — the AI provider withheld its answer to this run; " +
 		"the server log carries the provider's reason"
+	reasonAllowanceUsedUp = "the monthly AI allowance is used up — no AI provider was called for this run; " +
+		"scheduled runs start again once an administrator raises the allowance or the next budget window opens"
+	reasonProviderBlocked = "the AI provider is unavailable — no call was made for this run; " +
+		"the next scheduled occurrence starts clean"
 	reasonStepTooLong = "model answer was longer than one step allows — " +
 		"the next scheduled run starts clean"
 	reasonStepBudgetExhausted        = "step budget exhausted"
@@ -43,13 +47,28 @@ func invalidOutputReason(attempts int) string {
 		"the server log carries the parser's error", attempts)
 }
 
+// ErrAllowanceUsedUp and ErrProviderBlocked are what a Brain wraps a step in
+// when the router declined it without calling a provider: the budget stop, or
+// a provider it has blocked. The runner may not import the router, so the
+// adapter names the refusal in these terms.
+var (
+	ErrAllowanceUsedUp = errors.New("runner: the monthly AI allowance is used up")
+	ErrProviderBlocked = errors.New("runner: the AI provider is blocked")
+)
+
 // modelCallReason names a failed model call for its reader. A withheld answer
 // is the provider declining, which is not an outage and must not read as one; a
 // rejected request is our own defect, which the reader can do nothing about, so
 // it reads as the ordinary failure while degradeFromCause logs it as an error.
+// A step the router declined made no call, so it never reads as one that failed.
 func modelCallReason(err error) string {
-	if errors.Is(err, model.ErrOutputWithheld) {
+	switch {
+	case errors.Is(err, model.ErrOutputWithheld):
 		return reasonModelWithheld
+	case errors.Is(err, ErrAllowanceUsedUp):
+		return reasonAllowanceUsedUp
+	case errors.Is(err, ErrProviderBlocked):
+		return reasonProviderBlocked
 	}
 	return reasonModelCallFailed
 }

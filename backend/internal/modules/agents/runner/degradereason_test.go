@@ -110,6 +110,7 @@ func TestADegradeReasonNeverCarriesTheCauseItDegradedOn(t *testing.T) {
 func TestEveryClosedReasonSaysWhatStoppedTheRun(t *testing.T) {
 	for _, reason := range []string{
 		reasonWallClockExceeded, reasonModelCallFailed, reasonModelWithheld,
+		reasonAllowanceUsedUp, reasonProviderBlocked,
 		reasonStepBudgetExhausted, reasonOutputTokenBudgetExhausted,
 		invalidOutputReason(consecutiveInvalidLimit),
 		string(FailureEditedApprovalCarriedNoChange), string(FailurePassportNoLongerValid),
@@ -225,7 +226,8 @@ func (b outcomeBrain) Complete(context.Context, model.Request) (model.Response, 
 }
 
 // A withheld step is the provider declining, and the reader is owed that rather
-// than "did not answer"; a rejected request is our own defect, so the reader gets
+// than "did not answer"; so is a step the router declined without a call. A
+// rejected request is our own defect, so the reader gets
 // the ordinary failure while the operator log carries it at error level.
 func TestAProviderOutcomeDegradesOnItsOwnReason(t *testing.T) {
 	for _, tc := range []struct {
@@ -236,6 +238,8 @@ func TestAProviderOutcomeDegradesOnItsOwnReason(t *testing.T) {
 	}{
 		{name: "withheld", outcome: model.ErrOutputWithheld, wantReason: reasonModelWithheld, wantLevel: "level=WARN"},
 		{name: "rejected", outcome: model.ErrRequestRejected, wantReason: reasonModelCallFailed, wantLevel: "level=ERROR"},
+		{name: "allowance used up", outcome: ErrAllowanceUsedUp, wantReason: reasonAllowanceUsedUp, wantLevel: "level=WARN"},
+		{name: "provider blocked", outcome: ErrProviderBlocked, wantReason: reasonProviderBlocked, wantLevel: "level=WARN"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			logged := captureRunnerLog(t)

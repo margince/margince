@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -461,7 +462,19 @@ func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Resp
 	}
 	resp, info, err := b.router.Complete(ctx, ai.TaskAgentLoop, prepared)
 	meta := runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier), Reject: func() { b.router.Reject(info) }}
-	return resp, meta, err
+	return resp, meta, agentStepRefusal(err)
+}
+
+// agentStepRefusal names the router's "not now" in the runner's terms, so a
+// scheduled run says why no provider was called rather than that one failed.
+func agentStepRefusal(err error) error {
+	switch {
+	case errors.Is(err, ai.ErrBudgetDeferred):
+		return fmt.Errorf("%w: %w", runner.ErrAllowanceUsedUp, err)
+	case errors.Is(err, ai.ErrProviderDown):
+		return fmt.Errorf("%w: %w", runner.ErrProviderBlocked, err)
+	}
+	return err
 }
 
 // PromptWindow is the window of the agent loop's own ladder, read fresh on

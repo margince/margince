@@ -39,11 +39,12 @@ type codeBuilder struct {
 	keysStem string
 }
 
-// readerCodeBuilders are the helpers this gate holds: Unavailable exists to
-// carry a code for a reader, and Duplicate's detail is one sentence for every
-// key. keysStem names the keys that serve only that builder, so stale copy fails.
+// readerCodeBuilders are the helpers this gate holds: UnavailableProblem exists
+// to carry a code for a reader, and Duplicate's detail is one sentence for
+// every key. keysStem names the keys that serve only that
+// builder, so stale copy fails.
 var readerCodeBuilders = []codeBuilder{
-	{name: "Unavailable", codeArg: 2},
+	{name: "UnavailableProblem", codeArg: 0},
 	{name: "Duplicate", codeArg: 0, keysStem: duplicateCopyKeyStem},
 }
 
@@ -270,7 +271,7 @@ func literal() error  { return he.Duplicate("duplicate_email", "") }
 func constant() error { return he.Duplicate(codeDomain, "id") }
 func computed(code string) error { return he.Duplicate(code, "") }
 func asValue() func(string, string) *he.DetailedError { return he.Duplicate }
-func other(w http.ResponseWriter, r *http.Request) { he.Unavailable(w, r, "gateway_down", "") }
+func other() error { return he.UnavailableProblem("gateway_down", "") }
 `
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "planted.go", planted, 0)

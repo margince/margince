@@ -98,9 +98,7 @@ func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testin
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/onboarding/company/messages", nil)
-			if !answered(rec, req, fmt.Errorf("ai: anthropic: %s: %w", providerText, tc.cause)) {
-				t.Fatal("the walk ended with no answer and the handler would still report an opaque 500")
-			}
+			Write(rec, req, fmt.Errorf("ai: anthropic: %s: %w", providerText, tc.cause))
 			if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), codeAssistantUnavailable) {
 				t.Errorf("want 503 %s, got %d %s", codeAssistantUnavailable, rec.Code, rec.Body.String())
 			}
@@ -125,11 +123,11 @@ func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testin
 // An error that is not the model lane is left for httperr.Write to answer.
 func TestAnErrorThatIsNotTheModelLaneIsNotAnsweredAsOne(t *testing.T) {
 	t.Parallel()
-	rec := httptest.NewRecorder()
-	if answered(rec, httptest.NewRequest(http.MethodPost, "/", nil), errors.New("history: too many messages")) {
-		t.Errorf("an ordinary error was answered as the assistant being unavailable: %d", rec.Code)
+	ordinary := errors.New("history: too many messages")
+	if got := Refusal(t.Context(), ordinary); got != ordinary {
+		t.Errorf("an ordinary error was answered as the assistant being unavailable: %v", got)
 	}
-	rec = httptest.NewRecorder()
+	rec := httptest.NewRecorder()
 	Write(rec, httptest.NewRequest(http.MethodPost, "/", nil), apperrors.ErrNotFound)
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("a missing record reached Write and was answered %d rather than httperr's 404", rec.Code)
@@ -163,5 +161,17 @@ func TestAProviderTheRouterBlockedIsAnsweredWithItsReason(t *testing.T) {
 				t.Errorf("the detail must send the reader to their administrator and name no provider: %s", body)
 			}
 		})
+	}
+}
+
+// The budget stop is a reason of its own: the reader is told the allowance is
+// used up, not that the assistant failed, and the code has its own copy.
+func TestABudgetStopIsAnsweredAsTheAllowanceUsedUp(t *testing.T) {
+	t.Parallel()
+	deferred := &ai.BudgetDeferralError{Task: ai.TaskDocumentExtract}
+	rec := httptest.NewRecorder()
+	Write(rec, httptest.NewRequest(http.MethodPost, "/", nil), fmt.Errorf("reading: %w", deferred))
+	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), codeAllowanceUsedUp) {
+		t.Errorf("want 503 %s, got %d %s", codeAllowanceUsedUp, rec.Code, rec.Body.String())
 	}
 }

@@ -38,17 +38,11 @@ func (w *siteDeepReadWorker) Work(ctx context.Context, job *river.Job[SiteDeepRe
 			workErr = jobs.FaultContext(ctx, w.fail(workCtx, job.Args.SiteReadID, cause))
 		}
 	}()
-	err := w.run(workCtx, job.Args)
-	until, deferred := ai.DeferredUntil(err)
-	if !deferred {
-		return jobs.FaultContext(ctx, err)
-	}
 	now := time.Now()
 	if w.now != nil {
 		now = w.now()
 	}
-	delay := max(until.Sub(now), 0)
-	return river.JobSnooze(delay)
+	return jobs.FaultContext(ctx, snoozeWhileDeferred(w.run(workCtx, job.Args), now))
 }
 
 func (w *siteDeepReadWorker) deferForBudget(ctx context.Context, readID ids.UUID, cause error) (bool, error) {

@@ -9,6 +9,7 @@
 package modelfailure
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -21,31 +22,33 @@ import (
 // Write answers err: a model lane that produced no answer as a 503 the client
 // has copy for, and anything else through httperr.Write.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
-	if answered(w, r, err) {
-		return
-	}
-	httperr.Write(w, r, err)
+	httperr.Write(w, r, Refusal(r.Context(), err))
 }
 
-// answered answers a model lane that produced no answer, and reports whether
-// it did.
+// Refusal is err as a caller should read it: a model lane that produced no
+// answer becomes a 503 with a code the client has copy for, and anything else
+// is returned unchanged. A handler outside compose, which cannot import this
+// package, is handed its reader's errors through it.
 //
 // A model this installation cannot use is a DEPENDENCY that is down, not a
-// fault in the request, and httperr.Write has no sentinel for it, so it would
-// fall through to an opaque 500 whose body names nothing. The answer names the
-// way through instead: nothing that waits on the assistant needs it, because
-// what it would have drafted can be entered by hand.
-func answered(w http.ResponseWriter, r *http.Request, err error) bool {
+// fault in the request, and httperr has no sentinel for it, so it would fall
+// through to an opaque 500 whose body names nothing.
+func Refusal(ctx context.Context, err error) error {
 	if !unanswered(err) {
-		return false
+		return err
 	}
-	if answeredProviderDown(w, r, err) {
-		return true
+	if errors.Is(err, ai.ErrBudgetDeferred) {
+		return httperr.UnavailableProblem(codeAllowanceUsedUp,
+			"the monthly AI allowance is used up — an administrator can raise it under Settings → AI, "+
+				"or it renews at the start of the next budget window")
+	}
+	if down, ok := errors.AsType[*ai.ProviderDownError](err); ok {
+		return providerDown(down)
 	}
 	// Our own request refused is a defect the reader can do nothing about, and
 	// this answer hides it from them, so the log is where it is found.
 	if errors.Is(err, model.ErrRequestRejected) {
-		slog.ErrorContext(r.Context(), "the model provider rejected the assistant's request", "err", err)
+		slog.ErrorContext(ctx, "the model provider rejected the assistant's request", "err", err)
 	}
 	// A CODE, because this sentence has a reader: the client renders it in
 	// their language, and a detail written here would arrive in English. The
@@ -56,37 +59,31 @@ func answered(w http.ResponseWriter, r *http.Request, err error) bool {
 	// withheld or that failed validation, a request it rejected. Naming one
 	// would be a guess most of the time, so Settings → AI is offered as the
 	// place to look, not the diagnosis.
-	httperr.Unavailable(w, r, codeAssistantUnavailable,
+	return httperr.UnavailableProblem(codeAssistantUnavailable,
 		"the assistant did not answer — an administrator can check the model binding under "+
 			"Settings → AI. Nothing here needs the assistant; the details can be entered by hand")
-	return true
 }
 
-// answeredProviderDown answers a call the router refused because the provider
-// is known to be blocked, and reports whether it did.
+// providerDown answers a call the router refused because the provider is
+// known to be blocked.
 //
 // Unlike the generic answer this one knows the cause, so it names it and the
 // remedy: only the installation's administrator can top up an account, replace
 // a credential or wait out an outage. The detail carries no provider text, key
 // or host, and each code is a separate call because the client copy gate reads
 // the code at the call site.
-func answeredProviderDown(w http.ResponseWriter, r *http.Request, err error) bool {
-	var down *ai.ProviderDownError
-	if !errors.As(err, &down) {
-		return false
-	}
+func providerDown(down *ai.ProviderDownError) error {
 	switch down.Health {
 	case model.HealthOutOfCredit:
-		httperr.Unavailable(w, r, codeProviderOutOfCredit,
+		return httperr.UnavailableProblem(codeProviderOutOfCredit,
 			"the AI provider has no credit left — contact your system administrator")
 	case model.HealthUnauthorized:
-		httperr.Unavailable(w, r, codeProviderUnauthorized,
+		return httperr.UnavailableProblem(codeProviderUnauthorized,
 			"the AI provider refused the configured credential — contact your system administrator")
 	default:
-		httperr.Unavailable(w, r, codeProviderUnavailable,
+		return httperr.UnavailableProblem(codeProviderUnavailable,
 			"the AI provider is not answering — try again later or contact your system administrator")
 	}
-	return true
 }
 
 // unanswered reports whether err is the model lane ending without an answer
@@ -95,15 +92,16 @@ func answeredProviderDown(w http.ResponseWriter, r *http.Request, err error) boo
 // Matched by sentinel, never by message: ai.ErrAllTiersFailed when the walk
 // reached the end of the bound rungs, and the outcomes that stop it sooner — a
 // reply the models declined or the validator refused (ai.ModelDeclined), a
-// request rejected, an account out of budget, a provider the router has blocked — and the embed lane, which has no
-// walk to end, failing to answer (ai.ErrEmbedLaneFailed).
+// request rejected, an account out of budget, a provider the router has blocked
+// or a task the budget stop deferred — and the embed lane, which has no walk to
+// end, failing to answer (ai.ErrEmbedLaneFailed).
 func unanswered(err error) bool {
 	return errors.Is(err, ai.ErrAllTiersFailed) ||
 		errors.Is(err, ai.ErrEmbedLaneFailed) ||
 		ai.ModelDeclined(err) ||
 		errors.Is(err, model.ErrRequestRejected) ||
 		errors.Is(err, ai.ErrProviderQuota) ||
-		errors.Is(err, ai.ErrProviderDown)
+		ai.IsDeferral(err)
 }
 
 // codeAssistantUnavailable is the problem code the client reads to pick its
@@ -114,11 +112,12 @@ func unanswered(err error) bool {
 // (backend/gates/frontendoauthoutcomes_test.go)
 const codeAssistantUnavailable = "assistant_unavailable"
 
-// The reason-specific answers for a provider the router knows is blocked; the
-// client has its own copy for each.
+// The reason-specific answers for the budget stop and for a provider the
+// router knows is blocked; the client has its own copy for each.
 //
 // Held by: TestEveryReaderFacingProblemCodeHasClientCopy
 const (
+	codeAllowanceUsedUp      = "ai_allowance_used_up"
 	codeProviderOutOfCredit  = "provider_out_of_credit"
 	codeProviderUnauthorized = "provider_unauthorized"
 	codeProviderUnavailable  = "provider_unavailable"

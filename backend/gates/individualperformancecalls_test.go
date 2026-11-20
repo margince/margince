@@ -25,7 +25,7 @@ var refusalWriters = map[string]bool{
 	"httperr.Write": true, "httperr.NotImplemented": true, "httperr.NotImplementedBecause": true,
 	"httperr.Unauthorized": true, "httperr.ServiceUnavailable": true, "httperr.Decode": true,
 	"httperr.DecodeOrRefusal": true, "httperr.DecodeClaiming": true, "httperr.DecodeClosed": true,
-	"httperr.DecodeJudged": true, "httperr.IfMatchVersion": true, "httperr.Unavailable": true,
+	"httperr.DecodeJudged": true, "httperr.IfMatchVersion": true,
 	"httperr.WriteMultipartRefusal": true, "httperr.WriteNotModified": true, "modelfailure.Write": true,
 	"http.Error": true, "http.NotFound": true, "http.Redirect": true, "http.SetCookie": true,
 	"http.MaxBytesReader": true,

@@ -3445,6 +3445,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mã kết nối AI không hợp lệ. Liên hệ quản trị viên.",
   "common.providerUnavailable":
     "AI hiện không phản hồi. Thử lại sau hoặc liên hệ quản trị viên.",
+  "common.aiAllowanceUsedUp":
+    "Hạn mức AI hằng tháng đã dùng hết. Hãy nhờ quản trị viên tăng hạn mức trong Cài đặt → AI, hoặc thử lại khi hạn mức được làm mới.",
   "common.gatewayUnavailable":
     "Máy chủ không kịp xử lý xong yêu cầu và có thể vẫn đang xử lý. Chờ một lúc rồi hãy thử lại, nếu không thao tác có thể chạy hai lần.",
   "common.requestTimedOut":

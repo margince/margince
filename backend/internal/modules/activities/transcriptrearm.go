@@ -10,8 +10,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // rearmIfAbandoned hands a dead reading back to a worker.
@@ -57,4 +62,30 @@ func rearmIfAbandoned(
 		return nil
 	}
 	return enqueue(ctx, tx, rearmed)
+}
+
+// ReleaseTranscriptRead hands a claimed reading back to the queue when the
+// worker's try failed, so the job's next try can claim it. Left running, the
+// retry inside the lease takes the reading for somebody else's and ends as
+// success, with no job behind it. Scoped to the claim that began at claimedAt:
+// a worker whose lease ran out must not re-queue a reading another one holds.
+func (s *Store) ReleaseTranscriptRead(ctx context.Context, readID ids.UUID, claimedAt time.Time) error {
+	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		released, err := scanTranscriptRead(tx.QueryRow(ctx, `
+			UPDATE transcript_read
+			   SET status = 'queued', started_at = NULL, status_detail = NULL,
+			       attempt = attempt + 1, attempt_at = now()
+			 WHERE id = $1 AND status = 'running' AND started_at = $2
+			RETURNING `+transcriptReadColumns, readID, claimedAt))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("release transcript read: %w", err)
+		}
+		return logTranscriptActivity(ctx, tx, released)
+	})
 }

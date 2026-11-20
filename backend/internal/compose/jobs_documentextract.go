@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -115,7 +116,7 @@ func (w *documentExtractWorker) read(wsCtx context.Context, args DocumentExtract
 			"attachment_extraction_id", args.ExtractionReadID)
 		return nil
 	}
-	return jobs.FaultContext(wsCtx, snoozeWhileRestricted(err))
+	return jobs.FaultContext(wsCtx, snoozeWhileHeld(err, time.Now()))
 }
 
 // declineUnread closes a reading no configured lane can perform. Failing it

@@ -3446,6 +3446,8 @@ export const en = {
     "The AI provider refused the configured credential. Contact your system administrator.",
   "common.providerUnavailable":
     "The AI provider is not answering right now. Try again later or contact your system administrator.",
+  "common.aiAllowanceUsedUp":
+    "The monthly AI allowance is used up. Ask your admin to raise it under Settings → AI, or try again when it renews.",
   "common.gatewayUnavailable":
     "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
   "common.requestTimedOut":

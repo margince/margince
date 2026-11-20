@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -118,15 +119,33 @@ func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[Trans
 			"transcript_read_id", args.TranscriptReadID)
 		return nil
 	}
-	return jobs.FaultContext(ctx, snoozeWhileRestricted(err))
+	err = snoozeWhileHeld(err, time.Now())
+	if _, snoozed := errors.AsType[*river.JobSnoozeError](err); err != nil && !snoozed && lastTry(job.JobRow) {
+		// The reading was handed back for a try that will not come, and a
+		// queued reading with no job is one the door joins forever.
+		w.log.WarnContext(wsCtx, "transcript reading failed on its last try",
+			"transcript_read_id", args.TranscriptReadID, "error", err)
+		err = errors.Join(err, w.closeUnread(wsCtx, args, activities.TranscriptFailureUnanswered))
+	}
+	return jobs.FaultContext(ctx, err)
 }
 
-// declineUnread closes a reading no configured lane can perform. Failing it
-// visibly is the point: a queued row nobody will ever pick up is
-// indistinguishable, to the rep watching it, from one still being worked.
+// lastTry reports whether River will not run this job again after a fault.
+func lastTry(row *rivertype.JobRow) bool {
+	return row != nil && row.Attempt >= row.MaxAttempts
+}
+
+// declineUnread closes a reading no configured lane can perform.
 func (w *transcriptProposeWorker) declineUnread(ctx context.Context, args TranscriptProposeArgs) error {
 	w.log.WarnContext(ctx, "transcript reading declined: no model lane configured",
 		"transcript_read_id", args.TranscriptReadID)
+	return w.closeUnread(ctx, args, activities.TranscriptFailureNoModel)
+}
+
+// closeUnread fails a reading no worker will read, with the reason why. Failing
+// it visibly is the point: a queued row nobody will ever pick up is
+// indistinguishable, to the rep watching it, from one still being worked.
+func (w *transcriptProposeWorker) closeUnread(ctx context.Context, args TranscriptProposeArgs, code string) error {
 	if _, err := w.activities.BeginTranscriptRead(ctx, args.TranscriptReadID, activities.TranscriptReadLease); err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {
 			return nil
@@ -135,7 +154,7 @@ func (w *transcriptProposeWorker) declineUnread(ctx context.Context, args Transc
 	}
 	return w.activities.FinishTranscriptRead(ctx, args.TranscriptReadID,
 		transcriptCopyFor(string(w.language.Resolve(ctx))).failedOutcome(
-			activities.TranscriptFailure{Code: activities.TranscriptFailureNoModel}))
+			activities.TranscriptFailure{Code: code}))
 }
 
 // newTranscriptProposeWorker assembles the worker-role reading. brain may be
