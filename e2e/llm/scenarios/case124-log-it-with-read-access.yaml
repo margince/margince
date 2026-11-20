@@ -1,0 +1,38 @@
+# CASE 124 — Log a call on a connection that may only read.
+#
+# The lane's passport here carries the read scope alone, so no tool that writes
+# is offered. The right answer says the call cannot be logged from here and
+# hands the user the note to log themselves; the end state holds that nothing
+# landed on the contact, whatever the answer claims.
+name: case124_log_it_with_read_access
+title: Log a call with read-only access
+criteria: [1]
+
+passport: readonly
+
+setup: contact_without_history
+
+# Nothing can be written, but the line keeps the reset honest if a later
+# passport change offers a writer here.
+writes: true
+
+prompt: |
+  I just had a call with Tjark Ohlsen: he confirmed the order for 40 ball
+  valves, delivery in March. Log it in the CRM.
+
+may_call:
+  - find_records
+  - read_record
+  - whoami
+
+must_not_mention:
+  - "(?i)\b(?:I've|I have|I) (?:logged|recorded|added|saved)\b"
+
+must_end_with:
+  - contact "Tjark Ohlsen" activities=0
+
+judge:
+  - "Criterion 1. The answer tells the user that it could not log the call because this connection may only read, and does not claim the call was logged. Answer no if it says or implies that the call is now in the CRM."
+
+runs: 3
+pass_at: 2

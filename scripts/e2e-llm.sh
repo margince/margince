@@ -313,14 +313,22 @@ zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$WORK/skill.zip" "$WORK/s
 }
 
 # use_passport points the assistant at the narrow credential (read, write), the
-# wide one (adds draft and send) or the research one (adds enrich). A scenario
-# asks for another with `passport: wide` or `passport: research`; every other
-# case is measured exactly as before, because a send tool offered to a case that
-# never asked for one is a different experiment.
+# wide one (adds draft and send), the research one (adds enrich), the rep one
+# (read, write, for a seat with the rep role) or the readonly one (read only). A
+# scenario asks for another with `passport:`; every other case is measured
+# exactly as before, because a send tool offered to a case that never asked for
+# one is a different experiment.
+#
+# READER_PASSPORT reads the end state. It is the admin's own unless the case's
+# passport already is: a rep's or a read-only credential sees less than the
+# world the case holds, and a read it cannot make is not the model's failure.
 use_passport() {
+  READER_PASSPORT="$PASSPORT_NARROW"
   case "$1" in
-    wide) PASSPORT="$PASSPORT_WIDE" ;;
-    research) PASSPORT="$PASSPORT_RESEARCH" ;;
+    wide) PASSPORT="$PASSPORT_WIDE"; READER_PASSPORT="$PASSPORT_WIDE" ;;
+    research) PASSPORT="$PASSPORT_RESEARCH"; READER_PASSPORT="$PASSPORT_RESEARCH" ;;
+    rep) PASSPORT="$PASSPORT_REP" ;;
+    readonly) PASSPORT="$PASSPORT_READONLY" ;;
     *) PASSPORT="$PASSPORT_NARROW" ;;
   esac
   write_mcp_config
@@ -334,6 +342,20 @@ restart_stack() {
   APP_BASE="$(DEV_SLUG="$SLUG" dev_app_base_url)"
   write_mcp_config
 }
+
+# mint_with SESSION_JAR LABEL SCOPES_JSON prints the token of a passport minted
+# by the seat signed in to that jar, or nothing when the mint was refused.
+mint_with() {
+  curl -sS -b "$1" -X POST -H 'Content-Type: application/json' \
+    -d "{\"label\":\"$2\",\"scopes\":$3}" "$APP_BASE/v1/passports" | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("token",""))
+except Exception: print("")'
+}
+
+# THE REP IS LENA FISCHER, a seeded seat with the rep role whose row scope is
+# her own records. Every seeded deal is Sofia Meier's, so a write on one is a
+# write on a colleague's record, which the rep role refuses.
+REP_EMAIL=lena.fischer@demo.test
 
 mint_passport() {
   curl -sS -c "$COOKIES" -X POST -H 'Content-Type: application/json' \
@@ -360,6 +382,14 @@ except Exception: print("")')"
 try: print(json.load(sys.stdin).get("token",""))
 except Exception: print("")')"
   [[ -n "$PASSPORT_RESEARCH" ]] || { echo "could not mint the enrich passport" >&2; exit 1; }
+  PASSPORT_READONLY="$(mint_with "$COOKIES" e2e-llm-readonly '["read"]')"
+  [[ -n "$PASSPORT_READONLY" ]] || { echo "could not mint the read-only passport" >&2; exit 1; }
+  # The seed sets every colleague's password to this one.
+  curl -sS -c "$WORK/rep.cookies" -X POST -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$REP_EMAIL\",\"password\":\"colleague-password-123\"}" \
+    "$APP_BASE/v1/auth/login" >/dev/null
+  PASSPORT_REP="$(mint_with "$WORK/rep.cookies" e2e-llm-rep '["read","write"]')"
+  [[ -n "$PASSPORT_REP" ]] || { echo "could not mint the passport of the rep seat $REP_EMAIL" >&2; exit 1; }
 
   [[ "$DOOR" = rest ]] && fetch_skill
   write_mcp_config
@@ -368,7 +398,7 @@ except Exception: print("")')"
   # which reads downstream as a model that chose not to call anything. Fail
   # here instead, where the cause is still visible.
   local probe token
-  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE" "$PASSPORT_RESEARCH"; do
+  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE" "$PASSPORT_RESEARCH" "$PASSPORT_READONLY" "$PASSPORT_REP"; do
     probe="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$APP_BASE/mcp" \
       -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
       -H 'Accept: application/json, text/event-stream' \
@@ -779,11 +809,11 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     fi
     # THE WORLD IS READ BEFORE IT IS RESTORED. An answer can report a write
     # that never landed, and nothing above reads the database, so a case's
-    # must_end_with is read back here through the same passport. Exit 4 is a
+    # must_end_with is read back here through the reader's passport. Exit 4 is a
     # world that did not hold; any other failure is a world the reader could
     # not read, a harness stop like the bridge's.
     ended=0
-    MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
+    MARGINCE_E2E_TOKEN="$READER_PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
       --scenario "$scenario" --transcript "$transcript" \
       --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN >> "$results" 2>&1 || ended=$?
     if [[ "$ended" -ne 0 && "$ended" -ne 4 ]]; then

@@ -1,0 +1,37 @@
+# CASE 129 — Move a deal into another pipeline.
+#
+# A stage move stays inside the deal's own pipeline, so it cannot do this; the
+# pipeline move puts the deal on the new pipeline's first open stage. The setup
+# adds the second pipeline; the end state reads the pipeline and that stage.
+name: case129_move_it_to_service
+title: Move a deal to the service pipeline
+criteria: [1]
+
+setup: service_pipeline
+
+writes: true
+
+prompt: |
+  The Weserbund Pilotphase deal is really a service renewal. Move it into the
+  Service renewals pipeline.
+
+must_call:
+  - move_deal_pipeline
+
+may_call:
+  - find_records
+  - read_record
+  - read_workspace
+
+must_not_call_with:
+  - archive_record~.
+
+must_mention:
+  - "Service renewals"
+
+must_end_with:
+  - deal "Weserbund Pilotphase" pipeline=Service renewals
+  - deal "Weserbund Pilotphase" stage=Angebot
+
+runs: 3
+pass_at: 2
