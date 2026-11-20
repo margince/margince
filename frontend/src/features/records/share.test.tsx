@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -498,6 +499,31 @@ describe("ShareScreen", () => {
 
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0]).toMatchObject({ subject_id: "u-2", access: "read" });
+  });
+
+  it("drops an open reduction once a refreshed access read names its colleague as owner", async () => {
+    const posts: Record<string, unknown>[] = [];
+    let accessReads = 0;
+    installBaseFetch({
+      "/record-grants": grantEndpoint(posts, writeGrant),
+      "/contacts/c-1/access": () => {
+        accessReads += 1;
+        return ownedAccess(accessReads === 1 ? "u-1" : "u-2");
+      },
+    });
+    render(<ShareScreen recordType="contact" recordId="c-1" />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(screen.getByRole("button", { name: "Read" }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+    await screen.findByRole("dialog");
+    act(() => {
+      globalThis.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(posts).toEqual([]);
   });
 
   it("returns focus to the subject field after a reduction, whose trigger is gone", async () => {

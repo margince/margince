@@ -49,7 +49,7 @@ import {
   WhoCanSeePanel,
 } from "./recordaccesspanel";
 import { ShareConfirmation } from "./share.confirmation";
-import { pickedToGrant, shareCandidates } from "./share.roster";
+import { draftToGrant, pickedToGrant, shareCandidates } from "./share.roster";
 import {
   ApprovalRequiredError,
   RevokeGrantDialog,
@@ -481,7 +481,7 @@ export function ShareScreenBody({
       )}
 
       <ShareConfirmation
-        draft={confirmationDraft}
+        draft={draftToGrant(confirmationDraft, ownerId)}
         bulk={contactsOnly}
         open={askingConfirmation}
         onClose={() => {

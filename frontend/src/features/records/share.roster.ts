@@ -1,4 +1,4 @@
-import type { RosterSubject } from "../../components/share.parts";
+import type { GrantDraft, RosterSubject } from "../../components/share.parts";
 import { holdsEveryWord, searchWords } from "../../format/collate";
 
 // The owner already holds the record, so a share to them adds nothing and
@@ -19,6 +19,14 @@ export function pickedToGrant(
   ownerId: string | null | undefined,
 ): RosterSubject | null {
   return subject && mayShareWith(subject, ownerId) ? subject : null;
+}
+
+// An open confirmation holds a pick too, and the owner can change under it.
+export function draftToGrant(
+  draft: GrantDraft | null,
+  ownerId: string | null | undefined,
+): GrantDraft | null {
+  return draft && pickedToGrant(draft.subject, ownerId) ? draft : null;
 }
 
 export function shareCandidates(
