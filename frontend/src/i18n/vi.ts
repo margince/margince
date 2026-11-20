@@ -2854,6 +2854,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.sendEmail": "Gửi email",
   "shell.shortcuts.submitDialog": "Gửi biểu mẫu hộp thoại",
   "shell.shortcuts.then": "rồi",
+  "shell.shortcuts.ctrl": "Ctrl",
   "shell.shortcuts.or": "hoặc",
   "shell.shortcuts.singleKeyOff": "Đã tắt phím tắt một phím",
   "shell.shortcuts.singleKeyOffHint": "Bật lại trong Cài đặt, mục Tài khoản.",
@@ -8814,8 +8815,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.firstRunAction": "Mở Deal",
   "analytics.emptyOwnTitle": "Bạn chưa sở hữu deal nào",
   "analytics.emptyOwnBody":
-    "Các số liệu này chỉ gồm deal của riêng bạn, và bạn chưa có deal nào. Chọn Whole company để xem số liệu của công ty.",
-  "analytics.emptyOwnAction": "Xem Whole company",
+    "Các số liệu này chỉ gồm deal của riêng bạn, và bạn chưa có deal nào. Chọn Cả công ty để xem số liệu của công ty.",
+  "analytics.emptyOwnAction": "Xem cả công ty",
   "analytics.emptyTeamTitle": "{scope} chưa có deal nào",
   "analytics.emptyTeamBody": "Không ai trong {scope} sở hữu deal nào.",
   "analytics.deliveryCoversAll":
@@ -14080,8 +14081,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.preview.title": "Tác động khi chạy thử",
   "auto.lists.includeImports":
     "Áp dụng cả cho bản ghi thay đổi do nhập dữ liệu",
-  "auto.recipient.tasks": "Giao nhiệm vụ cho",
-  "auto.recipient.notices": "Gửi thông báo cho",
+  "auto.recipient.tasks": "Giao nhiệm vụ cho:",
+  "auto.recipient.notices": "Gửi thông báo cho:",
   "auto.renewal.recipient": "Giao nhiệm vụ nhắc nhở cho",
   "auto.renewal.recordOwner": "Người phụ trách bản ghi",
   "auto.renewal.authorizer": "Người cấp quyền cho tự động hóa này",

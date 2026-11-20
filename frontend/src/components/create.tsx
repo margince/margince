@@ -369,11 +369,7 @@ export function NewRecordButton({
       title={
         keyShortcut === undefined
           ? undefined
-          : shortcutTip(
-              label,
-              binding("create").keys,
-              t("shell.shortcuts.then"),
-            )
+          : shortcutTip(label, binding("create").keys, t)
       }
     >
       {link ? (

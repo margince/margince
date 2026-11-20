@@ -82,5 +82,18 @@ export function formatAnalyticsPercent(
   fraction: number,
   locale: Locale,
 ): string {
-  return `${formatAnalyticsNumber(fraction * 100, locale)}%`;
+  return formatAnalyticsPercentPoints(fraction * 100, locale);
+}
+
+/** A figure already in percent (0 to 100), with the sign set as the locale
+ *  sets it: "40 %" in German, "40%" in English. */
+export function formatAnalyticsPercentPoints(
+  points: number,
+  locale: Locale,
+): string {
+  const figure = formatAnalyticsNumber(points, locale);
+  return new Intl.NumberFormat(INTL_LOCALE[locale], { style: "percent" })
+    .formatToParts(0)
+    .map((part) => (part.type === "integer" ? figure : part.value))
+    .join("");
 }

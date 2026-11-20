@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import type { components } from "../../api/schema";
+import type { Translator } from "../../i18n";
 import { analyticsContextOptions } from "../../lib/analyticscontext";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 
@@ -120,4 +121,19 @@ export function writableScope(
  */
 export function scopeKey(scope: Pick<AnalyticsScope, "kind" | "id">): string {
   return scope.id ? `${scope.kind}:${scope.id}` : scope.kind;
+}
+
+/**
+ * The name a reader sees for a population. The server sends one fixed label
+ * for the whole company, so that one is named in the reader's language; a
+ * team or a person keeps its own name. Null where the server sent none.
+ */
+export function scopeName(
+  scope: Readonly<{ kind: string; label?: string | null }>,
+  t: Translator,
+): string | null {
+  if (scope.kind === "workspace") {
+    return t("analytics.share.populationCompany");
+  }
+  return scope.label ?? null;
 }

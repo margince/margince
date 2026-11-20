@@ -39,9 +39,7 @@ export function useRowTip(
   const t = useT();
   const keys = useGoToKeys(row.level, row.id);
   const label = state.collapsed ? row.label : undefined;
-  const text = keys
-    ? shortcutTip(label, keys, t("shell.shortcuts.then"))
-    : (label ?? null);
+  const text = keys ? shortcutTip(label, keys, t) : (label ?? null);
   return {
     text,
     raise: (by: "pointer" | "focus") => {

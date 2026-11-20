@@ -16,6 +16,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
+import { scopeName } from "./analytics.context";
 import type { ReportingReport } from "./reporting.model";
 import { useReportingCatalog } from "./reporting.queries";
 
@@ -116,8 +117,8 @@ export function ReportingScheduleDialog({
         }}
       >
         <p>
-          {report.selection.scope.label} · {t(`reporting.${report.audience}`)} ·{" "}
-          {timezone}
+          {scopeName(report.selection.scope, t)} ·{" "}
+          {t(`reporting.${report.audience}`)} · {timezone}
         </p>
         <p className="t-caption">{t("reporting.scheduleResult")}</p>
         {readiness.isSuccess && !ready && (

@@ -497,4 +497,5 @@ export {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
   formatAnalyticsPercent,
+  formatAnalyticsPercentPoints,
 } from "./format.analytics";
