@@ -17,8 +17,11 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -218,6 +221,36 @@ func TestADealHookChangeWithoutADeclaredReasonIsIgnored(t *testing.T) {
 	env.sync(t, mailFrom("alice@acme.example", "hook8@acme.example", "", "invoice"))
 	wantDeals(t, e, "hook8@acme.example", only)
 	wantFiling(t, e, activityOf(t, e, "hook8@acme.example"), "deal-rules", "ignored", "not declared")
+}
+
+// A parties hook cannot name a company the mailbox owner may not see. The
+// answer is ignored, and no deal of that company is reached through it.
+func TestAPartiesHookCannotNameACompanyTheMailboxOwnerCannotSee(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	acme := w.deal(t, "Acme rollout")
+	hidden := w.at(t, "Hidden")
+	hiddenDeal := hidden.deal(t, "Hidden rollout")
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE company SET visibility = 'owner', owner_id = $2 WHERE id = $1`, hidden.customer, e.Rep2)
+		return err
+	}); err != nil {
+		t.Fatalf("hiding the company: %v", err)
+	}
+	registerMailHooks(t, extension.MailHooks{Parties: func(_ context.Context, _ extension.MailView, p extension.MailParties) (extension.MailParties, error) {
+		p.Companies = []string{hidden.customer.String()}
+		p.Reason = "other_account"
+		return p, nil
+	}})
+	env.sync(t, mailFrom("alice@acme.example", "hook9@acme.example", "", "hello"))
+	wantDeals(t, e, "hook9@acme.example", acme)
+	if slices.Contains(dealsOf(t, e, "hook9@acme.example"), hiddenDeal) {
+		t.Fatal("the mail was filed on a deal of a company its mailbox owner cannot see")
+	}
+	wantFiling(t, e, activityOf(t, e, "hook9@acme.example"), "core", "linked", "sole_open_deal")
 }
 
 // wantFiling asserts what the mail's capture trace says about who filed it.

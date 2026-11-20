@@ -170,7 +170,32 @@ func partiesAreLive(ctx context.Context, tx pgx.Tx, p MailParties) (bool, error)
 	if err != nil {
 		return false, fmt.Errorf("capture: checking the hook's contacts and companies: %w", err)
 	}
-	return contacts == len(p.Contacts) && companies == len(p.Companies), nil
+	if contacts != len(p.Contacts) || companies != len(p.Companies) {
+		return false, nil
+	}
+	// Live is not enough: the mailbox owner must be able to see each one, as
+	// they must for what core derives. A hook cannot file mail under a record
+	// its owner may not read.
+	return allVisible(ctx, tx, "contact", p.Contacts, "company", p.Companies)
+}
+
+// allVisible is whether the deciding seat sees every id of each named table.
+func allVisible(ctx context.Context, tx pgx.Tx, table string, rows []ids.UUID, more ...any) (bool, error) {
+	for {
+		seen, err := auth.VisibleSubset(ctx, tx, table, rows)
+		if err != nil {
+			return false, err
+		}
+		for _, id := range rows {
+			if !seen[id] {
+				return false, nil
+			}
+		}
+		if len(more) == 0 {
+			return true, nil
+		}
+		table, rows, more = more[0].(string), more[1].([]ids.UUID), more[2:]
+	}
 }
 
 func hasDuplicate(list []ids.UUID) bool {

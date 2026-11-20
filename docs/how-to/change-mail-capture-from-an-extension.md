@@ -16,7 +16,7 @@ MailHooks: extension.MailHooks{
 
 | Hook | When it runs | What you may return |
 |---|---|---|
-| `Parties` | After core derived the mail's contacts and companies, before the deal rule reads them. | The same lists, or lists of live contacts and at most two live companies. Core never counts its own company. |
+| `Parties` | After core derived the mail's contacts and companies, before the deal rule reads them. | The same lists, or lists of live contacts and at most two live companies, all visible to the mailbox owner. Core never counts its own company. |
 | `Deal` | At the end of the deal rule. | `none`, a deal to link, or an `ambiguous` answer with fewer candidates. |
 
 ## Declare your reasons
@@ -50,4 +50,4 @@ A lookup cannot write. It runs in its own read-only transaction as the unit role
 - Core records the change. The deal link's audit row names each unit, the hook and its reason under `extension_hooks`.
 - Settings > Capture shows who filed each mail: core with the rule it used, or your unit with your reason. It also shows when your hook answered `none`, took a link away, failed, or was ignored, and when a later repair moved or took back a link.
 
-An answer core cannot use is dropped as a whole. That covers an id that is not a live record, a third company, a candidate the rule did not offer, and an `ambiguous` answer where core found none.
+An answer core cannot use is dropped as a whole. That covers an id that is not a live record, a contact, company or deal the mailbox owner cannot see (it is filed as ignored in the trace), a third company, a candidate the rule did not offer, and an `ambiguous` answer where core found none.
