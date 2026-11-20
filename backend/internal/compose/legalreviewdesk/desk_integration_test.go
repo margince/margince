@@ -17,9 +17,11 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/approvalseat"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/legalreviewdesk"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -165,5 +167,31 @@ func TestEveryReviewerGetsOneEntryAndOneNoticeAndSettlingClearsBoth(t *testing.T
 	}
 	if n := d.count(t, live); n != 0 {
 		t.Errorf("live notices after settling = %d, want none", n)
+	}
+}
+
+func TestAReviewerWhoLosesTheGrantsIsNoLongerAskedAboutTheReview(t *testing.T) {
+	d := newDeskEnv(t)
+	d.grant(t, d.e.AdminUser, legalReviewerGrants)
+	request := deals.ReviewRequest{ReviewID: ids.NewV7(), DealID: ids.NewV7(), DealName: "Fleet renewal", Seats: []ids.UUID{d.e.AdminUser}}
+	d.inTx(t, func(ctx context.Context, tx pgx.Tx) error { return d.desk.Raise(ctx, tx, request) })
+	var entry ids.ApprovalID
+	d.query(t, `SELECT id FROM approval WHERE kind = 'legal_review_request' AND status = 'pending'`,
+		func(r pgx.Rows) error { return r.Scan(&entry) })
+	ident := identity.NewService(d.e.Pool)
+	asked := func() bool {
+		var ok bool
+		d.inTx(t, func(ctx context.Context, tx pgx.Tx) (err error) {
+			ok, err = approvalseat.StillDecidable(ctx, tx, ident, d.desk.Approvals, entry, d.e.AdminUser)
+			return err
+		})
+		return ok
+	}
+	if !asked() {
+		t.Fatal("a reviewer who holds the grants is not asked about the review")
+	}
+	d.e.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, d.e.AdminUser)
+	if asked() {
+		t.Error("a reviewer who lost the grants is still asked about the review")
 	}
 }

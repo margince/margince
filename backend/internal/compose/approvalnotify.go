@@ -38,6 +38,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/approvalseat"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -45,7 +46,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -300,29 +300,7 @@ func stageNoticeMail(
 func (a *ApprovalNotify) seatContext(
 	ctx context.Context, wsID, seat ids.UUID,
 ) (context.Context, bool, error) {
-	return seatAuthorityContext(ctx, a.identity, wsID, seat)
-}
-
-// seatAuthorityContext binds one seat's current stored authority. live is false
-// for a seat that is gone, which is a race and not a fault.
-func seatAuthorityContext(
-	ctx context.Context, ident *identity.Service, wsID, seat ids.UUID,
-) (context.Context, bool, error) {
-	rbac, seatType, err := ident.EffectiveAuthority(ctx, wsID, seat)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, fmt.Errorf("resolving the seat's authority: %w", err)
-	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          principal.HumanIDPrefix + seat.String(),
-		UserID:      seat,
-		SeatType:    seatType,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	}), true, nil
+	return approvalseat.Context(ctx, a.identity, wsID, seat)
 }
 
 // approvalNoticeFor is the line one decidable seat is shown.

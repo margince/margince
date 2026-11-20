@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/approvalseat"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -141,7 +142,7 @@ func (w *approvalNoticeReconcileWorker) retractUnasked(ctx context.Context, held
 			return err
 		}
 		if asked[pair] {
-			if decidable, err := w.decidableByRecipient(ctx, tx, held); err != nil || decidable {
+			if decidable, err := approvalseat.StillDecidable(ctx, tx, w.identity, w.approvals, held.Approval, held.Recipient); err != nil || decidable {
 				return err
 			}
 		}
@@ -152,22 +153,4 @@ func (w *approvalNoticeReconcileWorker) retractUnasked(ctx context.Context, held
 		return 0, fmt.Errorf("approval notice reconcile: %w", err)
 	}
 	return taken, nil
-}
-
-// decidableByRecipient asks the delivery question again: is this approval still
-// theirs to decide, under the grants they hold now. A reviewer who lost the grant
-// since the notice was written no longer keeps a line naming the record.
-func (w *approvalNoticeReconcileWorker) decidableByRecipient(
-	ctx context.Context, tx pgx.Tx, held notices.OutstandingApprovalNotice,
-) (bool, error) {
-	ws, err := w.identity.InstallationWorkspace(ctx)
-	if err != nil {
-		return false, err
-	}
-	seatCtx, live, err := seatAuthorityContext(ctx, w.identity, ws.UUID, held.Recipient)
-	if err != nil || !live {
-		return false, err
-	}
-	decidable, _, _, err := w.approvals.PendingAskOfInTx(seatCtx, tx, held.Approval)
-	return decidable, err
 }
