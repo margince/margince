@@ -144,3 +144,31 @@ func TestAReplyOrReachOutNamesTheWayItsConversationWent(t *testing.T) {
 		})
 	}
 }
+
+// A reply task names the way its message came in only when the reader may read
+// that message. ReplyChannel projects the source activity's kind, which the
+// task's own audience does not admit. A caller who holds the task but stands
+// outside the source's audience gets no channel, not the kind of a message they
+// cannot open. The control is a workspace source the reader can see, which still
+// names email, so a nil is the gate, not an unrelated miss.
+func TestAReplyWithdrawsTheKindOfASourceTheReaderCannotSee(t *testing.T) {
+	s := setupStanding(t)
+	email := crmcontracts.ActivityReplyChannelEmail
+	for _, tc := range []struct {
+		name, audience string
+		want           *crmcontracts.ActivityReplyChannel
+	}{
+		{"a source in the reader's audience", "workspace", &email},
+		{"a source outside the reader's audience", "participants", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			row := s.typedTask(t, crmcontracts.TaskTypeReply, s.contactAt(t, "Ida Brandt", ""))
+			source := s.message(t, "reply-source-"+tc.audience, tc.audience)
+			s.WsExec(t, `UPDATE activity SET source_activity_id = $2 WHERE id = $1`, row, source)
+			got := s.readTask(t, row).ReplyChannel
+			if (got == nil) != (tc.want == nil) || (got != nil && *got != *tc.want) {
+				t.Errorf("reply_channel = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
