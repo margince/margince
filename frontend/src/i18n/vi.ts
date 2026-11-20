@@ -2476,6 +2476,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.undo.redo": "Làm lại",
   "history.undo.busy": "Đang hoàn tác thay đổi…",
   "history.undo.confirmTitle": "Hoàn tác thay đổi này?",
+  "history.undo.redoConfirmTitle": "Làm lại thay đổi này?",
+  "history.undo.redoConfirmBody_one":
+    "{count} trường trở về giá trị trước khi hoàn tác:",
+  "history.undo.redoConfirmBody_other":
+    "{count} trường trở về giá trị trước khi hoàn tác:",
   "history.undo.confirmEdgeBody":
     "Thao tác này thay đổi liên kết với {other}. Cả hai hồ sơ vẫn còn; chỉ liên kết giữa hai hồ sơ thay đổi.",
   "history.undo.confirmCreateBody":
@@ -7331,12 +7336,26 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.companyName": "Công ty",
   "create.companyPicked": "Thêm liên hệ vào công ty có sẵn này.",
   "create.companyNew":
-    "Tạo công ty mới nếu không chọn công ty có sẵn trong danh sách.",
+    "Liên kết công ty có tên này, hoặc tạo công ty mới nếu chưa có.",
   "create.companyPrefilled":
     "Đã khớp với công ty có sẵn theo tên miền email công việc.",
   "create.dealName": "Tên deal",
   "create.amount": "Giá trị",
   "create.amountNegative": "Nhập số tiền từ 0 trở lên.",
+  "create.emailNamesNoOne":
+    "Địa chỉ này thuộc về một hệ thống gửi thư mà không ai trả lời. Hãy nhập địa chỉ riêng của liên hệ.",
+  "create.addressErased":
+    "Giá trị này đã bị xóa theo yêu cầu của chủ sở hữu và không thể lưu lại.",
+  "create.linkedinMalformed":
+    "Đây không phải là đường liên kết. Hãy dán địa chỉ của trang LinkedIn.",
+  "create.linkedinNotLinkedin":
+    "Hãy nhập đường liên kết tới một trang trên linkedin.com.",
+  "create.linkedinNotProfile":
+    "Hãy nhập đường liên kết tới hồ sơ cá nhân, ví dụ linkedin.com/in/ten.",
+  "create.dateRangeReversed":
+    "Ngày kết thúc đứng trước ngày bắt đầu. Hãy chọn ngày kết thúc muộn hơn.",
+  "create.countryCodeInvalid":
+    "Hãy nhập quốc gia bằng mã hai chữ cái, ví dụ DE hoặc US.",
   "create.referenceNotFound":
     "Bản ghi này không còn tồn tại hoặc bạn không thể xem.",
   "create.currency": "Loại tiền",
@@ -7345,6 +7364,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.expectedClose": "Ngày chốt dự kiến",
 
   "keyCode.label": "Khóa: {key}",
+  "field.rowRepeated": "{value} có ở hai dòng. Hãy xóa một dòng.",
   "field.addEmail": "Thêm email",
   "field.addPhone": "Thêm điện thoại",
   "field.editEmails": "Sửa danh sách email",
@@ -18779,7 +18799,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.rail.employer": "Nơi làm việc",
   "contact.rail.allCompaniesConnected":
     "Mọi kết quả khớp đều đã liên kết với liên hệ này.",
-  "contact.rail.isCurrentEmployer": "Đây là nơi làm việc hiện tại của họ",
+  "contact.rail.isPrimaryEmployer": "Đây là nơi làm việc chính của họ",
   "contact.rail.markEnded": "Đánh dấu đã kết thúc",
   "contact.rail.removeEmploymentTitle": "Gỡ liên kết công ty?",
   "contact.rail.removeEmploymentBody":

@@ -262,3 +262,38 @@ describe("a reversal whose partner is not on the page", () => {
     expect(screen.getByRole("button", { name: /Redo/ })).toBeTruthy();
   });
 });
+
+describe("redoing a change of several fields", () => {
+  it("asks about the redo in its own words", async () => {
+    const user = userEvent.setup();
+    const twoFields = {
+      before: { title: "Head of Ops", full_name: "Sam O." },
+      after: { title: "Head of Platform", full_name: "Sam Okafor" },
+    };
+    vi.stubGlobal(
+      "fetch",
+      servingOnePage([
+        {
+          ...tinsReversal,
+          before: twoFields.after,
+          after: twoFields.before,
+        },
+        { ...samsChange, ...twoFields },
+      ]),
+    );
+    render(<RecordHistory kind="contact" id="p1" restore={restore} />);
+    await user.click(
+      await screen.findByRole("button", { name: /Show both changes/ }),
+    );
+    await user.click(screen.getByRole("button", { name: /Redo/ }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Redo this change?")).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        "2 fields go back to their values before the undo:",
+      ),
+    ).toBeTruthy();
+    expect(within(dialog).queryByText("Undo this change?")).toBeNull();
+  });
+});

@@ -2546,6 +2546,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.undo.redo": "Erneut anwenden",
   "history.undo.busy": "Änderung wird rückgängig gemacht…",
   "history.undo.confirmTitle": "Diese Änderung rückgängig machen?",
+  "history.undo.redoConfirmTitle": "Diese Änderung erneut anwenden?",
+  "history.undo.redoConfirmBody_one":
+    "{count} Feld erhält wieder seinen Wert vor dem Rückgängigmachen:",
+  "history.undo.redoConfirmBody_other":
+    "{count} Felder erhalten wieder ihre Werte vor dem Rückgängigmachen:",
   "history.undo.confirmEdgeBody":
     "Damit ändert sich die Verknüpfung mit {other}. Beide Datensätze bleiben bestehen, nur die Verknüpfung zwischen ihnen ändert sich.",
   "history.undo.confirmCreateBody":
@@ -7515,12 +7520,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.companyPicked":
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
   "create.companyNew":
-    "Erstellt ein neues Unternehmen, sofern keines aus der Liste ausgewählt wird.",
+    "Verknüpft das Unternehmen mit diesem Namen oder legt es an, wenn es keines gibt.",
   "create.companyPrefilled":
     "Über die Domain der geschäftlichen E-Mail-Adresse einem bestehenden Unternehmen zugeordnet.",
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
   "create.amountNegative": "Gib einen Betrag von null oder mehr ein.",
+  "create.emailNamesNoOne":
+    "Diese Adresse gehört zu einem Versandsystem, an dem niemand antwortet. Gib die eigene Adresse des Kontakts ein.",
+  "create.addressErased":
+    "Dieser Wert wurde auf Wunsch der betroffenen Person gelöscht und kann nicht wieder gespeichert werden.",
+  "create.linkedinMalformed":
+    "Das ist kein Link. Füge die Adresse der LinkedIn-Seite ein.",
+  "create.linkedinNotLinkedin":
+    "Gib einen Link zu einer Seite auf linkedin.com ein.",
+  "create.linkedinNotProfile":
+    "Gib einen Link zu einem persönlichen Profil ein, etwa linkedin.com/in/name.",
+  "create.dateRangeReversed":
+    "Das Enddatum liegt vor dem Startdatum. Wähle ein späteres Enddatum.",
+  "create.countryCodeInvalid":
+    "Gib das Land als Code aus zwei Buchstaben ein, etwa DE oder US.",
   "create.referenceNotFound":
     "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",
@@ -7529,6 +7548,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.expectedClose": "Erwarteter Abschluss",
 
   "keyCode.label": "Schlüssel: {key}",
+  "field.rowRepeated": "{value} steht in zwei Zeilen. Entferne eine davon.",
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",
   "field.editEmails": "E-Mail-Adressen bearbeiten",
@@ -19303,7 +19323,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.employer": "Arbeitgeber",
   "contact.rail.allCompaniesConnected":
     "Alle Treffer sind bereits mit diesem Kontakt verknüpft.",
-  "contact.rail.isCurrentEmployer": "Das ist der aktuelle Arbeitgeber",
+  "contact.rail.isPrimaryEmployer": "Das ist der Hauptarbeitgeber",
   "contact.rail.markEnded": "Als beendet markieren",
   "contact.rail.removeEmploymentTitle":
     "Verknüpfung zum Unternehmen entfernen?",

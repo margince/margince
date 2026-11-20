@@ -69,12 +69,12 @@ func declaredRouteVerbs(policies map[string]agentPolicy) []agents.RouteVerb {
 func routeThrough(door *viewDoor) agents.RouteRunner {
 	return func(ctx context.Context, call agents.RouteCall) (json.RawMessage, error) {
 		if door == nil || door.api == nil {
-			return nil, fmt.Errorf("%s: route-backed verbs are served by the API process: %w", call.Verb.Verb, apperrors.ErrUnsupportedBySoR)
+			return nil, fmt.Errorf("the %s verb is served only by the API process: %w", call.Verb.Verb, apperrors.ErrUnsupportedBySoR)
 		}
 		// These run as a user does in the app. Unattended work with no passport has no
 		// user to act for, whatever grants its principal carries.
 		if actor, ok := principal.Actor(ctx); ok && !actor.HumanOrItsAgent() {
-			return nil, fmt.Errorf("%s: this acts for a user, and this work has none: %w", call.Verb.Verb, apperrors.ErrPermissionDenied)
+			return nil, fmt.Errorf("the %s verb acts for a user, and this work has none: %w", call.Verb.Verb, apperrors.ErrPermissionDenied)
 		}
 		in := inProcessCall{Method: call.Verb.Method, Pattern: call.Verb.Pattern, Path: call.Path, Query: call.Query, Version: call.Version, FileLimit: agents.MaxInlineFileBytes}
 		// One key per call. This surface refuses a caller's idempotency_key on a
@@ -134,8 +134,9 @@ func routeAnswer(call agents.RouteVerb, rec *cappedRecorder) (json.RawMessage, e
 		return nil, fmt.Errorf("%s: the route failed with %d", verb, res.StatusCode)
 	}
 	var problem struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
+		Code    string         `json:"code"`
+		Detail  string         `json:"detail"`
+		Details map[string]any `json:"details"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil || problem.Detail == "" {
 		problem.Detail = http.StatusText(res.StatusCode)
@@ -144,13 +145,25 @@ func routeAnswer(call agents.RouteVerb, rec *cappedRecorder) (json.RawMessage, e
 		return nil, notOfferedHere(problem.Detail)
 	}
 	if problem.Code == "version_skew" {
-		return nil, fmt.Errorf("%s: %s: %w", verb, problem.Detail, apperrors.ErrVersionSkew)
+		return nil, routedRefusal{fmt.Errorf("the %s verb was refused: %s: %w", verb, problem.Detail, apperrors.ErrVersionSkew), problem.Details}
 	}
 	if refusal, known := viewRefusals[res.StatusCode]; known {
-		return nil, fmt.Errorf("%s: %s: %w", verb, problem.Detail, refusal)
+		return nil, routedRefusal{fmt.Errorf("the %s verb was refused: %s: %w", verb, problem.Detail, refusal), problem.Details}
 	}
 	return nil, httperr.Validation(verb, problem.Code, problem.Detail)
 }
+
+// routedRefusal keeps the route's structured details on the tool surface, so an
+// agent reads the same missing_grant or limit a REST caller does.
+type routedRefusal struct {
+	err     error
+	details map[string]any
+}
+
+func (e routedRefusal) Error() string                  { return e.err.Error() }
+func (e routedRefusal) Unwrap() error                  { return e.err }
+func (e routedRefusal) Unreferenced() error            { return e.err }
+func (e routedRefusal) FaultReference() map[string]any { return e.details }
 
 // notOfferedHere is a route's 501: this installation does not serve the call,
 // which no argument or retry changes, unlike a fault of the server's own.

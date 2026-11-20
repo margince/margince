@@ -439,9 +439,14 @@ func stagedReleasePath(staged *workflow.StagedApprovalError) string {
 // AN EMPTY REFERENCE APPENDS NOTHING. Most faults carry none, and a trailing
 // "review:" with nothing after it is worse than silence.
 func faultReferenceSuffix(fault httperr.Fault) string {
-	if len(fault.Details) == 0 {
-		return ""
+	suffix := reviewSuffix(fault)
+	if grant, ok := fault.Details["missing_grant"].(string); ok && grant != "" {
+		suffix += " (missing grant " + echoSafe(grant, maxBadArgsDetail) + "; an admin changes your roles to allow it)"
 	}
+	return suffix
+}
+
+func reviewSuffix(fault httperr.Fault) string {
 	reference, ok := fault.Details["review_id"].(string)
 	if !ok || reference == "" {
 		return ""
