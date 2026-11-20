@@ -127,6 +127,56 @@ describe("the outcome of a task filed on no record", () => {
     ).toHaveLength(1);
   });
 
+  it("retries what was sent when the subject was cleared mid-request", async () => {
+    const user = userEvent.setup();
+    const captured: Captured[] = [];
+    let created: (answer: Response) => void = () => {};
+    let completions = 0;
+    const onLogged = vi.fn();
+    stubApi(
+      {
+        "POST /activities": (body) =>
+          new Promise<Response>((resolve) => {
+            created = () => resolve(createdActivity(body));
+          }),
+        "GET /activities/t1": () => jsonResponse(unfiled),
+        "PATCH /activities/t1": () =>
+          ++completions === 1
+            ? jsonResponse({ title: "unavailable", status: 503 }, 503)
+            : jsonResponse({ ...unfiled, is_done: true, version: 2 }),
+      },
+      captured,
+    );
+    render(
+      <TaskOutcomeForm task={unfiled} onLogged={onLogged} onBack={() => {}} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Log without a record" }),
+    );
+    const subject = await screen.findByLabelText("Subject *");
+    await user.type(subject, "Renewed");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    await user.clear(subject);
+    created(new Response());
+    await screen.findByText(
+      /The activity is logged and can no longer be changed/,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() => expect(onLogged).toHaveBeenCalledTimes(1));
+    expect(completions).toBe(2);
+    expect(
+      captured.filter((entry) => entry.key === "POST /activities"),
+    ).toHaveLength(1);
+  });
+
   it("goes back to the task's actions", async () => {
     const user = userEvent.setup();
     stubApi({});

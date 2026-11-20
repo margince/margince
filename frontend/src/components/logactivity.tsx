@@ -259,6 +259,7 @@ export function LogActivityForm({
       form={formId}
       disabled={
         !log.isPending &&
+        !logged &&
         (dealFiling.blocked ||
           !draftSaysSomething(draft) ||
           (draft.kind !== "task" &&
@@ -413,6 +414,12 @@ export function LogActivityForm({
       className="form-stack"
       onSubmit={singlePress((event) => {
         event.preventDefault();
+        // Once the activity exists, a retry finishes what was sent, not the
+        // draft as edited since.
+        if (logged && log.variables) {
+          log.mutate(log.variables);
+          return;
+        }
         if (dealFiling.blocked || refuseUnreadableField(event.currentTarget)) {
           return;
         }
