@@ -262,10 +262,12 @@ func repointCarriedConsent(ctx context.Context, tx pgx.Tx, spec consentCarrySpec
 func copyConfirmedProof(ctx context.Context, tx pgx.Tx, spec consentCarrySpec, fromID, toID ids.UUID) error {
 	_, err := tx.Exec(ctx, storekit.SQLf(`
 		INSERT INTO consent_event (%[2]s, purpose_id, new_state, lawful_basis, source, policy_text, policy_version,
-		                           double_opt_in_confirmed_at, captured_at, captured_by, issuance_trigger, kept_until)
+		                           double_opt_in_confirmed_at, captured_at, captured_by, issuance_trigger, kept_until,
+		                           consent_text_version_id, subject_request_id, confirm_ip, confirm_user_agent)
 		SELECT DISTINCT ON (ce.purpose_id) $2, ce.purpose_id, ce.new_state, ce.lawful_basis, ce.source,
 		       ce.policy_text, ce.policy_version, ce.double_opt_in_confirmed_at, ce.captured_at, ce.captured_by,
-		       ce.issuance_trigger, ce.kept_until
+		       ce.issuance_trigger, ce.kept_until, ce.consent_text_version_id, ce.subject_request_id,
+		       ce.confirm_ip, ce.confirm_user_agent
 		  FROM consent_event ce
 		  JOIN contact_consent cc ON cc.%[2]s = $2 AND cc.purpose_id = ce.purpose_id AND cc.state = 'granted'
 		 WHERE ce.%[1]s = $1 AND ce.new_state = 'granted'

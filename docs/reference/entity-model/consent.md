@@ -375,7 +375,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `confirm_token_expires_after_creation`: `CHECK ((expires_at > issued_at))`
 - `confirm_token_hash_key`: `UNIQUE (token_hash)`
 - `confirm_token_kind`: `CHECK ((kind = ANY (ARRAY['record_confirmation', 'consent_confirmation', 'privacy_notice'])))`
-- `confirm_token_lead_is_only_told`: `CHECK (((lead_id IS NULL) OR (kind = ANY (ARRAY['privacy_notice', 'consent_confirmation']))))`
+- `confirm_token_lead_is_only_told`: `CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice') OR (kind = 'consent_confirmation')))`
 - `confirm_token_one_subject`: `CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))`
 - `confirm_token_purpose_is_consents`: `CHECK (((kind = 'consent_confirmation') = (purpose_id IS NOT NULL)))`
 

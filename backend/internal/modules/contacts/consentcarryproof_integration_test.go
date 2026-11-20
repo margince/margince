@@ -114,11 +114,24 @@ func TestAPromotionCopiesTheConfirmedProofOfACarriedGrant(t *testing.T) {
 	lead := e.seedConsentSubject(t, consentSubjectLead)
 	contact := e.seedConsentSubject(t, consentSubjectContact)
 	e.seedCarriedConsent(t, consentSubjectLead, lead, e.newsletter)
+	var textVersion, request ids.UUID
+	if err := e.owner.QueryRow(ctx, `
+		INSERT INTO consent_text_version (key, body, version) VALUES ('carry-proof-'||$1::text, 'Seeded question', 'v1')
+		RETURNING id`, lead).Scan(&textVersion); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.owner.QueryRow(ctx, `
+		INSERT INTO consent_qualifying_event (lead_id, kind, note, occurred_at, captured_by, source)
+		VALUES ($1, 'requested_by_subject', 'asked to subscribe', now(), 'human:x', 'captured')
+		RETURNING id`, lead).Scan(&request); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO consent_event (lead_id, purpose_id, new_state, source, policy_text, policy_version,
-		                           double_opt_in_confirmed_at, captured_at, captured_by, issuance_trigger)
-		VALUES ($1, $2, 'granted', 'consent_link', 'seeded wording', 'v1', now(), now(), 'human:x', 'confirm_link')`,
-		lead, e.newsletter); err != nil {
+		                           double_opt_in_confirmed_at, captured_at, captured_by, issuance_trigger,
+		                           consent_text_version_id, subject_request_id)
+		VALUES ($1, $2, 'granted', 'consent_link', 'seeded wording', 'v1', now(), now(), 'human:x', 'confirm_link', $3, $4)`,
+		lead, e.newsletter, textVersion, request); err != nil {
 		t.Fatal(err)
 	}
 	tx, err := e.owner.Begin(ctx)
@@ -136,12 +149,13 @@ func TestAPromotionCopiesTheConfirmedProofOfACarriedGrant(t *testing.T) {
 	var confirmed int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM consent_event WHERE contact_id = $1 AND purpose_id = $2
-		   AND double_opt_in_confirmed_at IS NOT NULL AND issuance_trigger IS NOT NULL`,
-		contact, e.newsletter).Scan(&confirmed); err != nil {
+		   AND double_opt_in_confirmed_at IS NOT NULL AND issuance_trigger IS NOT NULL
+		   AND consent_text_version_id = $3 AND subject_request_id = $4`,
+		contact, e.newsletter, textVersion, request).Scan(&confirmed); err != nil {
 		t.Fatal(err)
 	}
 	if confirmed != 1 || countProof(t, tx, consentSubjectLead, lead) == 0 {
-		t.Errorf("contact holds %d confirmed proofs, lead keeps %d events; want 1 copied and the lead's left in place",
+		t.Errorf("contact holds %d proofs naming the lead's text version and request, lead keeps %d events; want 1 copied and the lead's left in place",
 			confirmed, countProof(t, tx, consentSubjectLead, lead))
 	}
 }

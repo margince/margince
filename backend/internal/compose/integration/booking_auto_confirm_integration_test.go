@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // tickEnv drives the public booking form with a marketing tick, one slot per call.
@@ -391,4 +392,92 @@ func TestTheConfirmationBudgetPerAddressHoldsForALead(t *testing.T) {
 	x.wantQuiet(t, email, x.book(t, email), 3, 3)
 	x.ageLinks(t, 15)
 	x.wantQuiet(t, email, x.book(t, email), 3, 3)
+}
+
+func TestAHardBouncedAddressIsNotMailedAConfirmationToALead(t *testing.T) {
+	x := newTickEnv(t)
+	email := "bounced.lead@visitor.example"
+	leadID := x.leadTick(t, email)
+	if _, err := x.e.Owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression (address, kind, source, captured_by, decided_by_level, recorded_through)
+		VALUES ($1, 'hard_bounce', 'delivery_report', 'system:comms', 'machine', 'machine')`, email); err != nil {
+		t.Fatal(err)
+	}
+	x.wantQuiet(t, email, x.book(t, email), 0, 0)
+	if got := x.leadConsentState(t, leadID); got == "granted" {
+		t.Errorf("a bounced address holds marketing consent %q", got)
+	}
+}
+
+func TestAContactAndALeadOnOneAddressShareTheConfirmationBudget(t *testing.T) {
+	x := newTickEnv(t)
+	email := "shared@visitor.example"
+	x.leadTick(t, email)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+
+	// The API refuses a second record on a held address. The contact sharing
+	// it is written directly, as an import predating the lead would.
+	contactID := ids.NewV7()
+	if _, err := x.e.Owner.Exec(context.Background(),
+		`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Shared Contact', 'manual', 'human:x')`,
+		contactID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.e.Owner.Exec(context.Background(),
+		`INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by) VALUES ($1, $2, 'work', true, 'manual', 'human:x')`,
+		contactID, email); err != nil {
+		t.Fatal(err)
+	}
+	x.ageLinks(t, 1)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+	x.ageLinks(t, 7)
+	x.wantQuiet(t, email, x.book(t, email), 2, 2)
+	var contactLinks int
+	if err := x.e.Owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, contactID).Scan(&contactLinks); err != nil {
+		t.Fatal(err)
+	}
+	if contactLinks != 1 {
+		t.Errorf("the contact holds %d links, want the second one", contactLinks)
+	}
+	x.ageLinks(t, 8)
+	x.wantQuiet(t, email, x.book(t, email), 3, 3)
+	x.ageLinks(t, 15)
+	x.wantQuiet(t, email, x.book(t, email), 3, 3)
+}
+
+func TestALeadsLinkIsDeadOnceTheLeadIsPromoted(t *testing.T) {
+	x := newTickEnv(t)
+	email := "lead.dead.link@visitor.example"
+	leadID := x.leadTick(t, email)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
+	token := confirmLinkToken(t, x.e)
+	question := servedQuestion(t, x.e, token).Text
+
+	var promoted struct {
+		Contact struct {
+			ID string `json:"id"`
+		} `json:"contact"`
+	}
+	if status := x.e.Call(t, "POST", "/v1/leads/"+leadID+"/promote",
+		AnyMap{"trigger": "human_qualify"}, nil, &promoted); status != http.StatusOK || promoted.Contact.ID == "" {
+		t.Fatalf("promote → %d %+v", status, promoted)
+	}
+	if status := publicCall(t, x.e, "GET", "/v1/public/confirm/"+token, nil, nil, nil); status != http.StatusNotFound {
+		t.Errorf("opening the promoted lead's link → %d, want 404", status)
+	}
+	if status := publicCall(t, x.e, "POST", "/v1/public/confirm/"+token, AnyMap{
+		"marketing_choice": "granted", "marketing_wording": question,
+	}, nil, nil); status != http.StatusNotFound {
+		t.Errorf("answering the promoted lead's link → %d, want 404", status)
+	}
+	var grants int
+	if err := x.e.Owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM contact_consent WHERE purpose_id = $3 AND state = 'granted'
+		   AND (lead_id = $1 OR contact_id = $2)`, leadID, promoted.Contact.ID, x.marketing).Scan(&grants); err != nil {
+		t.Fatal(err)
+	}
+	if grants != 0 {
+		t.Errorf("a dead link left %d marketing grants on the lead or the contact", grants)
+	}
 }

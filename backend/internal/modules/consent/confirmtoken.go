@@ -88,8 +88,8 @@ type IssuedConfirm struct {
 // capability it arrived through.
 type ConfirmRef struct {
 	ContactID ids.ContactID
-	// LeadID is set instead of ContactID on a website lead's privacy notice,
-	// the one link a lead can hold.
+	// LeadID is set instead of ContactID on a lead's link: its privacy notice
+	// or its consent question.
 	LeadID      ids.LeadID
 	TokenID     ids.UUID
 	DeliveredTo string
