@@ -131,6 +131,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das verbleibende Mitglied ist deaktiviert. Für Anmeldung und Teamzuordnung wieder aktivieren.",
   "users.retirement.unknown":
     "Die verbleibende Arbeit vor dem Fortfahren klären.",
+  "users.retirement.blocked_one": "Kläre das, bevor du weitermachst",
+  "users.retirement.blocked_other": "Kläre diese Punkte, bevor du weitermachst",
+  "users.retirement.address": "Anmeldeadresse",
   "users.retirement.protected_email":
     "Diese Anmeldeadresse wurde bereits verwendet und kann hier nicht geändert werden.",
   "users.mergeSource": "Doppeltes Konto",

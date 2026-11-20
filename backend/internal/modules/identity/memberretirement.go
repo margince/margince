@@ -163,7 +163,7 @@ func applyRetirementWork(out *crmcontracts.MemberRetirementPreview, work MemberW
 	if merge {
 		applyMergeEligibility(out, member, actor, target)
 	}
-	if !merge && member.Status != userStatusDeactivated {
+	if !merge && refuseUnlessDeactivated(member.Status) != nil {
 		out.Blockers = append(out.Blockers, "deactivate_first")
 	}
 	if merge && target == nil {

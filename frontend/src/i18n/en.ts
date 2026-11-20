@@ -110,6 +110,9 @@ export const en = {
   "users.retirement.survivor_inactive":
     "The surviving member is deactivated. Reactivate it to restore sign-in and team assignment.",
   "users.retirement.unknown": "Resolve the remaining work before continuing.",
+  "users.retirement.blocked_one": "Resolve this before you continue",
+  "users.retirement.blocked_other": "Resolve these before you continue",
+  "users.retirement.address": "Sign-in address",
   "users.retirement.protected_email":
     "This sign-in address has already been used and cannot be changed here.",
   "users.mergeSource": "Duplicate account",

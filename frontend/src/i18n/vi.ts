@@ -131,6 +131,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.retirement.survivor_inactive":
     "Thành viên giữ lại đang bị tắt. Bật lại để đăng nhập và thêm vào nhóm.",
   "users.retirement.unknown": "Xử lý công việc còn lại trước khi tiếp tục.",
+  "users.retirement.blocked_one": "Xử lý mục này trước khi tiếp tục",
+  "users.retirement.blocked_other": "Xử lý các mục này trước khi tiếp tục",
+  "users.retirement.address": "Địa chỉ đăng nhập",
   "users.retirement.protected_email":
     "Địa chỉ đăng nhập này đã được sử dụng và không thể sửa tại đây.",
   "users.mergeSource": "Tài khoản trùng lặp",

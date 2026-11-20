@@ -6,11 +6,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { api } from "../../api/client";
 import { Button, Field } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { QueryStates } from "../../design-system/querystates";
 import { RecordPicker } from "../../design-system/recordpicker";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { usePlural, useT } from "../../i18n";
 import {
   memberRetirementBlocker,
   memberRetirementConsequence,
@@ -37,6 +38,7 @@ export function RetireMember({
   onClose: () => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const toast = useToast();
   const refresh = useMemberRefresh();
   const [target, setTarget] = useState("");
@@ -99,6 +101,7 @@ export function RetireMember({
         [t("users.work.alerts"), preview.data?.signal_count ?? 0],
       ]
     : [];
+  const blockers = preview.data?.blockers ?? [];
   const ready =
     preview.isSuccess &&
     !preview.isFetching &&
@@ -124,6 +127,20 @@ export function RetireMember({
         document.querySelector<HTMLInputElement>('input[type="search"]')
       }
     >
+      {/* First, so the reason the confirm is held is the first thing read. */}
+      {blockers.length > 0 && (
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={plural("users.retirement.blocked", blockers.length)}
+        >
+          <ul>
+            {blockers.map((blocker) => (
+              <li key={blocker}>{memberRetirementBlocker(blocker, t)}</li>
+            ))}
+          </ul>
+        </Callout>
+      )}
       <p>{t(merge ? "users.mergeBody" : "users.removeBody")}</p>
       <RetirementTarget
         memberId={member.id}
@@ -148,16 +165,10 @@ export function RetireMember({
           </ul>
         </div>
       )}
-      {preview.data?.blockers.length ? (
-        <ul>
-          {preview.data.blockers.map((blocker) => (
-            <li key={blocker}>{memberRetirementBlocker(blocker, t)}</li>
-          ))}
-        </ul>
-      ) : null}
       {merge && <p>{t("users.visibleWorkNote")}</p>}
       <p className="users-retirement-address">
-        {t("users.mergeSource")}: {preview.data?.source_email ?? member.email}
+        {t(merge ? "users.mergeSource" : "users.retirement.address")}:{" "}
+        {preview.data?.source_email ?? member.email}
       </p>
       {preview.data?.survivor_email && (
         <p className="users-retirement-address">
