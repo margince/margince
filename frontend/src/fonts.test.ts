@@ -2,10 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { readFileSync } from "node:fs";
+import { get } from "node:http";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createServer } from "vite";
 import { expect, it } from "vitest";
+import spaConfig from "../vite.config";
+import { stable } from "./format/collate";
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const resolvePackaged = createRequire(
@@ -59,7 +63,7 @@ it("declares every subset of each face it loads, as its @fontsource package does
       },
     ),
   );
-  const byFile = (a: Face, b: Face) => a.file.localeCompare(b.file);
+  const byFile = (a: Face, b: Face) => stable(a.file, b.file);
   expect([...own].sort(byFile)).toEqual(packaged.sort(byFile));
 });
 
@@ -70,3 +74,51 @@ it("swaps every face in when it arrives", () => {
   expect(displays).not.toHaveLength(0);
   expect(new Set(displays)).toEqual(new Set(["swap"]));
 });
+
+// The suite refuses `fetch`, so the dev server is asked over node:http.
+function served(url: string): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    get(url, (response) => {
+      let body = "";
+      response.setEncoding("latin1");
+      response.on("data", (part: string) => {
+        body += part;
+      });
+      response.on("end", () =>
+        resolve({ status: response.statusCode ?? 0, body }),
+      );
+    }).on("error", reject);
+  });
+}
+
+// Vite names a packaged face by its real path in the pnpm store, which the dev
+// server refuses unless fs.allow lists it.
+it("serves every face to the dev server", async () => {
+  const server = await createServer({
+    ...spaConfig,
+    configFile: false,
+    root: frontendRoot,
+    logLevel: "silent",
+    optimizeDeps: { noDiscovery: true },
+    server: { ...spaConfig.server, port: 0, proxy: undefined },
+  });
+  try {
+    await server.listen();
+    const origin = server.resolvedUrls?.local[0];
+    if (!origin) throw new Error("the dev server reported no address");
+    const sheet = await served(`${origin}src/fonts.css?direct`);
+    expect(sheet.status).toBe(200);
+    const urls = [...sheet.body.matchAll(/url\("?([^")]+)"?\)/g)].map(
+      (match) => new URL(match[1], origin).href,
+    );
+    expect(urls).toHaveLength(own.length);
+    const refused = [];
+    for (const url of urls) {
+      const { status } = await served(url);
+      if (status !== 200) refused.push(`${status} ${url}`);
+    }
+    expect(refused).toEqual([]);
+  } finally {
+    await server.close();
+  }
+}, 60_000);

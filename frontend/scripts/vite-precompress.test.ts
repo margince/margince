@@ -17,6 +17,7 @@ import { join } from "node:path";
 import { constants, gunzipSync, gzipSync } from "node:zlib";
 import { build } from "vite";
 import { expect, it } from "vitest";
+import { stable } from "../src/format/collate";
 import { MIN_BYTES, precompress } from "./vite-precompress";
 
 const words = (count: number) =>
@@ -54,11 +55,15 @@ it("writes a level-9 .gz beside every text file of the build worth compressing",
     });
     const dist = join(dir, "dist");
     const files = (await readdir(dist, { recursive: true })).map(String);
-    const compressed = files.filter((name) => name.endsWith(".gz")).sort();
+    const compressed = files
+      .filter((name) => name.endsWith(".gz"))
+      .sort(stable);
     const script = files.find((name) => /^assets\/index-.*\.js$/.test(name));
     const sheet = files.find((name) => /^assets\/index-.*\.css$/.test(name));
     expect(compressed).toEqual(
-      [`${script}.gz`, `${sheet}.gz`, "index.html.gz", "robots.txt.gz"].sort(),
+      [`${script}.gz`, `${sheet}.gz`, "index.html.gz", "robots.txt.gz"].sort(
+        stable,
+      ),
     );
     for (const name of compressed) {
       const source = await readFile(join(dist, name.replace(/\.gz$/, "")));
