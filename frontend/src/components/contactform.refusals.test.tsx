@@ -38,6 +38,7 @@ function NewContact({ problem }: Readonly<{ problem: unknown }>) {
       create={() => throwProblem(problem)}
       invalidate="contacts"
       screen="contacts"
+      requires={{ object: "contact", action: "create" }}
     />
   );
 }

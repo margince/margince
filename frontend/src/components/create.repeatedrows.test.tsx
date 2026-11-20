@@ -42,6 +42,7 @@ function Form({
       }}
       invalidate="contacts"
       screen="contacts"
+      requires={{ object: "contact", action: "create" }}
     />
   );
 }
