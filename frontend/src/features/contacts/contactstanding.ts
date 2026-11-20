@@ -190,7 +190,12 @@ function promisesDim(
     return {
       key: "promises",
       label,
-      value: t("contact.standing.dim.promisesNone"),
+      // A capped page of reminders alone says nothing about what lies past it.
+      value: t(
+        floor
+          ? "contact.standing.dim.promisesUncounted"
+          : "contact.standing.dim.promisesNone",
+      ),
       tone: "neutral",
     };
   }

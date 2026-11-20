@@ -385,6 +385,31 @@ describe("contactDims", () => {
     });
   });
 
+  it("does not read a capped page of reminders alone as nothing owed", () => {
+    const reminder = {
+      id: "t-9",
+      kind: "task" as const,
+      subject: "Renewal check-in",
+      occurred_at: "2026-08-01T09:00:00Z",
+      occurred_precision: "instant" as const,
+      is_done: false,
+      offers_email: false,
+      source: "manual",
+      captured_by: "system:renewal",
+      created_at: "2026-08-01T09:00:00Z",
+      updated_at: "2026-08-01T09:00:00Z",
+    };
+    const view: Contact360 = {
+      ...VIEW,
+      claims: [],
+      next_steps: { data: [reminder], page: { has_more: true } },
+    };
+    expect(contactDims(view, t, "en")[0]).toMatchObject({
+      key: "promises",
+      value: "Too many tasks to count",
+    });
+  });
+
   it("does not count recipients of an inbound message as colleagues in touch", () => {
     const dims = contactDims(
       {
