@@ -130,7 +130,7 @@ Also called: my name, profile name, rename myself.
 
 ### How do I change my profile picture?
 <!-- opens: settings/account -->
-To change your profile picture in Margince, open Settings → **Account**, choose **Edit** in the **Profile picture** row, then **Upload picture**. Pick a PNG, JPEG or WebP file of up to 5 MB. Margince cuts the middle square out of it, and colleagues see it next to your name. A larger photo from a phone, up to 25 MB, works too: your browser makes it smaller before it sends it.
+To change your profile picture in Margince, open Settings → **Account**, choose **Edit** in the **Profile picture** row, then **Upload picture**. Pick a PNG, JPEG or WebP file of up to 5 MB. Margince cuts the middle square out of it, and colleagues see it next to your name. Your browser tries to make a larger phone photo of up to 25 MB smaller before it sends it. If the picture is still over 5 MB, pick a smaller file.
 Also called: photo, avatar, profile photo.
 
 Colleagues see a picture you uploaded first. Without one, they see the picture of the Google account you sign in with. It updates at each sign-in, and each time you connect that same account for mail or calendar. Without either, they see the first letters of your name. **Remove picture** takes the picture off for good, even after a later sign-in with Google. Only a new upload brings a picture back.
