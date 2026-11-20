@@ -60,11 +60,12 @@ func TestAJobToldNotNowSleepsAndSpendsNoTry(t *testing.T) {
 		"provider down":  {&ai.ProviderDownError{Health: model.HealthDown, RetryAfter: far}, 15 * time.Minute},
 		"moment past":    {&ai.BudgetDeferralError{NextAttemptAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)}, time.Second},
 		"other fault":    {other, -1},
+		"tripping call":  {&ai.ProviderDownError{Health: model.HealthDown, RetryAfter: far, Cause: other}, -1},
 	} {
 		work := river.WorkFunc(func(context.Context, *river.Job[CloseDateSweepArgs]) error { return tc.err })
 		err := sessionBudgetWorker[CloseDateSweepArgs]{work: work}.Work(t.Context(), &river.Job[CloseDateSweepArgs]{})
 		snooze, snoozed := errors.AsType[*river.JobSnoozeError](err)
-		if tc.want < 0 && (snoozed || !errors.Is(err, other)) || tc.want >= 0 && (!snoozed || snooze.Duration != tc.want) {
+		if tc.want < 0 && (snoozed || !errors.Is(err, tc.err)) || tc.want >= 0 && (!snoozed || snooze.Duration != tc.want) {
 			t.Errorf("%s: err = %v, want a snooze of %s (negative: the fault itself, for River to retry)", name, err, tc.want)
 		}
 	}
