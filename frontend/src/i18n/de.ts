@@ -12293,14 +12293,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Liste ist möglicherweise unvollständig. Bitte lade die Seite neu, bevor du die Kriterien änderst.",
   "stage.criteria.none": "Noch keine Austrittskriterien.",
   "stage.criteria.add": "Kriterium hinzufügen",
-  "stage.criteria.key": "Schlüssel",
-  "stage.criteria.keyHint":
-    "Der Name, den Belege zitieren. Kleinbuchstaben, Ziffern und Unterstriche. Der Schlüssel lässt sich später nicht ändern.",
   "stage.criteria.label": "Bezeichnung",
   "stage.criteria.kind": "Typ",
   "stage.criteria.required": "Erforderlich",
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hinweis",
+  "stage.criteria.kindHelp":
+    "Was als Beleg zählt. Bei den Typen der Käuferseite zählt nur, was die Käuferseite selbst sagt.",
+  "stage.criteria.requiredHelp":
+    "Ein erforderliches Kriterium hält Margince davon ab, den Deal von selbst weiterzuschieben.",
+  "stage.criteria.hintHelp": "Anleitung für die KI, die nach Belegen sucht.",
   "stage.criteria.editOf": "{name} bearbeiten",
   "stage.criteria.removeOf": "{name} entfernen",
   "stage.criteria.remove": "Entfernen",
@@ -14723,7 +14725,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.builder.open": "Neues Feld",
   "cf.builder.noCode": "Ohne Code",
   "cf.builder.intro":
-    "Ein neues Feld ist eine echte Spalte in der bestehenden Tabelle. Es funktioniert in Filtern, Berichten, Exporten und der API wie jedes Kernfeld. Es ist kein neues Objekt.",
+    "Ein neues Feld erscheint bei jedem Datensatz dieser Art. Es funktioniert in Filtern, Berichten, Exporten und der API wie jedes eingebaute Feld. Du kannst es später archivieren, aber nicht zurückholen.",
   "cf.label": "Bezeichnung",
   "cf.apiKey": "API-Name",
   "cf.apiKeyHint":
@@ -14757,7 +14759,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Auswahl von „{label}“ gespeichert. {count} Datensätze geändert.",
   "cf.gate.title": "Dieses Feld hinzufügen?",
   "cf.gate.body":
-    "Nach der Bestätigung wird es zu einer aktiven Spalte auf jedem {object}: auf der 360-Seite, in Suche und Filtern, Listen, Export und der API. Das Hinzufügen wird im Audit-Log erfasst.",
+    "Nach der Bestätigung wird es jedem {object} hinzugefügt: auf der 360-Seite, in Suche und Filtern, Listen, Export und der API. Das Hinzufügen wird im Audit-Log erfasst.",
   "cf.refuse.title":
     "Das sieht nach einem neuen Objekt oder einer neuen Beziehung aus",
   "cf.refuse.body":

@@ -6066,11 +6066,15 @@ export interface paths {
         put?: never;
         /**
          * Add an exit criterion to a stage.
-         * @description Requires `pipeline:update`, like every other pipeline-shape edit.
+         * @description Requires `pipeline:update`, like every other pipeline-shape edit. Leave
+         *     `key` out and Margince makes it from the label, adding a number on a clash
+         *     in the stage. A `key` you send is validated, and a live clash is
+         *     `criterion_key_taken`.
          *
-         *     Two refusals, both `422`. `terminal_stage_has_no_exit_criteria` on a
-         *     `won`/`lost` stage. `criterion_key_taken` when the stage already has a LIVE
-         *     criterion with this key — archiving one frees its key for reuse, and both
+         *     Refusals, all `422`. `terminal_stage_has_no_exit_criteria` on a
+         *     `won`/`lost` stage. `invalid_criterion_key` for a key that is empty or has
+         *     the wrong shape. `criterion_key_taken` when a key you sent matches a LIVE
+         *     criterion of the stage — archiving one frees its key for reuse, and both
          *     rows survive so the older evidence stays legible.
          */
         post: operations["createStageExitCriterion"];
@@ -42856,7 +42860,11 @@ export interface components {
          */
         StageCriterionKind: "buyer_confirmed" | "event_held" | "document_signed" | "role_identified" | "terms_accepted" | "custom" | "legal_reviewed";
         CreateStageExitCriterionRequest: {
-            key: string;
+            /**
+             * @description Optional. Left out, Margince makes the key from the label and adds a
+             *     number when the stage already has a live criterion under that key.
+             */
+            key?: string;
             label: string;
             kind: components["schemas"]["StageCriterionKind"];
             /** @default true */
