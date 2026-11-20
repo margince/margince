@@ -101,7 +101,7 @@ func (ReportBlocksResource) Resources(context.Context) []mcp.Resource {
 // matching every other read on this surface.
 func (r ReportBlocksResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != ReportBlocksURI {
-		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
+		return mcp.ResourceContents{}, fmt.Errorf("no resource is published at %q: %w", uri, apperrors.ErrNotFound)
 	}
 	body, err := r.ReportBlocksDocument(ctx)
 	if err != nil {

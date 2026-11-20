@@ -57,13 +57,8 @@ func (e *closeDateEnv) correctionAuditIDFor(t *testing.T, dealID ids.UUID) ids.U
 	return id
 }
 
-// The undo the generic restore path could not perform.
-//
-// Two walls stop it there: rejectPastCloseDate refuses any past close date on an
-// open deal — which is exactly what undoing an overdue correction restores — and
-// close_date_provisional is audited but is not a writable deal field, so the
-// restore image filter refuses the whole entry rather than putting back the part
-// it understands. Every one of the sweep's tiers touches both.
+// The undo the generic restore path could not perform. rejectPastCloseDate refuses
+// a past close date, and the image filter refuses close_date_provisional; every tier touches both.
 func TestACorrectionIsTakenBackWithEveryFieldItMoved(t *testing.T) {
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Rolled forward overnight", e.early, nil, new(-12), 3)
@@ -197,21 +192,10 @@ func TestTakingACorrectionBackTwiceIsOneReversal(t *testing.T) {
 }
 
 // A confirm staged before an Undo does not put the change back after it.
-//
-// The approval path is a second door onto the same write, and an unattended one:
-// close_date_correction is in AutoApplyKinds, so a rep with autonomy on has
-// these redeemed without looking. An Undo followed by a redemption must not
-// restore what the Undo removed.
-//
-// TWO GUARDS STAND HERE, and this proves the outcome rather than either one.
-// The version pin refuses first — a reversal writes the deal, so the staged
-// card's pinned version no longer matches — and the reversal-memory check in
-// closeDateConfirmEffect stands behind it. Disabling the memory check alone
-// leaves this test green, because the pin catches the case; the memory check
-// exists because the pin is a property of how this KIND is staged, and a
-// memory that holds only while a configuration elsewhere stays put is not one
-// to rely on. TestAReversedCorrectionIsNotReappliedTomorrow is what fails when
-// the memory itself is broken.
+// close_date_correction auto-applies, so a redemption can follow an Undo unseen.
+// Two guards stand here: the version pin refuses first, and the reversal memory
+// in closeDateConfirmEffect stands behind it. TestAReversedCorrectionIsNotReappliedTomorrow
+// fails when the memory itself is broken.
 func TestConfirmingACardAfterAnUndoDoesNotReapplyIt(t *testing.T) {
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Confirmed after being undone", e.early, nil, new(-12), 3)
@@ -231,6 +215,14 @@ func TestConfirmingACardAfterAnUndoDoesNotReapplyIt(t *testing.T) {
 	approvalID := e.stageLegacyCard(t, deal, *swept.expectedClose)
 	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); err != nil {
 		t.Fatal(err)
+	}
+	// The memory check on its own, past the version pin that refuses first,
+	// asked the very question the taken-back correction answered.
+	staged := e.WsScalar(t, `SELECT json_build_object('deal_id', deal_id, 'expected_close_date', standing_close_date,
+		'remaining_open_stages', remaining_open_stages, 'asking', asking)::text
+		FROM deal_correction WHERE deal_id = $1 AND reversed_at IS NOT NULL`, deal)
+	if err := closeDateConfirmEffect(e.svc, e.Deals)(e.Admin(), approvalID, []byte(staged), ""); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("confirming a taken-back correction past the pin = %v, want ErrConflict", err)
 	}
 
 	// Now the card is decided — the state an auto-apply worker reaches.

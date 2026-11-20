@@ -26,7 +26,7 @@ func (e *noticeMailEnv) stageBurst(t *testing.T, summaries ...string) []ids.UUID
 			deal = e.dealBeside(t, summary)
 		}
 		proposal, err := json.Marshal(deals.CloseDateCorrection{
-			DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: "2026-12-01", Basis: "the date has passed",
+			DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: closeDateAhead(t), Basis: "the date has passed",
 		})
 		if err != nil {
 			t.Fatal(err)

@@ -27,7 +27,7 @@ const noMailBaseline = "This is a calendar connection, which brings in no mail t
 // baselineDateField is the body key whose explicit null clears the baseline.
 const baselineDateField = "date"
 
-func (h connectorHandlers) SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h connectorHandlers) SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.SetConnectorHistoryBaselineParams) {
 	if h.registry == nil {
 		httperr.NotImplemented(w, r, "SetConnectorHistoryBaseline")
 		return
@@ -51,7 +51,7 @@ func (h connectorHandlers) SetConnectorHistoryBaseline(w http.ResponseWriter, r 
 	if req.Timezone != nil {
 		timezone = *req.Timezone
 	}
-	view, err := h.registry.SetHistoryBaseline(r.Context(), string(provider), date, timezone)
+	view, err := h.registry.SetHistoryBaseline(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), date, timezone)
 	// A mailbox this caller has not connected answers as absent, as its siblings do.
 	if errors.Is(err, capture.ErrNoConnection) {
 		httperr.Write(w, r, apperrors.ErrNotFound)

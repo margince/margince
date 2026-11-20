@@ -102,3 +102,55 @@ describe("a lead's refusals read as the product's own sentences", () => {
     expect(says).toMatch(/open a deal on the contact/);
   });
 });
+
+// The server's timeout detail is English; every reader is told in their own words.
+it.each([en, de, vi])(
+  "localizes a request the server stopped for time",
+  (catalog) => {
+    expect(
+      problemMessage(
+        { code: "request_timed_out", detail: "English server detail" },
+        (key) => catalog[key],
+      ),
+    ).toBe(catalog["common.requestTimedOut"]);
+  },
+);
+
+describe("a currency rate refusal reads as the product's own sentence", () => {
+  it.each([
+    ["fx_rate_base_self", "from_currency", "settings.rates.fromIsBase"],
+    ["fx_rate_currency", "from_currency", "settings.rates.fromNotCurrency"],
+    ["fx_rate_positive", "rate", "settings.rates.rateNotPositive"],
+    ["fx_rate_past", "effective_date", "settings.rates.pastDate"],
+  ] as const)("words %s in every catalog", (code, field, key) => {
+    for (const catalog of [en, de, vi]) {
+      const problem = {
+        code: "validation_error",
+        details: {
+          errors: [{ field, code, message: "English server detail" }],
+        },
+      };
+      expect(problemMessage(problem, (each) => catalog[each])).toBe(
+        catalog[key],
+      );
+    }
+  });
+});
+
+describe("a name or membership clash", () => {
+  it.each([
+    ["pipeline_name_taken", "pipeline.nameTaken"],
+    ["pipeline_default_taken", "pipeline.defaultTaken"],
+    ["custom_field_label_taken", "cf.labelTaken"],
+    ["already_on_list", "lists.alreadyOnShortlist"],
+  ] as const)("words %s in each language", (code, key) => {
+    for (const catalog of [en, de, vi]) {
+      expect(
+        problemMessage(
+          { status: 409, code, detail: "an English API sentence" },
+          (k: MessageKey) => catalog[k],
+        ),
+      ).toBe(catalog[key]);
+    }
+  });
+});

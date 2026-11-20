@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -76,6 +77,15 @@ func admitLinkTx(ctx context.Context, tx pgx.Tx, req linkRequest) (admittedLink,
 	}
 	if err := requireExpectedAddress(req.expectedAddress, deliveredTo); err != nil {
 		return admittedLink{}, err
+	}
+	// An erased address is never mailed, by any door: the booking page can
+	// recreate the contact, and the send gate reads a different list.
+	erased, err := storekit.EmailSuppressed(ctx, tx, deliveredTo)
+	if err != nil {
+		return admittedLink{}, err
+	}
+	if erased {
+		return admittedLink{}, &storekit.ErasedIdentifierError{Field: "email"}
 	}
 	// THE SUBJECT'S OWN ASK IS NOT A RE-SOLICITATION. See the field.
 	if !req.askedByTheSubject {

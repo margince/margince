@@ -12,6 +12,8 @@ package ai
 import (
 	"slices"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -171,6 +173,45 @@ func (r *Router) install(next binding) {
 // Empty on a Router assembled without one, which is every unit fixture and an
 // installation whose keys come from the environment alone.
 func (r *Router) CredentialVersion() string { return r.binding().credentialVersion }
+
+// Bound reports whether the Router serves a stored or declared binding. An
+// unbound one refuses every call and is what an installation without AI holds.
+func (r *Router) Bound() bool {
+	return r.binding().public.State != crmcontracts.AssistantProfileStateUnconfigured
+}
+
+// Unbind returns the Router to serving nothing, as when the stored binding is
+// removed. The provider it named is not called again, and a call
+// is refused as on a role that booted with none.
+func (r *Router) Unbind() {
+	replaced := r.binding().providers()
+	r.install(binding{public: NewPublicProfile("unconfigured", RoutingConfig{})})
+	r.cache.clear()
+	for _, provider := range replaced {
+		sharedProviderHealth.forget(provider)
+	}
+}
+
+// ServesOnlyFake reports whether every bound lane is the offline fake, the
+// dev binding a stored one never replaces by being absent.
+func (r *Router) ServesOnlyFake() bool {
+	for _, ref := range r.binding().boundModels() {
+		if ref.Provider != ProviderFake {
+			return false
+		}
+	}
+	return true
+}
+
+// refuseUnbound is the answer every model call gets before a binding exists:
+// the 409 ai_not_configured. It rides httperr, so a surface that returns the
+// error as it came says the same.
+func (r *Router) refuseUnbound() error {
+	if r.Bound() {
+		return nil
+	}
+	return httperr.ErrNotConfigured
+}
 
 // ConfiguredProfile is the public profile of the binding served now, so the
 // profile reads follow a rebind the way the lanes do.

@@ -461,3 +461,14 @@ func TestStagingTheSameMessageIDTwiceConflicts(t *testing.T) {
 		}
 	}
 }
+
+// A recorded decision cannot authorize a delivery that was never staged.
+func TestADirectedDecisionNeedsAStagedDelivery(t *testing.T) {
+	e := setupStore(t)
+	err := database.WithWorkspaceTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
+		return e.store.RecordDirectedExecutionTx(e.ctx, tx, ids.NewV7(), ids.NewV7())
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("recording a decision on no delivery answered %v, want ErrNotFound", err)
+	}
+}

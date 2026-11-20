@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { TokenReading } from "../../design-system/tokeninput";
+import { addressKey } from "../../lib/addresskey";
 
 // Loose mirror of values.ParseEmail (backend/internal/shared/kernel/values/email.go),
 // a bare addr-spec: one @, a dotted domain, nothing that ends or quotes an address.
@@ -15,6 +16,25 @@ const HARD_BREAK = new Set([";", "\n"]);
 function recipient(text: string): string | null {
   const trimmed = text.trim();
   return RECIPIENT.test(trimmed) ? trimmed : null;
+}
+
+export type AddressLines = Readonly<{
+  to: readonly string[];
+  cc: readonly string[];
+  bcc: readonly string[];
+}>;
+
+/** Each address once, where it first stands in To, Cc, Bcc order. */
+export function distinctAddressLines(lines: AddressLines) {
+  const seen = new Set<string>();
+  const once = (line: readonly string[]) =>
+    line.filter((address) => {
+      const key = addressKey(address);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  return { to: once(lines.to), cc: once(lines.cc), bcc: once(lines.bcc) };
 }
 
 const isQuoted = (piece: string) =>

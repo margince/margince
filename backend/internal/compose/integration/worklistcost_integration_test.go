@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/attention"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -37,9 +38,11 @@ var worklistStages = []string{
 // savepoint statements count where the exchange that carries them does.
 const worklistOutsideStatements = 9
 
-// The seeded read includes every bound lane and an open task. Lower this
-// pgx-call ceiling when a batch or empty-set shortcut removes calls.
-const worklistExchangeBudget = 68
+// The seeded read includes every bound lane and three open tasks, which are
+// undated and so drawn under Upcoming. Lower this pgx-call ceiling when a
+// batch or empty-set shortcut removes calls.
+// waiting_customers reads the private_mail_requests setting once a transaction.
+const worklistExchangeBudget = 74
 
 const worklistRoundTripBudget = worklistExchangeBudget
 
@@ -48,6 +51,7 @@ type stageDelta struct {
 	statements, exchanges, clipped int64
 	runs                           map[attention.StageKey]uint64
 	byKey                          map[attention.StageKey]int64
+	exchangesBy                    map[attention.StageKey]int64
 }
 
 // meterRead keeps both meters on the same read, so statements
@@ -60,7 +64,9 @@ func meterRead(ctx context.Context, t *testing.T, read func(context.Context) err
 		t.Fatal(err)
 	}
 	after := attention.StageCosts()
-	delta := stageDelta{runs: map[attention.StageKey]uint64{}, byKey: map[attention.StageKey]int64{}}
+	delta := stageDelta{
+		runs: map[attention.StageKey]uint64{}, byKey: map[attention.StageKey]int64{}, exchangesBy: map[attention.StageKey]int64{},
+	}
 	for key, cost := range after {
 		runs := cost.DB.Count() - before[key].DB.Count()
 		if runs == 0 {
@@ -69,7 +75,8 @@ func meterRead(ctx context.Context, t *testing.T, read func(context.Context) err
 		delta.runs[key] = runs
 		delta.byKey[key] = cost.Statements - before[key].Statements
 		delta.statements += delta.byKey[key]
-		delta.exchanges += cost.Exchanges - before[key].Exchanges
+		delta.exchangesBy[key] = cost.Exchanges - before[key].Exchanges
+		delta.exchanges += delta.exchangesBy[key]
 		delta.clipped += cost.Clipped - before[key].Clipped
 		t.Logf("%s %-28s %3d statements, %3d exchanges, %6.2f ms pgx", key.Read, key.Stage, delta.byKey[key],
 			cost.Exchanges-before[key].Exchanges,
@@ -77,15 +84,20 @@ func meterRead(ctx context.Context, t *testing.T, read func(context.Context) err
 	}
 	return delta, meter.Cost()
 }
+
+// seedOpenTask writes three open tasks, so a read made once per task costs
+// more than the budget allows.
 func seedOpenTask(t *testing.T, e *Env) {
 	t.Helper()
 	pipeline, stage, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Renewal", pipeline, stage, nil)
-	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "task", Subject: new("Send the renewal terms"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
-	}); err != nil {
-		t.Fatal(err)
+	for _, subject := range []string{"Send the renewal terms", "Call the buyer", "Book the review"} {
+		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "task", Subject: &subject, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
+		}); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -177,9 +189,11 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // ceilings. Lower them in the diff that removes statements or exchanges. The
 // read is the assembly a cache miss pays; the cache's own lookup and store are
 // outside it.
+// Both count waiting_customers' private_mail_requests read, and the undated
+// tasks' planned, row_names and subject_labels reads.
 const (
-	homeReadStatementCeiling = 91
-	homeReadRoundTripCeiling = 62
+	homeReadStatementCeiling = 101
+	homeReadRoundTripCeiling = 68
 )
 
 // homeStages are the stages Home's read runs. A lane that stops running lowers
@@ -256,4 +270,108 @@ func TestTeamExceptionsChargesTheDayItReadsToItselfOnce(t *testing.T) {
 		}
 	}
 	t.Logf("team exceptions acquired %d pool connections", seen.Acquires)
+}
+
+// cutWaitingStageExchangeBudget caps the waiting_customers stage when the scan
+// is cut. It covers the scan, its email rows, and one read of the deals past it.
+const cutWaitingStageExchangeBudget = 18
+
+// cutScan is Rep1's waiting scan cut by plain mail, with two at-risk deals
+// filed under no mail yet.
+type cutScan struct {
+	e        *Env
+	at       time.Time
+	contact  ids.UUID
+	rep1     context.Context
+	waitedOn ids.UUID
+	second   ids.UUID
+}
+
+func seedCutScan(t *testing.T, e *Env, at time.Time) cutScan {
+	t.Helper()
+	c := cutScan{
+		e: e, at: at, contact: e.SeedContact(t, "Dana Buyer", nil),
+		rep1: e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms),
+	}
+	first := c.mail(t, "Question 0", at.Add(-time.Minute), nil)
+	e.CloneActivity(t, first, activities.WaitingScanCap+5, map[string]string{
+		"source_id":    "r.source_id || '-' || n.ord",
+		"identity_key": "r.identity_key || '-' || n.ord",
+		"subject":      "'Question ' || n.ord",
+		"thread_key":   "'question-' || n.ord",
+		"occurred_at":  "r.occurred_at - n.ord * interval '1 minute'",
+	})
+	pipeline, stage, _ := DealFixture(t, e)
+	for _, deal := range []*ids.UUID{&c.waitedOn, &c.second} {
+		*deal = e.SeedDeal(t, "Past its close", pipeline, stage, &e.Rep1)
+		e.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, *deal, at.AddDate(0, 0, -5).Format(time.DateOnly))
+	}
+	c.mail(t, "About the first deal", at.AddDate(0, 0, -2), &c.waitedOn)
+	return c
+}
+
+// mail logs one inbound mail to Rep1 from the contact, filed under deal when
+// one is named.
+func (c cutScan) mail(t *testing.T, subject string, at time.Time, deal *ids.UUID) ids.ActivityID {
+	t.Helper()
+	inbound := "inbound"
+	to := c.e.WsScalar(t, `SELECT lower(email) FROM app_user WHERE id = $1`, c.e.Rep1)
+	links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: c.contact}}
+	if deal != nil {
+		links = append(links, activities.ActivityLinkInput{EntityType: "deal", EntityID: *deal})
+	}
+	row, _, err := c.e.Activities.LogActivity(c.e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",
+		ThreadKey: "thread-" + subject, CounterpartyEmail: "dana@buyer.example", EmailFrom: "dana@buyer.example",
+		EmailTo: []string{to}, Links: links,
+	})
+	if err != nil {
+		t.Fatalf("logging %q: %v", subject, err)
+	}
+	return ids.From[ids.ActivityKind](ids.UUID(row.Id))
+}
+
+// A read whose waiting scan was cut asks once which at-risk deals wait past
+// it. The waiting stage stays inside its budget, and a second deal waited on
+// costs nothing more than the first.
+func TestACutWaitingScanAsksForTheDealsPastItOnce(t *testing.T) {
+	e := Setup(t)
+	at := clocktest.Now(t).UTC()
+	c := seedCutScan(t, e, at)
+	service, _ := meteredAttention(t, e, at)
+	stage := attention.StageKey{Read: attention.ReadWorklist, Stage: "waiting_customers"}
+	read := func() (int64, int64, map[string]bool) {
+		t.Helper()
+		var page crmcontracts.Worklist
+		delta, _ := meterRead(c.rep1, t, func(ctx context.Context) error {
+			var err error
+			page, err = service.Worklist(ctx, "mine", "all", ids.UUID{}, 0, "")
+			return err
+		})
+		atRisk := map[string]bool{}
+		for _, row := range page.Queue {
+			if row.Source == crmcontracts.WorklistItemSourceDealAtRisk {
+				atRisk[row.Id] = true
+			}
+		}
+		return delta.byKey[stage], delta.exchangesBy[stage], atRisk
+	}
+	read()
+
+	oneStatements, oneExchanges, atRisk := read()
+	if atRisk[c.waitedOn.String()] || !atRisk[c.second.String()] {
+		t.Fatalf("at-risk rows %v: want the second deal and not the one waited on past the scan", atRisk)
+	}
+	if oneExchanges > cutWaitingStageExchangeBudget {
+		t.Errorf("the cut waiting stage used %d exchanges, budget %d", oneExchanges, cutWaitingStageExchangeBudget)
+	}
+	c.mail(t, "About the second deal", at.AddDate(0, 0, -2), &c.second)
+	twoStatements, twoExchanges, atRisk := read()
+	if atRisk[c.second.String()] {
+		t.Error("the second deal waited on past the scan is still shown at risk")
+	}
+	if twoStatements != oneStatements || twoExchanges != oneExchanges {
+		t.Errorf("two deals waited on cost %d statements and %d exchanges, one cost %d and %d",
+			twoStatements, twoExchanges, oneStatements, oneExchanges)
+	}
 }

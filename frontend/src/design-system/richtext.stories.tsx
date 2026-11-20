@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { RichText } from "./richtext";
 
@@ -80,6 +80,34 @@ export const Formatted: Story = {
       }
     />
   ),
+};
+
+/** The caret in bold words: Bold shows pressed, and Link, a verb, has no state. */
+export const MarkOnAtCaret: Story = {
+  render: () => (
+    <Demo initial={"<p>The <b>deadline</b> is <em>Friday</em>.</p>"} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const bold = await canvas.findByText("deadline");
+    const box = canvas.getByRole("textbox", { name: "Message" });
+    box.focus();
+    const words = bold.firstChild;
+    if (!words) throw new Error("the story holds no bold words");
+    window.getSelection()?.collapse(words, 3);
+    await waitFor(() =>
+      expect(canvas.getByRole("button", { name: "Bold" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Italic" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    await expect(
+      canvas.getByRole("button", { name: "Link" }),
+    ).not.toHaveAttribute("aria-pressed");
+  },
 };
 
 /** The caret in a link: the link mark (or Cmd/Ctrl+K) offers its address and Remove link. */

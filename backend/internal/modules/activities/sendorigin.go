@@ -227,11 +227,11 @@ func (s *Store) probeLinkTargets(ctx context.Context, links []ActivityLinkInput)
 // staging transaction. An account-started message answers nothing, so it
 // roots the thread at its own identity — the same key capture derives when
 // it later reads that root message back out of the mailbox.
-func (o SendOrigin) threading(ctx context.Context, tx pgx.Tx, messageID string) (threading, error) {
+func (o SendOrigin) threading(ctx context.Context, tx pgx.Tx, messageID, subject string) (threading, error) {
 	if !o.isReply() {
 		return threading{threadKey: messageID}, nil
 	}
-	return anchorThreading(ctx, tx, o.anchor, messageID)
+	return anchorThreading(ctx, tx, o.anchor, messageID, subject)
 }
 
 // inheritedLinks carries the anchor's own links onto the reply, so the sent

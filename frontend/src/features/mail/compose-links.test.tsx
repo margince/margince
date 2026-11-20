@@ -7,20 +7,20 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import { draftButton } from "../../testing/composedraft.testkit";
+import { pressDraft } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
-import { pressSend } from "./compose.testkit";
+import { installComposeClock, pressSend } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // What a sent message files under.
 //
@@ -165,6 +165,8 @@ function render(ui: ReactNode) {
   );
 }
 
+beforeEach(installComposeClock);
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -173,15 +175,15 @@ afterEach(() => {
 
 // The account-started composer carries two dropdowns: what it is about, and
 // why. Each pick names the one it means, not the only combobox on screen.
-async function pickBy(labelText: string, option: string) {
+async function pickBy(user: UserEvent, labelText: string, option: string) {
   const select = screen.getByLabelText(labelText);
-  await pickOption(userEvent.setup(), select, option);
+  await pickOption(user, select, option);
 }
 
-async function fillBody() {
-  await userEvent.type(screen.getByLabelText("To"), "dieter@acme.test");
-  await userEvent.tab();
-  await userEvent.type(screen.getByLabelText("Subject"), "Hello");
+async function fillBody(user: UserEvent) {
+  await user.type(screen.getByLabelText("To"), "dieter@acme.test");
+  await user.tab();
+  await user.type(screen.getByLabelText("Subject"), "Hello");
   writeMessage("Body", "Body content");
 }
 
@@ -192,11 +194,12 @@ function linksOf(sent: Sent[]) {
 
 describe("what a sent message files under", () => {
   it("sends the deal the rep grounded the draft in, not only the page", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -206,10 +209,10 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Related to");
-    await pickBy("Related to", "Deal: Acme Renewal");
-    await fillBody();
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await pickBy(user, "Related to", "Deal: Acme Renewal");
+    await fillBody(user);
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     // The deal is the assertion that fails without the fix: before it, the
@@ -223,12 +226,13 @@ describe("what a sent message files under", () => {
   });
 
   it("files under the project the rep chose, beside the recipient", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
       "GET /projects/proj-1": () => jsonResponse(ERP_PROJECT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -237,22 +241,20 @@ describe("what a sent message files under", () => {
       />,
     );
 
-    // The picker holds its place from the start; it opens once the record's
-    // projects and deals have arrived.
     await waitFor(() =>
       expect(screen.getByLabelText("Related to").hasAttribute("disabled")).toBe(
         false,
       ),
     );
-    await pickBy("Related to", "ERP-27 · ERP rollout");
+    await pickBy(user, "Related to", "ERP-27 · ERP rollout");
     // The choice is visible in the head, and so is its tag in the subject.
     expect(screen.getByLabelText("Related to").textContent).toContain("ERP-27");
-    await fillBody();
+    await fillBody(user);
     expect(
       (screen.getByLabelText("Subject") as HTMLInputElement).value,
     ).toContain("ERP-27");
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     // One choice, two effects: the same project id that scoped the draft
@@ -268,12 +270,13 @@ describe("what a sent message files under", () => {
   // project takes the project's key out of the subject and its link off the
   // send. One mail is not filed under two answers.
   it("replaces the project with a deal chosen after it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
       "GET /projects/proj-1": () => jsonResponse(ERP_PROJECT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -287,14 +290,14 @@ describe("what a sent message files under", () => {
         false,
       ),
     );
-    await pickBy("Related to", "ERP-27 · ERP rollout");
-    await fillBody();
+    await pickBy(user, "Related to", "ERP-27 · ERP rollout");
+    await fillBody(user);
     const subject = screen.getByLabelText("Subject") as HTMLInputElement;
     await waitFor(() => expect(subject.value).toContain("ERP-27"));
-    await pickBy("Related to", "Deal: Acme Renewal");
+    await pickBy(user, "Related to", "Deal: Acme Renewal");
     await waitFor(() => expect(subject.value).toBe("Hello"));
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
@@ -305,6 +308,7 @@ describe("what a sent message files under", () => {
   });
 
   it("sends the chosen project on the draft request, so the draft is grounded in that project alone", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /companies/company-1/draft-email": () =>
         jsonResponse({
@@ -315,7 +319,7 @@ describe("what a sent message files under", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Discuss the cutover"
         entityType="company"
         entityId="company-1"
@@ -326,8 +330,8 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Related to");
-    await pickBy("Related to", "ERP-27 · ERP rollout");
-    await userEvent.click(draftButton());
+    await pickBy(user, "Related to", "ERP-27 · ERP rollout");
+    await pressDraft(user);
 
     await waitFor(() =>
       expect(
@@ -345,6 +349,7 @@ describe("what a sent message files under", () => {
   });
 
   it("defaults to the account's only live project, visibly", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // A closed project is not offered, so the account below has ONE live
     // project and the picker lands on it without a click. The default is a
     // rendered selection, never a silent addition to the request.
@@ -370,7 +375,7 @@ describe("what a sent message files under", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -384,9 +389,9 @@ describe("what a sent message files under", () => {
         "ERP-27",
       ),
     );
-    await fillBody();
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await fillBody(user);
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
@@ -397,11 +402,12 @@ describe("what a sent message files under", () => {
   });
 
   it("files under the page and the recipient when no deal was chosen", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -411,9 +417,9 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Related to");
-    await fillBody();
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await fillBody(user);
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     // An unchosen deal is absent, not an empty entry: "no deal" is a real
@@ -425,11 +431,12 @@ describe("what a sent message files under", () => {
   });
 
   it("files under every account contact the message is addressed to, on the preview and the send", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -438,11 +445,11 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Related to");
-    await userEvent.type(screen.getByLabelText("To"), "sara@acme.test");
-    await userEvent.tab();
-    await fillBody();
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await user.type(screen.getByLabelText("To"), "sara@acme.test");
+    await user.tab();
+    await fillBody(user);
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     const both = [
@@ -458,11 +465,12 @@ describe("what a sent message files under", () => {
   });
 
   it("files under an account contact who is only copied, once", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -471,14 +479,14 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Related to");
-    await fillBody();
-    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
-    await userEvent.type(screen.getByLabelText("Cc"), "sara@acme.test");
-    await userEvent.tab();
-    await userEvent.type(screen.getByLabelText("Bcc"), "SARA@acme.test");
-    await userEvent.tab();
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await fillBody(user);
+    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    await user.type(screen.getByLabelText("Cc"), "sara@acme.test");
+    await user.tab();
+    await user.type(screen.getByLabelText("Bcc"), "SARA@acme.test");
+    await user.tab();
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
@@ -489,11 +497,12 @@ describe("what a sent message files under", () => {
   });
 
   it("never files under a contact who is only blind-copied", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -502,12 +511,12 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Related to");
-    await fillBody();
-    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
-    await userEvent.type(screen.getByLabelText("Bcc"), "sara@acme.test");
-    await userEvent.tab();
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await fillBody(user);
+    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    await user.type(screen.getByLabelText("Bcc"), "sara@acme.test");
+    await user.tab();
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
@@ -517,11 +526,12 @@ describe("what a sent message files under", () => {
   });
 
   it("sends without the copied contact the sender may not attach it to, on the preview and the send", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -530,12 +540,12 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Related to");
-    await fillBody();
-    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
-    await userEvent.type(screen.getByLabelText("Cc"), "noah@acme.test");
-    await userEvent.tab();
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await fillBody(user);
+    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    await user.type(screen.getByLabelText("Cc"), "noah@acme.test");
+    await user.tab();
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     const filed = [
@@ -550,6 +560,7 @@ describe("what a sent message files under", () => {
   });
 
   it("keeps a deal whose id happens to match the company's", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // A link is identified by its TYPE and its id together, which is how the
     // server identifies one. Two records of different kinds live in different
     // tables and may hold the same uuid; collapsing them on the id alone would
@@ -574,7 +585,7 @@ describe("what a sent message files under", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="shared-id"
         contactId="per-1"
@@ -584,10 +595,10 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Related to");
-    await pickBy("Related to", "Deal: Acme Renewal");
-    await fillBody();
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await pickBy(user, "Related to", "Deal: Acme Renewal");
+    await fillBody(user);
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
@@ -598,6 +609,7 @@ describe("what a sent message files under", () => {
   });
 
   it("files a reply under its own record and adds nothing the rep did not pick", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // A reply grounds on the thread, not the account: the rep chose nothing,
     // and the recipient is already a participant on the activity being
     // answered. Anchored sends go to the activity's own endpoint, so the
@@ -607,7 +619,7 @@ describe("what a sent message files under", () => {
         jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="per-1"
@@ -618,9 +630,9 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Subject");
-    await fillBody();
-    await pickBy("Reason for contact", "Active deal");
-    await pressSend();
+    await fillBody(user);
+    await pickBy(user, "Reason for contact", "Active deal");
+    await pressSend(user);
 
     await waitFor(() =>
       expect(
@@ -650,7 +662,7 @@ describe("what a channel reply says it will be filed under", () => {
 
   function renderChannelReply() {
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="per-1"
@@ -718,7 +730,7 @@ describe("what a channel reply says it will be filed under", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="company-1"
@@ -774,7 +786,7 @@ it.each(["proj-2", ""])(
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open

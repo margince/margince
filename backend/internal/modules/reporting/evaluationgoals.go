@@ -162,3 +162,27 @@ func (s *Service) goalFigure(ctx context.Context, tx pgx.Tx, reach targetReach, 
 	}
 	return goalFigure{scope: frame.Scope, sellers: sellers.Owners}, nil
 }
+
+// CaptureGoal is the published goal of a captured team over window: the sum of
+// its members' monthly goals. It is not set for any other scope. Nor is it set
+// for one pipeline, since goals span every pipeline, or for a window a
+// member's goals do not fill. The daily freeze reads it as the system. Each
+// reader of what it ranked meets their own lens there.
+func (s *Service) CaptureGoal(ctx context.Context, tx pgx.Tx, capture crmcontracts.ReportingCaptureContext, window crmcontracts.ReportingWindow) (int64, bool, error) {
+	if capture.Scope.Kind != reportingTeam || capture.Scope.Id == nil || capture.PipelineId != nil {
+		return 0, false, nil
+	}
+	if err := auth.Require(ctx, "sales_target", principal.ActionRead); err != nil {
+		return 0, false, err
+	}
+	members, err := s.authority.MembersFor(ctx, tx, capture.Scope)
+	if err != nil {
+		return 0, false, err
+	}
+	goals, whole, err := s.goalsOver(ctx, tx, members, window)
+	if err != nil || !whole {
+		return 0, false, err
+	}
+	total, set := goals.over(members)
+	return total, set, nil
+}

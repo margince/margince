@@ -71,7 +71,7 @@ func TestAnOwedReceiptIsRaisedForThirtyDaysOnly(t *testing.T) {
 
 func TestAnOwedReceiptAboutAnErasedSubjectIsNotRaised(t *testing.T) {
 	l, owedAt, restore := failedReceiptAlarm(t)
-	if err := ComposedEraser(l.e.Pool, nil, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
+	if err := ComposedEraser(l.e.Pool, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	restore()

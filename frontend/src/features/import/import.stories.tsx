@@ -104,3 +104,81 @@ export const Withheld: Story = {
 
 // The run page's first step, reached from the hub's drop zone or by address.
 export const RunPage: Story = { render: story(OPERATOR, RUN) };
+
+// A run address that names no run: the page says so and offers the way back,
+// with no step and no retry.
+export const RunNotFound: Story = {
+  render: () => {
+    globalThis.history.replaceState(
+      null,
+      "",
+      "#/settings/import/run?run=019ff-gone",
+    );
+    installFetchStub({
+      "GET /me": meRoute(OPERATOR),
+      "GET /imports/format": () => jsonResponse(formatFixture),
+      "GET /imports": () =>
+        jsonResponse({ data: [], page: { has_more: false } }),
+      "GET /imports/019ff-gone": () =>
+        jsonResponse(
+          { status: 404, code: "not_found", detail: "import run not found" },
+          404,
+        ),
+    });
+    return (
+      <StoryProviders>
+        <ImportCard subpage={RUN} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText(
+        "This import does not exist or was removed.",
+      ),
+    ).toBeVisible();
+  },
+};
+
+// A run cancelled before it was tested: the page says so and offers a new
+// upload. The ladder carries no hint, as nothing is staged.
+export const RunCancelled: Story = {
+  render: () => {
+    globalThis.history.replaceState(
+      null,
+      "",
+      "#/settings/import/run?run=019ff-cancelled",
+    );
+    installFetchStub({
+      "GET /me": meRoute(OPERATOR),
+      "GET /imports/format": () => jsonResponse(formatFixture),
+      "GET /imports": () =>
+        jsonResponse({ data: [], page: { has_more: false } }),
+      "GET /imports/019ff-cancelled": () =>
+        jsonResponse({
+          id: "019ff-cancelled",
+          connector: "csv",
+          object: "contact",
+          file_name: "contacts.csv",
+          status: "cancelled",
+          checkpoint: 0,
+          version: 2,
+          source_released: true,
+          source: "import_api",
+          captured_by: "human:u-ada",
+          created_at: "2026-10-12T09:30:00Z",
+          updated_at: "2026-10-12T09:31:00Z",
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ImportCard subpage={RUN} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText("This import was canceled"),
+    ).toBeVisible();
+  },
+};

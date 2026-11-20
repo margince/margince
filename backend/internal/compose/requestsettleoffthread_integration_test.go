@@ -73,8 +73,7 @@ func (o *owedEnv) evidence(t *testing.T, candidate activities.RepliedRequest) []
 	return messages
 }
 
-// A request answered by a reply that lost its thread stays owed until the
-// settlement model judges that reply, and settles when it does.
+// A reply that lost its thread leaves the request owed until the model judges it.
 func TestARequestAnsweredOffItsThreadSettlesOnThatAnswer(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -152,8 +151,7 @@ func TestAMeetingWithSomebodyElseOffersNothing(t *testing.T) {
 	}
 }
 
-// A reply on the thread also matches the off-thread rule (our mail to the
-// sender with the same subject). The model reads it once, as thread mail.
+// A thread reply that also meets the off-thread rule is read once, as thread mail.
 func TestAReplyOnTheThreadReachesTheModelOnce(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -188,8 +186,7 @@ func TestAReplyOnTheThreadReachesTheModelOnce(t *testing.T) {
 	}
 }
 
-// Past the window's size the newest answer is still in it, because the verdict
-// is recorded through it.
+// Past the window's size the newest answer stays in it: the verdict is recorded through it.
 func TestTheNewestAnswerIsInTheWindowPastItsSize(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -215,9 +212,7 @@ func TestTheNewestAnswerIsInTheWindowPastItsSize(t *testing.T) {
 	}
 }
 
-// Our reply on the request's thread, sent to a colleague of theirs with them in
-// copy, is not in the thread read (it names another correspondent) but meets
-// the same-subject rule. It still reaches the model as thread mail.
+// Our thread reply to their colleague, with them in copy, still reaches the model as thread mail.
 func TestAReplyOnTheThreadFoundBySubjectIsNotCalledASeparateEmail(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -253,8 +248,7 @@ func TestAReplyOnTheThreadFoundBySubjectIsNotCalledASeparateEmail(t *testing.T) 
 	}
 }
 
-// Our reply filed before a request dated by its day, at that day's stored instant, answers it (occurredday.Answers).
-// The model reads that reply even under another subject, so the request the pass offers is judged.
+// Our reply at a day-dated request's stored instant answers it (occurredday.Answers), under any subject.
 func TestADayTieReplyFiledFirstReachesTheModel(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -402,7 +396,13 @@ func TestSettlementReadsTheFilesOnTheActualAnswer(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	assertFiles(0)
+	// A send still pending has not reached them, so it answers nothing.
+	if _, ok := o.offered(t, request); ok {
+		t.Fatal("an answer whose send is pending was offered")
+	}
+	if slices.ContainsFunc(o.evidence(t, candidate), func(message threadMessage) bool { return message.ID == reply }) {
+		t.Fatal("an answer whose send is pending reached the evidence")
+	}
 	if err := store.RecordSent(sendWorkerScope(actor), delivery, connector.SendReceipt{ProviderMessageID: "report-delivery"}); err != nil {
 		t.Fatal(err)
 	}

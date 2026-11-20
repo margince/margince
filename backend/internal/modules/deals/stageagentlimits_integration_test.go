@@ -26,6 +26,9 @@ type trustRace struct {
 	from, to ids.StageID
 	holder   pgx.Tx
 	pid      int32
+	// closing is the pair a full-ladder reorder names after the open stages,
+	// read before the race because the owner connection is busy during it.
+	closing []ids.UUID
 }
 
 func holdLadderTrust(ctx context.Context, t *testing.T, e *configEnv) *trustRace {
@@ -42,6 +45,7 @@ func holdLadderTrust(ctx context.Context, t *testing.T, e *configEnv) *trustRace
 	if err != nil {
 		t.Fatal(err)
 	}
+	closing := closingStageUUIDs(t, e.owner, pipeline)
 	holder, err := e.owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -51,7 +55,7 @@ func holdLadderTrust(ctx context.Context, t *testing.T, e *configEnv) *trustRace
 			t.Errorf("rolling back the lock holder: %v", err)
 		}
 	})
-	race := &trustRace{pipeline: pipeline, from: from, to: ids.From[ids.StageKind](ids.UUID(next.Id)), holder: holder}
+	race := &trustRace{pipeline: pipeline, from: from, to: ids.From[ids.StageKind](ids.UUID(next.Id)), holder: holder, closing: closing}
 	if err := holder.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&race.pid); err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +146,7 @@ func TestAnAgentWaitingForTheTrustLockHoldsNoLadderRow(t *testing.T) {
 			return e.store.ArchiveStage(e.asLadderAgent(), r.to, nil)
 		},
 		"reordering the stages": func(e *configEnv, r *trustRace, _ ids.ExitCriterionID) error {
-			_, err := e.store.ReorderStages(e.asLadderAgent(), r.pipeline, []ids.UUID{r.to.UUID, r.from.UUID}, nil)
+			_, err := e.store.ReorderStages(e.asLadderAgent(), r.pipeline, append([]ids.UUID{r.to.UUID, r.from.UUID}, r.closing...), nil)
 			return err
 		},
 		"adding a criterion": func(e *configEnv, r *trustRace, _ ids.ExitCriterionID) error {

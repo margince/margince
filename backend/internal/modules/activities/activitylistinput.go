@@ -21,7 +21,12 @@ import (
 // transport, and the record the activities hang off.
 type ListActivitiesInput struct {
 	InteractionsAsOf *time.Time
-	mailIdentities   map[string][]string
+	// ClockDirection with DirectionClockAsOf keeps the rows that move the
+	// "they last wrote" or "we last wrote" clock in that direction.
+	// relstrength.DirectionClockSQL is the rule, as on the account.
+	ClockDirection     string
+	DirectionClockAsOf *time.Time
+	mailIdentities     map[string][]string
 	// onlyID narrows a read to one row, so a caller can ask whether this list
 	// returns it without a second spelling of the list's clauses.
 	onlyID *ids.ActivityID
@@ -249,8 +254,8 @@ type ListActivitiesInput struct {
 	// the rows that qualify, which means the test belongs here.
 	//
 	// A task with no due date is excluded: it is agreed work, but it is not
-	// work for a given instant, and a queue that promised today's list would be
-	// lying if it carried the undated backlog too.
+	// work for a given instant. Paired with OpenAndDueAfter, the later window
+	// carries that undated backlog instead.
 	OpenAndDueBy *time.Time
 	// IncludeEmailRequests adds undated captured requests and undated commitments
 	// to the execution queue, not overdue counts.

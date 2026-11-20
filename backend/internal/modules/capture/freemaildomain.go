@@ -149,6 +149,13 @@ func (s *FreemailDomainStore) List(ctx context.Context) ([]FreemailDomain, error
 // keys on: an operator typing "mail.gmx.net" means gmx.net, and storing the
 // subdomain would leave an entry that never matches anything.
 func (s *FreemailDomainStore) Add(ctx context.Context, domain, kind string) (FreemailDomain, error) {
+	return s.AddConfirmed(ctx, domain, kind, false)
+}
+
+// AddConfirmed is Add for a caller that may carry the answer to a question.
+// An `extra` entry for a company's domain needs it, or is refused with a 409
+// naming the company. The own domain and a shipped entry are refused either way.
+func (s *FreemailDomainStore) AddConfirmed(ctx context.Context, domain, kind string, confirmed bool) (FreemailDomain, error) {
 	// Which grant this write demands depends on what it turns out to be — a
 	// fresh `extra` contribution is create (every seat), everything else is
 	// update (admin/ops) — and "fresh" is only knowable from the table. So the
@@ -175,10 +182,8 @@ func (s *FreemailDomainStore) Add(ctx context.Context, domain, kind string) (Fre
 		if err := lockFreemailDomain(ctx, tx, base); err != nil {
 			return err
 		}
-		var before *string
-		if err := tx.QueryRow(ctx,
-			`SELECT kind FROM capture_freemail_domain WHERE domain = $1`, base).Scan(&before); err != nil &&
-			!errors.Is(err, pgx.ErrNoRows) {
+		before, err := priorFreemailKind(ctx, tx, base)
+		if err != nil {
 			return err
 		}
 		// The specific demand, now that the write knows which half it is:
@@ -189,10 +194,11 @@ func (s *FreemailDomainStore) Add(ctx context.Context, domain, kind string) (Fre
 		// the contract promises an idempotent re-add answers the existing
 		// entry, so a create-only seat retrying a lost response must not 403.
 		// UpsertAction keeps this demand and the audit verb below one word.
-		rewriting := before != nil && *before != kind
-		freshCarveOut := before == nil && kind == FreemailKindNever
-		required := auth.UpsertAction(rewriting || freshCarveOut)
+		required := auth.UpsertAction(changesPriorDecision(before, kind))
 		if err := auth.Require(ctx, freemailDomainObject, required); err != nil {
+			return err
+		}
+		if err := checkConsumerListEntry(ctx, tx, base, kind, confirmed); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx, `
@@ -267,16 +273,10 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 	return nil
 }
 
-// lockFreemailDomain serializes decisions about ONE domain for the life of the
-// caller's transaction. Keyed on the domain alone since ADR-0091 §5 — one
-// installation, one company (ADR-0061) — so two admins editing different
-// domains never wait on each other.
+// lockFreemailDomain serializes this domain's decision against the company
+// domain writer, which takes the same lock.
 func lockFreemailDomain(ctx context.Context, tx pgx.Tx, domain string) error {
-	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:consumer-mail:' || $1)::bigint)`, domain); err != nil {
-		return fmt.Errorf("capture: serializing the decision about %s: %w", domain, err)
-	}
-	return nil
+	return storekit.LockConsumerDomain(ctx, tx, domain)
 }
 
 // freemailEntryAuthor is the human an entry is attributed to, NULL for a system
@@ -334,4 +334,20 @@ func readMatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
 		return nil, fmt.Errorf("capture: reading the workspace consumer-mail list: %w", err)
 	}
 	return freemail.New(extra, never), nil
+}
+
+// priorFreemailKind is the kind a domain already has on the list, nil for none.
+func priorFreemailKind(ctx context.Context, tx pgx.Tx, domain string) (*string, error) {
+	var kind *string
+	err := tx.QueryRow(ctx, `SELECT kind FROM capture_freemail_domain WHERE domain = $1`, domain).Scan(&kind)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	return kind, nil
+}
+
+// changesPriorDecision is true for a fresh carve-out and for a kind flip, the
+// two writes that need the update grant.
+func changesPriorDecision(before *string, kind string) bool {
+	return (before != nil && *before != kind) || (before == nil && kind == FreemailKindNever)
 }

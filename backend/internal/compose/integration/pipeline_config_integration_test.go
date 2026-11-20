@@ -81,12 +81,13 @@ func TestPipelineStageConfigLifecycle(t *testing.T) {
 		t.Fatalf("config events: stage.updated=%d pipeline.updated=%d, want 1 and ≥2", stageUpdated, pipelineUpdated)
 	}
 
+	// Scout, the born Won and Lost, and the Won created above.
 	var stages struct {
 		Data []struct {
 			ID string `json:"id"`
 		} `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/stages?pipeline_id="+second.ID, nil, nil, &stages); status != http.StatusOK || len(stages.Data) != 2 {
+	if status := e.Call(t, "GET", "/v1/stages?pipeline_id="+second.ID, nil, nil, &stages); status != http.StatusOK || len(stages.Data) != 4 {
 		t.Fatalf("list stages → %d %+v", status, stages)
 	}
 	if status := e.Call(t, "GET", "/v1/stages/"+stage.ID, nil, nil, nil); status != http.StatusOK {

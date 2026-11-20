@@ -22,7 +22,8 @@ import (
 const chatLinkEntity = "chat_link"
 
 // insertLink writes the link under the record's lock, with its audit row and
-// the flush that posts the card. A deal whose project has no channel brings
+// the flush that posts the card. A link that asks for the talk so far queues
+// its bot's pull too, rather than waiting for the sweep. A deal whose project has no channel brings
 // the project along, because a deal and its project share one channel.
 func (s *Store) insertLink(ctx context.Context, kind string, id ids.UUID, session Session, channel dispact.Channel, req LinkRequest) (Link, error) {
 	actor, err := linkActor(ctx)
@@ -59,7 +60,12 @@ func (s *Store) insertLink(ctx context.Context, kind string, id ids.UUID, sessio
 		if _, err := storekit.Audit(ctx, tx, "create", chatLinkEntity, out.ID, nil, auditImage(out)); err != nil {
 			return err
 		}
-		return s.flush.EnqueueFlushTx(ctx, tx, out.ID)
+		if out.BackfillRequested {
+			if err := s.jobs.EnqueuePullTx(ctx, tx, out.ConnectionID); err != nil {
+				return err
+			}
+		}
+		return s.jobs.EnqueueFlushTx(ctx, tx, out.ID)
 	})
 	return out, err
 }

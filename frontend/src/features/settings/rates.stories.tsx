@@ -232,6 +232,55 @@ export const SetRateDialog: Story = {
   },
 };
 
+// The server's refusal of the date, on the Effective field.
+export const SetRateRefused: Story = {
+  name: "Set rate dialog, refused",
+  play: async ({ canvasElement }) => {
+    await openDialog("Set rate")({ canvasElement });
+    const dialog = within(canvasElement.ownerDocument.body);
+    await userEvent.type(
+      await dialog.findByRole("textbox", { name: "From" }),
+      "GBP",
+    );
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: "Rate (to base currency)" }),
+      "1.17",
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+  },
+  render: () => {
+    installFetchStub({
+      "GET /me": admin(),
+      "GET /fx-rates": () => jsonResponse(FX),
+      "POST /fx-rates": () =>
+        jsonResponse(
+          {
+            status: 422,
+            code: "validation_error",
+            detail: "effective_date cannot be in the past",
+            details: {
+              errors: [
+                {
+                  field: "effective_date",
+                  code: "fx_rate_past",
+                  message: "effective_date cannot be in the past",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+      "GET /ai/price-sync": () => jsonResponse({ auto_sync: true }),
+      "GET /ai-model-rates": () => jsonResponse(MODELS),
+    });
+    return (
+      <StoryProviders>
+        <RateSheets />
+      </StoryProviders>
+    );
+  },
+};
+
 // The model price dialog, which asks the same question seven times over — the
 // case the shared `Field` spelling was worth having, and the tallest form either
 // sheet opens.

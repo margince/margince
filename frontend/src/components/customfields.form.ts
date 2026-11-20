@@ -10,31 +10,49 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import {
+  typedDecimalText,
+  typedNumberFault,
+  writtenDecimal,
+} from "../format/decimalinput";
 import { formatDateAbbrev, formatMoneyOrAbsent } from "../format/format";
-import { toMajorUnits, toMinorUnits } from "../format/minorunits";
+import {
+  typedAmountFault,
+  typedAmountText,
+  typedMinorUnits,
+} from "../format/minorunits";
 import { browserZone } from "../format/timezone";
 import { webUrl } from "../format/weburl";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
 import { translatedLabel } from "../lib/labeltranslation";
+import {
+  readKindRecord,
+  searchKindRecords,
+  useRecordKindDirectory,
+} from "../lib/recordkinds";
 import { TEXT_LIMITS } from "../lib/textlimits_gen";
 import {
   type CreateField,
   joinMultiselectValue,
   splitMultiselectValue,
 } from "./create";
+import { dayOutOfRange } from "./create.fields";
 
 export type CustomField = components["schemas"]["CustomField"];
 
 export type BooleanLabels = { yes: string; no: string };
+
+type RecordKindDirectory = readonly components["schemas"]["RecordKindOption"][];
 
 // One active custom field → a form control keyed on its immutable column_name.
 // Custom fields are always nullable (backfilled NULL), so never required.
 export function customFieldToFormField(
   field: CustomField,
   boolLabels: BooleanLabels,
-  tooPrecise: (currency: string) => string,
-  locale = "en",
+  t: Translator,
+  locale: Locale = "en",
+  kinds: RecordKindDirectory = [],
 ): CreateField {
   const base = {
     key: field.column_name,
@@ -47,28 +65,32 @@ export function customFieldToFormField(
   }));
   switch (field.type) {
     case "number":
-      return { ...base, type: "number" };
+      return {
+        ...base,
+        type: "decimal",
+        toInput: (raw) => customFieldFormValue(field, raw, locale),
+        validate: (value) => typedNumberFault(value, locale, t),
+      };
     case "date":
-      return { ...base, type: "date" };
+      return {
+        ...base,
+        type: "date",
+        validate: (value) => dayOutOfRange(value, locale, base.labelText),
+      };
     case "currency":
       return {
         ...base,
-        type: "number",
-        toInput: (raw) => customFieldFormValue(field, raw),
-        validate: (value) => {
-          const code = field.currency ?? "";
-          return value.trim() !== "" &&
-            Number.isNaN(toMinorUnits(Number(value), code))
-            ? tooPrecise(code)
-            : undefined;
-        },
+        type: "decimal",
+        toInput: (raw) => customFieldFormValue(field, raw, locale),
+        validate: (value) =>
+          typedAmountFault(value, field.currency ?? "", locale, t),
       };
     case "multiselect":
       return {
         ...base,
         type: "multiselect",
         multiselectEncoding: "json",
-        toInput: (raw) => customFieldFormValue(field, raw),
+        toInput: (raw) => customFieldFormValue(field, raw, locale),
         options: optionChoices,
       };
     case "picklist":
@@ -88,8 +110,19 @@ export function customFieldToFormField(
       };
     case "text":
       return { ...base, type: "text", maxLength: TEXT_LIMITS.document };
-    case "record":
-      return { ...base, type: "text" };
+    case "record": {
+      // A record field keeps its one kind in `options`, as the server checks.
+      const kind = field.options?.[0] ?? "";
+      return {
+        ...base,
+        type: "text",
+        searchTargets: searchKindRecords(kind, kinds),
+        resolveSelected: {
+          scope: kind,
+          read: (id) => readKindRecord(kind, kinds, id),
+        },
+      };
+    }
     default:
       // Exhaustive at COMPILE time over the contract's closed set of six scalar
       // types (CUSTOM-FIELDS-PARAM-1): a seventh added to crm.yaml makes this
@@ -145,6 +178,7 @@ function unhandledCustomFieldType<T>(_type: never, fallback: T): T {
 export function customFieldFormValue(
   field: CustomField,
   stored: unknown,
+  locale: Locale,
 ): string {
   if (stored == null || stored === "") {
     return "";
@@ -153,12 +187,15 @@ export function customFieldFormValue(
     return joinMultiselectValue(Array.isArray(stored) ? stored : [], "json");
   }
   if (field.type === "currency") {
-    return String(toMajorUnits(Number(stored), field.currency ?? ""));
+    return typedAmountText(Number(stored), field.currency ?? "", locale);
+  }
+  if (field.type === "number") {
+    return writtenDecimal(String(stored).trim(), locale);
   }
   return String(stored).trim();
 }
 
-function coerceWrite(field: CustomField, raw: string): unknown {
+function coerceWrite(field: CustomField, raw: string, locale: Locale): unknown {
   const value = raw.trim();
   if (value === "") {
     return null;
@@ -168,18 +205,19 @@ function coerceWrite(field: CustomField, raw: string): unknown {
       // NaN is never sent: it serialises to null, and a null PATCH clears the
       // column. The control's validate refuses such a figure before it gets
       // here; past it, the typed text goes and the store refuses it by name.
-      const minor = toMinorUnits(Number(value), field.currency ?? "");
-      if (Number.isNaN(minor)) {
-        return value;
-      }
-      return minor;
+      const typed = typedMinorUnits(value, field.currency ?? "", locale);
+      return "minor" in typed ? typed.minor : value;
     }
+    case "number":
+      // Numeric round-trips as a string, so the digits keep their precision.
+      // A refused text goes as typed, and the store refuses it by name.
+      return typedDecimalText(value, locale) ?? value;
     case "multiselect":
       return splitMultiselectValue(value, "json");
     case "boolean":
       return value === "true" ? true : value === "false" ? false : null;
     default:
-      // text / picklist / date / number (numeric round-trips as a string).
+      // text / picklist / date.
       return value;
   }
 }
@@ -191,6 +229,7 @@ function coerceWrite(field: CustomField, raw: string): unknown {
 export function customFieldsToBody(
   values: Record<string, unknown>,
   fields: CustomField[],
+  locale: Locale,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   for (const field of fields) {
@@ -198,6 +237,7 @@ export function customFieldsToBody(
     body[field.column_name] = coerceWrite(
       field,
       raw == null ? "" : String(raw),
+      locale,
     );
   }
   return body;
@@ -214,6 +254,7 @@ export function customFieldsToPatch(
   values: Record<string, unknown>,
   seeded: Record<string, unknown>,
   fields: CustomField[],
+  locale: Locale,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   for (const field of fields) {
@@ -223,10 +264,15 @@ export function customFieldsToPatch(
     // the same spelling first, which is what the control was prefilled with.
     const submitted =
       values[column] == null ? "" : String(values[column]).trim();
-    if (submitted === customFieldFormValue(field, seeded[column])) {
+    if (submitted === customFieldFormValue(field, seeded[column], locale)) {
       continue;
     }
-    body[column] = coerceWrite(field, submitted);
+    const written = coerceWrite(field, submitted, locale);
+    // "12.5" over a stored 1250 is the same amount spelled another way.
+    if (typeof written === "number" && written === Number(seeded[column])) {
+      continue;
+    }
+    body[column] = written;
   }
   return body;
 }
@@ -407,14 +453,13 @@ export function useObjectCustomFields(
     activity,
   );
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
+  // Asked only when a field points at a record, and kept for the session.
+  const kinds = useRecordKindDirectory(
+    fields.some((field) => field.type === "record"),
+  ).data?.data;
 
   const controls = fields.map((field) =>
-    customFieldToFormField(
-      field,
-      boolLabels,
-      (currency) => t("record.amountTooPrecise", { currency }),
-      locale,
-    ),
+    customFieldToFormField(field, boolLabels, t, locale, kinds),
   );
   const formFields: CreateField[] =
     controls.length === 0
@@ -437,7 +482,8 @@ export function useObjectCustomFields(
     },
     formFields,
     recordSlice: (record) => customFieldsRecordSlice(record, fields),
-    toBody: (values) => customFieldsToBody(values, fields),
-    toPatch: (values, seeded) => customFieldsToPatch(values, seeded, fields),
+    toBody: (values) => customFieldsToBody(values, fields, locale),
+    toPatch: (values, seeded) =>
+      customFieldsToPatch(values, seeded, fields, locale),
   };
 }

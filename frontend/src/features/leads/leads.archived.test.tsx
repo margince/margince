@@ -475,7 +475,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
 
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Change owner" }),
+      await screen.findByRole("button", { name: "Edit Ownership" }),
     );
     await user.click(
       await screen.findByRole("option", { name: "Dana Fischer" }),

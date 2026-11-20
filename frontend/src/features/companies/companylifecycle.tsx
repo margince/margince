@@ -40,10 +40,9 @@ export function CompanyNameLine({ company }: Readonly<{ company: Company }>) {
 // when it opens, and the header is not a line of text — the stage is the one
 // thing a rep sets on an account, and as a pale inline chip it read as
 // metadata a reader could not act on. So it is the design system's own
-// dropdown worn as a filled button: `--controlHeight`, the same picker, the
-// same PATCH (useCompanyFieldPatch) the rail's Details grid writes through.
-// The grid keeps its inline field, because there the stage IS a value in a
-// row of values.
+// dropdown worn as a filled button at `--controlHeight`. It writes through the
+// PATCH the owner flow uses (useCompanyFieldPatch). The details read the stage
+// as a row.
 export function CompanyLifecycleControl({
   company,
 }: Readonly<{ company: Company }>) {
@@ -62,7 +61,7 @@ export function CompanyLifecycleControl({
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const stored = company.lifecycle ?? "unknown";
-  // A stage saved from somewhere else (the Details grid) supersedes a refused
+  // A stage saved from somewhere else (About's dialog) supersedes a refused
   // pick here: the button shows what the record now holds, not the old error.
   const [shownFor, setShownFor] = useState(stored);
   if (shownFor !== stored) {

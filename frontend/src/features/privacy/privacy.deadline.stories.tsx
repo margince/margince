@@ -32,13 +32,15 @@ function Harness({ initial }: Readonly<{ initial: DeadlineDraft }>) {
   );
 }
 
-function story(rule: string, dueAt: string, initial = EMPTY_DEADLINE) {
+function story(
+  rule: string,
+  dueAt: string,
+  initial = EMPTY_DEADLINE,
+  answer = () => jsonResponse({ due_at: dueAt, rule }),
+) {
   return () => {
     stubWithSession(
-      {
-        "GET /data-subject-requests/deadline": () =>
-          jsonResponse({ due_at: dueAt, rule }),
-      },
+      { "GET /data-subject-requests/deadline": answer },
       { privacy_request: ["read", "update"] },
     );
     return (
@@ -80,4 +82,31 @@ export const EarlierDateTooLate: Story = {
 export const EarlierDateTooLateDark: Story = {
   ...EarlierDateTooLate,
   globals: { theme: "dark" },
+};
+
+/** The server refused the arrival day, said on its own field. */
+export const ReceivedDayRefused: Story = {
+  render: story(
+    "gdpr",
+    "2026-11-11T09:00:00Z",
+    { receivedOn: "2026-07-01", earlierDue: "" },
+    () =>
+      jsonResponse(
+        {
+          title: "Unprocessable Entity",
+          status: 422,
+          code: "validation_error",
+          details: {
+            errors: [
+              {
+                field: "received_at",
+                code: "invalid",
+                message: "a request cannot have arrived in the future",
+              },
+            ],
+          },
+        },
+        422,
+      ),
+  ),
 };

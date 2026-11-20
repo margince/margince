@@ -89,7 +89,7 @@ func (s *Store) RecordEvent(ctx context.Context, ev Event) error {
 					return err
 				}
 			}
-			if err := s.flush.EnqueueFlushTx(ctx, tx, link.ID); err != nil {
+			if err := s.jobs.EnqueueFlushTx(ctx, tx, link.ID); err != nil {
 				return err
 			}
 		}
@@ -251,7 +251,7 @@ func (s *Store) Withdraw(ctx context.Context, activityID ids.UUID) error {
 			return err
 		}
 		for _, link := range links {
-			if err := s.flush.EnqueueFlushTx(ctx, tx, link); err != nil {
+			if err := s.jobs.EnqueueFlushTx(ctx, tx, link); err != nil {
 				return err
 			}
 		}

@@ -72,7 +72,7 @@ func TestLeadCreationPreviewRefusesTheDeprecatedContactID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	in := CreateLeadInput{RequestedContactID: new(ids.From[ids.ContactKind](ids.UUID(contact.Id))), Source: "manual"}
+	in := CreateLeadInput{FullName: new("Known Buyer"), RequestedContactID: new(ids.From[ids.ContactKind](ids.UUID(contact.Id))), Source: "manual"}
 	for name, err := range map[string]error{
 		"preview": func() error { _, err := e.store.PreviewLeadCreation(e.ctx, in); return err }(),
 		"create":  func() error { _, _, err := e.store.CreateLead(e.ctx, in); return err }(),

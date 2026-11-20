@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { UTC_ZONE } from "../../format/timezone";
 import { meFixture } from "../../testing/mefixture";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
@@ -150,5 +151,24 @@ export const WithLegalEntity: Story = {
         <EditMember member={IMPORTED_MEMBER} onClose={() => undefined} />
       </StoryProviders>
     );
+  },
+};
+
+// Save pressed with the name cleared: the field says what it needs.
+export const NameRefused: Story = {
+  render: () => {
+    installMemberEditorRoutes();
+    return (
+      <StoryProviders>
+        <EditMember member={IMPORTED_MEMBER} onClose={() => undefined} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.clear(
+      await page.findByRole("textbox", { name: "Full name" }),
+    );
+    await userEvent.click(page.getByRole("button", { name: "Save member" }));
   },
 };

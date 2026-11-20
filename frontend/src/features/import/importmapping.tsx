@@ -7,9 +7,10 @@ import { Callout } from "../../design-system/callout";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { Select } from "../../design-system/select";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { ColumnGuideButton } from "./import.guide";
 import { ImportRefusal } from "./import.notices";
+import { fieldLabelOf } from "./importfieldlabel";
 import type { WizardFile } from "./importflow";
 import type {
   ImportColumn,
@@ -54,19 +55,22 @@ export function ImportMappingTable({
   onChange: (column: string, target: string) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const options = [
     { value: DONT_IMPORT, label: t("import.dontImport") },
     ...targets.map((target) => ({
       value: target.name,
-      label: target.label ?? target.field_label ?? target.name,
+      label: fieldLabelOf(target),
     })),
   ];
 
   return (
     <div className="import__mapping">
       <p className="import__hint t-sub">
-        {t("import.profiled", { rows: formatNumber(rowsProfiled, locale) })}
+        {plural("import.profiled", rowsProfiled, {
+          count: formatNumber(rowsProfiled, locale),
+        })}
       </p>
       <TableScroll label={t("import.mappingTable")}>
         <table className="import__table">
@@ -200,7 +204,13 @@ export function MapStep({
   format,
 }: Readonly<{ wizard: ImportWizardState; format: ImportFormat }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const typed = typedInOrder(wizard, format.order);
+  const leftOut = typed.flatMap((entry): [string, number][] => {
+    const left = unmapped(entry.file, wizard.mapping[entry.file.file] ?? {});
+    return left > 0 ? [[entry.file.file, left]] : [];
+  });
   const [open, setOpen] = useState(typed[0]?.file.file ?? "");
   const current = typed.find((entry) => entry.file.file === open) ?? typed[0];
   if (!current) return null;
@@ -234,14 +244,14 @@ export function MapStep({
             t(`import.object.${entry.object}`),
           ]),
         )}
-        counts={Object.fromEntries(
-          typed.flatMap((entry) => {
-            const left = unmapped(
-              entry.file,
-              wizard.mapping[entry.file.file] ?? {},
-            );
-            return left > 0 ? [[entry.file.file, left]] : [];
-          }),
+        counts={Object.fromEntries(leftOut)}
+        countLabels={Object.fromEntries(
+          leftOut.map(([file, left]) => [
+            file,
+            plural("import.map.leftOut", left, {
+              count: formatNumber(left, locale),
+            }),
+          ]),
         )}
       />
       <p className="import__hint t-sub">
@@ -279,6 +289,7 @@ export function MapStep({
         <ImportRefusal
           title={t("import.map.stageFailed")}
           error={refused}
+          format={format}
           keepsDraft
         />
       ) : stopped ? (

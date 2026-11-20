@@ -87,6 +87,18 @@ func TestTheWaitDoesNotHideWhatWeOweOrTheirAnswer(t *testing.T) {
 			page: &crmcontracts.Contact360{LastOutboundAt: new(at(goneQuietAfterDays))},
 			want: crmcontracts.ContactMomentRuleGoneQuiet,
 		},
+		"our mail as the newest exchange is still a silence": {
+			page: &crmcontracts.Contact360{LastOutboundAt: new(at(goneQuietAfterDays)), LastContactAt: new(at(goneQuietAfterDays))},
+			want: crmcontracts.ContactMomentRuleGoneQuiet,
+		},
+		"a meeting held after our mail is no silence": {
+			page: &crmcontracts.Contact360{LastOutboundAt: new(at(goneQuietAfterDays + 1)), LastContactAt: new(at(1))},
+			want: crmcontracts.ContactMomentRuleNothingNeeded,
+		},
+		"a meeting held after our mail ends the wait": {
+			page: &crmcontracts.Contact360{LastOutboundAt: new(at(3)), LastContactAt: new(at(1))},
+			want: crmcontracts.ContactMomentRuleNothingNeeded,
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -37,14 +37,13 @@ own. It is the right default for everything that is not Anthropic, OpenAI or Gem
 
 ## 2. Bind a tier
 
-The binding lives in the database. On an installation that is **running and already has a binding**,
-bind a tier under **Settings → AI**. The change works without a restart, within the time the routing
-takes to refresh.
+The binding lives in the database. On a running installation, bind a tier under **Settings → AI**. The change works without a restart,
+within the time the routing takes to refresh. That holds for a role that started with no binding too:
+it refuses AI calls until the first binding is saved, then adopts it.
 
-To save the first binding is the one case that needs a restart after it. A role that started with no
-binding set up no model path. And the watcher that would pick up the change is built from that path. For
-a new installation, declare the binding under `seeds.ai_routing` in `margince.yaml`. The one for a dev
-stack is in `config/margince.dev.yaml`. Then the first start comes up with the binding in place.
+For a new installation you can also declare the binding under `seeds.ai_routing` in `margince.yaml`.
+The one for a dev stack is in `config/margince.dev.yaml`. Then the first start comes up with the
+binding in place.
 
 A seed is used **once**, at the first setup, so a change to it after a database exists does nothing.
 `make dev-fresh` runs the first setup again, and Settings → AI binds again a stack that is already up.
@@ -58,7 +57,7 @@ step 4. The dev default we ship binds **`gemini`** on `cheap_cloud` and `premium
 # variable:
 tiers:
   cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
-  premium:     { provider: gemini, model: gemini-3.5-flash }
+  premium:     { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
 
 # …or any OpenAI-compatible vendor via the generic adapter. It needs a host,
 # set once on the provider (the key comes from OPENAI_COMPATIBLE_API_KEY):

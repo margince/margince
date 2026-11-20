@@ -210,7 +210,7 @@ func phonesMergedOnto(current []byte, mapped []contacts.ContactPhoneInput) ([]co
 		}
 		merged = append(merged, contacts.ContactPhoneInput{
 			Phone: held.Phone, PhoneType: held.PhoneType,
-			IsPrimary: held.IsPrimary && held.PhoneType != mapped[0].PhoneType,
+			IsPrimary: false,
 			Position:  len(merged) + 1,
 		})
 	}
@@ -232,7 +232,7 @@ func storedPrimaryPhone(current map[string]json.RawMessage) json.RawMessage {
 		return nil
 	}
 	for _, row := range rows {
-		if row.IsPrimary && row.PhoneType == contactPhoneTypeWork {
+		if row.PhoneType == contactPhoneTypeWork {
 			return encodedText(row.Phone)
 		}
 	}
@@ -270,11 +270,8 @@ func encodedText(text string) json.RawMessage {
 // file's address becomes the primary WORK address; every stored address it did
 // not name is carried through.
 //
-// Only same-type rows are demoted. uq_contact_email_primary allows one primary
-// per (contact_id, email_type), not one per contact — so clearing the flag on
-// every retained row would strip a contact's primary PERSONAL address because
-// the file named a work one, which is data the import was never given and had
-// no business changing.
+// Every retained row is demoted: uq_contact_email_primary allows one primary
+// per contact, and the file's address takes it.
 //
 // The bool reports whether the file carried an email at all. False means leave
 // the contact's addresses alone rather than send an empty set, which
@@ -307,10 +304,7 @@ func emailsMergedOnto(current []byte, mapped []contacts.ContactEmailInput) ([]co
 		}
 		merged = append(merged, contacts.ContactEmailInput{
 			Email: held.Email, EmailType: kind,
-			// Demoted only if it competes with the incoming address for the
-			// same type's primary slot. A primary personal address keeps its
-			// flag when the file named a work one.
-			IsPrimary:              held.IsPrimary && kind != mapped[0].EmailType,
+			IsPrimary:              false,
 			Position:               len(merged) + 1,
 			VouchedNotCorresponded: true,
 		})
@@ -346,9 +340,8 @@ func storedPrimaryEmail(current map[string]json.RawMessage) json.RawMessage {
 	}
 	// The primary WORK address, because that is what contactEmailsFrom writes and
 	// so the only row the file's column can be compared against. A contact may
-	// hold a primary personal address at the same time — the slot is per type —
-	// and matching on is_primary alone would let row order decide which one the
-	// comparison sees, reporting an update whenever it picked the other.
+	// hold a personal address as its primary, and matching on is_primary alone
+	// would compare the file against that one.
 	var chosen string
 	for _, row := range rows {
 		if row.IsPrimary && row.EmailType == contactEmailTypeWork {

@@ -157,6 +157,41 @@ export function review(over: Partial<LegalReviewSummary> = {}): LegalReview {
           available: false,
         },
       ],
+      contracts: [
+        {
+          id: "019f7e65-0000-7000-8000-0000000000c1",
+          title: "Master services agreement",
+          contract_number: "MSA-7",
+          status: "active",
+          starts_on: "2026-01-01",
+          renewal_on: "2027-01-01",
+          notice_period_days: 60,
+          auto_renew: true,
+        },
+      ],
+      touches: [
+        {
+          activity_id: "019f7e65-0000-7000-8000-0000000000a1",
+          kind: "call",
+          occurred_at: "2026-10-01T09:00:00Z",
+          occurred_precision: "instant",
+          subject: "Liability cap call",
+        },
+        {
+          activity_id: "019f7e65-0000-7000-8000-0000000000a3",
+          kind: "note",
+          occurred_at: "2026-09-30T00:00:00Z",
+          occurred_precision: "day",
+          subject: "Dated note",
+        },
+      ],
+      tasks: [
+        {
+          activity_id: "019f7e65-0000-7000-8000-0000000000a2",
+          subject: "Send the data processing terms",
+          due_at: "2026-10-20T09:00:00Z",
+        },
+      ],
     },
   };
 }

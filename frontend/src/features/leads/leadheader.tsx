@@ -7,10 +7,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
 import { OwnerPick } from "../../components/ownerpick";
+import type { SectionFlow } from "../../components/sectionedit";
 import { fetchGrants } from "../../components/share.parts";
 import { Badge } from "../../design-system/atoms";
 import { IdentityLine } from "../../design-system/identityline";
@@ -119,69 +120,87 @@ export function LeadPulse({ lead }: Readonly<{ lead: Lead }>): ReactNode {
   );
 }
 
-export function LeadOwnerControl({
-  lead,
-  writer,
-  terminalReasonId,
-}: Readonly<{
-  lead: Lead;
-  writer: LeadWriter;
-  terminalReasonId: string;
-}>) {
+/** Who holds the lead. */
+export function LeadOwnerName({ lead }: Readonly<{ lead: Lead }>) {
+  const t = useT();
+  const meId = useMe().data?.user?.id;
+  if (!lead.owner_id) {
+    return t("lead.unassigned");
+  }
+  return lead.owner_id === meId ? (
+    t("lead.ownerYou")
+  ) : (
+    <EntityRef kind="user" id={lead.owner_id} />
+  );
+}
+
+// Not the row's `writable`: an unowned lead is not writable, and its claim is the
+// way out of the unassigned queue. Grant and seat still bind; a closed lead does not move.
+function useOwnerRefusal(lead: Lead, writer: LeadWriter) {
   const t = useT();
   const me = useMe();
-  // Assignment asks a DIFFERENT question from editing, so it drops the PER-ROW
-  // half of the editor's answer and keeps the rest. `writable` is false on a
-  // lead nobody owns (the write arm being right), and gating on it would shut
-  // the only door out of the unassigned queue.
-  //
-  // The other two axes still bind. useCanWrite is the object grant AND the
-  // seat ceiling: a read seat, or one holding no `lead.update`, gets no
-  // pressable control, because the server refuses them and a button that only
-  // fails is worse than none. An archived lead is refused too: a terminal
-  // record is nobody's to hand on.
   const mayAssign = useCanWrite("lead", "update");
   const assignRefusal = useWriteRefusal("lead", "update", {
     seat: t("settings.seatRefused"),
     grant: t("record.actionRefused"),
   });
-  const refused = Boolean(lead.archived_at) || !mayAssign;
-  const meId = me.data?.user?.id;
-  let owner: ReactNode = t("lead.unassigned");
-  if (lead.owner_id) {
-    owner =
-      lead.owner_id === meId ? (
-        t("lead.ownerYou")
-      ) : (
-        <EntityRef kind="user" id={lead.owner_id} />
-      );
+  if (lead.archived_at) {
+    return { refused: true, reason: writer.readOnlyReason };
   }
-  if (refused) {
-    return (
-      <ReadOnlyValue
-        reason={
-          lead.archived_at
-            ? writer.readOnlyReason
-            : (me.data && assignRefusal) || undefined
-        }
-        describedBy={lead.archived_at ? terminalReasonId : undefined}
-      >
-        {owner}
-      </ReadOnlyValue>
-    );
-  }
+  return {
+    refused: !mayAssign,
+    reason: !mayAssign && me.data ? assignRefusal : undefined,
+  };
+}
+
+/** The Ownership row's reading, saying why it is fixed for a reader who may not hand it on. */
+export function LeadOwnerReading({
+  lead,
+  writer,
+  terminalReasonId,
+}: Readonly<{ lead: Lead; writer: LeadWriter; terminalReasonId: string }>) {
+  const { reason } = useOwnerRefusal(lead, writer);
   return (
-    <>
-      <span>{owner}</span>{" "}
+    <ReadOnlyValue
+      reason={reason || undefined}
+      describedBy={lead.archived_at ? terminalReasonId : undefined}
+    >
+      <LeadOwnerName lead={lead} />
+    </ReadOnlyValue>
+  );
+}
+
+/** The owner handover as a flow of the Ownership section, with the claim of an unowned lead. */
+export function useLeadOwnerFlow(
+  lead: Lead,
+  writer: LeadWriter,
+): Readonly<{ flow?: SectionFlow; element: ReactNode }> {
+  const t = useT();
+  const meId = useMe().data?.user?.id;
+  const [open, setOpen] = useState(false);
+  const { refused } = useOwnerRefusal(lead, writer);
+  if (refused) {
+    return { element: null };
+  }
+  return {
+    flow: {
+      label: t("lead.ownerLabel"),
+      reading: <LeadOwnerName lead={lead} />,
+      open: () => setOpen(true),
+    },
+    element: (
       <OwnerPick
+        opener="caller"
+        open={open}
+        onClose={() => setOpen(false)}
         record={lead}
         assign={(ownerId, opened) => writer.assign(ownerId, opened, meId)}
         invalidate="leads"
         recordKey="lead"
         pending={writer.patch.isPending}
       />
-    </>
-  );
+    ),
+  };
 }
 
 // What moved a system-set Engaged, in the few words the status row has.

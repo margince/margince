@@ -27,6 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -213,8 +214,9 @@ func heldNeighbourKeysTx(
 		 WHERE %s
 		   AND NOT EXISTS (SELECT 1 FROM held_neighbours other
 		       WHERE other.thread_key <> a.thread_key
-		         AND mail_topics_differ(a.subject, other.subject))`,
-		arg(neighbours), arg(sent), arg(seat), arg(id), sameTopicSQL("a", "self"))
+		         AND %s)`,
+		arg(neighbours), arg(sent), arg(seat), arg(id),
+		"NOT "+mailsubject.TopicsDifferSQL("a.subject", "self.subject"), mailsubject.TopicsDifferSQL("a.subject", "other.subject"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the threads a reply links: %w", err)

@@ -1275,6 +1275,9 @@ test("AC-pipeline-12: a busy stage's column loads its next page on its own", asy
   await expect(loadMore).toHaveCount(0);
 });
 
+// The note a won close leaves. A shown probability follows it after a "·".
+const closedWonNote = new RegExp(`^${de["deals.closedWon"]}`);
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {
@@ -1295,14 +1298,14 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   // with its contract is never asked.
   await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
   // Still nothing has run: the drop is not applied while the dialog is open.
-  await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
+  await expect(page.getByText(closedWonNote)).toHaveCount(0);
 
   await page
     .getByRole("combobox", { name: "Wie wurde der Deal gewonnen?" })
     .click();
   await page.getByRole("option", { name: "Per Bestellung" }).click();
   await page.getByRole("button", { name: "Bestätigen" }).click();
-  await expect(page.getByText("Nach Won verschoben")).toBeVisible();
+  await expect(page.getByText(closedWonNote)).toBeVisible();
 });
 
 /** A board card's "…" trigger, reached from the card's own link with Tab. */
@@ -1355,7 +1358,7 @@ test("AC-deal-7: a card's menu asks the terminal confirm for Mark won, and Cance
     .click();
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
   await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
-  await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
+  await expect(page.getByText(closedWonNote)).toHaveCount(0);
 
   await page.getByRole("button", { name: "Abbrechen" }).click();
   await expect(page.getByText("In die Phase Won verschieben?")).toHaveCount(0);
@@ -1747,7 +1750,7 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   await page.getByLabel("Deal-Name").fill("Neuer Deal");
   // By role: getByLabel("Wert") matches any label containing the word.
-  await page.getByRole("spinbutton", { name: "Wert" }).fill("480");
+  await page.getByRole("textbox", { name: "Wert" }).fill("480");
   await page.getByRole("button", { name: "Erstellen" }).click();
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });
@@ -3685,8 +3688,12 @@ const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
 
 // The analytics forecast for a reader who may share it, with the drawer open
 // from its trigger by the KEYBOARD, so every caller starts from the same place.
+// The rail offers Analytics only to a reader who may read the forecast.
 async function openSharedLinks(page: Page) {
-  await servePrincipal(page, meFixture({ allow: { forecast: ["create"] } }));
+  await servePrincipal(
+    page,
+    meFixture({ allow: { forecast: ["read", "create"] } }),
+  );
   await page.route(/\/v1\/forecast\/shares$/, (route) =>
     route.fulfill({ json: { data: SHARED_LINK_ROWS } }),
   );

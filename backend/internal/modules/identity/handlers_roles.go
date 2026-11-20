@@ -14,6 +14,7 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -38,7 +39,7 @@ func (h Handlers) ListRoles(w http.ResponseWriter, r *http.Request, params crmco
 	// the same URL — the same reasoning as the roster's private cache header,
 	// with a narrower audience.
 	w.Header().Set("Cache-Control", "private, no-store")
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RoleDirectory{Roles: roles})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RoleDirectory{Roles: roles, Verbs: wireVerbs()})
 }
 
 // SetRoleObjectGrant (PATCH /roles/{key}/objects/{object}).
@@ -67,6 +68,38 @@ func (h Handlers) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request, key
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, wireRole(row))
+}
+
+// RestoreRoleGrants (POST /roles/{key}/restore-grants).
+func (h Handlers) RestoreRoleGrants(w http.ResponseWriter, r *http.Request, key string, _ crmcontracts.RestoreRoleGrantsParams) {
+	actor, ok := h.actor(w, r)
+	if !ok {
+		return
+	}
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	row, err := h.svc.RestoreRoleGrants(r.Context(), actor, key, ifVersion)
+	if err != nil {
+		httperr.Write(w, r, roleEditRefusal(unknownRoleRefusal(err)))
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireRole(row))
+}
+
+// wireVerbs maps the verbs each grantable object offers onto the contract.
+func wireVerbs() map[string][]crmcontracts.RoleDirectoryVerbs {
+	offered := policy.OfferedVerbsByObject()
+	out := make(map[string][]crmcontracts.RoleDirectoryVerbs, len(offered))
+	for object, verbs := range offered {
+		wire := make([]crmcontracts.RoleDirectoryVerbs, 0, len(verbs))
+		for _, verb := range verbs {
+			wire = append(wire, crmcontracts.RoleDirectoryVerbs(verb))
+		}
+		out[object] = wire
+	}
+	return out
 }
 
 // ListAssignableRoles (GET /users/assignable-roles).
@@ -175,6 +208,8 @@ func roleEditRefusal(err error) error {
 	}{
 		{errRoleNameTaken, http.StatusConflict, "role_name_taken", "another role already has this name; choose a different one"},
 		{errSystemRole, http.StatusConflict, "system_role", "a role the product ships cannot be archived"},
+		{errNotSystemRole, http.StatusConflict, "custom_role", "only a role the product ships has shipped grants to return to"},
+		{errWriteNeedsRead, http.StatusUnprocessableEntity, "write_needs_read", "turn on Read for this object, or turn off Create, Update and Delete"},
 		{
 			errRoleInUse, http.StatusConflict, "role_in_use",
 			"members who can sign in hold this role; give them another role before archiving it",

@@ -13,10 +13,17 @@ import (
 	"mime/multipart"
 	"net/url"
 	"strconv"
+	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // errUnreadable refuses a body this intake cannot read as form fields.
 var errUnreadable = errors.New("the body is not form fields; send it urlencoded, as multipart/form-data or as a JSON object")
+
+// errMalformedText refuses text that is not valid UTF-8, which a decode would
+// store as U+FFFD without a sign.
+var errMalformedText = errors.New("the submission must be valid UTF-8 text")
 
 // parseFields reads a urlencoded, multipart or flat JSON body. A file part of a
 // multipart body is skipped: a form's attachments are not a lead's data.
@@ -50,6 +57,9 @@ func urlencodedFields(body []byte) ([]Field, error) {
 		if err != nil {
 			return nil, errUnreadable
 		}
+		if !utf8.ValidString(n) || !utf8.ValidString(v) {
+			return nil, errMalformedText
+		}
 		if n != "" {
 			out = append(out, Field{Name: n, Value: v})
 		}
@@ -79,6 +89,9 @@ func multipartFields(body []byte, boundary string) ([]Field, error) {
 		if err != nil {
 			return nil, errUnreadable
 		}
+		if !utf8.Valid(value) || !utf8.ValidString(part.FormName()) {
+			return nil, errMalformedText
+		}
 		out = append(out, Field{Name: part.FormName(), Value: string(value)})
 	}
 	return out, nil
@@ -87,6 +100,9 @@ func multipartFields(body []byte, boundary string) ([]Field, error) {
 // jsonFields reads one flat JSON object. A nested value is kept as its JSON
 // text, so a sender's structure still reaches the timeline.
 func jsonFields(body []byte) ([]Field, error) {
+	if datasource.HasMalformedText(body) {
+		return nil, errMalformedText
+	}
 	var object map[string]json.RawMessage
 	if err := json.Unmarshal(body, &object); err != nil {
 		return nil, errUnreadable

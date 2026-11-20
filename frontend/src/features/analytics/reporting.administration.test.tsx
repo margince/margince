@@ -62,10 +62,7 @@ it("creates a monetary commitment in minor units and refuses an incomplete targe
     dialog.getByRole("combobox", { name: /Month starting/ }),
     "October",
   );
-  await user.type(
-    dialog.getByRole("spinbutton", { name: /^Target/ }),
-    "1250.25",
-  );
+  await user.type(dialog.getByRole("textbox", { name: /^Target/ }), "1250.25");
   await user.type(dialog.getByLabelText(/Reason/), "Agreed October commitment");
   await user.click(dialog.getByRole("button", { name: "Set target" }));
   await waitFor(() =>
@@ -107,8 +104,8 @@ it("revises a count target without rescaling it or changing its identity", async
   expect(dialog.getByLabelText(/Year/)).toBeDisabled();
   // Meetings count every pipeline, so the editor offers none.
   expect(dialog.queryByRole("combobox", { name: "Pipeline" })).toBeNull();
-  expect(dialog.getByRole("spinbutton", { name: /^Target/ })).toHaveValue(40);
-  fireEvent.change(dialog.getByRole("spinbutton", { name: /^Target/ }), {
+  expect(dialog.getByRole("textbox", { name: /^Target/ })).toHaveValue("40");
+  fireEvent.change(dialog.getByRole("textbox", { name: /^Target/ }), {
     target: { value: "45" },
   });
   await user.type(dialog.getByLabelText(/Reason/), "Additional capacity");
@@ -424,7 +421,7 @@ it("offers only fiscal-quarter start months and submits the selected boundary", 
     screen.getAllByRole("option").map((option) => option.textContent),
   ).toEqual(["February", "May", "August", "November"]);
   await user.click(screen.getByRole("option", { name: "November" }));
-  await user.type(dialog.getByRole("spinbutton", { name: /^Target/ }), "1200");
+  await user.type(dialog.getByRole("textbox", { name: /^Target/ }), "1200");
   await user.type(
     dialog.getByRole("textbox", { name: /Reason/ }),
     "Agreed fiscal-quarter target",

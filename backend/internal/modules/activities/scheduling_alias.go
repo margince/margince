@@ -56,7 +56,7 @@ func validateBookingAlias(alias string) error {
 		return aliasRefusal("too_short", fmt.Sprintf("Use at least %d characters", bookingAliasMin))
 	case length > bookingAliasMax:
 		return &SchedulingArgumentError{
-			Field: aliasField, Code: "too_long", Max: bookingAliasMax,
+			Field: aliasField, Code: codeTooLong, Max: bookingAliasMax,
 			Message: fmt.Sprintf("Use at most %d characters", bookingAliasMax),
 		}
 	}

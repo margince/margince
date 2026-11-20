@@ -17,12 +17,12 @@ import {
 import { ListPopover } from "../../design-system/listpopover";
 import { useCloseOverflowMenu } from "../../design-system/overflowmenu";
 import { type useOwnToast, useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { appHref } from "../../lib/recordaddress";
 import { routeHash } from "../../lib/router";
 import type { Deal, Stage } from "./deals";
-import { dealCloseDateField } from "./deals.fields";
+import { dealCloseDate, dealCloseDateField } from "./deals.fields";
 import { archiveDeal, openDealEdit, saveDealEdit } from "./deals.write";
 
 type CardVerbs = Pick<DealCardActions, "onSummary" | "onEmail" | "onAddTask">;
@@ -149,16 +149,18 @@ function DealMoves({
 // Saved as the record page's own close-date row saves it.
 function DealCloseDate({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const closeDate = dealCloseDate(t, locale);
   const write = useRailText(
     {
       kind: "deal",
-      record: openDealEdit(deal),
-      fields: [dealCloseDateField],
+      record: openDealEdit(deal, locale),
+      fields: [closeDate],
       canEdit: true,
       save: (values, _rows, opened) =>
-        saveDealEdit(opened, values, deal.masked_fields ?? []),
+        saveDealEdit(opened, values, deal.masked_fields ?? [], locale),
     },
-    dealCloseDateField,
+    closeDate,
   );
   const { open, editing } = useFieldEditor(
     write.canEdit,
@@ -192,11 +194,17 @@ function DealCloseDate({ deal }: Readonly<{ deal: Deal }>) {
 
 function DealOwnerPick({ deal }: Readonly<{ deal: Deal }>) {
   const closeMenu = useCloseOverflowMenu();
+  const { locale } = useLocale();
   return (
     <OwnerPick
-      record={openDealEdit(deal)}
+      record={openDealEdit(deal, locale)}
       assign={(ownerId, opened) =>
-        saveDealEdit(opened, { owner_id: ownerId }, deal.masked_fields ?? [])
+        saveDealEdit(
+          opened,
+          { owner_id: ownerId },
+          deal.masked_fields ?? [],
+          locale,
+        )
       }
       invalidate="deals"
       recordKey="deal"

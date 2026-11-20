@@ -152,7 +152,7 @@ function stubApi({
 }
 
 function AboutRail({ view }: Readonly<{ view: Contact360 }>) {
-  return <RecordDetails sections={useContactAboutSections(view)} />;
+  return <RecordDetails sections={useContactAboutSections(view).sections} />;
 }
 
 // The rail as the contact page draws it: from the 360 read, which a write

@@ -15,11 +15,11 @@ import { useT } from "../../i18n";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
-import { scrollPageToTop } from "../../lib/reveal";
 import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { leadBand } from "./leadband";
-import { LeadDetails, useFieldSave } from "./leaddetails";
+import { LeadDetails } from "./leaddetails";
+import { useLeadRenameSave } from "./leadedit";
 import { LeadPulse, LeadSubtitle } from "./leadheader";
 import { LeadHistoryTab, LeadLatestInbound } from "./leadhistory";
 import { leadIdentityName } from "./leadname";
@@ -161,7 +161,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   // mode).
   const [composing, setComposing] = useState(false);
   const latest = useLatestInbound("lead", lead.id);
-  const saveField = useFieldSave(lead);
+  const rename = useLeadRenameSave(lead);
 
   return (
     <RecordView
@@ -179,7 +179,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         value: lead.full_name ?? "",
         canEdit: !writer.readOnly,
         readOnlyReason: writer.readOnlyReason,
-        onSave: saveField("full_name", true),
+        onSave: rename,
       }}
       identity={lead.id}
       nameBadge={<LeadSubtitle lead={lead} />}
@@ -220,10 +220,8 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         <RecordTabs
           options={LEAD_TABS}
           value={tab}
-          onChange={(next) => {
-            setTab(next);
-            scrollPageToTop();
-          }}
+          onChange={setTab}
+          keepPlace
           labels={{
             overview: t("tab.overview"),
             deals: t("tab.deals"),

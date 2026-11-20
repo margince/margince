@@ -66,6 +66,17 @@ describe("a different seat signing in", () => {
     expect(client.getQueryData(["me"])).toEqual(seat("seat-b"));
   });
 
+  it("drops the previous seat's own account reads, such as its signed-in devices", () => {
+    const client = new QueryClient();
+    const view = signedIn(client, seat("seat-a"));
+    client.setQueryData(["me", "sessions"], [{ id: "s1" }]);
+    act(() => client.setQueryData(["me"], undefined));
+    view.rerender();
+    act(() => client.setQueryData(["me"], seat("seat-b")));
+    view.rerender();
+    expect(client.getQueryData(["me", "sessions"])).toBeUndefined();
+  });
+
   it("keeps record caches when the same seat's grants change", () => {
     const client = new QueryClient();
     const view = signedIn(client, seat("seat-a"));

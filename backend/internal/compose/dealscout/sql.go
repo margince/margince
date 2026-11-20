@@ -1,0 +1,175 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package dealscout
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+)
+
+const (
+	// signalPairWindow is how close a buyer request and a commitment must be.
+	signalPairWindow = 30 * 24 * time.Hour
+	// itemCap bounds the meetings and documents one suggestion cites.
+	itemCap = 5
+)
+
+// EvidenceSQL is the statement ReadEvidence runs. Buyer intent selects
+// candidates; meetings and documents only corroborate them. share is the
+// installation's switch for sharing routine-private requests.
+func EvidenceSQL(since, now time.Time, companyCap int, share bool) (string, []any) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	sincePos, nowPos := arg(since), arg(now)
+	in := func(at string) string {
+		return fmt.Sprintf(`%[1]s > $%[2]d AND %[1]s <= $%[3]d`, at, sincePos, nowPos)
+	}
+	pairSeconds := arg(int64(signalPairWindow / time.Second))
+	document := ProposalDocumentSQL("at.filename", "at.content_type", arg)
+	query := `WITH ev AS (` + scoutEvidenceSQL(in, document, share) + `
+	), deduped AS (
+   SELECT DISTINCT ON (company_id, kind, source_identity) * FROM ev
+   ORDER BY company_id, kind, source_identity, occurred_at, ref
+ ), pairs AS (
+	  SELECT DISTINCT ON (o.company_id) o.company_id, o.ref AS opportunity, c.ref AS commitment,
+	         greatest(o.occurred_at, c.occurred_at) AS occurred_at
+	    FROM deduped o
+	    JOIN deduped c ON c.company_id = o.company_id AND c.signal_kind = 'commitment_made' AND c.matter = o.matter
+	     AND abs(extract(epoch FROM c.occurred_at - o.occurred_at)) <= $` + fmt.Sprint(pairSeconds) + `
+	   WHERE o.signal_kind = 'new_opportunity'
+	   ORDER BY o.company_id, o.occurred_at DESC, c.occurred_at DESC
+	), requests AS (
+	  SELECT DISTINCT ON (company_id) company_id, ref AS opportunity, occurred_at
+	    FROM deduped WHERE signal_kind = 'new_opportunity' AND request
+	   ORDER BY company_id, occurred_at DESC, ref
+	), chosen AS (
+	  SELECT company_id FROM (
+	    SELECT company_id, occurred_at FROM pairs
+	    UNION ALL SELECT company_id, occurred_at FROM requests) qualifying
+	   GROUP BY company_id
+	   ORDER BY max(occurred_at) DESC, company_id
+	   LIMIT $` + fmt.Sprint(arg(companyCap)) + `
+	), cited AS (
+	  SELECT ev.*, row_number() OVER (PARTITION BY ev.company_id, ev.kind ORDER BY ev.occurred_at DESC, ev.ref) AS rank
+	    FROM deduped ev JOIN chosen USING (company_id)
+	   WHERE ev.kind <> 'signal'
+	      OR ev.ref IN (SELECT p.opportunity FROM pairs p WHERE p.company_id = ev.company_id
+	                    UNION SELECT p.commitment FROM pairs p WHERE p.company_id = ev.company_id
+	                    UNION SELECT r.opportunity FROM requests r WHERE r.company_id = ev.company_id)
+	)
+	SELECT cited.company_id, cited.kind, cited.ref, cited.stamp, reading.amount, reading.currency,
+	       cited.request, cited.decision_date, cited.budget_quote, cited.shareable
+	  FROM cited
+	  LEFT JOIN LATERAL (
+	    SELECT (SELECT f->>'Value' FROM jsonb_array_elements(x.fields) f
+	             WHERE f->>'Field' = 'amount_minor' AND NOT coalesce((f->>'Omitted')::boolean, false)) AS amount,
+	           (SELECT f->>'Value' FROM jsonb_array_elements(x.fields) f
+	             WHERE f->>'Field' = 'currency' AND NOT coalesce((f->>'Omitted')::boolean, false)) AS currency
+	      FROM attachment_extraction x
+	     WHERE cited.kind = 'attachment' AND x.attachment_id = cited.ref AND x.status = 'done'
+	       AND x.question = 'deal_facts'
+	     ORDER BY x.finished_at DESC LIMIT 1) reading ON true
+	 WHERE cited.kind = 'signal' OR cited.rank <= $` + fmt.Sprint(arg(itemCap)) + `
+	 ORDER BY cited.company_id, cited.occurred_at DESC, cited.ref`
+	return query, args
+}
+
+// scoutEvidenceSQL places a meeting or a document by occurredday.StartSQL, so a
+// day entry falls in the window and past the floor by its date. stamp is the
+// stored time the evidence is recorded at, which no zone moves.
+func scoutEvidenceSQL(in func(string) string, document string, share bool) string {
+	placed := occurredday.StartSQL("a")
+	return `
+	  SELECT mc.company_id, 'meeting' AS kind, a.id AS ref, a.occurred_at, a.occurred_at AS stamp,
+	         NULL::text AS signal_kind, a.id::text AS source_identity, NULL::text AS matter,
+	         false AS request, NULL::text AS decision_date, NULL::text AS budget_quote, true AS shareable
+	    FROM (` + activities.HeldMeetingCounterparties() + `) mc
+	    JOIN activity a ON a.id = mc.activity_id
+	   WHERE ` + WorkspaceEvidence("a") + ` AND ` + in(placed) + `
+	     AND ` + scoutCandidate("mc.company_id", placed) + `
+	  UNION ALL
+	  SELECT s.resolved_company_id, 'signal', s.id, source.occurred_at, source.stamp, s.kind, s.id::text, source.matter,
+	         asked.request, facts.cite->'fields'->>'` + DecisionDateKey + `', facts.cite->'fields'->>'` + BudgetQuoteKey + `',
+	         ` + RequestShareableSQL("s", share) + `
+	    FROM signal s
+	    CROSS JOIN LATERAL (SELECT s.kind = 'new_opportunity' AND ` + BuyerSignal("s", true) + ` AS request) asked
+	    LEFT JOIN LATERAL (SELECT request_cite AS cite FROM jsonb_array_elements(s.evidence) request_cite
+	           WHERE asked.request AND ` + ExplicitRequestCite("request_cite") + ` LIMIT 1) facts ON true
+	    CROSS JOIN LATERAL (SELECT ` + storekit.CitedActivityTime("s.evidence") + ` AS occurred_at,
+         ` + storekit.CitedActivityStamp("s.evidence") + ` AS stamp,
+         (SELECT CASE WHEN count(DISTINCT coalesce(nullif(m.thread_key, ''), m.id::text)) = 1
+            THEN min(coalesce(nullif(m.thread_key, ''), m.id::text)) END
+          FROM jsonb_array_elements(s.evidence) matter_cite
+          JOIN activity m ON m.id = ` + storekit.CitedActivityID("matter_cite") + `
+          WHERE matter_cite->>'source_type' = 'activity') AS matter) source
+	   WHERE s.kind IN ('new_opportunity', 'commitment_made')
+	     AND (s.kind <> 'new_opportunity' OR ((` + BuyerSignal("s", false) + ` OR asked.request) AND ` + UnlinkedCommercialMatter("s") + `))
+	     AND s.status = 'open' AND s.archived_at IS NULL
+	     AND (s.visibility = 'workspace' OR (asked.request AND s.visibility = 'owner'))
+	     AND ` + in("source.occurred_at" /* occurred_at raw: a signal's cited time is placed already */) + `
+	     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
+	           WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
+	             WHERE ca.id = ` + storekit.CitedActivityID("cite") + ` AND (` + WorkspaceEvidence("ca") + `
+	               OR (asked.request AND ` + RequestSource("ca") + `))))
+	     AND ` + scoutCandidate("s.resolved_company_id", "source.occurred_at" /* occurred_at raw: a signal's cited time is placed already */) + `
+	  UNION ALL
+	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, a.occurred_at, NULL,
+	         coalesce(nullif(at.checksum, ''), at.id::text), NULL::text, false, NULL::text, NULL::text, true
+	    FROM attachment at
+	    JOIN activity a ON a.id = at.activity_id
+	    JOIN (` + activities.CompanyReachSet() + `) filed ON filed.activity_id = a.id
+	   WHERE at.archived_at IS NULL AND NOT at.bytes_withheld AND a.kind = 'email' AND a.direction = 'outbound'
+	     AND ` + WorkspaceEvidence("a") + ` AND ` + in(placed) + `
+	     AND ` + document + `
+	     AND ` + scoutCandidate("filed.company_id", placed) + ``
+}
+
+// WorkspaceEvidence admits an activity the whole workspace may read: the
+// workspace audience, live, and on a thread nobody holds.
+func WorkspaceEvidence(alias string) string {
+	return fmt.Sprintf(`(`+auth.WorkspaceAudienceSQL("%[1]s")+` AND %[1]s.archived_at IS NULL AND NOT %[2]s)`,
+		alias, capture.CounterpartyHeldOn(alias))
+}
+
+// RequestSource admits the message an explicit request was read from, whatever
+// its audience. A buyer asking for a quotation opens a deal even from protected
+// mail. The opener decides what of it reaches the deal (ShareableRequestSource).
+func RequestSource(alias string) string {
+	return alias + `.archived_at IS NULL AND ` + alias + `.restricted_at IS NULL`
+}
+
+// ShareableRequestSource is whether what a request's mail says may reach the
+// deal (activities.ShareableAudience, with on the installation's switches).
+// Mail someone protected opens the deal and gives it nothing.
+func ShareableRequestSource(alias string, on bool) string {
+	return `(` + WorkspaceEvidence(alias) + ` OR (` + alias + `.archived_at IS NULL AND ` +
+		activities.ShareableAudience(alias, on) + ` AND NOT ` + capture.CounterpartyHeldOn(alias) + `))`
+}
+
+// RequestShareableSQL is whether what signal says may reach a deal: it is
+// workspace-visible and every message it cites is shareable.
+func RequestShareableSQL(signal string, share bool) string {
+	return `(` + signal + `.visibility = 'workspace' AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(` + signal + `.evidence) share_cite
+	  WHERE share_cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity share_source
+	    WHERE share_source.id = ` + storekit.CitedActivityID("share_cite") + ` AND ` + ShareableRequestSource("share_source", share) + `)))`
+}
+
+// ExplicitRequestCite is whether a signal cite records an explicit request.
+func ExplicitRequestCite(cite string) string {
+	return `(` + cite + `->'fields'->>'` + RequestKindKey + `' = '` + RequestKindExplicit + `')`
+}
+
+// scoutCandidate narrows evidence to companies that may be offered a
+// suggestion, and to evidence newer than the company's floor.
+func scoutCandidate(company, occurred string) string {
+	return deals.SuggestableCompanyClause(company) +
+		` AND ` + occurred + ` > coalesce(` + deals.SuggestionFloorExpr(company) + `, '-infinity'::timestamptz)`
+}

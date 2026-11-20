@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -147,7 +148,11 @@ type DealCoverage struct {
 	// stakeholders, one edge per colleague and contact, warmest first.
 	// OurColleagues folds it to one entry per colleague.
 	OurSide []ColleagueEdge
-	Risks   []Risk
+	// Pairs says who talks to which seat, read from the activities the caller
+	// may open. Nil when the caller may not say: no activity grant, or the edge
+	// sections withheld. Set by the one handler that wires it.
+	Pairs *search.PairReading
+	Risks []Risk
 	// SectionsOmitted names the sections withheld for lack of the edge grant.
 	// Nil on the ordinary read.
 	//
@@ -299,9 +304,10 @@ func foldRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 	//
 	// The finding still arrives the moment there is something to find: one
 	// captured touch is enough to make the count mean what it says.
+	// A contact may hold several roles on one deal, one seat each.
 	engaged := make([]ids.UUID, 0, len(c.Stakeholders))
 	for _, s := range c.Stakeholders {
-		if s.Engaged {
+		if s.Engaged && !slices.Contains(engaged, s.ContactID) {
 			engaged = append(engaged, s.ContactID)
 		}
 	}

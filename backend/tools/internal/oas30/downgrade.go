@@ -107,6 +107,13 @@ const (
 	MaximumTag = "maximum"
 )
 
+// SingleLineTag marks a text field the contract declares `x-single-line`, whose
+// value may carry no control character, line break or bidirectional override.
+// datasource.SingleLineTag reads it; the contract gate fails if the names differ.
+const SingleLineTag = "singleline"
+
+const singleLineKey = "x-single-line"
+
 const extraTagsKey = "x-oapi-codegen-extra-tags"
 
 // Node downgrades a parsed OpenAPI 3.1 YAML node tree to 3.0.3 in place. The
@@ -234,6 +241,11 @@ func rewriteKeyword(mapping, key, val *yaml.Node) (handled, drop bool, err error
 				kept = append(kept, member)
 			}
 			val.Content = kept
+		}
+		return true, false, nil
+	case singleLineKey:
+		if val.Kind == yaml.ScalarNode && val.Value == "true" {
+			addExtraTag(mapping, SingleLineTag, "true")
 		}
 		return true, false, nil
 	case "uniqueItems":

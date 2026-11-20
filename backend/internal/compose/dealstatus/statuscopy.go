@@ -24,6 +24,11 @@ var statusWords = struct {
 	FarMeeting                       langcopy.Phrase
 	Complete                         langcopy.Phrase
 	Reminder                         langcopy.Phrase
+	RepliedYou                       langcopy.Phrase
+	RepliedTeam                      langcopy.Phrase
+	RepliedMarkDone                  langcopy.Phrase
+	RepliedOpen                      langcopy.Phrase
+	RepliedAsked                     langcopy.Phrase
 	Request                          langcopy.Phrase
 	OwnReply                         langcopy.Phrase
 	ReviewReply                      langcopy.Phrase
@@ -68,6 +73,11 @@ var statusWords = struct {
 	FarMeeting:       langcopy.Phrase{En: "A meeting is booked %s — no earlier open task is recorded.", De: "Eine Besprechung ist %s geplant – davor ist keine offene Aufgabe erfasst.", Vi: "Cuộc họp đã được lên lịch %s – chưa ghi nhận việc cần làm trước đó."},
 	Complete:         langcopy.Phrase{En: "Complete the existing task: %s", De: "Erledigen Sie die bestehende Aufgabe: %s", Vi: "Hoàn thành nhiệm vụ hiện có: %s"},
 	Reminder:         langcopy.Phrase{En: "This request already has a reminder. The reply still needs to be handled.", De: "Für diese Anfrage gibt es bereits eine Erinnerung. Die Antwort steht noch aus.", Vi: "Yêu cầu này đã có lời nhắc. Vẫn cần xử lý câu trả lời."},
+	RepliedYou:       langcopy.Phrase{En: "You replied %s.", De: "Sie haben %s geantwortet.", Vi: "Bạn đã trả lời %s."},
+	RepliedTeam:      langcopy.Phrase{En: "Your team replied %s.", De: "Ihr Team hat %s geantwortet.", Vi: "Nhóm của bạn đã trả lời %s."},
+	RepliedMarkDone:  langcopy.Phrase{En: "If nothing more is owed, mark the reminder done.", De: "Wenn nichts mehr aussteht, erledigen Sie die Erinnerung.", Vi: "Nếu không còn gì cần làm, hãy đánh dấu lời nhắc là xong."},
+	RepliedOpen:      langcopy.Phrase{En: "The request is still open.", De: "Die Anfrage ist noch offen.", Vi: "Yêu cầu vẫn đang mở."},
+	RepliedAsked:     langcopy.Phrase{En: "Still asked: %s", De: "Noch offen: %s", Vi: "Vẫn còn được hỏi: %s"},
 	Request:          langcopy.Phrase{En: "Request: %s", De: "Anfrage: %s", Vi: "Yêu cầu: %s"},
 	OwnReply:         langcopy.Phrase{En: "Review and take responsibility for the reply still owed: %s", De: "Prüfen und übernehmen Sie die noch ausstehende Antwort: %s", Vi: "Xem xét và nhận trách nhiệm cho câu trả lời còn thiếu: %s"},
 	ReviewReply:      langcopy.Phrase{En: "Review whether this conversation needs a follow-up: %s", De: "Prüfen Sie, ob dieses Gespräch eine Rückmeldung braucht: %s", Vi: "Xem xét liệu cuộc trao đổi này có cần phản hồi tiếp hay không: %s"},

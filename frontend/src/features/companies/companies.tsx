@@ -11,9 +11,8 @@ import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
 import { COMPANY_TABS, type CompanyTab } from "../../lib/companytab";
-import { useDisabledCoreFeatures } from "../../lib/corefeatures";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { unwrap } from "../../lib/problem";
-import { scrollPageToTop } from "../../lib/reveal";
 import { useAddressedTab } from "../records/recordtab";
 import { CompanyPage } from "./companies.page";
 import { useAcknowledgeCompanyView, useCompany360 } from "./company360";
@@ -201,7 +200,7 @@ function CompanyRecord({
   t: ReturnType<typeof useT>;
 }>) {
   const archived = Boolean(company.archived_at);
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   const enabledTab = (tab: CompanyTab) =>
     (tab !== "contacts" || !disabled.includes("contacts")) &&
     (tab !== "deals" ||
@@ -218,10 +217,8 @@ function CompanyRecord({
       <RecordTabs
         options={visibleTabs}
         value={tab}
-        onChange={(next) => {
-          onTab(next);
-          scrollPageToTop();
-        }}
+        onChange={onTab}
+        keepPlace
         counts={companyTabCounts(assembled)}
         labels={{
           // "360", not the shared "Overview": this tab is the account's

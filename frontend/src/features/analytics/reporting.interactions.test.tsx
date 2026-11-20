@@ -3,6 +3,7 @@ import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import "@testing-library/jest-dom/vitest";
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -107,6 +108,38 @@ it("saves the full selected graph layout and context", async () => {
     }),
     expect.any(URL),
   );
+});
+it("stores a report once when its form is submitted twice before the answer", async () => {
+  const user = userEvent.setup({ delay: null });
+  let answer: (response: Response) => void = () => {};
+  const write = vi.fn(
+    () => new Promise<Response>((resolve) => (answer = resolve)),
+  );
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "POST /analytics/reports": write,
+  });
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryEvaluation.selection}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await user.type(
+    await screen.findByRole("textbox", { name: "Report name" }),
+    "Friday review",
+  );
+  const form = screen
+    .getByRole("textbox", { name: "Report name" })
+    .closest("form");
+  if (!form) throw new Error("the dialog has no form");
+  fireEvent.submit(form);
+  fireEvent.submit(form);
+  await waitFor(() => expect(write).toHaveBeenCalledOnce());
+  answer(jsonResponse(reportingStoryReport));
 });
 it("draws a saved layout's sections under their titles", async () => {
   const laidOutEvaluation = {

@@ -36,6 +36,7 @@ function served(stage: Stage) {
           verbs={{
             writable: true,
             canRemove: true,
+            onlyOfKind: new Set(),
             onAddCriterion: fn(),
             onRemove: fn(),
           }}
@@ -85,5 +86,26 @@ export const ClosingStage: Story = {
       page.getByRole("button", { name: "Edit stage" }),
     ).toBeVisible();
     await expect(page.queryByRole("button", { name: "Remove" })).toBeNull();
+  },
+};
+
+/** An edit refused before sending: a chance with a fraction, said in percent. */
+export const EditRefused: Story = {
+  render: served(open),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Actions for Proposal" }),
+    );
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(page.getByRole("button", { name: "Edit stage" }));
+    const dialog = within(await page.findByRole("dialog"));
+    const chance = dialog.getByLabelText(/Win probability/);
+    await userEvent.clear(chance);
+    await userEvent.type(chance, "50.5");
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    await expect(
+      await dialog.findByText("Enter a whole number for Win probability."),
+    ).toBeVisible();
   },
 };

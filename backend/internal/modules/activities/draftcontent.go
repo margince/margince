@@ -18,13 +18,14 @@ type DraftContentFinding struct {
 	Words       []string
 	Language    string
 	Country     string
+	Provision   commsauthz.Provision
 }
 
 // DraftContentChecker answers what an advertising draft does not meet among
 // its recipients' content rules. Declared here, implemented by consent and
 // injected in compose/.
 type DraftContentChecker interface {
-	CheckAdvertisingDraft(ctx context.Context, recipients []string, subject, body string) ([]DraftContentFinding, error)
+	CheckAdvertisingDraft(ctx context.Context, recipients []string, countries []commsauthz.CountryOverride, subject, body string) ([]DraftContentFinding, error)
 }
 
 // WithDraftContent wires the checker onto the preview.
@@ -53,5 +54,5 @@ func (s *Store) draftContentFindings(ctx context.Context, in PreviewSendInput, d
 	if !advertising {
 		return nil, nil
 	}
-	return s.draftContent.CheckAdvertisingDraft(ctx, in.Recipients, in.Subject, in.Body)
+	return s.draftContent.CheckAdvertisingDraft(ctx, in.Recipients, in.Evidence.RecipientCountries, in.Subject, in.Body)
 }

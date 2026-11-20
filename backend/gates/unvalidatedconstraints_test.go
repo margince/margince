@@ -64,7 +64,15 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"how they say so. A VALIDATE would fail on every installation with meeting history. The " +
 		"precision data task fills in only the rows the noon repair's audit proves; the rest stay " +
 		"unknown on purpose, and the rule binds every row written since",
+	"finance_invoice.finance_invoice_names_its_customer_link": unnamedCustomerLink,
+	"finance_payment.finance_payment_names_its_customer_link": unnamedCustomerLink,
 })
+
+// unnamedCustomerLink is the cost shared by the two mirrored tables' link checks.
+const unnamedCustomerLink = "" +
+	"a row mirrored before rows named their customer link may name none, when its connection never " +
+	"mapped its company. A VALIDATE would fail the upgrade on such an installation, and the maintainers " +
+	"decided those rows stay as they are. The rule binds every row the sync writes or rewrites"
 
 // polymorphicBranchKey is the one cost shared by every key generated from a
 // polymorphic pair that had none before.

@@ -28,7 +28,22 @@ func TestPipelineAndStageNamesAreRefusedWhenTakenOrBlank(t *testing.T) {
 	mustCall(t, e, "POST", "/v1/pipelines", AnyMap{"name": "Alpha", "stages": []AnyMap{{"name": "Scout", "position": 1}}}, http.StatusCreated, &first)
 	mustCall(t, e, "POST", "/v1/pipelines", AnyMap{"name": "Beta", "stages": []AnyMap{{"name": "Scout", "position": 1}}}, http.StatusCreated, &second)
 
-	mustCall(t, e, "PATCH", "/v1/pipelines/"+second.ID, AnyMap{"name": "Alpha"}, http.StatusConflict, nil)
+	var taken struct {
+		Code string `json:"code"`
+	}
+	mustCall(t, e, "PATCH", "/v1/pipelines/"+second.ID, AnyMap{"name": "Alpha"}, http.StatusConflict, &taken)
+	if taken.Code != "pipeline_name_taken" {
+		t.Fatalf("a taken pipeline name answered code %q, want pipeline_name_taken", taken.Code)
+	}
+	var twoDefaults struct {
+		Code string `json:"code"`
+	}
+	mustCall(t, e, "POST", "/v1/pipelines", AnyMap{
+		"name": "Gamma", "is_default": true, "stages": []AnyMap{{"name": "Scout", "position": 1}},
+	}, http.StatusConflict, &twoDefaults)
+	if twoDefaults.Code != "pipeline_default_taken" {
+		t.Fatalf("a second default pipeline answered code %q, want pipeline_default_taken", twoDefaults.Code)
+	}
 	// A zero-width rune must not make a taken name look free.
 	mustCall(t, e, "PATCH", "/v1/pipelines/"+second.ID, AnyMap{"name": zeroWidth + "Alpha"}, http.StatusConflict, nil)
 	mustCall(t, e, "POST", "/v1/pipelines", AnyMap{"name": "Alpha" + zeroWidth}, http.StatusConflict, nil)

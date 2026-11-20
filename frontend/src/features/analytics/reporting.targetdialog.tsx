@@ -16,10 +16,15 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
+import { typedNumberFault, typedNumberOrNaN } from "../../format/decimalinput";
 import { formatDateAbbrev, monthName } from "../../format/format";
-import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
+import {
+  typedAmountFault,
+  typedAmountText,
+  typedMinorOrNaN,
+} from "../../format/minorunits";
 import { dayInZone, UTC_ZONE } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { fiscalQuarter, opensFiscalQuarter } from "../../lib/fiscalquarter";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem } from "../../lib/problem";
@@ -70,7 +75,7 @@ export function ReportingTargetDialog({
   const [retired, setRetired] = useState(isRetired(target));
   const [reason, setReason] = useState("");
   const [amount, setAmount] = useState(
-    targetAmount(target, context.base_currency),
+    targetAmount(target, context.base_currency, locale),
   );
   const catalog = useReportingCatalog();
   const definition = catalog.data?.metrics.find(
@@ -80,6 +85,13 @@ export function ReportingTargetDialog({
     amount,
     definition?.unit,
     context.base_currency,
+    locale,
+  );
+  const amountFault = targetFault(
+    amount,
+    definition?.unit,
+    context.base_currency,
+    { locale, t },
   );
   const write = useMutation({
     mutationFn: async ({
@@ -274,13 +286,12 @@ export function ReportingTargetDialog({
                 : t("reporting.wholeCount")
             }
             required
+            error={amountFault}
           >
             {(field) => (
               <TextInput
                 {...field}
-                type="number"
-                min="0"
-                step={definition?.unit === "money" ? "any" : "1"}
+                inputMode="decimal"
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
               />
@@ -392,13 +403,15 @@ function heldPipeline(
   return takesPipeline(definition) && pipeline ? pipeline : undefined;
 }
 
-function targetAmount(target: Target | undefined, currency: string): string {
+function targetAmount(
+  target: Target | undefined,
+  currency: string,
+  locale: Locale,
+): string {
   if (!target) return "";
-  return String(
-    target.unit === "count"
-      ? target.definition.value
-      : toMajorUnits(target.definition.value, currency),
-  );
+  return target.unit === "count"
+    ? String(target.definition.value)
+    : typedAmountText(target.definition.value, currency, locale);
 }
 
 function validTargetNumber(value: number): boolean {
@@ -439,8 +452,21 @@ function targetInputValue(
   amount: string,
   unit: string | undefined,
   currency: string,
+  locale: Locale,
 ): number {
   return unit === "money"
-    ? toMinorUnits(Number(amount), currency)
-    : Number(amount);
+    ? typedMinorOrNaN(amount, currency, locale)
+    : typedNumberOrNaN(amount, locale);
+}
+
+// Why the typed target is not a figure, said under the field.
+function targetFault(
+  amount: string,
+  unit: string | undefined,
+  currency: string,
+  { locale, t }: Readonly<{ locale: Locale; t: Translator }>,
+): string | undefined {
+  return unit === "money"
+    ? typedAmountFault(amount, currency, locale, t)
+    : typedNumberFault(amount, locale, t);
 }

@@ -235,7 +235,7 @@ on the module behind it.
 | `workflow` | `Handler { Spec; Match; Plan }` | the seam for work the product does on its own: typed trigger + result + idempotency key + risk tier; runs go on the job queue |
 | `extraction` | `ExtractedField` (a type, no interface) | the shape of one field read from a document: it points to its words, or it is empty with a reason, never a guess. The activities store keeps it and the document reader in compose makes it |
 | `fieldcatalog` | `Reader { ActiveColumns }` | how record stores learn the active `cf_*` custom-field columns per object (built by: the `Service` of `customfields`) without importing the module |
-| `jurisdiction` | `Pack { Code; Retention }` + `Register`/`For`/`Applicable` | country `packs` built in at compile time (for example `extensions/de`); core never names a country |
+| `jurisdiction` | `Pack { Code; Retention }` + `Register`/`For`/`Applicable` | country `packs` built in at compile time (for example `extensions/eu`); core never names a country |
 
 **Use a ports interface when:** code above a seam needs a module's work without importing it.
 

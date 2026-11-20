@@ -4,9 +4,13 @@
 package activities
 
 import (
+	"archive/zip"
+	"bytes"
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/filesniff"
 )
 
 func TestAnUploadIsStoredUnderTheTypeTheTableNames(t *testing.T) {
@@ -101,4 +105,58 @@ func TestEveryAcceptedExtensionResolvesToItsOwnRow(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestEveryAcceptedTypeHasAByteRule(t *testing.T) {
+	t.Parallel()
+	for _, kind := range attachmentTypes {
+		if !filesniff.Knows(kind.mediaType) {
+			t.Errorf("%s (%s) has no byte rule, so a renamed file would pass as it", kind.extension, kind.mediaType)
+		}
+	}
+}
+
+func TestAnUploadWhoseBytesContradictItsNameIsRefused(t *testing.T) {
+	t.Parallel()
+	program := make([]byte, 0x100)
+	copy(program, "MZ")
+	program[0x3C] = 0x80
+	copy(program[0x80:], "PE\x00\x00")
+	for _, tc := range []struct {
+		name, filename, declared string
+		content                  []byte
+		refused                  bool
+	}{
+		{"a program named pdf", "disguised.pdf", "application/pdf", program, true},
+		{"a program with no declared type", "disguised.pdf", "", program, true},
+		{"svg named png", "picture.png", "image/png", []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), true},
+		{"a real pdf", "quote.pdf", "application/pdf", []byte("%PDF-1.7 x"), false},
+		{"a docx", "terms.docx", "", zipBytes(t, "[Content_Types].xml", "word/document.xml"), false},
+		{"a jar named docx", "terms.docx", "", zipBytes(t, "META-INF/MANIFEST.MF", "A.class"), true},
+		{"utf-16 csv with its charset", "export.csv", "text/csv; charset=utf-16le", []byte("n\x00,\x00c\x00\r\x00\n\x00"), false},
+		{"utf-16 csv with no charset", "export.csv", "text/csv", []byte("n\x00,\x00c\x00\r\x00\n\x00"), true},
+		{"a text note", "note.txt", "text/plain", []byte("Köln"), false},
+	} {
+		in := AttachmentInput{Filename: tc.filename, ContentType: tc.declared, Content: bytes.NewReader(tc.content)}
+		_, err := acceptUploadedFile(in)
+		_, isRefusal := errors.AsType[*UnsupportedFileTypeError](err)
+		if isRefusal != tc.refused || (!tc.refused && err != nil) {
+			t.Errorf("%s: acceptUploadedFile error = %v, refused = %v, want refused = %v", tc.name, err, isRefusal, tc.refused)
+		}
+	}
+}
+
+func zipBytes(t *testing.T, names ...string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, name := range names {
+		if _, err := zw.Create(name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }

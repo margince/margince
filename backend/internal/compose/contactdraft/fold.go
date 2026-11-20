@@ -325,9 +325,8 @@ func FoldRecent(activities []crmcontracts.Activity, now time.Time, zone *time.Lo
 				readInbound = true
 				folded.Snippet = turn.Text
 			}
-		// A colleague's inbound mail is still ours. A row naming no direction
-		// stays unset, as it did: nobody said it that we can show.
-		case turn.ByColleague || turn.Direction == string(crmcontracts.ActivityDirectionOutbound):
+		// A row no side wrote stays unset: nobody said it that we can show.
+		case turn.OurWord():
 			folded.Said = turn.Text
 		}
 		out = append(out, folded)

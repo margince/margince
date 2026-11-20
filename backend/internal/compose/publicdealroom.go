@@ -32,10 +32,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// A literal, not dealrooms.PublicPathPrefix: the credential-path gate reads
+// it from here. The kept-cookie integration tests fail if the two drift.
 const publicDealRoomPrefix = "/v1/public/rooms/"
 
 // The three operations that carry no session. Everything else under the prefix
-// presents a Bearer.
+// presents a Bearer or the session cookie.
 var publicDealRoomAnonymous = map[string]bool{
 	"peek":         true,
 	"exchange":     true,
@@ -71,11 +73,14 @@ func newPublicDealRoomLimiters() publicDealRoomLimiters {
 // linkSharedKey is the one bucket every link request shares.
 const linkSharedKey = "deal_room_link_request"
 
-func publicDealRoom(store *dealrooms.Store, limits publicDealRoomLimiters) func(http.Handler) http.Handler {
+func publicDealRoom(store *dealrooms.Store, limits publicDealRoomLimiters, origin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !strings.HasPrefix(r.URL.Path, publicDealRoomPrefix) {
 				next.ServeHTTP(w, r)
+				return
+			}
+			if !dealrooms.GuardPublicRequest(w, r, origin) {
 				return
 			}
 			operation, _, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, publicDealRoomPrefix), "/")
@@ -146,20 +151,18 @@ func peekLinkRequestEmail(r *http.Request) (string, bool) {
 // address and a little JSON around it.
 const linkRequestBodyLimit = 4 << 10
 
-// resolveBuyerSession reads the Bearer and resolves it, writing the one 401
-// every failure shares. A missing header, a malformed one, an unknown token and
-// a revoked one are indistinguishable from outside.
+// resolveBuyerSession reads the presented token and resolves it, writing the
+// one 401 every failure shares. A missing token, a malformed one, an unknown
+// one and a revoked one are indistinguishable from outside.
 func resolveBuyerSession(store *dealrooms.Store, w http.ResponseWriter, r *http.Request) (dealrooms.Session, bool) {
-	const detail = "this link no longer admits you: ask for a new one"
-	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	token = strings.TrimSpace(token)
-	if !ok || token == "" {
-		httperr.Unauthorized(w, r, detail)
+	token := dealrooms.PresentedSessionToken(r)
+	if token == "" {
+		httperr.Unauthorized(w, r, dealrooms.NoSessionDetail)
 		return dealrooms.Session{}, false
 	}
 	sess, err := store.ResolveSession(r.Context(), token)
 	if errors.Is(err, dealrooms.ErrSessionRefused) {
-		httperr.Unauthorized(w, r, detail)
+		httperr.Unauthorized(w, r, dealrooms.NoSessionDetail)
 		return dealrooms.Session{}, false
 	}
 	if err != nil {

@@ -36,6 +36,20 @@ func (e *dedupeEnv) createNamedCompany(ctx context.Context, t *testing.T, name s
 	return ids.From[ids.CompanyKind](ids.UUID(company.Id))
 }
 
+// addLegacyDomain gives a company a domain the way a row written before the
+// consumer-mail refusal holds it: straight into the table.
+func (e *dedupeEnv) addLegacyDomain(ctx context.Context, t *testing.T, company ids.CompanyID, domain string) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+			VALUES ($1, $2, false, 'manual', 'human:test')`, company, domain)
+		return err
+	}); err != nil {
+		t.Fatalf("adding legacy domain %s: %v", domain, err)
+	}
+}
+
 // filedPairField answers the evidence field of the open review pair joining
 // the two companies, or "" when the queue holds no open pair for them.
 func (e *dedupeEnv) filedPairField(ctx context.Context, t *testing.T, a, b ids.CompanyID) string {

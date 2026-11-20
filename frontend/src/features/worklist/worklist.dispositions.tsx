@@ -23,7 +23,7 @@ import { type Locale, translatePlural, useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useFoldedViewport } from "../../lib/viewport";
 import { calendarSnooze } from "./snoozetime";
-import { useMarkRowsDone } from "./worklist.donequeries";
+import { doneFailure, useMarkRowsDone } from "./worklist.donequeries";
 import {
   type ReopenCondition,
   useClearDisposition,
@@ -167,8 +167,12 @@ export function usePutDown(item: WorklistItem) {
                   ),
           },
         }),
-      onError: () =>
-        toast.show(t("worklist.disposition.failed"), { tone: "danger" }),
+      onError: (error: unknown) => {
+        const failure = handled
+          ? doneFailure(error)
+          : ({ key: "worklist.disposition.failed", tone: "danger" } as const);
+        toast.show(t(failure.key), { tone: failure.tone });
+      },
       // Settled either way, so a refusal releases the row rather than leaving
       // it unanswerable until the reader reloads.
       onSettled: () => {

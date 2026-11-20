@@ -23,6 +23,7 @@ var transientCodes = map[string]struct{}{
 	AgentBusyCode:                {},
 	agentVolumeUnansweredCode:    {},
 	WebsiteFormBusyCode:          {},
+	requestTimedOutCode:          {},
 }
 
 // WebsiteFormBusyCode means another intake or policy cutover owns the form lock.

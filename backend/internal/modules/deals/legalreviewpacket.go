@@ -7,13 +7,13 @@ package deals
 //
 // Built from the requester's own reads, so the pack carries nothing the
 // requester could not open. The deal is read through their field masks. The
-// documents come through the activities reader under their principal.
+// documents, agreements, touches and tasks come through the readers in
+// legalreviewrecords.go under their principal.
 //
-// It freezes facts, not names. A document, the deal, its company and owner
-// are kept as ids. Their names are read when a reviewer opens the pack, so
-// erasing or renaming the source leaves no copy here.
-// The storage type is not the wire type, so a contract rename never breaks an
-// older pack.
+// It freezes facts, not names. Records are kept as ids. Their names are read
+// when a reviewer opens the pack, so erasing or renaming the source leaves no
+// copy here. The storage type is not the wire type, so a contract rename never
+// breaks an older pack.
 
 import (
 	"context"
@@ -37,6 +37,9 @@ type reviewPacket struct {
 	Binding       []packetOffer    `json:"binding,omitempty"`
 	History       []packetStage    `json:"history"`
 	Documents     []PacketDocument `json:"documents"`
+	Contracts     []PacketContract `json:"contracts"`
+	Touches       []PacketTouch    `json:"touches"`
+	Tasks         []PacketTask     `json:"tasks"`
 	// Terms fingerprints what legal approved (legalreviewterms.go). The stage
 	// gate compares it with the deal at the move. It never leaves the server.
 	Terms string `json:"terms"`
@@ -98,7 +101,7 @@ func (p reviewPacket) marshal() ([]byte, error) {
 
 // buildReviewPacket reads the pack inside the request's transaction.
 func (s *Store) buildReviewPacket(
-	ctx context.Context, tx pgx.Tx, dealID ids.DealID, docs []PacketDocument,
+	ctx context.Context, tx pgx.Tx, dealID ids.DealID, records packetRecords,
 ) (reviewPacket, error) {
 	var out reviewPacket
 	deal, err := readDealForCaller(ctx, tx, dealID, storekit.LiveOnly, nil)
@@ -127,7 +130,9 @@ func (s *Store) buildReviewPacket(
 	if out.History, err = stagesEntered(ctx, tx, dealID); err != nil {
 		return out, err
 	}
-	out.Documents = docs
+	out.Documents = records.documents
+	records = records.emptied()
+	out.Contracts, out.Touches, out.Tasks = records.contracts, records.touches, records.tasks
 	if out.Documents == nil {
 		out.Documents = []PacketDocument{}
 	}

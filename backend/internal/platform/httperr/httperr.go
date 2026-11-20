@@ -103,7 +103,7 @@ func clientInputValidation(err error) (error, bool) {
 	// carrying its own field and machine code — the parse-don't-validate
 	// seam's single wire mapping.
 	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
-		return withMax(Validation(badValue.Field, badValue.Code, badValue.Message), badValue.Max), true
+		return Validation(badValue.Field, badValue.Code, badValue.Message).WithMax(badValue.Max), true
 	}
 
 	// A payload the datasource seam refused to decode is a 422, never a 500. A
@@ -111,7 +111,7 @@ func clientInputValidation(err error) (error, bool) {
 	// does. Any other cause is restated as the native body decode restates it,
 	// and Write logs what that withheld.
 	if refused, ok := errors.AsType[*datasource.DecodedValueError](err); ok {
-		return Validation(refused.Field, refused.Code, refused.Error()), true
+		return Validation(refused.Field, refused.Code, refused.Error()).WithParams(refused.Params), true
 	}
 	if badFields, ok := errors.AsType[*datasource.FieldDecodeError](err); ok {
 		detail, _ := fieldDecodeRefusal(badFields.Cause)
@@ -215,7 +215,7 @@ func moduleDeclaredFault(err error) (error, bool) {
 		field, code, message := fieldFault.FieldFault()
 		refusal := Validation(boundFaultText(field), boundFaultText(code), boundFaultText(message))
 		if limited, ok := fieldFault.(fieldMaxer); ok {
-			return withMax(refusal, limited.FieldMax()), true
+			return refusal.WithMax(limited.FieldMax()), true
 		}
 		return refusal, true
 	}
@@ -392,6 +392,9 @@ func loggedPath(r *http.Request) string {
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
 	fault, ok := Classify(err)
+	if timedOut, late := timedOutFault(r, err, ok); late {
+		fault, ok = timedOut, true
+	}
 	if !ok && CallerLeft(r.Context()) {
 		// Debug, not error: nothing failed on our side, and the sweep an operator
 		// reads for faults must not have to rule these out by hand. The cause
@@ -456,6 +459,8 @@ type FieldError struct {
 	// Max is the limit a too_long refusal names, so a screen can say the
 	// number in the reader's language. Zero is "not stated".
 	Max int `json:"max,omitempty"`
+	// Params are the other values the code's sentence names, as text.
+	Params map[string]string `json:"params,omitempty"`
 }
 
 // fieldMaxer is a FieldFault that also states the limit it refused at. It is

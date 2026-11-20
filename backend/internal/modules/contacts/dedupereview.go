@@ -147,3 +147,17 @@ func firstVisibleReview(ctx context.Context, tx pgx.Tx, m ContactResolution) (*R
 	}
 	return nil, nil //nolint:nilnil // every match is hidden from this caller.
 }
+
+// AnyMatchVisible reports whether the caller may see one of the contacts the
+// ladder matched. An exact collision carries no review list, so its own id stands.
+func AnyMatchVisible(ctx context.Context, tx pgx.Tx, m ContactResolution) (bool, error) {
+	if len(m.Reviews) == 0 {
+		visible, err := auth.VisibleTo(ctx, tx, contactEntity, m.ContactID.UUID)
+		if err != nil {
+			return false, fmt.Errorf("contacts: probing a matched contact's visibility: %w", err)
+		}
+		return visible, nil
+	}
+	shown, err := firstVisibleReview(ctx, tx, m)
+	return shown != nil, err
+}

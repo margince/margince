@@ -365,7 +365,7 @@ func TestCustomFieldVocab_CraftedCursorKeyIsClientFault(t *testing.T) {
 
 	badKey := "abc"
 	crafted := CraftCursor(t, storekit.Cursor{
-		CreatedAt: time.Now().UTC(), ID: ids.NewV7(), SortField: score, SortKey: &badKey,
+		Scope: "deals", CreatedAt: time.Now().UTC(), ID: ids.NewV7(), SortField: score, SortKey: &badKey,
 	})
 	_, _, err := f.store.ListDeals(f.ctx, deals.ListDealsInput{Sort: &score, Cursor: &crafted})
 	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {

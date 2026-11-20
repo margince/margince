@@ -33,14 +33,16 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { postMultipart } from "../../lib/multipart";
-import {
-  problemCodeOf,
-  problemMessageOf,
-  throwProblem,
-  unwrap,
-} from "../../lib/problem";
+import { refusedForGood, throwProblem, unwrap } from "../../lib/problem";
+import { useInstallationSettings, usePickRefusal } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
-import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
+import {
+  DELETE_SHIPPED,
+  shippedRefusal,
+  UPLOAD_SHIPPED,
+  type UploadRefusal,
+  UploadRefusals,
+} from "./knowledge.notices";
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
 type EmbedState = components["schemas"]["KnowledgeEmbedState"];
@@ -402,24 +404,6 @@ export function DocumentList({
   );
 }
 
-// A write to what ships with Margince is refused in catalog copy, by code. The
-// list read can predate the shipped flag the press meets.
-export function shippedRefusal(
-  error: unknown,
-  t: Translator,
-  copy: ReadonlyMap<string, MessageKey>,
-): string {
-  const key = copy.get(problemCodeOf(error) ?? "");
-  return key ? t(key) : problemMessageOf(error, t);
-}
-
-const DELETE_SHIPPED = new Map<string, MessageKey>([
-  ["document_shipped", "knowledge.deleteShipped"],
-]);
-const UPLOAD_SHIPPED = new Map<string, MessageKey>([
-  ["corpus_shipped", "knowledge.uploadShipped"],
-]);
-
 // Two distinct files agreeing on all three are the same bytes for every
 // purpose here, and the server would refuse both identically.
 function fileIdentity(file: File): string {
@@ -431,22 +415,48 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const [files, setFiles] = useState<readonly File[]>([]);
+  // Refused as dropped, apart from what the last send refused, so a send
+  // never hides a file it did not carry.
+  const [dropRefusals, setDropRefusals] = useState<readonly UploadRefusal[]>(
+    [],
+  );
   const [refusals, setRefusals] = useState<readonly UploadRefusal[]>([]);
   const [sending, setSending] = useState(false);
   const upload = useDocumentWrite(corpusId, uploadDocument);
+  const refusalOf = usePickRefusal({
+    maxBytes: useInstallationSettings().data?.max_knowledge_document_bytes,
+  });
+
+  // A file the server would refuse is named as it is dropped, never held.
+  const pick = (file: File) => {
+    const message = refusalOf(file);
+    const others = (shown: readonly UploadRefusal[]) =>
+      shown.filter((refusal) => refusal.filename !== file.name);
+    if (message === null) {
+      setDropRefusals(others);
+      setFiles((held) => [...held, file]);
+      return;
+    }
+    setDropRefusals((shown) => [
+      ...others(shown),
+      { id: fileIdentity(file), filename: file.name, message },
+    ]);
+  };
 
   // One at a time: each upload locks the same corpus row, and the refusals
   // keep the order the reader dropped the files in.
   const send = async () => {
     setSending(true);
     setRefusals([]);
+    const sent = files;
     const refused: UploadRefusal[] = [];
-    const accepted: File[] = [];
-    for (const file of files) {
+    const retry: File[] = [];
+    for (const file of sent) {
       try {
         await upload.mutateAsync({ corpusId, file });
-        accepted.push(file);
       } catch (err) {
+        // A file that may pass when sent again stays in the zone for a retry.
+        if (!refusedForGood(err)) retry.push(file);
         // One bad file does not abandon the rest of the drop.
         refused.push({
           id: fileIdentity(file),
@@ -455,8 +465,11 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
         });
       }
     }
-    // From the latest held list: a file added mid-send must not be dropped.
-    setFiles((held) => held.filter((one) => !accepted.includes(one)));
+    // A refused file is named below, so it leaves the zone with the rest. One
+    // added mid-send was not sent and stays, and so does one worth a retry.
+    setFiles((held) =>
+      held.filter((one) => !sent.includes(one) || retry.includes(one)),
+    );
     setRefusals(refused);
     setSending(false);
   };
@@ -471,7 +484,7 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
         files={files}
         // A second drop adds every file, names included: the server refuses a
         // duplicate by checksum and names the document holding those bytes.
-        onPick={(picked) => setFiles((held) => [...held, picked])}
+        onPick={pick}
       />
       <div className="form-actions">
         <Button disabled={files.length === 0 || sending} onClick={send}>
@@ -481,7 +494,7 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
           })}
         </Button>
       </div>
-      <UploadRefusals refusals={refusals} />
+      <UploadRefusals refusals={[...dropRefusals, ...refusals]} />
     </div>
   );
 }

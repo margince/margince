@@ -372,7 +372,26 @@ elif [[ "${CLOCK_RESULT:-}" = "success" ]]; then
   resolve "the frontend suite's verdict depends on the calendar"
 fi
 
-if [[ "${BACKEND_CLOCK_RESULT:-}" = "failure" ]]; then
+# Split two ways like the growth arms below: BACKEND_CLOCK_OUTCOME is "calendar"
+# only when the suites failed with the shift proven still in force. A hosted runner
+# lost while its clock is moved fails the job with no verdict about the tree.
+if [[ "${BACKEND_CLOCK_RESULT:-}" = "failure" ]] && [[ "${BACKEND_CLOCK_OUTCOME:-}" != "calendar" ]]; then
+  report "the backend clock-drift lane could not complete" "priority: normal,area: ci-tests,bug" \
+"\`make backend-clock-drift\` failed on the scheduled run of \`main\` WITHOUT reaching a
+verdict about the tree: $RUN_URL
+
+No backend test is known to depend on the calendar, and none is known not to. The
+job annotations and the end of the step log say why the lane stopped: the runner
+lost its connection while its clock was moved, the 45-minute budget ran out, or
+\`scripts/clock-drift-host.sh\` found the shift no longer in force.
+
+Reproduce the suites locally with \`BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift\`."\
+    || unreported=1
+elif [[ "${BACKEND_CLOCK_RESULT:-}" = "success" ]] || [[ "${BACKEND_CLOCK_OUTCOME:-}" = "calendar" ]]; then
+  resolve "the backend clock-drift lane could not complete"
+fi
+
+if [[ "${BACKEND_CLOCK_OUTCOME:-}" = "calendar" ]]; then
   report "the backend suite's verdict depends on the calendar" "priority: normal,area: ci-tests,bug" \
 "\`make backend-clock-drift\` failed on the scheduled run of \`main\` at +200 days: $RUN_URL
 

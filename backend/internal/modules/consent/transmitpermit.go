@@ -38,7 +38,7 @@ func (g *Gate) AcquireTransmitPermit(ctx context.Context, req commsauthz.Transmi
 		return nil, err
 	}
 	if !issued.Current(req.DeliveryID, req.Attempt) {
-		return nil, fmt.Errorf("consent: no current decision covers this attempt: %w", apperrors.ErrInvalidArgument)
+		return nil, fmt.Errorf("no current decision covers this attempt: %w", apperrors.ErrInvalidArgument)
 	}
 	fresh, err := g.RecheckTransmit(ctx, req, issued)
 	if err != nil {

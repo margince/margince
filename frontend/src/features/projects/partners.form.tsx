@@ -346,8 +346,8 @@ function PartnerDetail({
             {partnerStageLabel(partner, t)}
             <ActivationNote partner={partner} locale={locale} zone={zone} />
           </dd>
-          <dt>{t("partner.nextStep")}</dt>
-          <dd>
+          <dt className="detail-grid-wide">{t("partner.nextStep")}</dt>
+          <dd className="detail-grid-wide">
             <PartnerNextStep companyId={companyId} partner={partner} />
           </dd>
           {partner.served_segments && partner.served_segments.length > 0 && (

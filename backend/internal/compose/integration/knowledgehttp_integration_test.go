@@ -183,8 +183,8 @@ func TestKnowledgeHandlersHTTPRoundTrip(t *testing.T) {
 	}
 }
 
-// A file this product has no reader for is 415 with the accepted types NAMED,
-// not a 422 about a form field and not a 500. The refusal is about the FILE.
+// A file this product has no reader for is 415 naming the kinds it takes, not
+// a 422 about a form field and not a 500. The refusal is about the file.
 func TestUploadingAPDFOverHTTPIs415NamingTheAcceptedTypes(t *testing.T) {
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
@@ -213,10 +213,8 @@ func TestUploadingAPDFOverHTTPIs415NamingTheAcceptedTypes(t *testing.T) {
 	// The detail names what IS accepted. A bare rejection leaves the uploader
 	// nothing to act on, and the alternative — taking the bytes and ingesting
 	// nothing from them — reads to them exactly like success.
-	for _, accepted := range []string{"text/plain", "text/markdown", "text/csv", "application/json"} {
-		if !strings.Contains(problem.Detail, accepted) {
-			t.Fatalf("the 415 detail does not name %s: %q", accepted, problem.Detail)
-		}
+	if want := "PDF files are not supported. Save it as plain text, Markdown, CSV or JSON first."; problem.Detail != want {
+		t.Fatalf("the 415 detail = %q, want %q", problem.Detail, want)
 	}
 	if len(h.queued) != 0 {
 		t.Fatalf("a refused upload queued %d ingests", len(h.queued))
@@ -377,4 +375,27 @@ func httpCorpus(ctx context.Context, t *testing.T, h *knowledgeHTTP) crmcontract
 		t.Fatalf("decode create response: %v", err)
 	}
 	return made
+}
+
+// A program renamed to .md is refused with 415, like any file that is not
+// text. Nothing is queued for ingest.
+func TestUploadingAProgramNamedMarkdownOverHTTPIs415(t *testing.T) {
+	e := Setup(t)
+	h := newKnowledgeHTTP(e)
+	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
+	made := httpCorpus(ctx, t, h)
+
+	program := append([]byte("MZ"), make([]byte, 0x100)...)
+	body, ctype := apptest.MultipartDocument(t, "operating.md", "text/markdown", program)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(ctx)
+	req.Header.Set("Content-Type", ctype)
+	h.handlers.UploadCorpusDocument(rec, req, made.Id)
+
+	if rec.Code != http.StatusUnsupportedMediaType {
+		t.Fatalf("program named .md: status %d, want 415. body %s", rec.Code, rec.Body.String())
+	}
+	if len(h.queued) != 0 {
+		t.Fatalf("a refused upload queued %d ingests", len(h.queued))
+	}
 }

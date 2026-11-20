@@ -32,7 +32,10 @@ const QUIET: MagicReceipt = {
 };
 
 function panel(receipt: MagicReceipt) {
-  stubWithSession({ "GET /magic": () => jsonResponse(receipt) }, {});
+  stubWithSession(
+    { "GET /magic": () => jsonResponse(receipt) },
+    { deal: ["read", "update"] },
+  );
   return (
     <StoryProviders>
       <MagicPanel />
@@ -107,7 +110,6 @@ const EVERY_LANE: MagicReceipt = {
     },
   ],
   totals: { done: 1, needs_you: 1, could_not_complete: 1, watching: 1 },
-  not_shown: [{ reason: "out_of_scope", count: 12 }],
 };
 
 export const EveryLane: Story = { render: () => panel(EVERY_LANE) };
@@ -115,26 +117,57 @@ export const EveryLane: Story = { render: () => panel(EVERY_LANE) };
 /** Nothing ran: the panel stays away rather than drawing four empty lanes. */
 export const QuietNight: Story = { render: () => panel(QUIET) };
 
-/** A lane the reader may not see: no lane below it may claim to be clear. */
-export const ASourceWithheld: Story = {
+/** A source that did not load holds the section up by itself, and names
+ *  beside it the one the reader may not see. */
+export const ASourceDidNotLoad: Story = {
   render: () =>
     panel({
       ...QUIET,
+      sources_unavailable: [
+        { source: "approval", reason: "failed" },
+        { source: "automation_health", reason: "withheld" },
+      ],
+    }),
+};
+
+/** What the reader cannot use is no news: housekeeping, a record type this
+ *  build cannot place and a withheld count draw nothing, as a quiet night. */
+export const OnlyWhatTheReaderCannotUse: Story = {
+  render: () =>
+    panel({
+      ...QUIET,
+      not_shown: [
+        { reason: "unadmitted_action", count: 12 },
+        { reason: "unknown_entity_type", count: 2 },
+      ],
+      not_shown_count_withheld: true,
       sources_unavailable: [{ source: "approval", reason: "withheld" }],
     }),
 };
 
-export const WithheldCoverage: Story = {
-  render: () =>
-    panel({ ...EVERY_LANE, not_shown: [], not_shown_count_withheld: true }),
-};
-
-export const UnknownReceiptKind: Story = {
-  render: () =>
-    panel({
-      ...QUIET,
-      not_shown: [{ reason: "unknown_entity_type", count: 2 }],
-    }),
+/** The read refused: one line and Retry, never a quiet morning. */
+export const DidNotLoad: Story = {
+  render: () => {
+    stubWithSession(
+      {
+        "GET /magic": () =>
+          jsonResponse({ title: "Server Error", status: 500 }, 500),
+      },
+      { deal: ["read"] },
+    );
+    return (
+      <StoryProviders>
+        <MagicPanel />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText(en["magic.failed"]);
+    await expect(
+      canvas.getByRole("button", { name: en["state.retry"] }),
+    ).toBeTruthy();
+  },
 };
 
 /** Lanes the server read to their bound: the done fold says "at least", and a

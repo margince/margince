@@ -24,7 +24,7 @@ func TestUnreadPeriodNeedsBothEnds(t *testing.T) {
 		{"an end with no start", nil, &later},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			if got := unreadPeriodOf(c.from, c.to); got != nil {
+			if got := UnreadPeriodOf(c.from, c.to); got != nil {
 				t.Errorf("reports the period %v to %v", got.From, got.To)
 			}
 		})
@@ -38,7 +38,7 @@ func TestUnreadPeriodReportsBothEndsInUTC(t *testing.T) {
 	from := time.Date(2026, 2, 22, 9, 0, 0, 0, zone)
 	to := time.Date(2026, 2, 24, 9, 0, 0, 0, zone)
 
-	got := unreadPeriodOf(&from, &to)
+	got := UnreadPeriodOf(&from, &to)
 	if got == nil {
 		t.Fatal("a whole period was not reported")
 	}

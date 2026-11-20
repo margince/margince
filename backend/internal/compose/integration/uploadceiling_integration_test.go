@@ -23,6 +23,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -57,6 +58,7 @@ uploads:
   attachment_mb: 3
   csv_import_mb: 2
   linkedin_import_mb: 1
+  knowledge_document_mb: 4
 `, nil, nil, compose.UploadSettings()...)
 	if err != nil {
 		t.Fatalf("the uploads section was refused: %v", err)
@@ -85,6 +87,7 @@ func fileOf(size int) []byte {
 	for i := range content {
 		content[i] = byte(i%251 + 1)
 	}
+	copy(content, "%PDF-1.4")
 	return content
 }
 
@@ -191,6 +194,18 @@ func TestTheInstallationReadPublishesTheConfiguredCeiling(t *testing.T) {
 			"client that trusts this number either refuses files the server would "+
 			"take, or sends files it will not", settings.MaxUploadBytes, want)
 	}
+	want := configuredUploads(t).KnowledgeDocument
+	if got := settings.MaxKnowledgeDocumentBytes; got == nil || *got != want {
+		t.Errorf("the installation reports a corpus document ceiling of %s but enforces %d", describeCeiling(got), want)
+	}
+}
+
+// describeCeiling prints a published ceiling, which an older server leaves out.
+func describeCeiling(published *int64) string {
+	if published == nil {
+		return "nothing"
+	}
+	return strconv.FormatInt(*published, 10)
 }
 
 // TestEachUploadRouteIsBoundedSeparately proves the per-route keys are not one

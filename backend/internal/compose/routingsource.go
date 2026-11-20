@@ -197,14 +197,8 @@ func plantRouting(ctx context.Context, store settingsWriter, cfg ai.RoutingConfi
 // that from a feature that stopped working.
 func warnRoutingFileIgnored(ctx context.Context, routingPath string, unconfigured bool, log *slog.Logger) {
 	if unconfigured {
-		// Says "and restart" deliberately. A process that boots with nothing
-		// bound wires no model path, and the watcher that would notice a later
-		// write is built from that path — so a binding set through the UI now is
-		// stored correctly and picked up on the next start, not on this one.
-		// Promising an immediate effect here would send an operator looking for
-		// a lane that was never going to light up.
 		log.WarnContext(ctx,
-			"--ai-routing is ignored and this installation has NO stored model binding, so its AI lanes are absent for the life of this process: declare the binding under `seeds.ai_routing` in margince.yaml before a fresh install's first boot, or set it through Settings -> AI and restart this role to pick it up",
+			"--ai-routing is ignored and this installation has NO stored model binding, so its AI lanes refuse calls until one is saved: declare the binding under `seeds.ai_routing` in margince.yaml before a fresh install's first boot, or set it through Settings -> AI, which this role adopts without a restart",
 			"file", routingPath)
 		return
 	}

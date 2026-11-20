@@ -319,6 +319,51 @@ describe("ProjectScreen", () => {
     expect(screen.queryByText("Brandt Automotive")).toBeNull();
   });
 
+  it("says a project with no customer has none, never hidden, and explains the missing New deal", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({ company_id: undefined, writable: true }),
+        company: undefined,
+        sections_omitted: [],
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    expect(screen.queryByText("Hidden for your role")).toBeNull();
+    expect(screen.queryByTestId("project-company-withheld")).toBeNull();
+    expect(screen.getByTestId("project-company-none").textContent).toBe(
+      "No customer company",
+    );
+    expect(
+      await screen.findByTestId("project-new-deal-needs-company"),
+    ).toBeTruthy();
+  });
+
+  it("offers neither New deal nor its customer hint to a reader who may not create deals", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({ company_id: undefined, writable: true }),
+        company: undefined,
+      }),
+      respond: async (url) =>
+        url.endsWith("/v1/me")
+          ? jsonResponse(
+              meFixture({
+                allow: {
+                  project: ["read", "update"],
+                  deal: ["read"],
+                  activity: ["read", "create", "update"],
+                },
+              }),
+            )
+          : null,
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    expect(screen.queryByTestId("project-new-deal-needs-company")).toBeNull();
+    expect(screen.queryByRole("button", { name: "New deal" })).toBeNull();
+  });
+
   it("closing asks for a reason, holds Confirm until it is given, and posts the move", async () => {
     const user = userEvent.setup();
     let posted: { body: unknown; ifMatch: string | null } | null = null;
@@ -378,6 +423,44 @@ describe("ProjectScreen", () => {
     await user.click(within(dialog).getByRole("button", { name: "Move" }));
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toEqual({ to_phase: "pursuing", reason: null });
+  });
+
+  it("shows the new phase from the move's answer and closes the dialog only once the page is read again", async () => {
+    const user = userEvent.setup();
+    let moved = false;
+    let releaseReread: (response: Response) => void = () => {};
+    projectsBackend({
+      respond: async (url, method) => {
+        if (method === "POST" && url.endsWith("/projects/pr-1/advance")) {
+          moved = true;
+          return jsonResponse(project({ phase: "pursuing" }));
+        }
+        if (moved && method === "GET" && url.endsWith("/projects/pr-1/360")) {
+          return new Promise<Response>((resolve) => {
+            releaseReread = resolve;
+          });
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByTestId("project-step-pursuing"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Move" }));
+
+    await waitFor(() => {
+      const here = [...document.querySelectorAll("[aria-current='step']")];
+      expect(
+        here.some((node) => node.textContent?.startsWith("Pursuing")),
+      ).toBe(true);
+    });
+    expect(screen.queryByRole("dialog")).toBeTruthy();
+
+    releaseReread(
+      jsonResponse(project360({ project: project({ phase: "pursuing" }) })),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   // `writable` is what the server's write gate would answer on a mutation. A
@@ -470,7 +553,9 @@ describe("ProjectScreen", () => {
     await screen.findByRole("heading", { name: "CRM rollout" });
 
     expect(screen.getByText(/You cannot edit this project/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Edit (About|Ownership)$/ }),
+    ).toBeNull();
   });
 
   // Absent is not "unknown", it is "no": a response from a server too old to
@@ -544,6 +629,96 @@ describe("ProjectScreen", () => {
     expect(landed).not.toBe(document.body);
     expect(landed?.isConnected).toBe(true);
     expect(landed?.closest("[hidden]")).toBeNull();
+  });
+});
+
+describe("Edit project in the More menu", () => {
+  const region = {
+    id: "cf-region",
+    object: "project",
+    label: "Region",
+    slug: "region",
+    type: "text",
+    status: "active",
+    column_name: "cf_region",
+    show_in_create: true,
+    reportable: false,
+    created_by: "human:u-1",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+
+  it("opens the project's fields in one dialog and saves them through the record write", async () => {
+    const user = userEvent.setup();
+    const writes: { body: unknown; ifMatch: string | null }[] = [];
+    projectsBackend({
+      view: project360({
+        project: Object.assign(project(), { cf_region: "North" }),
+      }),
+      respond: async (url, method, request) => {
+        if (new URL(url).pathname === "/v1/custom-fields") {
+          return jsonResponse({ data: [region] });
+        }
+        if (method === "PATCH") {
+          writes.push({
+            body: await request.json(),
+            ifMatch: request.headers.get("If-Match"),
+          });
+          return jsonResponse(project({ name: "CRM rollout two", version: 4 }));
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("button", { name: en["project.edit"] }));
+    const dialog = within(
+      await screen.findByRole("dialog", { name: en["project.edit"] }),
+    );
+    expect(dialog.getByRole("textbox", { name: "Description" })).toBeTruthy();
+    expect(dialog.getByLabelText(en["project.targetEnd"])).toBeTruthy();
+    expect(dialog.getByLabelText(/^Owner/)).toBeTruthy();
+    const regionBox = await dialog.findByRole("textbox", { name: "Region" });
+    await user.clear(regionBox);
+    await user.type(regionBox, "South");
+    const name = dialog.getByRole("textbox", { name: /^Project name/ });
+    await user.clear(name);
+    await user.type(name, "CRM rollout two");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(writes).toEqual([
+        { body: { name: "CRM rollout two", cf_region: "South" }, ifMatch: "3" },
+      ]),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("opens only once the custom fields have read, so a quick press still shows them", async () => {
+    const user = userEvent.setup();
+    let answer: (response: Response) => void = () => undefined;
+    const fieldsRead = new Promise<Response>((resolve) => {
+      answer = resolve;
+    });
+    projectsBackend({
+      view: project360(),
+      respond: async (url) =>
+        new URL(url).pathname === "/v1/custom-fields" ? fieldsRead : null,
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("button", { name: en["project.edit"] }));
+    expect(
+      screen.queryByRole("dialog", { name: en["project.edit"] }),
+    ).toBeNull();
+    answer(jsonResponse({ data: [region] }));
+    const dialog = await screen.findByRole("dialog", {
+      name: en["project.edit"],
+    });
+    expect(
+      within(dialog).getByRole("textbox", { name: "Region" }),
+    ).toBeTruthy();
   });
 });
 
@@ -700,6 +875,63 @@ describe("a commitment's tick", () => {
     expect(
       urls.filter((url) => url.includes(`/v1/activities/${row.activity_id}`)),
     ).toHaveLength(1);
+  });
+});
+
+describe("the Next bar's task write", () => {
+  it("says a task changed elsewhere when Snooze is refused as stale", async () => {
+    const row = {
+      activity_id: "a-next",
+      subject: "Confirm the depot slot",
+      due_at: "2099-09-11T09:00:00Z",
+      due_has_time: false,
+      version: 7,
+      assignee_id: null,
+      assignee_name: null,
+      overdue: false,
+    };
+    projectsBackend({
+      view: project360({
+        commitments: { data: [row], page: { has_more: false } },
+      }),
+      respond: async (url, method) => {
+        if (url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({
+              allow: {
+                project: ["read", "update"],
+                activity: ["read", "update"],
+              },
+            }),
+          );
+        }
+        if (method === "PATCH" && url.includes("/v1/activities/a-next")) {
+          return jsonResponse(
+            {
+              type: "about:blank",
+              title: "Stale",
+              status: 409,
+              code: "version_skew",
+            },
+            409,
+          );
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id={project().id} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Snooze/ }),
+    );
+
+    const alerts = await screen.findAllByRole("alert");
+    expect(
+      alerts.some((alert) =>
+        alert.textContent?.includes(en["common.versionSkew"]),
+      ),
+    ).toBe(true);
+    expect(screen.getAllByRole("button", { name: "Reload" }).length).toBe(1);
   });
 });
 

@@ -102,7 +102,7 @@ func ListLegalHolds(ctx context.Context, db *database.DB, cursor *string, limit 
 	if len(page.Records) > size {
 		page.Records = page.Records[:size]
 		last := page.Records[len(page.Records)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.RecordID)
+		next, err := storekit.EncodeCursor("legal_holds", last.CreatedAt, last.RecordID)
 		if err != nil {
 			return HeldPage{}, err
 		}
@@ -118,7 +118,7 @@ func heldListWhere(cursor *string, size int) (string, []any, error) {
 	where := ""
 	args := []any{}
 	if cursor != nil && *cursor != "" {
-		c, err := storekit.DecodeCursor(*cursor)
+		c, err := storekit.DecodeCursor("legal_holds", *cursor)
 		if err != nil {
 			return "", nil, err
 		}

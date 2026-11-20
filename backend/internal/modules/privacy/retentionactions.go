@@ -152,7 +152,7 @@ func auditRetentionAction(ctx context.Context, tx pgx.Tx, pol retentionPolicy, e
 // Anonymization clears identifiers without suppressing a subject who may return.
 // The erasure parity gate holds table coverage; custom fields need the same depth of scrub.
 func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser *Eraser) error {
-	if err := eraseContactMeetingCapabilities(ctx, tx, id, eraser.payloads); err != nil {
+	if err := eraseContactMeetingCapabilities(ctx, tx, id); err != nil {
 		return err
 	}
 	// The identifiers the graph holds the subject by, read BEFORE the deletes
@@ -183,7 +183,8 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
-		  source_author_name = NULL, anonymized_address_hashes = $3, anonymized_address_key_id = $4,
+		  source_author_name = NULL, greeting_register = NULL,
+		  anonymized_address_hashes = $3, anonymized_address_key_id = $4,
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), id, erasedName, addressHashes(subjectEmails),
 		storekit.SuppressionKeyID())
@@ -241,7 +242,7 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
 	}
 	if err == nil {
-		err = redactSubjectExtensionSignals(ctx, tx, ids.From[ids.ContactKind](id))
+		err = scrubSubjectSignals(ctx, tx, ids.From[ids.ContactKind](id), nil, "retention", causeRetention)
 	}
 	if err == nil {
 		err = clearExtensionRows(ctx, tx, eraser.extensions, "retention", causeRetention, map[extdecl.RecordKind][]ids.UUID{extdecl.Contact: {id}})

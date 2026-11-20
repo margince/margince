@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
+import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -222,6 +223,40 @@ describe("Log activity and Add task, gated on the create grant", () => {
     );
   });
 
+  it("names each refusal in its verb's tooltip or title, outside its description", async () => {
+    stubGrants({});
+    const user = userEvent.setup();
+    armHoverIntent();
+    renderActions();
+    const why = en["record.logActivityRefused"];
+
+    const log = await screen.findByRole("button", { name: "Log activity" });
+    const email = screen.getByRole("button", {
+      name: en["contact.action.email"],
+    });
+    await waitFor(() =>
+      expect(log.getAttribute("title")).toBe(`${en["log.title"]}. ${why}`),
+    );
+    expect(email.getAttribute("aria-describedby")).toBe(
+      log.getAttribute("aria-describedby"),
+    );
+    const book = screen.getByRole("button", {
+      name: en["scheduling.bookContact"],
+    });
+    expect(book.getAttribute("title")).toBe(
+      `${en["scheduling.bookContact"]}. ${en["scheduling.bookRefused"]}`,
+    );
+
+    const host = email.closest(".icon-action");
+    if (!(host instanceof HTMLElement)) {
+      throw new Error("the Email verb lost its tooltip host");
+    }
+    await user.hover(host);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      `${en["contact.action.email"]}. ${why}`,
+    );
+  });
+
   it("refuses both without the grant, over one shared sentence", async () => {
     stubGrants({});
     const user = userEvent.setup();
@@ -393,7 +428,8 @@ describe("Add task writes only tasks", () => {
     expect(within(drawer).queryByLabelText(en["log.kind"])).toBeNull();
     const due = within(drawer).getByLabelText("Due date");
     await user.clear(due);
-    await user.type(due, "16/03/2099");
+    const year = new Date().getFullYear() + 1;
+    await user.type(due, `16/03/${year}`);
     await user.type(within(drawer).getByLabelText("Subject *"), "Demo prep");
     await user.click(within(drawer).getByRole("button", { name: "Add task" }));
 
@@ -405,7 +441,7 @@ describe("Add task writes only tasks", () => {
     });
     expect(posted[0]?.body).toHaveProperty(
       "due_at",
-      expect.stringMatching(/^2099-03-1[56]T/),
+      expect.stringMatching(new RegExp(`^${year}-03-1[56]T`)),
     );
   });
 

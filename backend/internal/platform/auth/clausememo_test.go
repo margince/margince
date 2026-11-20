@@ -61,6 +61,7 @@ func TestTheRememberedActivityGatesAreTheBuiltOnes(t *testing.T) {
 	gates := map[string]rememberedGate{
 		"content":  {ActivityContentClause, contentGateFor},
 		"discover": {ActivityDiscoverClause, discoverGateFor},
+		"message":  {ActivityMessageContentClause, messageContentGateFor},
 	}
 	for gateName, gate := range gates {
 		t.Run(gateName, func(t *testing.T) { checkRememberedGate(t, gate) })

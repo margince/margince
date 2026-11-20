@@ -1,6 +1,26 @@
-import type { components } from "../api/schema";
+import type { components, operations } from "../api/schema";
 
 type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
+type DealListQuery = NonNullable<
+  operations["listDeals"]["parameters"]["query"]
+>;
+
+// The deal list's word for "no value recorded", which no enum member can say.
+const UNSET = "unset";
+
+/** A motion dial as the deal list admits it, or undefined for none. */
+export function motionFilter(
+  v: string | undefined,
+): DealListQuery["commercial_motion"] {
+  return v === UNSET ? UNSET : (commercialMotion(v ?? "") ?? undefined);
+}
+
+/** A priority dial as the deal list admits it, or undefined for none. */
+export function priorityFilter(
+  v: string | undefined,
+): DealListQuery["priority"] {
+  return v === UNSET ? UNSET : (dealPriority(v ?? "") ?? undefined);
+}
 
 export function commercialMotion(
   v: string,

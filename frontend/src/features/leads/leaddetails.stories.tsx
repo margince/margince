@@ -58,9 +58,15 @@ function page(
   locale: Locale = "en",
   companyName?: string,
   listsOn = false,
+  allow: Parameters<typeof meRoute>[0] = {
+    lead: ["read", "update"],
+    company: ["read"],
+  },
+  tags: unknown = { data: [] },
 ) {
   return () => {
     installFetchStub({
+      "GET /records/lead/l-1/tags": () => jsonResponse(tags),
       "GET /records/lead/l-1/lists": () =>
         jsonResponse({ data: [{ id: "s-1", name: "Launch references" }] }),
       "GET /users": () =>
@@ -74,6 +80,7 @@ function page(
       "GET /users/names": () =>
         jsonResponse({ data: [{ id: "u-2", display_name: "Dana Fischer" }] }),
       "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
+      "GET /leads/l-1/consent/stops": () => jsonResponse({ stops: [] }),
       "GET /leads/l-1": () => jsonResponse(lead),
       "GET /companies/c-7": () =>
         jsonResponse({
@@ -89,10 +96,7 @@ function page(
               list: ["read", "create", "update"],
             },
           })
-        : meRoute(
-            { lead: ["read", "update"], company: ["read"] },
-            { roles: ["rep"] },
-          ),
+        : meRoute(allow, { roles: ["rep"] }),
     });
     return (
       <StoryProviders locale={locale}>
@@ -163,13 +167,13 @@ export const Lists: Story = {
   },
 };
 
-/** The owner is handed on from the list beside the Owner row's value: the pick is the save. */
+/** Ownership's one change is the owner, so its Edit opens the owner list at once: the pick is the save. */
 export const OwnerList: Story = {
   render: page({ ...base, owner_id: "u-2" }),
   play: async () => {
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Change owner" }),
+      await screen.findByRole("button", { name: "Edit Ownership" }),
     );
     const list = within(await screen.findByRole("dialog"));
     await expect(
@@ -179,3 +183,95 @@ export const OwnerList: Story = {
 };
 
 export const OwnerListPhone: Story = { ...OwnerList, tags: ["uat-phone"] };
+
+/** About's Edit opens one dialog with the fields the section shows; a linked company's name is fixed, with why. */
+export const AboutEdit: Story = {
+  render: page({ ...linked, title: "Head of fleet" }),
+  play: async () => {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Edit About" }));
+    const about = within(await screen.findByRole("dialog", { name: "About" }));
+    await expect(about.getByRole("textbox", { name: "Title" })).toHaveValue(
+      "Head of fleet",
+    );
+    await waitFor(() =>
+      expect(about.getByRole("group", { name: "Company" })).toBeVisible(),
+    );
+  },
+};
+
+export const AboutEditDark: Story = {
+  ...AboutEdit,
+  globals: { theme: "dark" },
+};
+
+export const AboutEditPhone: Story = { ...AboutEdit, tags: ["uat-phone"] };
+
+/** Email and phone holds the address, the number and the profile; the profile shows locked, with its reason. */
+export const ReachEdit: Story = {
+  render: page({ ...base, phone: "+49301234567" }),
+  play: async () => {
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Edit Email and phone" }),
+    );
+    const reach = within(
+      await screen.findByRole("dialog", { name: "Email and phone" }),
+    );
+    await expect(reach.getByRole("textbox", { name: "Email" })).toHaveValue(
+      "jonas@nordwind.example",
+    );
+    await waitFor(() =>
+      expect(reach.getByRole("group", { name: "LinkedIn URL" })).toBeVisible(),
+    );
+  },
+};
+
+export const ReachEditPhone: Story = { ...ReachEdit, tags: ["uat-phone"] };
+
+/** The project row leaves the dialog for the project search, which stands alone. */
+export const ProjectFlow: Story = {
+  render: page(base),
+  play: async () => {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Edit About" }));
+    const about = within(await screen.findByRole("dialog", { name: "About" }));
+    await user.click(about.getByRole("button", { name: "Change Project" }));
+    const search = await screen.findByRole("dialog", {
+      name: "Attach project",
+    });
+    await waitFor(() => expect(search).toBeVisible());
+  },
+};
+
+/** A reader who may only read the lead gets the readings and no Edit. */
+export const ReadOnly: Story = {
+  render: page(base, "en", undefined, false, {
+    lead: ["read"],
+    company: ["read"],
+  }),
+  play: async () => {
+    await screen.findByRole("region", { name: "About" });
+    await expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
+  },
+};
+
+/** A reader the vocabulary is withheld from reads that, not an empty Tags row. */
+export const TagsWithheld: Story = {
+  render: page(
+    base,
+    "en",
+    undefined,
+    false,
+    { lead: ["read"], company: ["read"] },
+    { data: [], withheld: true },
+  ),
+  play: async () => {
+    const registration = within(
+      await screen.findByRole("region", { name: "Registration" }),
+    );
+    const note = await registration.findByText("Hidden for your role");
+    // The page fades in as it arrives, so the note is visible once that ends.
+    await waitFor(() => expect(note).toBeVisible());
+  },
+};

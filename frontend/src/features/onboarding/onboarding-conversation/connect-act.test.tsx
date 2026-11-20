@@ -263,7 +263,7 @@ describe("the way onward", () => {
 });
 
 describe("the IMAP form", () => {
-  it("carries only the real contract's fields — no invented SMTP host, port or TLS toggle", async () => {
+  it("carries the contract's fields, with sending off until it is ticked", async () => {
     stubWithSession(
       { "GET /connectors": () => jsonResponse({ data: [] }) },
       {},
@@ -276,16 +276,19 @@ describe("the IMAP form", () => {
     const form = await screen.findByRole("region", {
       name: "Connect mail host",
     });
-    expect(screen.getByLabelText("IMAP host")).toBeTruthy();
+    expect(screen.getByLabelText("IMAP server *")).toBeTruthy();
     expect(screen.getByLabelText("Port")).toBeTruthy();
-    expect(screen.getByLabelText("Email")).toBeTruthy();
-    expect(screen.getByLabelText("App password")).toBeTruthy();
+    expect(screen.getByLabelText("Email address *")).toBeTruthy();
+    expect(screen.getByLabelText("App password *")).toBeTruthy();
     expect(screen.getByLabelText("Mailbox")).toBeTruthy();
-    // The real connector contract has no SMTP host or TLS toggle, so this
-    // form invents no widget that would submit nothing. Scoped to the form:
+    // Sending is opt-in: the one tick in the form starts off, and the
+    // outgoing server's fields show only once it is on. Scoped to the form:
     // the step around it carries the overnight question's own checkbox.
+    const send = within(form).getByRole("checkbox");
+    expect(send).not.toBeChecked();
     expect(within(form).queryByLabelText(/smtp/i)).toBeNull();
-    expect(within(form).queryAllByRole("checkbox")).toHaveLength(0);
+    await userEvent.click(send);
+    expect(within(form).getByLabelText("SMTP server")).toBeTruthy();
   });
 
   it("puts the form away on 'Not now' without skipping the step", async () => {
@@ -300,7 +303,7 @@ describe("the IMAP form", () => {
     );
     await user.click(screen.getByRole("button", { name: "Not now" }));
 
-    expect(screen.queryByLabelText("IMAP host")).toBeNull();
+    expect(screen.queryByLabelText("IMAP server *")).toBeNull();
     // Backing out of one provider's ask is not the same decision as skipping
     // the whole mailbox step: neither fires here.
     expect(dispatch).not.toHaveBeenCalled();
@@ -350,9 +353,10 @@ it("keeps the accounts disabled during a roster refetch, not just its first load
   );
 
   await user.click(screen.getByRole("radio", { name: /Other mail provider/ }));
-  await user.type(screen.getByLabelText("Email"), "me@example.com");
-  await user.type(screen.getByLabelText("App password"), "secret");
-  await user.click(screen.getByRole("button", { name: "Test and connect" }));
+  await user.type(screen.getByLabelText("IMAP server *"), "imap.example.com");
+  await user.type(screen.getByLabelText("Email address *"), "me@example.com");
+  await user.type(screen.getByLabelText("App password *"), "secret");
+  await user.click(screen.getByRole("button", { name: "Connect" }));
   await waitFor(() => expect(rosterCalls).toBe(2));
 
   // The connect just invalidated the shared roster query, and its refetch (call

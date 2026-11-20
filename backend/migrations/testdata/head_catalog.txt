@@ -29,7 +29,7 @@ public.activity.activity_internal_mail_remains_restricted CHECK (((internal_mail
 public.activity.activity_invitation_sender_fkey FOREIGN KEY (invitation_sender) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind)
 public.activity.activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text, 'vi'::text]))))
-public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome) OR (old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested))) EXECUTE FUNCTION trg_activity_last_activity()
+public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, audience_reason, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.audience_reason IS DISTINCT FROM new.audience_reason) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome) OR (old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested))) EXECUTE FUNCTION trg_activity_last_activity()
 public.activity.activity_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.activity.activity_meeting_host CHECK (((host_user_id IS NULL) OR (kind = 'meeting'::text)))
 public.activity.activity_meeting_intent_kind CHECK (((meeting_wall IS NULL) OR ((kind = 'meeting'::text) AND (occurred_precision = 'instant'::text))))
@@ -109,6 +109,7 @@ public.activity.due_wall timestamp without time zone gen=- def=-
 public.activity.due_zone text gen=- def=-
 public.activity.duration_seconds integer gen=- def=-
 public.activity.foreign_link boolean gen=- def=-
+public.activity.forwarded_to_self boolean NOT NULL gen=- def=false
 public.activity.guests_left_out integer NOT NULL gen=- def=0
 public.activity.has_calendar_part boolean NOT NULL gen=- def=false
 public.activity.home_read_fence_activity_reach CREATE TRIGGER home_read_fence_activity_reach AFTER UPDATE ON public.activity FOR EACH ROW WHEN (((old.audience IS DISTINCT FROM new.audience) OR ((old.restricted_at IS NULL) AND (new.restricted_at IS NOT NULL)) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)) OR (old.assignee_id IS DISTINCT FROM new.assignee_id) OR ((old.sent_by_colleague IS NOT NULL) AND (old.sent_by_colleague IS DISTINCT FROM new.sent_by_colleague)) OR (old.captured_by IS DISTINCT FROM new.captured_by) OR (old.source_system IS DISTINCT FROM new.source_system) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id))) EXECUTE FUNCTION advance_home_read_fence()
@@ -1757,7 +1758,7 @@ public.attachment.attachment_contract_id_fkey FOREIGN KEY (contract_id) REFERENC
 public.attachment.attachment_doc_state_check CHECK ((doc_state = ANY (ARRAY['draft'::text, 'current'::text, 'final'::text, 'superseded'::text])))
 public.attachment.attachment_entity_type_check CHECK (((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
 public.attachment.attachment_external_identity_complete CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))
-public.attachment.attachment_link_shape CHECK ((((category = 'link'::text) = (url IS NOT NULL)) AND ((category <> 'link'::text) OR ((storage_key = ''::text) AND bytes_withheld AND (url ~ '^https?://'::text) AND (length(url) <= 2048)))))
+public.attachment.attachment_link_shape CHECK ((((category <> 'link'::text) OR (url IS NOT NULL)) AND ((url IS NULL) OR ((storage_key = ''::text) AND bytes_withheld AND (url ~ '^https?://'::text) AND (length(url) <= 2048)))))
 public.attachment.attachment_pkey PRIMARY KEY (id)
 public.attachment.attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES attachment(id) ON DELETE SET NULL (supersedes_id)
 public.attachment.attachment_supersedes_not_self CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))
@@ -2389,7 +2390,6 @@ public.capture_connection.capture_connection_provider_check CHECK ((provider = A
 public.capture_connection.capture_connection_reader_team_id_fkey FOREIGN KEY (reader_team_id) REFERENCES team(id) ON DELETE RESTRICT
 public.capture_connection.capture_connection_shared_shape CHECK ((((user_id IS NOT NULL) AND (reader_team_id IS NULL)) OR ((user_id IS NULL) AND (reader_team_id IS NOT NULL) AND (account_label IS NOT NULL) AND (mail_posture <> 'classified'::text))))
 public.capture_connection.capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
-public.capture_connection.capture_connection_unique UNIQUE (user_id, provider)
 public.capture_connection.capture_connection_unread_period_whole CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))
 public.capture_connection.capture_connection_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_connection.connected_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2398,6 +2398,7 @@ public.capture_connection.connector_connection_pkey PRIMARY KEY (id)
 public.capture_connection.context_tag_id uuid gen=- def=-
 public.capture_connection.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_connection.credential_ref text gen=- def=-
+public.capture_connection.default_sender boolean NOT NULL gen=- def=false
 public.capture_connection.generation integer NOT NULL gen=- def=0
 public.capture_connection.history_baseline_date date gen=- def=-
 public.capture_connection.history_baseline_set_at timestamp with time zone gen=- def=-
@@ -2405,6 +2406,7 @@ public.capture_connection.history_baseline_set_by text gen=- def=-
 public.capture_connection.history_baseline_tz text gen=- def=-
 public.capture_connection.home_read_fence_shared_mailbox_readers CREATE TRIGGER home_read_fence_shared_mailbox_readers AFTER UPDATE OF reader_team_id, mail_posture ON public.capture_connection FOR EACH ROW WHEN (((old.reader_team_id IS DISTINCT FROM new.reader_team_id) OR (old.mail_posture IS DISTINCT FROM new.mail_posture))) EXECUTE FUNCTION advance_home_read_fence()
 public.capture_connection.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_connection.keys_by_provider boolean NOT NULL gen=- def=false
 public.capture_connection.legal_entity_id uuid gen=- def=-
 public.capture_connection.mail_posture text NOT NULL gen=- def='classified'::text
 public.capture_connection.provider text NOT NULL gen=- def=-
@@ -2425,8 +2427,9 @@ public.capture_connection.unread_to timestamp with time zone gen=- def=-
 public.capture_connection.user_id uuid gen=- def=-
 public.capture_connection.watch_expires_at timestamp with time zone gen=- def=-
 public.capture_connection.watch_ref text gen=- def=-
+public.capture_connection_member_mailbox CREATE UNIQUE INDEX capture_connection_member_mailbox ON public.capture_connection USING btree (user_id, provider, lower(account_label)) NULLS NOT DISTINCT WHERE (user_id IS NOT NULL)
+public.capture_connection_one_default_sender CREATE UNIQUE INDEX capture_connection_one_default_sender ON public.capture_connection USING btree (user_id) WHERE default_sender
 public.capture_connection_shared_mailbox CREATE UNIQUE INDEX capture_connection_shared_mailbox ON public.capture_connection USING btree (provider, lower(account_label)) WHERE (user_id IS NULL)
-public.capture_connection_unique CREATE UNIQUE INDEX capture_connection_unique ON public.capture_connection USING btree (user_id, provider)
 public.capture_counterparty_hold acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_counterparty_hold.capture_counterparty_hold_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))
 public.capture_counterparty_hold.capture_counterparty_hold_pkey PRIMARY KEY (id)
@@ -2455,6 +2458,7 @@ public.capture_digest.user_id uuid NOT NULL gen=- def=-
 public.capture_digest_pkey CREATE UNIQUE INDEX capture_digest_pkey ON public.capture_digest USING btree (id)
 public.capture_digest_user_id_digest_date_key CREATE UNIQUE INDEX capture_digest_user_id_digest_date_key ON public.capture_digest USING btree (user_id, digest_date)
 public.capture_exclusion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_exclusion.capture_exclusion_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
 public.capture_exclusion.capture_exclusion_container_is_personal CHECK (((kind <> 'container'::text) OR (scope = 'user'::text) OR (value = ANY (ARRAY['gmail:CATEGORY_PROMOTIONS'::text, 'gmail:CATEGORY_SOCIAL'::text, 'gmail:CATEGORY_UPDATES'::text, 'gmail:CATEGORY_FORUMS'::text]))))
 public.capture_exclusion.capture_exclusion_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text, 'container'::text])))
 public.capture_exclusion.capture_exclusion_pkey PRIMARY KEY (id)
@@ -2462,6 +2466,7 @@ public.capture_exclusion.capture_exclusion_scope_check CHECK ((scope = ANY (ARRA
 public.capture_exclusion.capture_exclusion_scope_user CHECK (((scope = 'user'::text) = (user_id IS NOT NULL)))
 public.capture_exclusion.capture_exclusion_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_exclusion.capture_exclusion_value_check CHECK (((value <> ''::text) AND ((kind = 'container'::text) OR (value = lower(value)))))
+public.capture_exclusion.connection_id uuid gen=- def=-
 public.capture_exclusion.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_exclusion.created_by text NOT NULL gen=- def=-
 public.capture_exclusion.id uuid NOT NULL gen=- def=uuidv7()
@@ -2711,6 +2716,7 @@ public.capture_test_mailbox_sent_user_message_unique CREATE UNIQUE INDEX capture
 public.capture_thread_verdict acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_thread_verdict.attempts integer NOT NULL gen=- def=0
 public.capture_thread_verdict.capture_thread_verdict_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
+public.capture_thread_verdict.capture_thread_verdict_deal_clock CREATE TRIGGER capture_thread_verdict_deal_clock AFTER INSERT OR DELETE OR UPDATE OF kind, status, thread_key, user_id ON public.capture_thread_verdict FOR EACH ROW EXECUTE FUNCTION trg_thread_verdict_deal_clock()
 public.capture_thread_verdict.capture_thread_verdict_first_activity_id_fkey FOREIGN KEY (first_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.capture_thread_verdict.capture_thread_verdict_pkey PRIMARY KEY (id)
 public.capture_thread_verdict.capture_thread_verdict_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text])))
@@ -2970,6 +2976,7 @@ END;
 
 public.comms_outbound acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.comms_outbound.activity_id uuid NOT NULL gen=- def=-
+public.comms_outbound.answers_activity_id uuid gen=- def=-
 public.comms_outbound.attachments jsonb NOT NULL gen=- def='[]'::jsonb
 public.comms_outbound.attempts integer NOT NULL gen=- def=0
 public.comms_outbound.bcc jsonb gen=- def=-
@@ -2981,11 +2988,13 @@ public.comms_outbound.bounced_at timestamp with time zone gen=- def=-
 public.comms_outbound.cc jsonb gen=- def='[]'::jsonb
 public.comms_outbound.channel_user_id text gen=- def=-
 public.comms_outbound.comms_outbound_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.comms_outbound.comms_outbound_answers_activity_id_fkey FOREIGN KEY (answers_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.comms_outbound.comms_outbound_attachments_shape CHECK (comms_outbound_attachments_well_formed(attachments))
 public.comms_outbound.comms_outbound_bounce_is_stated CHECK ((((bounced_at IS NULL) = (bounce_kind IS NULL)) AND ((bounce_reason IS NULL) OR (bounced_at IS NOT NULL))))
 public.comms_outbound.comms_outbound_bounce_kind_named CHECK (((bounce_kind IS NULL) OR (bounce_kind = ANY (ARRAY['hard'::text, 'soft'::text]))))
 public.comms_outbound.comms_outbound_bounce_recipient_stated CHECK (((bounce_recipient IS NULL) OR (bounced_at IS NOT NULL)))
 public.comms_outbound.comms_outbound_cc_array CHECK ((jsonb_typeof(cc) = 'array'::text))
+public.comms_outbound.comms_outbound_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE SET NULL
 public.comms_outbound.comms_outbound_execution_authority CHECK ((execution_authority = ANY (ARRAY['supported'::text, 'instruction'::text])))
 public.comms_outbound.comms_outbound_inflight_cannot_detect_prior_send CHECK (((inflight_at IS NULL) OR (channel_user_id IS NOT NULL) OR (sender_kind = 'controller'::text)))
 public.comms_outbound.comms_outbound_instruction_id_fkey FOREIGN KEY (instruction_id) REFERENCES communication_instruction(id) ON DELETE RESTRICT
@@ -3004,6 +3013,7 @@ public.comms_outbound.comms_outbound_shape CHECK ((((channel_user_id IS NULL) AN
 public.comms_outbound.comms_outbound_status CHECK ((status = ANY (ARRAY['pending'::text, 'sent'::text, 'parked'::text])))
 public.comms_outbound.comms_outbound_template_is_controllers CHECK (((sender_kind = 'controller'::text) = ((template_key IS NOT NULL) AND (template_version IS NOT NULL))))
 public.comms_outbound.comms_outbound_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.comms_outbound.connection_id uuid gen=- def=-
 public.comms_outbound.consent_purpose text gen=- def=-
 public.comms_outbound.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.comms_outbound.delivery_due_at timestamp with time zone gen=- def=-
@@ -3045,6 +3055,7 @@ public.comms_outbound_addressed(recipients jsonb, cc jsonb) secdef=false cfg=- a
       FROM jsonb_array_elements_text(
           CASE WHEN jsonb_typeof(recipients || cc) = 'array' THEN recipients || cc END) address
 
+public.comms_outbound_answers_ix CREATE INDEX comms_outbound_answers_ix ON public.comms_outbound USING btree (answers_activity_id) WHERE (answers_activity_id IS NOT NULL)
 public.comms_outbound_attachments_well_formed(files jsonb) secdef=false cfg=- acl=- 
   SELECT jsonb_typeof(files) = 'array'
      AND NOT EXISTS (
@@ -3103,11 +3114,13 @@ public.communication_decision.communication_decision_instruction_shape CHECK (((
 public.communication_decision.communication_decision_mode CHECK ((mode = ANY (ARRAY['observe'::text, 'warn'::text, 'enforce'::text])))
 public.communication_decision.communication_decision_phase CHECK ((phase = ANY (ARRAY['staging'::text, 'transmit'::text])))
 public.communication_decision.communication_decision_pkey PRIMARY KEY (id)
+public.communication_decision.communication_decision_ruleset_digest_shape CHECK (((ruleset_digest IS NULL) OR ((ruleset_digest ~ '^[0-9a-f]{64}$'::text) AND (ruleset_version IS NOT NULL) AND (COALESCE(array_length(ruleset_codes, 1), 0) = 1))))
 public.communication_decision.communication_decision_ruleset_shape CHECK ((((ruleset_codes IS NULL) OR (COALESCE(array_length(ruleset_codes, 1), 0) > 0)) AND ((ruleset_version IS NULL) OR (COALESCE(array_length(ruleset_codes, 1), 0) = 1))))
 public.communication_decision.communication_decision_subject_kind CHECK (((subject_kind IS NULL) OR (subject_kind = ANY (ARRAY['contact'::text, 'lead'::text]))))
 public.communication_decision.communication_decision_subject_shape CHECK (((subject_kind IS NULL) = (subject_id IS NULL)))
 public.communication_decision.communication_decision_verdict CHECK ((verdict = ANY (ARRAY['allow'::text, 'deny'::text, 'review'::text])))
 public.communication_decision.content_fingerprint bytea gen=- def=-
+public.communication_decision.country_source text gen=- def=-
 public.communication_decision.data_protection_country text gen=- def=-
 public.communication_decision.decided_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_decision.decision_set_id uuid NOT NULL gen=- def=-
@@ -3129,12 +3142,13 @@ public.communication_decision.recipient_address text NOT NULL gen=- def=-
 public.communication_decision.requested_category text gen=- def=-
 public.communication_decision.resolved_category text NOT NULL gen=- def=-
 public.communication_decision.ruleset_codes text[] gen=- def=-
+public.communication_decision.ruleset_digest text gen=- def=-
 public.communication_decision.ruleset_version integer gen=- def=-
 public.communication_decision.subject_id uuid gen=- def=-
 public.communication_decision.subject_kind text gen=- def=-
 public.communication_decision.suppression text gen=- def=-
-public.communication_decision.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_decision FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "legacy_verdict": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')
-public.communication_decision.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_decision FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "legacy_verdict": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')
+public.communication_decision.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_decision FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "country_source": 20000, "legacy_verdict": 20000, "ruleset_digest": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"country_source":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"ruleset_digest":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')
+public.communication_decision.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_decision FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "country_source": 20000, "legacy_verdict": 20000, "ruleset_digest": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"country_source":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"ruleset_digest":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')
 public.communication_decision.verdict text NOT NULL gen=- def=-
 public.communication_decision_by_subject CREATE INDEX communication_decision_by_subject ON public.communication_decision USING btree (subject_id) WHERE (subject_id IS NOT NULL)
 public.communication_decision_disagreements CREATE INDEX communication_decision_disagreements ON public.communication_decision USING btree (decided_at) WHERE ((legacy_verdict IS NOT NULL) AND (legacy_verdict <> verdict))
@@ -3467,7 +3481,7 @@ public.company_domain_disposition.company_domain_disposition_candidate_company_f
 public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
 public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text, 'near_duplicate'::text, 'forwarded_identity'::text, 'vendor_verdict'::text, 'reserved_domain'::text]))))
+public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text, 'near_duplicate'::text, 'forwarded_identity'::text, 'vendor_verdict'::text, 'reserved_domain'::text, 'foreign_site'::text]))))
 public.company_domain_disposition.company_domain_disposition_pending_reason_shape CHECK (((pending_reason IS NULL) OR ((status = 'pending'::text) AND (admission IS DISTINCT FROM 'suppressed'::text))))
 public.company_domain_disposition.company_domain_disposition_pkey PRIMARY KEY (id)
 public.company_domain_disposition.company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL))))
@@ -4088,6 +4102,7 @@ public.contact.archived_at timestamp with time zone gen=- def=-
 public.contact.captured_by text NOT NULL gen=- def=-
 public.contact.contact_converted_from_lead_id_fkey FOREIGN KEY (converted_from_lead_id) REFERENCES lead(id) ON DELETE SET NULL (converted_from_lead_id)
 public.contact.contact_created_from_activity_id_fkey FOREIGN KEY (created_from_activity_id) REFERENCES activity(id) ON DELETE SET NULL
+public.contact.contact_greeting_register_check CHECK ((greeting_register = ANY (ARRAY['formal'::text, 'familiar'::text])))
 public.contact.contact_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES contact(id) ON DELETE SET NULL (merged_into_id)
 public.contact.contact_narrowing_reason_check CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict'::text, 'outbound_no_answer'::text, 'confidentiality_hold'::text, 'advisor'::text, 'human_decided'::text])))
 public.contact.contact_narrowing_reason_only_when_owner CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner'::text)))
@@ -4109,6 +4124,7 @@ public.contact.created_from_activity_id uuid gen=- def=-
 public.contact.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.first_name text gen=- def=-
 public.contact.full_name text NOT NULL gen=- def=-
+public.contact.greeting_register text gen=- def=-
 public.contact.home_read_fence_contact_reach CREATE TRIGGER home_read_fence_contact_reach AFTER UPDATE ON public.contact FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()
 public.contact.id uuid NOT NULL gen=- def=uuidv7()
 public.contact.last_activity_at timestamp with time zone gen=- def=-
@@ -4128,8 +4144,8 @@ public.contact.source_author_id uuid gen=- def=-
 public.contact.source_author_name text gen=- def=-
 public.contact.source_id text gen=- def=-
 public.contact.source_system text gen=- def=-
-public.contact.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')
-public.contact.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')
+public.contact.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')
+public.contact.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')
 public.contact.title text gen=- def=-
 public.contact.trg_contact_address_country_stale CREATE TRIGGER trg_contact_address_country_stale AFTER UPDATE OF address_postal_code, address_city, address_country ON public.contact FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()
 public.contact.trg_contact_updated CREATE TRIGGER trg_contact_updated BEFORE UPDATE ON public.contact FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -4960,6 +4976,7 @@ public.deal_move_dismissal.text_bound_update CREATE TRIGGER text_bound_update AF
 public.deal_move_dismissal.user_id uuid NOT NULL gen=- def=-
 public.deal_move_dismissal_deal_ix CREATE INDEX deal_move_dismissal_deal_ix ON public.deal_move_dismissal USING btree (deal_id)
 public.deal_move_dismissal_pkey CREATE UNIQUE INDEX deal_move_dismissal_pkey ON public.deal_move_dismissal USING btree (user_id, deal_id)
+public.deal_pause_ends_at(d deal) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner SELECT (LEAST(((d.wait_until)::timestamp AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))), CASE WHEN ((((d.wait_until)::timestamp AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))) - interval '1 hour') AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')))::date = (d.wait_until)::date THEN ((d.wait_until)::timestamp AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))) - interval '1 hour' END, CASE WHEN ((((d.wait_until)::timestamp AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))) - interval '30 minutes') AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')))::date = (d.wait_until)::date THEN ((d.wait_until)::timestamp AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))) - interval '30 minutes' END))
 public.deal_pkey CREATE UNIQUE INDEX deal_pkey ON public.deal USING btree (id)
 public.deal_product acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_product.amount_minor bigint gen=- def=-
@@ -5722,6 +5739,7 @@ public.finance_invoice.finance_invoice_customer_link_fk FOREIGN KEY (customer_li
 public.finance_invoice.finance_invoice_dunning_level_range CHECK (((dunning_level >= 0) AND (dunning_level <= 99)))
 public.finance_invoice.finance_invoice_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))
 public.finance_invoice.finance_invoice_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))
+public.finance_invoice.finance_invoice_names_its_customer_link CHECK ((customer_link_id IS NOT NULL)) NOT VALID
 public.finance_invoice.finance_invoice_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
 public.finance_invoice.finance_invoice_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
 public.finance_invoice.finance_invoice_owner_key UNIQUE (id, connection_id, company_id)
@@ -5777,6 +5795,7 @@ public.finance_payment.finance_payment_connection_id_external_id_key UNIQUE (con
 public.finance_payment.finance_payment_customer_link_fk FOREIGN KEY (customer_link_id, connection_id, company_id) REFERENCES finance_customer_link(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
 public.finance_payment.finance_payment_invoice_fk FOREIGN KEY (invoice_id) REFERENCES finance_invoice(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_invoice_owner_fk FOREIGN KEY (invoice_id, connection_id, company_id) REFERENCES finance_invoice(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
+public.finance_payment.finance_payment_names_its_customer_link CHECK ((customer_link_id IS NOT NULL)) NOT VALID
 public.finance_payment.finance_payment_pkey PRIMARY KEY (id)
 public.finance_payment.finance_payment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_payment.id uuid NOT NULL gen=- def=uuidv7()
@@ -5850,11 +5869,16 @@ public.forecast_contribution.deal_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.effective_close_date date gen=- def=-
 public.forecast_contribution.evidence_n integer gen=- def=-
 public.forecast_contribution.exclusion_reason text gen=- def=-
+public.forecast_contribution.focus_rank smallint gen=- def=-
+public.forecast_contribution.focus_reason jsonb gen=- def=-
 public.forecast_contribution.forecast_contribution_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
 public.forecast_contribution.forecast_contribution_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_base_minor_js_safe CHECK (((base_minor >= '-9007199254740991'::bigint) AND (base_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_evidence_n_is_a_tally CHECK (((evidence_n IS NULL) OR (evidence_n >= 0)))
 public.forecast_contribution.forecast_contribution_exclusion_reason_check CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced'::text, 'fx_missing'::text, 'out_of_period'::text, 'not_eligible'::text]))))
+public.forecast_contribution.forecast_contribution_focus_rank_in_list CHECK (((focus_rank IS NULL) OR ((focus_rank >= 1) AND (focus_rank <= 20))))
+public.forecast_contribution.forecast_contribution_focus_reason_object CHECK (((focus_reason IS NULL) OR (jsonb_typeof(focus_reason) = 'object'::text)))
+public.forecast_contribution.forecast_contribution_focus_reason_pair CHECK (((focus_rank IS NULL) = (focus_reason IS NULL)))
 public.forecast_contribution.forecast_contribution_is_frozen CREATE TRIGGER forecast_contribution_is_frozen BEFORE UPDATE ON public.forecast_contribution FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()
 public.forecast_contribution.forecast_contribution_pkey PRIMARY KEY (id)
 public.forecast_contribution.forecast_contribution_probability_is_a_percent CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))
@@ -5917,6 +5941,7 @@ public.forecast_snapshot.definition_version text NOT NULL gen=- def=-
 public.forecast_snapshot.eligible_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.evidence_cutoff timestamp with time zone gen=- def=-
 public.forecast_snapshot.evidence_minor bigint NOT NULL gen=- def=-
+public.forecast_snapshot.focus_on_target boolean gen=- def=-
 public.forecast_snapshot.forecast_snapshot_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES forecast_call(id) ON DELETE SET NULL
 public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))
@@ -6168,7 +6193,7 @@ public.idx_activity_thread_reply_seek CREATE INDEX idx_activity_thread_reply_see
 public.idx_activity_unfolded_counterparty CREATE INDEX idx_activity_unfolded_counterparty ON public.activity USING btree (activity_unfolded_counterparty(counterparty_email)) WHERE (activity_unfolded_counterparty(counterparty_email) IS NOT NULL)
 public.idx_activity_unjudged CREATE INDEX idx_activity_unjudged ON public.activity USING btree (occurred_at) WHERE ((owed_verdict IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
 public.idx_activity_unjudged_reply CREATE INDEX idx_activity_unjudged_reply ON public.activity USING btree (occurred_at) WHERE ((reply_verdict IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
-public.idx_activity_unlabeled CREATE INDEX idx_activity_unlabeled ON public.activity USING btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%'::text) AND (kind = 'email'::text))
+public.idx_activity_unlabeled CREATE INDEX idx_activity_unlabeled ON public.activity USING btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])))
 public.idx_agent_run_awaiting CREATE INDEX idx_agent_run_awaiting ON public.agent_run USING btree (approval_id) WHERE (status = 'awaiting_approval'::text)
 public.idx_agent_standing_grant_live CREATE INDEX idx_agent_standing_grant_live ON public.agent_standing_grant USING btree (agent_spec, user_id) WHERE ((state = 'granted'::text) AND (passport_id IS NOT NULL))
 public.idx_agent_task_approval CREATE UNIQUE INDEX idx_agent_task_approval ON public.agent_task USING btree (approval_id)
@@ -6237,6 +6262,7 @@ public.idx_bulk_operation_requested_by CREATE INDEX idx_bulk_operation_requested
 public.idx_capture_auto_enrich_due CREATE INDEX idx_capture_auto_enrich_due ON public.capture_auto_enrich_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_capture_backfill_conn CREATE INDEX idx_capture_backfill_conn ON public.capture_backfill USING btree (connection_id, created_at DESC)
 public.idx_capture_connection CREATE INDEX idx_capture_connection ON public.capture_connection USING btree (provider, status) WHERE (archived_at IS NULL)
+public.idx_capture_exclusion_connection CREATE INDEX idx_capture_exclusion_connection ON public.capture_exclusion USING btree (connection_id) WHERE (connection_id IS NOT NULL)
 public.idx_capture_exclusion_user CREATE INDEX idx_capture_exclusion_user ON public.capture_exclusion USING btree (user_id)
 public.idx_capture_exclusion_value CREATE INDEX idx_capture_exclusion_value ON public.capture_exclusion USING btree (kind, value)
 public.idx_capture_import_provider_messages CREATE INDEX idx_capture_import_provider_messages ON public.capture_import USING gin (provider_message_ids)
@@ -6258,6 +6284,7 @@ public.idx_close_date_run_member_deal CREATE INDEX idx_close_date_run_member_dea
 public.idx_commission_deal CREATE INDEX idx_commission_deal ON public.commission_entry USING btree (deal_id)
 public.idx_commission_partner CREATE INDEX idx_commission_partner ON public.commission_entry USING btree (partner_company_id, status)
 public.idx_comms_outbound_addressed CREATE INDEX idx_comms_outbound_addressed ON public.comms_outbound USING gin (comms_outbound_addressed(recipients, cc)) WHERE ((sender_kind = 'user'::text) AND (status = 'sent'::text) AND (user_id IS NOT NULL) AND (channel_user_id IS NULL))
+public.idx_comms_outbound_connection CREATE INDEX idx_comms_outbound_connection ON public.comms_outbound USING btree (connection_id) WHERE (connection_id IS NOT NULL)
 public.idx_comms_outbound_parked CREATE INDEX idx_comms_outbound_parked ON public.comms_outbound USING btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL)
 public.idx_communication_basis_contact CREATE INDEX idx_communication_basis_contact ON public.communication_basis USING btree (contact_id)
 public.idx_communication_basis_lead CREATE INDEX idx_communication_basis_lead ON public.communication_basis USING btree (lead_id)
@@ -6315,6 +6342,11 @@ END)) WHERE (archived_at IS NULL)
 public.idx_contact_email_trgm CREATE INDEX idx_contact_email_trgm ON public.contact_email USING gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_contact_exact_digraph_name_key CREATE INDEX idx_contact_exact_digraph_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä'::text, 'ae'::text), 'ö'::text, 'oe'::text), 'ü'::text, 'ue'::text))), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_exact_name_key CREATE INDEX idx_contact_exact_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
+public.idx_contact_family_name_key CREATE INDEX idx_contact_family_name_key ON public.contact USING btree ("substring"(btrim(regexp_replace(replace(f_fold_apostrophes(lower(
+CASE
+    WHEN (full_name ~~ '%,%'::text) THEN split_part(full_name, ','::text, 1)
+    ELSE full_name
+END)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text)), '[^ ]+$'::text)) WHERE (archived_at IS NULL)
 public.idx_contact_from_lead CREATE INDEX idx_contact_from_lead ON public.contact USING btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)
 public.idx_contact_keyed_address_hashes CREATE INDEX idx_contact_keyed_address_hashes ON public.contact USING btree (anonymized_address_key_id) WHERE (anonymized_address_key_id IS NOT NULL)
 public.idx_contact_last_activity_keyset CREATE INDEX idx_contact_last_activity_keyset ON public.contact USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
@@ -6326,6 +6358,7 @@ public.idx_contact_name_trigram_candidates CREATE INDEX idx_contact_name_trigram
 public.idx_contact_owner CREATE INDEX idx_contact_owner ON public.contact USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_contact_phone_contact CREATE INDEX idx_contact_phone_contact ON public.contact_phone USING btree (contact_id)
 public.idx_contact_phone_dedupe_scan CREATE INDEX idx_contact_phone_dedupe_scan ON public.contact_phone USING btree (updated_at, id)
+public.idx_contact_phone_live_phone CREATE INDEX idx_contact_phone_live_phone ON public.contact_phone USING btree (phone) WHERE (archived_at IS NULL)
 public.idx_contact_search CREATE INDEX idx_contact_search ON public.contact USING gin (search_tsv)
 public.idx_contact_signature_enrich_state_activity CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id)
 public.idx_contact_signature_enrich_state_retry_activity CREATE INDEX idx_contact_signature_enrich_state_retry_activity ON public.contact_signature_enrich_state USING btree (retry_activity_id) WHERE (retry_activity_id IS NOT NULL)
@@ -6854,8 +6887,8 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
        AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
-     WHERE r.company_id = cid AND r.kind = 'employment'
-       AND r.ended_at IS NULL AND r.archived_at IS NULL
+     WHERE r.company_id = cid
+       AND r.kind = 'employment' AND r.archived_at IS NULL AND (coalesce(r.employment_status, 'current') = 'current' AND (r.ended_at IS NULL OR CASE WHEN r.ended_precision = 'month' THEN (date_trunc('month', r.ended_at::date) + interval '1 month')::date ELSE r.ended_at END > (CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))::date))
        AND (CASE WHEN r.started_at IS NOT NULL THEN (r.started_at::timestamp AT TIME ZONE 'UTC' <= a.occurred_at)
 		WHEN r.first_observed_at IS NOT NULL THEN (a.occurred_at >= r.first_observed_at AND (a.occurred_precision = 'instant' OR (CASE WHEN a.occurred_precision = 'day'
 		THEN date_trunc('day', a.occurred_at AT TIME ZONE 'UTC') AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')
@@ -6890,8 +6923,8 @@ public.last_activity_of_company_activity(aid uuid, oid uuid) secdef=false cfg=- 
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
        AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
-     WHERE l.activity_id = aid AND r.company_id = oid AND r.kind = 'employment'
-       AND r.ended_at IS NULL AND r.archived_at IS NULL
+     WHERE l.activity_id = aid AND r.company_id = oid
+       AND r.kind = 'employment' AND r.archived_at IS NULL AND (coalesce(r.employment_status, 'current') = 'current' AND (r.ended_at IS NULL OR CASE WHEN r.ended_precision = 'month' THEN (date_trunc('month', r.ended_at::date) + interval '1 month')::date ELSE r.ended_at END > (CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))::date))
        AND (CASE WHEN r.started_at IS NOT NULL THEN (r.started_at::timestamp AT TIME ZONE 'UTC' <= a.occurred_at)
 		WHEN r.first_observed_at IS NOT NULL THEN (a.occurred_at >= r.first_observed_at AND (a.occurred_precision = 'instant' OR (CASE WHEN a.occurred_precision = 'day'
 		THEN date_trunc('day', a.occurred_at AT TIME ZONE 'UTC') AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')
@@ -6911,10 +6944,28 @@ public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=-
   SELECT max(a.occurred_at)
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
-     AND a.audience = 'workspace'
+     AND a.audience IN ('workspace', 'participants')
+     AND (coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=a.thread_key
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))
      AND a.origin NOT IN ('system_remediation', 'system_notice')
      AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
    WHERE l.deal_id = did
+
+public.last_activity_of_deal_activity(aid uuid) secdef=false cfg=- acl=- SELECT max(a.occurred_at)
+    FROM activity_link l
+    JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+     AND a.audience IN ('workspace', 'participants')
+     AND (coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=a.thread_key
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+   WHERE l.activity_id = aid
 
 public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=- 
   SELECT max(a.occurred_at)
@@ -6932,13 +6983,14 @@ public.last_activity_reach(contact_ids uuid[], deal_ids uuid[], company_ids uuid
   UNION SELECT 'company', d.company_id FROM deal d
          WHERE d.id = ANY (deal_ids) AND d.company_id IS NOT NULL
   UNION SELECT 'company', r.company_id FROM relationship r
-         WHERE r.contact_id = ANY (contact_ids) AND r.kind = 'employment'
-           AND r.ended_at IS NULL AND r.archived_at IS NULL
+         WHERE r.contact_id = ANY (contact_ids)
+           AND r.kind = 'employment' AND r.archived_at IS NULL AND (coalesce(r.employment_status, 'current') = 'current' AND (r.ended_at IS NULL OR CASE WHEN r.ended_precision = 'month' THEN (date_trunc('month', r.ended_at::date) + interval '1 month')::date ELSE r.ended_at END > (CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))::date))
 
 public.lawful_basis_confirmation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lawful_basis_confirmation.confirmed_at timestamp with time zone NOT NULL gen=- def=now()
 public.lawful_basis_confirmation.confirmed_by uuid NOT NULL gen=- def=-
 public.lawful_basis_confirmation.contact_id uuid gen=- def=-
+public.lawful_basis_confirmation.country text gen=- def=-
 public.lawful_basis_confirmation.delivery_id uuid gen=- def=-
 public.lawful_basis_confirmation.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.lawful_basis_confirmation.id uuid NOT NULL gen=- def=uuidv7()
@@ -6951,6 +7003,8 @@ public.lawful_basis_confirmation.lawful_basis_confirmation_pkey PRIMARY KEY (id)
 public.lawful_basis_confirmation.lawful_basis_confirmation_window CHECK ((expires_at > confirmed_at))
 public.lawful_basis_confirmation.lead_id uuid gen=- def=-
 public.lawful_basis_confirmation.spent_at timestamp with time zone gen=- def=-
+public.lawful_basis_confirmation.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lawful_basis_confirmation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"country": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"country":20000}')
+public.lawful_basis_confirmation.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lawful_basis_confirmation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"country": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"country":20000}')
 public.lawful_basis_confirmation_confirmed_by_cascade_idx CREATE INDEX lawful_basis_confirmation_confirmed_by_cascade_idx ON public.lawful_basis_confirmation USING btree (confirmed_by)
 public.lawful_basis_confirmation_contact_id_cascade_idx CREATE INDEX lawful_basis_confirmation_contact_id_cascade_idx ON public.lawful_basis_confirmation USING btree (contact_id)
 public.lawful_basis_confirmation_delivery CREATE INDEX lawful_basis_confirmation_delivery ON public.lawful_basis_confirmation USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
@@ -6972,6 +7026,7 @@ public.lead.email text gen=- def=-
 public.lead.email_domain_folded text gen=- def=-
 public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
+public.lead.first_response_marked_by uuid gen=- def=-
 public.lead.from_contact_id uuid gen=- def=-
 public.lead.full_name text gen=- def=-
 public.lead.home_read_fence_lead_owner CREATE TRIGGER home_read_fence_lead_owner AFTER UPDATE ON public.lead FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()
@@ -7482,7 +7537,7 @@ public.mail_draft.editor_state jsonb NOT NULL gen=- def='{}'::jsonb
 public.mail_draft.grounding jsonb NOT NULL gen=- def='[]'::jsonb
 public.mail_draft.html_body text gen=- def=-
 public.mail_draft.id uuid NOT NULL gen=- def=uuidv7()
-public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'forward'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.mail_draft.mail_draft_author_id_fkey FOREIGN KEY (author_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.mail_draft.mail_draft_author_id_retirement_guard CREATE TRIGGER mail_draft_author_id_retirement_guard BEFORE INSERT OR UPDATE ON public.mail_draft FOR EACH ROW WHEN (((new.author_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('author_id')
 public.mail_draft.mail_draft_communication_context CHECK (((communication_context IS NULL) OR (communication_context = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'marketing'::text]))))
@@ -7491,12 +7546,14 @@ public.mail_draft.mail_draft_one_per_anchor UNIQUE (author_id, anchor_type, anch
 public.mail_draft.mail_draft_pkey PRIMARY KEY (id)
 public.mail_draft.mail_draft_schedule_pair CHECK (((scheduled_at IS NULL) = (scheduled_tz IS NULL)))
 public.mail_draft.mail_draft_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.mail_draft.override_explanation text gen=- def=-
+public.mail_draft.recipient_countries jsonb gen=- def=-
 public.mail_draft.scheduled_at timestamp with time zone gen=- def=-
 public.mail_draft.scheduled_tz text gen=- def=-
 public.mail_draft.scheduled_wall timestamp without time zone gen=- def=-
 public.mail_draft.subject text NOT NULL gen=- def=''::text
-public.mail_draft.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.mail_draft FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "communication_context": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')
-public.mail_draft.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.mail_draft FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "communication_context": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')
+public.mail_draft.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.mail_draft FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "override_explanation": 2000, "communication_context": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"override_explanation":2000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')
+public.mail_draft.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.mail_draft FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "override_explanation": 2000, "communication_context": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"override_explanation":2000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')
 public.mail_draft.to_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.mail_draft.version bigint NOT NULL gen=- def=1
@@ -8755,6 +8812,21 @@ public.record_stored_object_intent(requested_kind text, requested_key text) secd
         RAISE EXCEPTION 'The stored file has expired; upload it again' USING ERRCODE = '55000';
     END IF;
 END;
+public.refresh_deal_clocks_of_thread(key text, seat uuid) secdef=false cfg=- acl=- 
+DECLARE
+  l record;
+BEGIN
+  FOR l IN
+     SELECT DISTINCT link.deal_id FROM activity a
+       JOIN capture_import i ON i.activity_id = a.id AND i.user_id = seat
+       JOIN activity_link link ON link.activity_id = a.id
+      WHERE a.thread_key = key AND key <> '' AND link.deal_id IS NOT NULL
+      ORDER BY link.deal_id
+  LOOP
+    PERFORM refresh_last_activity_for_link(NULL, l.deal_id, NULL);
+  END LOOP;
+END;
+
 public.refresh_last_activity_for_link(cid uuid, did uuid, oid uuid) secdef=false cfg=- acl=- 
 DECLARE
   reached record;
@@ -10476,6 +10548,7 @@ END;
 public.trg_activity_link_last_activity() secdef=false cfg=- acl=- 
 DECLARE
   at timestamptz;
+  deal_at timestamptz;
   reached record;
 BEGIN
   IF TG_OP = 'INSERT' THEN
@@ -10483,14 +10556,18 @@ BEGIN
       RETURN NULL;
     END IF;
     at := last_activity_of_activity(NEW.activity_id);
-    IF at IS NOT NULL THEN
+    IF NEW.deal_id IS NOT NULL THEN
+      deal_at := last_activity_of_deal_activity(NEW.activity_id);
+    END IF;
+    IF at IS NOT NULL OR deal_at IS NOT NULL THEN
       FOR reached IN
          SELECT reach.kind, reach.id
            FROM last_activity_reach(ARRAY[NEW.contact_id], ARRAY[NEW.deal_id], ARRAY[NEW.company_id]) reach
           ORDER BY reach.kind, reach.id
       LOOP
         PERFORM advance_last_activity(reached.kind::regclass, reached.id,
-          CASE reached.kind WHEN 'company' THEN last_activity_of_company_activity(NEW.activity_id, reached.id) ELSE at END);
+          CASE reached.kind WHEN 'company' THEN last_activity_of_company_activity(NEW.activity_id, reached.id)
+                            WHEN 'deal' THEN deal_at ELSE at END);
       END LOOP;
     END IF;
     RETURN NULL;
@@ -10571,6 +10648,30 @@ BEGIN
 	END IF;
 	RETURN NEW;
 END 
+public.trg_thread_verdict_deal_clock() secdef=false cfg=- acl=- 
+DECLARE
+  was_personal boolean := false;
+  is_personal boolean := false;
+BEGIN
+  IF TG_OP <> 'INSERT' THEN
+    was_personal := OLD.kind = 'personal' AND OLD.status IN ('held', 'held_by_owner', 'unsure');
+  END IF;
+  IF TG_OP <> 'DELETE' THEN
+    is_personal := NEW.kind = 'personal' AND NEW.status IN ('held', 'held_by_owner', 'unsure');
+  END IF;
+  IF TG_OP = 'UPDATE' AND was_personal = is_personal
+     AND OLD.thread_key = NEW.thread_key AND OLD.user_id = NEW.user_id THEN
+    RETURN NULL;
+  END IF;
+  IF was_personal THEN
+    PERFORM refresh_deal_clocks_of_thread(OLD.thread_key, OLD.user_id);
+  END IF;
+  IF is_personal THEN
+    PERFORM refresh_deal_clocks_of_thread(NEW.thread_key, NEW.user_id);
+  END IF;
+  RETURN NULL;
+END;
+
 public.trg_user_record_view_entity_keys() secdef=false cfg=- acl=- 
 BEGIN
 	IF TG_OP = 'INSERT' THEN
@@ -10644,7 +10745,7 @@ public.uq_brief_run_user_day CREATE UNIQUE INDEX uq_brief_run_user_day ON public
 public.uq_bulk_operation_undo_of CREATE UNIQUE INDEX uq_bulk_operation_undo_of ON public.bulk_operation USING btree (undo_of) WHERE (undo_of IS NOT NULL)
 public.uq_capture_backfill_admission_slot CREATE UNIQUE INDEX uq_capture_backfill_admission_slot ON public.capture_backfill USING btree (admission_slot) WHERE ((status = 'running'::text) AND (admission_slot IS NOT NULL))
 public.uq_capture_backfill_live CREATE UNIQUE INDEX uq_capture_backfill_live ON public.capture_backfill USING btree (connection_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
-public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value) NULLS NOT DISTINCT
+public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value, connection_id) NULLS NOT DISTINCT
 public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain)
 public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL)
 public.uq_chat_link_channel CREATE UNIQUE INDEX uq_chat_link_channel ON public.chat_link USING btree (provider, channel_slug) WHERE (archived_at IS NULL)
@@ -10665,8 +10766,8 @@ public.uq_company_rel_type CREATE UNIQUE INDEX uq_company_rel_type ON public.com
 public.uq_company_source CREATE UNIQUE INDEX uq_company_source ON public.company USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_contact_channel_identity CREATE UNIQUE INDEX uq_contact_channel_identity ON public.contact_channel_identity USING btree (provider, channel_user_id) WHERE (archived_at IS NULL)
 public.uq_contact_email_dedupe CREATE UNIQUE INDEX uq_contact_email_dedupe ON public.contact_email USING btree (email) WHERE (archived_at IS NULL)
-public.uq_contact_email_primary CREATE UNIQUE INDEX uq_contact_email_primary ON public.contact_email USING btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL))
-public.uq_contact_phone_primary CREATE UNIQUE INDEX uq_contact_phone_primary ON public.contact_phone USING btree (contact_id, phone_type) WHERE (is_primary AND (archived_at IS NULL))
+public.uq_contact_email_primary CREATE UNIQUE INDEX uq_contact_email_primary ON public.contact_email USING btree (contact_id) WHERE (is_primary AND (archived_at IS NULL))
+public.uq_contact_phone_primary CREATE UNIQUE INDEX uq_contact_phone_primary ON public.contact_phone USING btree (contact_id) WHERE (is_primary AND (archived_at IS NULL))
 public.uq_contact_profile_field CREATE UNIQUE INDEX uq_contact_profile_field ON public.contact_profile_field USING btree (contact_id, field, value_key)
 public.uq_contact_source CREATE UNIQUE INDEX uq_contact_source ON public.contact USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name)

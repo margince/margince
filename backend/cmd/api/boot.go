@@ -192,14 +192,9 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	if err != nil {
 		return deployconfig.Bootstrap{}, nil, err
 	}
-	// The re-check runs on the process context — the signal context main built —
-	// so it lives exactly as long as this role serves and needs no stop of its
-	// own. What cancellation actually ends is the WAIT between ticks: wazero is
-	// built without WithCloseOnContextDone, so a check already inside the module
-	// runs to completion whatever happens to the context. That is why the loop
-	// holds nothing open and answers nobody — there is no work here for a
-	// shutdown to interrupt safely, only a reading the process was about to stop
-	// reporting.
+	// The re-check loop runs on the process context, the signal context main
+	// built, so it lives as long as this role serves. Cancellation ends the wait
+	// between ticks. A check already running ends at its own budget instead.
 	go license.RunRecheck(ctx)
 	return bootstrap, license, nil
 }

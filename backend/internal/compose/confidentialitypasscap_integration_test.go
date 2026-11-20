@@ -217,7 +217,7 @@ func TestTheBacklogLeavesOutThreadsThePassWillNotClaim(t *testing.T) {
 	registry := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), backfillAuthority{}, keyvault.NewMemory())
 	registry.Register(plainSyncConnector{name: "gmail"})
 	seat := e.As(e.Rep1, nil, integration.AdminPerms)
-	if _, err := registry.SetMailPosture(seat, "gmail", capture.PostureHeld, false); err != nil {
+	if _, err := registry.SetMailPosture(seat, capture.ProviderMailbox("gmail"), capture.PostureHeld, false); err != nil {
 		t.Fatalf("switching the seat's posture: %v", err)
 	}
 

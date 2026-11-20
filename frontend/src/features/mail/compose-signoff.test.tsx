@@ -20,7 +20,7 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // The sign-off under the body is the server's answer, drawn as given: the
 // composer shows what the send appends and never assembles it itself.
@@ -102,7 +102,7 @@ function render(ui: ReactNode) {
 
 function renderComposer() {
   return render(
-    <ComposeModal
+    <ComposeWindow
       entityType="company"
       entityId="company-1"
       contactId="per-1"
@@ -200,7 +200,7 @@ describe("the sign-off under the composer's body", () => {
       kind: "closing",
     }));
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"

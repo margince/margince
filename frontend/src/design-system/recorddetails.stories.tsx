@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { Badge } from "./atoms";
 import { RecordDetails } from "./recorddetails";
 
@@ -21,7 +22,8 @@ export default meta;
 
 type Story = StoryObj<typeof RecordDetails>;
 
-/** A company's details: three groups, lists, five empty fields folded. */
+/** A company's details: four group panes, five empty fields folded behind
+ *  the link under them, and the footnote pane. */
 export const Company: Story = {
   args: {
     sections: [
@@ -69,6 +71,150 @@ export const Company: Story = {
     ],
     footnote:
       "View only. Ask Lena Fischer to share it, or an administrator for edit rights.",
+  },
+};
+
+const editAbout = fn();
+
+/** A reader who may change the record: About and Ownership end their label
+ *  line in an Edit link named for the section; Lists has none. */
+export const Editable: Story = {
+  args: {
+    sections: [
+      {
+        key: "about",
+        label: "About",
+        help: "What the company is and where it sits.",
+        edit: { onEdit: editAbout },
+        rows: [
+          { key: "domain", term: "Domain", value: "brandt.example" },
+          { key: "industry", term: "Industry", value: "Automotive" },
+        ],
+      },
+      {
+        key: "ownership",
+        label: "Ownership",
+        edit: { onEdit: fn() },
+        rows: [{ key: "owner", term: "Owner", value: "Lena Fischer" }],
+      },
+      {
+        key: "lists",
+        label: "Lists",
+        children: <Badge>Key accounts</Badge>,
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("button", { name: "Edit About" });
+    await expect(link).toHaveTextContent("Edit");
+    await expect(
+      canvas.getByRole("button", { name: "Edit Ownership" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Edit Lists" }),
+    ).toBeNull();
+    await userEvent.click(link);
+    await expect(editAbout).toHaveBeenCalledTimes(1);
+  },
+};
+
+/** On a phone the Edit link still closes its label line, after the "?". */
+export const EditablePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: Editable.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("button", { name: "Edit About" });
+    const line = link.parentElement?.getBoundingClientRect();
+    await expect(Math.round(link.getBoundingClientRect().right)).toBe(
+      Math.round(line?.right ?? 0),
+    );
+  },
+};
+
+/** The Edit link's touch layer stops above the first row, so a thumb on the
+ *  row's top edge reaches the row. */
+export const EditTouchLayerPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: Editable.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("button", { name: "Edit About" });
+    const row = canvas.getByText("brandt.example").closest(".factlist-row");
+    if (!row) throw new Error("the first row is not a fact list row");
+    const layer = getComputedStyle(link, "::before");
+    const layerEnd =
+      link.getBoundingClientRect().bottom - Number.parseFloat(layer.bottom);
+    await expect(Number.parseFloat(layer.height)).toBeGreaterThanOrEqual(44);
+    await expect(layerEnd).toBeLessThanOrEqual(
+      row.getBoundingClientRect().top + 0.5,
+    );
+  },
+};
+
+/** An editable section with every row still empty keeps its pane, so its
+ *  Edit link is the way to add the first value; a read-only one folds away. */
+export const EditableEmpty: Story = {
+  args: {
+    sections: [
+      {
+        key: "about",
+        label: "About",
+        edit: { onEdit: fn() },
+        rows: [{ key: "domain", term: "Domain", value: "brandt.example" }],
+      },
+      {
+        key: "address",
+        label: "Address",
+        edit: { onEdit: fn() },
+        rows: [
+          { key: "street", term: "Street", value: "Add…", empty: true },
+          { key: "city", term: "City", value: "Add…", empty: true },
+        ],
+      },
+      {
+        key: "registration",
+        label: "Registration",
+        rows: [{ key: "vat", term: "VAT ID", value: "Add…", empty: true }],
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("button", { name: "Edit Address" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("heading", { name: "Registration" }),
+    ).toBeNull();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Show 3 empty fields" }),
+    );
+    await expect(await canvas.findByText("City")).toBeVisible();
+  },
+};
+export const EditableEmptyPhone: Story = {
+  ...EditableEmpty,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+/** The fold opened: the empty fields join their groups' panes, and the link
+ *  under the panes folds them again. */
+export const EmptyFieldsShown: Story = {
+  args: Company.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Show 5 empty fields" }),
+    );
+    await expect(await canvas.findByText("VAT ID")).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Hide empty fields" }),
+    ).toHaveAttribute("aria-expanded", "true");
   },
 };
 

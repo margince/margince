@@ -17,8 +17,14 @@
 // two unrelated layouts behind one name for the sake of one shared signature.
 
 import { ChevronDown } from "lucide-react";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { useT } from "../i18n";
+import { offsetShowingStrip, stripPlace } from "../lib/reveal";
+import {
+  dropKeptPlace,
+  keepPlaceOnNextMove,
+  seekScrollTop,
+} from "../lib/scrollmemory";
 import { Button, OptionCount } from "./atoms";
 import { OverflowMenu } from "./overflowmenu";
 import { useFocusKeptOnFold, useFoldedTabs } from "./recordtabs.fold";
@@ -39,6 +45,8 @@ type RecordTabsCommon<Option extends string> = Readonly<{
   // reader announces "Contacts 10" rather than leaving it to a sighted reader
   // alone.
   counts?: Partial<Record<Option, number>>;
+  // What a tab's count counts, where the tab's name does not say it.
+  countLabels?: Partial<Record<Option, string>>;
   // Something waits behind this tab that nobody has taken up — a lookup never
   // run, an answer never read. A dot rather than a figure, because the thing
   // waiting has no count: it is a state, and the surface behind the tab says it
@@ -60,6 +68,9 @@ type RecordTabsCommon<Option extends string> = Readonly<{
 type RecordTabsChoice<Option extends string> = Readonly<{
   options: readonly Option[];
   onChange: (next: Option) => void;
+  // A record's tabs: a press keeps the reader's offset in the page pane, or
+  // raises it just enough to show the strip. Elsewhere a new tab opens at top.
+  keepPlace?: boolean;
 }>;
 
 // A record read in ONE body: the lone tab names the page the reader is already
@@ -73,6 +84,7 @@ type RecordTabsChoice<Option extends string> = Readonly<{
 type RecordTabsLone<Option extends string> = Readonly<{
   options: readonly [Option];
   onChange?: never;
+  keepPlace?: never;
 }>;
 
 /**
@@ -95,9 +107,11 @@ export function RecordTabs<Option extends string>({
   onChange,
   labels,
   counts,
+  countLabels,
   marks,
   label,
   trailing,
+  keepPlace,
 }: RecordTabsCommon<Option> &
   (RecordTabsChoice<Option> | RecordTabsLone<Option>)) {
   const t = useT();
@@ -111,12 +125,46 @@ export function RecordTabs<Option extends string>({
     value,
   );
   const keepFocus = useFocusKeptOnFold(stripRef, folded, value);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const pressed = useRef<{
+    option: Option;
+    place: { pane: HTMLElement; below: number };
+  } | null>(null);
+  const valueShown = useRef(value);
+  // After the commit, not at the press. The new tab can change what stands
+  // above the strip, and its body can be too short for the offset.
+  useEffect(() => {
+    // Only a change of tab spends the press. A press can land before this
+    // effect's first run, which must leave it for the run after.
+    if (valueShown.current === value) return;
+    valueShown.current = value;
+    const press = pressed.current;
+    pressed.current = null;
+    const strip = rowRef.current;
+    if (press?.option !== value || !strip) return;
+    const { pane, below } = press.place;
+    return seekScrollTop(pane, offsetShowingStrip(pane, strip, below));
+  }, [value]);
+  const choose = (option: Option) => {
+    const place =
+      keepPlace && option !== value && rowRef.current
+        ? stripPlace(rowRef.current)
+        : null;
+    pressed.current = place && { option, place };
+    if (place) keepPlaceOnNextMove();
+    const before = globalThis.location.hash;
+    onChange?.(option);
+    // A tab kept in state moves no address, so no move would spend the mark.
+    if (place && globalThis.location.hash === before) dropKeptPlace();
+  };
   const tabBody = (option: Option) => {
     const count = counts?.[option];
     return (
       <>
         {labels[option]}
-        {count !== undefined && <OptionCount count={count} />}
+        {count !== undefined && (
+          <OptionCount count={count} label={countLabels?.[option]} />
+        )}
         {marks?.[option] && (
           <span className="recordtabs-mark" aria-hidden="true" />
         )}
@@ -126,7 +174,7 @@ export function RecordTabs<Option extends string>({
 
   return (
     <div className="recordtabs">
-      <div className="recordtabs-row">
+      <div className="recordtabs-row" ref={rowRef}>
         {/* A fieldset, like every other group of controls here: a tablist
             would promise arrow-key navigation between the tabs and panels
             wired to them by id, and these are buttons that route to a page.
@@ -162,7 +210,7 @@ export function RecordTabs<Option extends string>({
                   className="recordtabs-tab"
                   data-tab={option}
                   aria-pressed={option === value}
-                  onClick={() => onChange(option)}
+                  onClick={() => choose(option)}
                 >
                   {tabBody(option)}
                 </button>
@@ -186,7 +234,7 @@ export function RecordTabs<Option extends string>({
                 align="start"
               >
                 {folded.map((option) => (
-                  <Button key={option} onClick={() => onChange(option)}>
+                  <Button key={option} onClick={() => choose(option)}>
                     {tabBody(option)}
                   </Button>
                 ))}

@@ -21,6 +21,9 @@
 //
 // These types are frozen published API from their first external consumer; they
 // evolve additively or through versioned successors, never in place (EXT-P3).
+// Additive means new fields, so an extension must write its literals of these
+// types keyed (Instrument{Name: ...}). An unkeyed literal stops compiling when
+// a field is added.
 //
 //margince:extension-surface
 package messaging
@@ -195,6 +198,19 @@ type Rules struct {
 
 	// ConsentRequestFirstFor are the purpose classes the rule above covers; empty covers all.
 	ConsentRequestFirstFor []PurposeClass
+
+	// Provenance is who reviewed this rule set and when the next review is due.
+	Provenance Provenance
+
+	// Citations name the law behind the engine's findings and refusals, one
+	// per code and sender territory. Each names one of Instruments, and only a
+	// reviewed pack may carry any. Shown to a rep, never applied: a citation
+	// changes no verdict.
+	Citations []Citation
+
+	// Digest is the SHA-256 of the source this rule set was compiled from, in
+	// lower-case hex. Empty for a pack written by hand. A decision records it.
+	Digest string
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
@@ -227,7 +243,8 @@ func (k ExceptionKind) Validate() error {
 type MarketingException struct {
 	Kind ExceptionKind
 
-	// RequiresSaleEvidence: there must be a recorded sale to this contact.
+	// RequiresSaleEvidence: there must be a recorded sale to this contact, and
+	// the address the message goes to must have come with that sale.
 	RequiresSaleEvidence bool
 
 	// RequiresCollectionTimeOptOut: the address must have been collected with
@@ -352,34 +369,6 @@ type FrequencyCap struct {
 	Window time.Duration
 }
 
-// Instrument is one law or decree a rule set states, and when it took effect.
-//
-// It is DOCUMENTATION IN THE RECORD, not an obligation. A decision records the
-// ruleset version it was judged under; this says what that number meant. Two
-// instruments with different commencement dates may both be live, which is the
-// ordinary case when a decree amends rather than replaces — Vietnam's Decree
-// 91/2020 and Law 91/2025 sit that way — so this is a list and the pack states
-// every instrument its obligations rest on.
-type Instrument struct {
-	// Name is the instrument as a regulator cites it, e.g.
-	// "Decree 91/2020/ND-CP". Not translated: a citation is the same string
-	// in every locale, and translating one would make it unfindable.
-	Name string
-
-	// EffectiveFrom is the instrument's own commencement date, never the date
-	// this product learned about it. Zero means the pack did not state one,
-	// which is legal and says less rather than saying "the epoch".
-	EffectiveFrom time.Time
-}
-
-// Validate refuses an instrument that names nothing.
-func (i Instrument) Validate() error {
-	if strings.TrimSpace(i.Name) == "" {
-		return errors.New("an instrument carries no name — a commencement date with nothing to commence names no law")
-	}
-	return nil
-}
-
 // Validate refuses a cap that cannot bind.
 func (c FrequencyCap) Validate() error {
 	if c.Messages <= 0 {
@@ -459,6 +448,9 @@ func (r Rules) Validate() error {
 		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 	}
 	if err := r.validateRequestFirstFor(); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	if err := errors.Join(r.validateCitations(), r.validateDigest()); err != nil {
 		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 	}
 	return r.validateDisclosureLanguage()

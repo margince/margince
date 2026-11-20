@@ -288,7 +288,7 @@ func (s *Store) History(ctx context.Context, listID ids.ListID, limit int, curso
 	}
 	var after *storekit.Cursor
 	if cursor != "" {
-		decoded, err := storekit.DecodeCursor(cursor)
+		decoded, err := storekit.DecodeCursor("list_history", cursor)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -315,7 +315,7 @@ func (s *Store) History(ctx context.Context, listID ids.ListID, limit int, curso
 	if len(out) > limit {
 		out = out[:limit]
 		last := out[limit-1]
-		next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+		next, err := storekit.EncodeCursor("list_history", last.OccurredAt, last.ID)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}

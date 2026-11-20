@@ -21,6 +21,7 @@ import { navigate } from "../lib/router";
 import { worklistKey } from "../lib/workkeys";
 import { Badge, Button, Card, EmptyState, Skeleton } from "./atoms";
 import { Callout } from "./callout";
+import { ModelWorkError, useConnectAiGate } from "./connectai";
 import { ErrorLine } from "./errorline";
 import { AutonomyDot } from "./trust";
 import "./transcriptread.css";
@@ -362,6 +363,7 @@ export function TranscriptReadCard({
   // first reading.
   const latest = useLatestTranscriptRead(activityId);
   const shownReadId = readId ?? latest.data?.read_id ?? null;
+  const aiGate = useConnectAiGate(`transcript-ai-${activityId}`);
   const start = useMutation({
     mutationFn: async () => {
       const { data, error, response } = await api.POST(
@@ -399,6 +401,7 @@ export function TranscriptReadCard({
         <Button
           pending={start.isPending}
           busyLabel={t("transcriptread.starting")}
+          reasonId={aiGate.reasonId}
           onClick={() => start.mutate()}
         >
           {t("transcriptread.cta")}
@@ -411,7 +414,8 @@ export function TranscriptReadCard({
           not KNOW whether this transcript has been read. Saying so beats an
           empty card, which reads as a confident "not yet". */}
       <ErrorLine error={latest.error} />
-      <ErrorLine error={start.error} />
+      {aiGate.notice}
+      <ModelWorkError error={start.error} />
       {shownReadId && (
         <TranscriptReadPanel activityId={activityId} readId={shownReadId} />
       )}

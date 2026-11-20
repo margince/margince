@@ -152,6 +152,30 @@ func TestWireRoleCarriesTheStoredGrantsAndNeverANullMap(t *testing.T) {
 
 // Each role-editor conflict answers 409 with its own code, so a client can say
 // which one happened and what to do next.
+func TestRefuseWriteWithoutReadFollowsTheObjectsOfferedVerbs(t *testing.T) {
+	if err := refuseWriteWithoutRead("contact", storedGrant{Update: true}); !errors.Is(err, errWriteNeedsRead) {
+		t.Errorf("update without read on contact: err = %v", err)
+	}
+	for object, g := range map[string]storedGrant{
+		"contact":      {Read: true, Delete: true},
+		"audit_log":    {Read: true},
+		"system_reset": {Delete: true},
+		"company":      {},
+	} {
+		if err := refuseWriteWithoutRead(object, g); err != nil {
+			t.Errorf("%s %+v refused: %v", object, g, err)
+		}
+	}
+	var detailed *httperr.DetailedError
+	if !errors.As(roleEditRefusal(errWriteNeedsRead), &detailed) ||
+		detailed.Status != http.StatusUnprocessableEntity || detailed.Code != "write_needs_read" {
+		t.Errorf("write without read rendered as %+v, want 422/write_needs_read", detailed)
+	}
+	if !errors.As(roleEditRefusal(errNotSystemRole), &detailed) || detailed.Code != "custom_role" {
+		t.Errorf("custom role restore rendered as %+v, want custom_role", detailed)
+	}
+}
+
 func TestTheRoleEditorConflictsCarryDistinctCodes(t *testing.T) {
 	for cause, want := range map[error]string{
 		errRoleNameTaken:  "role_name_taken",

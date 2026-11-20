@@ -638,8 +638,11 @@ func TestARefusalWhoseRecipientWasErasedHoldsNothing(t *testing.T) {
 		t.Fatalf("recording the erasure suppression: %v", err)
 	}
 
-	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send with no grant → %d, want 409", status)
+	if status, code := c.send(t, "marketing_email"); status != http.StatusConflict || code != "consent_not_granted" {
+		t.Fatalf("marketing send with no grant → %d %q, want 409 consent_not_granted", status, code)
+	}
+	if reviews := openReviews(t, c.AppEnv); len(reviews) != 0 {
+		t.Errorf("%d review(s) for an erased subject, want none: a review stores their address again", len(reviews))
 	}
 
 	if held := heldSends(t, c.AppEnv); len(held) != 0 {

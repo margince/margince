@@ -421,6 +421,7 @@ public.communication_basis.note note
 public.communication_basis.thread_key document
 public.communication_decision.actor document
 public.communication_decision.basis document
+public.communication_decision.country_source document
 public.communication_decision.data_protection_country document
 public.communication_decision.execution_authority document
 public.communication_decision.legacy_verdict document
@@ -432,6 +433,7 @@ public.communication_decision.recipient_address document
 public.communication_decision.requested_category document
 public.communication_decision.resolved_category document
 public.communication_decision.ruleset_codes document
+public.communication_decision.ruleset_digest document
 public.communication_decision.subject_kind document
 public.communication_decision.suppression document
 public.communication_decision.verdict document
@@ -589,6 +591,7 @@ public.contact.anonymized_address_key_id document
 public.contact.captured_by document
 public.contact.first_name exempt captured name parts retain the existing ingestion name rules
 public.contact.full_name exempt captured names retain the existing ingestion name rules
+public.contact.greeting_register document
 public.contact.last_name exempt captured name parts retain the existing ingestion name rules
 public.contact.narrowing_reason note
 public.contact.photo_object_key document
@@ -946,6 +949,7 @@ public.knowledge_document.ingest_detail document checked: fixed sentences and nu
 public.knowledge_document.ingest_status document
 public.knowledge_document.managed_source document
 public.knowledge_document.storage_key document
+public.lawful_basis_confirmation.country document
 public.lead.candidate_company_key document
 public.lead.captured_by document
 public.lead.company_name label
@@ -1055,6 +1059,7 @@ public.mail_draft.body exempt complete captured or authored source content must 
 public.mail_draft.cc_addresses document
 public.mail_draft.communication_context document
 public.mail_draft.html_body exempt complete captured or authored source content must retain its original text
+public.mail_draft.override_explanation note checked: refused past 1000 characters
 public.mail_draft.scheduled_tz document
 public.mail_draft.subject document checked: refused past 998 characters
 public.mail_draft.to_addresses document

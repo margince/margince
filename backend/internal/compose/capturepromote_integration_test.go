@@ -94,7 +94,7 @@ func authorizeCaptureMailbox(t *testing.T, e *integration.Env, owner ids.UUID, a
 	e.WsExec(t, `INSERT INTO capture_connection
  (user_id, provider, status, credential_ref, mail_posture, account_label)
  VALUES (@owner, 'gmail', 'connected', 'vault:test', 'shared', @address)
- ON CONFLICT (user_id, provider) DO NOTHING`, pgx.NamedArgs{"owner": owner, "address": address})
+ ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO NOTHING`, pgx.NamedArgs{"owner": owner, "address": address})
 }
 
 // captureInboundThroughRealSinkAs is the same capture under a principal the
@@ -538,7 +538,7 @@ func seedClassifiedGmail(t *testing.T, e *integration.Env, user ids.UUID) {
 			INSERT INTO capture_connection
 			       (user_id, provider, status, credential_ref, mail_posture, account_label)
 			VALUES ($1, 'gmail', 'connected', 'vault:test', 'classified', 'a@authz.test')
-			ON CONFLICT (user_id, provider)
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL
 			DO UPDATE SET mail_posture = 'classified', archived_at = NULL,
 			              account_label = 'a@authz.test'`, user)
 		return err

@@ -6,6 +6,7 @@ import { worklistDayOptions } from "../../lib/worklistday";
 import type { WorklistView } from "../../lib/worklistviews";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import type {
+  ForecastFocus,
   TeamBoard,
   TeamExceptions,
   Worklist,
@@ -100,6 +101,17 @@ export function useTeamExceptions(enabled: boolean) {
     queryFn: async (): Promise<TeamExceptions> => {
       return unwrap(await api.GET("/worklist/exceptions", {}));
     },
+  });
+}
+
+// The deals each of the reader's teams should work to meet its quarter goal,
+// as the last daily freeze ranked them. A seat with no team lens reads no team.
+export function useForecastFocus(enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryKey: [...worklistKey, "focus"],
+    queryFn: async (): Promise<ForecastFocus> =>
+      unwrap(await api.GET("/forecast/focus", {})),
   });
 }
 

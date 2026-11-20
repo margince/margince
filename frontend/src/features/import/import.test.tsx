@@ -13,7 +13,7 @@ import {
   settingsHref,
   settingsRouteTarget,
 } from "../../lib/settingsrouting";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { tabContent } from "../settings/settings";
 import { ImportCard } from "./import";
 import {
@@ -348,40 +348,71 @@ describe("a run named by the address", () => {
     expect(sent.some((s) => s.path === "POST /imports/sources")).toBe(false);
   });
 
-  it("names what an undo kept and what it could not reverse", async () => {
-    stubRoutes({
-      "GET /imports/r1": () =>
-        jsonResponse({ ...run, id: "r1", status: "undone" }),
-      "GET /imports/r1/report": () =>
-        jsonResponse({
-          ...dryRun,
+  const undoneWithLeftovers = {
+    "GET /imports/r1": () =>
+      jsonResponse({ ...run, id: "r1", status: "undone" }),
+    "GET /imports/r1/report": () =>
+      jsonResponse({
+        ...dryRun,
+        run_id: "r1",
+        status: "undone",
+        undo: {
           run_id: "r1",
           status: "undone",
-          undo: {
-            run_id: "r1",
-            status: "undone",
-            reversed_count: 1,
-            kept: [{ object: "lead", id: "l-1" }],
-            errored: [
-              {
-                object: "company",
-                id: "c-1",
-                reason: "A contact still references this company.",
-              },
-            ],
-          },
-        }),
+          reversed_count: 1,
+          kept: [{ object: "lead", id: "l-1" }],
+          errored: [
+            {
+              object: "company",
+              id: "c-1",
+              reason: "A contact still references this company.",
+            },
+          ],
+        },
+      }),
+  };
+
+  it("names what an undo kept and what it could not reverse", async () => {
+    stubRoutes({
+      ...undoneWithLeftovers,
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            roles: ["admin"],
+            allow: {
+              ...READS_RECORDS,
+              import_run: ["create", "update", "read"],
+            },
+          }),
+        ),
     });
     renderAtImport("r1");
 
     expect(await screen.findByText("1 row reversed.")).toBeVisible();
-    expect(screen.getByText("Prospects: l-1")).toBeVisible();
-    expect(
-      screen.getByText(/c-1: A contact still references this company\./),
-    ).toBeVisible();
+    // Neither record comes back with a name, so each keeps its id.
+    expect((await screen.findByTitle("l-1")).closest("li")).toHaveTextContent(
+      "Leads: l-1",
+    );
+    expect((await screen.findByTitle("c-1")).closest("li")).toHaveTextContent(
+      "Companies — c-1: A contact still references this company.",
+    );
     expect(
       screen.queryByRole("button", { name: "Undo this import" }),
     ).toBeNull();
+  });
+
+  it("names a kept record by its id when the reader cannot read its kind", async () => {
+    const sent = stubRoutes(undoneWithLeftovers);
+    renderAtImport("r1");
+
+    expect(await screen.findByText("1 row reversed.")).toBeVisible();
+    const lines = screen.getAllByRole("listitem").map((li) => li.textContent);
+    expect(lines).toContain("Leads: l-1");
+    expect(lines).toContain(
+      "Companies — c-1: A contact still references this company.",
+    );
+    expect(screen.queryByRole("link", { name: "l-1" })).toBeNull();
+    expect(sent.some((s) => s.path === "GET /records/references")).toBe(false);
   });
 
   it("says a cancelled run was canceled and starts again from an upload", async () => {
@@ -429,7 +460,7 @@ describe("a run named by the address", () => {
     ).toBeVisible();
   });
 
-  it("says so when the server will not answer for the run", async () => {
+  it("says the import is not there when the server knows no such run", async () => {
     stubRoutes({
       "GET /imports/r9": () =>
         jsonResponse(
@@ -439,7 +470,10 @@ describe("a run named by the address", () => {
     });
     renderAtImport("r9");
 
-    expect(await screen.findByText("No such import run.")).toBeVisible();
+    expect(
+      await screen.findByText("This import does not exist or was removed."),
+    ).toBeVisible();
+    expect(screen.queryByText("No such import run.")).toBeNull();
   });
 
   it("is opened from the hub's list of recent imports", async () => {

@@ -107,6 +107,10 @@ func contactsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, no
 		if who, ok := identity[id]; ok {
 			card.FullName = who.fullName
 			card.Title = who.title
+			if who.greetingRegister != nil {
+				register := crmcontracts.Company360ContactGreetingRegister(*who.greetingRegister)
+				card.GreetingRegister = &register
+			}
 			card.PrimaryEmail = who.primaryEmail
 			card.ProviderTitle = who.providerTitle
 			card.TitleSource = titleSource(who)
@@ -138,6 +142,8 @@ type contactCard struct {
 	fullName     string
 	title        *string
 	primaryEmail *string
+	// greetingRegister is the register a rep set on the contact, nil when none.
+	greetingRegister *string
 	// providerTitle is a PURCHASED job title, shown only where the canonical
 	// one is empty (PO-EXT-9). It fills a blank; it never overwrites or
 	// seconds a title a human typed.
@@ -212,7 +218,7 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 	// company_domain against this company's domains, or on its
 	// company_name against the display name.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT p.id, p.full_name, p.title,
+		SELECT p.id, p.full_name, p.title, p.greeting_register,
 		       (SELECT e.email FROM contact_email e
 		         WHERE e.contact_id = p.id AND e.archived_at IS NULL`+
 		contacts.ReachableEmailOrder+`
@@ -244,7 +250,7 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 	for rows.Next() {
 		var id ids.ContactID
 		var card contactCard
-		if err := rows.Scan(&id, &card.fullName, &card.title, &card.primaryEmail, &card.providerTitle, &card.attachable); err != nil {
+		if err := rows.Scan(&id, &card.fullName, &card.title, &card.greetingRegister, &card.primaryEmail, &card.providerTitle, &card.attachable); err != nil {
 			return nil, err
 		}
 		out[id] = card

@@ -322,6 +322,26 @@ describe("Top bar sidebar toggle", () => {
 // is never a link — a link to the page you are already on is a control that does
 // nothing — and it is the ONE element in the bar that claims the current page.
 describe("Top bar trail", () => {
+  it("calls a lead without a name 'Unnamed lead' rather than printing its id", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: RequestInfo | URL) => {
+        const url = new URL(
+          request instanceof Request ? request.url : String(request),
+          "https://test.local",
+        );
+        return url.pathname === "/v1/records/references" &&
+          url.searchParams.get("kind") === "lead"
+          ? Response.json({
+              data: [{ id: "l-1", name: null, archived: false }],
+            })
+          : new Response(null, { status: 404 });
+      }),
+    );
+    renderTopBar({ screen: "leads", id: "l-1" }, { onToggle: ignoreToggle });
+    await waitFor(() => expect(stopTexts().at(-1)).toBe("Unnamed lead"));
+  });
+
   it("names the page once on a list route, with nothing to lead back to", () => {
     renderTopBar({ screen: "deals" }, { onToggle: ignoreToggle });
     expect(stopTexts()).toEqual(["Deals"]);

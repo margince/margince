@@ -258,7 +258,8 @@ func TestClassifyFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	given := map[string]bool{"subject": true, "body": true, "inbound": true}
 	for i, fields := range messages {
 		for name := range fields {
-			if !given[name] {
+			// A chat's channel is handed over too, and only for chat.
+			if !given[name] && name != "channel" {
 				t.Errorf("message %d carries %q, which the backlog row does not hand the engine", i+1, name)
 			}
 		}
@@ -307,7 +308,7 @@ func TestClassifyCaseTraceCarriesTheRequestItIssued(t *testing.T) {
 	if len(trace.Requests) != 1 {
 		t.Fatalf("the trace carries %d requests, want the one this site issues", len(trace.Requests))
 	}
-	if !strings.Contains(trace.Requests[0].System, "You label captured emails") {
+	if !strings.Contains(trace.Requests[0].System, "You label captured messages") {
 		t.Errorf("the traced request is not the classify prompt: %q", trace.Requests[0].System)
 	}
 	if !strings.Contains(trace.Requests[0].Messages[0].Content, "We need forty seats by March.") {

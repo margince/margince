@@ -273,6 +273,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 		plain, filtered = listUsersInvitedQuery, listUsersInvitedFilteredQuery
 	}
 	rows, page, err := listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[userRow]{
+		scope:     "users",
 		plain:     plain,
 		filtered:  filtered,
 		leadArgs:  []any{mayManage},
@@ -391,6 +392,7 @@ func (s *Service) ListTeams(ctx context.Context, in ListTeamsInput) ([]teamRow, 
 		return nil, storekit.Page{}, err
 	}
 	return listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[teamRow]{
+		scope:     "teams",
 		plain:     listTeamsQuery,
 		filtered:  listTeamsFilteredQuery,
 		scan:      scanTeam,
@@ -408,11 +410,11 @@ type rosterCursor struct {
 	id        *ids.UUID
 }
 
-func decodeRosterCursor(token *string) (rosterCursor, error) {
+func decodeRosterCursor(scope string, token *string) (rosterCursor, error) {
 	if token == nil || *token == "" {
 		return rosterCursor{}, nil
 	}
-	c, err := storekit.DecodeCursor(*token)
+	c, err := storekit.DecodeCursor(scope, *token)
 	if err != nil {
 		return rosterCursor{}, err
 	}
@@ -425,6 +427,9 @@ func decodeRosterCursor(token *string) (rosterCursor, error) {
 // fixed query strings (unfiltered + q-filtered), the row scanner, and the
 // keyset-cursor extractor.
 type rosterQuery[T userRow | teamRow] struct {
+	// scope names the list in the cursors it mints, so a user cursor never
+	// continues the team list.
+	scope    string
 	plain    string
 	filtered string
 	// leadArgs bind BEFORE the pager's own cursor/limit args, so a row type
@@ -447,7 +452,7 @@ func listRosterPage[T userRow | teamRow](
 	spec rosterQuery[T],
 ) ([]T, storekit.Page, error) {
 	limit := storekit.ClampLimit(limitIn)
-	after, err := decodeRosterCursor(cursor)
+	after, err := decodeRosterCursor(spec.scope, cursor)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -484,7 +489,7 @@ func listRosterPage[T userRow | teamRow](
 	}
 	pageRows = pageRows[:limit]
 	createdAt, id := spec.cursorKey(pageRows[len(pageRows)-1])
-	next, err := storekit.EncodeCursor(createdAt, id)
+	next, err := storekit.EncodeCursor(spec.scope, createdAt, id)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}

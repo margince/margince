@@ -3,14 +3,18 @@
 
 package deals
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+)
 
 // BaseValueSQL renders the deal under alias in the installation's base
 // currency. A closed deal reads the amount frozen at close, so a corrected rate
 // sheet never rewrites it. An open deal takes the latest rate on or before the
-// as-of date. A missing rate yields NULL, never a guessed rate of 1.
+// installation's day at the as-of instant. A missing rate yields NULL, never a guessed rate of 1.
 //
-// asOfSQL and baseSQL are SQL expressions, a bind position or a report-engine
+// asOfSQL is an instant, never a day cut in some other zone. asOfSQL and baseSQL are SQL expressions, a bind position or a report-engine
 // token, so the caller keeps sole ownership of its argument slice.
 //
 // alias is interpolated into SQL, so it is a compile-time literal from the
@@ -50,9 +54,9 @@ func BaseValueSQL(asOfSQL, baseSQL, alias string) string {
 		      END
 		      FROM fx_rate fr
 		      WHERE fr.from_currency = %[3]s.currency AND fr.to_currency = %[2]s
-		        AND fr.rate_date <= %[1]s::date
+		        AND fr.rate_date <= %[4]s
 		      ORDER BY fr.rate_date DESC LIMIT 1)
-	END`, asOfSQL, baseSQL, alias)
+	END`, asOfSQL, baseSQL, alias, occurredday.TodaySQL(asOfSQL))
 }
 
 // BaseValueSumSQL sums priced deals without making an absent price zero.

@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import {
   Button,
@@ -39,6 +40,7 @@ function ReferenceControl({
   control,
   value,
   setValue,
+  resolved,
   t,
 }: Readonly<{
   field: CreateField;
@@ -46,6 +48,8 @@ function ReferenceControl({
   control: FieldControl;
   value: string;
   setValue: (next: string) => void;
+  // The record the stored value names, when the field can look it up.
+  resolved?: RecordPickerCandidate | null;
   t: (key: MessageKey) => string;
 }>) {
   const [picked, setPicked] = useState<RecordPickerCandidate | null>(null);
@@ -56,14 +60,12 @@ function ReferenceControl({
   }
   const selected: RecordPickerCandidate | null = !value
     ? null
-    : picked?.id === value
-      ? picked
-      : {
-          id: value,
-          name:
-            field.options?.find((option) => option.value === value)?.label ??
-            value,
-        };
+    : ((picked?.id === value ? picked : resolved) ?? {
+        id: value,
+        name:
+          field.options?.find((option) => option.value === value)?.label ??
+          value,
+      });
   return (
     <>
       <RecordPicker
@@ -86,6 +88,37 @@ function ReferenceControl({
   );
 }
 
+// Looks the stored value's record up before the control names it. A separate
+// component so only a field that can resolve needs a query client.
+function ResolvedReferenceControl(
+  props: Parameters<typeof ReferenceControl>[0] &
+    Readonly<{ resolver: NonNullable<CreateField["resolveSelected"]> }>,
+) {
+  const { resolver, ...rest } = props;
+  const found = useQuery({
+    queryKey: ["field-record", resolver.scope, props.value],
+    enabled: props.value !== "",
+    queryFn: () => resolver.read(props.value),
+  });
+  return <ReferenceControl {...rest} resolved={found.data} />;
+}
+
+function referenceControl(
+  field: CreateField,
+  searchTargets: NonNullable<CreateField["searchTargets"]>,
+  control: FieldControl,
+  value: string,
+  setValue: (next: string) => void,
+  t: (key: MessageKey) => string,
+): ReactNode {
+  const reference = { field, searchTargets, control, value, setValue, t };
+  return field.resolveSelected ? (
+    <ResolvedReferenceControl {...reference} resolver={field.resolveSelected} />
+  ) : (
+    <ReferenceControl {...reference} />
+  );
+}
+
 export function fieldControl(
   field: CreateField | SubField,
   control: FieldControl,
@@ -95,17 +128,16 @@ export function fieldControl(
   // The form's current values, for a field whose choices depend on them.
   values: Record<string, string> = {},
 ): ReactNode {
-  if ("searchTargets" in field && field.searchTargets)
-    return (
-      <ReferenceControl
-        field={field}
-        searchTargets={field.searchTargets}
-        control={control}
-        value={value}
-        setValue={setValue}
-        t={t}
-      />
+  if ("searchTargets" in field && field.searchTargets) {
+    return referenceControl(
+      field,
+      field.searchTargets,
+      control,
+      value,
+      setValue,
+      t,
     );
+  }
   if (field.type === "select") {
     // Optional fields can be cleared; preserve a caller's existing empty choice.
     const options =
@@ -157,7 +189,8 @@ export function fieldControl(
   return (
     <TextInput
       {...control}
-      type={field.type ?? "text"}
+      type={field.type === "decimal" ? "text" : (field.type ?? "text")}
+      inputMode={field.type === "decimal" ? "decimal" : undefined}
       // A bare number input steps by 1, so the browser refuses 14.60 before
       // any handler sees it. A money field has to say it takes cents.
       step={field.step}

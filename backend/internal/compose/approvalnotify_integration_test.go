@@ -178,7 +178,7 @@ func (a approvalNotifyEnv) stageCorrection(t *testing.T) (ids.ApprovalID, kevent
 	// that drifted from it would stage a payload the product never produces.
 	proposal, err := json.Marshal(deals.CloseDateCorrection{
 		DealID:            ids.From[ids.DealKind](a.deal),
-		ExpectedCloseDate: "2026-12-01",
+		ExpectedCloseDate: closeDateAhead(t),
 		Basis:             "the date has passed and the deal is still open",
 	})
 	if err != nil {
@@ -314,7 +314,7 @@ func TestAnApprovalNoticeCarriesItsSummaryPartsToTheBell(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	proposal, err := json.Marshal(deals.CloseDateCorrection{
-		DealID: ids.From[ids.DealKind](a.deal), ExpectedCloseDate: "2026-12-01", Basis: "the date has passed",
+		DealID: ids.From[ids.DealKind](a.deal), ExpectedCloseDate: closeDateAhead(t), Basis: "the date has passed",
 	})
 	if err != nil {
 		t.Fatal(err)

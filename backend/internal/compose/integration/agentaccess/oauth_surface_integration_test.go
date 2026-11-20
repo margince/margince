@@ -44,7 +44,7 @@ func TestAnApprovedCallRedeemsOnceByItsApprovalID(t *testing.T) {
 	}
 	if status := o.Call(t, "POST", "/v1/companies", integration.AnyMap{
 		"source": "manual", "display_name": "Redeem Once GmbH",
-		"domains": []integration.AnyMap{{"domain": "example.com", "is_primary": true}},
+		"domains": []integration.AnyMap{{"domain": "example.test", "is_primary": true}},
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("company create → %d", status)
 	}

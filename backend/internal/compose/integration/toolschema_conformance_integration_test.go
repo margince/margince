@@ -529,13 +529,14 @@ func oneFinishedInputCheck(ctx context.Context, t *testing.T, e *Env) {
 // what the queue tools read back is a row production would have written.
 func stageOneProposal(ctx context.Context, t *testing.T, e *Env, deal ids.UUID) ids.ApprovalID {
 	t.Helper()
+	closes := clocktest.Now(t).AddDate(0, 1, 0).Format(time.DateOnly)
 	staged, err := approvals.NewService(compose.InstallationDB(e.Pool)).Stage(ctx, approvals.StageInput{
 		Kind:           "close_date_correction",
-		ProposedChange: json.RawMessage(`{"expected_close_date":"2026-12-31"}`),
+		ProposedChange: json.RawMessage(`{"expected_close_date":"` + closes + `"}`),
 		DiffHash:       ids.NewV7().String(),
 		TargetType:     "deal",
 		TargetID:       deal,
-		Summary:        "Move the expected close date to 2026-12-31",
+		Summary:        "Move the expected close date to " + closes,
 	})
 	if err != nil {
 		t.Fatalf("staging a proposal for the queue tools: %v", err)

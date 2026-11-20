@@ -17,6 +17,7 @@ package compose
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/sendmetrics"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -56,7 +57,7 @@ func (h directedSendHandlers) CorrectCommunicationWording(w http.ResponseWriter,
 // DirectCommunicationSend records the decision and sends the message it was
 // about.
 func (h directedSendHandlers) DirectCommunicationSend(
-	w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.DirectCommunicationSendParams,
 ) {
 	if h.directed == nil {
 		httperr.NotImplemented(w, r, "DirectCommunicationSend")
@@ -78,6 +79,7 @@ func (h directedSendHandlers) DirectCommunicationSend(
 		Acknowledged:       body.Acknowledged,
 		ShownReasons:       shown,
 	})
+	sendmetrics.ObserveSendAnyway(body.WarningVersion, err)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

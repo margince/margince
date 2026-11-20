@@ -20,8 +20,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/salutation"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
@@ -50,11 +52,14 @@ type DraftFinding struct {
 	Language string
 	// Country is the recipient's country, for DraftForeignAdvertiser.
 	Country string
+	// Provision is the law the recipient's pack cites for Requirement, zero
+	// when it shows none.
+	Provision commsauthz.Provision
 }
 
 // CheckAdvertisingDraft answers what an advertising draft to recipients does
 // not meet. Recipients whose country no pack covers add nothing.
-func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, subject, body string) ([]DraftFinding, error) {
+func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, countries []commsauthz.CountryOverride, subject, body string) ([]DraftFinding, error) {
 	// The grant the send needs: the answer is about a message this caller is
 	// writing, and it reads each recipient's country to give it.
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
@@ -65,7 +70,7 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 		// One check per pack, however many recipients share it.
 		var codes []jurisdiction.Code
 		for _, address := range recipients {
-			country, err := recipientCountryOf(ctx, tx, connector.Recipient{Email: address})
+			country, err := recipientCountryStated(ctx, tx, connector.Recipient{Email: address}, countries)
 			if err != nil {
 				return err
 			}
@@ -77,19 +82,14 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 		if err != nil {
 			return err
 		}
+		at := s.now()
 		for _, code := range codes {
-			rules, _, found := applicableRules(code)
-			if !found {
-				continue
-			}
-			packFindings := draftFindings(contentRules{
-				language: rules.DisclosureLanguage, claims: rules.ClaimsNeedProof,
-			}, subject, body)
-			if rules.ForeignAdvertiserNeedsLocalAgency && sender != code {
-				packFindings = append(packFindings, foreignAdvertiser(code))
-			}
-			for _, f := range packFindings {
-				if !slices.ContainsFunc(findings, func(have DraftFinding) bool { return have.Detail == f.Detail }) {
+			for _, f := range packDraftFindings(code, sender, subject, body) {
+				f.Provision = shownProvision(f.Requirement, citationContext{Recipient: RecipientCountry{Code: code}, Sender: sender, At: at})
+				// The same words under two laws are two findings, one per law.
+				if !slices.ContainsFunc(findings, func(have DraftFinding) bool {
+					return have.Detail == f.Detail && have.Provision == f.Provision
+				}) {
 					findings = append(findings, f)
 				}
 			}
@@ -99,6 +99,22 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 	return findings, err
 }
 
+// packDraftFindings checks one draft against the content rules of the pack of
+// country code, for a sending entity established in sender. No pack, no finding.
+func packDraftFindings(code, sender jurisdiction.Code, subject, body string) []DraftFinding {
+	rules, _, found := applicableRules(code)
+	if !found {
+		return nil
+	}
+	findings := draftFindings(contentRules{
+		language: rules.DisclosureLanguage, claims: rules.ClaimsNeedProof,
+	}, subject, body)
+	if rules.ForeignAdvertiserNeedsLocalAgency && sender != code {
+		findings = append(findings, foreignAdvertiser(code))
+	}
+	return findings
+}
+
 // senderCountryTx is the country of the legal entity the caller sends for,
 // the one the data-protection selector reads.
 func (s *Store) senderCountryTx(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
@@ -106,6 +122,12 @@ func (s *Store) senderCountryTx(ctx context.Context, tx pgx.Tx) (jurisdiction.Co
 	if err != nil {
 		return "", err
 	}
+	return s.senderCountryOf(ctx, tx, entity)
+}
+
+// senderCountryOf is the country of a legal entity in the lower case the packs
+// are keyed by.
+func (s *Store) senderCountryOf(ctx context.Context, tx pgx.Tx, entity ids.UUID) (jurisdiction.Code, error) {
 	code, err := s.dataProtectionCountryTx(ctx, tx, entity)
 	return jurisdiction.Code(strings.ToLower(string(code))), err
 }

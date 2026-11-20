@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -208,17 +209,9 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 	}
 	var grantedBy ids.UUID
 	var provider string
-	// The mailbox that CAPTURED this message, matched through the provenance
-	// string capture stamps (connector:<provider>:<user id>). There is no
-	// foreign key, so this is the only join available — and a message whose
-	// captured_by names no live connection has no grantor to run as, which
+	// The mailboxes that captured this message (storekit.CapturingMailboxSQL).
+	// A message no live connection captured has no grantor to run as, which
 	// stops the import rather than choosing one.
-	//
-	// The format is capture's, spelled again here because a module never imports
-	// a sibling; capture.connectorProvenance owns it, and contacts's own signature
-	// candidates carry a third copy for the same reason. Nothing holds the three
-	// to each other, and a change to the Go owner makes every SQL copy match zero
-	// rows — which stops this import with no failing assertion anywhere.
 	//
 	// status = 'connected' with the archive test, because a mailbox the human
 	// DISCONNECTED without archiving is a grant they took back. The signature
@@ -227,15 +220,13 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 	err := w.pool.QueryRow(ctx, `
 		SELECT cc.user_id, cc.provider
 		  FROM activity a
-		  JOIN capture_connection cc
-		    ON ('connector:' || cc.provider || ':' || cc.user_id::text) = a.captured_by
+		  JOIN capture_connection cc ON `+storekit.CapturingMailboxSQL("cc", "a")+`
 		 WHERE a.id = $1 AND a.archived_at IS NULL AND cc.user_id IS NOT NULL
 		   -- INBOUND only, the same gate the signature candidates apply. A card a
 		   -- rep SENT is our own attachment coming back: forwarding a colleague's
 		   -- .vcf out of the mailbox would otherwise file it as a contact, which
 		   -- is not "mail arriving in their mailbox" by any reading.
 		   AND a.direction = 'inbound'
-		   AND cc.archived_at IS NULL AND cc.status = 'connected'
 		   -- The per-mailbox switch, and the workspace default when the mailbox
 		   -- has not chosen. It is the SAME switch the signature pass obeys:
 		   -- both answer "read my mail for contact details", and a mailbox owner
@@ -246,9 +237,13 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 		   -- DECIDES whether to build a principal — it cannot use the one it
 		   -- gates. capture.SignatureEnrich is declared MachineryApplied for
 		   -- exactly this: candidate selection reads it per mailbox, in SQL.
-		   AND COALESCE(cc.signature_enrich_enabled, $4::boolean,
+		   --
+		   -- Every mailbox that delivered the message must allow it, so one
+		   -- switched off or disconnected is never bypassed through the other.
+		 GROUP BY cc.user_id, cc.provider
+		HAVING bool_and(cc.status = 'connected' AND COALESCE(cc.signature_enrich_enabled, $4::boolean,
 		                (SELECT value FROM setting WHERE key = $2)::boolean,
-		                $3::boolean)`,
+		                $3::boolean))`,
 		args.Activity, capture.SignatureEnrich.Key(), declared, booted).Scan(&grantedBy, &provider)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
