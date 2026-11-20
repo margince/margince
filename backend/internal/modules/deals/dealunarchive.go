@@ -38,8 +38,8 @@ var dealUnarchive = storekit.UnarchiveShape{
 func (s *Store) RestoreDealTx(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
-	// The archive's own authority: whoever could archive the deal may bring
-	// it back, which with edit rights alone is its owner.
+	// The archive's own authority. With edit rights alone, the owner may bring
+	// back only an archive they made (auth.EnsureRestorable).
 	if err := auth.RequireArchiveGrant(ctx, auth.DealArchive); err != nil {
 		return storekit.RestoreReport{}, err
 	}
@@ -53,7 +53,7 @@ func (s *Store) RestoreDealTx(
 	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	if err := auth.EnsureArchivable(ctx, tx, auth.DealArchive, id.UUID); err != nil {
+	if err := auth.EnsureRestorable(ctx, tx, auth.DealArchive, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
 	shape := dealUnarchive

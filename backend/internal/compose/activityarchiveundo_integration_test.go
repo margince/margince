@@ -72,8 +72,8 @@ func TestActivityArchiveUndoRefusesStaleVersionAndMissingAuthority(t *testing.T)
 		t.Fatalf("stale undo: %v", err)
 	}
 	reader := e.As(e.AdminUser, nil, principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"activity": {Read: true, Update: true}, "contact": {Read: true}}})
-	if answer := advisoryAnswer(reader, t, e, entityTypeActivity, id, archive); answer.Undoable || answer.Reason != string(ReasonNotWritableByCaller) {
-		t.Fatalf("delete grant not required: %+v", answer)
+	if answer := advisoryAnswer(reader, t, e, entityTypeActivity, id, archive); answer.Undoable || answer.Reason != string(ReasonRestoreArchiverRequired) {
+		t.Fatalf("an editor who neither holds delete nor made the archive is told %+v, want %s", answer, ReasonRestoreArchiverRequired)
 	}
 	err := e.DB().Tx(reader, func(tx pgx.Tx) error {
 		_, err := e.Activities.RestoreActivityTx(reader, tx, ids.From[ids.ActivityKind](id), &version, unarchiveWith(nil))

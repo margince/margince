@@ -158,6 +158,20 @@ func requireUndoGrant(ctx context.Context, row AuditRow) error {
 	return auth.Require(ctx, row.EntityType, undoGrantFor(row))
 }
 
+// ensureUndoArchiveRule asks the archive rule's row arm. Undoing an archive
+// is a restore, and asks auth.EnsureRestorable. Undoing a create or a restore
+// archives, and asks the archive's arm.
+func ensureUndoArchiveRule(ctx context.Context, tx pgx.Tx, row AuditRow, kind inverse) error {
+	rule, ok := undoArchiveRule(row)
+	switch {
+	case !ok:
+		return nil
+	case kind == inverseUnarchive:
+		return auth.EnsureRestorable(ctx, tx, rule, row.EntityID)
+	}
+	return auth.EnsureArchivable(ctx, tx, rule, row.EntityID)
+}
+
 // evaluateInverse answers whether an entry a module verb undoes can be undone
 // now. Same order as the record path: who may act first, then whether it is
 // already undone, then whether anything has moved since, then the erasure
@@ -179,13 +193,14 @@ func (e Evaluator) evaluateInverse(ctx context.Context, tx pgx.Tx, row AuditRow,
 			return refuse(ReasonNotWritableByCaller, ""), nil
 		}
 	}
-	if rule, ok := undoArchiveRule(row); ok {
-		if err := auth.EnsureArchivable(ctx, tx, rule, row.EntityID); err != nil {
-			if !isWriteScopeRefusal(err) {
-				return Undoability{}, err
-			}
-			return refuse(ReasonNotWritableByCaller, ""), nil
+	if err := ensureUndoArchiveRule(ctx, tx, row, kind); err != nil {
+		if _, restore := errors.AsType[*auth.RestoreAuthorityError](err); restore {
+			return refuse(ReasonRestoreArchiverRequired, ""), nil
 		}
+		if !isWriteScopeRefusal(err) {
+			return Undoability{}, err
+		}
+		return refuse(ReasonNotWritableByCaller, ""), nil
 	}
 	if e.AlreadyUndone != nil {
 		undone, err := e.AlreadyUndone(ctx, tx, row)

@@ -39,7 +39,10 @@ export default meta;
 
 type Story = StoryObj;
 
-const band = (grants: Parameters<typeof meRoute>[0]) => {
+const band = (
+  grants: Parameters<typeof meRoute>[0],
+  undoable: Record<string, unknown> = { undoable: true },
+) => {
   installFetchStub({
     "GET /me": meRoute(grants),
     [`GET /records/deal/${DEAL_ID}/history`]: () =>
@@ -49,7 +52,7 @@ const band = (grants: Parameters<typeof meRoute>[0]) => {
             id: "audit-archive",
             action: "archive",
             occurred_at: "2026-09-01T00:00:00Z",
-            undoable: { undoable: true },
+            undoable,
           },
         ],
         page: { next_cursor: null, has_more: false },
@@ -80,4 +83,13 @@ export const MayRestore: Story = {
 /** A reader who may only read deals: the sentence alone. */
 export const SentenceOnly: Story = {
   render: () => band({ deal: ["read"] }),
+};
+
+/** A rep who may edit the deal, when a manager made the archive: the reason, no button. */
+export const ArchivedBySomeoneElse: Story = {
+  render: () =>
+    band(
+      { deal: ["read", "update"] },
+      { undoable: false, reason: "restore_archiver_required" },
+    ),
 };

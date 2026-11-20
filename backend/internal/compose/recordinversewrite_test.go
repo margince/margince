@@ -70,6 +70,25 @@ func TestOnlyAnUnarchiveIsRedoneByArchiving(t *testing.T) {
 	}
 }
 
+// Done for you offers the undo of an archive to an owner with edit rights
+// alone. It offers none to a seat that may only read.
+func TestDoneForYouHoldsTheArchiveRulesGrantForAnArchiveUndo(t *testing.T) {
+	archive := AuditRow{EntityType: "deal", Action: actionArchive}
+	seat := func(grant principal.ObjectGrant) context.Context {
+		return principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
+			Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"deal": grant}},
+		})
+	}
+	for name, want := range map[string]bool{"edit": true, "read": false} {
+		grant := principal.ObjectGrant{Read: true, Update: name == "edit"}
+		held, err := undoGrants{}.holds(seat(grant), archive)
+		if err != nil || held != want {
+			t.Errorf("a seat that may %s deals holds the undo = %v (%v), want %v", name, held, err, want)
+		}
+	}
+}
+
 // systemSeatCtx is a seat holding every grant, so the object gate passes and the
 // branches after it are what a case is about.
 func systemSeatCtx() context.Context {

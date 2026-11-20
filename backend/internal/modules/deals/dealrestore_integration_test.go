@@ -37,21 +37,40 @@ func (e *configEnv) restoreAs(ctx context.Context, deal ids.DealID) error {
 	})
 }
 
-// Restore asks what the archive asks. Edit rights alone admit the deal's
-// owner, and refuse a seat that may write every deal but owns none of them.
+// Restore asks what the archive asks. With edit rights alone, the owner
+// restores only an archive they made, so a manager's archive stays until a
+// delete holder restores it. An editor of every deal who owns none restores
+// no archive.
 func TestADealRestoreAsksTheArchivesOwnAuthority(t *testing.T) {
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
-	if _, err := e.store.ArchiveDeal(e.asDealArchiver(), deal, nil); err != nil {
-		t.Fatalf("archiving the deal: %v", err)
+	owner := e.asEditor(e.admin, principal.RowScopeOwn)
+	manager := e.asDealArchiver()
+	actor, ok := principal.Actor(manager)
+	if !ok {
+		t.Fatal("the manager's context carries no actor")
+	}
+	actor.UserID = ids.NewV7()
+	actor.ID = "human:" + actor.UserID.String()
+	manager = principal.WithActor(manager, actor)
+
+	if _, err := e.store.ArchiveDeal(manager, deal, nil); err != nil {
+		t.Fatalf("the manager's archive: %v", err)
+	}
+	if _, refused := errors.AsType[*auth.RestoreAuthorityError](e.restoreAs(owner, deal)); !refused {
+		t.Error("the owner restored the manager's archive, want restore_archiver_required")
+	}
+	if err := e.restoreAs(manager, deal); err != nil {
+		t.Fatalf("the manager's restore: %v", err)
 	}
 
-	err := e.restoreAs(e.asEditor(ids.NewV7(), principal.RowScopeAll), deal)
-	if refusal, isArchiveRule := errors.AsType[*auth.ArchiveAuthorityError](err); !isArchiveRule || refusal.SelfAssigned {
-		t.Fatalf("an editor of every deal who owns none restores → %v, want archive_owner_required", err)
+	if _, err := e.store.ArchiveDeal(owner, deal, nil); err != nil {
+		t.Fatalf("the owner's archive with edit rights: %v", err)
 	}
-
-	if err := e.restoreAs(e.asEditor(e.admin, principal.RowScopeOwn), deal); err != nil {
-		t.Fatalf("the owner's restore with edit rights alone: %v", err)
+	if _, refused := errors.AsType[*auth.RestoreAuthorityError](e.restoreAs(e.asEditor(ids.NewV7(), principal.RowScopeAll), deal)); !refused {
+		t.Error("an editor of every deal who owns none restored it, want restore_archiver_required")
+	}
+	if err := e.restoreAs(owner, deal); err != nil {
+		t.Fatalf("the owner's restore of their own archive: %v", err)
 	}
 }

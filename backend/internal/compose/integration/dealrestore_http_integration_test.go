@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
@@ -184,10 +185,7 @@ func TestADealRestoreIsRefusedToAColleagueAndToAnotherDealsEntry(t *testing.T) {
 	other := archiveADealOnTwoLists(t, e, "Pier signage")
 
 	e.DescribeCompany(t)
-	const email, password = "rep@deal-restore.test", "deal-restore-password"
-	rep := createdID(t, e, "/v1/users", AnyMap{"email": email, "display_name": "Rhea Rep", "role": "rep"})
-	apptest.SetPasswordByLink(t, e, rep, password)
-	colleague := e.AsSecondSeat(t, email, password)
+	colleague := repSeat(t, e, "rep@deal-restore.test")
 	var refusal struct {
 		Code string `json:"code"`
 	}
@@ -205,19 +203,55 @@ func TestADealRestoreIsRefusedToAColleagueAndToAnotherDealsEntry(t *testing.T) {
 	}
 }
 
-// A rep may archive a deal they own with edit rights alone. An archive and
-// its undo answer to one authority, so they may bring it back the same way.
-func TestARepRestoresTheDealTheyArchived(t *testing.T) {
-	e := listsOnApp(t)
-	e.DescribeCompany(t)
-	const email, password = "owner@deal-restore.test", "deal-restore-password"
+// repSeat signs in a new rep, who holds edit rights on deals and no delete.
+func repSeat(t *testing.T, e *apptest.AppEnv, email string) *apptest.AppEnv {
+	t.Helper()
+	const password = "deal-restore-password"
 	rep := createdID(t, e, "/v1/users", AnyMap{"email": email, "display_name": "Otto Owner", "role": "rep"})
 	apptest.SetPasswordByLink(t, e, rep, password)
-	owner := e.AsSecondSeat(t, email, password)
+	return e.AsSecondSeat(t, email, password)
+}
+
+func repDeal(t *testing.T, owner *apptest.AppEnv, name string) bulkItemDTO {
+	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, owner)
-	deal := createdID(t, owner, "/v1/deals", AnyMap{
-		"name": "Own rollout", "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "source": "manual",
-	})
+	var deal bulkItemDTO
+	if status := owner.Call(t, "POST", "/v1/deals", AnyMap{
+		"name": name, "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "source": "manual",
+	}, nil, &deal); status != http.StatusCreated {
+		t.Fatalf("the rep's deal → %d", status)
+	}
+	return deal
+}
+
+// A rep may archive a deal they own with edit rights alone, and bring back
+// that archive. An archive a manager made of the rep's deal stays, and the
+// rep is told only its archiver or a manager can restore it.
+func TestARepRestoresTheirOwnArchiveAndNotAManagers(t *testing.T) {
+	e := listsOnApp(t)
+	e.DescribeCompany(t)
+	owner := repSeat(t, e, "owner@deal-restore.test")
+	deal := repDeal(t, owner, "Own rollout").ID
+
+	if status := e.Call(t, "DELETE", "/v1/deals/"+deal, nil, nil, nil); status != http.StatusOK && status != http.StatusNoContent {
+		t.Fatalf("the manager's archive → %d", status)
+	}
+	byManager := theArchiveEntry(t, owner, deal)
+	if entry := theEntryByID(t, readHistory(t, owner, "deal", deal), byManager); entry.Undoable.Undoable || reasonOf(entry) != "restore_archiver_required" {
+		t.Errorf("the rep is offered the manager's archive as %+v, want restore_archiver_required", entry.Undoable)
+	}
+	var refusal struct {
+		Code string `json:"code"`
+	}
+	status := owner.Call(t, "POST", fmt.Sprintf("/v1/records/deal/%s/history/%s/restore", deal, byManager),
+		nil, map[string]string{"If-Match": fmt.Sprint(dealVersion(t, owner, deal))}, &refusal)
+	if status != http.StatusConflict || refusal.Code != "restore_archiver_required" {
+		t.Errorf("the rep's restore of the manager's archive → %d %q, want 409 restore_archiver_required", status, refusal.Code)
+	}
+	if status, _ := restoreTheDealArchive(t, e, deal, byManager, dealVersion(t, e, deal)); status != http.StatusOK {
+		t.Fatalf("the manager's restore → %d", status)
+	}
+
 	if status := owner.Call(t, "DELETE", "/v1/deals/"+deal, nil, nil, nil); status != http.StatusOK && status != http.StatusNoContent {
 		t.Fatalf("the owner's archive → %d", status)
 	}
@@ -230,5 +264,30 @@ func TestARepRestoresTheDealTheyArchived(t *testing.T) {
 	}
 	if n := countInWorkspace(t, e, `SELECT count(*) FROM deal WHERE id = $1 AND archived_at IS NULL`, deal); n != 1 {
 		t.Error("the deal is still archived")
+	}
+}
+
+// The bulk undo of an archive is one restore per row, and asks what each
+// restore asks. So a rep who archived their own deals in bulk undoes it.
+func TestARepUndoesTheirOwnBulkArchive(t *testing.T) {
+	e := listsOnApp(t)
+	e.DescribeCompany(t)
+	owner := repSeat(t, e, "bulk-owner@deal-restore.test")
+	deals := []bulkItemDTO{repDeal(t, owner, "First own deal"), repDeal(t, owner, "Second own deal")}
+
+	archived, refusal := httpBulkDoor(owner).execute(t, AnyMap{"record_type": "deal", "verb": "archive", "items": deals}, "")
+	if refusal != "" || archived.Changed != 2 {
+		t.Fatalf("the rep's bulk archive → %+v, refused %q", archived, refusal)
+	}
+	raw, refusal := httpPost(t, owner, "/v1/bulk/"+archived.BatchID+"/undo", AnyMap{})
+	if refusal != "" {
+		t.Fatalf("the rep's bulk undo refused %q", refusal)
+	}
+	var undone bulkResultDTO
+	if err := json.Unmarshal(raw, &undone); err != nil || undone.Changed != 2 {
+		t.Errorf("the rep's bulk undo → %s, want both deals back", raw)
+	}
+	if n := countInWorkspace(t, e, `SELECT count(*) FROM deal WHERE id IN ($1, $2) AND archived_at IS NULL`, deals[0].ID, deals[1].ID); n != 2 {
+		t.Errorf("%d of two deals are live after the undo", n)
 	}
 }

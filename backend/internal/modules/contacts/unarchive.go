@@ -187,15 +187,18 @@ func (s *Store) RestoreCompanyTx(
 }
 
 // ensureRestorable asks what the archive asks: its rule's grant, write
-// authority on the row, and the rule's own arm. So an owner who archived with
-// edit rights may restore. Not the live twin: the row is archived by
-// definition, and bringing it back is the write that reaches it on purpose.
+// authority on the row, and auth.EnsureRestorable, judged under the row lock.
+// Not the live twin: the row is archived by definition, and a restore is the
+// write meant to reach it.
 func ensureRestorable(ctx context.Context, tx pgx.Tx, rule auth.ArchiveRule, table string, id ids.UUID) error {
 	if err := auth.RequireArchiveGrant(ctx, rule); err != nil {
+		return err
+	}
+	if _, err := storekit.LockRow(ctx, tx, table, id, storekit.IncludeArchived); err != nil {
 		return err
 	}
 	if err := auth.EnsureWritable(ctx, tx, table, id); err != nil {
 		return err
 	}
-	return auth.EnsureArchivable(ctx, tx, rule, id)
+	return auth.EnsureRestorable(ctx, tx, rule, id)
 }

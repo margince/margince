@@ -35,7 +35,7 @@ func (s *Store) RestoreActivityTx(ctx context.Context, tx pgx.Tx, id ids.Activit
 	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, false); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	if err := auth.EnsureArchivable(ctx, tx, auth.ActivityArchive, id.UUID); err != nil {
+	if err := auth.EnsureRestorable(ctx, tx, auth.ActivityArchive, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
 	if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {

@@ -2584,6 +2584,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Änderung lässt sich nicht rückgängig machen, da dabei ein Pflichtfeld leer würde.",
   "history.undo.notWritableByCaller":
     "Du hast keine Berechtigung, diese Felder zu ändern.",
+  "history.undo.restoreArchiverRequired":
+    "Nur wer diesen Datensatz archiviert hat oder eine Führungskraft kann ihn wiederherstellen.",
   "history.undo.edgeRelinkUnsupported":
     "Eine entfernte Verknüpfung lässt sich nicht rückgängig machen. Füge die Verknüpfung auf diesem Datensatz erneut hinzu.",
   "history.undo.laterCompanyChange":

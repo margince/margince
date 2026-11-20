@@ -101,23 +101,16 @@ describe("an archived deal", () => {
     expect(screen.queryByText("“ERP connector” restored")).toBeNull();
   });
 
-  it("names the server's reason when the archive cannot be put back", async () => {
+  it("draws no Restore deal and says why when the archive cannot be put back", async () => {
     vi.stubGlobal(
       "fetch",
-      serve({ undoable: false, reason: "not_writable_by_caller" }, []),
+      serve({ undoable: false, reason: "restore_archiver_required" }, []),
     );
     render(<DealScreen id="x" />);
-    // Disabled while the history is read too, so the wait is on the sentence.
-    await waitFor(() => {
-      const restore = screen.getByTestId("restore-record");
-      expect(
-        document.getElementById(restore.getAttribute("aria-describedby") ?? "")
-          ?.textContent,
-      ).toBe("You do not have permission to write these fields.");
-    });
-    expect(screen.getByTestId("restore-record").hasAttribute("disabled")).toBe(
-      true,
-    );
+    expect(
+      await screen.findByText(en["history.undo.restoreArchiverRequired"]),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("restore-record")).toBeNull();
   });
 });
 
@@ -126,7 +119,16 @@ describe("an archived deal", () => {
 // asks: delete, or edit rights for the deal's owner.
 describe("the archived deal's band", () => {
   function mountBand(allow: Parameters<typeof stubWithSession>[1]) {
-    stubWithSession({}, allow);
+    stubWithSession(
+      {
+        "GET /records/deal/x/history": () =>
+          jsonResponse({
+            data: [archiveEntry({ undoable: true })],
+            page: { next_cursor: null, has_more: false },
+          }),
+      },
+      allow,
+    );
     render(
       <ArchivedDealBand
         deal={{ ...archived, writable: false }}
