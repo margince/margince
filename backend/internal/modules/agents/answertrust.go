@@ -11,22 +11,30 @@ import (
 // machineFormats are the string formats whose values no one writes: ids,
 // instants and numbers. An address or a link is not one of them, because its
 // local part or path is text somebody chose.
-var machineFormats = []string{"uuid", "date-time", "date", "int64", "int32", "double"}
+var machineFormats = []string{uuidFormat, formatDateTime, "date", "int64", "int32", "double"}
+
+// formatDateTime is the format of an instant.
+const formatDateTime = "date-time"
 
 // answerNode is the part of a JSON schema that decides whether a value can
 // hold somebody's words.
 type answerNode struct {
-	Type            json.RawMessage            `json:"type"`
-	Enum            []json.RawMessage          `json:"enum"`
-	Const           json.RawMessage            `json:"const"`
-	ExtensibleEnum  bool                       `json:"x-extensible-enum"`
-	Format          string                     `json:"format"`
-	Properties      map[string]json.RawMessage `json:"properties"`
-	AdditionalProps json.RawMessage            `json:"additionalProperties"`
-	Items           json.RawMessage            `json:"items"`
-	AnyOf           []json.RawMessage          `json:"anyOf"`
-	OneOf           []json.RawMessage          `json:"oneOf"`
-	AllOf           []json.RawMessage          `json:"allOf"`
+	Type  json.RawMessage   `json:"type"`
+	Enum  []json.RawMessage `json:"enum"`
+	Const json.RawMessage   `json:"const"`
+	//nolint:tagliatelle // x-extensible-enum is the contract's schema extension
+	ExtensibleEnum bool                       `json:"x-extensible-enum"`
+	Format         string                     `json:"format"`
+	Properties     map[string]json.RawMessage `json:"properties"`
+	//nolint:tagliatelle // additionalProperties is the JSON Schema keyword
+	AdditionalProps json.RawMessage `json:"additionalProperties"`
+	Items           json.RawMessage `json:"items"`
+	//nolint:tagliatelle // anyOf is the JSON Schema keyword
+	AnyOf []json.RawMessage `json:"anyOf"`
+	//nolint:tagliatelle // oneOf is the JSON Schema keyword
+	OneOf []json.RawMessage `json:"oneOf"`
+	//nolint:tagliatelle // allOf is the JSON Schema keyword
+	AllOf []json.RawMessage `json:"allOf"`
 }
 
 // CarriesFreeText reports whether an answer of this schema may hold text
@@ -63,7 +71,7 @@ func (n answerNode) types() []string {
 		return many
 	}
 	if n.Properties != nil {
-		return []string{"object"}
+		return []string{schemaObject}
 	}
 	return nil
 }
@@ -72,13 +80,13 @@ func (n answerNode) types() []string {
 // the node admits no type the schema names.
 func (n answerNode) freeAs(jsonType string) bool {
 	switch jsonType {
-	case "integer", "number", "boolean", "null":
+	case schemaInteger, schemaNumber, schemaBoolean, schemaNull:
 		return false
 	case schemaString:
 		return !slices.Contains(machineFormats, n.Format)
 	case schemaArray:
 		return CarriesFreeText(n.Items)
-	case "object":
+	case schemaObject:
 		return n.objectCarriesFreeText()
 	default:
 		return true
