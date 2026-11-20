@@ -95,6 +95,10 @@ func (stubs) DeclineActivityDeal(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "DeclineActivityDeal")
 }
 
+func (stubs) SetActivityDealRelevance(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SetActivityDealRelevance")
+}
+
 func (stubs) ClearActivityDisposition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ClearActivityDispositionParams) {
 	httperr.NotImplemented(w, r, "ClearActivityDisposition")
 }

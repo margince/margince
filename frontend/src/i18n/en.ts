@@ -22387,13 +22387,15 @@ export const en = {
   "aiServing.previewFailed":
     "The server could not check this value: {reason} Save stays off until it can.",
   "dealDecline.action": "Not about this deal",
-  "dealDecline.title": "Take this email off the deal?",
-  "dealDecline.body":
-    "The email comes off this deal, and Margince does not file it here again. A project link it got from this deal comes off too.",
-  "dealDecline.confirm": "Take off deal",
-  "dealDecline.done": "Email taken off the deal",
+  "dealDecline.done":
+    "Marked as not about this deal. It no longer keeps the deal active.",
   "dealDecline.doneProjectKept":
-    "Email taken off the deal. Its project link stays.",
+    "Marked as not about this deal. Its project link stays.",
+  "dealRelevance.about": "About this deal",
+  "dealRelevance.restored":
+    "Marked as about this deal. It counts for the deal again.",
+  "dealRelevance.unrelated": "Not about this deal",
+  "dealRelevance.uncertain": "Maybe not about this deal",
   "projectFiling.action": "Undo filing",
   "projectFiling.title": "Undo project filing?",
   "projectFiling.loading": "Checking what keeps this activity…",

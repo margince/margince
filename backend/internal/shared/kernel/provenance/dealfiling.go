@@ -3,6 +3,8 @@
 
 package provenance
 
+import "github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+
 // ProjectRungKey names, in the evidence of capture's project-link audit row,
 // the ladder rung that chose the project. Its values are the ProjectRung*
 // constants.
@@ -20,11 +22,14 @@ const (
 const DealDeclinedKey = "declined"
 
 // HumanDealFilingSQL is the test that a human or an agent filed activity on
-// some deal, or took it off one. A later decline of that deal undoes it.
-// Capture's repair and the activities writer ask it before taking an
-// automatic deal link back. activity is a compile-time SQL expression.
+// some deal, or took it off one. A later decline of that deal undoes it, but a
+// colleague's mark on a deal link of the activity holds. Capture's repair and
+// the activities writer ask it before taking an automatic deal link back.
+// activity is a compile-time SQL expression.
 func HumanDealFilingSQL(activity string) string {
-	return humanFilingSQL(activity, `'deal'`, "") + ` AND NOT ` + DeclineRowSQL("h") + latestDealDecisionSQL(activity) + `)`
+	return `(` + humanFilingSQL(activity, `'deal'`, "") + ` AND NOT ` + DeclineRowSQL("h") + latestDealDecisionSQL(activity) + `)
+	 OR EXISTS (SELECT 1 FROM activity_link marked WHERE marked.activity_id = ` + activity + `
+	   AND marked.entity_type = 'deal' AND marked.relevance_source = '` + relstrength.RelevanceByHuman + `'))`
 }
 
 // DealDeclinedSQL is the test that the latest human or agent decision about

@@ -1,0 +1,12 @@
+{
+  "verb": "set_activity_deal_relevance",
+  "checks": [
+    "activity.update",
+    "deal.update"
+  ],
+  "takes": [
+    "activity",
+    "deal",
+    "deal_note"
+  ]
+}

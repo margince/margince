@@ -1,71 +1,90 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import type { components } from "../../api/schema";
-import { Button } from "../../design-system/atoms";
-import { ConfirmModal } from "../../design-system/confirmmodal";
-import { useToast } from "../../design-system/toast";
+import { Badge, Button } from "../../design-system/atoms";
+import { undoAction, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import { entityTimelineKeys } from "../../lib/activitykeys";
 import { useCanWriteRecord } from "../../lib/capability";
-import { useDealDecline } from "../../lib/dealdecline";
+import {
+  type DealRelevanceInput,
+  useDealRelevance,
+} from "../../lib/dealdecline";
 import { problemMessageOf } from "../../lib/problem";
 
 type Activity = components["schemas"]["Activity"];
+type Relevance = DealRelevanceInput["relevance"];
+
+/** The mark the activity's link to the deal carries; none when nobody judged it. */
+export function dealRelevanceOf(activity: Activity, dealId: string) {
+  return activity.links?.find(
+    (link) => link.entity_type === "deal" && link.entity_id === dealId,
+  )?.deal_relevance;
+}
 
 /**
- * "Not about this deal" on an email of a deal's timeline. The email comes off
- * the deal and no automatic pass files it there again. A project the email got
- * from the deal comes off too, when the server's filing rules allow it.
+ * "Not about this deal" and "About this deal" on a row of a deal's timeline.
+ * The row stays on the timeline with its mark, the deal's activity date stops
+ * counting it, and the toast's Undo sets the other mark.
  */
-export function DealDeclineAction({
+export function DealRelevanceAction({
   activity,
   dealId,
 }: Readonly<{ activity: Activity; dealId: string }>) {
   const t = useT();
   const toast = useToast();
-  const queryClient = useQueryClient();
   const writable = useCanWriteRecord("activity", activity);
-  const [open, setOpen] = useState(false);
-  const decline = useDealDecline(async (answer) => {
-    setOpen(false);
-    toast.show(
-      t(
-        answer.project_kept
-          ? "dealDecline.doneProjectKept"
-          : "dealDecline.done",
+  // Pressed from the menu or from an Undo toast, so a refusal lands in a toast.
+  const refuse = (error: Error) =>
+    toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
+  const mark = useDealRelevance((answer, input) => {
+    if (!answer.changed) return;
+    const back: Relevance =
+      input.relevance === "unrelated" ? "relevant" : "unrelated";
+    toast.show(t(markedMessage(input.relevance, answer.project_kept)), {
+      action: undoAction(t("common.undo"), () =>
+        mark.mutate({ ...input, relevance: back }, { onError: refuse }),
       ),
-    );
-    await Promise.all(
-      entityTimelineKeys("deal", dealId).map((queryKey) =>
-        queryClient.invalidateQueries({ queryKey }),
-      ),
-    );
+    });
   });
+  const unrelated = dealRelevanceOf(activity, dealId) === "unrelated";
   return (
-    <>
-      <Button
-        onClick={() => setOpen(true)}
-        reason={writable ? undefined : t("activity.notYoursToChange")}
-      >
-        {t("dealDecline.action")}
-      </Button>
-      <ConfirmModal
-        open={open}
-        onClose={() => {
-          decline.reset();
-          setOpen(false);
-        }}
-        title={t("dealDecline.title")}
-        confirmLabel={t("dealDecline.confirm")}
-        onConfirm={() => decline.mutate({ activityId: activity.id, dealId })}
-        pending={decline.isPending}
-        error={decline.isError ? problemMessageOf(decline.error, t) : null}
-      >
-        <p className="t-body">{t("dealDecline.body")}</p>
-      </ConfirmModal>
-    </>
+    <Button
+      onClick={() =>
+        mark.mutate(
+          {
+            activityId: activity.id,
+            dealId,
+            relevance: unrelated ? "relevant" : "unrelated",
+          },
+          { onError: refuse },
+        )
+      }
+      pending={mark.isPending}
+      reason={writable ? undefined : t("activity.notYoursToChange")}
+    >
+      {t(unrelated ? "dealRelevance.about" : "dealDecline.action")}
+    </Button>
   );
+}
+
+function markedMessage(relevance: Relevance, projectKept: boolean) {
+  if (relevance === "relevant") return "dealRelevance.restored";
+  return projectKept ? "dealDecline.doneProjectKept" : "dealDecline.done";
+}
+
+/** The row's mark when it does not count for the deal. */
+export function DealRelevanceBadge({
+  activity,
+  dealId,
+}: Readonly<{ activity: Activity; dealId: string }>) {
+  const t = useT();
+  switch (dealRelevanceOf(activity, dealId)) {
+    case "unrelated":
+      return <Badge tone="warning">{t("dealRelevance.unrelated")}</Badge>;
+    case "uncertain":
+      return <Badge>{t("dealRelevance.uncertain")}</Badge>;
+    default:
+      return null;
+  }
 }

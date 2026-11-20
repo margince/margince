@@ -113,9 +113,10 @@ func TestNoneOfThemDeclinesTheDealsTheQuestionOffered(t *testing.T) {
 
 func compareIDs(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) }
 
-// The latest decision about a deal counts. After a decline, a relink and a
-// second decline, the mail is declined on that deal and kept by nobody. The
-// refile pass and the repair both file it on the deal its project now names.
+// The latest decision about a deal counts. After a decline, "About this
+// deal" and a second decline, the mail is declined on that deal anew. A link a
+// colleague judged stays where it is: neither the refile pass nor the repair
+// moves it to the deal its project now names.
 func TestTheLatestDecisionAboutADealHolds(t *testing.T) {
 	for _, pass := range []struct {
 		name string
@@ -139,16 +140,20 @@ func TestTheLatestDecisionAboutADealHolds(t *testing.T) {
 			mail := activityOf(t, e, "late1@acme.example")
 
 			mustDecline(w.ctx, t, e, mail, first)
-			relinkAsColleague(t, e, w, mail, "deal", first)
+			if _, err := activities.NewStore(e.DB()).SetDealRelevance(w.ctx, ids.From[ids.ActivityKind](mail), first, "relevant"); err != nil {
+				t.Fatalf("saying the mail is about the deal after all: %v", err)
+			}
+			wantMark(t, e, "late1@acme.example", first, "relevant/human")
 			if again := mustDecline(w.ctx, t, e, mail, first); len(again.DeclinedDealIds) != 1 {
-				t.Fatalf("the decline after a relink answered %+v, want the deal declined anew", again)
+				t.Fatalf("the decline after the undo answered %+v, want the deal declined anew", again)
 			}
 			reporting := w.project(t, "Reporting")
-			second := w.dealOnProject(t, "Acme reporting", reporting.ID)
+			w.dealOnProject(t, "Acme reporting", reporting.ID)
 			relinkAsColleague(t, e, w, mail, "project", reporting.ID)
 
 			pass.run(t, env, w, ids.From[ids.ActivityKind](mail))
-			wantDeals(t, e, "late1@acme.example", second)
+			wantDeals(t, e, "late1@acme.example", first)
+			wantMark(t, e, "late1@acme.example", first, "unrelated/human")
 		})
 	}
 }
@@ -202,10 +207,34 @@ func TestADeclineKeepsAProjectTheThreadFiled(t *testing.T) {
 	}
 
 	status, out := decline(w.ctx, t, e, activityOf(t, e, "tp2@acme.example"), dealBody(deal))
-	if status != http.StatusOK || !out.Unlinked || out.ProjectUnfiled {
-		t.Fatalf("the decline answered %d %+v, want the deal off and the thread's project kept", status, out)
+	if status != http.StatusOK || !out.MarkedUnrelated || out.ProjectUnfiled {
+		t.Fatalf("the decline answered %d %+v, want the deal marked and the thread's project kept", status, out)
 	}
 	if got := linkedProject(t, e, "tp2@acme.example"); got != rollout.ID {
 		t.Fatalf("the decline took off the project the thread filed; the reply is on %s", got)
 	}
+}
+
+// A reply follows its thread onto the deal our mail is on. Once a colleague
+// marks our mail not about that deal, the thread no longer files the reply
+// there.
+func TestAThreadMarkedNotAboutADealFilesNoReplyThere(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme operations")
+	reporting := w.deal(t, "Acme reporting")
+	env.syncSent(t, map[string]bool{"mk1@myco.example": true},
+		email(captureOwner, "", "alice@acme.example", "mk1@myco.example", ""))
+	ours := ids.From[ids.ActivityKind](activityOf(t, e, "mk1@myco.example"))
+	store := activities.NewStore(e.DB())
+	if _, err := store.RelinkActivity(w.ctx, ours, activities.RelinkActivityInput{EntityType: "deal", EntityID: reporting}); err != nil {
+		t.Fatalf("filing our mail on a deal as a colleague: %v", err)
+	}
+	if _, err := store.SetDealRelevance(w.ctx, ours, reporting, "unrelated"); err != nil {
+		t.Fatalf("marking our mail not about the deal: %v", err)
+	}
+	env.sync(t, authenticated(mailFrom("alice@acme.example", "mk2@acme.example", "mk1@myco.example", "Re: project"), "acme.example"))
+	wantDeals(t, e, "mk2@acme.example")
 }

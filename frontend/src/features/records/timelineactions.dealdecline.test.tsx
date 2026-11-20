@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -15,7 +15,7 @@ import { meFixture } from "../../testing/mefixture";
 import { TimelineActions } from "./timelineactions";
 
 type Activity = components["schemas"]["Activity"];
-type DealDecline = components["schemas"]["ActivityDealDecline"];
+type DealRelevance = components["schemas"]["ActivityDealRelevance"];
 
 const MAIL: Activity = {
   occurred_precision: "instant",
@@ -36,13 +36,38 @@ const MAIL: Activity = {
   audience: "workspace",
 };
 
-const DECLINED: DealDecline = {
-  declined_deal_ids: ["deal-1"],
-  unlinked: true,
-  project_unfiled: true,
-  project_kept: false,
-  questions_closed: 0,
+const ON_DEAL: Activity = {
+  ...MAIL,
+  links: [{ entity_type: "deal", entity_id: "deal-1" }],
 };
+
+const UNRELATED: Activity = {
+  ...MAIL,
+  links: [
+    {
+      entity_type: "deal",
+      entity_id: "deal-1",
+      deal_relevance: "unrelated",
+      relevance_source: "human",
+    },
+  ],
+};
+
+function answerFor(
+  body: { deal_relevance: "relevant" | "unrelated" },
+  extra: Partial<DealRelevance> = {},
+): DealRelevance {
+  return {
+    deal_id: "deal-1",
+    deal_relevance: body.deal_relevance,
+    relevance_source: "human",
+    changed: true,
+    project_unfiled: false,
+    project_kept: false,
+    project_filed: false,
+    ...extra,
+  };
+}
 
 afterEach(() => {
   cleanup();
@@ -52,9 +77,9 @@ afterEach(() => {
 function show(
   activity: Activity,
   entityType: "deal" | "company",
-  answer: DealDecline = DECLINED,
+  extra: Partial<DealRelevance> = {},
 ) {
-  const declines: unknown[] = [];
+  const marks: unknown[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
@@ -63,9 +88,10 @@ function show(
         return jsonResponse(
           meFixture({ allow: { activity: ["read", "update"] } }),
         );
-      if (path === "/activities/mail-1/deal-decline") {
-        declines.push(await request.json());
-        return jsonResponse(answer);
+      if (path === "/activities/mail-1/deal-relevance") {
+        const body = await request.json();
+        marks.push(body);
+        return jsonResponse(answerFor(body, extra));
       }
       throw new Error(`Unexpected request: ${request.method} ${path}`);
     }),
@@ -88,7 +114,7 @@ function show(
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { declines, client };
+  return { marks, client };
 }
 
 async function openMenu(user: ReturnType<typeof userEvent.setup>) {
@@ -99,48 +125,69 @@ async function openMenu(user: ReturnType<typeof userEvent.setup>) {
   );
 }
 
-describe("not about this deal", () => {
-  it("takes an email off the deal whose timeline shows it, after a confirm", async () => {
+describe("whether a row is about the deal", () => {
+  it("marks a row not about the deal, and the toast's Undo marks it about it again", async () => {
     const user = userEvent.setup();
-    const { declines, client } = show(MAIL, "deal");
+    const { marks, client } = show(ON_DEAL, "deal");
     await openMenu(user);
     await user.click(
       await screen.findByRole("button", { name: en["dealDecline.action"] }),
     );
-    await user.click(
-      within(screen.getByRole("dialog")).getByRole("button", {
-        name: en["dealDecline.confirm"],
-      }),
-    );
     expect(await screen.findByText(en["dealDecline.done"])).toBeTruthy();
-    expect(declines).toEqual([{ deal_id: "deal-1" }]);
     expect(
       client.getQueryState(["activities", "deal", "deal-1"])?.isInvalidated,
     ).toBe(true);
+    await user.click(screen.getByRole("button", { name: en["common.undo"] }));
+    expect(await screen.findByText(en["dealRelevance.restored"])).toBeTruthy();
+    expect(marks).toEqual([
+      { deal_id: "deal-1", deal_relevance: "unrelated" },
+      { deal_id: "deal-1", deal_relevance: "relevant" },
+    ]);
   });
 
-  it("says so when the project the email got from the deal stays", async () => {
+  it("says so when the project the row got from the deal stays", async () => {
     const user = userEvent.setup();
-    show(MAIL, "deal", {
-      ...DECLINED,
-      project_unfiled: false,
-      project_kept: true,
-    });
+    show(ON_DEAL, "deal", { project_kept: true });
     await openMenu(user);
     await user.click(
       await screen.findByRole("button", { name: en["dealDecline.action"] }),
-    );
-    await user.click(
-      within(screen.getByRole("dialog")).getByRole("button", {
-        name: en["dealDecline.confirm"],
-      }),
     );
     expect(
       await screen.findByText(en["dealDecline.doneProjectKept"]),
     ).toBeTruthy();
   });
 
-  it("is not offered off a deal timeline, or on a row that is not an email", async () => {
+  it("shows a row marked not about the deal, and offers to take the mark back", async () => {
+    const user = userEvent.setup();
+    const { marks } = show(UNRELATED, "deal");
+    expect(screen.getByText(en["dealRelevance.unrelated"])).toBeTruthy();
+    await openMenu(user);
+    await user.click(
+      await screen.findByRole("button", { name: en["dealRelevance.about"] }),
+    );
+    expect(await screen.findByText(en["dealRelevance.restored"])).toBeTruthy();
+    expect(marks).toEqual([{ deal_id: "deal-1", deal_relevance: "relevant" }]);
+  });
+
+  it("shows a row the classifier was unsure about", () => {
+    show(
+      {
+        ...MAIL,
+        links: [
+          {
+            entity_type: "deal",
+            entity_id: "deal-1",
+            deal_relevance: "uncertain",
+            relevance_source: "classifier",
+          },
+        ],
+      },
+      "deal",
+    );
+    expect(screen.getByText(en["dealRelevance.uncertain"])).toBeTruthy();
+  });
+
+  it("is not offered off a deal timeline, or on a task", async () => {
     const user = userEvent.setup();
     show(MAIL, "company");
     await openMenu(user);
@@ -149,7 +196,7 @@ describe("not about this deal", () => {
       screen.queryByRole("button", { name: en["dealDecline.action"] }),
     ).toBeNull();
     cleanup();
-    show({ ...MAIL, kind: "note" }, "deal");
+    show({ ...ON_DEAL, kind: "task" }, "deal");
     await openMenu(user);
     await screen.findByRole("button", { name: en["compose.relink"] });
     expect(

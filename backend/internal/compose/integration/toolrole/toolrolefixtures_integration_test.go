@@ -178,6 +178,10 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"decline_activity_deal": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("inbound_email"), "request_body": map[string]any{"deal_id": p.take("deal")}}
 	},
+	"set_activity_deal_relevance": func(p *recordPool) map[string]any {
+		note := p.take("deal_note")
+		return map[string]any{"id": note, "request_body": map[string]any{"deal_id": p.fact(note, "deal"), "deal_relevance": "unrelated"}}
+	},
 	"set_thread_audience":     func(p *recordPool) map[string]any { return map[string]any{"thread_key": p.take("captured_thread")} },
 	"hide_deal_document":      dealDocument,
 	"unhide_deal_document":    dealDocument,

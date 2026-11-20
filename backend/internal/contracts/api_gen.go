@@ -583,6 +583,45 @@ func (e ActivityDealFilingRecordType) Valid() bool {
 	}
 }
 
+// Defines values for ActivityDealRelevanceDealRelevance.
+const (
+	ActivityDealRelevanceDealRelevanceRelevant  ActivityDealRelevanceDealRelevance = "relevant"
+	ActivityDealRelevanceDealRelevanceUncertain ActivityDealRelevanceDealRelevance = "uncertain"
+	ActivityDealRelevanceDealRelevanceUnrelated ActivityDealRelevanceDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealRelevanceDealRelevance enum.
+func (e ActivityDealRelevanceDealRelevance) Valid() bool {
+	switch e {
+	case ActivityDealRelevanceDealRelevanceRelevant:
+		return true
+	case ActivityDealRelevanceDealRelevanceUncertain:
+		return true
+	case ActivityDealRelevanceDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityDealRelevanceRelevanceSource.
+const (
+	ActivityDealRelevanceRelevanceSourceClassifier ActivityDealRelevanceRelevanceSource = "classifier"
+	ActivityDealRelevanceRelevanceSourceHuman      ActivityDealRelevanceRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealRelevanceRelevanceSource enum.
+func (e ActivityDealRelevanceRelevanceSource) Valid() bool {
+	switch e {
+	case ActivityDealRelevanceRelevanceSourceClassifier:
+		return true
+	case ActivityDealRelevanceRelevanceSourceHuman:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityEmailTargetEntityType.
 const (
 	ActivityEmailTargetEntityTypeCompany ActivityEmailTargetEntityType = "company"
@@ -625,6 +664,27 @@ func (e ActivityEmailTargetRefusal) Valid() bool {
 	}
 }
 
+// Defines values for ActivityLinkDealRelevance.
+const (
+	ActivityLinkDealRelevanceRelevant  ActivityLinkDealRelevance = "relevant"
+	ActivityLinkDealRelevanceUncertain ActivityLinkDealRelevance = "uncertain"
+	ActivityLinkDealRelevanceUnrelated ActivityLinkDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkDealRelevance enum.
+func (e ActivityLinkDealRelevance) Valid() bool {
+	switch e {
+	case ActivityLinkDealRelevanceRelevant:
+		return true
+	case ActivityLinkDealRelevanceUncertain:
+		return true
+	case ActivityLinkDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -646,6 +706,24 @@ func (e ActivityLinkEntityType) Valid() bool {
 	case ActivityLinkEntityTypeLead:
 		return true
 	case ActivityLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityLinkRelevanceSource.
+const (
+	ActivityLinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
+	ActivityLinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkRelevanceSource enum.
+func (e ActivityLinkRelevanceSource) Valid() bool {
+	switch e {
+	case ActivityLinkRelevanceSourceClassifier:
+		return true
+	case ActivityLinkRelevanceSourceHuman:
 		return true
 	default:
 		return false
@@ -23668,6 +23746,24 @@ func (e ServiceStatusStatus) Valid() bool {
 	}
 }
 
+// Defines values for SetActivityDealRelevanceRequestDealRelevance.
+const (
+	SetActivityDealRelevanceRequestDealRelevanceRelevant  SetActivityDealRelevanceRequestDealRelevance = "relevant"
+	SetActivityDealRelevanceRequestDealRelevanceUnrelated SetActivityDealRelevanceRequestDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the SetActivityDealRelevanceRequestDealRelevance enum.
+func (e SetActivityDealRelevanceRequestDealRelevance) Valid() bool {
+	switch e {
+	case SetActivityDealRelevanceRequestDealRelevanceRelevant:
+		return true
+	case SetActivityDealRelevanceRequestDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetActivityDispositionRequestDisposition.
 const (
 	SetActivityDispositionRequestDispositionHandled  SetActivityDispositionRequestDisposition = "handled"
@@ -33311,6 +33407,9 @@ type ActivityDealDecline struct {
 	// DeclinedDealIds The deals this call declined on the message. A deal declined before is not listed again.
 	DeclinedDealIds []openapi_types.UUID `json:"declined_deal_ids"`
 
+	// MarkedUnrelated A deal link of the message is now marked `unrelated` by a human.
+	MarkedUnrelated bool `json:"marked_unrelated"`
+
 	// ProjectKept A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project.
 	ProjectKept bool `json:"project_kept"`
 
@@ -33320,7 +33419,8 @@ type ActivityDealDecline struct {
 	// QuestionsClosed The open deal questions of the conversation this call marked done.
 	QuestionsClosed int `json:"questions_closed" minimum:"0"`
 
-	// Unlinked A deal link came off the message.
+	// Unlinked Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Unlinked bool `json:"unlinked"`
 }
 
@@ -33345,6 +33445,34 @@ type ActivityDealFilingOptions struct {
 
 // ActivityDealFilingRecordType defines model for ActivityDealFilingRecordType.
 type ActivityDealFilingRecordType string
+
+// ActivityDealRelevance defines model for ActivityDealRelevance.
+type ActivityDealRelevance struct {
+	// Changed The call changed the mark.
+	Changed bool               `json:"changed"`
+	DealId  openapi_types.UUID `json:"deal_id"`
+
+	// DealRelevance The link's mark after the call.
+	DealRelevance ActivityDealRelevanceDealRelevance `json:"deal_relevance"`
+
+	// ProjectFiled The activity was filed on the deal's project again.
+	ProjectFiled bool `json:"project_filed"`
+
+	// ProjectKept A project link came from the deal and stays, because a retention rule keeps it or the caller cannot read the project.
+	ProjectKept bool `json:"project_kept"`
+
+	// ProjectUnfiled The project link that came from the deal came off the activity.
+	ProjectUnfiled bool `json:"project_unfiled"`
+
+	// RelevanceSource Who set the mark. Always `human` after this call.
+	RelevanceSource ActivityDealRelevanceRelevanceSource `json:"relevance_source"`
+}
+
+// ActivityDealRelevanceDealRelevance The link's mark after the call.
+type ActivityDealRelevanceDealRelevance string
+
+// ActivityDealRelevanceRelevanceSource Who set the mark. Always `human` after this call.
+type ActivityDealRelevanceRelevanceSource string
 
 // ActivityEmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
 type ActivityEmailTarget struct {
@@ -33375,14 +33503,30 @@ type ActivityFollowUpTask struct {
 
 // ActivityLink defines model for ActivityLink.
 type ActivityLink struct {
-	ActivityId *openapi_types.UUID    `json:"activity_id,omitempty"`
-	EntityId   openapi_types.UUID     `json:"entity_id"`
-	EntityType ActivityLinkEntityType `json:"entity_type"`
-	Id         *openapi_types.UUID    `json:"id,omitempty"`
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// DealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+	// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+	// it; only `unrelated` also leaves it out of the silent close.
+	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
+	EntityId      openapi_types.UUID         `json:"entity_id"`
+	EntityType    ActivityLinkEntityType     `json:"entity_type"`
+	Id            *openapi_types.UUID        `json:"id,omitempty"`
+
+	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
 }
+
+// ActivityLinkDealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+// it; only `unrelated` also leaves it out of the silent close.
+type ActivityLinkDealRelevance string
 
 // ActivityLinkEntityType defines model for ActivityLink.EntityType.
 type ActivityLinkEntityType string
+
+// ActivityLinkRelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+type ActivityLinkRelevanceSource string
 
 // ActivityLinkInput One record an activity is filed under, as a caller supplies it. The read shape
 // (ActivityLink) carries the ids the server assigned; this carries only the target.
@@ -66967,6 +67111,18 @@ type SetActivityAudienceRequest struct {
 	Members *[]AudienceMember `json:"members,omitempty"`
 }
 
+// SetActivityDealRelevanceRequest defines model for SetActivityDealRelevanceRequest.
+type SetActivityDealRelevanceRequest struct {
+	// DealId The deal whose link to the activity is judged.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// DealRelevance `relevant` says the activity is about the deal; `unrelated` says it is not.
+	DealRelevance SetActivityDealRelevanceRequestDealRelevance `json:"deal_relevance"`
+}
+
+// SetActivityDealRelevanceRequestDealRelevance `relevant` says the activity is about the deal; `unrelated` says it is not.
+type SetActivityDealRelevanceRequestDealRelevance string
+
 // SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
 type SetActivityDispositionRequest struct {
 	// Disposition What the reader decided. `not_sales` binds the thread for everybody; `handled`,
@@ -83722,6 +83878,9 @@ type AnswerCalendarInvitationJSONRequestBody = AnswerCalendarInvitationRequest
 // DeclineActivityDealJSONRequestBody defines body for DeclineActivityDeal for application/json ContentType.
 type DeclineActivityDealJSONRequestBody = DeclineActivityDealRequest
 
+// SetActivityDealRelevanceJSONRequestBody defines body for SetActivityDealRelevance for application/json ContentType.
+type SetActivityDealRelevanceJSONRequestBody = SetActivityDealRelevanceRequest
+
 // SetActivityDispositionJSONRequestBody defines body for SetActivityDisposition for application/json ContentType.
 type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
@@ -98688,6 +98847,9 @@ type ServerInterface interface {
 	// Say a captured message is not about a deal, or about none of the deals its question offered.
 	// (POST /activities/{id}/deal-decline)
 	DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id)
+	// Say whether an activity linked to a deal is about that deal, or take that back.
+	// (PUT /activities/{id}/deal-relevance)
+	SetActivityDealRelevance(w http.ResponseWriter, r *http.Request, id Id)
 	// Pick the message back up — the undo behind every set-aside verb.
 	// (DELETE /activities/{id}/disposition)
 	ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams)
@@ -102093,6 +102255,12 @@ func (_ Unimplemented) AnswerCalendarInvitation(w http.ResponseWriter, r *http.R
 // Say a captured message is not about a deal, or about none of the deals its question offered.
 // (POST /activities/{id}/deal-decline)
 func (_ Unimplemented) DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say whether an activity linked to a deal is about that deal, or take that back.
+// (PUT /activities/{id}/deal-relevance)
+func (_ Unimplemented) SetActivityDealRelevance(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109748,6 +109916,40 @@ func (siw *ServerInterfaceWrapper) DeclineActivityDeal(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeclineActivityDeal(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetActivityDealRelevance operation middleware
+func (siw *ServerInterfaceWrapper) SetActivityDealRelevance(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetActivityDealRelevance(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -157994,6 +158196,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/deal-decline", wrapper.DeclineActivityDeal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/activities/{id}/deal-relevance", wrapper.SetActivityDealRelevance)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/activities/{id}/disposition", wrapper.ClearActivityDisposition)

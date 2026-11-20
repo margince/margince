@@ -23,9 +23,9 @@ import (
 )
 
 // A member's agent declines a deal on a captured mail through its route and
-// through its tool, on its member's live passport. The deal's own project link
-// comes off with the deal, and the audit row names the agent, its passport and
-// its member. A revoked passport, or a member who has left, changes nothing.
+// through its tool, on its member's live passport. The deal link stays, marked
+// unrelated, the deal's own project link comes off, and the audit row names the
+// agent, its passport and its member. A revoked passport, or a member who has left, changes nothing.
 func TestAnAgentsDeclineTakesTheDealsProjectThroughBothDoors(t *testing.T) {
 	d := newTwoDoors(t, "agent-deal-decline", "read", "write")
 	d.e.DescribeCompany(t)
@@ -50,9 +50,9 @@ func TestAnAgentsDeclineTakesTheDealsProjectThroughBothDoors(t *testing.T) {
 
 	body := AnyMap{"deal_id": deal}
 	type answer struct {
-		Unlinked       bool `json:"unlinked"`
-		ProjectUnfiled bool `json:"project_unfiled"`
-		ProjectKept    bool `json:"project_kept"`
+		MarkedUnrelated bool `json:"marked_unrelated"`
+		ProjectUnfiled  bool `json:"project_unfiled"`
+		ProjectKept     bool `json:"project_kept"`
 	}
 	var byRoute json.RawMessage
 	if status := seat.Call(t, "POST", "/v1/activities/"+mails[0]+"/deal-decline", body, bearer, &byRoute); status != http.StatusOK {
@@ -60,11 +60,11 @@ func TestAnAgentsDeclineTakesTheDealsProjectThroughBothDoors(t *testing.T) {
 	}
 	got := sameRecords[answer](t, "decline_deal", byRoute,
 		agent.CallOK(t, "change_activities", map[string]any{"action": "decline_deal", "id": mails[1], "request_body": body}).Envelope(t).Data)
-	if !got.Unlinked || !got.ProjectUnfiled || got.ProjectKept {
-		t.Fatalf("the agent's decline answered %+v, want the deal and its project taken off", got)
+	if !got.MarkedUnrelated || !got.ProjectUnfiled || got.ProjectKept {
+		t.Fatalf("the agent's decline answered %+v, want the deal marked and its project taken off", got)
 	}
 	for _, mail := range mails[:2] {
-		wantMailLinks(t, d.e, mail)
+		wantMailLinks(t, d.e, mail, deal)
 		var actorType, passportID, onBehalfOf, decidedBy string
 		if err := d.e.Owner.QueryRow(t.Context(), `
 			SELECT actor_type, coalesce(passport_id::text, ''), coalesce(on_behalf_of::text, ''), evidence->>'decided_by_name'
