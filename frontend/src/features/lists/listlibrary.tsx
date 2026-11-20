@@ -386,7 +386,13 @@ export function NewShortlistAction() {
     <>
       <Button
         onClick={() => {
+          // Every opening starts from nothing typed before: a kept draft under
+          // a reset audience would be shared wider than the reader chose.
+          setName("");
+          setPurpose("");
+          setEntityType("contact");
           setAudience(defaultAudience);
+          create.reset();
           setOpen(true);
         }}
       >

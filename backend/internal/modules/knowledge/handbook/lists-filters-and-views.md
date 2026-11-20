@@ -307,7 +307,7 @@ Add a note under **Why (optional)** and press **Add**. To add many records at on
 Also called: static list, hand-picked list, target list, account list.
 
 ### Who can find a list?
-Each list in Margince says **Who can find it**: **Only me**, **A team** (one of your teams, or all of the owner's teams) or **Everyone**. Change it with **Edit list** under **⋯** on the list's page. While you are in no team, a team list you own says **Only me**, because nobody else can find it.
+Each list in Margince says **Who can find it**: **Only me**, **A team** (one of your teams, or all of the owner's teams) or **Everyone**. Change it with **Edit list** under **⋯** on the list's page. While you are in no team, a team list you own that names no team reaches only you and its steward. It then says **Only me**, or **You and its steward** if someone else looks after it.
 
 Sharing a list shows nobody a record they could not already see. Each reader sees only the members they may see, and **Records** on the list's page says how many that is ("12 companies"). So two colleagues can see different numbers on the same list. A contact, company, deal or lead page shows the lists that record is on under **Lists**, again only those you can find.
 Also called: share a list, list permissions, private list, team list.
