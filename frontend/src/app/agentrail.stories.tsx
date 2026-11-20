@@ -119,11 +119,11 @@ function callRow(task: string, minutesAgo: number, index: number) {
   };
 }
 
-// The three feet the block has to look right in, named by the class the shell
-// puts on the rail (app/shell.tsx) — the stylesheet keys the reduction off that
+// The two feet the block has to look right in, named by the class the shell
+// puts on the rail (app/shell.tsx) — the stylesheet keys the fold off that
 // state, so a story that dressed itself would be showing a rail this app never
 // renders.
-type RailState = "expanded" | "collapsed" | "leveled";
+type RailState = "expanded" | "collapsed";
 
 // The shell sets `--railW` on `.app`, which a story does not render.
 type RailWidth = CSSProperties & Readonly<{ "--railW": string }>;
@@ -484,12 +484,6 @@ export const NothingHasRunYet: Story = {
  *  figure gone. */
 export const CollapsedRail: Story = {
   render: story(HEALTHY, "collapsed"),
-};
-
-/** The rail showing one section's entries: the agent keeps its foot, at the size
- *  that says it is still reporting without leading a list it is not about. */
-export const LeveledRail: Story = {
-  render: story(HEALTHY, "leveled"),
 };
 
 /**

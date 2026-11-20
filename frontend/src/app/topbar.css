@@ -17,8 +17,7 @@
   /* The sidebar's head reads it too, so the two share one centre line. */
   height: var(--topbarH);
   /* The gutter, and no vertical padding: the strip's height is the token above
-     and its children centre in it, so vertical padding only narrows the box the
-     40px search already stands taller than. */
+     and its children centre in it. */
   padding: 0 var(--pageGutter);
   /* Over the phone scroller pulled up behind it; under the phone nav (30) and
      the modal overlay (50). */
@@ -44,26 +43,22 @@
 .topbar-searchslot {
   width: var(--topbarSearchW);
 }
-/* This is a BUTTON that opens the palette, and it is drawn as the field the
-   palette opens with — so it takes the field's box and the field's type, not a
-   control's. A reader reads the shape: something shaped like a search box that
-   stands 8px shorter than the one it opens, in type a rung off it, reads as a
-   different object mid-gesture. `font: inherit` because the app reset hands a
-   button the body FAMILY and nothing else, and root type at the root weight is
-   what a field wears. */
+/* A BUTTON that opens the palette, drawn as a search pill at a control's height
+   so it sits in the strip's row of controls. `font: inherit` because the app
+   reset hands a button the body FAMILY and nothing else. */
 .topbar-search {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  min-block-size: var(--inputHeight);
+  block-size: var(--controlHeight);
   /* The page's gutter, so the glyph starts where the content in the card does. */
   padding-inline: var(--pageGutter);
   font: inherit;
   /* One more pane on the glass, with the pane's own edge: a field drawn in the
      page's ground sat in the strip as a hole. */
   border: 1px solid var(--groundEdge);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-full);
   background: var(--pane);
   text-align: left;
   cursor: pointer;
@@ -99,12 +94,9 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-/* One cap per KEY. Two small squares read as keys because they are shaped like
-   keys; the single wide box they replace read as a label. This rule only PLACES
-   them in the strip — the cap itself is `Kbd`, the one key cap
-   (design-system/atoms.css `.kbd`), so the strip cannot draw a second key.
-   Each cap is still sized to its own character: ⌘ and K are different widths
-   and two caps forced to one width read as a pair of buttons. */
+/* One cap per KEY: two small squares read as keys, one wide box as a label.
+   This rule only PLACES them; the cap itself is `Kbd` (design-system/atoms.css
+   `.kbd`), so the strip cannot draw a second key. */
 .topbar-keys {
   display: flex;
   align-items: center;
@@ -147,7 +139,6 @@
      left one of three icons in a box. */
   .topbar-search {
     width: var(--controlHeight);
-    min-block-size: var(--controlHeight);
     justify-content: center;
     padding: 0;
     border-color: transparent;

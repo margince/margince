@@ -995,13 +995,21 @@
   text-align: start;
 }
 
+/* Not `display: flex`: a cap stands inside a sentence (kbd.stories.tsx), and a
+   block box would break the line around it. */
 .kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-5);
+  height: var(--space-5);
+  padding: 0 var(--space-1);
+  font: var(--fontKeycap);
   background: var(--bgChip);
   color: var(--textPrimary);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
   border-radius: var(--r-xs);
-  padding: 1px 5px;
 }
 
 /* The section's head: its title, and the verbs that act on it at the far end.

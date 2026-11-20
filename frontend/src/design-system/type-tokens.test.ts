@@ -32,6 +32,7 @@ describe("the type scale and the control geometry", () => {
       "--paragraphSpacing",
       "--fontBodySmall",
       "--paragraphSpacingSmall",
+      "--fontKeycap",
       "--fontHeadingXXLarge",
       "--fontHeadingXLarge",
       "--fontHeadingLarge",

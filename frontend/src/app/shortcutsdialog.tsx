@@ -143,7 +143,8 @@ function ShortcutKeys({ ways }: Readonly<{ ways: readonly ShortcutWay[] }>) {
             <span className="t-caption">{t("shell.shortcuts.or")}</span>
           )}
           {way.caps.map((cap, step) => (
-            <Fragment key={cap}>
+            // The keys pressed so far: a sequence may press one key twice.
+            <Fragment key={way.caps.slice(0, step + 1).join(" ")}>
               {way.sequence && step > 0 && (
                 <span className="t-caption">{t("shell.shortcuts.then")}</span>
               )}

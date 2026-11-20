@@ -323,11 +323,8 @@ export function WorkspaceRail({
   const offBar = shownRow ? !MOBILE_PRIMARY.has(shownRow.screen) : false;
   const moreClaim = offBar ? currentClaim(level.shown) : undefined;
 
-  // The agent is app-level chrome: there is one of it, and it belongs to the
-  // whole session rather than to any destination. A drilled-in level is
-  // navigation inside one destination. An agent under it would read as that
-  // destination's own: re-parented under a sub-level, and a second one the
-  // moment a reader walks back out.
+  // The agent belongs to the whole session, so a drilled-in level, which is one
+  // destination's own pages, does not carry it at its foot.
   const leveled = level.parent !== undefined;
 
   return (
@@ -406,13 +403,9 @@ export function WorkspaceRail({
             that reports rather than navigates, and it never claims the current
             page. It does not carry the licence: the banner over the page states
             a refused one and the agent panel's pill an absent or refused one.
-            On a drilled-in level it is reduced rather than removed
-            (app/agentrail.css). The agent belongs to the whole session, but the
-            column there is one section's own pages. The ball at rail size would
-            lead a list it is not about. It goes at phone width, where there is
-            no column to have a foot. There the agent stands in the bar's centre
-            cell above, and two would be two Cores. */}
-        {!phone && (
+            At phone width it stands in the bar's centre cell instead, and two
+            would be two Cores. */}
+        {!phone && !leveled && (
           <div className="railagent">
             <AgentRail />
           </div>

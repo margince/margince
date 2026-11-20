@@ -167,17 +167,12 @@
      different diameters. 172px is a step under the width the card could give
      it — the ball leads the rail without crowding the destinations above it —
      and 18vh is what a short window can, whichever is smaller.
-     Named, because the short-window ladder below moves it and the reduced foot
-     (`.rail.leveled`) has to stay SMALLER than it at every step: a second rule
-     that spelled its own length would be drawing the reduction larger than the
-     ball it reduces on any window where the ladder had already fired. */
+     Named, because the short-window ladder below moves it. */
   --arBall: min(172px, 18vh);
-  --arFull: var(--arBall);
-  --arFullHalo: 0.08;
   --coreSize: calc(
     var(--arShutBall) +
     var(--arOpen) *
-    (var(--arFull) - var(--arShutBall))
+    (var(--arBall) - var(--arShutBall))
   );
   --coreGlass: calc(var(--coreSize) - 4px - 2px * var(--arOpen));
   /* The viewport cap is for a hero standing in a content column; the rail's own
@@ -186,7 +181,7 @@
   /* Nearly all of the halo off. At this size the ball IS the signal: a bloom
      wide enough to suit a hero reaches the destinations above it, and with no
      card edge to contain it there is nothing to stop it either. */
-  --coreHalo: calc(0.5 + var(--arOpen) * (var(--arFullHalo) - 0.5));
+  --coreHalo: calc(0.5 + var(--arOpen) * (0.08 - 0.5));
   flex: none;
 }
 
@@ -357,46 +352,6 @@
 /* Clipped only while it folds: open, the pill's focus ring stands outside it. */
 .rail.collapsed .artrial {
   overflow: hidden;
-}
-
-/* ===== The rail showing one section's entries =====
- *
- * The agent belongs to the SESSION rather than to a destination, so walking into
- * settings does not put it away: an amber orb is the same fact on every screen,
- * and a report that goes quiet on the screens where somebody would go to fix it
- * is a report nobody acts on. What changes is its WEIGHT. The level above it is
- * one section's own pages, and a ball at the size that leads the workspace rail
- * would read as the thing that list is about.
- *
- * So the foot is reduced to the orb, which is the whole report at every width
- * the words are gone at. The panel it opens is where the line and the month's
- * spend are said, and the button keeps its accessible name, so nothing here is
- * lost to a screen reader.
- */
-.rail.leveled .arwords,
-.rail.leveled .artrial {
-  display: none;
-}
-.rail.leveled .arhit {
-  /* Centred in both directions the block can run: it is a column of one thing
-     here, and the short-window step above turns it into a ROW whose only other
-     cell — the words — this level has just dropped. */
-  justify-content: center;
-  padding: var(--space-2) 0;
-}
-.rail.leveled .artoggle {
-  translate: none;
-}
-.rail.leveled .arorb {
-  /* Against the rail's OWN ball rather than a length of its own, so this is a
-     reduction at every window height: the short-window ladder above already
-     takes that ball to 56px, and a flat 72px there would draw the reduced foot
-     larger than the full one it reduces. */
-  --arFull: min(72px, var(--arBall));
-  /* The collapsed rail's halo, for the collapsed rail's reason: below the size
-     where the ribbons inside the ball can be read, the bloom is what makes the
-     foot read as lit from within rather than as a marble set on the rail. */
-  --arFullHalo: 0.4;
 }
 
 /* ===== The phone bar's centre cell =====

@@ -739,28 +739,17 @@
     animation: none;
   }
 }
-/* The way back up: the first control in the level and the only one that leaves
-   it, so it is the one thing here that looks like a control. On `.navitem`'s
-   geometry — the level's header and its rows stand on one column of icons — with
-   a recessed fill of its own, because at destination weight and the rows' own
-   transparent ground it read as a stray label above the section's name rather
-   than as the way out of it. */
+/* The way back up, on `.navitem`'s geometry and its states: the level's header
+   and its rows stand on one column of icons. */
 .rail .navback {
   /* `flex: none`, against the rows' own `flex: 1`: a row grows inside its
      `.navwrap`, which is a ROW, while this control is a child of the level's
      column — where growing would mean growing taller than the rows under it. */
   flex: none;
   margin-bottom: var(--space-2);
-  /* Filled rather than outlined: it is the way OUT of a level, standing above a
-     column of rows, and a hairline would read as a field at the head of them. A
-     recessed ground says "control" in a different word than a border does. */
-  background: var(--bgInset);
   color: var(--textPrimary);
   font-family: var(--fontFamilyBody);
   text-align: left;
-}
-.rail .navback:hover {
-  background: color-mix(in srgb, var(--textPrimary) 4%, var(--bgInset));
 }
 /* The chevron leads the movement it stands for: it pulls back the way the reader
    is about to go, which is the whole gesture in 2px. */
@@ -1160,10 +1149,6 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-}
-.palette-foot .kbd {
-  display: inline-flex;
-  align-items: center;
 }
 .palette-foot .kbd svg {
   width: 12px;

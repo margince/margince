@@ -608,6 +608,9 @@
     var(--fontWeightRegular) 0.75rem / 1rem var(--fontFamilyBody);
   /* The gap between two blocks of S prose. */
   --paragraphSpacingSmall: 0.5rem;
+  /* A key cap's legend (`Kbd`), under Body S: a cap sits beside words and is
+     not read as one of them. */
+  --fontKeycap: var(--fontWeightMedium) 0.625rem / 1rem var(--fontFamilyBody);
 
   /* Heading sizes, chosen by the CONTEXT a heading sits in. The level an
      `<h1>`–`<h6>` carries is structure and is chosen separately — README's
