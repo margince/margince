@@ -110,6 +110,7 @@ func base(
 		DomainReasonCode:  item.DomainReasonCode,
 		DomainNote:        item.DomainNote,
 		RunReasonCode:     item.RunReasonCode,
+		EffectFailureCode: item.EffectFailureCode,
 		DomainContext:     item.DomainContext,
 		CauseRef:          item.CauseRef,
 		// The identity AND the words for it. The identity groups the row; the

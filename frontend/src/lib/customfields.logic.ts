@@ -70,43 +70,6 @@ export function apiKey(object: CfObject, label: string): string {
   return `${object}.${columnName(label)}`;
 }
 
-// The physical storage note per type (CUSTOM-FIELDS-PARAM-4) — mirrors what the
-// governed engine emits, shown before Confirm so the admin sees the exact
-// pending schema change.
-function storageNote(type: CfType, currency: string): string {
-  switch (type) {
-    case "text":
-      return "text";
-    case "number":
-      return "numeric";
-    case "date":
-      return "date";
-    case "currency":
-      return `numeric · cents · ${currency || "EUR"}`;
-    case "multiselect":
-      return "text[]";
-    case "picklist":
-      return "enum";
-    case "boolean":
-      return "boolean";
-    case "record":
-    case "url":
-      return "text";
-  }
-}
-
-export function ddlPreview(
-  object: CfObject,
-  label: string,
-  type: CfType,
-  currency: string,
-): string {
-  return `ALTER ${object} ADD COLUMN ${columnName(label)} (${storageNote(
-    type,
-    currency,
-  )}) · backfilled NULL · reversible`;
-}
-
 // A field is data; an object or a relationship is structure. A label that reads
 // like a structural request is refused pre-emptively (AC-custom-fields-5).
 //

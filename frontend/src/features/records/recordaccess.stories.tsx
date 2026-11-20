@@ -52,10 +52,12 @@ function Access({
   contact,
   seat = "full",
   patchStatus = 200,
+  locale,
 }: Readonly<{
   contact: Contact;
   seat?: "full" | "read";
   patchStatus?: number;
+  locale?: "de";
 }>) {
   installFetchStub({
     "GET /me": meRoute(MAY_WRITE, { seat }),
@@ -71,7 +73,7 @@ function Access({
       ),
   });
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       {/* The header's row of marks, so the chip is seen at the height and
           interval it keeps beside the standing badge. */}
       <IdentityLine separator="space">
@@ -196,6 +198,13 @@ export const Phone: Story = {
   tags: ["uat-phone"],
   render: () => <Access contact={{ ...base, visibility: "owner" }} />,
   play: openChip,
+};
+
+/** The chip says the audience in the words of its choices, the longest in German. */
+export const GermanOnlyTheOwner: Story = {
+  render: () => (
+    <Access contact={{ ...base, visibility: "owner" }} locale="de" />
+  ),
 };
 
 const account: Company = {

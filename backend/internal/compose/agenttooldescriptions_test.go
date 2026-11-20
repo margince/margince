@@ -193,9 +193,8 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 //
 // The bound is per declared agent: each scheduled agent declares its tools in
 // api/ai-tasks.yaml, and no run is offered the whole catalog. Description copy is
-// the one thing measured to move tool selection, so the bound was raised rather
-// than met by trimming it. docs/reference/agent-tool-budget.md carries the
-// current figures. Git history holds why each earlier fraction was set.
+// the one thing measured to move tool selection, so it is not trimmed to fit.
+// docs/reference/agent-tool-budget.md carries the current figures.
 const (
 	listingBudgetNumerator   = 17
 	listingBudgetDenominator = 24

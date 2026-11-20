@@ -229,7 +229,7 @@ func routeParameters(t *testing.T) map[string][]routeParameter {
 		Ref    string `yaml:"$ref"`
 		Name   string `yaml:"name"`
 		In     string `yaml:"in"`
-		Hidden bool   `yaml:"x-agent-hidden"` // a box-only switch the agent contract leaves out
+		Hidden bool   `yaml:"x-agent-hidden"` //nolint:tagliatelle // the contract's extension key, not ours to rename
 	}
 	var doc struct {
 		Paths      map[string]map[string]yaml.Node `yaml:"paths"`

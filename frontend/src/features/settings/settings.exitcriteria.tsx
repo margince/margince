@@ -15,7 +15,6 @@ import { Badge, Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { IconAction } from "../../design-system/iconaction";
-import { KeyCode } from "../../design-system/keyedname";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
@@ -30,12 +29,6 @@ import {
 import "./settings.pipelines.css";
 
 type Criterion = components["schemas"]["StageExitCriterion"];
-
-// The key an extractor cites. Spelled here as well as in the column's CHECK
-// and the store's own guard, because a round trip to learn that a key may not
-// start with a digit is a wait the reader need not pay. The server stays the
-// authority: this only saves the trip.
-const KEY_SHAPE = /^[a-z][a-z0-9_]{0,63}$/;
 
 // The kinds that name something the BUYER did. A criterion of one of these is
 // never settled by a message our own side wrote, which is the rule the callout
@@ -247,7 +240,6 @@ export function CriterionCreateDialog({
         await api.POST("/stages/{id}/exit-criteria", {
           params: { path: { id: draft.stageId } },
           body: {
-            key: values.key ?? "",
             label: values.label ?? "",
             kind: criterionKindOf(values.kind),
             required: values.required !== "false",
@@ -362,14 +354,6 @@ function criterionCreateFields(
   legalReview: boolean,
 ): CreateField[] {
   return [
-    {
-      key: "key",
-      label: "stage.criteria.key",
-      required: true,
-      hint: t("stage.criteria.keyHint"),
-      validate: (value) =>
-        KEY_SHAPE.test(value) ? undefined : t("stage.criteria.keyHint"),
-    },
     { key: "label", label: "stage.criteria.label", required: true },
     ...criterionShapeFields(
       t,
@@ -378,8 +362,8 @@ function criterionCreateFields(
   ];
 }
 
-// The edit form shows `key` and never edits it: evidence matches a criterion by
-// key, so renaming one would orphan every claim already recorded under it.
+// The edit form leaves the key out. Evidence matches a criterion by key, so the
+// server never changes it.
 function criterionEditFields(
   t: ReturnType<typeof useT>,
   current: Pick<Criterion, "key" | "kind">,
@@ -390,7 +374,6 @@ function criterionEditFields(
       key: "label",
       label: "stage.criteria.label",
       required: true,
-      hint: <KeyCode code={current.key} />,
     },
     ...criterionShapeFields(t, (kind) => (kind === "legal_reviewed") === legal),
   ];
@@ -408,6 +391,7 @@ function criterionShapeFields(
       type: "select",
       required: true,
       options: kindOptions(t, admits),
+      hint: t("stage.criteria.kindHelp"),
     },
     {
       key: "required",
@@ -415,8 +399,14 @@ function criterionShapeFields(
       type: "select",
       required: true,
       options: requiredOptions(t),
+      hint: t("stage.criteria.requiredHelp"),
     },
-    { key: "hint", label: "stage.criteria.hint", type: "textarea" },
+    {
+      key: "hint",
+      label: "stage.criteria.hint",
+      type: "textarea",
+      hint: t("stage.criteria.hintHelp"),
+    },
   ];
 }
 

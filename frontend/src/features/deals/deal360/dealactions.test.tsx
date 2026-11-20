@@ -123,7 +123,9 @@ describe("the deal header's Email verb", () => {
 });
 
 const meet = () =>
-  screen.getByRole("button", { name: en["scheduling.bookContact"] });
+  screen.getByRole("button", {
+    name: `${en["record.verb.meet"]}, ${en["scheduling.bookContact"]}`,
+  });
 
 describe("the deal header's Meet verb", () => {
   const grants: Parameters<typeof stubWithSession>[1] = {

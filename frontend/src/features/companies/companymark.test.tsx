@@ -440,6 +440,29 @@ it("tells the admin to outline the text when an SVG draws its words as text", as
   expect(within(alert).queryByText(/cannot render/)).toBeNull();
 });
 
+it("names the pixel bound when a logo has more pixels than the server reads", async () => {
+  const user = userEvent.setup();
+  refuseUploads({
+    type: "about:blank",
+    title: "Unprocessable Entity",
+    status: 422,
+    code: "too_many_pixels",
+    detail: "the picture has more than 8388608 pixels",
+  });
+  mark(WITHOUT_MARK);
+
+  await user.upload(
+    slot("Wide logo").getByLabelText("Wide logo"),
+    new File(["jpeg"], "acme.jpg", { type: "image/jpeg" }),
+  );
+
+  const alert = await screen.findByRole("alert");
+  expect(
+    within(alert).getByText("Use a picture of up to 8 megapixels."),
+  ).toBeTruthy();
+  expect(within(alert).queryByText(/8388608/)).toBeNull();
+});
+
 it("tells the admin to export a PNG when an SVG has parts that cannot be drawn", async () => {
   const user = userEvent.setup();
   refuseUploads({

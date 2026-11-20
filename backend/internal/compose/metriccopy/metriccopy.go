@@ -39,7 +39,7 @@ var Names = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	"account_progression":             {En: "How far companies got", De: "Wie weit Unternehmen kamen", Vi: "Công ty đã đi đến đâu"},
 	"source_quality":                  {En: "Lead source quality", De: "Qualität der Lead-Quellen", Vi: "Chất lượng nguồn lead"},
 	"bookings_mix":                    {En: "Commercial mix", De: "Umsatzmix", Vi: "Cơ cấu doanh số"},
-	"qualified_opportunities_created": {En: "Qualified opportunities", De: "Qualifizierte Verkaufschancen", Vi: "Cơ hội đủ điều kiện"},
+	"qualified_opportunities_created": {En: "Qualified opportunities", De: "Qualifizierte Deals", Vi: "Cơ hội đủ điều kiện"},
 	"initiative_pipeline":             {En: "Initiative pipeline by origin", De: "Initiativen-Pipeline nach Herkunft", Vi: "Pipeline sáng kiến theo nguồn gốc"},
 	"introductions_made":              {En: "Introductions made", De: "Vorgenommene Vorstellungen", Vi: "Lời giới thiệu đã thực hiện"},
 	"meetings_booked_for_colleagues":  {En: "Meetings booked for colleagues", De: "Für das Team gebuchte Termine", Vi: "Cuộc họp đã đặt cho đồng nghiệp"},
@@ -169,7 +169,7 @@ var Definitions = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	},
 	"initiative_pipeline": {
 		En: "The known open value of the selected initiative's member deals as of today, split by where each deal came from: existing at launch, sourced by the initiative, created after launch, or added after launch. Example: an initiative launched on 1 May with 50,000 € of open deals, and a member lead promoted into a 10,000 € deal in June, shows 50,000 € existing and 10,000 € sourced.",
-		De: "Der bekannte offene Wert der zugehörigen Deals der gewählten Initiative zum heutigen Tag, aufgeteilt nach Herkunft: beim Start vorhanden, durch die Initiative gewonnen, nach dem Start angelegt oder nach dem Start hinzugefügt. Beispiel: Eine am 1. Mai gestartete Initiative mit 50.000 € offenen Deals und ein zugehöriger Lead, der im Juni in einen Deal über 10.000 € umgewandelt wurde, zeigt 50.000 € vorhanden und 10.000 € gewonnen.",
+		De: "Der bekannte offene Wert der zugehörigen Deals der gewählten Initiative zum heutigen Tag, aufgeteilt nach Herkunft: beim Start vorhanden, durch die Initiative gewonnen, nach dem Start erstellt oder nach dem Start hinzugefügt. Beispiel: Eine am 1. Mai gestartete Initiative mit 50.000 € offenen Deals und ein zugehöriger Lead, der im Juni in einen Deal über 10.000 € umgewandelt wurde, zeigt 50.000 € vorhanden und 10.000 € gewonnen.",
 		Vi: "Giá trị đang mở đã biết của các deal thành viên thuộc sáng kiến đã chọn tính đến hôm nay, chia theo nguồn gốc của từng deal: có sẵn khi khởi động, do sáng kiến mang về, tạo sau khi khởi động, hoặc thêm sau khi khởi động. Ví dụ: sáng kiến khởi động ngày 1 tháng 5 với 50.000 € deal đang mở, và một lead thành viên được chuyển thành deal 10.000 € vào tháng 6, hiển thị 50.000 € có sẵn và 10.000 € do sáng kiến mang về.",
 	},
 	"introductions_made": {

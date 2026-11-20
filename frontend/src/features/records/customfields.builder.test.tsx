@@ -66,15 +66,12 @@ describe("FieldBuilder", () => {
     expect(key).toBeDisabled();
   });
 
-  it("shows the pending DDL preview reflecting the type", async () => {
+  it("states what adding does in plain words, with no SQL or reversibility claim", async () => {
     const { user, pickType } = builder();
     await user.type(screen.getByLabelText(/Label/i), "Contract end date");
     await pickType("Date");
-    expect(
-      screen.getByText(
-        /ALTER company ADD COLUMN cf_contract_end_date \(date\)/,
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText(en["cf.builder.intro"])).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/ALTER |reversible|column/i);
   });
 
   it("refuses a structural label and disables Confirm", async () => {

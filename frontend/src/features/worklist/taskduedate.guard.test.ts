@@ -7,20 +7,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { snoozedDueAt } from "../../components/taskactions";
 import { calendarDay, dueInstant } from "../../format/calendarday";
-import { parseTypedDate } from "../../format/datepattern";
+import { readTypedDate } from "../../format/datepattern";
 import { FIXED_DATE_PATTERNS } from "../../format/preferences";
 
 describe("the days a task may be moved to", () => {
   it("never reads a five-digit year, which dueInstant cannot convert", () => {
-    expect(parseTypedDate("15/09/10000", FIXED_DATE_PATTERNS.dmy)).toBeNull();
-    expect(parseTypedDate("10000-09-15", FIXED_DATE_PATTERNS.dmy)).toBeNull();
+    expect(readTypedDate("15/09/10000", FIXED_DATE_PATTERNS.dmy)).toEqual({
+      refused: "shape",
+    });
+    expect(readTypedDate("10000-09-15", FIXED_DATE_PATTERNS.dmy)).toEqual({
+      refused: "shape",
+    });
     expect(() => dueInstant("10000-09-15", "Europe/Berlin")).toThrow();
   });
 
   it("admits an ordinary day, which dueInstant then converts", () => {
-    expect(parseTypedDate("15/09/2026", FIXED_DATE_PATTERNS.dmy)).toBe(
-      "2026-09-15",
-    );
+    expect(readTypedDate("15/09/2026", FIXED_DATE_PATTERNS.dmy)).toEqual({
+      day: "2026-09-15",
+    });
     // Read back in the zone it was minted for, the instant is that day's last
     // whole second. It is the day the picker offered, for every reader.
     expect(dueInstant("2026-09-15", "Europe/Berlin")).toBe(

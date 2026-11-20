@@ -35,14 +35,15 @@ func failedItem(failed FailedEffect) crmcontracts.AttentionItem {
 		actions = append(actions, actionOpen)
 	}
 	return crmcontracts.AttentionItem{
-		Id:         failed.ID.String(),
-		Source:     crmcontracts.AttentionItemSource("failed_approval"),
-		Kind:       &kind,
-		Title:      failed.Summary,
-		Detail:     &sentence,
-		Subject:    subject,
-		OccurredAt: &occurred,
-		Actions:    actions,
+		Id:                failed.ID.String(),
+		Source:            crmcontracts.AttentionItemSource("failed_approval"),
+		Kind:              &kind,
+		Title:             failed.Summary,
+		Detail:            &sentence,
+		EffectFailureCode: failed.Code,
+		Subject:           subject,
+		OccurredAt:        &occurred,
+		Actions:           actions,
 	}
 }
 

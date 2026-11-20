@@ -177,7 +177,7 @@ func TestAnEmptyWorkspaceAnswersEmptyWithoutAskingTwice(t *testing.T) {
 // it so the warnings the miss raises are readable.
 func colleagueMiss(t *testing.T, q string, list ColleagueLister) (ListColleaguesResult, *envelopeFacts) {
 	t.Helper()
-	ctx, facts := withEnvelopeFacts(context.Background())
+	ctx, facts := withEnvelopeFacts(context.Background(), listColleagues{}.Spec())
 	out, err := listColleagues{list: list}.Handle(ctx, json.RawMessage(`{"q":"`+q+`"}`))
 	if err != nil {
 		t.Fatalf("answered %v, want an answer", err)
@@ -277,7 +277,7 @@ func TestAWorkspaceWithNoSeatsSaysSoRatherThanGoingQuiet(t *testing.T) {
 func TestWhitespaceIsNotANarrowingOnEitherSideOfTheSeam(t *testing.T) {
 	t.Parallel()
 	reads := 0
-	ctx, _ := withEnvelopeFacts(context.Background())
+	ctx, _ := withEnvelopeFacts(context.Background(), listColleagues{}.Spec())
 	if _, err := (listColleagues{list: func(context.Context, ColleagueQuery) ([]Colleague, bool, error) {
 		reads++
 		return nil, false, nil
@@ -298,7 +298,7 @@ func TestWhitespaceIsNotANarrowingOnEitherSideOfTheSeam(t *testing.T) {
 // remove, one level up.
 func TestAnEmptyFallbackAndAnUnreadableOneAreDifferentOnTheWire(t *testing.T) {
 	t.Parallel()
-	ctx, _ := withEnvelopeFacts(context.Background())
+	ctx, _ := withEnvelopeFacts(context.Background(), listColleagues{}.Spec())
 
 	empty, err := listColleagues{list: func(context.Context, ColleagueQuery) ([]Colleague, bool, error) {
 		return nil, false, nil

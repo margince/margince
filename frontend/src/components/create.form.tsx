@@ -14,6 +14,7 @@ import { RecordFormDialog } from "../design-system/recordformdialog";
 import { useFieldFaults } from "../design-system/savepage";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { emailFault } from "../lib/emailshape";
 import { fieldCheckSentence } from "../lib/problem";
 import { navigate, type Route } from "../lib/router";
 import { fieldControl, MultiselectField } from "./create.controls";
@@ -75,6 +76,7 @@ export function RecordFormBody({
   onClose,
   intent,
   dialog,
+  resetToken = 0,
   answerlessRow,
   unsaved,
 }: Readonly<{
@@ -100,6 +102,8 @@ export function RecordFormBody({
   onClose: () => void;
   intent: SubmitIntent;
   dialog?: { open: boolean; title: string };
+  // Bumped when a save empties the form for the next record.
+  resetToken?: number;
   // A read-only or flow field's row. Only an edit has them, so a create form never loads them.
   answerlessRow?: (field: CreateField) => ReactNode;
   // Whether a close asks first. Left out, any keystroke since the opening counts.
@@ -156,18 +160,33 @@ export function RecordFormBody({
     return field.required && !(values[field.key] ?? "").trim();
   });
   const requiredMissing = missing.length > 0;
-  const refusals = new Map(
-    shown.flatMap((field) => {
-      if (answerless(field)) return [];
-      const refusal =
-        (field.rowsUnique
-          ? repeatedRowRefusal(field, rows[field.key] ?? [], t)
-          : undefined) ??
-        field.validate?.(values[field.key] ?? "", values, rows) ??
-        ownCheck(field, values[field.key] ?? "", touched, locale, t);
-      return refusal ? [[field.key, refusal] as const] : [];
-    }),
-  );
+  const checked = shown.flatMap((field) => {
+    if (answerless(field)) return [];
+    const rowsRefusal = field.rowsUnique
+      ? repeatedRowRefusal(field, rows[field.key] ?? [], t)
+      : undefined;
+    const validated = rowsRefusal
+      ? undefined
+      : field.validate?.(values[field.key] ?? "", values, rows);
+    const refusal =
+      rowsRefusal ??
+      validated ??
+      ownCheck(field, values[field.key] ?? "", touched, locale, t);
+    return refusal
+      ? [{ key: field.key, refusal, fromValidate: validated !== undefined }]
+      : [];
+  });
+  const refusals = new Map(checked.map((c) => [c.key, c.refusal] as const));
+  // A field's own validate holds Save from the first render. An empty field
+  // keeps quiet until the reader changes something or tries to save. A value
+  // already there, or a rule across fields, is said at once or once any field
+  // is filled.
+  const said = (key: string) => {
+    const entry = checked.find((c) => c.key === key);
+    const empty = !(values[key] ?? "").trim();
+    const hidden = entry?.fromValidate === true && !edited && empty;
+    return (hidden ? undefined : refusals.get(key)) ?? faults.of(key);
+  };
   // A refusal lands at the foot of a long stack, out of sight of a pinned Save.
   useEffect(() => {
     if (error) {
@@ -176,13 +195,26 @@ export function RecordFormBody({
     }
   }, [error, formId]);
 
+  // The emptied form is for the next record, so typing starts in its first box.
+  useEffect(() => {
+    if (resetToken > 0) {
+      document
+        .getElementById(formId)
+        ?.querySelector<HTMLElement>(
+          "input:not([type=hidden]), textarea, select",
+        )
+        ?.focus();
+    }
+  }, [resetToken, formId]);
+
   // Enter in a field submits without touching Save, so the form holds the
   // same latch the button does.
   const singlePress = useSinglePress(pending);
   const submit = singlePress((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
-    if (requiredMissing || refusals.size > 0) {
+    const malformed = boxFaults(shown, answers, rows, locale, t);
+    if (requiredMissing || refusals.size > 0 || malformed.length > 0) {
       setTouched(new Set([...touched, ...missing.map((field) => field.key)]));
       faults.show(
         new Map([
@@ -193,6 +225,7 @@ export function RecordFormBody({
                 fieldCheckSentence("required", locale, fieldLabel(field, t)),
               ] as const,
           ),
+          ...malformed,
           ...refusals,
         ]),
       );
@@ -229,7 +262,7 @@ export function RecordFormBody({
               field={field}
               formId={formId}
               labelHidden={titledByDialog}
-              error={refusals.get(field.key) ?? faults.of(field.key)}
+              error={said(field.key)}
               rows={rows[field.key] ?? []}
               setRows={(next) => {
                 setEdited(true);
@@ -245,7 +278,7 @@ export function RecordFormBody({
               key={field.key}
               field={field}
               labelHidden={titledByDialog}
-              error={refusals.get(field.key) ?? faults.of(field.key)}
+              error={said(field.key)}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })
@@ -270,7 +303,7 @@ export function RecordFormBody({
                   )
                 : field.hint
             }
-            error={refusals.get(field.key) ?? faults.of(field.key)}
+            error={said(field.key)}
           >
             {(control) =>
               field.offers ? (
@@ -330,7 +363,7 @@ export function RecordFormBody({
   );
   if (!dialog) {
     return (
-      <form id={formId} ref={faultsRoot} onSubmit={submit}>
+      <form id={formId} ref={faultsRoot} noValidate onSubmit={submit}>
         <div className="form-stack">{stack}</div>
         <div className="actions">{actions}</div>
       </form>
@@ -349,6 +382,7 @@ export function RecordFormBody({
           id={formId}
           ref={faultsRoot}
           className="form-stack"
+          noValidate
           onSubmit={submit}
         >
           {stack}
@@ -357,6 +391,49 @@ export function RecordFormBody({
       actions={actions}
     />
   );
+}
+
+// What the browser checked before the forms set noValidate, by field key.
+// That is a row whose required value is blank, and an email box whose text is
+// no address. Said in the app's language, not the browser's.
+function boxFaults(
+  fields: readonly CreateField[],
+  values: Record<string, string>,
+  rows: FormRows,
+  locale: Locale,
+  t: (key: MessageKey) => string,
+): (readonly [string, string])[] {
+  return fields.flatMap((field) => {
+    if (answerless(field)) return [];
+    const label = fieldLabel(field, t);
+    const fault =
+      field.type === "repeatable"
+        ? rowFault(field, rows[field.key] ?? [], locale, label)
+        : field.type === "email"
+          ? emailFault(values[field.key] ?? "", locale, label)
+          : undefined;
+    return fault ? [[field.key, fault] as const] : [];
+  });
+}
+
+// A row is kept only with its required values: blanking an address must
+// not delete it. Its value box, when an email, must hold an address.
+function rowFault(
+  field: CreateField,
+  rows: readonly FormRow[],
+  locale: Locale,
+  label: string,
+): string | undefined {
+  const subFields = field.rowFields ?? [];
+  const blank = rows.some((row) =>
+    subFields.some((sub) => sub.required && !(row[sub.key] ?? "").trim()),
+  );
+  if (blank) return fieldCheckSentence("required", locale, label);
+  const valueField = subFields[0];
+  if (valueField?.type !== "email") return undefined;
+  return rows
+    .map((row) => emailFault(row[valueField.key] ?? "", locale, label))
+    .find((sentence) => sentence !== undefined);
 }
 
 // A check the form makes before sending, beyond the field's own validate: a

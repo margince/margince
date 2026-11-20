@@ -1,7 +1,9 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -151,8 +153,7 @@ describe("StageExitCriteria", () => {
     render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
 
     await userEvent.click(await screen.findByTestId("new-criterion-s1"));
-    await userEvent.type(await screen.findByLabelText(/Key/), "demo_held");
-    await userEvent.type(screen.getByLabelText(/Label/), "Demo held");
+    await userEvent.type(await screen.findByLabelText(/Label/), "Demo held");
     await userEvent.click(screen.getByRole("combobox", { name: /Kind/ }));
     await userEvent.click(
       within(screen.getByRole("listbox")).getByRole("option", {
@@ -163,16 +164,40 @@ describe("StageExitCriteria", () => {
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({
-      key: "demo_held",
       label: "Demo held",
       kind: "event_held",
       required: true,
     });
+    expect(posted[0]).not.toHaveProperty("key");
   });
 
-  // Evidence matches a criterion by key across an edit, so the editor names the
-  // key under the label and offers no field to change it.
-  it("shows the key on an edit and never offers to change it", async () => {
+  it("opens the add form with no Key field, no red field and no error text", async () => {
+    vi.stubGlobal("fetch", criteriaStub({}));
+    render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
+
+    await userEvent.click(await screen.findByTestId("new-criterion-s1"));
+    const label = await screen.findByLabelText(/Label/);
+    expect(screen.queryByLabelText(/^Key/)).toBeNull();
+    expect(label).not.toHaveAttribute("aria-invalid");
+    expect(document.querySelector("[aria-invalid='true']")).toBeNull();
+    expect(document.querySelector(".field-error")).toBeNull();
+    expect(screen.getByText(en["stage.criteria.kindHelp"])).toBeTruthy();
+  });
+
+  it("says the label is required once the reader empties it", async () => {
+    vi.stubGlobal("fetch", criteriaStub({}));
+    render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
+
+    await userEvent.click(await screen.findByTestId("new-criterion-s1"));
+    const label = await screen.findByLabelText(/Label/);
+    await userEvent.type(label, "x");
+    await userEvent.clear(label);
+    expect(label).toHaveAttribute("aria-invalid", "true");
+  });
+
+  // The server never changes a criterion's key, so the editor shows neither the
+  // key nor a field for it.
+  it("shows no key on an edit and never offers to change it", async () => {
     vi.stubGlobal("fetch", criteriaStub({}));
     render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
 
@@ -183,13 +208,8 @@ describe("StageExitCriteria", () => {
         name: "Edit Buyer confirmed the problem",
       }),
     );
-    const label = await screen.findByLabelText(/Label/);
-    const hints = (label.getAttribute("aria-describedby") ?? "")
-      .split(" ")
-      .map((id) => document.getElementById(id));
-    const keyHint = hints.find((hint) => hint?.querySelector("code"));
-    expect(keyHint?.textContent).toBe("Key: buyer_confirmed");
-    expect(keyHint?.querySelector("code")?.textContent).toBe("buyer_confirmed");
+    await screen.findByLabelText(/Label/);
+    expect(screen.queryByText(/buyer_confirmed/)).toBeNull();
     expect(screen.queryByLabelText(/^Key/)).toBeNull();
   });
 

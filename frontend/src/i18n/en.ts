@@ -110,6 +110,9 @@ export const en = {
   "users.retirement.survivor_inactive":
     "The surviving member is deactivated. Reactivate it to restore sign-in and team assignment.",
   "users.retirement.unknown": "Resolve the remaining work before continuing.",
+  "users.retirement.blocked_one": "Resolve this before you continue",
+  "users.retirement.blocked_other": "Resolve these before you continue",
+  "users.retirement.address": "Sign-in address",
   "users.retirement.protected_email":
     "This sign-in address has already been used and cannot be changed here.",
   "users.mergeSource": "Duplicate account",
@@ -1791,6 +1794,7 @@ export const en = {
     "The reminder could not be sent. If Margince’s email rules stopped it, your notifications say why. Email the guest directly.",
   "history.field.reminder_status": "Reminder status",
   "scheduling.myLink": "My booking link",
+  "scheduling.setUpMyLink": "Set up my booking link",
   "scheduling.linkIntro":
     "One link for your email signature, messages and website. Anyone can choose a time within your availability.",
   "scheduling.copyLink": "Copy link",
@@ -1984,7 +1988,9 @@ export const en = {
   "aiAdmin.reset": "{date} UTC",
   "aiAdmin.fixed":
     "Fixed company allowance overrides the per-user calculation.",
-  "aiAdmin.formula":
+  "aiAdmin.formula_one":
+    "Active full users: {users} × {tokens} token per user per month.",
+  "aiAdmin.formula_other":
     "Active full users: {users} × {tokens} tokens per user per month.",
   "aiAdmin.floor": "With no eligible users, the allowance counts 1 user.",
   "aiAdmin.degraded": "80% threshold reached: reduced-tier routing is active",
@@ -1998,6 +2004,7 @@ export const en = {
   "aiAdmin.perUser": "Tokens per full user per month",
   "aiAdmin.range": "Whole tokens, from 1 to 1,000,000,000,000.",
   "aiAdmin.company": "Fixed company total (optional)",
+  "aiAdmin.companyName": "Fixed company total",
   "aiAdmin.overrideHint":
     "Leave blank to use the per-user calculation. The per-user value is retained.",
   "aiAdmin.routingStale": "Model bindings changed while you were editing",
@@ -2007,6 +2014,7 @@ export const en = {
   "aiAdmin.reload": "Reload values",
   "aiAdmin.failed": "Change not applied",
   "aiAdmin.preview": "Preview effects",
+  "aiAdmin.fixToPreview": "Fix the marked fields to preview.",
   "aiAdmin.previewHint":
     "Preview of current conditions. Saving checks the latest settings and usage again; this does not reserve capacity or call a model.",
   "aiAdmin.features": "AI by activity",
@@ -2362,6 +2370,7 @@ export const en = {
   "systemJob.linkedin_rematch": "LinkedIn import matching",
   "systemJob.list_checker": "Live list check",
   "systemJob.mail_draft_retention": "Mail draft cleanup",
+  "systemJob.oauth_client_unused_sweep": "Unused AI tool client cleanup",
   "systemJob.privacy_request_proof_expiry": "Privacy request proof cleanup",
   "systemJob.waiting_horizon_refresh": "Reply time measurement",
   "systemJob.evidence_authorship": "Deal evidence author check",
@@ -2834,6 +2843,7 @@ export const en = {
   "shell.shortcuts.sendEmail": "Send email",
   "shell.shortcuts.submitDialog": "Submit dialog",
   "shell.shortcuts.then": "then",
+  "shell.shortcuts.ctrl": "Ctrl",
   "shell.shortcuts.or": "or",
   "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
   "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
@@ -3103,6 +3113,10 @@ export const en = {
     "Enter the amount without thousands separators, such as {example}.",
   "amount.refused.notNumber": "Enter the amount in digits, such as {example}.",
   "amount.refused.tooLarge": "This amount is too large to store.",
+  "amount.refused.noCurrency": "This amount needs a currency first.",
+  "amount.waitsForCurrency": "Opens once a currency is set.",
+  "amount.currencyUnread":
+    "The currency could not be read, so no amount can be entered yet.",
   "amount.refused.negative": "Enter an amount of zero or more.",
   "number.refused.ambiguous": "Enter the number as {whole} or {fraction}.",
   "number.refused.grouping":
@@ -3207,8 +3221,12 @@ export const en = {
   "share.whoHasAccess": "Shared with",
   "share.grantedBy": "granted by",
   "share.revoke": "Revoke",
+  "share.revokeFor": "Revoke access to {record} for {name}",
   "share.revokeConfirm":
-    "Revoke this access? It ends at the next request and cannot be undone.",
+    "Revoke {access} access to {record} for {name}? It ends at the next request and cannot be undone.",
+  "share.granted": "{name} now has {access} access to {record}.",
+  "share.thisRecord": "this record",
+  "share.until": "Until {date}",
   "share.approvalRequired":
     "This share takes effect only after approval. It is not applied yet.",
   "share.teamMembers_one": "Team · {count} member",
@@ -3218,12 +3236,14 @@ export const en = {
   "share.rosterErrorTeams": "Teams did not load. People are shown below.",
   "share.rosterErrorBoth": "People and teams did not load.",
   "share.rosterEmpty": "No people or teams to share with.",
+  "share.rosterNoMatch": "No member or team matches your search.",
 
   "merge.contact": "Merge contact",
   "merge.company": "Merge company",
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
-  "merge.confirm": "Merge {source} into {target}? This archives {source}.",
+  "merge.confirm":
+    "Merge {source} into {target}? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty standard fields from it. The other is archived and keeps its custom field values. A merge cannot be undone.",
   // A record's name with its detail line, so two look-alike names stay apart.
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "{source} was merged into {target}.",
@@ -5766,6 +5786,9 @@ export const en = {
   "tags.catalogTruncated":
     "A tag may be missing. Search by name before requesting a new one.",
   "tags.noMatchYouCanCreate": "No tag with that name.",
+  "tags.noneYouCanCreate": "No tags yet. Type a name to create one.",
+  "tags.noneAskForOne":
+    "No tags yet. An administrator or operations user can add one.",
   "tags.createNamed": "Create tag {name}",
   "tags.shortlistInstead": "Add to a Shortlist instead",
   "tags.manage": "Manage tags",
@@ -6160,8 +6183,6 @@ export const en = {
   "lead.qualify.dealName": "Deal name",
   "lead.qualify.amount": "Amount ({currency})",
   "lead.qualify.amountHint": "Optional. In the installation’s base currency.",
-  "lead.qualify.amountNoCurrency":
-    "Opens once the installation’s base currency has loaded.",
   "lead.qualify.why": "Why",
   "lead.qualify.reasonReplied": "Reason: the lead replied on {at}.",
   "lead.qualify.reasonMeetingBooked": "Reason: a meeting was booked for {at}.",
@@ -6342,7 +6363,6 @@ export const en = {
   "deal.standing.figure.probability": "Probability",
   "deal.winProbability": "Probability",
   "deal.winProbability.hint": "Leave empty to use the stage’s probability.",
-  "deal.winProbability.invalid": "Enter a whole number from 0 to 100.",
   "deal.winProbability.source.stage": "from the stage",
   "deal.winProbability.source.human": "set by hand",
   "deal.winProbability.source.you": "set by you",
@@ -6680,6 +6700,8 @@ export const en = {
     "Only the deal’s owner or a manager can archive this deal.",
   "contact.archiveRefused":
     "Only the contact’s owner or a manager can archive this contact.",
+  "contact.undoArchiveNothing":
+    "This archive could not be undone, because the contact’s history holds no archive to put back. Open the contact to see whether it is still archived.",
   "company.archiveRefused":
     "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
@@ -6876,9 +6898,8 @@ export const en = {
   "bulk.taskSubject": "What has to be done",
   "bulk.taskDue": "Due date",
   "bulk.taskAssignee": "Assignee",
-  "bulk.taskAssigneeMe": "Me",
   "bulk.taskNext": "Preview",
-  "bulk.titleCreateTask": "Create a task for each selected record in {unit}?",
+  "bulk.titleCreateTask": "Create a task for each of the selected {unit}?",
   "bulk.confirmCreateTask": "Create tasks",
   "bulk.stateNewTask": "New task",
   "bulk.stateNoTask": "No new task",
@@ -7384,6 +7405,16 @@ export const en = {
   "brief.agenda.system_one": "{count} system issue",
   "brief.agenda.system_other": "{count} system issues",
   "worklist.source.failed_approval": "Approved but not run",
+  "worklist.effectFailure.approval_lapsed":
+    "Approval expired before execution. Nothing changed. Request a new proposal to try again.",
+  "worklist.effectFailure.effect_not_run":
+    "This was approved, but the work it released did not run.",
+  "worklist.effectFailure.effect_unconfirmed":
+    "This was approved and sent on, but the system it went to never confirmed it, so it may have happened. Check the record before you ask for it again.",
+  "worklist.effectFailure.follow_up_failed":
+    "This was approved and the change was made, but the automation that asked for it could not be marked finished.",
+  "worklist.effectFailure.window_not_widened":
+    "The agent’s window could not be widened, so the approval has not taken effect.",
   "brief.panel.decisions": "Approvals",
   // The rail's own panel titles, after the rename that made each claim exactly
   // what its rows are. "Promises & tasks" named a thing the product does not
@@ -8057,6 +8088,7 @@ export const en = {
   "log.date": "Date",
   "log.dateHint": "The day it happened; for a later day, add a task.",
   "log.assignee": "Assignee",
+  "log.assigneeMe": "Me",
   "log.unassigned": "Unassigned",
   "log.save": "Log",
   "log.saving": "Logging…",
@@ -8381,6 +8413,7 @@ export const en = {
   "calendar.patternMonth": "MM",
   "calendar.patternYear": "YYYY",
   "calendar.invalidDate": "Enter a date as {pattern}.",
+  "calendar.noSuchDay": "There is no {date} in the calendar.",
   "calendar.patternHour": "hh",
   "calendar.patternMinute": "mm",
   "calendar.invalidTime": "Enter a time as {pattern}.",
@@ -9341,6 +9374,7 @@ export const en = {
   "analytics.share.listCreated": "Created {date}",
   "analytics.share.listExpires": "Expires {date}",
   "analytics.share.populationCompany": "Whole company",
+  "analytics.scope.workspace": "Whole company",
   "analytics.share.populationTeam": "Team",
   "analytics.share.populationOwner": "Colleague",
   "analytics.share.closeTitle": "Close this link?",
@@ -9587,7 +9621,6 @@ export const en = {
   "settings.signatureReviewUseLatest": "Use latest version",
   "settings.signatureReviewKeepDraft": "Keep my draft",
   "settings.signatureReviewLoading": "Loading the retained signature…",
-  "settings.signatureReviewSaved": "Signature review saved",
   "settings.signatureReviewMember": "the member",
   "settings.signatureChoicePlain":
     "Your own signature goes under every mail you send. Without one, mail closes with a greeting and your name.",
@@ -9608,7 +9641,7 @@ export const en = {
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",
   "settings.signatureLabel": "Sign-off",
-  "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
+  "settings.signaturePlaceholder": "Your name\nCompany · Phone",
   "settings.signatureHint":
     "Plain text. If empty, mail closes with a greeting and your name. AI never adds one.",
   "settings.signatureSaving": "Saving…",
@@ -9628,13 +9661,15 @@ export const en = {
   "delivery.none": "Not by email",
   "delivery.hourLabel": "Routine email time",
   "delivery.scheduleHelp":
-    "Choose a personal time to use your working days and timezone, with a three-hour delivery window. Your previous schedule stays until you change it.",
-  "delivery.legacyTime": "Previous morning schedule (reporting timezone):",
+    "When routine emails such as the Morning brief are sent: within three hours of this time, on your working days and in your time zone. A schedule set earlier stays until you choose a time here.",
+  "delivery.legacyTime": "Previous morning schedule (reporting time zone):",
   "delivery.workingStart": "Start of my working hours",
   "delivery.weekdayLabel": "Weekly review day",
   "delivery.weekdayHelp":
-    "Uses the next working day if your chosen day is off. The reporting week stays fixed; later working days allow catch-up.",
+    "The day the Weekly review is sent. On a day you do not work, it comes on your next working day.",
   "delivery.quietLabel": "Quiet mornings",
+  "delivery.quietHelp":
+    "A morning with nothing to act on sends no email, unless you choose a status summary.",
   "delivery.onlyUseful": "Only when there is useful content",
   "delivery.quietAlso": "Also send a status summary on quiet mornings",
   "delivery.combineLabel": "Combine routine emails",
@@ -9643,6 +9678,8 @@ export const en = {
   "delivery.separate": "Separate routine emails",
   "delivery.combined": "Combine available content",
   "delivery.scopeLabel": "Routine email scope",
+  "delivery.scopeHelp":
+    "Whose work routine emails cover: your own, a team you review, or both.",
   "delivery.scope.personal": "My work",
   "delivery.scope.team": "Selected team",
   "delivery.scope.combined": "My work and selected team",
@@ -10174,6 +10211,7 @@ export const en = {
   "agentClients.enable": "Enable",
   "agentClients.disable": "Disable",
   "agentClients.disabled": "Disabled",
+  "agentClients.active": "Active",
   "agentClients.neverUsed": "Never",
   "agentClients.usersFolded_one": "{count} user",
   "agentClients.usersFolded_other": "{count} users",
@@ -10215,6 +10253,7 @@ export const en = {
   "agentClients.register.redirectInvalid":
     "Use https, or http on localhost or 127.0.0.1, with no fragment.",
   "agentClients.register.redirectCount": "Add 1 to 10 redirect URIs.",
+  "agentClients.register.fixRedirect": "Fix or remove the marked redirect URI.",
   "agentClients.result.title": "Client registered",
   "agentClients.result.secretOnceTitle": "Copy the secret now",
   "agentClients.result.secretOnceBody":
@@ -12063,13 +12102,13 @@ export const en = {
   "retention.create": "Create policy",
   "retention.scope": "Applies to",
   "retention.window": "Window in days",
-  "retention.windowInvalid": "Enter a whole number of days, at least 1.",
   "retention.action": "Action",
   "retention.actionHint":
     "Archive keeps the record. Anonymize and erase destroy data and are held back in retain-only mode.",
   "retention.lawfulBasis": "Lawful basis",
   "retention.lawfulBasisHint":
     "Optional. The Art. 6 basis this window relies on, for auditors reading the policy.",
+  "retention.basis.storage_limitation": "Storage limitation, GDPR Art. 5(1)(e)",
   "retention.enabled": "Enabled",
   "retention.save": "Save policy",
   "retention.delete": "Delete policy",
@@ -12198,14 +12237,16 @@ export const en = {
     "Reload before changing them; the list may be incomplete.",
   "stage.criteria.none": "No exit criteria yet.",
   "stage.criteria.add": "Add criterion",
-  "stage.criteria.key": "Key",
-  "stage.criteria.keyHint":
-    "The name evidence cites. Lowercase letters, digits and underscores. It cannot be changed later.",
   "stage.criteria.label": "Label",
   "stage.criteria.kind": "Kind",
   "stage.criteria.required": "Required",
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hint",
+  "stage.criteria.kindHelp":
+    "What counts as proof. Buyer kinds count only the buyer’s own words.",
+  "stage.criteria.requiredHelp":
+    "A required criterion keeps Margince from moving the deal on by itself.",
+  "stage.criteria.hintHelp": "Guidance for the AI that looks for evidence.",
   "stage.criteria.editOf": "Edit {name}",
   "stage.criteria.removeOf": "Remove {name}",
   "stage.criteria.remove": "Remove",
@@ -13737,6 +13778,10 @@ export const en = {
   "auth.emailPlaceholder": "name@example.com",
   "auth.password": "Password",
   "auth.passwordPlaceholder": "Password",
+  "auth.emailMissing": "Enter your email address.",
+  "auth.emailMalformed":
+    "Enter a full email address, such as name@example.com.",
+  "auth.passwordMissing": "Enter your password.",
   "auth.passwordHint": "12 to 256 characters",
   "auth.showPassword": "Show password",
   "auth.hidePassword": "Hide password",
@@ -13768,15 +13813,18 @@ export const en = {
   "auth.failed": "Sign-in failed",
   "auth.errCredentials":
     "Sign-in failed. Check the email and password and retry.",
-  "auth.errRateLimited": "Too many sign-in attempts. Retry later.",
+  "auth.errRateLimited":
+    "Too many sign-in attempts. Wait a minute, then retry.",
   "auth.errUnreachable":
     "Margince could not be reached. Check the connection and retry.",
   "auth.retry": "Retry",
   "auth.noticeSignedOut": "You have been signed out.",
   "auth.noticeSessionExpired":
     "The session expired. Sign in again to continue.",
+  "auth.noticeResetIncomplete":
+    "This set-password link is incomplete or was already opened. Ask for a new link.",
   "auth.noticeOidcFailed":
-    "Sign-in with Google failed. If you were invited, open the link in the invitation email to complete account setup.",
+    "Sign-in with the provider did not complete. If you were invited, open the link in the invitation email to complete account setup.",
   "auth.connectionTitle": "Margince could not be reached",
   "auth.connectionBody":
     "Check the connection and retry. If the problem continues, the server may be restarting.",
@@ -13817,6 +13865,15 @@ export const en = {
   "password.submit": "Save new password",
   "password.doneTitle": "Password changed",
   "password.changeFailedTitle": "Password not changed",
+  "password.currentWrong":
+    "The current password did not match. Check it, then enter it again.",
+  "password.locked":
+    "The account is locked after too many wrong passwords. Wait 15 minutes, then retry.",
+  "password.unchanged":
+    "The new password is the same as the current one. Choose a different password.",
+  "password.email":
+    "The new password is your email address. Choose a different password.",
+  "password.length": "Use a new password of 12 to 256 characters.",
   // Deliberately says nothing about WHICH field: this is the fallback for a
   // refusal the server did not explain, and naming the current password would
   // send someone hunting a mistake that may not be theirs.
@@ -13915,6 +13972,8 @@ export const en = {
   "setup.errorNetwork":
     "Margince could not be reached. Check the connection and retry.",
   "auth.forgotLink": "Forgot password?",
+  "auth.forgotAskAdmin":
+    "Forgot your password? Ask an administrator for a set-password link.",
   "auth.forgotTitle": "Reset password",
   // Two sentences, sentence-cased, with no dash. VOICE-RULE-5 forbids an em or
   // en dash anywhere in user-facing copy, and a lowercase opening mid-surface
@@ -13926,7 +13985,7 @@ export const en = {
   "auth.forgotSentBody":
     "If that address has an account, a reset link has been sent. It expires in 1 hour.",
   "auth.resetTitle": "Choose new password",
-  "auth.resetSub": "The link is valid. Enter a new password.",
+  "auth.resetSub": "Enter a new password.",
   "auth.newPassword": "New password",
   "auth.setNewPassword": "Set new password",
   "auth.resetFailed": "This reset link is invalid, already used or expired.",
@@ -14332,15 +14391,16 @@ export const en = {
     "No Shortlist of this record type that can be changed here.",
   "auto.dateField.placeholder": "Select date field",
   "auto.dateField.needsObject":
-    "Choose an object first to list its date fields.",
-  "auto.dateField.empty": "This object has no active date fields yet.",
+    "Choose a record type first to list its date fields.",
+  "auto.dateField.empty":
+    "This record type has no date field yet. Add one in {place}.",
   "auto.dateField.loadError": "Could not load date fields. Retry.",
   "auto.enabledFor": "{name} is enabled",
   "auto.colLastRun": "Last run",
   "auto.colRuns30": "Runs (30 days)",
   "auto.colOwner": "Authorized by",
   "auto.ownerFor": "Person authorizing {name}",
-  "auto.ownerNone": "No owner",
+  "auto.ownerNone": "No one chosen",
   "auto.ownerHint": "Actions use this person’s current access.",
   "auto.deadlineTimezone": "Deadline timezone",
   "auto.colStatus": "Status",
@@ -14407,17 +14467,67 @@ export const en = {
   "auto.runs.reasonCode.blocked":
     "a permission check or a declined approval stopped it",
   "auto.runs.outcome": "Outcome",
+  "auto.runs.when": "When",
+  "auto.runs.when.stageNamed": "Deal moved to stage {stage}",
+  "auto.runs.technical": "Technical details",
+  "auto.runs.event": "Event",
+  "auto.runs.mode": "Mode",
+  "auto.runs.did.create_task": "Created a task on {target}",
+  "auto.runs.did.create_task_titled": "Created task “{title}” on {target}",
+  "auto.runs.did.create_record": "Created a record from {target}",
+  "auto.runs.did.update_record": "Updated {target}",
+  "auto.runs.did.assign_owner": "Assigned an owner to {target}",
+  "auto.runs.did.advance_deal": "Moved {target} to its next stage",
+  "auto.runs.did.send_email": "Sent an email about {target}",
+  "auto.runs.did.emit_flow_event": "Started a follow-up step for {target}",
+  "auto.runs.did.recompute_score": "Recalculated the score of {target}",
+  "auto.runs.did.enqueue_job": "Started background work for {target}",
+  "auto.runs.did.notify": "Sent a notification about {target}",
+  "auto.runs.did.draft_email": "Drafted an email on {target}",
+  "auto.runs.did.add_list_member": "Added {target} to a Shortlist",
+  "auto.runs.queued.create_task": "Waiting for approval: a task on {target}",
+  "auto.runs.queued.create_task_titled":
+    "Waiting for approval: task “{title}” on {target}",
+  "auto.runs.queued.create_record":
+    "Waiting for approval: a new record from {target}",
+  "auto.runs.queued.update_record":
+    "Waiting for approval: a change to {target}",
+  "auto.runs.queued.assign_owner":
+    "Waiting for approval: an owner for {target}",
+  "auto.runs.queued.advance_deal":
+    "Waiting for approval: moving {target} to its next stage",
+  "auto.runs.queued.send_email":
+    "Waiting for approval: an email about {target}",
+  "auto.runs.queued.emit_flow_event":
+    "Waiting for approval: a follow-up step for {target}",
+  "auto.runs.queued.recompute_score":
+    "Waiting for approval: a new score for {target}",
+  "auto.runs.queued.enqueue_job":
+    "Waiting for approval: background work for {target}",
+  "auto.runs.queued.notify":
+    "Waiting for approval: a notification about {target}",
+  "auto.runs.queued.draft_email":
+    "Waiting for approval: a draft email on {target}",
+  "auto.runs.queued.add_list_member":
+    "Waiting for approval: adding {target} to a Shortlist",
+  "auto.runs.unnamed.contact": "a contact",
+  "auto.runs.unnamed.company": "a company",
+  "auto.runs.unnamed.deal": "a deal",
+  "auto.runs.unnamed.lead": "a lead",
+  "auto.runs.unnamed.project": "a project",
+  "auto.runs.unnamed.activity": "an activity",
+  "auto.runs.unnamed.record": "a record",
 
   "auto.initialRun.title": "Allow work for existing records?",
   "auto.initialRun.confirm": "Save and allow work",
   "auto.initialRun.body":
     "The next scheduled run of {name} can create work for records that already match. Later runs also handle new matches.",
   "auto.preview.open": "Preview",
-  "auto.preview.title": "Dry-run impact",
+  "auto.preview.title": "Preview",
   "auto.lists.includeImports": "Also act on records changed by imports",
   "auto.recipient.tasks": "Tasks go to",
   "auto.recipient.notices": "Notices go to",
-  "auto.renewal.recipient": "Send the reminder task to",
+  "auto.renewal.recipient": "Send the task to",
   "auto.renewal.recordOwner": "The record owner",
   "auto.renewal.authorizer": "The person authorizing this automation",
   "auto.renewal.object": "Record type",
@@ -14440,7 +14550,73 @@ export const en = {
   "auto.preview.notComputable": "Trailing estimate unavailable",
   "auto.preview.hidden": "{n} hidden (no access)",
   "auto.preview.explainer":
-    "Read-only dry run. No records are changed and nothing is sent.",
+    "Read-only preview. No records are changed and nothing is sent.",
+  "auto.template.no_activity_reminder.name":
+    "Remind me when an active deal goes quiet",
+  "auto.template.no_activity_reminder.description":
+    "Creates a task for the owner of a quiet open deal in the selected pipeline. Genuine contact resets its clock.",
+  "auto.template.renewal_reminder.name": "Prepare for a renewal",
+  "auto.template.renewal_reminder.description":
+    "Creates a task for the chosen recipient before a saved renewal date. Annual repeats are optional.",
+  "auto.template.stage_change_notify.name":
+    "Tell the owner when someone moves their deal",
+  "auto.template.stage_change_notify.description":
+    "Notifies the deal’s owner when someone else or an automation moves the deal, including closes. The owner’s own moves stay in deal history.",
+  "auto.template.route_lead.name": "Route new lead to a task",
+  "auto.template.route_lead.description":
+    "Creates a follow-up task the moment a new lead is captured, so every lead gets a first next step.",
+  "auto.template.check_in_cadence.name":
+    "Keep in touch with selected customers",
+  "auto.template.check_in_cadence.description":
+    "Creates a task for a customer list member’s owner after the chosen period without genuine contact. An open equivalent reminder prevents another task.",
+  "auto.template.post_meeting_recap.name": "Draft a follow-up after a meeting",
+  "auto.template.post_meeting_recap.description":
+    "Drafts a follow-up once a customer meeting is held and has usable notes. The draft waits for a colleague and is never sent by the rule.",
+  "auto.template.website_inquiry.name": "Handle website inquiries",
+  "auto.template.website_inquiry.description":
+    "Routes accepted website inquiries and gives a colleague one task to answer each request.",
+  "auto.template.assign_lead_owner.name": "Assign new leads an owner",
+  "auto.template.assign_lead_owner.description":
+    "Assigns every new lead an owner: matching rules first, else round-robin across the pool, never exceeding capacity caps.",
+  "auto.template.stage_change_create_task.name":
+    "Add the next task when a deal reaches a stage",
+  "auto.template.stage_change_create_task.description":
+    "Adds the chosen task when a deal enters a selected open stage. Each visit to the stage gets one task.",
+  "auto.template.list_membership_task.name":
+    "Create a task when someone joins this list",
+  "auto.template.list_membership_task.description":
+    "Creates a task for the chosen recipient when a record joins or leaves the list. It fires from the list’s check every 15 minutes, once for each record seen joining or leaving. A record that joins and leaves between two checks is not seen. When one check moves more than 100 records, the rule fires for none of them and pauses itself.",
+  "auto.template.list_membership_notify.name": "Tell me when this list changes",
+  "auto.template.list_membership_notify.description":
+    "Sends the rule’s owner a notice for each record that joins or leaves the list. It fires from the list’s check every 15 minutes, once for each record seen joining or leaving. A record that joins and leaves between two checks is not seen. When one check moves more than 100 records, the rule fires for none of them and pauses itself.",
+  "auto.template.list_membership_shortlist.name":
+    "Save matching records to a list",
+  "auto.template.list_membership_shortlist.description":
+    "Adds each record that joins or leaves the list to a Shortlist of the same record type. A record already on it stays as it is. It fires from the list’s check every 15 minutes, once for each record seen joining or leaving. A record that joins and leaves between two checks is not seen. When one check moves more than 100 records, the rule fires for none of them and pauses itself.",
+  "auto.param.dueInDays": "Due after (days)",
+  "auto.param.capPerOwner": "Most open leads per owner",
+  "auto.lists.direction": "Fires when",
+  "auto.lists.direction.entered": "A record joins the list",
+  "auto.lists.direction.left": "A record leaves the list",
+  "auto.lists.direction.either": "A record joins or leaves it",
+  "auto.lists.watched": "Live List to watch",
+  "auto.lists.shortlist": "Shortlist to add to",
+  "auto.needs.dateField": "Choose a renewal date field.",
+  "auto.needs.object": "Choose a record type.",
+  "auto.needs.recipient": "Choose who gets the task.",
+  "auto.needs.pipeline": "Choose a pipeline.",
+  "auto.needs.stages": "Choose at least one stage.",
+  "auto.needs.watched": "Choose the Live List to watch.",
+  "auto.needs.shortlist": "Choose a Shortlist.",
+  "auto.needs.customerList": "Choose a customer list.",
+  "auto.nameRequired": "Give the automation a name.",
+  "auto.dateField.place": "Settings → Records and fields",
+  "auto.recipient.tasksToOwner": "Tasks go to the record owner",
+  "auto.recipient.noticesToOwner": "Notices go to the record owner",
+  "auto.recipient.tasksToAuthorizer":
+    "Tasks go to whoever authorizes this automation",
+  "auto.recipient.noticesToAuthorizer":
+    "Notices go to whoever authorizes this automation",
 
   // The relationship-graph coverage card (ADR-0078).
   "coverage.seatWithheld": "A contact you cannot read",
@@ -14500,7 +14676,7 @@ export const en = {
   "cf.builder.open": "New field",
   "cf.builder.noCode": "No code",
   "cf.builder.intro":
-    "A new field is a real column on the existing table. It works in filters, reports, exports and the API like any core field. It is not a new object.",
+    "A new field appears on every record of this kind. It works in filters, reports, exports and the API like any built-in field. You can archive it later, but not bring it back.",
   "cf.label": "Label",
   "cf.apiKey": "API name",
   "cf.apiKeyHint":
@@ -14531,7 +14707,7 @@ export const en = {
     "Choices of “{label}” saved. {count} records changed.",
   "cf.gate.title": "Add this field?",
   "cf.gate.body":
-    "On confirm, it becomes a live column on every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
+    "On confirm, it is added to every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
   "cf.refuse.title": "This looks like a new object or relationship",
   "cf.refuse.body":
     "This builder adds simple fields to existing records only. A new object, a link between objects or a calculated roll-up is a structural change. It ships as a reviewed change in a new Margince version, made by people, not by the product editing its own code.",
@@ -14570,6 +14746,143 @@ export const en = {
   "cf.removedFromReports": "“{label}” removed from reports",
   "cf.audit.title": "Recent field changes",
   "audit.kind.customField": "Custom field",
+  "audit.kind.activity_review_template": "Activity review template",
+  "audit.kind.agent_standing_grant": "Standing agent permission",
+  "audit.kind.ai_call": "AI call",
+  "audit.kind.ai_feedback": "AI feedback",
+  "audit.kind.ai_model_rate": "AI model price",
+  "audit.kind.analytics_share": "Shared report",
+  "audit.kind.approval": "Approval",
+  "audit.kind.assurance_cycle": "Assurance cycle",
+  "audit.kind.assurance_exception": "Assurance exception",
+  "audit.kind.assurance_resolution": "Assurance resolution",
+  "audit.kind.assurance_run": "Assurance run",
+  "audit.kind.assurance_task_item": "Assurance task",
+  "audit.kind.attachment": "Attachment",
+  "audit.kind.attachment_extraction": "Attachment text",
+  "audit.kind.audit_log": "Audit log entry",
+  "audit.kind.automation": "Automation",
+  "audit.kind.booking_page": "Booking page",
+  "audit.kind.brief_item": "Morning brief item",
+  "audit.kind.brief_run": "Morning brief",
+  "audit.kind.capture_auto_enrich_state": "Automatic enrichment setting",
+  "audit.kind.capture_connection": "Connector",
+  "audit.kind.capture_exclusion": "Capture exclusion",
+  "audit.kind.capture_pending_counterparty": "New sender to review",
+  "audit.kind.capture_settings": "Capture settings",
+  "audit.kind.chat_link": "Chat link",
+  "audit.kind.commission": "Commission",
+  "audit.kind.communication_instruction": "Communication instruction",
+  "audit.kind.communication_review": "Communication review",
+  "audit.kind.communication_suppression": "Communication block",
+  "audit.kind.company_domain_question_reader": "Company domain question",
+  "audit.kind.confirm_token": "Confirmation link",
+  "audit.kind.consent_text_version": "Consent text version",
+  "audit.kind.contact_acquisition_evidence": "Contact source evidence",
+  "audit.kind.contract": "Contract",
+  "audit.kind.data_subject_request": "Data subject request",
+  "audit.kind.deal_acquisition_source": "Deal source",
+  "audit.kind.deal_loss_reason": "Loss reason",
+  "audit.kind.deal_loss_reason_mapping": "Loss reason mapping",
+  "audit.kind.deal_risk_day": "Deal risk check",
+  "audit.kind.deal_room": "Deal Room",
+  "audit.kind.deal_room_comment": "Deal Room comment",
+  "audit.kind.deal_room_document": "Deal Room document",
+  "audit.kind.deal_room_participant": "Deal Room participant",
+  "audit.kind.deal_room_session": "Deal Room visit",
+  "audit.kind.deal_room_thread": "Deal Room discussion",
+  "audit.kind.deal_stage_evidence": "Stage evidence",
+  "audit.kind.deal_suggestion": "Deal suggestion",
+  "audit.kind.dedupe_candidate": "Possible duplicate",
+  "audit.kind.existing_customer_notice": "Existing customer notice",
+  "audit.kind.finance_connection": "Accounting connection",
+  "audit.kind.finance_customer_link": "Accounting customer link",
+  "audit.kind.finance_external_customer": "Accounting customer",
+  "audit.kind.finance_invoice": "Invoice",
+  "audit.kind.finance_payment": "Payment",
+  "audit.kind.forecast_call": "Forecast call",
+  "audit.kind.forecast_capture_status": "Forecast capture status",
+  "audit.kind.forecast_snapshot": "Forecast snapshot",
+  "audit.kind.fx_rate": "Exchange rate",
+  "audit.kind.import_run": "Import",
+  "audit.kind.intro_request": "Introduction request",
+  "audit.kind.knowledge_corpus": "Knowledge base",
+  "audit.kind.knowledge_document": "Knowledge document",
+  "audit.kind.lead_disqualify_reason": "Disqualification reason",
+  "audit.kind.lead_origin": "Lead origin",
+  "audit.kind.lead_privacy_notice": "Lead privacy notice",
+  "audit.kind.lead_source": "Lead source",
+  "audit.kind.legal_entity": "Legal entity",
+  "audit.kind.legal_review": "Legal review",
+  "audit.kind.license": "License settings",
+  "audit.kind.linkedin_connection": "LinkedIn connection",
+  "audit.kind.list": "List",
+  "audit.kind.mail_draft": "Email draft",
+  "audit.kind.notice": "Notice",
+  "audit.kind.oauth_authorization_code": "OAuth authorization code",
+  "audit.kind.oauth_client": "OAuth app",
+  "audit.kind.oauth_grant": "OAuth access",
+  "audit.kind.offer": "Offer",
+  "audit.kind.onboarding_wizard_state": "Setup progress",
+  "audit.kind.partner_stage": "Partner stage",
+  "audit.kind.passport": "Passport",
+  "audit.kind.pipeline": "Pipeline",
+  "audit.kind.privacy_notice_case": "Privacy notice case",
+  "audit.kind.privacy_request_proof": "Privacy request proof",
+  "audit.kind.project_health_assessment": "Project health check",
+  "audit.kind.provider_connection": "Provider connection",
+  "audit.kind.provider_run": "Provider run",
+  "audit.kind.record_assignment": "Responsibility",
+  "audit.kind.record_role": "Record role",
+  "audit.kind.relationship": "Relationship",
+  "audit.kind.report_run": "Report run",
+  "audit.kind.restore_drill": "Restore drill",
+  "audit.kind.retention_policy": "Retention policy",
+  "audit.kind.role": "Role",
+  "audit.kind.sales_initiative": "Sales initiative",
+  "audit.kind.saved_view": "Saved view",
+  "audit.kind.scheduled_send": "Scheduled email",
+  "audit.kind.sdr_handoff": "SDR handoff",
+  "audit.kind.signal": "Signal",
+  "audit.kind.site_read": "Website analysis",
+  "audit.kind.stage": "Stage",
+  "audit.kind.stage_exit_criterion": "Stage exit criterion",
+  "audit.kind.tag_suggestion": "Tag suggestion",
+  "audit.kind.tax_rate": "Tax rate",
+  "audit.kind.team": "Team",
+  "audit.kind.team_weekly_review": "Team weekly review",
+  "audit.kind.transcript_read": "Transcript analysis",
+  "audit.kind.user": "Member",
+  "audit.kind.voice_build": "Writing voice build",
+  "audit.kind.voice_corpus_source": "Writing sample source",
+  "audit.kind.voice_learning_signal": "Writing voice signal",
+  "audit.kind.voice_profile": "Writing voice profile",
+  "audit.kind.voice_profile_version": "Writing voice profile version",
+  "audit.kind.web_form": "Web form",
+  "audit.kind.webhook_subscription": "Webhook",
+  "audit.kind.weekly_plan": "Weekly plan",
+  "audit.kind.weekly_plan_commitment": "Weekly plan commitment",
+  "audit.kind.weekly_review": "Weekly review",
+  "audit.kind.worklist_done": "Worklist item done",
+  "audit.kind.worklist_pin": "Worklist pin",
+  "audit.kind.workspace": "Company profile",
+  "audit.kind.agent_client": "Connected AI tool",
+  "audit.kind.ai_budget": "AI allowance",
+  "audit.kind.ai_call_payload": "AI call content",
+  "audit.kind.ai_routing": "AI model routing",
+  "audit.kind.authentication_policy": "Sign-in policy",
+  "audit.kind.channel_connection": "Chat channel connection",
+  "audit.kind.company_fact": "Fact about a company",
+  "audit.kind.company_profile_field": "Company record field",
+  "audit.kind.installation_settings": "Installation settings",
+  "audit.kind.integrations": "Integration settings",
+  "audit.kind.raw_capture": "Captured original message",
+  "audit.kind.report_definition": "Report",
+  "audit.kind.report_edition": "Published report",
+  "audit.kind.report_schedule": "Report schedule",
+  "audit.kind.reporting_framework": "Reporting setup",
+  "audit.kind.sales_goal_plan": "Sales goal plan",
+  "audit.kind.sales_target": "Sales target",
   "cf.audit.empty": "No custom field changes yet.",
   "cf.audit.footer":
     "Every addition, edit and archive is recorded permanently in the audit log.",
@@ -16061,6 +16374,7 @@ export const en = {
   "settings.companyMarkUnsupported":
     "Use a PNG, JPEG, GIF, WebP, ICO or SVG file.",
   "settings.companyMarkTooLarge": "Use a smaller file.",
+  "settings.companyMarkTooManyPixels": "Use a picture of up to 8 megapixels.",
   "settings.companyMarkSvgNotDrawable":
     "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
   "settings.companyMarkSvgText":
@@ -16625,7 +16939,7 @@ export const en = {
   "signInMethods.title": "Sign-in methods",
   "signInMethods.saveFailed": "Change not saved",
   "signInMethods.sub":
-    "An administrator can turn a provider off but cannot add one. A provider shows on the sign-in screen once its app below is set up.",
+    "An administrator can turn a provider off but cannot add one. A provider shows on the sign-in screen once its app is set up under {apps}.",
   "signInMethods.password": "Email and password",
   "signInMethods.passwordAlways":
     "Always available, so nobody is locked out when another method is off.",
@@ -16797,6 +17111,7 @@ export const en = {
   "signInMethods.onScreen": "On the sign-in screen",
   "signInMethods.offScreen": "Not on the sign-in screen",
   "signInMethods.offScreenReason.noApp": "The {vendor} app is not set up.",
+  "signInMethods.setUpApp": "Set up the {vendor} app",
   "signInMethods.offScreenReason.noDirectory":
     "The Microsoft app is not limited to your company directory.",
   "signInMethods.offScreenReason.unusable":
@@ -17131,6 +17446,8 @@ export const en = {
   "account.pictureWrongType":
     "Picture not uploaded. Use a PNG, JPEG or WebP file.",
   "account.pictureTooLarge": "Picture not uploaded. Use a file up to 5 MB.",
+  "account.pictureTooManyPixels":
+    "Picture not uploaded. Use a picture of up to 8 megapixels.",
   "account.pictureNoStorage":
     "This installation has no file storage for pictures. Contact your system administrator.",
   "account.pictureUploadFailed":
@@ -18208,7 +18525,7 @@ export const en = {
     "Outbound subscriptions that receive signed HTTP POSTs for chosen events.",
   "webhooks.new": "New subscription",
   "webhooks.notConfigured":
-    "Webhooks are not enabled on this installation until a signing key is configured.",
+    "Webhooks need a signing key, which whoever runs your Margince server sets as webhook_key. Nothing can be sent until then.",
   "webhooks.state.active": "Active",
   "webhooks.state.paused": "Paused",
   "webhooks.updated": "Updated {date}",
@@ -19432,6 +19749,7 @@ export const en = {
   "contact.standing.dims": "How the relationship stands",
   "contact.standing.dim.promises": "Your commitments",
   "contact.standing.dim.promisesNone": "None open",
+  "contact.standing.dim.promisesUncounted": "Too many tasks to count",
   "standing.overdue_one": "{count} overdue",
   "standing.overdue_other": "{count} overdue",
   "standing.ofOpen_one": "of {count} open",
@@ -22158,8 +22476,7 @@ export const en = {
   "magic.action.send_email": "A message was sent",
   "magic.action.schedule": "A meeting was booked",
   "magic.action.disqualify": "A lead was disqualified",
-  "magic.action.automation_troubled":
-    "{name} could not finish ({outcome}): {reason}",
+  "magic.action.automation_troubled": "Could not finish ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Review first approach",
   "magic.action.approval_send_email": "Review message",
   "magic.action.approval_advance_deal": "Review stage change",
@@ -22184,7 +22501,7 @@ export const en = {
     "{party} (unverified): {summary}",
   "magic.action.approval_commitment_task": "Review proposed task",
   "magic.action.approval_capture_counterparty":
-    "{target} wrote to you. Keep them as a contact?",
+    "Someone new wrote to you. Keep as a contact?",
   "magic.action.approval_summary": "Proposed: {summary}",
   "magic.action.approval_pending": "{kind}",
   "magic.action.decided_summary": "{summary}",
@@ -22912,6 +23229,7 @@ export const en = {
   "record.details.hideEmpty": "Hide empty fields",
   "record.details.editSection": "Edit {section}",
   "record.verb.email": "Email",
+  "record.verb.message": "Message",
   "record.verb.call": "Call",
   "record.verb.meet": "Meet",
   "record.verb.log": "Log",
@@ -23019,7 +23337,7 @@ export const en = {
     "No exchange with this contact is recorded yet.",
   "contactCase.title": "Possible duplicates",
   "contactCase.intro":
-    "Tick the contacts that are the same person. Then choose which record to keep and who owns it.",
+    "Tick the contacts that are the same person. Then choose which one stays and who owns it.",
   "contactCase.loading": "Loading possible duplicates…",
   "contactCase.none": "This contact has no open duplicates.",
   "contactCase.settledElsewhere":
@@ -23056,8 +23374,10 @@ export const en = {
   "contactCase.merge_other": "Merge {count} contacts",
   "contactCase.member.owner": "Owner: {name}",
   "contactCase.member.unowned": "No owner",
-  "contactCase.member.keep": "Keep this record’s details",
-  "contactCase.member.keepNamed": "Keep details of {name}",
+  "contactCase.member.stays": "{name} stays",
+  "contactCase.survivor.legend": "Which contact stays?",
+  "contactCase.survivor.hint":
+    "The other ticked contacts merge into it and are archived.",
   "contactCase.member.dismissedWith":
     "Marked as a different person from {names}.",
   "contactCase.notAllowed.tooLarge":
@@ -23082,11 +23402,13 @@ export const en = {
   "contactCase.field.domain": "Domain",
   "contactCase.field.other": "Detail",
   "contactCase.evidence.title": "Why they look alike",
+  "contactCase.evidence.hint":
+    "Not the same person stops only that pair from being suggested. A contact you leave unticked stays a possible duplicate.",
   "contactCase.evidence.pair": "{left} and {right}",
   "contactCase.evidence.different": "Different people",
   "contactCase.preview.title": "What the merge does",
-  "contactCase.preview.keeps": "{name} remains, owned by {owner}.",
-  "contactCase.preview.mergedTitle": "Merged into it",
+  "contactCase.preview.keeps": "{name} stays, owned by {owner}.",
+  "contactCase.preview.mergedTitle": "Merged into it and archived",
   "contactCase.preview.sharesTitle": "Keeps access",
   "contactCase.preview.noShares": "No other owner.",
   "contactCase.preview.shareWrite": "{name}, can edit",

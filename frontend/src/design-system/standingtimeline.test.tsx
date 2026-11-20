@@ -59,6 +59,71 @@ const draw = (
     />,
   );
 
+describe("an axis with nothing dated", () => {
+  const drawOnly = (marks: TimelineMark[]) =>
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2026-08-13T09:00:00Z"
+        record={UTC_ZONE}
+        events={[]}
+        marks={marks}
+      />,
+    );
+
+  it("says nothing is dated when nothing is", () => {
+    drawOnly([]);
+    expect(screen.getByText("Nothing dated here yet.")).toBeInTheDocument();
+  });
+
+  it("draws a logged item rather than saying nothing is dated", () => {
+    drawOnly([mark({ key: "m", at: "2026-08-10", when: "10 Aug" })]);
+    expect(screen.queryByText("Nothing dated here yet.")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Aug" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens wide enough for a logged item older than a quarter", () => {
+    drawOnly([mark({ key: "m", at: "2026-01-10", when: "10 Jan" })]);
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jan" }),
+    ).toBeInTheDocument();
+  });
+
+  it("measures the canvas once a first logged item draws it", () => {
+    const observed: Element[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe(node: Element) {
+          observed.push(node);
+        }
+        disconnect() {}
+      },
+    );
+    try {
+      const { rerender } = drawOnly([]);
+      rerender(
+        <StandingTimeline
+          label="Brandt over time"
+          asOf="2026-08-13T09:00:00Z"
+          record={UTC_ZONE}
+          events={[]}
+          marks={[mark({ key: "m", at: "2026-08-10", when: "10 Aug" })]}
+        />,
+      );
+      expect(
+        observed.some((node) =>
+          node.classList.contains("standing-timeline-canvas"),
+        ),
+      ).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe("marks on the line", () => {
   it("draws a chip for one logged item and opens a card of who, what and when", async () => {
     const user = userEvent.setup();

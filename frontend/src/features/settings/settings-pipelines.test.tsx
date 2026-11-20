@@ -646,6 +646,10 @@ describe("PipelinesCard: the ladder", () => {
     const [edit] = backend.writes("PATCH", "/stages/s1");
     expect(edit.ifMatch).toBe("5");
     expect(edit.body).toMatchObject({ name: "Qualified" });
+    // The "Forecast uses" line reads the chances again after the write.
+    await waitFor(() =>
+      expect(backend.writes("GET", "/forecast/stage-chances")).toHaveLength(2),
+    );
   });
 
   it("refuses a new type on the pipeline's only Won stage, and saves the same type", async () => {

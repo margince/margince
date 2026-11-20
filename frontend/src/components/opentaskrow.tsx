@@ -6,7 +6,7 @@ import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { OverviewRow } from "../design-system/overviewcard";
 import { formatNumber } from "../format/format";
-import { formatDayMonth, formatDueCompact } from "../format/format.dates";
+import { formatDueCompact } from "../format/format.dates";
 import { daysPast } from "../format/lateness";
 import { useLocale, usePlural, useT } from "../i18n";
 import { displayedSubject } from "../lib/systemdisplay";
@@ -113,7 +113,8 @@ export function OpenTaskRow({
 }
 
 /** Where a task stands, as the right end of its row: a pill while it is late
- *  or close, the day itself further out, "No date" when it has none. */
+ *  or close, "No date" when it has none. Further out it adds nothing, because
+ *  the row's own line already says the day it is due. */
 export function TaskStandingMark({
   task,
   asOf,
@@ -145,7 +146,7 @@ export function TaskStandingMark({
         </Badge>
       );
     case "later":
-      return formatDayMonth(standing.due, locale, zone);
+      return null;
     case "undated":
       return t("co.overview.noDate");
   }

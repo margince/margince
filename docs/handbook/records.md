@@ -4,7 +4,6 @@
 Margince holds five kinds of record: contacts, companies, leads, deals and projects. [Shared record links](sharing-record-links.md) show a limited public card.
 
 ## Each record in one line
-
 - **Contact**: a single human you do business with. The sidebar calls this **Contacts**.
 - **Company**: a company you work with. The sidebar calls this **Companies**.
 - **Lead**: a possible customer you have not qualified yet, kept apart from your contacts.
@@ -104,7 +103,7 @@ A contact also holds an owner, a consent record for each purpose, a relationship
 ### How do I merge duplicate contacts?
 To merge two duplicate contacts in Margince, open the contact you want to remove, choose **More actions**, then **Merge contact**.
 1. Search for the other contact and pick it under **Select record to keep**.
-2. Read the question: "Merge {source} into {target}? This archives {source}." Each name carries its company, title and email, so two contacts with one name stay apart.
+2. Read the question. It says what the record you keep takes over, and that a merge cannot be undone. Each name carries its company, title and email, so two contacts with one name stay apart.
 3. Choose **Merge**. Margince opens the contact you kept and says "{source} was merged into {target}." The contact you merged away is archived, not deleted. The band at the top of its page says so and links the contact you kept: "Merged into {target}."
 
 A lead has no **Merge** of its own. Two leads that may be one show in **To review** in the Worklist. Press **Keep {name}** under "Which record should be kept?" and read the same question **Merge** asks. Choose **Merge**, and Margince merges the other lead into it. Two companies that may be one show there too, with a link, a created date and the reasons on each card. **Not duplicates** settles the pair, and **Undo** asks about it again.
@@ -113,9 +112,10 @@ The contact you kept keeps every email address, phone number and employer of bot
 
 Margince also groups contacts that may be duplicates of each other, so you can merge more than two at once. Every owner of a contact in the group finds it under **To review** in their Worklist. A contact a colleague keeps private is not in your group, and only they can merge it.
 1. Open the group: **Possible duplicates (N)** under the contact's name, or **Review** on its Worklist card.
-2. Tick the contacts that are true duplicates, and choose **Keep this record’s details** on one. The group opens with two ticked: the contact you came from and its closest match. **Why they look alike** says what matched for each pair. Two contacts can each look like one other contact and still be different people, so tick each one yourself.
-3. Choose the **Owner**, pick under **Which value to keep** where they differ, then press **Preview merge** and **Merge {count} contacts**.
-The first merge settles the group for every owner, and it cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts must be decided one pair at a time. Your own contact may merge into a colleague's, which keeps its owner; the review ticks those two ([who may merge](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge)).
+2. Tick the contacts that are true duplicates. Opened from a contact, the group starts with only that contact ticked; opened from a Worklist card, nothing is ticked. **Why they look alike** says what matched for each pair. **Not the same person** on a pair stops only that pair from being suggested. Two contacts can each look like one other contact and still be different people, so tick each one yourself.
+3. Under **Which contact stays?**, choose one of the ticked contacts; the others merge into it and are archived. Choose the **Owner**, pick under **Which value to keep** where they differ, then press **Preview merge** and **Merge {count} contacts**.
+
+Margince then opens the contact you kept; the first merge settles the group for every owner and cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts reads **Possible duplicates (25+)** and must be decided one pair at a time. Your own contact may merge into a colleague's, and the colleague's record and owner stay ([who may merge](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge)).
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 
 ### How do I call a contact?
@@ -186,7 +186,7 @@ A company may have a parent company, and that parent may have a parent of its ow
 ### How do I merge duplicate companies?
 To merge two duplicate companies in Margince, open the company you want to remove, choose **More actions**, then **Merge company**.
 1. Search for the other company and pick it under **Select record to keep**.
-2. Read the question: "Merge {source} into {target}? This archives {source}." Each name carries its main domain, so two companies with one name stay apart.
+2. Read the question. It says what the record you keep takes over, and that a merge cannot be undone. Each name carries its main domain, so two companies with one name stay apart.
 3. Choose **Merge**. Margince opens the company you kept and says "{source} was merged into {target}." The company you kept takes each empty field from the other, such as **Industry**, **Employees** or the address. Its **Lifecycle** is taken when it was still **Unknown**.
 
 The company you merged away is archived, not deleted. You cannot merge an archived company. Its **Overview** says that it is archived, and **Merged into** links the company you kept. Some contacts work at both companies, with the merged-away company as current employer. They keep the company you kept as current employer.
@@ -220,7 +220,7 @@ Also called: remove, hide, deactivate a record.
 ### Can I restore or unarchive an archived record?
 Yes, for a contact, company or deal. Open the record with **Show archived**, find the entry that archived it in its history, and press **Undo**. An archived deal also shows **Restore deal** beside "This deal is archived and takes no changes." Anyone with the delete right, such as a manager, may bring back any archive. With edit rights alone, you may bring back only a record you own and archived yourself. If someone else archived it, the history says "Only the colleague who archived this record, or a manager, can restore it."
 
-Its email addresses, phone numbers, links, list members and tags come back too, where they still can. A list or tag archived since stays archived, and the record does not go back on it. Anything that could not come back is named in the history, and **Restore deal** says how many items stayed behind. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
+Right after you archive a contact, the message that says so has **Undo** too, which brings the contact back and opens it. Its email addresses, phone numbers, links, list members and tags come back too, where they still can. A list or tag archived since stays archived, and the record does not go back on it. Anything that could not come back is named in the history, and **Restore deal** says how many items stayed behind. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
 
 Margince archives some records on its own, such as emails it judged to be of no use. Those show under **Done for you** on Home, with the other work Margince did for you. A contact, company or deal there has its own **Undo**.
 
@@ -255,7 +255,7 @@ Also called: timeline, activity log, customer history, interaction history, newe
 To log an activity in Margince, open the contact, company, lead or deal and choose **Log activity** in its header.
 1. Pick the **Type**: Note, Task, Call, Meeting or Message. **Message** records a chat, such as a WhatsApp conversation. Pick its **Chat app** too. **Message** shows only when your installation knows a chat app.
 2. Set the **Date** (or **Due date** for a task), and the **Assignee** for a task. A task can also take a **Time (optional)**, such as the hour you agreed to call back. Its reminder comes due at that hour. Without a time, a task is due at the end of its day.
-3. For a call or meeting, add the contacts who took part under **Other attendees**, or **Attendees** on a company. Add colleagues who took part under **Colleagues who attended**. A call also takes an **Outcome**, such as **Reached** or **Not reached**, and then needs no subject. Only **Reached** and **Put through** count as contact.
+3. For a call or meeting, add the contacts who took part under **Other attendees**, or **Attendees** on a company. Add colleagues who took part under **Colleagues who attended**. A call also takes an **Outcome**, such as **Reached** or **Not reached**, and then needs no subject. History and the **Overview** show the outcome beside **Call**, and a call with no subject takes it as its title. Only **Reached** and **Put through** count as contact.
 4. Enter a **Subject** (optional for calls and messages) and the **Details**. **Details** keeps its format, such as lists, headings and links. You can paste it from a document or as markdown. If you enter a call or meeting transcript, tick **This text is a transcript**. The text then stays plain, and you can paste it or use **Or upload a file** (`.txt` only).
 5. Add any files under **Attach files**, then choose **Log**. A call or meeting shows in the History of each contact you named, and of their companies.
 Without permission you see "You do not have permission to log activities on this record." A contact you can open only through a **Read** share refuses **Log activity**, **Add task** and **Book a meeting**. Ask its owner to share it at **Write**.
@@ -266,7 +266,7 @@ To read a whole note, call or meeting from a contact's **Overview** in Margince,
 Also called: open a note, see the full call notes, read a meeting in full.
 
 ### How do I add a task on a record?
-To add a task in Margince, open the contact, company, lead, deal or project, choose **More actions** in its header, then **Add task**. Enter a **Subject** (required), a **Task type**, a **Due date**, an optional **Time** and an **Assignee** (or **Unassigned**), then choose **Add task**. History marks tasks **Open** or **Completed** and names an open one's holder and due day; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done**, **Snooze 1 day** and **Move to**, which also takes a time. A snoozed task moves one day later, or to tomorrow if that is later, and keeps its time.
+To add a task in Margince, open the contact, company, lead, deal or project, choose **More actions** in its header, then **Add task**. Enter a **Subject** (required), a **Task type**, a **Due date**, an optional **Time** and an **Assignee**, which starts on **Me**, then choose **Add task**. History marks tasks **Open** or **Completed** and names an open one's holder and due day; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done**, **Snooze 1 day** and **Move to**, which also takes a time. A snoozed task moves one day later, or to tomorrow if that is later, and keeps its time.
 Also called: create a to-do, follow-up, reminder.
 
 On a contact's or company's **Overview**, the **Next** bar shows a task's subject and the email it came from, with **View full thread**. A past meeting is never the next step. On a deal, lead or project with nothing next, the last exchange shows above the bar, such as **Last meeting** with **View meeting**. It adds **Waiting on them** if you wrote last, or **Your turn to answer** if they did. A contact shows that exchange under **What was said**, and a company under **Last contact**. With no open task, a contact's bar offers **Add follow-up** if you may log activity, under **No follow-up task recorded.**

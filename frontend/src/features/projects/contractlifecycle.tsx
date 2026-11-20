@@ -23,11 +23,14 @@ import { CONTRACT_STATUS_LABEL } from "../../lib/contractstatus";
 import { useHealthScope } from "../../lib/healthscope";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { useInstallationSettings } from "../../lib/uploadlimit";
 import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
 import { renewContract } from "./contractrenewal";
 import { renewDraftOf } from "./contracttermsbody";
-import { ContractTermsFields, useTermsFaults } from "./contracttermsfields";
+import {
+  ContractTermsFields,
+  useContractCurrency,
+  useTermsFaults,
+} from "./contracttermsfields";
 
 // The three transitions a signed agreement goes through after it is recorded:
 // renew, assert a status, record a cancellation.
@@ -92,8 +95,11 @@ export function ContractRenewModal({
   // Never seeded from the predecessor — see renewalBody's comment: the
   // successor's deal is a fresh answer, not a carried-over one.
   const [dealId, setDealId] = useState("");
-  const baseCurrency = useInstallationSettings().data?.base_currency;
-  const contractCurrency = draft.currency || baseCurrency || "";
+  const {
+    base: baseCurrency,
+    currency: contractCurrency,
+    unread: currencyUnread,
+  } = useContractCurrency(draft.currency);
   // The counterparty is withheld from a reader admitted through the DEAL who
   // cannot open the company (masked_fields names it). They may still renew —
   // write authority follows the deal — so the modal keeps working and the deal
@@ -180,6 +186,7 @@ export function ContractRenewModal({
             draft={draft}
             setDraft={terms.setDraft}
             currency={contractCurrency}
+            currencyUnread={currencyUnread}
             errors={terms.errors}
           />
           {/* Never required: the server accepts a renewal with no deal. */}

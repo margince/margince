@@ -10,6 +10,8 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
+import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -119,10 +121,12 @@ function mount(page: () => Contact360, routes: RouteMap = {}) {
       }
     >
       <LocaleProvider initial="en">
-        <ToastProvider>
-          <Card />
-          <ToastRegion />
-        </ToastProvider>
+        <ViewerZoneProvider zone={FIXTURE_TIMEZONE}>
+          <ToastProvider>
+            <Card />
+            <ToastRegion />
+          </ToastProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -153,6 +157,13 @@ it("leaves out the task the Next bar already shows", async () => {
     "Book the site visit",
     "Confirm the delivery date",
   ]);
+});
+
+it("says a task's due day once, beside who holds it", async () => {
+  mount(() => view(TASKS, WAITING));
+
+  await screen.findByText("Confirm the delivery date");
+  expect(screen.getAllByText(/2 Sept?/)).toHaveLength(1);
 });
 
 it("completes a task on the tick, and the row leaves on the re-read", async () => {

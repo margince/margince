@@ -56,10 +56,13 @@ export function ContactCaseReview({
   open,
   onClose,
   chosen = true,
+  onMerged,
 }: Readonly<{
   contactId: string;
   open: boolean;
   onClose: () => void;
+  /** Takes the place of the merged note, for a host the merge unmounts. */
+  onMerged?: (outcome: ContactCaseOutcome) => void;
   /**
    * The reader opened the review from this contact, so it starts ticked.
    * False where the server picked the contact, which nobody chose.
@@ -80,6 +83,7 @@ export function ContactCaseReview({
           contactId={contactId}
           chosen={chosen}
           onClose={onClose}
+          onMerged={onMerged}
         />
       )}
     </Modal>
@@ -90,7 +94,13 @@ function CaseReviewBody({
   contactId,
   chosen,
   onClose,
-}: Readonly<{ contactId: string; chosen: boolean; onClose: () => void }>) {
+  onMerged,
+}: Readonly<{
+  contactId: string;
+  chosen: boolean;
+  onClose: () => void;
+  onMerged?: (outcome: ContactCaseOutcome) => void;
+}>) {
   const t = useT();
   const query = useContactCase(contactId);
   const [stale, setStale] = useState(false);
@@ -147,7 +157,7 @@ function CaseReviewBody({
         setStale(true);
         void query.refetch();
       }}
-      onMerged={setMerged}
+      onMerged={onMerged ?? setMerged}
       onPairMerged={() => setMergedPair(true)}
     />
   );

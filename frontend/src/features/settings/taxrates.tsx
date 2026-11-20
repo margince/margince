@@ -23,7 +23,7 @@ import { useToast } from "../../design-system/toast";
 import { countryOptions } from "../../format/assignedcountries";
 import { todayIn } from "../../format/calendarday";
 import { typedDecimalText, typedNumberFault } from "../../format/decimalinput";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDate, formatNumber, formatPercent } from "../../format/format";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -36,6 +36,9 @@ type TaxRate = components["schemas"]["TaxRate"];
 type Category = TaxRate["category"];
 
 const TAX_RATES_KEY = ["tax-rates"] as const;
+
+// The server sends a rate in percent with two decimals.
+const TAX_RATE_DIGITS = 2;
 
 // The tax rates offers are charged, by country and category. A rate is added
 // and never changed: a new rate from a later day replaces it from that day.
@@ -101,7 +104,9 @@ export function TaxRatesCard() {
             {
               key: "rate",
               header: t("taxRates.colRate"),
-              render: (row) => `${row.rate} %`,
+              // A statutory rate keeps its decimals: 7.7 % is not 8 %.
+              render: (row) =>
+                formatPercent(Number(row.rate) / 100, locale, TAX_RATE_DIGITS),
             },
             {
               key: "from",

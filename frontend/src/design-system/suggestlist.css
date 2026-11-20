@@ -8,7 +8,6 @@
 
 .suggest-popup {
   position: fixed;
-  z-index: 70;
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid var(--borderStrong);

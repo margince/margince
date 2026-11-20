@@ -9,12 +9,12 @@ import {
   type SortControl,
   type ViewRow,
 } from "./listsurface";
+import { useColumnWidths, useFrozenEdge } from "./listtable.layout";
 import {
+  orderedColumns,
   useColumnDisplay,
-  useColumnWidths,
-  useFrozenEdge,
-} from "./listtable.layout";
-import { orderedColumns, useColumnOrder } from "./listtable.order";
+  useColumnOrder,
+} from "./listtable.order";
 import { fitsOnePage, usePaging } from "./listtable.paging";
 import {
   applyView,
@@ -309,7 +309,7 @@ export function ListTable<Row>({
   notice?: ReactNode;
 }>) {
   const columns = declared.filter((column) => !column.phoneOnly);
-  const display = useColumnDisplay(columns);
+  const display = useColumnDisplay(columns, widthsKey);
   const order = useColumnOrder(widthsKey);
   const placed = orderedColumns(columns, order.order);
   const scroller = useRef<HTMLDivElement>(null);

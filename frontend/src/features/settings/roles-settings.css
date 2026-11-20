@@ -138,6 +138,7 @@
 .roles-row-press > .cell-stack {
   flex: 1;
   min-inline-size: 0;
+  overflow-wrap: anywhere;
 }
 
 .roles-row-facts {

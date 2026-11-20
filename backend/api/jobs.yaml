@@ -1418,6 +1418,22 @@ kinds:
       answers not found, so nobody can find it to discard it — and a draft
       holds a subject's address and the words written to them.
 
+  oauth_client_unused_sweep:
+    role: worker
+    go_type: OAuthClientUnusedSweepArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, because each pass is capped (unusedClientSweepBatch) and the
+      cadence drains a backlog deeper than one batch. It deletes the clients
+      that registered themselves at /oauth/register and that no consent used
+      within mcp.client_registration.unused_retention. Registration needs no
+      sign-in, so without it nothing removes such a row, and the cap on them
+      would stay full.
+
   privacy_request_proof_expiry:
     role: worker
     go_type: RequestProofExpiryArgs

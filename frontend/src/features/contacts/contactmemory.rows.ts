@@ -12,6 +12,7 @@ import { primaryPhone } from "../../format/contacturi";
 import { formatDayMonth } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { callOutcomeLabel } from "../../lib/calloutcome";
 import {
   authorName,
   contactRole,
@@ -80,32 +81,49 @@ export function memoryRows(
             row.kind !== "note" || row.row?.content_state === "available",
         )
   ).sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt));
-  return said.map((row) => ({
-    key: row.key,
-    title: row.title || interactionLabel(row.kind, row.provider),
-    sub: [
-      interactionLabel(row.kind, row.provider),
-      directionWord(row, t),
-      activityDay(
-        row.occurredAt,
-        row.occurredPrecision,
-        locale,
-        recordZone,
-        formatDayMonth,
-      ),
-    ]
-      .filter(Boolean)
-      .join(" · "),
-    pill: statusPill(row.status, t),
-    kind: row.kind,
-    source: row.source,
-    context:
-      row.kind === "note" && row.row?.content_state === "available"
-        ? markdownLines(row.row.body ?? "")
-            .join(" ")
-            .slice(0, 280) || undefined
-        : undefined,
-  }));
+  return said.map((row) => {
+    // A call with no subject is titled by how it ended, and says it only once.
+    const outcome = outcomeOf(row, view, t);
+    return {
+      key: row.key,
+      title: row.title || outcome || interactionLabel(row.kind, row.provider),
+      sub: [
+        interactionLabel(row.kind, row.provider),
+        row.title ? outcome : undefined,
+        directionWord(row, t),
+        activityDay(
+          row.occurredAt,
+          row.occurredPrecision,
+          locale,
+          recordZone,
+          formatDayMonth,
+        ),
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      pill: statusPill(row.status, t),
+      kind: row.kind,
+      source: row.source,
+      context:
+        row.kind === "note" && row.row?.content_state === "available"
+          ? markdownLines(row.row.body ?? "")
+              .join(" ")
+              .slice(0, 280) || undefined
+          : undefined,
+    };
+  });
+}
+
+// A thread entry carries no outcome, so it is read off the activity it opens.
+function outcomeOf(
+  said: Said,
+  view: Contact360,
+  t: Translator,
+): string | undefined {
+  const id = said.source?.id;
+  const activity =
+    said.row ?? view.activities?.data.find((row) => row.id === id);
+  return activity ? callOutcomeLabel(activity, t) : undefined;
 }
 
 export function callBackNumber(
