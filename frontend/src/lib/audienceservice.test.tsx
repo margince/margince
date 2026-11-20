@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useMessageAudience, useThreadAudience } from "./audienceservice";
@@ -176,10 +176,31 @@ describe("useThreadAudience", () => {
 
 // The open message is drawn from its own read, and the write's answer cannot
 // stand in for it. A write reported done before that read lands closes the
-// dialog over a message that still says its old audience.
+// dialog over a message that still says its old audience. A write that waits
+// on every other read the sweep reaches holds the dialog for as long as the
+// slowest one takes.
 describe("an audience write reports done only once the open message shows it", () => {
   const MESSAGE = "44444444-4444-4444-8444-444444444444";
   const OPEN_MESSAGE = ["email-presentation", MESSAGE, 1];
+  // What the drawer's editor names as its own read: the message, by prefix.
+  const CALLER_KEY = ["email-presentation", MESSAGE];
+  // A timeline the sweep reaches, whose re-read never comes back, as one
+  // offline or retrying would.
+  const STALLED_TIMELINE = ["activities", "contact", "p-1"];
+
+  function StalledTimeline() {
+    const reads = useRef(0);
+    useQuery({
+      queryKey: STALLED_TIMELINE,
+      queryFn: () => {
+        reads.current += 1;
+        return reads.current === 1
+          ? Promise.resolve({ drawn: "before the save" })
+          : new Promise<never>(() => undefined);
+      },
+    });
+    return null;
+  }
 
   function serverWithAudience(before: string, after: string) {
     const server = { audience: before };
@@ -214,7 +235,7 @@ describe("an audience write reports done only once the open message shows it", (
 
   function MessageSave({ onDone }: Readonly<{ onDone: () => void }>) {
     const mutation = useMessageAudience({
-      invalidate: () => [],
+      invalidate: () => [CALLER_KEY],
       onSettled: onDone,
     });
     return (
@@ -235,7 +256,7 @@ describe("an audience write reports done only once the open message shows it", (
 
   function ThreadSave({ onDone }: Readonly<{ onDone: () => void }>) {
     const mutation = useThreadAudience({
-      invalidate: () => [],
+      invalidate: () => [CALLER_KEY],
       onSettled: onDone,
     });
     return (
@@ -259,6 +280,7 @@ describe("an audience write reports done only once the open message shows it", (
     const seenWhenDone: unknown[] = [];
     render(
       <QueryClientProvider client={client}>
+        <StalledTimeline />
         <OpenMessage server={server}>
           <Save
             onDone={() => seenWhenDone.push(client.getQueryData(OPEN_MESSAGE))}
@@ -269,6 +291,10 @@ describe("an audience write reports done only once the open message shows it", (
     await screen.findByText("workspace");
     await user.click(screen.getByRole("button", { name: "save" }));
     await waitFor(() => expect(seenWhenDone).toHaveLength(1));
+    // The sweep still reached the timeline; the save only did not wait on it.
+    expect(client.getQueryState(STALLED_TIMELINE)?.fetchStatus).toBe(
+      "fetching",
+    );
     return seenWhenDone[0];
   }
 

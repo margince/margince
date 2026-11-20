@@ -3212,7 +3212,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "share.granted": "{name} giờ có quyền {access} với {record}.",
   "share.thisRecord": "hồ sơ này",
   "share.until": "Đến {date}",
-  "share.unnamedSubject": "thành viên hoặc nhóm này",
   "share.approvalRequired":
     "Lần chia sẻ này chỉ có hiệu lực sau khi được duyệt. Hiện chưa được áp dụng.",
   "share.teamMembers_one": "Nhóm · {count} thành viên",

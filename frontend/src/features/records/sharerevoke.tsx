@@ -46,22 +46,25 @@ export function shareRefusalMessage(
 // The version the reader saw rides the revoke, so a grant re-asserted since
 // (a new level, expiry or reason) is refused instead of removed unseen.
 export function RevokeGrantDialog({
-  grant,
+  grants,
+  revoking,
   grantsKey,
-  subjectName,
   recordName,
   onClose,
   returnFocusTo,
 }: {
-  grant: RecordGrant | null;
+  // Looked up in the current list, not kept from the press. A list re-read
+  // after a refusal then sends its newer version.
+  grants: readonly RecordGrant[] | undefined;
+  revoking: Readonly<{ id: string; subjectName: string }> | null;
   grantsKey: readonly unknown[];
-  subjectName: (grant: RecordGrant) => string;
   recordName: string;
   onClose: () => void;
   returnFocusTo: () => HTMLElement | null;
 }) {
   const t = useT();
   const queryClient = useQueryClient();
+  const grant = grants?.find((held) => held.id === revoking?.id) ?? null;
   const revoke = useMutation({
     mutationFn: async (held: RecordGrant) => {
       const { error } = await api.DELETE("/record-grants/{id}", {
@@ -108,10 +111,10 @@ export function RevokeGrantDialog({
       pending={revoke.isPending}
       error={revoke.isError ? shareRefusalMessage(revoke.error, t) : null}
     >
-      {grant && (
+      {grant && revoking && (
         <p>
           {t("share.revokeConfirm", {
-            name: subjectName(grant),
+            name: revoking.subjectName,
             access: accessLabel(grant.access, t),
             record: recordName,
           })}

@@ -3309,7 +3309,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.granted": "{name} hat jetzt {access} auf {record}.",
   "share.thisRecord": "diesen Datensatz",
   "share.until": "Bis {date}",
-  "share.unnamedSubject": "dieses Mitglied oder Team",
   "share.approvalRequired":
     "Dieser geteilte Zugriff wird erst nach einer Freigabe wirksam. Der Zugriff gilt noch nicht.",
   "share.teamMembers_one": "Team · {count} Mitglied",

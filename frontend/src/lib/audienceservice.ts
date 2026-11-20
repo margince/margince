@@ -132,21 +132,21 @@ export function useMessageAudience(options: {
 }
 
 /**
- * Re-reads what shows a message's audience, and resolves once the reads on
- * screen hold the new answer.
+ * Re-reads what shows a message's audience, and resolves once the caller's own
+ * reads hold the new answer.
  *
- * The write's answer is an Activity, not the access block a message draws, so
- * it cannot stand in for the read. Awaiting the refetch keeps the control
- * pending until the open message shows the new audience.
+ * The write answers with an Activity, which cannot stand in for the read. The
+ * sweep is not awaited: one offline or retrying timeline would hold the dialog.
+ * It starts first, so the awaited refetch joins it rather than cancelling it.
  */
 async function refreshMessageReads(
   queryClient: QueryClient,
   callerKeys: QueryKey[],
 ): Promise<void> {
-  await Promise.all([
-    ...callerKeys.map((queryKey) =>
-      queryClient.invalidateQueries({ queryKey }),
+  void queryClient.invalidateQueries({ predicate: showsAMessage });
+  await Promise.all(
+    callerKeys.map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey }, { cancelRefetch: false }),
     ),
-    queryClient.invalidateQueries({ predicate: showsAMessage }),
-  ]);
+  );
 }

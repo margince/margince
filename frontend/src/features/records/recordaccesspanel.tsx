@@ -171,17 +171,14 @@ function YouLine({
 // The first page carries the counts and the reader's own line; every loaded
 // page adds its rows.
 // The answer has one row per member, but its pages are read at different times,
-// so a member can land on two of them. A second row would list them twice under
-// one key.
+// so a member can land on two of them. The later page is the newer reading, so
+// its row wins, in the place the member first appeared.
 function oncePerMember(rows: readonly Member[]): Member[] {
-  const seen = new Set<string>();
-  return rows.filter((row) => {
-    if (seen.has(row.user_id)) {
-      return false;
-    }
-    seen.add(row.user_id);
-    return true;
-  });
+  const byMember = new Map<string, Member>();
+  for (const row of rows) {
+    byMember.set(row.user_id, row);
+  }
+  return [...byMember.values()];
 }
 
 function AccessBody({

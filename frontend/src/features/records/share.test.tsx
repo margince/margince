@@ -571,6 +571,37 @@ describe("ShareScreen", () => {
     );
   });
 
+  // A colleague who left is not on the live roster, and is still named by id.
+  it("names a grantee the roster does not list, on Revoke and in its question", async () => {
+    const departed = { ...existingGrant, subject_id: "u-gone" };
+    installBaseFetch({
+      "/users/names": () =>
+        jsonResponse({
+          data: [
+            { id: "u-gone", display_name: "Lee Former", departed: true },
+            { id: "u-1", display_name: "Priya Shah" },
+          ],
+        }),
+      "/record-grants": () =>
+        jsonResponse({
+          data: [departed],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Revoke access to Acme renewal for Lee Former (left)",
+      }),
+    );
+
+    expect((await screen.findByRole("dialog")).textContent).toContain(
+      "Revoke Read access to Acme renewal for Lee Former (left)?",
+    );
+  });
+
   it("confirms a grant by naming who can now see the record", async () => {
     const posts: Record<string, unknown>[] = [];
     installBaseFetch({ "/record-grants": grantEndpoint(posts, existingGrant) });

@@ -246,7 +246,7 @@ describe("WhoCanSeePanel", () => {
   });
 
   // Pages are read at different times, so one member can come back on two.
-  it("lists a member once when two pages both carry them", async () => {
+  it("lists a member once, as the later page has them, when two pages both carry them", async () => {
     const user = userEvent.setup();
     serve(
       answer({
@@ -254,9 +254,13 @@ describe("WhoCanSeePanel", () => {
         page: { has_more: true, next_cursor: "c-2", total: 3 },
       }),
       {
+        // Between the two reads Kim was shared the contact directly.
         "c-2": answer({
           data: [
-            member("u-kim", "Kim Rep", {}),
+            member("u-kim", "Kim Rep", {
+              group: "shared",
+              read_reasons: [{ code: "user_share", access: "read" }],
+            }),
             member("u-noor", "Noor Rep", {}),
           ],
           page: { has_more: false, next_cursor: null, total: 3 },
@@ -266,11 +270,10 @@ describe("WhoCanSeePanel", () => {
     render(<WhoCanSeePanel kind="contact" recordId="c-1" />);
     await screen.findByTestId("who-can-see-owner");
     await user.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Load more" })).toBeNull(),
-    );
+    const shared = await screen.findByTestId("who-can-see-shared");
 
     expect(screen.getAllByText("Kim Rep")).toHaveLength(1);
+    expect(within(shared).getByText("Kim Rep")).toBeTruthy();
   });
 
   it("counts, without naming, the colleagues a team adds", async () => {

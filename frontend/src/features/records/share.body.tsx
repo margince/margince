@@ -39,7 +39,7 @@ import { throwProblem } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useViewerId } from "../../lib/session";
 import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
-import { ShareAccessRow, useShareNames } from "./share.accessrow";
+import { ShareAccessRow, useShareRecordName } from "./share.accessrow";
 import { ShareBack } from "./share.back";
 import { ShareConfirmation } from "./share.confirmation";
 import {
@@ -83,11 +83,7 @@ export function ShareScreenBody({
 
   const { roster, usersQuery, teamsQuery, rosterPartial } = useShareRoster();
   const toast = useToast();
-  const { recordName, subjectName } = useShareNames(
-    recordType,
-    recordId,
-    roster,
-  );
+  const recordName = useShareRecordName(recordType, recordId);
 
   const heldBySubject = useMemo(() => {
     const bySubject = new Map<string, RecordGrant>();
@@ -198,7 +194,10 @@ export function ShareScreenBody({
     },
   });
 
-  const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [revoking, setRevoking] = useState<{
+    id: string;
+    subjectName: string;
+  } | null>(null);
 
   const grantErrorMessage = grant.isError
     ? shareRefusalMessage(grant.error, t)
@@ -444,7 +443,6 @@ export function ShareScreenBody({
                     <ShareAccessRow
                       key={g.id}
                       grant={g}
-                      subjectName={subjectName(g)}
                       recordName={recordName}
                       // The one share a reader who may not share can take
                       // away is one made to themselves (grants.go mayRevoke).
@@ -452,7 +450,9 @@ export function ShareScreenBody({
                         mayRetract ||
                         (g.subject_type === "user" && g.subject_id === viewerId)
                       }
-                      onRevoke={() => setRevokingId(g.id)}
+                      onRevoke={(subjectName) =>
+                        setRevoking({ id: g.id, subjectName })
+                      }
                     />
                   ))}
                 </div>
@@ -461,11 +461,11 @@ export function ShareScreenBody({
           </Panel>
 
           <RevokeGrantDialog
-            grant={grantsQuery.data?.find((g) => g.id === revokingId) ?? null}
+            grants={grantsQuery.data}
+            revoking={revoking}
             grantsKey={grantsKey}
-            subjectName={subjectName}
             recordName={recordName}
-            onClose={() => setRevokingId(null)}
+            onClose={() => setRevoking(null)}
             returnFocusTo={returnFocusToSubject}
           />
         </>
