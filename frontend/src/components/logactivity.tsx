@@ -3,17 +3,11 @@ import { type ReactNode, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
-import {
-  DateInput,
-  type ISODate,
-  isISODate,
-  isoOrBlank,
-} from "../design-system/dateinput";
+import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
 import { useToast } from "../design-system/toast";
-import { dueDayBounds } from "../format/calendarday";
 import { useT } from "../i18n";
 import {
   type ActivityDraft,
@@ -35,6 +29,7 @@ import { useMe } from "../lib/session";
 import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
+import { dueBoundsOf, latestDayOf } from "./logactivity.days";
 import { ActivityKindField } from "./logactivity.kindfield";
 import {
   completeLoggedTask,
@@ -72,21 +67,6 @@ import { useTaskUpdate } from "./taskwrite";
 import { useUnsavedGuard } from "./unsaved";
 
 export type OpeningKind = "note" | "task" | "call" | "meeting";
-
-function dueBoundsOf(
-  kind: ActivityDraft["kind"],
-  recordZone: string,
-): { min?: ISODate; max?: ISODate } {
-  return kind === "task" ? dueDayBounds(recordZone) : {};
-}
-
-function latestDayOf(
-  kind: ActivityDraft["kind"],
-  recordZone: string,
-): ISODate | undefined {
-  const day = todayDay(kind, recordZone);
-  return kind !== "task" && isISODate(day) ? day : undefined;
-}
 
 export function LogActivityForm({
   entityType,
