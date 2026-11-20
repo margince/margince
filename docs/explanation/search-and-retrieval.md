@@ -129,7 +129,7 @@ the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per
 
 A grouped page of one plain word reads a type's own matches first (`withOwnMatches`). For
 contacts, companies and leads, these are the rows the name index finds. A whole address or domain
-counts too, and so does one that earns a tier. A row found only by part of an address then scores
+counts too, and so does a prefix that gets a tier. A row found only by part of an address then scores
 0, or at most 0.1 for a company. The employer arm scores below 0.
 
 When the own matches fill the `N + 1` rows above that score, the statement skips the scans for

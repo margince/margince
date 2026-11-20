@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -71,7 +72,7 @@ func TestAFilledGroupedPageSkipsTheContainedAddressScans(t *testing.T) {
 	statements := &statementLog{}
 	cfg := e.Pool.Config().Copy()
 	cfg.ConnConfig.Tracer = statements
-	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	pool, err := testdb.OwnPoolFromConfig(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
