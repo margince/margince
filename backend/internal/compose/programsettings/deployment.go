@@ -41,17 +41,18 @@ var (
 		Key: "mcp.client_registration.metadata_document", Env: "MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT", Type: config.Bool, Default: config.Some(true), Roles: apiOnly,
 		Doc: "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > AI tool access says.",
 	})
-	// The bounds on clients that registered themselves and that no consent has
-	// used: how many may exist, and how long one is kept.
+	// The bounds on clients that made themselves (registration or a metadata
+	// document) and that no consent has used: how many may exist, and how long
+	// one is kept.
 	MCPUnusedClientLimit = config.Define(config.Spec[int]{
 		Key: "mcp.client_registration.unused_limit", Env: "MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_LIMIT", Type: config.Int,
 		Default: config.Some(identity.DefaultUnusedDynamicClientCap), Validate: atLeastOne, Roles: apiOnly,
-		Doc: "Most clients that AI tools registered at /oauth/register and that no sign-in has used yet; a new one past it is refused.",
+		Doc: "Most clients that AI tools made themselves (at /oauth/register or by a metadata document) and that no sign-in has used yet; a new one past it removes the oldest such client.",
 	})
 	MCPUnusedClientRetention = config.Define(config.Spec[time.Duration]{
 		Key: "mcp.client_registration.unused_retention", Env: "MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_RETENTION", Type: config.Duration,
 		Default: config.Some(identity.DefaultUnusedDynamicClientRetention), Validate: positiveWindow, Roles: workerOnly,
-		Doc: "How long a client an AI tool registered itself, and that no sign-in has used, is kept before the hourly sweep deletes it.",
+		Doc: "How long a client an AI tool made itself, and that no sign-in has used, is kept before the hourly sweep deletes it.",
 	})
 	AnalyticsPerformance = config.Define(config.Spec[bool]{
 		Key: "analytics.performance_enabled", Env: "MARGINCE_ANALYTICS_PERFORMANCE_ENABLED", Type: config.Bool, Default: config.Some(false), Roles: both,

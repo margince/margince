@@ -34,9 +34,6 @@ func (e *cimdEnv) selfRegister(t *testing.T, h Handlers, name string) (int, stri
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("register answered no JSON document: %v (%s)", err, rec.Body.String())
 	}
-	if rec.Code == http.StatusTooManyRequests && body.Error != oauthErrTemporarilyUnavailable {
-		t.Fatalf("a refusal at the cap answered error %q, want %q", body.Error, oauthErrTemporarilyUnavailable)
-	}
 	return rec.Code, body.ClientID
 }
 
@@ -68,34 +65,74 @@ func (e *cimdEnv) clientExists(t *testing.T, clientID string) bool {
 	return exists
 }
 
-func TestSelfRegistrationStopsAtTheCapOnClientsNoConsentUsed(t *testing.T) {
+// unusedSelfMade counts the self-made clients no consent used.
+func (e *cimdEnv) unusedSelfMade(t *testing.T) int {
+	t.Helper()
+	var n int
+	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+		return tx.QueryRow(e.ctx, `SELECT count(*) FROM oauth_client c WHERE `+unusedSelfMadeClient).Scan(&n)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// A full cap makes room instead of refusing: someone filling it cannot shut a
+// real tool out, and the never-used clients stay at the cap.
+func TestAFullCapMakesRoomByRemovingTheOldestUnusedClient(t *testing.T) {
 	e := setupCIMD(t, "dcr-cap")
 	h := Handlers{svc: e.svc}.WithUnusedDynamicClientCap(2)
 	admin := e.actorWith(t, fullAgentClientGrant)
-	if _, _, err := e.svc.RegisterAgentClient(e.ctx, admin, RegisterAgentClientInput{
+	byAdmin, _, err := e.svc.RegisterAgentClient(e.ctx, admin, RegisterAgentClientInput{
 		Name: "Admin tool", RedirectURIs: []string{"https://admin-tool.example/cb"},
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
-
-	var first string
-	for i := range 2 {
+	registered := make([]string, 0, 4)
+	for i := range 4 {
 		code, clientID := e.selfRegister(t, h, "Tool")
 		if code != http.StatusCreated {
-			t.Fatalf("registration %d under the cap answered %d", i+1, code)
+			t.Fatalf("registration %d answered %d, want 201 whatever the table holds", i+1, code)
 		}
-		if i == 0 {
-			first = clientID
+		registered = append(registered, clientID)
+		if i == 1 {
+			e.consent(t, registered[0])
 		}
 	}
-	if code, _ := e.selfRegister(t, h, "Tool"); code != http.StatusTooManyRequests {
-		t.Fatalf("a registration past the cap answered %d, want 429", code)
+	if got := e.unusedSelfMade(t); got != 2 {
+		t.Errorf("never-used self-made clients = %d, want the cap of 2", got)
 	}
+	for i, want := range []bool{true, false, true, true} {
+		if kept := e.clientExists(t, registered[i]); kept != want {
+			t.Errorf("registration %d: kept = %v, want %v (the first was used, the second was the oldest unused)", i+1, kept, want)
+		}
+	}
+	if !e.clientExists(t, byAdmin.ClientID) {
+		t.Error("an admin's client was removed to make room; only self-made clients count")
+	}
+}
 
-	e.consent(t, first)
-	if code, _ := e.selfRegister(t, h, "Tool"); code != http.StatusCreated {
-		t.Errorf("a registration after a consent used one client answered %d, want 201: "+
-			"a used client does not count against the cap", code)
+// A metadata-document client is a self-made client too: its first resolution
+// is held to the cap a registration is.
+func TestADocumentClientMakesRoomUnderTheSameCap(t *testing.T) {
+	e := setupCIMD(t, "cimd-cap")
+	h := Handlers{svc: e.svc}.WithUnusedDynamicClientCap(1)
+	_, registered := e.selfRegister(t, h, "Tool")
+	clientID := e.docs.URL + "/client.json"
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, 1); err != nil {
+		t.Fatal(err)
+	}
+	if e.clientExists(t, registered) || !e.clientExists(t, clientID) {
+		t.Errorf("after a document client under a cap of 1: registered kept = %v, document kept = %v; want false, true",
+			e.clientExists(t, registered), e.clientExists(t, clientID))
+	}
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, 1); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.unusedSelfMade(t); got != 1 {
+		t.Errorf("refreshing a known document client changed the count to %d, want 1", got)
 	}
 }
 
@@ -118,10 +155,14 @@ func TestTheSweepDeletesOnlyOldSelfRegisteredClientsNoConsentUsed(t *testing.T) 
 		t.Fatal(err)
 	}
 	clients["old by an admin"] = byAdmin.ClientID
+	clients["old document"] = e.docs.URL + "/client.json"
+	if err := e.svc.resolveCIMDClient(e.ctx, clients["old document"], DefaultUnusedDynamicClientCap); err != nil {
+		t.Fatal(err)
+	}
 	e.consent(t, clients["old used"])
 	err = database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.ctx, `UPDATE oauth_client SET created_at = now() - interval '30 days'
-			WHERE client_id = ANY($1)`, []string{clients["old unused"], clients["old used"], clients["old by an admin"]})
+			WHERE client_id = ANY($1)`, []string{clients["old unused"], clients["old used"], clients["old by an admin"], clients["old document"]})
 		return err
 	})
 	if err != nil {
@@ -137,12 +178,50 @@ func TestTheSweepDeletesOnlyOldSelfRegisteredClientsNoConsentUsed(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if purged != 1 {
-		t.Errorf("purged %d clients, want 1", purged)
+	if purged != 2 {
+		t.Errorf("purged %d clients, want 2", purged)
 	}
 	for name, clientID := range clients {
-		if kept, want := e.clientExists(t, clientID), name != "old unused"; kept != want {
+		if kept, want := e.clientExists(t, clientID), name != "old unused" && name != "old document"; kept != want {
 			t.Errorf("%s client: kept = %v, want %v", name, kept, want)
 		}
+	}
+}
+
+// A consent holds its client locked while it makes the grant. The sweep skips
+// that client and still deletes the rest of its batch, and the consent then
+// commits.
+func TestTheSweepLeavesAClientAConsentHoldsAndDeletesTheRest(t *testing.T) {
+	e := setupCIMD(t, "dcr-race")
+	h := Handlers{svc: e.svc}
+	_, held := e.selfRegister(t, h, "Held")
+	_, idle := e.selfRegister(t, h, "Idle")
+	admin := e.actorWith(t, fullAgentClientGrant)
+
+	consent, err := e.svc.db.Pool().Begin(e.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := consent.Rollback(e.ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	}()
+	if err := lockClientRegistration(e.ctx, consent, held); err != nil {
+		t.Fatal(err)
+	}
+	purged, err := e.svc.PurgeUnusedDynamicClients(principal.SystemActing(e.ctx, "system:test"), 0, 100)
+	if err != nil {
+		t.Fatalf("the sweep failed while a consent held one client: %v", err)
+	}
+	if purged != 1 || e.clientExists(t, idle) {
+		t.Errorf("purged %d, idle client kept = %v; want 1 and false", purged, e.clientExists(t, idle))
+	}
+	if _, err := consent.Exec(e.ctx, `INSERT INTO oauth_grant (client_id, user_id, scopes) VALUES ($1, $2, '{read}')`,
+		held, admin.UserID); err != nil {
+		t.Fatalf("the consent could not make its grant after the sweep: %v", err)
+	}
+	if err := consent.Commit(e.ctx); err != nil {
+		t.Fatalf("the consent could not commit after the sweep: %v", err)
 	}
 }

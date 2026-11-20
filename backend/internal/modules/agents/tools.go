@@ -172,10 +172,9 @@ type readRecord struct {
 func (t readRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_record", Title: "Read a record", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       readRecordCopy.render(),
-		Instead:           readRecordCopy.Instead,
-		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Description:   readRecordCopy.render(),
+		Instead:       readRecordCopy.Instead,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getContact/getCompany/getDeal/getLead/getActivity/getProject/getPartner/getProduct/getOfferTemplate/getOffer/getCommissionEntry/getDealRoom",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner","product","offer_template","offer","commission","deal_room"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
@@ -224,10 +223,9 @@ type createRecord struct {
 func (t createRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "create_record", Title: "Create a record", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       createRecordCopy.render(),
-		Instead:           createRecordCopy.Instead,
-		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		Description:   createRecordCopy.render(),
+		Instead:       createRecordCopy.Instead,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate/createOffer/createDealRoom",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer","deal_room"]},

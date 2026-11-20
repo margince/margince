@@ -49,3 +49,36 @@ func TestRelinkToAProjectWaitsEvenForItsUser(t *testing.T) {
 		}
 	}
 }
+
+// Away from a project the waiting flag changes nothing, so each relink is
+// admitted as it was before the flag. A named version still binds the write.
+// A batch that names none runs as its user's own move. Automatic work with no
+// passport still waits for the version it could not name.
+func TestARelinkAwayFromAProjectIsAdmittedAsBeforeTheFlag(t *testing.T) {
+	gate := auth.NewGate(unboundedAuthority{})
+	deal := json.RawMessage(`{"entity_type":"deal"}`)
+	version := int64(7)
+	admit := func(ctx context.Context, spec mcp.ToolSpec, observed *int64) (context.Context, error) {
+		return gate.Admit(ctx, spec, func() (mcp.TierResolverInput, error) {
+			return mcp.TierResolverInput{Args: deal, ObservedVersion: observed}, nil
+		})
+	}
+
+	ctx, err := admit(passportWriter(), relinkActivities{}.Spec(), nil)
+	if err != nil {
+		t.Fatalf("relink_activities to a deal, for its user's own agent: %v, want it to run at once", err)
+	}
+	if _, pinned := auth.AutoExecutePin(ctx); pinned {
+		t.Error("relink_activities named no version, so nothing may pin its write")
+	}
+	ctx, err = admit(passportWriter(), relinkActivity{}.Spec(), &version)
+	if err != nil {
+		t.Fatalf("relink_activity to a deal, for its user's own agent: %v, want it to run at once", err)
+	}
+	if pin, pinned := auth.AutoExecutePin(ctx); !pinned || pin != version {
+		t.Errorf("relink_activity named version %d, and its write is pinned to %d (pinned=%v)", version, pin, pinned)
+	}
+	if _, err := admit(scopedAgentCtx(principal.ScopeWrite), relinkActivities{}.Spec(), nil); !errors.Is(err, apperrors.ErrRequiresApproval) {
+		t.Errorf("relink_activities to a deal with no passport and no version: %v, want it to wait", err)
+	}
+}

@@ -63,11 +63,10 @@ type describeAnalyticsVocabulary struct {
 func (t describeAnalyticsVocabulary) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "describe_analytics_vocabulary", Title: "Describe the analytics vocabulary",
-		ProductMadeAnswer: true,
-		Version:           toolVersionV1,
-		Description:       describeAnalyticsVocabularyCopy.render(),
-		Instead:           describeAnalyticsVocabularyCopy.Instead,
-		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		Version:       toolVersionV1,
+		Description:   describeAnalyticsVocabularyCopy.render(),
+		Instead:       describeAnalyticsVocabularyCopy.Instead,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeAnalyticsVocabulary",
 		// No arguments. The document is composed for the calling principal, so
 		// a population filter would only let a caller narrow what it already

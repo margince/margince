@@ -138,6 +138,21 @@ type jsonSchema struct {
 	// see the file comment for why that is the honest default here.
 	//nolint:tagliatelle // additionalProperties is JSON Schema's own member name, camelCase by that spec
 	AdditionalProperties *additionalProperties `json:"additionalProperties,omitempty"`
+	// The members below only a read of a contract schema meets; the deriver never
+	// writes them. CarriesFreeText reads them.
+	Const json.RawMessage `json:"const,omitempty"`
+	//nolint:tagliatelle // x-extensible-enum is the contract's own schema extension
+	ExtensibleEnum bool `json:"x-extensible-enum,omitempty"`
+	//nolint:tagliatelle // anyOf is JSON Schema's own member name
+	AnyOf []*jsonSchema `json:"anyOf,omitempty"`
+	//nolint:tagliatelle // oneOf is JSON Schema's own member name
+	OneOf []*jsonSchema `json:"oneOf,omitempty"`
+	//nolint:tagliatelle // allOf is JSON Schema's own member name
+	AllOf []*jsonSchema `json:"allOf,omitempty"`
+	//nolint:tagliatelle // patternProperties is JSON Schema's own member name
+	PatternProperties map[string]*jsonSchema `json:"patternProperties,omitempty"`
+	//nolint:tagliatelle // prefixItems is JSON Schema's own member name
+	PrefixItems []*jsonSchema `json:"prefixItems,omitempty"`
 }
 
 // additionalProperties is JSON Schema's own union: a BOOLEAN closing or opening

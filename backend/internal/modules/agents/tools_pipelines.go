@@ -87,10 +87,9 @@ type listPipelinesTool struct{ list PipelineLister }
 func (t listPipelinesTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "list_pipelines", Title: "List pipelines and their stages", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       listPipelinesCopy.render(),
-		Instead:           listPipelinesCopy.Instead,
-		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		Description:   listPipelinesCopy.render(),
+		Instead:       listPipelinesCopy.Instead,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listPipelines",
 		// No filter beyond the route's own: the whole config is small, bounded
 		// by how many pipelines a workspace configures.

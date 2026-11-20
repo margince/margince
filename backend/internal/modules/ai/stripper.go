@@ -44,6 +44,13 @@ func NewSecretStripper() model.SecretStripper {
 
 type secretStripper struct{}
 
+// textStripper is a stripper that also reads plain record text, which the
+// embedding lane sends as inputs rather than as a request body.
+type textStripper interface {
+	model.SecretStripper
+	StripText(ctx context.Context, text []byte) ([]byte, model.StripReport, error)
+}
+
 func (s secretStripper) Strip(_ context.Context, payload []byte) ([]byte, model.StripReport, error) {
 	report := model.StripReport{}
 	kinds := map[string]bool{}
@@ -58,11 +65,25 @@ func (s secretStripper) Strip(_ context.Context, payload []byte) ([]byte, model.
 		at = seg.to
 	}
 	out = append(out, payload[at:]...)
+	return out, reported(report, kinds), nil
+}
+
+// StripText strips record text on the text lane. It skips no key, because in
+// text a key that looks like an attachment's field is prose.
+func (secretStripper) StripText(_ context.Context, text []byte) ([]byte, model.StripReport, error) {
+	report := model.StripReport{}
+	kinds := map[string]bool{}
+	out := stripLane(text, credentialmask.Text, &report, kinds)
+	return out, reported(report, kinds), nil
+}
+
+// reported lists the kinds a pass found, in a stable order.
+func reported(report model.StripReport, kinds map[string]bool) model.StripReport {
 	for k := range kinds {
 		report.Kinds = append(report.Kinds, k)
 	}
 	sort.Strings(report.Kinds)
-	return out, report, nil
+	return report
 }
 
 // strippedMarker is what a removed credential leaves in model-bound text.
@@ -71,7 +92,12 @@ func strippedMarker(kind string) string { return "[SECRET-REMOVED:" + kind + "]"
 // stripSegment runs the shared credential rules for the JSON lane over one
 // scannable stretch of the body.
 func (secretStripper) stripSegment(payload []byte, report *model.StripReport, kinds map[string]bool) []byte {
-	stripped, found := credentialmask.Replace(payload, credentialmask.JSON, strippedMarker)
+	return stripLane(payload, credentialmask.JSON, report, kinds)
+}
+
+// stripLane runs the shared credential rules for one lane and counts what went.
+func stripLane(payload []byte, lane credentialmask.Lane, report *model.StripReport, kinds map[string]bool) []byte {
+	stripped, found := credentialmask.Replace(payload, lane, strippedMarker)
 	report.Findings += len(found)
 	for _, kind := range found {
 		kinds[kind] = true

@@ -108,11 +108,6 @@ func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 	err = h.svc.db.Tx(ctx, func(tx pgx.Tx) error {
 		return insertDynamicClient(ctx, tx, h.unusedDynamicClientLimit(), clientID, req)
 	})
-	if errors.Is(err, apperrors.ErrBudgetExceeded) {
-		logRegistrationRefused(r, oauthErrTemporarilyUnavailable, "unused_client_cap")
-		oauthError(w, http.StatusTooManyRequests, oauthErrTemporarilyUnavailable, unusedDynamicClientsFull)
-		return
-	}
 	if errors.Is(err, database.ErrNoWorkspace) {
 		// Registration is per tenant; the request's host resolved to none.
 		oauthError(w, http.StatusBadRequest, "invalid_request", "no workspace resolved for this request")
@@ -209,7 +204,7 @@ func (h Handlers) validateAuthorize(r *http.Request, q url.Values) (authorizeReq
 	if !methods.MetadataDocument && cimdClientID(req.ClientID) == nil {
 		return authorizeRequest{}, oauthErrUnauthorizedClient, refusedMethodDescription
 	}
-	if err := h.svc.resolveCIMDClient(ctx, req.ClientID); err != nil && !errors.Is(err, errNotCIMD) {
+	if err := h.svc.resolveCIMDClient(ctx, req.ClientID, h.unusedDynamicClientLimit()); err != nil && !errors.Is(err, errNotCIMD) {
 		return authorizeRequest{}, oauthErrInvalidClient, "unknown client_id"
 	}
 	err = h.svc.db.Tx(ctx, func(tx pgx.Tx) error {

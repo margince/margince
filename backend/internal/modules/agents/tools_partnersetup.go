@@ -70,9 +70,8 @@ const setUpPartnerToolName = "set_up_partner"
 func (t setUpPartner) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: setUpPartnerToolName, Title: "Set up a partner program", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       setUpPartnerCopy.render(),
-		Instead:           setUpPartnerCopy.Instead,
+		Description: setUpPartnerCopy.render(),
+		Instead:     setUpPartnerCopy.Instead,
 		// Waits for a human even when a passport acts as its user. The web app
 		// sets a program up directly. An assistant naming a company a partner is
 		// a request for someone to look at.

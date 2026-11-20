@@ -79,11 +79,10 @@ type describeQueryVocabulary struct {
 func (t describeQueryVocabulary) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "describe_query_vocabulary", Title: "Describe the query vocabulary",
-		ProductMadeAnswer: true,
-		Version:           toolVersionV1,
-		Description:       describeQueryVocabularyCopy.render(),
-		Instead:           describeQueryVocabularyCopy.Instead,
-		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		Version:       toolVersionV1,
+		Description:   describeQueryVocabularyCopy.render(),
+		Instead:       describeQueryVocabularyCopy.Instead,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeQueryVocabulary",
 		// No arguments. The document is composed for the calling principal, so
 		// there is nothing to ask about: a target filter would only let a

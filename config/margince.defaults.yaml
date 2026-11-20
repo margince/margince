@@ -214,7 +214,7 @@ mcp:
     dynamic: true
     metadata_document: true
     unused_limit: 1000
-    unused_retention: 168h0m0s
+    unused_retention: 24h0m0s
   connector_enabled: false
 
 operations:

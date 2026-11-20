@@ -70,10 +70,9 @@ type whoami struct{ read IdentityReader }
 func (t whoami) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "whoami", Title: "Who this passport acts for", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       whoamiCopy.render(),
-		Instead:           whoamiCopy.Instead,
-		RequiredScope:     principal.ScopeRead, SelfDescribing: true, Tier: mcp.TierAutoExecute,
+		Description:   whoamiCopy.render(),
+		Instead:       whoamiCopy.Instead,
+		RequiredScope: principal.ScopeRead, SelfDescribing: true, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getActingIdentity",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[WhoamiResult](),

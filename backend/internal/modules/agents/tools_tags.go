@@ -217,10 +217,9 @@ type listTags struct{ tags Tags }
 func (t listTags) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "list_tags", Title: "List tags", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       listTagsCopy.render(),
-		Instead:           listTagsCopy.Instead,
-		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		Description:   listTagsCopy.render(),
+		Instead:       listTagsCopy.Instead,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listTags",
 		InputSchema: schema(`{"type":"object","properties":{
 			"include_archived":{"type":"boolean","description":"Also list retired words; they cannot be applied"},
@@ -256,10 +255,9 @@ type getTag struct{ tags Tags }
 func (t getTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "get_tag", Title: "Get a tag", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       getTagCopy.render(),
-		Instead:           getTagCopy.Instead,
-		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		Description:   getTagCopy.render(),
+		Instead:       getTagCopy.Instead,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getTag",
 		InputSchema: schema(`{"type":"object","required":["tag_id"],"properties":{
 			"tag_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
@@ -295,10 +293,9 @@ func (t getRecordTags) Spec() mcp.ToolSpec {
 	}
 	return mcp.ToolSpec{
 		Name: "get_record_tags", Title: "Get a record's tags", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       getRecordTagsCopy.render(),
-		Instead:           getRecordTagsCopy.Instead,
-		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		Description:   getRecordTagsCopy.render(),
+		Instead:       getRecordTagsCopy.Instead,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getRecordTags",
 		InputSchema: schema(`{"type":"object","required":["record_type","record_id"],"properties":{
 			"record_type":{"type":"string","enum":[` + strings.Join(quoted, ",") + `]},

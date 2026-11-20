@@ -188,17 +188,18 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// tier says: what the colleague may do unaided, their agent may do too. The
 	// tier then decides nothing, so a version it could not name raises nothing,
 	// and one it did name is still bound below. A dynamic tool that waits even
-	// for its user is decided per call by its resolver. A version it could not
-	// name raises nothing there either. Automatic work with nobody behind it keeps
-	// both rules.
+	// for its user is decided per call by its resolver. A call it raises waits.
+	// One it admits runs as it would without the flag, unnamed version or not.
+	// Automatic work with nobody behind it keeps both rules.
 	resolvedAuto := tier == mcp.TierAutoExecute
+	ownMoveDecidedPerCall := p.ActsAsItsUser() && spec.WaitsEvenForItsUser
 	effectiveTier := TierFor(ctx, p, spec)
 	switch {
 	case effectiveTier == mcp.TierAutoExecute:
 		tier = mcp.TierAutoExecute
 	case effectiveTier == mcp.TierConfirmationRequired:
 		tier = mcp.TierConfirmationRequired
-	case tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil && !p.ActsAsItsUser():
+	case tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil && !ownMoveDecidedPerCall:
 		return ctx, fmt.Errorf(
 			"%s resolved to auto-execute without naming the record version it was resolved from: %w",
 			spec.Name, apperrors.ErrRequiresApproval)

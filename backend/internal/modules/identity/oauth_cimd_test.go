@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -111,6 +112,25 @@ func TestARedirectInADocumentIsHeldToTheSameRuleAsARegisteredOne(t *testing.T) {
 		if _, err := validCIMD([]byte(body), url); err == nil {
 			t.Errorf("redirect %q was accepted from a metadata document but would be refused at registration", redirect)
 		}
+	}
+}
+
+// A metadata document is held to the redirect limit a registration is. It is
+// not a way to hold more redirects than an admin may set.
+func TestADocumentListsNoMoreRedirectsThanAnAdminMay(t *testing.T) {
+	const url = "https://app.example.com/client.json"
+	document := func(n int) []byte {
+		uris := make([]string, n)
+		for i := range uris {
+			uris[i] = `"https://app.example.com/cb/` + strconv.Itoa(i) + `"`
+		}
+		return []byte(`{"client_id":"` + url + `","client_name":"n","redirect_uris":[` + strings.Join(uris, ",") + `]}`)
+	}
+	if _, err := validCIMD(document(maxAgentClientRedirects), url); err != nil {
+		t.Errorf("%d redirects were refused: %v", maxAgentClientRedirects, err)
+	}
+	if _, err := validCIMD(document(maxAgentClientRedirects+1), url); err == nil {
+		t.Errorf("%d redirects were accepted from a metadata document", maxAgentClientRedirects+1)
 	}
 }
 

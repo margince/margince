@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -36,11 +35,14 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return model.Embeddings{}, errors.New("ai: embeddings outside workspace context")
 	}
-	// An input is record text, not a request body, so it takes the text lane.
-	// No key in it marks attachment bytes the scan must skip.
+	// An input is record text, not a request body, so the stripper reads it on
+	// the text lane.
 	stripped := make([]string, len(req.Inputs))
 	for i, input := range req.Inputs {
-		clean, _ := credentialmask.Replace([]byte(input), credentialmask.Text, strippedMarker)
+		clean, _, err := r.stripper.StripText(ctx, []byte(input))
+		if err != nil {
+			return model.Embeddings{}, fmt.Errorf("ai: stripping embed input: %w", err)
+		}
 		stripped[i] = string(clean)
 	}
 	req.Inputs = stripped

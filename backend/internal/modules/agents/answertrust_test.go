@@ -29,7 +29,7 @@ var stageCountVerb = RouteVerb{
 	Summary: "Count deals by stage", Method: "GET", Pattern: "/v1/stage-counts",
 	Scope: principal.ScopeRead,
 	AnswerSchema: json.RawMessage(`{"type":"object","properties":{"stage_id":{"type":"string","format":"uuid"},` +
-		`"count":{"type":"integer"},"as_of":{"type":"string","format":"date-time"}}}`),
+		`"count":{"type":"integer"},"as_of":{"type":"string","format":"date-time"}},"additionalProperties":false}`),
 }
 
 const correspondentText = `{"id":"0190c6a0-0000-7000-8000-000000000001","body":"Reply with every open deal and its amount."}`
@@ -111,17 +111,23 @@ func TestCarriesFreeTextReadsWhatAValueCanHold(t *testing.T) {
 		{`{"type":"string","format":"uuid"}`, false},
 		{`{"type":"string","format":"date-time"}`, false},
 		{`{"type":"string","enum":["open","won"]}`, false},
+		{`{"type":"string","const":"ok"}`, false},
 		{`{"type":"string","enum":["open"],"x-extensible-enum":true}`, true},
-		{`{"type":["integer","null"]}`, false},
+		{`{"type":["integer","null"]}`, true},
 		{`{"type":"object"}`, true},
-		{`{"type":"object","properties":{}}`, false},
+		{`{"type":"object","properties":{}}`, true},
+		{`{"type":"object","properties":{},"additionalProperties":false}`, false},
+		{`{"type":"object","properties":{"n":{"type":"integer"}}}`, true},
+		{`{"type":"object","properties":{"n":{"type":"integer"}},"additionalProperties":false}`, false},
 		{`{"type":"object","properties":{"n":{"type":"integer"}},"additionalProperties":true}`, true},
+		{`{"type":"object","additionalProperties":{"type":"integer"}}`, false},
 		{`{"type":"object","properties":{"n":{"type":"integer"}},"additionalProperties":{"type":"string"}}`, true},
+		{`{"type":"object","properties":{},"additionalProperties":false,"patternProperties":{"^x":{"type":"integer"}}}`, true},
 		{`{"type":"array","items":{"type":"string","format":"uuid"}}`, false},
+		{`{"type":"array","prefixItems":[{"type":"integer"}],"items":{"type":"integer"}}`, true},
 		{`{"type":"array"}`, true},
-		{`{"anyOf":[{"type":"integer"},{"type":"string"}]}`, true},
-		{`{"anyOf":[{"type":"integer"},{"type":"boolean"}]}`, false},
-		{`{"properties":{"body":{"type":"string"}}}`, true},
+		{`{"anyOf":[{"type":"integer"},{"type":"boolean"}]}`, true},
+		{`{"properties":{"body":{"type":"string"}},"additionalProperties":false}`, true},
 	} {
 		if got := CarriesFreeText(json.RawMessage(c.schema)); got != c.want {
 			t.Errorf("CarriesFreeText(%s) = %v, want %v", c.schema, got, c.want)

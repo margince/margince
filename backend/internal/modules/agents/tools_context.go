@@ -107,10 +107,9 @@ type searchContext struct {
 func (t searchContext) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "search_context", Title: "Search for relevant material", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       searchContextCopy.render(),
-		Instead:           searchContextCopy.Instead,
-		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Description:   searchContextCopy.render(),
+		Instead:       searchContextCopy.Instead,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "searchContext",
 		// The input is three members and stays three. The retrieval seam

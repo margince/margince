@@ -40,10 +40,9 @@ type createTag struct{ tags Tags }
 func (t createTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "create_tag", Title: "Create a tag", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       createTagCopy.render(),
-		Instead:           createTagCopy.Instead,
-		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		Description:   createTagCopy.render(),
+		Instead:       createTagCopy.Instead,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		// A tag is a WORD, not a row with a scope, so this answer names no
 		// record and the replay has nothing to re-read. The grant is what the
 		// handler checked; it is what the replay checks. Without it a retry
@@ -83,10 +82,9 @@ type updateTag struct{ tags Tags }
 func (t updateTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "update_tag", Title: "Rename or recolour a tag", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       updateTagCopy.render(),
-		Instead:           updateTagCopy.Instead,
-		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		Description:   updateTagCopy.render(),
+		Instead:       updateTagCopy.Instead,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		// A tag is a WORD, not a row with a scope, so this answer names no
 		// record and the replay has nothing to re-read. The grant is what the
 		// handler checked; it is what the replay checks. Without it a retry
@@ -151,10 +149,9 @@ type archiveTag struct{ tags Tags }
 func (t archiveTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "archive_tag", Title: "Retire a tag", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		AskUserFirst:      true,
-		Description:       archiveTagCopy.render(),
-		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		AskUserFirst:  true,
+		Description:   archiveTagCopy.render(),
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		ReplayGrant: &mcp.ReplayGrant{Object: tagRecordType, Action: principal.ActionDelete},
 		OpenAPIOp:   "archiveTag",
 		InputSchema: schema(`{"type":"object","required":["tag_id"],"properties":{

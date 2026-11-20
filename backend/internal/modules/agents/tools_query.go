@@ -125,10 +125,9 @@ type queryWorkspace struct {
 func (t queryWorkspace) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "query_workspace", Title: "Query the workspace", Version: toolVersionV1,
-		ProductMadeAnswer: true,
-		Description:       queryWorkspaceCopy.render(),
-		Instead:           queryWorkspaceCopy.Instead,
-		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Description:   queryWorkspaceCopy.render(),
+		Instead:       queryWorkspaceCopy.Instead,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "queryWorkspace",
 		// The plan document is NOT re-declared here. Its grammar is published
