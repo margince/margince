@@ -241,7 +241,7 @@ func (s *Service) wireCommittee(
 	}
 	held := map[string]bool{}
 	for _, seat := range seats {
-		held[seat.Role] = true
+		held[dealrole.Recorded(seat.Role)] = true
 		wire := crmcontracts.CompanyCoverageSeat{
 			ContactId: openapi_types.UUID(seat.ContactID),
 			FullName:  identity[ids.From[ids.ContactKind](seat.ContactID)].fullName,

@@ -5577,6 +5577,7 @@ export const en = {
   "co.roleLabel.blocker": "Blocker",
   "co.roleLabel.influencer": "Influencer",
   "co.roleLabel.user": "End user",
+  "co.roleLabel.decision_maker": "Decision-maker",
   "co.evidence.extractedUnconfirmed": "Extracted by AI · not confirmed",
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",

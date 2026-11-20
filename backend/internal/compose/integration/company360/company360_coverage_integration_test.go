@@ -131,6 +131,28 @@ func TestCoverageReportsAChampionGapOnACompleteCommittee(t *testing.T) {
 	}
 }
 
+// A stored role is free text, so " Economic_Buyer " holds the economic buyer
+// seat and only the champion is a gap.
+func TestCoverageReadsAHeldRoleInAnyCase(t *testing.T) {
+	e := integration.Setup(t)
+	company := e.SeedCompany(t, "Brandt GmbH", nil)
+	pipeline, openStage, _ := integration.DealFixture(t, e)
+	deal := e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
+	buyer := e.SeedContact(t, "Ute Sommer", nil)
+	employ(t, e, buyer, company, "Procurement")
+	e.WsExec(t, `UPDATE deal SET company_id = $1 WHERE id = $2`, company, deal)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, ' Economic_Buyer ', 'manual', 'human:x')`, buyer, deal)
+
+	got, err := company360Service(e).Coverage(e.Admin(), ids.CompanyID{UUID: company})
+	if err != nil {
+		t.Fatalf("reading coverage: %v", err)
+	}
+	if got.Committee == nil || len(got.Committee.Gaps) != 1 || got.Committee.Gaps[0] != "champion" {
+		t.Fatalf("committee = %+v, want exactly the champion gap", got.Committee)
+	}
+}
+
 // An account the caller cannot see answers not-found, so this read does not
 // become the way to learn that a company exists.
 func TestCoverageHidesAnAccountItCannotRead(t *testing.T) {

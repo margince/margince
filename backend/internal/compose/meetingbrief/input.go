@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/datenotation"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/moneynotation"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -271,7 +272,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 			ContactID: attendee.ContactID.String(),
 			FullName:  attendee.FullName,
 			Title:     attendee.Title,
-			DealRole:  attendee.DealRole,
+			DealRole:  dealrole.Recorded(attendee.DealRole),
 			LastTouch: attendee.LastTouch.occurred(),
 			FirstTime: attendee.firstTime(),
 		})

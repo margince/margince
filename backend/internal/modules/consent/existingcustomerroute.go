@@ -86,7 +86,7 @@ func existingCustomerGround(
 		         SELECT 1 FROM relationship r
 		          WHERE r.kind = 'deal_stakeholder' AND r.deal_id = o.deal_id
 		            AND r.contact_id = $1 AND r.archived_at IS NULL
-		            AND r.role = ANY($4) AND r.created_at <= o.accepted_at)
+		            AND lower(trim(r.role)) = ANY($4) AND r.created_at <= o.accepted_at)
 		     OR EXISTS (
 		         SELECT 1 FROM relationship b
 		          WHERE b.kind = 'billing_contact' AND b.company_id = o.buyer_company_id

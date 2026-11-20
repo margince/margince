@@ -110,7 +110,7 @@ var assuranceSubjectsSQL = `
 		          FROM relationship r
 		         WHERE r.kind = 'deal_stakeholder'
 		           AND r.deal_id = d.id
-		           AND r.role = $3
+		           AND lower(trim(r.role)) = $3
 		           AND r.archived_at IS NULL) AS has_economic_buyer,
 		       (SELECT count(*)
 		          FROM stage_exit_criterion c
