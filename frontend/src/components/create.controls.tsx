@@ -210,11 +210,13 @@ export function MultiselectField({
   value,
   setValue,
   labelHidden,
+  error,
 }: Readonly<{
   field: CreateField;
   value: string;
   setValue: (next: string) => void;
   labelHidden?: boolean;
+  error?: string;
 }>) {
   const t = useT();
   return (
@@ -223,6 +225,7 @@ export function MultiselectField({
       labelHidden={labelHidden}
       required={field.required}
       hint={field.hint}
+      error={error}
     >
       {(control) => (
         <MultiSelect

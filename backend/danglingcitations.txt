@@ -128,7 +128,6 @@ backend/internal/modules/contacts/relationshiperrors.go migration 0007
 backend/internal/modules/contacts/relationshiperrors.go migration 1787111736
 backend/internal/modules/contacts/sitereadfinish.go migration 0221
 backend/internal/modules/customfields/candidates_integration_test.go core 0009
-backend/internal/modules/customfields/engine.go core 0063
 backend/internal/modules/customfields/engine.go core 0171
 backend/internal/modules/customfields/fieldobjects_test.go core 0171
 backend/internal/modules/customfields/service.go core 0063

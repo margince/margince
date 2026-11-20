@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { components } from "../../api/schema";
 import { usePageName } from "../../app/pagemeta";
 import { useBulkSelection } from "../../components/bulkverbs";
@@ -6,9 +7,9 @@ import { ListTable, useListQuery } from "../../components/listquery";
 import {
   createdColumn,
   lastActivityColumn,
-  mineEmptyNote,
+  mineEmptyLine,
   ownerColumn,
-  sharedEmptyNote,
+  sharedEmptyLine,
   sharedWithMeView,
   standardViews,
   tagsColumn,
@@ -20,7 +21,12 @@ import { ContactLink, CopyEmail } from "../../design-system/contactlink";
 import { useLocale, useT } from "../../i18n";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
-import { VCardImportAction, VCardImportPage } from "../import/vcard-import";
+import { useActionRefusal } from "../../lib/writerefusal";
+import {
+  useVCardImportRefusal,
+  VCardImportAction,
+  VCardImportPage,
+} from "../import/vcard-import";
 import {
   SavedViewsFailure,
   SaveViewAction,
@@ -74,6 +80,37 @@ export function ContactsScreen({
   );
 }
 
+// The ways a contact comes to exist. The vCard import is last: a reader
+// reaches for it with a stack of cards in hand. A seat refused them reads why
+// once, and each refused verb points at that sentence.
+function ContactListActions({
+  startCreating,
+}: Readonly<{ startCreating: boolean }>) {
+  const refusalId = useId();
+  const createRefusal = useActionRefusal({
+    object: "contact",
+    action: "create",
+  });
+  const importRefusal = useVCardImportRefusal();
+  const refusal = createRefusal ?? importRefusal;
+  return (
+    <>
+      <ContactCreateActions
+        startCreating={startCreating}
+        refusalId={refusalId}
+      />
+      <VCardImportAction
+        refusalId={importRefusal === undefined ? undefined : refusalId}
+      />
+      {refusal !== undefined && (
+        <span className="t-caption" id={refusalId}>
+          {refusal}
+        </span>
+      )}
+    </>
+  );
+}
+
 function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
   const t = useT();
   const pageName = usePageName("contacts");
@@ -102,18 +139,11 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
         state={state}
         unit="unit.contacts"
         unitOne="unit.contact"
-        emptyNote={
-          mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" }) ??
-          sharedEmptyNote({ t, state, unit: "unit.contacts" })
+        emptyLine={
+          mineEmptyLine({ t, state, viewerId, unit: "unit.contacts" }) ??
+          sharedEmptyLine({ t, state, unit: "unit.contacts" })
         }
-        action={
-          <>
-            <ContactCreateActions startCreating={startCreating} />
-            {/* Last, because it is the one a reader reaches for with a stack
-                of cards already in hand rather than while typing one contact. */}
-            <VCardImportAction />
-          </>
-        }
+        action={<ContactListActions startCreating={startCreating} />}
         columns={[
           {
             key: "name",

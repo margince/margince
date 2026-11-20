@@ -18,7 +18,7 @@ import {
   useTagChips,
 } from "../../components/listquery";
 import { useOwnerChips } from "../../components/ownerdials";
-import { mineEmptyNote, standardViews } from "../../components/recordlist";
+import { mineEmptyLine, standardViews } from "../../components/recordlist";
 import { useOwnerPicker } from "../../components/recordowners";
 import { RefusedFiltersNote } from "../../components/refusedfiltersnote";
 import { ErrorLine } from "../../design-system/errorline";
@@ -148,6 +148,7 @@ function DealCreateAction({
   return (
     <CreateAction
       label={t("create.deal")}
+      requires={{ object: "deal", action: "create" }}
       invalidate="deals"
       screen="deals"
       create={createDeal}
@@ -457,22 +458,24 @@ export function DealsScreen({
         selection={rowSelection}
         chips={surfaceChips}
         views={[...standardViews(viewerId, { sort: "" })]}
-        emptyNote={
-          refusal ? (
-            <RefusedFiltersNote
-              message={t("deals.filterRefused", { dial: refusal.names })}
-              dials={refusal.dials}
-              names={refusal.names}
-            />
-          ) : (
-            mineEmptyNote({
-              t,
-              state: dealsListState,
-              viewerId,
-              unit: "unit.deals",
-            })
-          )
-        }
+        {...(refusal
+          ? {
+              emptyNote: (
+                <RefusedFiltersNote
+                  message={t("deals.filterRefused", { dial: refusal.names })}
+                  dials={refusal.dials}
+                  names={refusal.names}
+                />
+              ),
+            }
+          : {
+              emptyLine: mineEmptyLine({
+                t,
+                state: dealsListState,
+                viewerId,
+                unit: "unit.deals",
+              }),
+            })}
       />
       <ErrorLine error={advanceErrorBehind(advance.error, pending !== null)} />
       <BoardReopenModal

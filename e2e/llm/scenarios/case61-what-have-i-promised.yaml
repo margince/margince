@@ -9,6 +9,7 @@
 # The prompt names no tool and no view. Nothing here grades the answer's
 # wording, so the case costs one short run: the call is the whole assertion.
 name: case61_what_have_i_promised
+title: What have I promised
 criteria: [1]
 writes: false
 

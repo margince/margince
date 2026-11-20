@@ -3,6 +3,8 @@ import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import type { Provenance } from "../../design-system/trust";
 import type { OccurredPrecision } from "../../format/activitywhen";
 import { stable } from "../../format/collate";
+import type { PluralBase } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { precisionOf } from "../../lib/historyvalues";
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
@@ -130,6 +132,11 @@ const DERIVED_COLUMNS: ReadonlySet<string> = new Set([
   "version",
 ]);
 
+// Whether a history field is one of the record's own, rather than a stamp.
+export function isRecordField(field: string): boolean {
+  return !DERIVED_COLUMNS.has(field);
+}
+
 export function entryFieldChanges(
   entry: Pick<AuditHistoryEntry, "before" | "after" | "edge">,
 ): EntryFieldChange[] {
@@ -154,7 +161,7 @@ export function entryFieldChanges(
     }
   }
   return fields
-    .filter((field) => !DERIVED_COLUMNS.has(field))
+    .filter(isRecordField)
     .map(
       (field): EntryFieldChange => ({
         field,
@@ -176,3 +183,24 @@ function imageValue(value: unknown): string | null {
   }
   return typeof value === "string" ? value : JSON.stringify(value);
 }
+
+// The words of one press. Putting a change back and putting a REVERSAL back
+// are one write with two intents. The second redoes what the first undid, so
+// the two must never read the same on adjacent rows.
+export const PRESS_WORDS = {
+  undo: {
+    label: "history.undo.action",
+    title: "history.undo.confirmTitle",
+    body: "history.undo.confirmBody",
+  },
+  redo: {
+    label: "history.undo.redo",
+    title: "history.undo.redoConfirmTitle",
+    body: "history.undo.redoConfirmBody",
+  },
+} as const satisfies Record<
+  string,
+  { label: MessageKey; title: MessageKey; body: PluralBase }
+>;
+
+export type PressIntent = keyof typeof PRESS_WORDS;

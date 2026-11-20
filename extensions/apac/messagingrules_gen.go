@@ -18,6 +18,7 @@ func messagingRules() []messaging.Rules {
 			Name:          "Spam Act 2003 (Cth)",
 			EffectiveFrom: time.Date(2004, time.April, 10, 0, 0, 0, 0, time.UTC),
 			Provision:     "ss. 16-18",
+			SourceURL:     "https://www.legislation.gov.au/C2004A01214/latest/text",
 		}, {
 			Name: "Spam Regulations 2021 (Cth)",
 		}, {
@@ -44,7 +45,48 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "0f595c56d172a368b9db43fec6fdab7f826313a695f130f6ba80509419f5e36f",
+		Citations: []messaging.Citation{{
+			Code:       "no_marketing_consent",
+			Instrument: "Spam Act 2003 (Cth)",
+			Provision:  "s. 16(1) and (2)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Spam Act 2003 (Cth)",
+			Provision:  "s. 16(1) and (2)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Spam Act 2003 (Cth)",
+			Provision:  "s. 16(1) and (2)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Spam Act 2003 (Cth)",
+			Provision:  "s. 16(1) and (2)",
+		}, {
+			Code:       "advertiser_contact",
+			Instrument: "Spam Act 2003 (Cth)",
+			Provision:  "s. 17(1)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Spam Act 2003 (Cth)",
+			Provision:  "s. 18(1)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Spam Act 2003 (Cth)",
+			Provision:  "s. 18(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Spam Act 2003 (Cth)",
+			Provision:  "Schedule 2, cl. 6",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Spam Act 2003 (Cth)",
+			Provision:  "Schedule 2, cl. 6",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Spam Act 2003 (Cth)",
+			Provision:  "Schedule 2, cl. 6",
+		}},
+		Digest: "b8121211ffd1409fa10c3fd8f39ed2cad5a92faa921ab01691989b80008e2654",
 	}, {
 		Jurisdiction: "cn",
 		Version:      1,
@@ -52,14 +94,17 @@ func messagingRules() []messaging.Rules {
 			Name:          "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
 			EffectiveFrom: time.Date(2006, time.March, 30, 0, 0, 0, 0, time.UTC),
 			Provision:     "arts. 13 and 14",
+			SourceURL:     "https://www.gov.cn/zhengce/2022-08/23/content_5722728.htm",
 		}, {
 			Name:          "Advertising Law of the PRC",
 			EffectiveFrom: time.Date(2015, time.September, 1, 0, 0, 0, 0, time.UTC),
 			Provision:     "art. 43",
+			SourceURL:     "https://scjgj.beijing.gov.cn/cxfw/flfgcxfw/ggl/202204/t20220401_2646388.html",
 		}, {
 			Name:          "Personal Information Protection Law of the PRC (PIPL)",
 			EffectiveFrom: time.Date(2021, time.November, 1, 0, 0, 0, 0, time.UTC),
 			Provision:     "arts. 13 and 17",
+			SourceURL:     "https://www.cac.gov.cn/2021-08/20/c_1631050028355286.htm",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -81,7 +126,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "cec16e30d47018c8abe06e6cfe37c27e490ea1c3655830e479f7af0130e44227",
+		Citations: []messaging.Citation{{
+			Code:       "no_marketing_consent",
+			Instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			Provision:  "art. 13(2)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			Provision:  "art. 13(2)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			Provision:  "art. 13(2)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			Provision:  "art. 13(2)",
+		}, {
+			Code:       "subject_label_missing",
+			Instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			Provision:  "art. 13(3)",
+		}, {
+			Code:       "subject_prefix",
+			Instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			Provision:  "art. 13(3)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			Provision:  "art. 14(1)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			Provision:  "art. 14(1)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			Provision:  "art. 14(2)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			Provision:  "art. 14(2)",
+		}, {
+			Code:       "advertiser_contact",
+			Instrument: "Advertising Law of the PRC",
+			Provision:  "art. 43(2)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Personal Information Protection Law of the PRC (PIPL)",
+			Provision:  "art. 15",
+		}, {
+			Code:       "lawful_basis_unconfirmed",
+			Instrument: "Personal Information Protection Law of the PRC (PIPL)",
+			Provision:  "art. 13(1)",
+		}, {
+			Code:       "no_compatible_evidence",
+			Instrument: "Personal Information Protection Law of the PRC (PIPL)",
+			Provision:  "art. 13(1)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Personal Information Protection Law of the PRC (PIPL)",
+			Provision:  "art. 17(1)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Personal Information Protection Law of the PRC (PIPL)",
+			Provision:  "art. 17(1)",
+		}},
+		Digest: "638e3e94ea39573cdc7d390db4999e134f23c5dc286be4befbc37ad3733e60a8",
 	}, {
 		Jurisdiction: "hk",
 		Version:      1,
@@ -107,7 +217,44 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "c0f5c4eab4f7823b4bd330ea34fb5d8de413c95e183bdfa47bc43fce4e979248",
+		Citations: []messaging.Citation{{
+			Code:       "no_marketing_consent",
+			Instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A",
+			Provision:  "s. 35E",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A",
+			Provision:  "s. 35E",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A",
+			Provision:  "s. 35E",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A",
+			Provision:  "s. 35E",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A",
+			Provision:  "s. 35G",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A",
+			Provision:  "s. 35G",
+		}, {
+			Code:       "advertiser_contact",
+			Instrument: "Unsolicited Electronic Messages Ordinance (Cap. 593)",
+			Provision:  "s. 8",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Unsolicited Electronic Messages Ordinance (Cap. 593)",
+			Provision:  "s. 9",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Unsolicited Electronic Messages Ordinance (Cap. 593)",
+			Provision:  "s. 9",
+		}},
+		Digest: "a6444cc4c5110b1e5f7b82206dcd97060d6d366868c39ab19894c4bcf887b741",
 	}, {
 		Jurisdiction: "id",
 		Version:      1,
@@ -161,7 +308,7 @@ func messagingRules() []messaging.Rules {
 			Name:          "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
 			EffectiveFrom: time.Date(2002, time.July, 1, 0, 0, 0, 0, time.UTC),
 			Provision:     "arts. 3 and 4",
-			SourceURL:     "https://elaws.e-gov.go.jp/document?lawid=414AC0000000026",
+			SourceURL:     "https://laws.e-gov.go.jp/law/414AC0100000026",
 		}, {
 			Name:          "Act No. 54 of 2008, amending Act No. 26 of 2002",
 			EffectiveFrom: time.Date(2008, time.December, 1, 0, 0, 0, 0, time.UTC),
@@ -185,7 +332,48 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "9df89e3331c421b1aa0514e3a1576c620b52ff4c318157c46464373a562666b5",
+		Citations: []messaging.Citation{{
+			Code:       "no_marketing_consent",
+			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			Provision:  "art. 3(1)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			Provision:  "art. 3(1)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			Provision:  "art. 3(1)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			Provision:  "art. 3(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			Provision:  "art. 3(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			Provision:  "art. 3(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			Provision:  "art. 3(3)",
+		}, {
+			Code:       "advertiser_contact",
+			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			Provision:  "art. 4(i)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			Provision:  "art. 4(ii)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			Provision:  "art. 4(ii)",
+		}},
+		Digest: "1136d3bd13db9fcbcc2db22e7a5d9bc8b1ac82e092b79c41dc373d56922fc705",
 	}, {
 		Jurisdiction: "kr",
 		Version:      1,
@@ -193,9 +381,11 @@ func messagingRules() []messaging.Rules {
 			Name:          "Act on Promotion of Information and Communications Network Utilization and Information Protection",
 			EffectiveFrom: time.Date(2014, time.November, 29, 0, 0, 0, 0, time.UTC),
 			Provision:     "art. 50",
+			SourceURL:     "https://www.law.go.kr/법령/정보통신망이용촉진및정보보호등에관한법률",
 		}, {
 			Name:      "Enforcement Decree of the Act on Promotion of Information and Communications Network Utilization and Information Protection",
 			Provision: "arts. 61 and 62-2",
+			SourceURL: "https://www.law.go.kr/법령/정보통신망이용촉진및정보보호등에관한법률시행령",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -216,7 +406,48 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "421e4f3c9b79d7be82e1c19b298b5a0e1c9a92e01209b45578af65f8bebaa49a",
+		Citations: []messaging.Citation{{
+			Code:       "no_marketing_consent",
+			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:  "art. 50(1)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:  "art. 50(1)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:  "art. 50(1)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:  "art. 50(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:  "art. 50(2)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:  "art. 50(2)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:  "art. 50(2)",
+		}, {
+			Code:       "advertiser_contact",
+			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:  "art. 50(4)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:  "art. 50(4)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:  "art. 50(4)",
+		}},
+		Digest: "7c40de76a42b8962ce37d1530b649bd4be86e2d4b6f33c06450a47363380be39",
 	}, {
 		Jurisdiction: "my",
 		Version:      1,
@@ -267,7 +498,36 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "e20106b668877c2c26374b2b1485ab874dae9d78e21c5ae26e48f75e8671d8dc",
+		Citations: []messaging.Citation{{
+			Code:       "no_marketing_consent",
+			Instrument: "Unsolicited Electronic Messages Act 2007",
+			Provision:  "s. 9",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Unsolicited Electronic Messages Act 2007",
+			Provision:  "s. 9",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Unsolicited Electronic Messages Act 2007",
+			Provision:  "s. 9",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Unsolicited Electronic Messages Act 2007",
+			Provision:  "s. 9",
+		}, {
+			Code:       "advertiser_contact",
+			Instrument: "Unsolicited Electronic Messages Act 2007",
+			Provision:  "s. 10",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Unsolicited Electronic Messages Act 2007",
+			Provision:  "s. 11",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Unsolicited Electronic Messages Act 2007",
+			Provision:  "s. 11",
+		}},
+		Digest: "d05bbac80c215b92c04906834dfd969a3dda3ae38910a3b89a4cd013832b4d08",
 	}, {
 		Jurisdiction: "ph",
 		Version:      1,
@@ -318,7 +578,52 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "8c3145c332b4a044866ee04cbff636b68c1a75692be8b78882166ef06d88487d",
+		Citations: []messaging.Citation{{
+			Code:       "no_marketing_consent",
+			Instrument: "Personal Data Protection Act 2012",
+			Provision:  "s. 13",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Personal Data Protection Act 2012",
+			Provision:  "s. 13",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Personal Data Protection Act 2012",
+			Provision:  "s. 13",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Personal Data Protection Act 2012",
+			Provision:  "s. 13",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Personal Data Protection Act 2012",
+			Provision:  "s. 16",
+		}, {
+			Code:       "subject_label_missing",
+			Instrument: "Spam Control Act 2007",
+			Provision:  "Second Schedule, para. 3(1)(b)",
+		}, {
+			Code:       "subject_prefix",
+			Instrument: "Spam Control Act 2007",
+			Provision:  "Second Schedule, para. 3(1)(b)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Spam Control Act 2007",
+			Provision:  "Second Schedule, para. 2(1)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Spam Control Act 2007",
+			Provision:  "Second Schedule, para. 2(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Spam Control Act 2007",
+			Provision:  "Second Schedule, para. 2(7)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Spam Control Act 2007",
+			Provision:  "Second Schedule, para. 2(7)",
+		}},
+		Digest: "76e2a80b8aa86a55f26dac92bdd76faa0f68bac5319b1a63b6475706c9c46496",
 	}, {
 		Jurisdiction: "th",
 		Version:      1,
@@ -352,6 +657,7 @@ func messagingRules() []messaging.Rules {
 			Name:          "Personal Data Protection Act",
 			EffectiveFrom: time.Date(2012, time.October, 1, 0, 0, 0, 0, time.UTC),
 			Provision:     "arts. 19 and 20",
+			SourceURL:     "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=I0050021",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -362,19 +668,38 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "b507ec6d4c18431bb482ae99d60c689fd795a40a6aff5e9eac115d112491779e",
+		Citations: []messaging.Citation{{
+			Code:       "marketing_objection",
+			Instrument: "Personal Data Protection Act",
+			Provision:  "art. 20(2)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Personal Data Protection Act",
+			Provision:  "art. 20(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Personal Data Protection Act",
+			Provision:  "art. 20(3)",
+		}},
+		Digest: "db0d613451a8548ae240c2d29bbe9fa312e14dd32857f04f8461659baff9c1ba",
 	}, {
 		Jurisdiction: "vn",
 		Version:      5,
 		Instruments: []messaging.Instrument{{
 			Name:          "Decree 91/2020/ND-CP",
 			EffectiveFrom: time.Date(2020, time.October, 1, 0, 0, 0, 0, time.UTC),
+			SourceURL:     "https://vanban.chinhphu.vn/default.aspx?pageid=27160&docid=200773",
 		}, {
 			Name:          "Law 91/2025/QH15",
 			EffectiveFrom: time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
+			SourceURL:     "https://congbaocdn.chinhphu.vn/CongBaoCP/VanBan/2025/6/45578/57730-1-2025971-97291-2025-qh15.pdf",
 		}, {
 			Name:          "Decree 356/2025/ND-CP",
 			EffectiveFrom: time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
+		}, {
+			Name:          "Advertising Law 16/2012/QH13, as amended by Law 75/2025/QH15",
+			EffectiveFrom: time.Date(2013, time.January, 1, 0, 0, 0, 0, time.UTC),
+			SourceURL:     "https://vanban.chinhphu.vn/default.aspx?pageid=27160&docid=163008",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -411,6 +736,76 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.September, 4, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "3ef89a4655ded5aa3ba54c7c0617c8e60a542aa281ca67de7e2ef0656a3e5ecf",
+		Citations: []messaging.Citation{{
+			Code:       "no_marketing_consent",
+			Instrument: "Law 91/2025/QH15",
+			Provision:  "Art. 28(3)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Law 91/2025/QH15",
+			Provision:  "Art. 28(3)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Law 91/2025/QH15",
+			Provision:  "Art. 28(3)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Law 91/2025/QH15",
+			Provision:  "Art. 28(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Law 91/2025/QH15",
+			Provision:  "Art. 10",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Law 91/2025/QH15",
+			Provision:  "Art. 28(5)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Law 91/2025/QH15",
+			Provision:  "Art. 28(5)",
+		}, {
+			Code:       "lawful_basis_unconfirmed",
+			Instrument: "Law 91/2025/QH15",
+			Provision:  "Art. 9",
+		}, {
+			Code:       "no_compatible_evidence",
+			Instrument: "Law 91/2025/QH15",
+			Provision:  "Art. 9",
+		}, {
+			Code:       "frequency_cap_reached",
+			Instrument: "Decree 91/2020/ND-CP",
+			Provision:  "Art. 13(5)",
+		}, {
+			Code:       "subject_label_missing",
+			Instrument: "Decree 91/2020/ND-CP",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "subject_prefix",
+			Instrument: "Decree 91/2020/ND-CP",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "advertiser_contact",
+			Instrument: "Decree 91/2020/ND-CP",
+			Provision:  "Art. 19",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Decree 91/2020/ND-CP",
+			Provision:  "Art. 20(1)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Decree 91/2020/ND-CP",
+			Provision:  "Art. 20(1)",
+		}, {
+			Code:       "claim_without_proof",
+			Instrument: "Advertising Law 16/2012/QH13, as amended by Law 75/2025/QH15",
+			Provision:  "Art. 8(11)",
+		}, {
+			Code:       "foreign_advertiser",
+			Territory:  "sender_elsewhere",
+			Instrument: "Advertising Law 16/2012/QH13, as amended by Law 75/2025/QH15",
+			Provision:  "Art. 39(2)",
+		}},
+		Digest: "f3d650a05d925c3ba05d6f69c36afbf762cad072d67d39fdd057edebe45a0a23",
 	}}
 }

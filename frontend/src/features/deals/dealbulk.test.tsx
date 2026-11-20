@@ -15,8 +15,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { seedWriter } from "../../testing/mefixture";
 import { DealBulkBar } from "./dealbulk";
 import { render as renderWithToasts } from "./deals.testkit";
+
+// The stage move asks the deal update grant, so the bar is drawn for a writer.
+function renderBar(ui: ReactNode) {
+  return renderWithToasts(
+    ui,
+    seedWriter(
+      new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    ),
+  );
+}
 
 // Where the roster caveat sits in the bulk bar, and why it is not a free choice.
 //
@@ -99,6 +110,7 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  seedWriter(client);
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -269,7 +281,7 @@ describe("the bulk bar's stage move result", () => {
   it("says how many moved and how many were already there", async () => {
     const advanced = stubAdvances();
     const user = userEvent.setup();
-    renderWithToasts(
+    renderBar(
       <DealBulkBar
         deals={[DEAL, SECOND, { ...THIRD, stage_id: OTHER_STAGE.id }]}
         stages={[STAGE, OTHER_STAGE]}
@@ -294,7 +306,7 @@ describe("the bulk bar's stage move result", () => {
     const advanced = stubAdvances();
     const onDone = vi.fn();
     const user = userEvent.setup();
-    renderWithToasts(
+    renderBar(
       <DealBulkBar
         deals={[DEAL, SECOND, THIRD]}
         stages={[STAGE, OTHER_STAGE]}

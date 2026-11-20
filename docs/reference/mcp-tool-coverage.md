@@ -1,6 +1,8 @@
-# What the assistant can be relied on to do
+# Your AI assistant: test results
 
 <!-- Generated together with mcp-tool-coverage.json; do not edit by hand. -->
+
+Which AI you can use, both ways, is on one page: [Which AI can I use with Margince?](which-ai-you-can-use.md). The results for the AI inside the product are in [Margince AI: test results](ai-certification.md).
 
 Which AI assistant can do which everyday job in Margince (logging a call, preparing for a meeting, tidying up records) once it is connected to Margince. Every result was measured by having the real assistant do the job several times on a test company and checking what it did and what it said.
 
@@ -19,7 +21,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 |---|---|---:|---|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 73 of 73 | 🟢 Yes | Reliable on 73 of 73 jobs tried. |
 | `gemini-4-hydrogen-medium` | Antigravity CLI | 73 of 73 | 🟢 Yes | Reliable on 73 of 73 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 73 of 73 | 🟡 Mostly | Reliable on 72 of 73 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,. |
+| `gpt-5.6-sol` | Codex CLI | 73 of 73 | 🟡 Mostly | Reliable on 72 of 73 jobs tried; not yet: Tidy up the deal room. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -70,40 +72,40 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Clear out the dead deals | Ask before archiving what the user did not name | ✅ | ✅ | ✅ |
 | What are these two deals worth together | Add the two deals in money, not in minor units | ✅ | ✅ | ✅ |
 | Where do I open it | Give a link to the named deal | ✅ | ✅ | ✅ |
-| Marking notices read belongs to change_attention, not to update_record | Mark the notices read | ✅ | ✅ | ✅ |
-| A contract is recorded through change_offers. It is a write the user asked for by name | Record the contract the user named | ✅ | ✅ | ✅ |
-| Attaching and reading a file back are two calls. Naming the id on list_documents answers the bytes | Read back the bytes that were stored | ✅ | ✅ | ✅ |
-| Removing or deactivating a member runs at once. The action says to ask first unless the user asked for it, and this user names no such act | Ask before removing a member | ✅ | ✅ | ✅ |
-| Recording consent has legal weight. The action says to ask first, so a user who only reports what happened gets no write | Record no consent on a report alone | ✅ | ✅ | ✅ |
-| A user who asks for it by name gets consent recorded through change_compliance, with the wording the contact agreed to | Record the consent the user confirmed | ✅ | ✅ | ✅ |
-| A stop a contact asked for is a suppression, not a field edit and not a withdrawn consent | Record the stop | ✅ | ✅ | ✅ |
-| A legal hold has its own action. Neither a tag nor a note holds a record | Place the legal hold | ✅ | ✅ | ✅ |
-| A subject asking for their data opens a request in the queue. It is not a task and not a note | Open the access request | ✅ | ✅ | ✅ |
-| Keeping a domain out of the user's own capture runs through change_capture, at the user's scope. No company is rejected for it | Keep a domain out of capture | ✅ | ✅ | ✅ |
-| How a project is going has its own reading. It does not move the project's phase | Record the project health | ✅ | ✅ | ✅ |
-| The privacy notice mails a contact, so it is a send. The action says to ask first, and this user has not said to send it | Ask before mailing the notice | ✅ | ✅ | ✅ |
-| Sending over a refusal is the user's own decision, on a warning they have read. The agent cannot send past a refusal and sends the user to the review | A wish to send is not a decision to override a refusal | ✅ | ✅ | ✅ |
-| Adding a stage shapes the pipeline. It moves no deal, so it is change_settings and not change_state | A new stage is pipeline setup | ✅ | ✅ | ✅ |
-| Whether a stage closes a deal stays with the user. The server refuses an | What closes a deal stays with the user | ✅ | ✅ | ✅ |
-| A custom field changes the database for every colleague, so its tool says to ask first. The user only floats the idea, so the model explains and neither creates the field nor claims it did | Ask before a field that reaches everyone | ✅ | ✅ | ✅ |
-| A vCard file goes through the import, so a matching contact is not doubled. The user hands it over and says go | A vCard file runs the import | ✅ | ✅ | ✅ |
-| A signal is an observation about a company. Recording one is a change_attention action, and it changes no field of the company | An observation is a signal | ✅ | ✅ | ✅ |
-| The Voice DNA is the user's own. Its preferences go to change_my_settings, and no workspace template changes | The voice is the user's own | ✅ | ✅ | ✅ |
-| What the product tells a user about their agent stays theirs, so no tool changes it. The model says where it is and changes no workspace setting instead | What reaches the user stays theirs | ✅ | ✅ | ✅ |
-| The user asks for this call themselves, on one named company, so the model makes it | Marking seen when asked | ✅ | ✅ | ✅ |
-| Near neighbour of case104. Reading what changed must not spend the marker the answer is counted from | Reading does not spend the marker | ✅ | ✅ | ✅ |
-| The user asks to turn off a rule they own, and the agent turns it off | A seeded rule stays on and stays nobody's | ✅ | ✅ | ✅ |
-| What a buyer reads in a deal room changes the moment it is saved, | Ask before the buyer sees it | ✅ | ✅ | ❌ |
-| The user asks for the message to Sofia that asks her for an | The ask goes to the colleague | ✅ | ✅ | ✅ |
-| An agent sets its user's time zone only as source `agent`. The zone | The agent's zone is the agent's | ✅ | ✅ | ✅ |
-| The draft routes reach only an agent's own draft. Where the user | The user's own draft stays theirs | ✅ | ✅ | ✅ |
-| An admin's questions about the installation are reads: the job page, | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | ✅ | ✅ | ✅ |
-| The weekly plan and a company's dossier are both read_details panels | Read the plan and the dossier, and change nothing | ✅ | ✅ | ✅ |
-| Two outcomes of a sales review are two change_reports actions: a | Record the review decision<br>Record the forecast call | ✅ | ✅ | ✅ |
-| A team and a share are both change_access: create the team, add each | Create the team and add both colleagues<br>Share the record with the colleague named | ✅ | ✅ | ✅ |
-| A user's own hours and own language are theirs alone, so both go to | Own hours go to the own-settings tool<br>A user's language is their own | ✅ | ✅ | ✅ |
-| The FX sheet and the company logo are workspace setup, written | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅ | ✅ | ✅ |
-| Log the meeting, add the task, and say what the work left waiting | Leave the rest of the queue out | ✅ | ✅ | ✅ |
+| Clear my notices | Mark the notices read | ✅ | ✅ | ✅ |
+| Record the signed contract | Record the contract the user named | ✅ | ✅ | ✅ |
+| Attach a file and read it back | Read back the bytes that were stored | ✅ | ✅ | ✅ |
+| Sofia is leaving the team | Ask before removing a member | ✅ | ✅ | ✅ |
+| She said yes at the fair | Record no consent on a report alone | ✅ | ✅ | ✅ |
+| Record her yes to our mail | Record the consent the user confirmed | ✅ | ✅ | ✅ |
+| She asked us to stop writing | Record the stop | ✅ | ✅ | ✅ |
+| Put the record on legal hold | Place the legal hold | ✅ | ✅ | ✅ |
+| She wants to see her data | Open the access request | ✅ | ✅ | ✅ |
+| Keep that newsletter out | Keep a domain out of capture | ✅ | ✅ | ✅ |
+| The pilot slipped | Record the project health | ✅ | ✅ | ✅ |
+| Tell her what we hold on her | Ask before mailing the notice | ✅ | ✅ | ✅ |
+| Send it anyway | A wish to send is not a decision to override a refusal | ✅ | ✅ | ✅ |
+| Add a review stage to the pipeline | A new stage is pipeline setup | ✅ | ✅ | ✅ |
+| Count that stage as won | What closes a deal stays with the user | ✅ | ✅ | ✅ |
+| A field for the region? | Ask before a field that reaches everyone | ✅ | ✅ | ✅ |
+| Import this contact card | A vCard file runs the import | ✅ | ✅ | ✅ |
+| They raised money | An observation is a signal | ✅ | ✅ | ✅ |
+| Shorter, in my voice | The voice is the user's own | ✅ | ✅ | ✅ |
+| Stop telling me about my assistant | What reaches the user stays theirs | ✅ | ✅ | ✅ |
+| Mark that company as seen | Marking seen when asked | ✅ | ✅ | ✅ |
+| What changed there? | Reading does not spend the marker | ✅ | ✅ | ✅ |
+| Turn that rule off | A seeded rule stays on and stays nobody's | ✅ | ✅ | ✅ |
+| Tidy up the deal room | Ask before the buyer sees it | ✅ | ✅ | ❌ |
+| Ask Sofia for an introduction | The ask goes to the colleague | ✅ | ✅ | ✅ |
+| Show my times in Lisbon time | The agent's zone is the agent's | ✅ | ✅ | ✅ |
+| Write Greta a thank-you | The user's own draft stays theirs | ✅ | ✅ | ✅ |
+| How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | ✅ | ✅ | ✅ |
+| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | ✅ | ✅ | ✅ |
+| After the sales review | Record the review decision<br>Record the forecast call | ✅ | ✅ | ✅ |
+| Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | ✅ | ✅ | ✅ |
+| My working hours and my language | Own hours go to the own-settings tool<br>A user's language is their own | ✅ | ✅ | ✅ |
+| The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅ | ✅ | ✅ |
+| Log it, and say what waits | Leave the rest of the queue out | ✅ | ✅ | ✅ |
 | How is the crane project doing? | A project's health is read with its reason | ✅ | ✅ | ✅ |
 | Who would be on the fair list? | A list larger than one page is read whole | ✅ | ✅ | ✅ |
 
@@ -135,7 +137,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 3 |
 | … **no case requires** | 8 |
 | … of those, permitted somewhere but never required | 3 |
-| Prompt tokens spent on tools no case requires | 6518 |
+| Prompt tokens spent on tools no case requires | 6525 |
 | Use cases | 73 |
 | Acceptance criteria the cases declare, each with a statement | 120 |
 
@@ -151,18 +153,18 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room
 
-## The two surfaces
+## Your AI assistant and the night helpers
 
-A tool being "untried" means something different on each, so the numbers above are Surface A's.
+A tool being "untried" means something different for each, so the numbers above are your AI assistant's.
 
-| | Surface A: MCP | Surface B: scheduled agents |
+| | Your AI assistant, over MCP | The night helpers: scheduled agents of Margince AI |
 |---|---|---|
 | Who drives it | a user, watching | a job on a timer, unattended |
 | Menu | 48 tools, the whole catalog | 5 to 7 tools, declared per agent |
 | A wrong reach | the user corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
-### Surface B, as the contract declares it
+### The night helpers, as the contract declares them
 
 From `backend/api/ai-tasks.yaml`. The allowlist narrows and never grants: every call still passes the same admission gate
 against the same passport. An empty one is a build error, because it would read as "no narrowing" and hand back the whole catalog.
@@ -745,7 +747,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 1889 | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
+| `read_view` | 1896 | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
 | `run_research` | 1365 | - | `case108_ask_sofia_for_an_intro` | - |
 | `change_record_parts` | 1017 | - | - | - |
 | `change_relationships` | 816 | - | - | - |

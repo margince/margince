@@ -14,6 +14,7 @@ import {
   useLocale,
   useT,
 } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 
 // The repeatable-row field on its own, in the states the row list decides.
 // A single row disables both move buttons. In a longer list the first row
@@ -43,11 +44,13 @@ function RowsField({
   fieldKey,
   initial,
   labelHidden,
+  error,
 }: Readonly<{
   source: FieldSource;
   fieldKey: string;
   initial: FormRow[];
   labelHidden?: boolean;
+  error?: MessageKey;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -67,6 +70,7 @@ function RowsField({
       rows={rows}
       setRows={setRows}
       labelHidden={labelHidden}
+      error={error && t(error)}
     />
   );
 }
@@ -125,6 +129,18 @@ export const EmailsTitledByDialog: Story = {
         { email: "carol@demo.test", email_type: "work", is_primary: "true" },
         { email: "carol.home@demo.test", email_type: "personal" },
       ]}
+    />
+  ),
+};
+
+/** A refusal of the rows reads under them, above Add. */
+export const RefusedRows: Story = {
+  render: () => (
+    <RowsField
+      source={contactCreateFields}
+      fieldKey="emails"
+      error="common.fieldInvalid"
+      initial={[{ email: "noreply@demo.test", email_type: "work" }]}
     />
   ),
 };

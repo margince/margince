@@ -14,6 +14,7 @@ import { EntityRef } from "../../components/entityref";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
+import { seedWriter } from "../../testing/mefixture";
 import { DealBulkBar } from "../deals/dealbulk";
 
 type Deal = components["schemas"]["Deal"];
@@ -78,6 +79,7 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  seedWriter(client);
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>

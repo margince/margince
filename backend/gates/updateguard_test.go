@@ -120,6 +120,7 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:writeClaimStatus":            "every caller holds the claim's row lock and has read its status under it, so no other writer can move the row between the read and this write",
 	"internal/modules/capture:upsertConnection":             "priorGrantTx holds the connection FOR UPDATE in the same transaction before the grant writes it",
 	"internal/modules/chatlinks:SetCard":                    "the card columns are sync state the chat_link version trigger leaves out, and the one writer is the link's flush, which River runs once per link at a time",
 	"internal/modules/capture:storeDeferredOriginalTx":      "names the original of an activity this same transaction inserted; no other writer can hold the row yet",
@@ -203,6 +204,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/activities:SetAudience":              "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/activities:RefuseArchiveActivity":    "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above; this self-touch (SET archived_at = archived_at) never commits, since the trigger it deliberately provokes refuses every write to the held row it runs against",
 	"internal/modules/contacts:DemoteLead":                 "the lead is held FOR UPDATE by lockContactThenLead, which takes the contact first and then the lead, one hop past what this witness's AST walk follows",
+	"internal/modules/activities:writeDealMarkTx":          "every caller holds the activity row first: MarkDealLinkTx with a LiveOnly lock and a colleague's mark through lockForFilingChange, so the version touch races nothing; the link row it marks is read FOR UPDATE above it",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, from before this function runs — the guard is the caller's lock, held across the whole transaction, not a second one taken here; this witness's AST walk sees neither the caller's lockActivityForWrite (a second hop) nor that this function is only ever reached under it",
 	// This IS a compare-and-set write; what this gate cannot see is the shape it
 	// checks the outcome in. It witnesses RowsAffected on a tx.Exec, and this

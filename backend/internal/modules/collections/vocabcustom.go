@@ -22,6 +22,7 @@ var customFieldTypes = map[string]storekit.FieldType{
 	fieldcatalog.TypePicklist:    storekit.FieldPicklist,
 	fieldcatalog.TypeBoolean:     storekit.FieldBoolean,
 	fieldcatalog.TypeRecord:      storekit.FieldText,
+	fieldcatalog.TypeURL:         storekit.FieldText,
 }
 
 // customField types one custom column for the predicate engine, and answers

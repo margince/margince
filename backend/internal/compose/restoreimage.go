@@ -104,6 +104,16 @@ var mergedObjectFields = map[string]bool{
 	"social": true,
 }
 
+// replacedLists are the sets an update replaces as a whole list, where an empty
+// list removes every member. An image records "none" as null, which the patch
+// cannot send, so the restore sends the empty list instead.
+//
+//nolint:goconst // as namedByTheShapeButNotWrittenByThePatch below: the rows are wire names read as data
+var replacedLists = map[string]map[string]bool{
+	"contact": {"emails": true, "phones": true},
+	"company": {"domains": true, "relationship_types": true, "extension_relationship_types": true},
+}
+
 // namedByTheShapeButNotWrittenByThePatch: keys a record type's update REQUEST
 // declares that its update path does not write. The generated shape is the
 // contract's, and the module's mapper is narrower than it — a key in the gap is
@@ -175,6 +185,8 @@ func filterImage(entityType string, before, after json.RawMessage) (map[string]j
 			if patch[key], err = mergedRestore(value, wrote[key]); err != nil {
 				return nil, nil, err
 			}
+		case spelledAsReplacedList:
+			patch[key] = listRestore(value)
 		default:
 			patch[key] = value
 		}
@@ -209,6 +221,8 @@ const (
 	// spelledAsMergedObject: an object the update merges, which the restore
 	// sends with every key the entry wrote.
 	spelledAsMergedObject
+	// spelledAsReplacedList: a set the update replaces whole, "none" included.
+	spelledAsReplacedList
 )
 
 // spell decides how one image key reaches the update path, so filterImage reads
@@ -223,6 +237,9 @@ func spell(entityType, key string, value json.RawMessage, allowed map[string]boo
 	}
 	if mergedObjectFields[key] && allowed[key] {
 		return spelledAsMergedObject
+	}
+	if replacedLists[entityType][key] && allowed[key] {
+		return spelledAsReplacedList
 	}
 	// A cf_* key is a custom field: the catalog decides whether it is still
 	// writable, and that is a live-state question the value check owns. The
@@ -256,6 +273,15 @@ func mergedRestore(before, after json.RawMessage) (json.RawMessage, error) {
 		return nil, fmt.Errorf("compose: spell the restored object: %w", err)
 	}
 	return restored, nil
+}
+
+// listRestore is the list a restore sends for a replaced set: the one the image
+// holds, or the empty list where it records none.
+func listRestore(before json.RawMessage) json.RawMessage {
+	if len(before) == 0 || string(before) == jsonNull {
+		return json.RawMessage("[]")
+	}
+	return before
 }
 
 // objectKeys decodes one image value as an object, a null as an empty one.

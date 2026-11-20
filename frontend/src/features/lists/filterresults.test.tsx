@@ -18,6 +18,7 @@ import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { FilterResults, previewColumnNames } from "./filterresults";
@@ -167,6 +168,125 @@ it("heads a custom column the way the field picker named it", () => {
   expect(
     screen.queryByRole("columnheader", { name: /cf_loyalty_tier/ }),
   ).toBeNull();
+});
+
+it("heads a custom column with the label the catalog gave it", () => {
+  render(
+    <FilterResults
+      preview={preview([
+        { id: "p1", full_name: "Ann Lee", cf_loyalty_tier: "gold" },
+      ])}
+      resource="contact"
+      fields={[{ ...TIER_FIELD, label: "Loyalty Tier" }]}
+      named={["cf_loyalty_tier"]}
+      unit="contacts"
+      widthsKey="filter-preview-contacts"
+      pending={false}
+    />,
+    { wrapper },
+  );
+
+  expect(
+    screen.getByRole("columnheader", { name: /Loyalty Tier/ }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("columnheader", { name: /loyalty tier/ }),
+  ).toBeNull();
+});
+
+describe("a cell read by its field's type", () => {
+  const TYPED: VocabularyField[] = [
+    { name: "created_at", type: "date", operators: ["gte"], custom: false },
+    { name: "cf_renewal", type: "date", operators: ["gte"], custom: true },
+    { name: "cf_seats", type: "number", operators: ["gte"], custom: true },
+    {
+      name: "cf_budget",
+      type: "currency",
+      operators: ["gte"],
+      custom: true,
+      currency: "EUR",
+    },
+    { name: "cf_partner", type: "boolean", operators: ["eq"], custom: true },
+  ];
+  const NAMES = TYPED.map((field) => field.name);
+
+  // West of Greenwich, where a calendar day read as a UTC instant shows the day before.
+  function renderTyped(row: Record<string, unknown>) {
+    return render(
+      <ViewerZoneProvider zone="America/Los_Angeles">
+        <FilterResults
+          preview={{
+            resource: "contact",
+            match_count: 1,
+            columns: ["id", "full_name", ...NAMES, "updated_at"],
+            rows: [{ id: "p1", full_name: "Ann Lee", ...row }],
+            truncated: false,
+          }}
+          resource="contact"
+          fields={TYPED}
+          named={NAMES}
+          unit="contacts"
+          widthsKey="filter-preview-typed"
+          pending={false}
+        />
+      </ViewerZoneProvider>,
+      { wrapper },
+    );
+  }
+
+  it("shows a timestamp as the day it fell on in the reader's zone", () => {
+    renderTyped({ created_at: "2026-11-16T01:19:20.700242Z" });
+
+    expect(screen.getByText("15 Nov 2026")).toBeTruthy();
+    expect(screen.queryByText("16 Nov 2026")).toBeNull();
+    expect(screen.queryByText(/2026-11-16T/)).toBeNull();
+  });
+
+  it("keeps a calendar day on its day in any zone", () => {
+    renderTyped({ cf_renewal: "2026-12-01T00:00:00Z" });
+
+    expect(screen.getByText("1 Dec 2026")).toBeTruthy();
+    expect(screen.queryByText("30 Nov 2026")).toBeNull();
+  });
+
+  it("writes a figure, an amount and a yes in the reader's words", () => {
+    renderTyped({ cf_seats: 1234.5, cf_budget: 250000, cf_partner: true });
+
+    expect(screen.getByText("1,234.5")).toBeTruthy();
+    expect(screen.getByText("€2,500.00")).toBeTruthy();
+    expect(screen.getByText(en["field.yes"])).toBeTruthy();
+  });
+
+  it("reads a deal's amount in the currency its row carries", () => {
+    render(
+      <FilterResults
+        preview={{
+          resource: "deal",
+          match_count: 1,
+          columns: ["id", "name", "amount_minor", "currency"],
+          rows: [
+            {
+              id: "d1",
+              name: "Renewal",
+              amount_minor: 2500000,
+              currency: "EUR",
+            },
+          ],
+          truncated: false,
+        }}
+        resource="deal"
+        fields={[]}
+        named={[]}
+        unit="deals"
+        widthsKey="filter-preview-deals"
+        pending={false}
+      />,
+      { wrapper },
+    );
+
+    expect(screen.getByText("€25,000.00")).toBeTruthy();
+    expect(screen.queryByText("2500000")).toBeNull();
+  });
 });
 
 it("shows a dash where a row has no value", () => {
@@ -484,6 +604,26 @@ describe("a column that points at another record", () => {
     expect(screen.queryByText("u-1")).toBeNull();
     expect(screen.queryByText("s-1")).toBeNull();
     expect(screen.queryByText("c-1")).toBeNull();
+  });
+
+  it("keeps the id out of a named cell's tooltip, and on one it could not name", async () => {
+    stubWorkspace();
+    renderDeals([
+      { id: "d-1", name: "Named", owner_id: "u-1", company_id: "c-1" },
+      { id: "d-2", name: "Orphaned", owner_id: "u-removed" },
+    ]);
+
+    expect(
+      (await screen.findByText("Priya Shah")).getAttribute("title"),
+    ).toBeNull();
+    expect(
+      (await screen.findByText("Brandt GmbH")).getAttribute("title"),
+    ).toBeNull();
+    expect(
+      (await screen.findByText(en["filters.resultRefGone"])).getAttribute(
+        "title",
+      ),
+    ).toBe("u-removed");
   });
 
   it("reads every company on the page in one request", async () => {

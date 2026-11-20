@@ -390,6 +390,27 @@ func (e ActivityEmailTargetRefusal) Valid() bool {
 	}
 }
 
+// Defines values for ActivityLinkDealRelevance.
+const (
+	LinkDealRelevanceRelevant  ActivityLinkDealRelevance = "relevant"
+	LinkDealRelevanceUncertain ActivityLinkDealRelevance = "uncertain"
+	LinkDealRelevanceUnrelated ActivityLinkDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkDealRelevance enum.
+func (e ActivityLinkDealRelevance) Valid() bool {
+	switch e {
+	case LinkDealRelevanceRelevant:
+		return true
+	case LinkDealRelevanceUncertain:
+		return true
+	case LinkDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -411,6 +432,24 @@ func (e ActivityLinkEntityType) Valid() bool {
 	case ActivityLinkEntityTypeLead:
 		return true
 	case ActivityLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityLinkRelevanceSource.
+const (
+	LinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
+	LinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkRelevanceSource enum.
+func (e ActivityLinkRelevanceSource) Valid() bool {
+	switch e {
+	case LinkRelevanceSourceClassifier:
+		return true
+	case LinkRelevanceSourceHuman:
 		return true
 	default:
 		return false
@@ -1980,7 +2019,7 @@ type Activity struct {
 	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
-	// ReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
@@ -2060,7 +2099,7 @@ type ActivityMeetingStatus string
 // a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
 
-// ActivityReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+// ActivityReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 type ActivityReplyChannel string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
@@ -2126,14 +2165,30 @@ type ActivityFollowUpTask struct {
 
 // ActivityLink defines model for ActivityLink.
 type ActivityLink struct {
-	ActivityId *string                `json:"activity_id,omitempty"`
-	EntityId   string                 `json:"entity_id"`
-	EntityType ActivityLinkEntityType `json:"entity_type"`
-	Id         *string                `json:"id,omitempty"`
+	ActivityId *string `json:"activity_id,omitempty"`
+
+	// DealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+	// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+	// it; only `unrelated` also leaves it out of the silent close.
+	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
+	EntityId      string                     `json:"entity_id"`
+	EntityType    ActivityLinkEntityType     `json:"entity_type"`
+	Id            *string                    `json:"id,omitempty"`
+
+	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
 }
+
+// ActivityLinkDealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+// it; only `unrelated` also leaves it out of the silent close.
+type ActivityLinkDealRelevance string
 
 // ActivityLinkEntityType defines model for ActivityLink.EntityType.
 type ActivityLinkEntityType string
+
+// ActivityLinkRelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+type ActivityLinkRelevanceSource string
 
 // ActivityReference One activity a derived number was computed from, named well enough to be
 // recognised and opened.

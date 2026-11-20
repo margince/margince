@@ -3,13 +3,14 @@
 
 // A filter operand's control, shared by the Filters and Analytics builders.
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { SegmentedControl, TextInput } from "../../design-system/atoms";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
+import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
-import { TokenInput } from "../../design-system/tokeninput";
+import { formatNumber } from "../../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import "./filterbuilder.css";
 import { RosterPartialNote } from "../../components/entityref";
 import {
@@ -22,9 +23,10 @@ import {
   type FilterOp,
   isRelativeDate,
   type LeafValue,
+  MAX_DAYS_AGO,
 } from "../../lib/segmentpredicate";
 import { MoneyControl } from "./filtervalue.money";
-import { NumberValue } from "./filtervalue.number";
+import { ListValue, NumberValue } from "./filtervalue.number";
 import { RadiusValue } from "./filtervalue.radius";
 import {
   ChosenRecords,
@@ -118,12 +120,11 @@ export function ValueControl({
   }
   if (op === "in") {
     return (
-      <TokenInput
-        values={Array.isArray(value) ? value.map(String) : []}
-        onChange={(next) => onChange(next)}
-        removeLabel={(item) => t("tokenInput.remove", { value: item })}
-        aria-label={label ?? t("filters.values")}
-        placeholder={t("filters.addValue")}
+      <ListValue
+        type={type}
+        value={value}
+        onChange={onChange}
+        label={label ?? t("filters.values")}
       />
     );
   }
@@ -390,36 +391,88 @@ function DateValue({
   onChange: (next: LeafValue) => void;
 }>) {
   const t = useT();
-  const mode = isRelativeDate(value) ? "ago" : "on";
+  const { locale } = useLocale();
+  const faultId = useId();
+  // The count as typed in "days ago" mode, null in date mode. The tree holds ""
+  // while a count is being corrected, and "" names no mode.
+  const [days, setDays] = useState(() => daysTextOf(value));
+  // A change the tree made without this row, such as Discard, replaces it.
+  const [seen, setSeen] = useState<LeafValue>(value);
+  if (seen !== value) {
+    setSeen(value);
+    if (!holds(days, value)) {
+      setDays(daysTextOf(value));
+    }
+  }
+  const invalid =
+    days !== null && days.trim() !== "" && !isRelativeDate(daysOperand(days));
   return (
-    <span className="filter-date-value">
-      <SegmentedControl
-        options={DATE_MODES}
-        value={mode}
-        onChange={(next) => onChange(next === "ago" ? { days_ago: 0 } : "")}
-        labels={{ on: t("filters.date.on"), ago: t("filters.date.daysAgo") }}
-        label={t("filters.date.mode")}
-      />
-      {isRelativeDate(value) ? (
-        <input
-          className="input"
-          inputMode="numeric"
-          value={String(value.days_ago)}
-          onChange={(event) => {
-            const days = Number(event.target.value);
-            onChange({
-              days_ago: Number.isInteger(days) && days >= 0 ? days : 0,
-            });
+    <div className="filter-value">
+      <span className="filter-date-value">
+        <SegmentedControl
+          options={DATE_MODES}
+          value={days === null ? "on" : "ago"}
+          onChange={(next) => {
+            const operand = next === "ago" ? { days_ago: 0 } : "";
+            setDays(daysTextOf(operand));
+            onChange(operand);
           }}
-          aria-label={t("filters.date.daysAgoCount", { field: label })}
+          labels={{ on: t("filters.date.on"), ago: t("filters.date.daysAgo") }}
+          label={t("filters.date.mode")}
         />
-      ) : (
-        <DateInput
-          value={typeof value === "string" ? isoOrBlank(value) : ""}
-          onChange={(event) => onChange(event.target.value)}
-          aria-label={label}
-        />
+        {days === null ? (
+          <DateInput
+            value={typeof value === "string" ? isoOrBlank(value) : ""}
+            onChange={(event) => onChange(event.target.value)}
+            aria-label={label}
+          />
+        ) : (
+          <TextInput
+            inputMode="numeric"
+            value={days}
+            onChange={(event) => {
+              setDays(event.target.value);
+              onChange(daysOperand(event.target.value));
+            }}
+            aria-label={t("filters.date.daysAgoCount", { field: label })}
+            aria-invalid={invalid ? true : undefined}
+            aria-describedby={invalid ? faultId : undefined}
+          />
+        )}
+      </span>
+      {invalid && (
+        <ErrorLine id={faultId}>
+          {t("filters.date.daysAgoInvalid", {
+            max: formatNumber(MAX_DAYS_AGO, locale),
+          })}
+        </ErrorLine>
       )}
-    </span>
+    </div>
   );
+}
+
+function daysTextOf(value: LeafValue): string | null {
+  return isRelativeDate(value) ? String(value.days_ago) : null;
+}
+
+/**
+ * The count as an operand, or "" while the text is not one. Not the text
+ * itself: a non-empty string passes as an `eq` operand and the count would run.
+ */
+function daysOperand(text: string): LeafValue {
+  const trimmed = text.trim();
+  const operand = { days_ago: Number(trimmed) };
+  return /^\d+$/.test(trimmed) && isRelativeDate(operand) ? operand : "";
+}
+
+/** Whether the row as held already shows this value. */
+function holds(days: string | null, value: LeafValue): boolean {
+  if (days === null) {
+    return !isRelativeDate(value);
+  }
+  const typed = daysOperand(days);
+  if (isRelativeDate(typed)) {
+    return isRelativeDate(value) && value.days_ago === typed.days_ago;
+  }
+  return value === typed;
 }

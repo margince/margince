@@ -24,7 +24,7 @@ import type { Identity } from "./accountidentity";
 import { type RowSeat, useRovingSeats } from "./accountseats";
 import { ThemeSubmenu } from "./accounttheme";
 import {
-  nextStepRoute,
+  nextStepHref,
   SetupReminderLabel,
   useSetupReminder,
 } from "./setup-reminder";
@@ -257,7 +257,7 @@ export function AccountPanel({
       </FlyoutRow>
       {setup && (
         <LinkRow
-          href={routeHash(nextStepRoute(setup))}
+          href={nextStepHref(setup)}
           seat={seat(SETUP_SEAT)}
           onActivate={onDismiss}
         >

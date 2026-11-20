@@ -49,6 +49,27 @@ it("saves only the corrected scalar", async () => {
   await user.type(screen.getByRole("textbox", { name: "Title" }), "CEO{Enter}");
   await waitFor(() => expect(sent).toEqual([{ title: "CEO" }]));
 });
+it("renames with the full name alone, leaving the server to drop the old parts", async () => {
+  const user = userEvent.setup();
+  const sent: unknown[] = [];
+  const named = {
+    ...contact,
+    full_name: "Stefan Altmann",
+    first_name: "Stefan",
+    last_name: "Altmann",
+  };
+  mount((body) => {
+    sent.push(body);
+    return jsonResponse({ ...named, version: 4 });
+  }, named);
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Full name/ }),
+  );
+  const box = screen.getByRole("textbox", { name: /Full name/ });
+  await user.clear(box);
+  await user.type(box, "Maria Neumann{Enter}");
+  await waitFor(() => expect(sent).toEqual([{ full_name: "Maria Neumann" }]));
+});
 it("corrects an email while preserving other addresses, types and primary flags", async () => {
   const user = userEvent.setup();
   const sent: unknown[] = [];
@@ -460,5 +481,158 @@ describe("the left column's sections", () => {
         { address: expect.objectContaining({ city: "Hamburg" }) },
       ]),
     );
+  });
+});
+
+describe("the name parts in About", () => {
+  function Column({ page }: Readonly<{ page: typeof view }>) {
+    const about = useContactAboutSections(page);
+    return (
+      <>
+        <RecordDetails sections={about.sections} />
+        {about.element}
+      </>
+    );
+  }
+
+  it("corrects the first name a greeting reads in About's dialog, and sends only it", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    const named = { ...contact, first_name: "Dana", last_name: "Buyer" };
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
+      "PATCH /contacts/p-1": (body) => {
+        sent.push(body);
+        return jsonResponse({ ...named, first_name: "Daniela" });
+      },
+    });
+    render(
+      <StoryProviders>
+        <Column page={{ ...view, contact: named }} />
+      </StoryProviders>,
+    );
+    const about = await screen.findByRole("region", {
+      name: en["record.details.about"],
+    });
+    expect(within(about).getByText("Dana")).toBeTruthy();
+    expect(within(about).getByText("Buyer")).toBeTruthy();
+    await user.click(await screen.findByRole("button", { name: "Edit About" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "About" }));
+    const input = dialog.getByRole("textbox", { name: en["create.firstName"] });
+    await user.clear(input);
+    await user.type(input, "Daniela");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    // The name parts are one group, so the unchanged last name rides along;
+    // the server reads a restated part as no change.
+    await waitFor(() =>
+      expect(sent).toEqual([{ first_name: "Daniela", last_name: "Buyer" }]),
+    );
+  });
+});
+
+describe("the tags in the About group", () => {
+  function About({ page }: Readonly<{ page: typeof view }>) {
+    const about = useContactAboutSections(page);
+    return (
+      <>
+        <RecordDetails sections={about.sections} />
+        {about.element}
+      </>
+    );
+  }
+
+  it("folds an untagged contact's Tags row and asks for no tags", async () => {
+    let asked = 0;
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
+      "GET /records/contact/p-1/tags": () => {
+        asked += 1;
+        return jsonResponse({ data: [], withheld: false });
+      },
+    });
+    render(
+      <StoryProviders>
+        <About page={{ ...view, contact: { ...contact, tags: [] } }} />
+      </StoryProviders>,
+    );
+    const about = await screen.findByRole("region", {
+      name: en["record.details.about"],
+    });
+    expect(within(about).queryByText(en["tags.panelTitle"])).toBeNull();
+    expect(asked).toBe(0);
+  });
+
+  it("shows the tags the contact carries and the verb to add one", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
+      "GET /records/contact/p-1/tags": () =>
+        jsonResponse({
+          data: [
+            {
+              tag_id: "t-1",
+              name: "Champion",
+              color: "teal",
+              archived: false,
+              assigned_at: "2026-03-03T10:00:00Z",
+            },
+          ],
+          withheld: false,
+        }),
+    });
+    render(
+      <StoryProviders>
+        <About
+          page={{
+            ...view,
+            contact: {
+              ...contact,
+              tags: [{ tag_id: "t-1", name: "Champion", color: "teal" }],
+            },
+          }}
+        />
+      </StoryProviders>,
+    );
+    const about = await screen.findByRole("region", {
+      name: en["record.details.about"],
+    });
+    await within(about).findByText("Champion");
+    expect(within(about).getByText(en["tags.panelTitle"])).toBeTruthy();
+    expect(
+      within(about).getByRole("button", { name: en["tags.add"] }),
+    ).toBeTruthy();
+  });
+
+  it("keeps the row and the focus in it when the last tag is removed", async () => {
+    const user = userEvent.setup();
+    let held = [{ tag_id: "t-1", name: "Champion", archived: false }];
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
+      "GET /records/contact/p-1/tags": () =>
+        jsonResponse({ data: held, withheld: false }),
+      "DELETE /tags/t-1/apply": () => {
+        held = [];
+        return jsonResponse({ restore: "r-1" });
+      },
+    });
+    const tagged = { ...view, contact: { ...contact, tags: [held[0]] } };
+    const { rerender } = render(
+      <StoryProviders>
+        <About page={tagged} />
+      </StoryProviders>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Remove Champion" }),
+    );
+    await waitFor(() => expect(screen.queryByText("Champion")).toBeNull());
+    rerender(
+      <StoryProviders>
+        <About page={{ ...view, contact: { ...contact, tags: [] } }} />
+      </StoryProviders>,
+    );
+    const about = screen.getByRole("region", {
+      name: en["record.details.about"],
+    });
+    expect(within(about).getByText(en["tags.panelTitle"])).toBeTruthy();
+    expect(about.contains(document.activeElement)).toBe(true);
   });
 });

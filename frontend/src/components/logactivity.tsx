@@ -3,17 +3,11 @@ import { type ReactNode, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
-import {
-  DateInput,
-  type ISODate,
-  isISODate,
-  isoOrBlank,
-} from "../design-system/dateinput";
+import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
 import { useToast } from "../design-system/toast";
-import { dueDayBounds } from "../format/calendarday";
 import { useT } from "../i18n";
 import {
   type ActivityDraft,
@@ -35,6 +29,7 @@ import { useMe } from "../lib/session";
 import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
+import { dueBoundsOf, latestDayOf } from "./logactivity.days";
 import { ActivityKindField } from "./logactivity.kindfield";
 import {
   completeLoggedTask,
@@ -73,21 +68,6 @@ import { useUnsavedGuard } from "./unsaved";
 
 export type OpeningKind = "note" | "task" | "call" | "meeting";
 
-function dueBoundsOf(
-  kind: ActivityDraft["kind"],
-  recordZone: string,
-): { min?: ISODate; max?: ISODate } {
-  return kind === "task" ? dueDayBounds(recordZone) : {};
-}
-
-function latestDayOf(
-  kind: ActivityDraft["kind"],
-  recordZone: string,
-): ISODate | undefined {
-  const day = todayDay(kind, recordZone);
-  return kind !== "task" && isISODate(day) ? day : undefined;
-}
-
 export function LogActivityForm({
   entityType,
   entityId,
@@ -98,6 +78,7 @@ export function LogActivityForm({
   sourceActivityId,
   taskToComplete,
   inheritSourceLinks = false,
+  onLoggedOnly,
 }: Readonly<{
   entityType?: EntityKind;
   entityId?: string;
@@ -110,6 +91,9 @@ export function LogActivityForm({
   sourceActivityId?: string;
   taskToComplete?: Readonly<{ id: string; version?: number }>;
   inheritSourceLinks?: boolean;
+  // Told when the activity is created but a step after it is left; a retry must
+  // keep this form, and its idempotency key, mounted.
+  onLoggedOnly?: () => void;
 }>) {
   const t = useT();
   const toast = useToast();
@@ -220,7 +204,10 @@ export function LogActivityForm({
       };
     },
     onError: (error, input) => {
-      if (error instanceof TaskLeftOpenError) setLogged(true);
+      if (error instanceof TaskLeftOpenError) {
+        setLogged(true);
+        onLoggedOnly?.();
+      }
       recordOf.keep(input.record);
       for (const queryKey of failedLogKeys(input, entityType, entityId))
         queryClient.invalidateQueries({ queryKey });
@@ -244,6 +231,7 @@ export function LogActivityForm({
       if (input.completion && logged.unattached.length > 0) {
         toast.show(t("tasks.log.leftOpen"), { tone: "danger", sticky: true });
         setLogged(true);
+        onLoggedOnly?.();
         return;
       }
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
@@ -271,6 +259,7 @@ export function LogActivityForm({
       form={formId}
       disabled={
         !log.isPending &&
+        !logged &&
         (dealFiling.blocked ||
           !draftSaysSomething(draft) ||
           (draft.kind !== "task" &&
@@ -425,6 +414,12 @@ export function LogActivityForm({
       className="form-stack"
       onSubmit={singlePress((event) => {
         event.preventDefault();
+        // Once the activity exists, a retry finishes what was sent, not the
+        // draft as edited since.
+        if (logged && log.variables) {
+          log.mutate(log.variables);
+          return;
+        }
         if (dealFiling.blocked || refuseUnreadableField(event.currentTarget)) {
           return;
         }

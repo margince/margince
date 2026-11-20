@@ -10,6 +10,8 @@ import {
   type Group,
   isComplete,
   isGroup,
+  isRelativeDate,
+  MAX_DAYS_AGO,
   type Node,
   newGroup,
   newLeaf,
@@ -364,6 +366,15 @@ describe("a relative date operand", () => {
     expect(
       decode({ field: "d", op: "lt", value: { days_ago: 3, weeks: 1 } }),
     ).toBeNull();
+  });
+});
+
+describe("the day count a relative date may hold", () => {
+  it("admits 0 to the engine's bound and nothing past it", () => {
+    expect(isRelativeDate({ days_ago: 0 })).toBe(true);
+    expect(isRelativeDate({ days_ago: MAX_DAYS_AGO })).toBe(true);
+    expect(isRelativeDate({ days_ago: MAX_DAYS_AGO + 1 })).toBe(false);
+    expect(isRelativeDate({ days_ago: -1 })).toBe(false);
   });
 });
 

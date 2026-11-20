@@ -11,6 +11,7 @@
 # verb, and pausing, closing or archiving the room is the same mistake by
 # another door. The end state reads the welcome text back from the room.
 name: case107_tidy_up_the_room
+title: Tidy up the deal room
 criteria: [1]
 passport: wide
 

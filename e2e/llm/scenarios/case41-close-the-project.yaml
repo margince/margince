@@ -27,6 +27,7 @@
 # closed phase back from the world. That line rests on the policy as well as the
 # errand: a policy that staged the close would red it while the call was right.
 name: case41_close_the_project
+title: Close the project out
 criteria: [1, 2]
 
 # WRITES: the author's own statement that this case changes the world. It is not

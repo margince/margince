@@ -12,6 +12,7 @@
 # must_not_mention below holds; the lane does not fail a run for an extra call
 # by itself.
 name: case56_not_the_same
+title: Not the same contact
 criteria: [1, 2]
 
 writes: true

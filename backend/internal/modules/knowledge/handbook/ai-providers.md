@@ -6,7 +6,8 @@ An AI provider is the company whose models Margince calls. It is Anthropic,
 OpenAI, Google Gemini, Gemini on Vertex AI, an OpenAI-compatible service such
 as OpenRouter, or a decision model. Each provider is set up once, on its own sheet,
 and every kind of work tied to it reads that sheet. You choose which model does
-which work in another place, under **Model tiers**.
+which work in another place, under **Model tiers**. Which models we tested, and how
+well each did, is on [Which AI can I use with Margince?](which-ai-you-can-use.md).
 
 ### Where do I set up an AI provider?
 To set up an AI provider in Margince, open **Settings**, then **AI models**, and

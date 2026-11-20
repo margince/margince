@@ -28,6 +28,7 @@
 # a sweep, the honest fix is to say so in the report, not to widen must_call
 # until the case tests nothing.
 name: case9_filed_in_the_wrong_place
+title: Filed in the wrong place
 criteria: [1, 2, 3]
 
 # WRITES: the author's own statement that this case changes the world. It is not

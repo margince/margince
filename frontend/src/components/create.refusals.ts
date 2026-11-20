@@ -18,6 +18,16 @@ export type CreateConflict = NonNullable<
   NonNullable<Parameters<typeof refusalSentences>[3]>["conflict"]
 >;
 
+// Every key a field's values reach the server under. A row list's rows send
+// theirs under each row field's own key.
+function wireKeys(field: CreateField): string[] {
+  return [
+    field.wireField ?? field.key,
+    field.offers?.pickedKey,
+    ...(field.rowFields ?? []).map((row) => row.key),
+  ].filter((key): key is string => key !== undefined);
+}
+
 // A 422 names the wire field. A form field whose key differs (an amount typed
 // in major units, sent as amount_minor) declares it as wireField. An offered
 // box sends its pick under `pickedKey`.
@@ -32,11 +42,8 @@ export function fieldRefusals(
   const labels: Record<string, FieldLabel> = {};
   const fieldKeys = new Map<string, string>();
   for (const field of fields) {
-    for (const wire of [
-      field.wireField ?? field.key,
-      field.offers?.pickedKey,
-    ]) {
-      if (wire === undefined || fieldKeys.has(wire)) continue;
+    for (const wire of wireKeys(field)) {
+      if (fieldKeys.has(wire)) continue;
       const label = fieldLabel(field, t);
       const { limit } = field;
       labels[wire] = limit

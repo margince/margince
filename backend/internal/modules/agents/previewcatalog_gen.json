@@ -854,6 +854,8 @@
      "Occurred",
     "occurred_precision":
      "Time precision",
+    "odd_due_date":
+     "This date looks far off: keep it, change it or clear it",
     "offer_line_position":
      "Position",
     "offer_number":
@@ -9114,6 +9116,18 @@
      "Acquisition source",
     "merge_profile_field/text/address":
      "Address",
+    "merge_profile_field/text/address_city":
+     "City",
+    "merge_profile_field/text/address_country":
+     "Country code (ISO 3166)",
+    "merge_profile_field/text/address_line1":
+     "Street and number",
+    "merge_profile_field/text/address_line2":
+     "Address line 2",
+    "merge_profile_field/text/address_postal_code":
+     "Postal code",
+    "merge_profile_field/text/address_region":
+     "State or region",
     "merge_profile_field/text/admission":
      "Domain intake check",
     "merge_profile_field/text/admission_reason":
@@ -9448,6 +9462,18 @@
      "Acquisition source",
     "merge_profile_field/lifecycle/address":
      "Address",
+    "merge_profile_field/lifecycle/address_city":
+     "City",
+    "merge_profile_field/lifecycle/address_country":
+     "Country code (ISO 3166)",
+    "merge_profile_field/lifecycle/address_line1":
+     "Street and number",
+    "merge_profile_field/lifecycle/address_line2":
+     "Address line 2",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Postal code",
+    "merge_profile_field/lifecycle/address_region":
+     "State or region",
     "merge_profile_field/lifecycle/admission":
      "Domain intake check",
     "merge_profile_field/lifecycle/admission_reason":
@@ -10777,6 +10803,26 @@
     "occurred_precision/lifecycle/unknown":
      "Unknown",
     "occurred_precision/boolean/true":
+     "Yes",
+    "odd_due_date/lifecycle/customer":
+     "Customer",
+    "odd_due_date/lifecycle/disqualified":
+     "Disqualified",
+    "odd_due_date/lifecycle/former_customer":
+     "Former customer",
+    "odd_due_date/lifecycle/live":
+     "Live",
+    "odd_due_date/lifecycle/onboarding":
+     "Onboarding",
+    "odd_due_date/lifecycle/opportunity":
+     "Opportunity",
+    "odd_due_date/lifecycle/prospect":
+     "Prospect",
+    "odd_due_date/lifecycle/target":
+     "Target",
+    "odd_due_date/lifecycle/unknown":
+     "Unknown",
+    "odd_due_date/boolean/true":
      "Yes",
     "offer_line_position/lifecycle/customer":
      "Customer",
@@ -18572,6 +18618,12 @@
      "Not set",
     "occurred_precision/execution":
      "Set when applied",
+    "odd_due_date/boolean":
+     "No",
+    "odd_due_date/empty":
+     "Not set",
+    "odd_due_date/execution":
+     "Set when applied",
     "offer_line_position/boolean":
      "No",
     "offer_line_position/empty":
@@ -20888,6 +20940,8 @@
      "Zeitpunkt",
     "occurred_precision":
      "Zeitgenauigkeit",
+    "odd_due_date":
+     "Dieses Datum wirkt weit weg: behalten, ändern oder leeren",
     "offer_line_position":
      "Position",
     "offer_number":
@@ -29148,6 +29202,18 @@
      "Akquisitionsquelle",
     "merge_profile_field/text/address":
      "Adresse",
+    "merge_profile_field/text/address_city":
+     "Stadt",
+    "merge_profile_field/text/address_country":
+     "Ländercode (ISO 3166)",
+    "merge_profile_field/text/address_line1":
+     "Straße und Hausnummer",
+    "merge_profile_field/text/address_line2":
+     "Adresszusatz",
+    "merge_profile_field/text/address_postal_code":
+     "Postleitzahl",
+    "merge_profile_field/text/address_region":
+     "Bundesland oder Region",
     "merge_profile_field/text/admission":
      "Eingangsprüfung der Domain",
     "merge_profile_field/text/admission_reason":
@@ -29482,6 +29548,18 @@
      "Akquisitionsquelle",
     "merge_profile_field/lifecycle/address":
      "Adresse",
+    "merge_profile_field/lifecycle/address_city":
+     "Stadt",
+    "merge_profile_field/lifecycle/address_country":
+     "Ländercode (ISO 3166)",
+    "merge_profile_field/lifecycle/address_line1":
+     "Straße und Hausnummer",
+    "merge_profile_field/lifecycle/address_line2":
+     "Adresszusatz",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Postleitzahl",
+    "merge_profile_field/lifecycle/address_region":
+     "Bundesland oder Region",
     "merge_profile_field/lifecycle/admission":
      "Eingangsprüfung der Domain",
     "merge_profile_field/lifecycle/admission_reason":
@@ -30811,6 +30889,26 @@
     "occurred_precision/lifecycle/unknown":
      "Unbekannt",
     "occurred_precision/boolean/true":
+     "Ja",
+    "odd_due_date/lifecycle/customer":
+     "Kunde",
+    "odd_due_date/lifecycle/disqualified":
+     "Disqualifiziert",
+    "odd_due_date/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "odd_due_date/lifecycle/live":
+     "Live",
+    "odd_due_date/lifecycle/onboarding":
+     "Onboarding",
+    "odd_due_date/lifecycle/opportunity":
+     "Chance",
+    "odd_due_date/lifecycle/prospect":
+     "Interessent",
+    "odd_due_date/lifecycle/target":
+     "Zielunternehmen",
+    "odd_due_date/lifecycle/unknown":
+     "Unbekannt",
+    "odd_due_date/boolean/true":
      "Ja",
     "offer_line_position/lifecycle/customer":
      "Kunde",
@@ -38606,6 +38704,12 @@
      "Nicht gesetzt",
     "occurred_precision/execution":
      "Wird beim Anwenden festgelegt",
+    "odd_due_date/boolean":
+     "Nein",
+    "odd_due_date/empty":
+     "Nicht gesetzt",
+    "odd_due_date/execution":
+     "Wird beim Anwenden festgelegt",
     "offer_line_position/boolean":
      "Nein",
     "offer_line_position/empty":
@@ -40922,6 +41026,8 @@
      "Thời điểm xảy ra",
     "occurred_precision":
      "Độ chính xác của thời gian",
+    "odd_due_date":
+     "Ngày này có vẻ quá xa: giữ, đổi hoặc xóa",
     "offer_line_position":
      "Số thứ tự",
     "offer_number":
@@ -49182,6 +49288,18 @@
      "Nguồn tiếp cận",
     "merge_profile_field/text/address":
      "Địa chỉ",
+    "merge_profile_field/text/address_city":
+     "Thành phố",
+    "merge_profile_field/text/address_country":
+     "Mã quốc gia (ISO 3166)",
+    "merge_profile_field/text/address_line1":
+     "Số nhà và tên đường",
+    "merge_profile_field/text/address_line2":
+     "Địa chỉ dòng 2",
+    "merge_profile_field/text/address_postal_code":
+     "Mã bưu chính",
+    "merge_profile_field/text/address_region":
+     "Tỉnh hoặc vùng",
     "merge_profile_field/text/admission":
      "Kiểm tra đầu vào tên miền",
     "merge_profile_field/text/admission_reason":
@@ -49516,6 +49634,18 @@
      "Nguồn tiếp cận",
     "merge_profile_field/lifecycle/address":
      "Địa chỉ",
+    "merge_profile_field/lifecycle/address_city":
+     "Thành phố",
+    "merge_profile_field/lifecycle/address_country":
+     "Mã quốc gia (ISO 3166)",
+    "merge_profile_field/lifecycle/address_line1":
+     "Số nhà và tên đường",
+    "merge_profile_field/lifecycle/address_line2":
+     "Địa chỉ dòng 2",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Mã bưu chính",
+    "merge_profile_field/lifecycle/address_region":
+     "Tỉnh hoặc vùng",
     "merge_profile_field/lifecycle/admission":
      "Kiểm tra đầu vào tên miền",
     "merge_profile_field/lifecycle/admission_reason":
@@ -50845,6 +50975,26 @@
     "occurred_precision/lifecycle/unknown":
      "Chưa rõ",
     "occurred_precision/boolean/true":
+     "Có",
+    "odd_due_date/lifecycle/customer":
+     "Khách hàng",
+    "odd_due_date/lifecycle/disqualified":
+     "Đã loại",
+    "odd_due_date/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "odd_due_date/lifecycle/live":
+     "Đang vận hành",
+    "odd_due_date/lifecycle/onboarding":
+     "Đang triển khai",
+    "odd_due_date/lifecycle/opportunity":
+     "Cơ hội",
+    "odd_due_date/lifecycle/prospect":
+     "Tiềm năng",
+    "odd_due_date/lifecycle/target":
+     "Mục tiêu",
+    "odd_due_date/lifecycle/unknown":
+     "Chưa rõ",
+    "odd_due_date/boolean/true":
      "Có",
     "offer_line_position/lifecycle/customer":
      "Khách hàng",
@@ -58639,6 +58789,12 @@
     "occurred_precision/empty":
      "Chưa đặt",
     "occurred_precision/execution":
+     "Được xác định khi áp dụng",
+    "odd_due_date/boolean":
+     "Không",
+    "odd_due_date/empty":
+     "Chưa đặt",
+    "odd_due_date/execution":
      "Được xác định khi áp dụng",
     "offer_line_position/boolean":
      "Không",

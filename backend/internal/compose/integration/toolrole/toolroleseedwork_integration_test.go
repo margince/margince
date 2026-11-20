@@ -55,6 +55,15 @@ func workSeeders(s sweepSeed) map[string]func() string {
 				"source": "manual", "rfc_message_id": "<sweep-" + ids.NewV7().String() + "@role-sweep.test>",
 			})
 		},
+		// A note on a deal, so the deal link has a mark to set.
+		"deal_note": func() string {
+			deal := s.create["deal"]()
+			note := s.post("/v1/activities", integration.AnyMap{
+				"kind": "note", "subject": "Role sweep", "links": []integration.AnyMap{{"entity_type": "deal", "entity_id": deal}},
+			})
+			s.pool.note(note, "deal", deal)
+			return note
+		},
 		// An invitation the seat's own mailbox received, for an event its calendar holds.
 		"calendar_invitation": func() string {
 			uid := "sweep-" + ids.NewV7().String() + "@role-sweep.test"

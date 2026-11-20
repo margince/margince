@@ -19,6 +19,7 @@
 # commit, and the asker wanted both numbers. So one tool both waits for the run
 # to finish and reads what it did.
 name: case10_finish_the_import
+title: Finish the import
 criteria: [1, 2]
 
 # WRITES: the author's own statement that this case changes the world. It is not

@@ -80,6 +80,7 @@ func assertReconciledHomeNotices(t *testing.T, a approvalNotifyEnv, want int) {
 func TestNoticeReconciliationResumesPastAPageOfPendingDecisions(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
 	integration.ApplyRiverSchema(t)
+	a.grantRole(t, a.e.AdminUser)
 	ctx := principal.SystemActing(a.e.Admin(), approvalNoticeRetractActor)
 	store := notices.NewStore(a.db)
 	var firstApproval ids.ApprovalID

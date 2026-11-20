@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/legalreviewdesk"
 	"github.com/margince/margince/backend/internal/compose/legalreviewrecords"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -63,6 +64,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		WithSettings(StoredConfig(pool)).
 		WithLocks(loadedLocks).
 		WithLegalReviewDocuments(legalReviewDocuments{store: activities.NewStore(InstallationDB(pool))}).
+		WithLegalReviewDesk(legalreviewdesk.Desk{Approvals: NewApprovalsService(InstallationDB(pool)), Notices: notices.NewStore(InstallationDB(pool))}).
 		WithLegalReviewRecords(legalreviewrecords.New(contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), activities.NewStore(InstallationDB(pool))))
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
@@ -87,7 +89,6 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames()).
 		WithInstallationDescribed(installationDescribed(anchor)).
 		WithInstallationBrand(installationBrand(anchor)).
-		WithInlineSendReview(activities.InlineSendReviewFor(StoredConfig(pool))).
 		WithEntityMembership(anchor.AssignLegalEntityMemberTx)
 
 	// The transport directory, loaded on the REAL assembly path rather than in
@@ -107,6 +108,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	srv.applySendPath(pool)
 	srv.publishCoreFeatures()
 	srv.publishListsAvailability(pool)
+	srv.customfieldsHandlers = srv.WithChoiceRemovers(CustomFieldChoiceRemovers())
 	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)
 	// After the lists switch, so /me probes list_id through the resolvers the deal and lead lists hold.
 	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters).WithRefusedLeadFilters(srv.RefusedLeadFilters)

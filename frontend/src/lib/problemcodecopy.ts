@@ -67,6 +67,10 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["run_in_flight", "import.reason.run_in_flight"],
   // A date-only meeting cannot hold its host's calendar hour.
   ["day_holds_host_slot", "activity.dayHoldsHostSlot"],
+  // The member invite's refusals: the detail is English and names no screen.
+  ["already_invited", "users.alreadyInvited"],
+  ["email_taken", "users.emailTaken"],
+  ["removed_member_email", "users.removedEmail"],
   // A legal entity's refusals: the detail is English and names no screen.
   ["legal_entity_has_members", "legalEntities.hasMembers"],
   ["legal_entity_is_assessed_against", "legalEntities.assessedAgainst"],
@@ -81,9 +85,16 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["phone_malformed", "common.phone.malformed"],
   // The detail speaks of a promotion; the screen calls it a qualification.
   ["contact_has_deal", "lead.demoteContactHasDeal"],
-  // Invite and Deal Room refusals: each detail is an English API sentence.
-  ["email_taken", "users.emailTaken"],
-  ["removed_member_email", "users.emailReserved"],
+  // A contact's address, profile, country and date refusals: the detail names
+  // wire keys and the request schema.
+  ["email_names_no_one", "create.emailNamesNoOne"],
+  ["address_erased", "create.addressErased"],
+  ["linkedin_url_malformed", "create.linkedinMalformed"],
+  ["linkedin_url_not_linkedin", "create.linkedinNotLinkedin"],
+  ["linkedin_url_not_profile", "create.linkedinNotProfile"],
+  ["invalid_date_range", "create.dateRangeReversed"],
+  ["invalid_country_code", "create.countryCodeInvalid"],
+  // A Deal Room refusal: the detail is an English API sentence.
   ["deal_room_document_already_present", "room.docs.alreadyPresent"],
   // The detail says to regenerate, which a draft cannot; one sentence serves both.
   ["offer_lapsed", "offer.lapsed"],

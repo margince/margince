@@ -233,10 +233,10 @@ func familyAnswerWords(answer string) string {
 // It is built from the counts, the same ones the answer beside it reads.
 func familyPlainWords(fam aiCertFamily) string {
 	if fam.Answer == familyNotEnough {
-		return fmt.Sprintf("Tested on only %d of the %d features. Ask before relying on it.",
+		return fmt.Sprintf("Tested in only %d of the %d places. Ask before relying on it.",
 			fam.SitesMeasured, fam.SitesShipped)
 	}
-	words := fmt.Sprintf("Ready for %d of the %d features we tested", fam.Ready, fam.SitesMeasured)
+	words := fmt.Sprintf("Ready in %d of the %d places we tested", fam.Ready, fam.SitesMeasured)
 	if fam.UsableWithCare > 0 {
 		words += fmt.Sprintf("; %d more work if someone looks over the result", fam.UsableWithCare)
 	}
@@ -273,17 +273,18 @@ func familyModelNames(fam aiCertFamily) string {
 func writeAICertFamilySummary(page *strings.Builder, families []aiCertFamily) {
 	page.WriteString("## Which model family should I use?\n\n")
 	page.WriteString("*\"I want to run Margince on Gemini. Can I trust it?\"* This is the answer for each\n")
-	page.WriteString("family of AI models, across everything Margince does with AI. To start from a ready-made\n")
-	page.WriteString("setup instead, go to [Can I use this preset?](#can-i-use-this-preset).\n\n")
+	page.WriteString("family of AI models, across everything Margince AI does. A *place* is one spot in the\n")
+	page.WriteString("product where a feature calls a model; one feature can call from several places. To start\n")
+	page.WriteString("from a ready-made setup instead, go to [Can I use this model setup?](#can-i-use-this-model-setup).\n\n")
 	page.WriteString("| Family | Models we tested | Can I trust it? | In plain words |\n|---|---|---|---|\n")
 	for _, fam := range families {
 		fmt.Fprintf(page, "| %s | %s | %s | %s |\n", fam.Name, familyModelNames(fam), familyAnswerWords(fam.Answer), familyPlainWords(fam))
 	}
 	page.WriteString("\n")
-	fmt.Fprintf(page, "A family rated **Yes** is ready for every feature we tested. One rated **Mostly** has at least %d in every 100 "+
-		"tested features ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** "+
-		"when we tested it on under half of the features. A family is judged on its best "+
-		"model for each feature, and only on the models a preset uses, each on the features that preset "+
+	fmt.Fprintf(page, "A family rated **Yes** is ready in every place we tested. One rated **Mostly** has at least %d in every 100 "+
+		"tested places ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** "+
+		"when we tested it in under half of the places. A family is judged on its best "+
+		"model for each place, and only on the models a model setup uses, each in the places that setup "+
 		"sends to it.\n\n", familyMostlyPercent)
 }
 
@@ -291,7 +292,7 @@ func writeAICertFamilySummary(page *strings.Builder, families []aiCertFamily) {
 // its best result on every feature it was measured on.
 func writeAICertFamilyDetail(page *strings.Builder, families []aiCertFamily) {
 	writeAICertFolded(page, "See the detail behind each family", func(page *strings.Builder) {
-		page.WriteString("A family counts a model only on the features some preset sends it, as the answering\n")
+		page.WriteString("A family counts a model only in the places some preset sends it, as the answering\n")
 		page.WriteString("model or its fallback. A record no preset reaches is left out here and still listed\n")
 		page.WriteString("under [Certification by provider and model](#certification-by-provider-and-model) and its site.\n\n")
 		for _, fam := range families {
@@ -307,13 +308,13 @@ func writeAICertFamilySection(page *strings.Builder, fam aiCertFamily) {
 		fmt.Fprintf(page, "%d of these results were measured on an older version of the product and are re-check pending.\n\n",
 			fam.RecheckPending)
 	}
-	page.WriteString("| Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |\n|---|---|---:|---:|---:|---:|---|\n")
+	page.WriteString("| Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |\n|---|---|---:|---:|---:|---:|---|\n")
 	for _, m := range fam.Models {
 		fmt.Fprintf(page, "| `%s` | `%s` | %d | %d | %d | %d | %s |\n", m.Binding.Model, m.Binding.Env,
-			m.Sites, m.Bands.Certified, m.Bands.SupportedDegraded, m.Bands.NotSupported, reliabilityCell(m.Reliability))
+			m.Sites, m.Bands.Certified, m.Bands.SupportedDegraded, m.Bands.NotSupported, aicert.ReliabilityCell(m.Passed, m.Runs))
 	}
-	page.WriteString("\n<details>\n<summary>Best model for each feature</summary>\n\n")
-	page.WriteString("| Feature | Best model in the family | Grade | Right in |\n|---|---|---|---|\n")
+	page.WriteString("\n<details>\n<summary>Best model for each place</summary>\n\n")
+	page.WriteString("| Place | Best model in the family | Grade | Right in |\n|---|---|---|---|\n")
 	for _, s := range fam.Sites {
 		fmt.Fprintf(page, "| [`%s`](#%s) | `%s` | %s%s | %d of %d tries |\n", s.Key, aiCertSiteAnchor(s.Key),
 			s.Best.label(), bandGrade(s.Band), staleMark(s.State), s.Passed, s.Runs)

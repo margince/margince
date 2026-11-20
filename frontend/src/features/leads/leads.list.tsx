@@ -19,7 +19,7 @@ import {
   useListQuery,
 } from "../../components/listquery";
 import {
-  mineEmptyNote,
+  mineEmptyLine,
   standardViews,
   useOwnerTagChips,
 } from "../../components/recordlist";
@@ -245,15 +245,18 @@ function LeadsWorkbench({
       <ListTable
         title={pageName}
         emptyNote={
-          refused.length > 0 ? (
+          refused.length > 0 && (
             <RefusedFiltersNote
               message={t("lead.filterRefused", { dial: refusedNames })}
               dials={refused}
               names={refusedNames}
             />
-          ) : (
-            mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })
           )
+        }
+        emptyLine={
+          refused.length > 0
+            ? undefined
+            : mineEmptyLine({ t, state, viewerId, unit: "unit.leads" })
         }
         // The board renders inside the surface, so the toolbar stays above it:
         // a narrowed answer always shows the way to change what narrowed it.
@@ -275,6 +278,7 @@ function LeadsWorkbench({
         action={
           <CreateAction
             label={t("create.lead")}
+            requires={{ object: "lead", action: "create" }}
             invalidate="leads"
             screen="leads"
             listCreate={{ open: startCreating }}

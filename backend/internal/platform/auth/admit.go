@@ -5,8 +5,8 @@
 // (interfaces.md §2, ADR-0055): scope ∧ seat ∧ tier ∧ volume, resolved against
 // the calling Principal, BEFORE any handler runs — whether the action arrives
 // as an MCP tool call or a mutating REST operation. It is its own package
-// so nothing else can mint an admitted capability — Surface A (inbound
-// agents) and Surface B (our own runner) both enter here, and there is no
+// so nothing else can mint an admitted capability. A user's AI assistant over
+// MCP and the night helpers (our own runner) both enter here, and there is no
 // other door.
 package auth
 

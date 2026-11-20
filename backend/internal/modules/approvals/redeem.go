@@ -303,6 +303,8 @@ var contextTargetKinds = map[string]string{
 		"because that is the record its owner decides about. The effect writes a record " +
 		"grant and never the contact's own fields. Pinning bound the answer to a row that " +
 		"every edit and every captured message bumps while the request waits in the inbox.",
+	approvalsubject.KindTaskDueDate: "A due-date question is filed under the TASK it is about. The effect " +
+		"writes only the task's due date, and the task's other fields change while the question waits.",
 	kindCommitmentTask: "A promise read out of a conversation is filed under the ACTIVITY " +
 		"it was said in — the message or the meeting — because those words are the evidence " +
 		"a human judges it on. The effect CREATES a task activity and never writes the " +

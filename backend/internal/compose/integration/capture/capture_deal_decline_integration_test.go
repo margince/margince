@@ -41,6 +41,17 @@ func decline(ctx context.Context, t *testing.T, e *integration.SearchEnv, mail i
 
 func dealBody(deal ids.UUID) string { return `{"deal_id":"` + deal.String() + `"}` }
 
+// wantMark fails unless the mail's link to deal carries want, spelled
+// "relevance/source", or no mark when want is empty.
+func wantMark(t *testing.T, e *integration.SearchEnv, sourceID string, deal ids.UUID, want string) {
+	t.Helper()
+	query := `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = '` + deal.String() + `'
+		WHERE a.source_id = '` + sourceID + `' AND coalesce(l.deal_relevance || '/' || l.relevance_source, '') = '` + want + `'`
+	if n := countRows(t, e, query); n != 1 {
+		t.Fatalf("%s's link to deal %s is not marked %q", sourceID, deal, want)
+	}
+}
+
 // asColleague is the deal world's colleague with other grants, or as another
 // kind of principal.
 func asColleague(w dealWorld, kind principal.PrincipalType, objects map[string]principal.ObjectGrant) context.Context {
@@ -57,8 +68,9 @@ func asColleague(w dealWorld, kind principal.PrincipalType, objects map[string]p
 }
 
 // The sole open deal files the mail, and a later capture copies the deal's
-// project onto it. The colleague declines the deal: both links come off, and
-// a live capture and the repair leave the mail off that deal.
+// project onto it. The colleague declines the deal: the deal link stays,
+// marked unrelated, and the project comes off. A live capture and the repair
+// change neither.
 func TestADeclinedDealStaysOffForCaptureAndTheRepair(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -76,26 +88,28 @@ func TestADeclinedDealStaysOffForCaptureAndTheRepair(t *testing.T) {
 
 	mail := activityOf(t, e, "dec1@acme.example")
 	status, out := decline(w.ctx, t, e, mail, dealBody(deal))
-	if status != http.StatusOK || !out.Unlinked || !out.ProjectUnfiled || out.ProjectKept {
-		t.Fatalf("the decline answered %d %+v, want the deal and its project taken off", status, out)
+	if status != http.StatusOK || !out.MarkedUnrelated || out.Unlinked || !out.ProjectUnfiled || out.ProjectKept {
+		t.Fatalf("the decline answered %d %+v, want the deal marked and its project taken off", status, out)
 	}
 	if len(out.DeclinedDealIds) != 1 || ids.UUID(out.DeclinedDealIds[0]) != deal {
 		t.Fatalf("the decline names %v, want %s", out.DeclinedDealIds, deal)
 	}
-	wantDeals(t, e, "dec1@acme.example")
+	wantDeals(t, e, "dec1@acme.example", deal)
+	wantMark(t, e, "dec1@acme.example", deal, "unrelated/human")
 	if got := linkedProject(t, e, "dec1@acme.example"); !got.IsZero() {
 		t.Fatalf("the project %s that came from the declined deal stayed", got)
 	}
 
 	env.sync(t, raw)
-	wantDeals(t, e, "dec1@acme.example")
+	wantMark(t, e, "dec1@acme.example", deal, "unrelated/human")
 	if got := linkedProject(t, e, "dec1@acme.example"); !got.IsZero() {
 		t.Fatalf("a live capture filed the mail under %s again", got)
 	}
 	if changed := newRepairer(e, w).run(t); changed != 0 {
-		t.Fatalf("the repair changed %d mails, want the declined one left off its deal", changed)
+		t.Fatalf("the repair changed %d mails, want the declined one left as marked", changed)
 	}
-	wantDeals(t, e, "dec1@acme.example")
+	wantDeals(t, e, "dec1@acme.example", deal)
+	wantMark(t, e, "dec1@acme.example", deal, "unrelated/human")
 	relinks := `SELECT count(*) FROM audit_log WHERE action = 'activity_relink' AND entity_id = '` + mail.String() + `'`
 	before := countRows(t, e, relinks)
 	if again, _ := decline(w.ctx, t, e, mail, dealBody(deal)); again != http.StatusOK {
@@ -106,9 +120,10 @@ func TestADeclinedDealStaysOffForCaptureAndTheRepair(t *testing.T) {
 	}
 }
 
-// A decline holds for its one deal. Once a second deal fits the mail better,
-// the refile pass files it there, and the declined deal stays off.
-func TestADeclineLeavesTheMailOpenToAnotherDeal(t *testing.T) {
+// A decline keeps the mail on its deal, marked. Once a second deal fits the
+// mail better, the refile pass still leaves it alone. A colleague judged it,
+// so only a colleague's relink moves it.
+func TestADeclinedMailIsNotMovedToAnotherDealByItself(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -123,7 +138,8 @@ func TestADeclineLeavesTheMailOpenToAnotherDeal(t *testing.T) {
 	second := w.deal(t, "Acme reporting")
 	w.stakeholder(t, alice, second)
 	refile(t, refiler(env, w), ids.From[ids.ActivityKind](activityOf(t, e, "dec2@acme.example")))
-	wantDeals(t, e, "dec2@acme.example", second)
+	wantDeals(t, e, "dec2@acme.example", first)
+	wantMark(t, e, "dec2@acme.example", first, "unrelated/human")
 }
 
 // "None of them" declines every deal the question offered, on the mail and
@@ -165,8 +181,8 @@ func TestNoneOfThemDeclinesEveryOfferedDealAndClosesTheQuestion(t *testing.T) {
 }
 
 // The decline answers by the caller's access, for a member and an agent
-// alike. It is 403 without the grants it needs, and 404 for a message or a
-// deal the caller cannot reach. An agent's decline takes the deal's own project link
+// alike. It is 403 without the grants it needs, the deal update included, and
+// 404 for a message or a deal the caller cannot reach. An agent's decline takes the deal's own project link
 // off too, as a member's does, and the audit row names the agent. An agent
 // that cannot read projects keeps the link and says so.
 func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
@@ -181,8 +197,9 @@ func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
 	env.sync(t, raw)
 	mail := activityOf(t, e, "dec3@acme.example")
 
-	readOnly := map[string]principal.ObjectGrant{"activity": {Read: true}, "deal": {Read: true}}
+	readOnly := map[string]principal.ObjectGrant{"activity": {Read: true}, "deal": {Read: true, Update: true}}
 	noDeals := map[string]principal.ObjectGrant{"activity": {Read: true, Update: true}}
+	readDeals := map[string]principal.ObjectGrant{"activity": {Read: true, Update: true}, "deal": {Read: true}}
 	for _, c := range []struct {
 		name string
 		ctx  context.Context
@@ -194,6 +211,7 @@ func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
 		{"without the deal read", asColleague(w, principal.PrincipalHuman, noDeals), mail, dealBody(deal), http.StatusForbidden},
 		{"an agent without activity update", asColleague(w, principal.PrincipalAgent, readOnly), mail, dealBody(deal), http.StatusForbidden},
 		{"an agent without the deal read", asColleague(w, principal.PrincipalAgent, noDeals), mail, dealBody(deal), http.StatusForbidden},
+		{"without the deal update", asColleague(w, principal.PrincipalHuman, readDeals), mail, dealBody(deal), http.StatusForbidden},
 		{"a message nobody has", w.ctx, ids.NewV7(), dealBody(deal), http.StatusNotFound},
 		{"a deal nobody has", w.ctx, mail, dealBody(ids.NewV7()), http.StatusNotFound},
 	} {
@@ -201,14 +219,14 @@ func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
 			t.Errorf("%s: the decline answered %d, want %d", c.name, status, c.want)
 		}
 	}
-	wantDeals(t, e, "dec3@acme.example", deal)
+	wantMark(t, e, "dec3@acme.example", deal, "relevant/classifier")
 
-	noProjects := map[string]principal.ObjectGrant{"activity": {Read: true, Update: true}, "deal": {Read: true}}
+	noProjects := map[string]principal.ObjectGrant{"activity": {Read: true, Update: true}, "deal": {Read: true, Update: true}}
 	status, out := decline(asColleague(w, principal.PrincipalAgent, noProjects), t, e, mail, dealBody(deal))
-	if status != http.StatusOK || !out.Unlinked || out.ProjectUnfiled || !out.ProjectKept {
-		t.Fatalf("the decline of an agent that cannot read projects answered %d %+v, want the deal off and the project kept", status, out)
+	if status != http.StatusOK || !out.MarkedUnrelated || out.ProjectUnfiled || !out.ProjectKept {
+		t.Fatalf("the decline of an agent that cannot read projects answered %d %+v, want the deal marked and the project kept", status, out)
 	}
-	wantDeals(t, e, "dec3@acme.example")
+	wantMark(t, e, "dec3@acme.example", deal, "unrelated/human")
 	if got := linkedProject(t, e, "dec3@acme.example"); got != rollout.ID {
 		t.Fatalf("the decline of an agent that cannot read projects left project %s, want %s", got, rollout.ID)
 	}
@@ -223,10 +241,10 @@ func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
 	}
 	mail = activityOf(t, e, "dec4@acme.example")
 	status, out = decline(asColleague(w, principal.PrincipalAgent, nil), t, e, mail, dealBody(deal))
-	if status != http.StatusOK || !out.Unlinked || !out.ProjectUnfiled || out.ProjectKept {
-		t.Fatalf("the agent's decline answered %d %+v, want the deal and its project taken off", status, out)
+	if status != http.StatusOK || !out.MarkedUnrelated || !out.ProjectUnfiled || out.ProjectKept {
+		t.Fatalf("the agent's decline answered %d %+v, want the deal marked and its project taken off", status, out)
 	}
-	wantDeals(t, e, "dec4@acme.example")
+	wantMark(t, e, "dec4@acme.example", deal, "unrelated/human")
 	if got := linkedProject(t, e, "dec4@acme.example"); !got.IsZero() {
 		t.Fatalf("the agent's decline left project %s, want it taken off with the deal", got)
 	}

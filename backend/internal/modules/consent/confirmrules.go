@@ -32,10 +32,10 @@ type confirmRules struct {
 // an operator, for a purpose the rules ask a request for, is refused without
 // one.
 func (s *Store) confirmRulesTx(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, kind string, purpose askedPurpose, address string, operatorAsks bool,
+	ctx context.Context, tx pgx.Tx, who subject, kind string, purpose askedPurpose, address string, operatorAsks bool,
 ) (confirmRules, error) {
 	out := confirmRules{asksNews: true}
-	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()})
+	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: who.entityType, ID: who.id.String()})
 	if err != nil {
 		return out, err
 	}
@@ -48,7 +48,7 @@ func (s *Store) confirmRulesTx(
 		return out, nil
 	}
 	var asked bool
-	out.subjectRequest, asked, err = s.subscriptionRequestTx(ctx, tx, contactID, address)
+	out.subjectRequest, asked, err = s.subscriptionRequestTx(ctx, tx, who, address)
 	if err != nil {
 		return out, err
 	}
@@ -120,8 +120,8 @@ func (e *NoSubjectRequestError) reason() string {
 // else a mail the contact wrote, read again from the timeline and stamped.
 // found is false when there is none; request is zero for acquisition evidence,
 // which has no qualifying-event row to name.
-func (s *Store) subscriptionRequestTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, address string) (ids.UUID, bool, error) {
-	ask, err := subjectAskTx(ctx, tx, contactID, address)
+func (s *Store) subscriptionRequestTx(ctx context.Context, tx pgx.Tx, who subject, address string) (ids.UUID, bool, error) {
+	ask, err := subjectAskTx(ctx, tx, who, address)
 	if err != nil || !ask.found || !ask.fromMail {
 		return ask.request, ask.found, err
 	}
@@ -129,10 +129,10 @@ func (s *Store) subscriptionRequestTx(ctx context.Context, tx pgx.Tx, contactID 
 	if err != nil {
 		return ids.UUID{}, false, err
 	}
-	if err := RecordDerivedQualifyingEvent(ctx, tx, contactID.String(), ask.mail, by); err != nil {
+	if err := RecordDerivedQualifyingEvent(ctx, tx, who.id.String(), ask.mail, by); err != nil {
 		return ids.UUID{}, false, err
 	}
-	id, err := qualifyingEventRowTx(ctx, tx, contactID, ask.mail)
+	id, err := qualifyingEventRowTx(ctx, tx, ids.From[ids.ContactKind](who.id), ask.mail)
 	return id, err == nil, err
 }
 
@@ -149,15 +149,19 @@ type subjectAsk struct {
 
 // subjectAskTx finds the contact's own request without writing anything. The
 // mail is the installation's own, so the default legal entity is the sender.
-func subjectAskTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, address string) (subjectAsk, error) {
+func subjectAskTx(ctx context.Context, tx pgx.Tx, who subject, address string) (subjectAsk, error) {
 	entity, err := storekit.LegalEntityOf(ctx, tx, ids.UUID{})
 	if err != nil {
 		return subjectAsk{}, err
 	}
-	subject := subjectRef{Kind: entityContact, ID: contactID.String(), Address: address, SendingEntity: entity}
+	subject := subjectRef{Kind: who.entityType, ID: who.id.String(), Address: address, SendingEntity: entity}
 	request, found, err := newestRequest(ctx, tx, subject, subscriptionRequests, ids.UUID{})
 	if err != nil || found {
 		return subjectAsk{found: found, request: request.event}, err
+	}
+	// A lead has no timeline of mails it wrote, so only a recorded request counts.
+	if who.entityType == entityLead {
+		return subjectAsk{}, nil
 	}
 	mail, found, err := inboundQualifyingEvent(ctx, tx, subject, time.Time{}, entity)
 	return subjectAsk{found: found, fromMail: found, mail: mail}, err

@@ -8,7 +8,7 @@ What you can do in Margince is decided by three things, and one cannot stand in 
 2. **Your role**: what kinds of record you may act on.
 3. **Row scope**: which records you may act on.
 
-A "no" from any one of them is a no. **Settings → Overview** shows your own answer to all three under **Your seat**, **Your role** and **Visible records**.
+A "no" from any one of them is a no. **Settings → Overview** shows your own answer under **Your role**, **Your seat**, **Records you can read** and **Records you can change**. A role with no right to change records, or a read seat, reads **None** under **Records you can change**, whatever its row scope.
 
 ## Managing colleagues, roles and teams
 
@@ -23,7 +23,7 @@ You need the permission to manage users. To pick the legal entity you also need 
 Also called: add a user, add a teammate, create an account, onboard a colleague.
 
 ### What if the invitation email did not arrive?
-You can send a new invitation to any colleague who has not set a password yet. This covers a link that expired after 7 days, an email that went to spam, and a colleague added without an invitation email. If the mail server refuses the invitation email, their row in **Settings → Members** shows **Invitation email failed**.
+You can send a new invitation to any colleague who has not set a password yet. This covers a link that expired after 7 days, an email that went to spam, and a colleague added without an invitation email. If the mail server refuses the invitation email, their row in **Settings → Members** shows **Invitation email failed**. If inviting says "Margince could not confirm the invitation", look for the colleague in the list before you invite again. An address that already waits on an invitation is refused, so use **Resend invitation** on that row.
 1. Check the email address on their row. If it is wrong, deactivate the seat and invite the right address.
 2. Open the **Actions for {name}** menu on their row and choose **Resend invitation**.
 3. The note "Invitation sent again to {name}" confirms it. The new email carries a new link, and any older link stops working.
@@ -186,7 +186,7 @@ Row scope has three levels: **own**, **team**, **all**.
 - **team**: those, plus records owned by your teammates
 - **all**: everything in the company
 
-This is not how most CRM products work. Any seat that can read records reads every contact, company, lead, deal and project in the company, whatever its row scope. The app says so: "Reads every contact, company, lead and deal in the company." Row scope decides which records you may change. This includes projects.
+This is not how most CRM products work. Row scope does not narrow reading: a seat reads every record of each kind its role may read, in the whole company. The **User access** preview names the kinds a role may read: "Reads all contacts, companies, deals, leads and projects in the company." A role with no right to change records reads "Changes no records." Row scope decides which records you may change. This includes projects.
 
 Two exceptions count for every role, Admin included:
 
@@ -232,7 +232,7 @@ In German, the owner is **Verantwortlich** and the responsibility roles are **Zu
 ## Seeing and sharing records
 
 ### Why can't I see a record?
-When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. The full record answers all three with **not found**. A contact, company or deal link can still show its name and short context in a [public preview](sharing-record-links.md). The preview gives no access to the full record.
+When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. The full record answers all three with **not found**. A contact, company or deal link can still show its name and short context in a [public preview](sharing-record-links.md). The preview gives no access to the full record. **Share** on such a record says "This record does not exist, or it is not shared with you."
 
 Ask the record's owner to share it with you (**Share** on the record). Or ask them to choose **All users in the company** behind the access chip under the record's name. An admin's role does not open a private record either: only a share does. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
 Also called: record missing, access denied, 404, cannot open a contact.
@@ -251,14 +251,14 @@ Also called: contact already exists, email already taken, hidden contact.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**.
-You cannot share more access than you hold.
+You cannot share more than you hold, and **Grant access** needs the right to change the record.
 
 On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
 
 Margince reports how many contacts it shared and skipped. A contact you can read but cannot share is skipped. Hidden contacts are not counted. Contacts who left the company are left out. Being on the same team alone gives no new access.
 
 ### How do I stop sharing a record?
-To take back a share in Margince, open the record and choose **Share**. Find the colleague or team under **Shared with** and choose **Revoke**. The question says: "Revoke this access? It ends at the next request and cannot be undone." To lower write to read instead, share again with **Read**; Margince asks **Reduce access?** first.
+To take back a share in Margince, open the record and choose **Share**. Under **Shared with**, choose **Revoke** on your own share, or on any share of a record you may change, archived or not. The question says: "Revoke this access? It ends at the next request and cannot be undone." To lower write to read instead, share again with **Read**; Margince asks **Reduce access?** first.
 Also called: unshare, remove access.
 
 ### How do I make a contact or company visible to everyone?

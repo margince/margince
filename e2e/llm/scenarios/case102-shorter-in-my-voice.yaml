@@ -1,5 +1,6 @@
 # CASE 102 — The Voice DNA is the user's own. Its preferences go to change_my_settings, and no workspace template changes.
 name: case102_shorter_in_my_voice
+title: Shorter, in my voice
 criteria: [1]
 writes: true
 

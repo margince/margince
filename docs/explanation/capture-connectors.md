@@ -502,7 +502,7 @@ Capture spans two process roles, api and worker (see [architecture.md](architect
   - Those are the sync dispatcher (`30s`) → `SyncOnce` per connection, and the backfill engine (one page
     per tick). They also include each vendor's scan for watch renewal (`6h`), and the capture jobs
     (sort every hour, enrich + digest daily).
-  - The agent runner of Surface B shares the worker process, but is a *separate* scheduler; it does not
+  - The agent runner of the night helpers shares the worker process, but is a *separate* scheduler; it does not
     run capture.
 
   The enrich pass has a second trigger. `activity.captured` queues it for the workspace that received the

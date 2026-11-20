@@ -25,6 +25,7 @@
 # The Go suite measures the radius half, because it seeds the coordinates
 # through SQL that the API carries no way to express.
 name: case4_use_the_moment
+title: Use the moment
 criteria: [1, 6]
 
 # WRITES: nothing — this case only reads. Said out loud because a scenario that

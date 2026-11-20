@@ -23,6 +23,7 @@
 #     is true and "slipping past the sixty-day line" is not, and both carry the
 #     same words.
 name: case58_quiet_for_three_weeks
+title: Quiet for three weeks
 criteria: [1]
 writes: false
 

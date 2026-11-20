@@ -16,13 +16,10 @@ import (
 	"slices"
 )
 
-// The six closed field types (custom-fields.md), spelled the way
-// modules/customfields' own type constants and the custom_field.type
-// CHECK constraint spell them. Shared may not import modules (it would
-// invert the shared → platform → modules DAG), so this is the one other
-// place these six literals are allowed to live — modules/customfields
-// and platform/database/storekit both consume this set rather than
-// hand-rolling their own copies.
+// The closed field types (custom-fields.md), spelled the way the
+// custom_field.type CHECK constraint spells them. This is the one place they
+// are written: modules/customfields, platform/database/storekit and the
+// frontend's CF_TYPES all follow this set.
 const (
 	TypeText        = "text"
 	TypeNumber      = "number"
@@ -32,17 +29,18 @@ const (
 	TypeMultiselect = "multiselect"
 	TypeBoolean     = "boolean"
 	TypeRecord      = "record"
+	TypeURL         = "url"
 )
 
-// Types answers the closed set above, so a consumer handling EVERY field type
-// derives that obligation instead of restating it: a gate over a hand-copied
-// list passes unchanged the day a seventh type lands, which is the one moment it
-// exists to fail. Missing the segment vocabulary costs a column its filter;
+// Types answers the closed set above. A consumer handling every field type
+// derives that obligation from it instead of restating it. A gate over a
+// hand-copied list passes unchanged the day a new type lands, which is the one
+// moment it exists to fail. Missing the segment vocabulary costs a column its filter;
 // missing storekit's conversion matrix costs the VALUE on both write and read.
 //
 // A fresh slice per call, so no consumer can reorder it for every other.
 func Types() []string {
-	return []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeMultiselect, TypeBoolean, TypeRecord}
+	return []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeMultiselect, TypeBoolean, TypeRecord, TypeURL}
 }
 
 // Column is one custom-field column for a (workspace, object) pair. Whether it

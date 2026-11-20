@@ -1,5 +1,6 @@
 # CASE 78 — A stop a contact asked for is a suppression, not a field edit and not a withdrawn consent.
 name: case78_she_asked_us_to_stop
+title: She asked us to stop writing
 criteria: [1]
 writes: true
 

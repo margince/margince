@@ -149,6 +149,29 @@ describe("a deal priced from its lines", () => {
     });
   });
 
+  it("keeps Enter in the custom item field from saving the lines", async () => {
+    const posted: unknown[] = [];
+    show(ESTIMATE, posted);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Price from products" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const custom = within(dialog).getByRole<HTMLInputElement>("textbox", {
+      name: "Custom item",
+    });
+    await user.type(custom, "Ripening");
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Quantity" }),
+      "2",
+    );
+    await user.type(custom, "Delivery{Enter}");
+    expect(posted).toEqual([]);
+    expect(screen.queryByRole("dialog")).toBe(dialog);
+    expect(custom.value).toBe("Delivery");
+  });
+
   it("sends a negotiated price and a new name for a product picked from the catalogue", async () => {
     const posted: unknown[] = [];
     show(ESTIMATE, posted);
