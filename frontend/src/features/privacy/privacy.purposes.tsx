@@ -27,6 +27,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import {
   fieldCheckSentence,
   refusalSentences,
@@ -351,13 +352,15 @@ function PurposeSendCounts({
       render: (count) =>
         t(
           count.class
-            ? CLASS_LABEL[count.class]
+            ? labelFor(CLASS_LABEL, count.class)
             : "privacy.purposeClass.undefined",
         ),
     },
     {
       key: "sends",
-      header: t("privacy.purposeSends", { days: String(SEND_COUNT_DAYS) }),
+      header: t("privacy.purposeSends", {
+        days: formatNumber(SEND_COUNT_DAYS, locale),
+      }),
       align: "end",
       render: (count) => formatNumber(count.sends, locale),
     },
@@ -366,7 +369,9 @@ function PurposeSendCounts({
     <>
       <PanelBody>
         <PanelIntro>
-          {t("privacy.purposeSendsSub", { days: String(SEND_COUNT_DAYS) })}
+          {t("privacy.purposeSendsSub", {
+            days: formatNumber(SEND_COUNT_DAYS, locale),
+          })}
         </PanelIntro>
         {(!query.isSuccess || counts.length === 0) && (
           <QueryStates
@@ -375,7 +380,7 @@ function PurposeSendCounts({
           >
             <EmptyState>
               {t("privacy.purposeSendsEmpty", {
-                days: String(SEND_COUNT_DAYS),
+                days: formatNumber(SEND_COUNT_DAYS, locale),
               })}
             </EmptyState>
           </QueryStates>

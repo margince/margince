@@ -11889,7 +11889,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeClass.undefined": "Nicht definiert",
   "privacy.purposeSends": "Gesendet in {days} Tagen",
   "privacy.purposeSendsSub":
-    "Jede Mail nennt ihren Zweck, und die Art des Zwecks entscheidet, ob sie eine Einwilligung braucht. Margince sendet sie unter der Art, die sie nennt. Prüfe diese Zahlen der letzten {days} Tage: Ein Newsletter sollte nicht als Korrespondenz erscheinen.",
+    "Jede Mail nennt ihren Zweck, und die Art des Zweckes entscheidet, ob sie eine Einwilligung braucht. Margince sendet sie unter der Art, die sie nennt. Prüfe diese Zahlen der letzten {days} Tage: Ein Newsletter sollte nicht als Korrespondenz erscheinen.",
   "privacy.purposeSendsLoading": "Gesendete Mails werden gezählt …",
   "privacy.purposeSendsEmpty":
     "In den letzten {days} Tagen hat keine Mail einen Zweck genannt.",
