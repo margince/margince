@@ -378,8 +378,9 @@ func readCompanyHeading(
 //
 // The order below IS the spec's evaluation order and the states are mutually
 // exclusive — the first match wins, so a silent account reads as dormant rather
-// than as whichever side happened to write last a year ago. Dormant is the
-// dormancy ladder's cold rungs, so the strip and the ladder cannot disagree.
+// than as whichever side happened to write last a year ago.
+// Dormant is the dormancy ladder's cold rungs, so the strip and the ladder
+// cannot disagree.
 //
 // waiting_on_them reuses noReplyDays rather than restating it, which is what
 // makes the strip and the no_reply suggestion beneath it agree by construction

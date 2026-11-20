@@ -269,19 +269,9 @@ func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontr
 			}
 			where = append(where, sourceKey...)
 			where = appendCompanyLinkClauses(ctx, where, in, arg)
-			partner, err := companyPartnerClause(ctx, in.Partner, arg)
+			where, err = appendCompanyStandingClauses(ctx, where, in, ladder, now, arg)
 			if err != nil {
 				return nil, err
-			}
-			if partner != "" {
-				where = append(where, partner)
-			}
-			if in.Dormancy != nil {
-				clause, err := dormancyClause(*in.Dormancy, ladder, now, arg)
-				if err != nil {
-					return nil, err
-				}
-				where = append(where, clause)
 			}
 			return appendCompanyEnumClauses(where, in, arg)
 		},
@@ -413,6 +403,28 @@ func appendCompanyLinkClauses(
 		where = append(where, clause)
 	}
 	return where
+}
+
+// appendCompanyStandingClauses adds the narrowings on how the account stands
+// with us: its partner programme and its rung on the dormancy ladder.
+func appendCompanyStandingClauses(
+	ctx context.Context, where []string, in ListCompaniesInput, ladder dormancy.Ladder, now time.Time, arg func(any) int,
+) ([]string, error) {
+	partner, err := companyPartnerClause(ctx, in.Partner, arg)
+	if err != nil {
+		return nil, err
+	}
+	if partner != "" {
+		where = append(where, partner)
+	}
+	if in.Dormancy == nil {
+		return where, nil
+	}
+	clause, err := dormancyClause(*in.Dormancy, ladder, now, arg)
+	if err != nil {
+		return nil, err
+	}
+	return append(where, clause), nil
 }
 
 // dormancyClause narrows to the companies on one rung today, by the window the

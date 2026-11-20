@@ -119,7 +119,7 @@ func next(r Rung) (Rung, bool) {
 
 // Window is Read turned into bounds on last_activity_at, for a list filter.
 // Each bound is the start of a day so many days before today, in the
-// installation zone: a row is on the rung when it is at or after the From day
+// installation zone. A row is on the rung when it is at or after the From day
 // and before the Before day. A nil bound is open. IncludesNone says an account
 // with no activity is on the rung too.
 type Window struct {
@@ -128,8 +128,8 @@ type Window struct {
 }
 
 // WindowOf answers the window of rung r. A last activity dated d days before
-// today is silent d days, so a rung that begins on silent day n ends with the
-// day n days back, and the next day starts n-1 days back.
+// today is silent d days. So a rung that begins on silent day n takes the day
+// n days back and earlier, and stops where day n-1 back starts.
 func (l Ladder) WindowOf(r Rung) Window {
 	out := Window{IncludesNone: r == Stale}
 	if r != Active {

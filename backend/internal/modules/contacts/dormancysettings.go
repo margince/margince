@@ -27,7 +27,7 @@ var DormancyDays = config.DefineStored(config.Spec[[]int]{
 	},
 	Doc: "Silent days after which an account reads as cooling, dormant and stale, in that order.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
+	RBACObject: installationSettingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the ladder rides company reads the caller is already gated for
 })
 
@@ -41,7 +41,7 @@ var DormancyFollowUpEnabled = config.DefineStored(config.Spec[bool]{
 	Default: config.Some(true),
 	Doc:     "Suggest a follow-up task to the owner of an account that has gone dormant or stale.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
+	RBACObject: installationSettingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the company page applies it to a suggestion card it already gates
 })
 

@@ -33,10 +33,14 @@ func TestEachRungBeginsOnItsDay(t *testing.T) {
 		days int
 		want Rung
 	}{
-		{0, Active}, {29, Active},
-		{30, Cooling}, {59, Cooling},
-		{60, Dormant}, {89, Dormant},
-		{90, Stale}, {400, Stale},
+		{0, Active},
+		{29, Active},
+		{30, Cooling},
+		{59, Cooling},
+		{60, Dormant},
+		{89, Dormant},
+		{90, Stale},
+		{400, Stale},
 	}
 	for _, tc := range cases {
 		got := Default.Read(daysAgo(tc.days), now, berlin)

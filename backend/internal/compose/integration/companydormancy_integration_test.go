@@ -5,9 +5,9 @@
 
 package integration
 
-// The company clock the dormancy ladder reads counts no personal mail, moves
-// with new activity and with an archive, and the company page reads the ladder
-// and its follow-up from it.
+// The company clock the dormancy ladder reads counts no personal mail. It moves
+// with new activity and with an archive. The company page reads the ladder and
+// its follow-up from it.
 
 import (
 	"testing"
@@ -43,8 +43,8 @@ func (w dealEvidenceWorld) companyClock(t *testing.T) *time.Time {
 
 // A held thread captured into a classified mailbox reads as participants mail,
 // which no company clock counts. Should such a row still reach the workspace,
-// the hold alone keeps it off the company clock, and ending the hold gives the
-// company its date back. Only the verdict's trigger can move the clock then.
+// the hold alone keeps it off the company clock. Ending the hold gives the
+// company its date back, and only the verdict's trigger can move it then.
 func TestAPersonalHoldKeepsAWorkspaceMailOffTheCompanyClock(t *testing.T) {
 	w := newDealEvidenceWorld(t)
 	thread, at := "thread-"+ids.NewV7().String(), w.now.AddDate(0, 0, -2)

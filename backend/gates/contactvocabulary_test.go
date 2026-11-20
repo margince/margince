@@ -20,7 +20,8 @@ package gates
 // WHAT THIS DOES NOT COVER, said rather than left to be assumed. The word
 // `contact` itself, which this tree already used for three other things before
 // the rename — a `graph_contact_edge`, a `company_fact` whose field is
-// `contact_email`, a lead that has been `contacted`. Telling a NEW second spelling of the record apart from those is
+// `contact_email`, a lead that has been
+// `contacted`. Telling a NEW second spelling of the record apart from those is
 // judgement per occurrence, so this test does not pretend to: it refuses the
 // retired word and says nothing about the new one.
 //

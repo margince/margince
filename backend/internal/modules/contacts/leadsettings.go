@@ -94,6 +94,10 @@ var UnassignedEscalationUserID = config.DefineStored(config.Spec[string]{
 // settingsAuditVerb is the audit action every contacts settings change records.
 const settingsAuditVerb = "update"
 
+// installationSettingsObject is the RBAC object of the settings an
+// administrator changes for the whole installation.
+const installationSettingsObject = "installation_settings"
+
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {
 	return append(LeadSettingsSurface(), SignatureTemplate, SharedMergeReviews, DormancyDays, DormancyFollowUpEnabled)
