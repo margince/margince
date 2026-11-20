@@ -32,6 +32,29 @@ export const CATEGORY_LABELS: Record<DocumentCategory, MessageKey> = {
   link: "docs.category.link",
 };
 
+const CATEGORY_ORDER: readonly string[] = Object.keys(CATEGORY_LABELS);
+
+/**
+ * The category chips over a list of files: `steady` always, and every other
+ * category only while a file holds it, so the chips add up to "All".
+ */
+export function categoryCuts(
+  files: readonly Attachment[],
+  steady: readonly DocumentCategory[],
+): DocumentCategory[] {
+  const rank = (category: string) => {
+    const at = CATEGORY_ORDER.indexOf(category);
+    return at === -1 ? CATEGORY_ORDER.length : at;
+  };
+  const held = new Set<DocumentCategory>();
+  for (const file of files) {
+    if (file.category && !steady.includes(file.category)) {
+      held.add(file.category);
+    }
+  }
+  return [...steady, ...[...held].sort((a, b) => rank(a) - rank(b))];
+}
+
 type DocumentsView = "grid" | "list";
 const VIEWS: readonly DocumentsView[] = ["grid", "list"];
 
