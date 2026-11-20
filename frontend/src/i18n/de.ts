@@ -15070,7 +15070,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureActivity.filing.basis.named_stakeholder":
     "ein in der Mail genannter Beteiligter",
   "captureActivity.filing.basis.ambiguous":
-    "mehrere Deals passen, ein Kollege wurde gefragt",
+    "mehrere Deals passen, ein Mitglied wurde gefragt",
   "captureActivity.filing.ext.linked":
     "{unit} hat sie einem Deal zugeordnet: {reason}",
   "captureActivity.filing.ext.none":

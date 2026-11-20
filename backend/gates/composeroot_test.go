@@ -33,8 +33,8 @@ const composeRootDir = "internal/compose"
 const (
 	composeRootProductionFiles = 1378
 	composeRootTestFiles       = 1904
-	composeRootProductionLines = 229_697
-	composeRootTestLines       = 357_674
+	composeRootProductionLines = 229_744
+	composeRootTestLines       = 357_675
 )
 
 // A read under these floors stopped early or read the wrong place, and would
