@@ -26,15 +26,9 @@ package compose
 //     about that contact — including asks the member is not party to and could
 //     not otherwise read or write.
 //
-//     The test is `captured_by`, and nothing weaker holds. `source_system` is
-//     settable on the public log endpoint, so a body naming a connector's
-//     system forges that in one line. (The one mail identity is refused there
-//     now, which closes that spelling and no other: any other value a caller
-//     invents still lands in the column.) `captured_by` comes from
-//     the AUTHENTICATED principal through storekit.CapturedBy — a connector's
-//     is `connector:…`, a colleague's is `human:…` — so it is provenance a caller
-//     cannot assert. capture/sinkprovenance.go states the same rule for the
-//     same reason.
+//     The test is `captured_by`, and nothing weaker holds: `source_system` is
+//     settable on the public log endpoint. `captured_by` comes from the
+//     authenticated principal (storekit.CapturedBy), so a caller cannot assert it.
 //   - The activity is INBOUND. An outbound mail is the rep writing to the
 //     contact, which is the opposite of the contact answering.
 //   - The contact is the SENDER, not merely present. Being cc'd on a colleague's
