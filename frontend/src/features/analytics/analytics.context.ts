@@ -125,8 +125,8 @@ export function scopeKey(scope: Pick<AnalyticsScope, "kind" | "id">): string {
 
 /**
  * The name a reader sees for a population. The server sends one fixed label
- * for the whole company, so that one is named in the reader's language; a
- * team or a person keeps its own name. Null where the server sent none.
+ * for the whole company, so the client names it in the reader's language. A
+ * team or a seller keeps its own name. Null where the server sent none.
  */
 export function scopeName(
   scope: Readonly<{ kind: string; label?: string | null }>,

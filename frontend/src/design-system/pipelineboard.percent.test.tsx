@@ -47,8 +47,8 @@ function renderBoard(locale: Locale) {
   );
 }
 
-// The stage header and the card write one figure, so they write it one way:
-// in the locale's own percent form, which in German sets a no-break space.
+// The stage header and the card write one figure, so they write it one way.
+// That way is the locale's own percent form, with a no-break space in German.
 describe("the board's percent", () => {
   it.each<[Locale, string]>([
     ["de", "10 %"],

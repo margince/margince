@@ -68,7 +68,7 @@ func TestAnUnclassifiedMoveIsRefusedLikeAWrite(t *testing.T) {
 func TestTheRefusalSpeaksTheReadersLanguage(t *testing.T) {
 	ctx := systemtext.WithLocale(reader(readerOnly), textlang.German)
 	got := MoveRefusal(ctx, crmcontracts.WorklistMoveActionCreateTask)
-	if want := "Sie haben keine Berechtigung, Aufgaben anzulegen"; got == nil || *got != want {
+	if want := "Sie haben keine Berechtigung, Aufgaben zu erstellen"; got == nil || *got != want {
 		t.Fatalf("refusal %v, want %q", got, want)
 	}
 }

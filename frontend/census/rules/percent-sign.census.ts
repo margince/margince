@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// A percent on screen is spelled by a percent formatter (`formatPercent`,
-// `formatAnalyticsPercent`, `formatAnalyticsPercentPoints`), never by a literal
-// `%` glued to a formatted number. German sets a no-break space before the
-// sign and English none, so a hand-glued sign is wrong in one of them, and a
-// board that mixes the two writes one number two ways.
+// A percent on screen comes from a percent formatter: `formatPercent`,
+// `formatAnalyticsPercent` or `formatAnalyticsPercentPoints`. A literal `%`
+// glued to a formatted number is the offence. German sets a no-break space
+// before the sign and English none. So a hand-glued sign is wrong in one of
+// them, and a board that mixes the two writes one number two ways.
 //
-// The subject is a formatter's output followed by a `%`: in a template
-// literal, as the JSX text after it, or as the string added to it. A style
-// value such as `${width}%` comes from no formatter and is not read.
+// The subject is a formatter's output followed by a `%`. The sign can sit in a
+// template literal, in the JSX text after it, or in the string added to it. A
+// style value such as `${width}%` comes from no formatter and is not read.
 
 import ts from "typescript";
 import type { CensusFile, CensusRule } from "../tree";
