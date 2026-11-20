@@ -22,7 +22,7 @@ import {
   settingsBackend,
 } from "../../testing/settings.testkit";
 import { SIGN_OFF_QUERY } from "../mail/composesignoff";
-import { SettingsScreen, tabContent } from "./settings";
+import { SETTINGS_PAGE_VIEWS, SettingsScreen } from "./settings";
 import { AuditLogCard } from "./settings-audit";
 import { healthReport } from "./systemhealth.fixtures";
 import "./systemhealthdiagnostics";
@@ -933,7 +933,10 @@ describe("SettingsScreen restructured pages", () => {
 describe("installation-wide cards live off the personal pages", () => {
   // The card names itself; searching the returned tree for that name avoids
   // rendering twenty-nine pages and their API calls.
-  function pageRenders(id: SettingsPageId, componentName: string): boolean {
+  async function pageRenders(
+    id: SettingsPageId,
+    componentName: string,
+  ): Promise<boolean> {
     const seen = new Set<unknown>();
     const walk = (node: ReactNode): boolean => {
       if (!node || typeof node !== "object") {
@@ -960,13 +963,17 @@ describe("installation-wide cards live off the personal pages", () => {
     // Every tab, since a card lives on one part of its page.
     const page = SETTINGS_PAGES.find((each) => each.id === id);
     const tabs = page && "tabs" in page ? page.tabs.map((tab) => tab.id) : [""];
-    return tabs.some((tab) => walk(tabContent(id, tab)));
+    const drawn = await Promise.all(
+      tabs.map((tab) => SETTINGS_PAGE_VIEWS[id].drawn({ tab })),
+    );
+    return drawn.some(walk);
   }
 
-  it("puts the vendor OAuth apps on an installation page, not beside a contact's own connections", () => {
-    const hosts = SETTINGS_PAGES.filter((page) =>
-      pageRenders(page.id, "OAuthAppsCard"),
+  it("puts the vendor OAuth apps on an installation page, not beside a contact's own connections", async () => {
+    const renders = await Promise.all(
+      SETTINGS_PAGES.map((page) => pageRenders(page.id, "OAuthAppsCard")),
     );
+    const hosts = SETTINGS_PAGES.filter((_, index) => renders[index]);
     expect(hosts).toHaveLength(1);
     expect(hosts[0]?.scope).toBe("installation");
     // And the group with it: `scope` alone would be satisfied by any page the
