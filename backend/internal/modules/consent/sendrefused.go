@@ -123,6 +123,9 @@ func refusalReference(refusals []RefusedRecipient) []map[string]any {
 		if cited := commsauthzwire.Provision(r.Provision); cited != nil {
 			entry["provision"] = cited
 		}
+		if cited := commsauthzwire.Provisions(r.Provisions); cited != nil {
+			entry["provisions"] = cited
+		}
 		out = append(out, entry)
 	}
 	return out

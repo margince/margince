@@ -614,7 +614,7 @@ describe("the email composer that decides at Send", () => {
   );
 
   it(
-    "keeps the warning to its finding, and asks again on a refreshed review",
+    "names the country under the finding, and asks again on a refreshed review",
     async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const judged = (
@@ -648,9 +648,9 @@ describe("the email composer that decides at Send", () => {
       await fillMessage(user);
       await pressSend(user);
       expect(await leadFinding()).toBeTruthy();
-      // The warning is its first line: the country it was judged under is not
-      // repeated beneath it.
-      expect(screen.queryByText(/^Country:/)).toBeNull();
+      // Beneath the finding, the country it was judged under and where it was
+      // read, so the rep can see why this law applies.
+      expect(screen.getByText(/^Country:/).textContent).toContain("Germany");
       await user.type(await reasonField(), "Asked by phone.");
       await user.click(await sendAnyway());
       expect(await screen.findByText(/The email checks changed/)).toBeTruthy();
