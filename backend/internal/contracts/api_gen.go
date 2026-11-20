@@ -47763,7 +47763,10 @@ type CreateSignalRequestSourceChannel string
 // CreateStageExitCriterionRequest defines model for CreateStageExitCriterionRequest.
 type CreateStageExitCriterionRequest struct {
 	Hint *string `json:"hint,omitempty"`
-	Key  string  `json:"key"`
+
+	// Key Optional. Left out, Margince makes the key from the label and adds a
+	// number when the stage already has a live criterion under that key.
+	Key *string `json:"key,omitempty"`
 
 	// Kind What KIND of fact settles a criterion. This is not decoration: the kind
 	// decides which evidence sources may satisfy it. `buyer_confirmed`,

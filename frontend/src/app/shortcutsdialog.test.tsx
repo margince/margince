@@ -15,11 +15,19 @@ import { isParagraphCommit } from "../design-system/fieldeditdialog";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import type { CoreFeature } from "../lib/corefeatures";
-import { bindingCaps, capOf, KEYMAP, shortcutCaps } from "../lib/keymap";
+import {
+  bindingCaps,
+  capOf,
+  KEYMAP,
+  type ShortcutWords,
+  shortcutCaps,
+} from "../lib/keymap";
 import { setSingleKeyShortcutsOn } from "../lib/shortcuts";
 import { PRINTABLE_KEYS } from "../testing/keys";
 import { meFixture, READS_DESTINATIONS } from "../testing/mefixture";
 import { ShortcutsDialog } from "./shortcutsdialog";
+
+const english: ShortcutWords = (key) => en[key];
 
 afterEach(() => {
   cleanup();
@@ -83,7 +91,7 @@ describe("the keyboard shortcuts dialog", () => {
           ? en["nav.myProgress"]
           : en[entry.labelKey];
       const caps = capsBeside(group, label).join(" ");
-      expect(caps).toContain(bindingCaps(entry.keys).join(" "));
+      expect(caps).toContain(bindingCaps(entry.keys, english).join(" "));
     }
   });
 
@@ -91,7 +99,7 @@ describe("the keyboard shortcuts dialog", () => {
     const dialog = renderDialog();
     const row = within(dialog).getByText("Open search", { selector: "dt" });
     expect(row.nextElementSibling).toHaveTextContent(
-      `${shortcutCaps("search").join("")}or/`,
+      `${shortcutCaps("search", english).join("")}or/`,
     );
   });
 

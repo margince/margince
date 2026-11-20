@@ -3,7 +3,11 @@
 
 package compose
 
-import "github.com/jackc/pgx/v5/pgxpool"
+import (
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/compose/cardphoto"
+)
 
 // WithCardPhotoReader binds the lane that reads a photo of business cards.
 //
@@ -15,6 +19,6 @@ func WithCardPhotoReader(lane documentCompleter) Option {
 			return
 		}
 		//nolint:staticcheck // QF1008: the embedded name shows the copy assigned back is the contacts handlers'
-		s.contactsHandlers = s.contactsHandlers.WithCardPhotoReader(cardPhotoReader(lane))
+		s.contactsHandlers = s.contactsHandlers.WithCardPhotoReader(cardphoto.Reader(lane))
 	}
 }

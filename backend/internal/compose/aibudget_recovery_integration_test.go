@@ -19,11 +19,14 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func TestAllowanceRecoveryAdvancesBothWebsiteClocksAndIsIdempotent(t *testing.T) {
@@ -208,5 +211,32 @@ func setRecoveryAllowance(t *testing.T, e *integration.Env, tokens int64) {
 	_, err = store.ReplaceBudget(e.Admin(), ai.BudgetChange{ExpectedRevision: current.Revision, Config: ai.BudgetConfig{TokensPerFullUser: current.Config.TokensPerFullUser, CompanyMonthlyTokens: &tokens}})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A step the router declines reaches the runner as the runner's own refusal,
+// so the run says why no provider was called. A call that was made is not one.
+func TestAnAgentStepTheRouterDeclinedReachesTheRunnerAsItsReason(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
+	meter := ai.NewMeter(InstallationDB(e.Pool))
+	if err := meter.Record(ctx, ai.Usage{Task: ai.TaskAgentLoop, Tier: ai.TierCheapCloud, TokensIn: 10}); err != nil {
+		t.Fatalf("spending the allowance: %v", err)
+	}
+	cfg, err := ai.ParseRouting([]byte("profile: eu_hosted\ntiers:\n  cheap_cloud: {provider: fake, model: m}\nembeddings: {provider: fake, model: e, dimensions: 8}\n"))
+	router, routerErr := ai.NewRouter(cfg, meter, ai.StaticBudget(5), nil, false, nil)
+	if err != nil || routerErr != nil {
+		t.Fatalf("binding the router: %v, %v", err, routerErr)
+	}
+	brain := agentBrain{router: router, companyContext: newCompanyContextProvider(nil)}
+	_, _, err = brain.Complete(ctx, model.Request{Messages: []model.Message{{Role: "user", Content: "go"}}})
+	if !errors.Is(err, runner.ErrAllowanceUsedUp) || !errors.Is(err, ai.ErrBudgetDeferred) {
+		t.Errorf("budget stop = %v, want the runner's allowance refusal over the router's deferral", err)
+	}
+	if err := agentStepRefusal(&ai.ProviderDownError{Provider: "p", Health: model.HealthDown}); !errors.Is(err, runner.ErrProviderBlocked) {
+		t.Errorf("blocked provider = %v, want the runner's blocked-provider refusal", err)
+	}
+	if err := agentStepRefusal(&ai.ProviderDownError{Health: model.HealthDown, Cause: ai.ErrProviderUnavailable}); errors.Is(err, runner.ErrProviderBlocked) {
+		t.Errorf("the call that tripped the provider = %v, want it left a failed call: it was made", err)
 	}
 }

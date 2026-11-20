@@ -159,18 +159,33 @@ export function RecordFormBody({
     return field.required && !(values[field.key] ?? "").trim();
   });
   const requiredMissing = missing.length > 0;
-  const refusals = new Map(
-    shown.flatMap((field) => {
-      if (answerless(field)) return [];
-      const refusal =
-        (field.rowsUnique
-          ? repeatedRowRefusal(field, rows[field.key] ?? [], t)
-          : undefined) ??
-        field.validate?.(values[field.key] ?? "", values, rows) ??
-        ownCheck(field, values[field.key] ?? "", touched, locale, t);
-      return refusal ? [[field.key, refusal] as const] : [];
-    }),
-  );
+  const checked = shown.flatMap((field) => {
+    if (answerless(field)) return [];
+    const rowsRefusal = field.rowsUnique
+      ? repeatedRowRefusal(field, rows[field.key] ?? [], t)
+      : undefined;
+    const validated = rowsRefusal
+      ? undefined
+      : field.validate?.(values[field.key] ?? "", values, rows);
+    const refusal =
+      rowsRefusal ??
+      validated ??
+      ownCheck(field, values[field.key] ?? "", touched, locale, t);
+    return refusal
+      ? [{ key: field.key, refusal, fromValidate: validated !== undefined }]
+      : [];
+  });
+  const refusals = new Map(checked.map((c) => [c.key, c.refusal] as const));
+  // A field's own validate holds Save from the first render. An empty field
+  // keeps quiet until the reader changes something or tries to save. A value
+  // already there, or a rule across fields, is said at once or once any field
+  // is filled.
+  const said = (key: string) => {
+    const entry = checked.find((c) => c.key === key);
+    const empty = !(values[key] ?? "").trim();
+    const hidden = entry?.fromValidate === true && !edited && empty;
+    return (hidden ? undefined : refusals.get(key)) ?? faults.of(key);
+  };
   // A refusal lands at the foot of a long stack, out of sight of a pinned Save.
   useEffect(() => {
     if (error) {
@@ -244,7 +259,7 @@ export function RecordFormBody({
               field={field}
               formId={formId}
               labelHidden={titledByDialog}
-              error={refusals.get(field.key) ?? faults.of(field.key)}
+              error={said(field.key)}
               rows={rows[field.key] ?? []}
               setRows={(next) => {
                 setEdited(true);
@@ -260,7 +275,7 @@ export function RecordFormBody({
               key={field.key}
               field={field}
               labelHidden={titledByDialog}
-              error={refusals.get(field.key) ?? faults.of(field.key)}
+              error={said(field.key)}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })
@@ -285,7 +300,7 @@ export function RecordFormBody({
                   )
                 : field.hint
             }
-            error={refusals.get(field.key) ?? faults.of(field.key)}
+            error={said(field.key)}
           >
             {(control) =>
               field.offers ? (

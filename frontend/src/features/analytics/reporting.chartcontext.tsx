@@ -11,6 +11,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { scopeName } from "./analytics.context";
 import { useProgressDoor } from "./progress.links";
 import {
   type ReportingChart,
@@ -99,7 +100,7 @@ export function ChartDetails({
         }
       >
         <p>
-          {evaluation.context.scope.label} · {timezone}
+          {scopeName(evaluation.context.scope, t)} · {timezone}
         </p>
         <p>
           {formatDateTime(
@@ -207,7 +208,7 @@ function contextPeriod(
               ? "reporting.currentPipeline"
               : "reporting.currentState",
           )
-      : evaluation.context.scope.label;
+      : (scopeName(evaluation.context.scope, t) ?? undefined);
 }
 
 // Whom an owner chart credits. The rules differ by metric, and a ranking

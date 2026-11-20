@@ -2,15 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { de } from "../i18n/de";
+import { en } from "../i18n/en";
 import {
   ariaKeyShortcuts,
   type BindingKeys,
   capOf,
   isCharacterKey,
   KEYMAP,
+  type ShortcutWords,
   shortcutCaps,
   shortcutTip,
 } from "./keymap";
+
+const english: ShortcutWords = (key) => en[key];
+const german: ShortcutWords = (key) => de[key];
 
 const dispatched = KEYMAP.filter((entry) => entry.answeredBy === "dispatcher");
 
@@ -21,13 +27,20 @@ const pressed = (keys: BindingKeys) =>
 
 describe("the platform's modifier", () => {
   it.each(["MacIntel", "iPhone"])("is ⌘ on %s", (platform) => {
-    expect(shortcutCaps("sidebar", platform)).toEqual(["⌘", "B"]);
-    expect(shortcutCaps("search", platform)).toEqual(["⌘", "K"]);
+    expect(shortcutCaps("sidebar", english, platform)).toEqual(["⌘", "B"]);
+    expect(shortcutCaps("search", german, platform)).toEqual(["⌘", "K"]);
   });
 
   // An unreported platform is more likely Windows or Linux than a Mac.
   it.each(["Win32", "Linux x86_64", ""])("is Ctrl on %j", (platform) => {
-    expect(shortcutCaps("search", platform)).toEqual(["Ctrl", "K"]);
+    expect(shortcutCaps("search", english, platform)).toEqual(["Ctrl", "K"]);
+  });
+
+  it("is the cap a German keyboard prints, Strg", () => {
+    expect(shortcutCaps("search", german, "Win32")).toEqual(["Strg", "K"]);
+    expect(shortcutTip("Suche", { kind: "chord", key: "k" }, german)).toMatch(
+      /^Suche · (?:⌘|Strg) K$/,
+    );
   });
 });
 
@@ -86,11 +99,11 @@ describe("aria-keyshortcuts", () => {
 
 describe("a label with its shortcut", () => {
   it("joins a chord's caps, and a sequence's with the reader's word", () => {
-    expect(shortcutTip("Search", { kind: "single", key: "/" }, "then")).toBe(
+    expect(shortcutTip("Search", { kind: "single", key: "/" }, english)).toBe(
       "Search · /",
     );
     expect(
-      shortcutTip(undefined, { kind: "sequence", keys: ["g", "c"] }, "dann"),
+      shortcutTip(undefined, { kind: "sequence", keys: ["g", "c"] }, german),
     ).toBe("G dann C");
   });
 });

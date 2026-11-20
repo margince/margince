@@ -145,7 +145,7 @@ it("renames through the row menu's dialog, starting from the current label", asy
   const dialog = within(await screen.findByRole("dialog"));
   const field = dialog.getByLabelText(en["acqSources.addLabel"]);
   expect(field).toHaveValue("Partner");
-  expect(dialog.getByText("partner").tagName).toBe("CODE");
+  expect(dialog.queryByText("partner")).toBeNull();
   await user.clear(field);
   await user.type(field, "Channel partner{Enter}");
   await waitFor(() =>

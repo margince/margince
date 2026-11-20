@@ -35,6 +35,7 @@ describe("the de copy checks, over planted catalogs", () => {
     ["spells an ellipsis as the one character …", "Lädt..."],
     ["has no double space", "Speichern  jetzt"],
     ["uses no exclamation mark", "Fertig!"],
+    ["keeps the -e of a du imperative", "Schreib zuerst einen Grund."],
     ["says bitte once, to open a recovery step in a sentence", "Bitte warten"],
     ["uses no abbreviation", "Kontakte usw. laden."],
     ["uses no apostrophe contraction", "Lars’s Deals"],
@@ -49,6 +50,40 @@ describe("the de copy checks, over planted catalogs", () => {
         line.startsWith(`${check}: `),
       ),
     ).toEqual([`${check}: de.ts a.b: ${JSON.stringify(value)}`]);
+  });
+
+  // Freigeben is approval. A value whose English shares says teilen, and one
+  // whose English also approves keeps the approval word.
+  it("says teilen where the English says share", () => {
+    const shared = styleFindings([
+      {
+        source: "de.ts",
+        catalog: {
+          "a.share": "Für dich freigegeben",
+          "a.opens": "Freigeben für das Team",
+          "a.compound": "Keine Kontofreigabe vorhanden",
+          "a.split": "Gib die Kontakte für das Team frei.",
+          "a.approve": "Wird erst nach einer Freigabe geteilt.",
+          "a.free": "Geteilt, die Zeit bleibt frei.",
+          "a.ok": "Mit dir geteilt",
+        },
+        english: {
+          "a.share": "Shared with me",
+          "a.opens": "Share with the team",
+          "a.compound": "No account sharing",
+          "a.split": "Share the contacts with the team.",
+          "a.approve": "This share takes effect only after approval.",
+          "a.free": "Shared, and the time stays free.",
+          "a.ok": "Shared with me",
+        },
+      },
+    ]).filter((line) => line.startsWith("says teilen"));
+    expect(shared).toEqual([
+      'says teilen where the English says share: de.ts a.share: "Für dich freigegeben"',
+      'says teilen where the English says share: de.ts a.opens: "Freigeben für das Team"',
+      'says teilen where the English says share: de.ts a.compound: "Keine Kontofreigabe vorhanden"',
+      'says teilen where the English says share: de.ts a.split: "Gib die Kontakte für das Team frei."',
+    ]);
   });
 
   it("holds the retired words to the Vocabulary table, both ways", () => {

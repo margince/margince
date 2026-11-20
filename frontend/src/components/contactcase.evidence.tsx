@@ -56,6 +56,7 @@ export function CaseEvidence({
   return (
     <section className="contactcase-section">
       <Eyebrow as="h3">{t("contactCase.evidence.title")}</Eyebrow>
+      <p className="t-caption">{t("contactCase.evidence.hint")}</p>
       <ul className="contactcase-list">
         {contactCase.edges.map((edge) => (
           <li key={edge.pair_id} className="contactcase-edge">
