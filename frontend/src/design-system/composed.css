@@ -455,6 +455,12 @@
   overflow: hidden;
   overflow-wrap: anywhere;
 }
+/* Above the stretched link, like the owner, or the pointer never reaches the
+   name and the tip with the whole of a clamped one never opens. */
+.deal-card .deal-name-text {
+  position: relative;
+  z-index: 1;
+}
 .deal-card .deal-figure {
   display: flex;
   align-items: baseline;

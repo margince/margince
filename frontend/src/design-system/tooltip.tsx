@@ -134,8 +134,20 @@ function clipped(element: Element | null): boolean {
     element !== null &&
     !element.classList.contains("sr-only") &&
     (element.scrollWidth > element.clientWidth ||
+      clampedLines(element) ||
       Array.from(element.children).some(clipped))
   );
+}
+
+// Asks for the clamp itself: a box under `overflow: visible` draws text taller
+// than itself whole. The pixel of slack is the one `useLineClamped` allows.
+function clampedLines(element: Element): boolean {
+  if (element.scrollHeight <= element.clientHeight + 1) {
+    return false;
+  }
+  const lines =
+    getComputedStyle(element).getPropertyValue("-webkit-line-clamp");
+  return lines !== "" && lines !== "none";
 }
 
 /** A control's own name is always worth showing: it is not on screen at all. */
