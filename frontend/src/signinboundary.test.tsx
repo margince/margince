@@ -20,15 +20,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// A refused password leaves the sign-in surface standing.
-//
-// The probe holds no data while the reader is signed out, and a query with
-// no data returns to `pending` for every refetch. A refetch, such as a
-// returning focus starts, must not rebuild the form and lose what it held.
-//
-// Built on createQueryClient, the client the application runs. A hand-made
-// one with other defaults does not re-ask, and the case then passes over
-// the defect.
+// A refetch of the signed-out probe returns it to `pending`; the form must
+// survive that. Built on createQueryClient, whose defaults the app runs.
 describe("a password the server refuses", () => {
   const problem = (body: unknown, status: number) =>
     new Response(JSON.stringify(body), {

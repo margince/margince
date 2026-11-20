@@ -19,12 +19,25 @@ import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import type { Route, Screen } from "../lib/router";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
 import {
+  opensReservedPage,
+  type ReservedPageScreen,
+  reservedPageOf,
+} from "./reservedpages";
+import {
   type NavLevelEntry,
   type NavSection,
   type NavTrailLevel,
   navLevelRoute,
   navTrail,
 } from "./subnav";
+
+export {
+  CREATE_ID,
+  CREATE_SCREENS,
+  IMPORT_ID,
+  opensCreateForm,
+  opensReservedPage,
+} from "./reservedpages";
 
 // The level registry lives beside this list and is reached through it: a caller
 // asking where the sidebar can go has one module to import.
@@ -228,45 +241,15 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
   "projects",
 ]);
 
-// Id segments that name a page rather than a record, each on its own screen
-// only: `#/leads/import` is the lead whose id is "import".
-export const CREATE_ID = "new";
-export const IMPORT_ID = "import";
-
-/** The screens whose list opens a create form at `CREATE_ID`, which `C` opens. */
-export const CREATE_SCREENS: ReadonlySet<Screen> = new Set([
-  "contacts",
-  "companies",
-  "leads",
-  "deals",
-  "projects",
-]);
-
-/** `#/deals/new`: the list itself, with its create form open. */
-export function opensCreateForm(route: Route): boolean {
-  return route.id === CREATE_ID && CREATE_SCREENS.has(route.screen);
-}
-
-// A page of its own below the list, which the trail names.
-const RESERVED_PAGES: Readonly<
-  Partial<Record<Screen, { id: string; titleKey: MessageKey }>>
-> = {
-  contacts: { id: IMPORT_ID, titleKey: "vcardImport.title" },
+// The name the trail gives each reserved page.
+const RESERVED_PAGE_TITLES: Readonly<Record<ReservedPageScreen, MessageKey>> = {
+  contacts: "vcardImport.title",
 };
-
-export function opensReservedPage(route: Route): boolean {
-  return (
-    opensCreateForm(route) ||
-    (route.id !== undefined && RESERVED_PAGES[route.screen]?.id === route.id)
-  );
-}
 
 // The trail, the agent's subject and the rail read a reserved page's name here.
 export function reservedPageTitle(route: Route): MessageKey | undefined {
-  const page = RESERVED_PAGES[route.screen];
-  return route.id !== undefined && page?.id === route.id
-    ? page.titleKey
-    : undefined;
+  const page = reservedPageOf(route);
+  return page === undefined ? undefined : RESERVED_PAGE_TITLES[page];
 }
 
 // The trail, the page heading, the agent's subject and the rail all ask this.

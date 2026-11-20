@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { opensReservedPage } from "./app/reservedpages";
 import type { Route, Screen } from "./lib/router";
 
 // Each screen's code by its module. bootstrap.ts imports this, so it names
@@ -40,31 +41,27 @@ export const SCREEN_CODE = {
 
 type Code = () => Promise<unknown>;
 
-// Not app/nav's opensReservedPage: nav imports the icon set, which would load
-// with bootstrap. App.routes.test.tsx holds the two in agreement.
-function opensList(route: Route): boolean {
-  return (
-    route.id === undefined ||
-    route.id === "new" ||
-    (route.screen === "contacts" && route.id === "import")
-  );
-}
-
 // Total over `Screen`, so a new screen fails the build until it names its code.
 const ADDRESSED: Readonly<Record<Screen, (route: Route) => Code | undefined>> =
   {
     home: () => SCREEN_CODE.brief,
     contacts: (route) =>
-      opensList(route) ? SCREEN_CODE.contacts : SCREEN_CODE.contactPage,
+      route.id === undefined || opensReservedPage(route)
+        ? SCREEN_CODE.contacts
+        : SCREEN_CODE.contactPage,
     companies: () => SCREEN_CODE.companies,
     partners: () => SCREEN_CODE.partners,
     leads: () => SCREEN_CODE.leads,
     deals: (route) =>
-      !opensList(route) && route.id2 === "room"
+      route.id !== undefined &&
+      !opensReservedPage(route) &&
+      route.id2 === "room"
         ? SCREEN_CODE.dealRoom
         : SCREEN_CODE.deals,
     projects: (route) =>
-      opensList(route) ? SCREEN_CODE.projects : SCREEN_CODE.project,
+      route.id === undefined || opensReservedPage(route)
+        ? SCREEN_CODE.projects
+        : SCREEN_CODE.project,
     worklist: () => SCREEN_CODE.worklist,
     analytics: () => SCREEN_CODE.analytics,
     progress: () => SCREEN_CODE.progress,
