@@ -213,9 +213,9 @@ func TestMeetingsFromACalendarConnectedBeforeTheScopeCountForItsOwnersCompany(t 
 	requireGuard(t, e, e.Rep3, guest, "colleague of another company", "unknown")
 }
 
-// An import takes the company of the live connection that delivered it. A seat
-// with mailboxes in two companies is scoped by the mailbox named in delivered_by,
-// and stays unscoped when both delivered it or the mailbox has no company.
+// An import takes the company of the live connection that delivered it.
+// A seat with mailboxes in two companies is scoped by the one named in delivered_by.
+// It stays unscoped when both delivered it or the mailbox has no company.
 func TestTheImportScopeTaskFollowsTheDeliveringMailboxAndGuessesNone(t *testing.T) {
 	c := twoCompanies(t)
 	e := c.e
