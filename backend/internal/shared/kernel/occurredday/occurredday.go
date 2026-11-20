@@ -304,9 +304,15 @@ func IsAnchorSQL(at string) string {
 // StartAtSQL is StartSQL for an activity time held elsewhere than its own
 // row: at is the instant stored the way occurred_at is, precision its kind.
 func StartAtSQL(at, precision string) string {
+	return StartInSQL(at, precision, InstallationZoneSQL)
+}
+
+// StartInSQL is StartAtSQL with the day entry's date begun in the zone the SQL
+// expression zone names, such as a report's saved zone.
+func StartInSQL(at, precision, zone string) string {
 	return fmt.Sprintf(`(CASE WHEN %[2]s = 'day'
-		THEN date_trunc('day', %[1]s AT TIME ZONE 'UTC') AT TIME ZONE `+InstallationZoneSQL+`
-		ELSE %[1]s END)`, at, precision)
+		THEN date_trunc('day', %[1]s AT TIME ZONE 'UTC') AT TIME ZONE %[3]s
+		ELSE %[1]s END)`, at, precision, zone)
 }
 
 // WithinSQL is "the activity under alias falls in the period [from, to)", both

@@ -14,6 +14,7 @@
 # is one those readings support — the stage's probability against the deal's
 # amount — never causes it has no data for.
 name: case45_move_the_deal_on
+title: Move the deal on
 criteria: [1, 2, 3, 4]
 
 # WRITES: the author's own statement that this case changes the world. It is not

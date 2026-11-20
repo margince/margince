@@ -292,7 +292,7 @@ check-gates:
 ## so an optimization starts from a reading rather than from a guess.
 gate-timings:
 	@mkdir -p backend/.tmp
-	@cd backend && $(GO) test ./gates/ -count=1 -v > .tmp/gate-timings.log 2>&1 || true
+	@cd backend && CHECK_BASE_REF="$(CHECK_BASE_REF)" $(GO) test ./gates/ -count=1 -v > .tmp/gate-timings.log 2>&1 || true
 	@GATE_TIMING_CORES="$$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)" \
 		bash scripts/gate-timings.sh backend/.tmp/gate-timings.log
 

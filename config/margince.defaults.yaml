@@ -115,6 +115,8 @@ consent:
   controller_particulars: null
 
 contacts:
+  dormancy_days: [30,60,90]
+  dormancy_follow_up_enabled: true
   first_response_enabled: false
   first_response_target_minutes: 240
   shared_merge_reviews: false

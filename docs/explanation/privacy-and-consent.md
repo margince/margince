@@ -456,19 +456,19 @@ it down.
 `consent/ruleselectors.go` holds two selectors. Each recipient of a message is put to them on their own.
 
 - **Marketing rules follow the recipient's jurisdiction**: the advertising cap and label, how to
-  object, the opt-out receipt and the marketing exception. It is the first two-letter
-  `address_country` of the contact, then their current primary employer; a lead takes its company's.
-- **Data protection follows the sending legal entity's jurisdiction.** This covers the controller
-  identity and privacy contact at the foot of the mail. `storekit.LegalEntityOf` reads the sending
-  user's membership; none, or an archived entity, gives `installation.country`. A further entity
-  puts its own legal name and address in the foot. Staging stores the entity.
-- **The lawful basis follows both, the stricter winning**, and its warning cites both laws (see
+  object, the opt-out receipt and the marketing exception. A jurisdiction a human stated for the message
+  wins; else the contact's `address_country`, then their primary employer's, or a lead's company's.
+- **Data protection follows the sending legal entity's jurisdiction**: the controller, its legal
+  name and address, and the privacy contact in the foot. `storekit.LegalEntityOf` reads the sending
+  user's membership; none, or an archived entity, gives `installation.country`. Staging stores the entity.
+  A recipient pack that sets `data-protection-follows-recipient` takes disclosures and deadlines.
+- **The legal basis follows both, the stricter winning**, and its warning cites both laws (see
   [messaging-policy-packs.md](messaging-policy-packs.md#which-country-judges-a-recipient)).
 
-A recipient whose record states no jurisdiction, or one no pack covers, gets the baseline: no pack
-duties. Marketing still needs consent, because the verdict asks for it everywhere, and the send path
-adds the unsubscribe link in every case. The email domain, the jurisdiction of the user who sends
-and the least strict pack never stand in for the recipient's jurisdiction.
+A recipient whose record states no jurisdiction, or one no pack covers, has no recipient pack
+duties. The sending entity's pack alone judges the legal basis. Marketing still needs consent, as
+the verdict asks for it everywhere, and the send path always adds the unsubscribe link. The email
+domain, the jurisdiction of the user who sends and the least strict pack never stand in for the recipient's.
 
 Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`, and a compiled
 pack's `ruleset_digest`) and the `data_protection_country` of the user who sends. Preview and staging refuse an advertising subject without a recipient's label (`subject_label_missing`).

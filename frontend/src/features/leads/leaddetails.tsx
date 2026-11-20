@@ -15,6 +15,7 @@ import { useTagsRow } from "../../components/tagsflow";
 import { Badge, PendingBody } from "../../design-system/atoms";
 import { ContactLink } from "../../design-system/contactlink";
 import { InfoTip } from "../../design-system/infotip";
+import { ReadOnlyValue } from "../../design-system/readonlyvalue";
 import {
   type DetailRow,
   type DetailSection,
@@ -165,7 +166,9 @@ function useReachRows(lead: Lead): DetailRow[] {
       value: lead.linkedin_url ? (
         <LinkedInChip href={lead.linkedin_url} name={lead.full_name} />
       ) : (
-        <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
+        <ReadOnlyValue reason={t("record.leadProfileReadOnly")}>
+          {t("field.unset")}
+        </ReadOnlyValue>
       ),
     },
   ];

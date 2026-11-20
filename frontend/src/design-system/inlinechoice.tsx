@@ -3,6 +3,7 @@ import { useT } from "../i18n";
 import { EditableValue } from "./editablevalue";
 import { FieldEditDialog, useFieldEditor } from "./fieldeditdialog";
 import "./inlinechoice.css";
+import { ReadOnlyValue } from "./readonlyvalue";
 import { Select, type SelectOption } from "./select";
 
 // One value a reader may choose. A pick is only the draft; Save stores it.
@@ -59,13 +60,13 @@ export function InlineChoice({
           {value ? shown : null}
         </EditableValue>
       ) : (
-        <span
+        <ReadOnlyValue
           className={value ? undefined : "inlinechoice-unset"}
-          title={readOnlyReason}
-          data-testid={testId}
+          reason={readOnlyReason}
+          testId={testId}
         >
           {shown}
-        </span>
+        </ReadOnlyValue>
       )}
       <FieldEditDialog
         open={open}

@@ -36311,6 +36311,30 @@ export interface components {
             open_commitments?: number | null;
         };
         /**
+         * @description How cold an account has gone, counted in calendar days of the installation zone since its
+         *     stored `last_activity_at`. `active` before the first day of the ladder, `cooling` from it,
+         *     `dormant` from the second and `stale` from the third. The days are the installation's
+         *     `contacts.dormancy_days` setting, 30, 60 and 90 by default. An account with no activity at
+         *     all is `stale`.
+         * @enum {string}
+         */
+        DormancyRung: "active" | "cooling" | "dormant" | "stale";
+        /** @description Where one account stands on the dormancy ladder, with the facts that put it there. */
+        DormancyReading: {
+            rung: components["schemas"]["DormancyRung"];
+            /**
+             * Format: date-time
+             * @description The account's stored last activity the rung is counted from. Null when it has none.
+             */
+            last_activity_at?: string | null;
+            /** @description Calendar days from `last_activity_at` to today in the installation zone. 0 when there is no activity. */
+            silent_days: number;
+            /** @description True when the account has no activity recorded at all, which is why it reads as `stale`. */
+            no_activity: boolean;
+            /** @description The silent days on which `cooling`, `dormant` and `stale` begin, each from 1 to 3650 and in rising order, so a reader can see the rule. */
+            ladder_days: number[];
+        };
+        /**
          * @description The three readings a company page leads with (AC-company-13, PO-F-4). Each half is
          *     independently gated: a caller who may read the account but not its mail gets the account
          *     half and a null engagement, because a state inferred from data they were not allowed to see
@@ -36322,10 +36346,12 @@ export interface components {
                 lifecycle: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 relationship_types: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             };
+            /** @description How cold the account has gone, read from its stored `last_activity_at`. */
+            dormancy?: components["schemas"]["DormancyReading"];
             /** @description Null when the caller has no activity grant — not assessed, as distinct from never contacted. */
             engagement?: {
                 /**
-                 * @description PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
+                 * @description PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting. `dormant` is the dormancy ladder's `dormant` or `stale` rung, so the strip and `dormancy` cannot disagree either.
                  * @enum {string}
                  */
                 state: "never_contacted" | "active" | "waiting_on_them" | "waiting_on_us" | "dormant";
@@ -36691,7 +36717,7 @@ export interface components {
          */
         Company360Suggestion: {
             /**
-             * @description The four RULE kinds, computed from the account's records with no model:
+             * @description The five RULE kinds, computed from the account's records with no model:
              *
              *     `no_reply` — an outbound message on a thread nobody answered.
              *     `stalled_deal` — an open deal idle past the 60-day stall window.
@@ -36700,6 +36726,11 @@ export interface components {
              *     filed under: a `contract_ended` signal stands while the record still reads as a live
              *     customer or an open opportunity. The page states the conflict rather than resolving
              *     it, because which of the two is wrong is a judgment only the reader can make.
+             *     `gone_dormant` — the account is on the `dormant` or `stale` rung of the dormancy ladder
+             *     and has an owner. Its `add_task` action prepares a follow-up task for that owner. One
+             *     silent stretch raises it once: its fingerprint is the stored `last_activity_at`, so a
+             *     dismissal holds until new activity starts a new stretch. An installation switches it
+             *     off with `contacts.dormancy_follow_up_enabled`.
              *
              *     The four READ kinds, which only the account scan raises — each from words the
              *     model read in the account's own exchanges, quoted on the citation so the reader
@@ -36713,7 +36744,7 @@ export interface components {
              *     `need_raised` — they wrote about a need or a plan nothing on the record has picked up.
              * @enum {string}
              */
-            kind: "no_reply" | "stalled_deal" | "no_next_step" | "lifecycle_conflict" | "commitment_unmet" | "question_unanswered" | "risk_raised" | "need_raised";
+            kind: "no_reply" | "stalled_deal" | "no_next_step" | "lifecycle_conflict" | "gone_dormant" | "commitment_unmet" | "question_unanswered" | "risk_raised" | "need_raised";
             /**
              * @description What to do, in the RULE's own words — "Follow up: no reply in 24 days" (PO-AC-N-13).
              *
@@ -45719,7 +45750,10 @@ export interface components {
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
-            /** @description The law the recipient's pack cites for `reason_code`, absent when none may be shown. */
+            /**
+             * @description The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+             *     when only that pack cites one. Absent when none may be shown.
+             */
             provision?: components["schemas"]["CitedProvision"];
             /**
              * @description Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
@@ -48521,7 +48555,7 @@ export interface components {
         /** @description The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift. */
         SavedViewTarget: string;
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline" | "account_progression" | "source_quality";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline" | "account_progression" | "source_quality" | "introductions_made" | "meetings_booked_for_colleagues";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -51388,7 +51422,10 @@ export interface components {
             category?: string;
             /** @description The category the sender claimed. */
             requested_category?: string;
-            /** @description The first law cited for `reason_code`, absent when none may be shown. */
+            /**
+             * @description The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+             *     when only that pack cites one. Absent when none may be shown.
+             */
             provision?: components["schemas"]["CitedProvision"];
             /** @description Every law cited for `reason_code`, `provision` first. Absent when none may be shown. */
             provisions?: components["schemas"]["CitedProvision"][];
@@ -55102,9 +55139,16 @@ export interface components {
             readonly partner_fit_score_computed?: number | null;
             /** @description Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared. */
             readonly partner_fit_override_reason?: string | null;
-            /** @description Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags. */
+            /**
+             * @deprecated
+             * @description Never set; always null. Kept so existing clients keep compiling.
+             */
             relationship_health?: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @deprecated
+             * @description Never set; always null. Kept so existing clients keep compiling.
+             */
             last_contact_at?: string | null;
             /**
              * @deprecated
@@ -55954,7 +55998,10 @@ export interface components {
             /** Format: uuid */
             subject_id?: string;
             reason_code: string;
-            /** @description The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed. */
+            /**
+             * @description The first law cited for `reason_code` when the refusal was assessed: the recipient's
+             *     pack's, or the sending entity's when only that pack cites one.
+             */
             provision?: components["schemas"]["CitedProvision"];
             /**
              * @description Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
@@ -61291,7 +61338,7 @@ export interface components {
             as_of: string;
             /**
              * @description True when this answer is Home's kept answer past its five-minute freshness,
-             *     served while the server reads it again. It still holds every access rule the
+             *     or older than the reader's own latest write, served while the server reads it again. It still holds every access rule the
              *     fresh read would apply. A client asks again a few seconds later for the fresh
              *     answer. Absent or false means the answer is fresh.
              */
@@ -67719,6 +67766,12 @@ export interface operations {
                 partner_stage?: string;
                 /** @description Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise). */
                 partner_stage_meaning?: components["schemas"]["PartnerStageMeaning"];
+                /**
+                 * @description Companies on this rung of the dormancy ladder today, read from the stored
+                 *     `last_activity_at` by the same rule the company page's `state_strip.dormancy` uses.
+                 *     `stale` includes companies with no activity at all.
+                 */
+                dormancy?: components["schemas"]["DormancyRung"];
                 /**
                  * @description Companies that came from this outside system, matched exactly. Send `source_id`
                  *     too to find the one company holding that id there. A company the caller cannot
@@ -85239,6 +85292,8 @@ export interface operations {
                 per_type?: number;
                 /** @description Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`. */
                 with_employees?: boolean;
+                /** @description The caller is a search box answering each keystroke. Messages (`activity`) are left out of the answer while the word being typed is under 4 letters, because a short prefix matches a large share of all messages and ranking them is the slow part. Every other type is searched from the first letter as usual. A query that ends in a finished word, or uses the websearch operators, has no word being typed and keeps its messages, and so does a request whose `types` names messages alone. Only a human caller's flag is honoured. */
+                typeahead?: boolean;
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset

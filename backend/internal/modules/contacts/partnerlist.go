@@ -55,17 +55,15 @@ type ListPartnersInput struct {
 const columnCertifiedStaff = "certified_staff"
 
 var partnerSortFields = map[string]storekit.SortField{
-	filterCertStatus:      storekit.Column(fieldcatalog.TypeText),
-	"margin_tier":         storekit.Column(fieldcatalog.TypeText),
-	"relationship_stage":  storekit.Column(fieldcatalog.TypeText),
-	columnCertifiedStaff:  storekit.Column(fieldcatalog.TypeNumber),
-	"retention_rate":      storekit.Column(fieldcatalog.TypeNumber),
-	"partner_fit_score":   storekit.Column(fieldcatalog.TypeNumber),
-	"relationship_health": storekit.Column(fieldcatalog.TypeNumber),
-	"last_contact_at":     storekit.Column(storekit.KindTimestamp),
-	"next_step_due_at":    storekit.Column(fieldcatalog.TypeDate),
-	"created_at":          storekit.Column(storekit.KindTimestamp),
-	"updated_at":          storekit.Column(storekit.KindTimestamp),
+	filterCertStatus:     storekit.Column(fieldcatalog.TypeText),
+	"margin_tier":        storekit.Column(fieldcatalog.TypeText),
+	"relationship_stage": storekit.Column(fieldcatalog.TypeText),
+	columnCertifiedStaff: storekit.Column(fieldcatalog.TypeNumber),
+	"retention_rate":     storekit.Column(fieldcatalog.TypeNumber),
+	"partner_fit_score":  storekit.Column(fieldcatalog.TypeNumber),
+	"next_step_due_at":   storekit.Column(fieldcatalog.TypeDate),
+	"created_at":         storekit.Column(storekit.KindTimestamp),
+	"updated_at":         storekit.Column(storekit.KindTimestamp),
 }
 
 // ListPartners reads one page of the partner list, in the caller's order or the

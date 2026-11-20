@@ -162,11 +162,11 @@ func subjectOfRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient) (
 	return ruleSubject{Kind: entityLead, ID: leadID}, nil
 }
 
-// recipientCountries resolves every recipient's country once, before any of
+// resolveRecipientCountries resolves every recipient's country once, before any of
 // them is decided. The cap lock, the verdict, the cap count and the recorded
 // stamp all read this one answer. So a record edited mid-send cannot make one
 // step judge under a pack another step did not.
-func (s *Store) recipientCountries(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient, requestFor func(connector.Recipient) commsauthz.Request) ([]RecipientCountry, error) {
+func (s *Store) resolveRecipientCountries(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient, requestFor func(connector.Recipient) commsauthz.Request) ([]RecipientCountry, error) {
 	out := make([]RecipientCountry, 0, len(recipients))
 	for _, r := range recipients {
 		country, err := s.recipientRequestCountry(ctx, tx, r, requestFor(r))

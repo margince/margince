@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -75,7 +76,7 @@ func footerOmissions(findings []commsauthz.FooterFinding) []footerOmission {
 // changed citation asks for a new confirmation, as changed words do.
 func shownProvisions(refusal RefusedRecipient) []string {
 	var out []string
-	for _, p := range citedLaw(refusal) {
+	for _, p := range slices.Concat(citedLaw(refusal)...) {
 		if p.Cited() {
 			out = append(out, p.Instrument, p.Provision, p.SourceURL)
 		}

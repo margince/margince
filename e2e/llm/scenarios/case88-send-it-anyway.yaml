@@ -1,5 +1,6 @@
 # CASE 88 — Sending over a refusal is the user's own decision, on a warning they have read. The agent cannot send past a refusal and sends the user to the review.
 name: case88_send_it_anyway
+title: Send it anyway
 criteria: [1]
 writes: true
 passport: wide

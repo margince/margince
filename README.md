@@ -78,6 +78,8 @@ disagree.
 Each AI task can use a model on your own machines (Ollama or vLLM) or a cloud provider. A task that uses
 a cloud provider sends the text it reads to that provider. The `sovereign` profile refuses every cloud
 provider. [docs/reference/ai-egress.md](docs/reference/ai-egress.md) lists, for each task, what can leave.
+Each model and each AI tool a user can connect has a test score in
+[docs/reference/which-ai-you-can-use.md](docs/reference/which-ai-you-can-use.md).
 
 ## What is not here yet
 

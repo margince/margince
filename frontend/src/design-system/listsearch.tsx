@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { holdsEveryWord, searchWords } from "../format/collate";
 import { translate, useLocale, useT } from "../i18n";
+import { isImeCommit } from "../lib/imecommit";
 import { useDebouncedSearch } from "./debouncedsearch";
 import type { ListChip } from "./listsurface.dials";
 import { SuggestPopup, useSuggestList } from "./suggestlist";
@@ -170,7 +171,12 @@ export function ListSearch({
             list.close();
           }}
           onKeyDown={(event) => {
-            if (canFilter && !list.navigate(event) && event.key === "Enter")
+            if (
+              canFilter &&
+              !list.navigate(event) &&
+              event.key === "Enter" &&
+              !isImeCommit(event)
+            )
               list.close();
           }}
         />

@@ -78,7 +78,7 @@ var Name = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "The company's name. Set at boot, it also refuses a different name on the company profile.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
 // Timezone is the IANA reporting-period zone every period boundary is
 // computed in. Distinct from a user's own timezone (app_user.timezone), which

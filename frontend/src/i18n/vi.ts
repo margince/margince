@@ -945,6 +945,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Ngày đến",
   "reporting.enteredOn": "Ngày vào giai đoạn",
   "reporting.accruedOn": "Ngày ghi nhận",
+  "reporting.introducedOn": "Ngày giới thiệu",
+  "reporting.bookedOn": "Ngày đặt",
   "reporting.commissionAmount": "Hoa hồng",
   "reporting.hoursUnit": "Giờ",
   "reporting.outOf": "Trên tổng {total}",
@@ -1060,6 +1062,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.daysUnit": "Ngày",
   "reporting.countUnit": "Số lượng",
   "reporting.wholeCount": "Nhập số nguyên.",
+  "reporting.needsChart": "Thêm ít nhất một biểu đồ.",
+  "reporting.needsInterval":
+    "Ngày kết thúc của khoảng tùy chỉnh phải sau ngày bắt đầu.",
   "reporting.retired": "Mục tiêu đã ngừng",
   "reporting.comparisonHelp":
     "Chọn các kỳ đã hoàn tất liền kề nhau. Ảnh chụp của cùng một kỳ không cho thấy thay đổi giữa các kỳ.",
@@ -1817,7 +1822,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.reminder.pending": "Đã lên lịch email nhắc.",
   "scheduling.reminder.queued": "Đang chờ gửi email nhắc.",
   "scheduling.reminder.unavailable":
-    "Không thể gửi lời nhắc. Kiểm tra kết nối email và gửi email trực tiếp cho khách.",
+    "Không thể gửi lời nhắc. Nếu quy tắc email của Margince đã chặn, thông báo của bạn sẽ nêu lý do. Hãy gửi email trực tiếp cho khách.",
   "history.field.reminder_status": "Trạng thái lời nhắc",
   "scheduling.myLink": "Liên kết đặt lịch của tôi",
   "scheduling.linkIntro":
@@ -3642,6 +3647,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.filterLifecycleAll": "Mọi giai đoạn",
   "company.filterRelTypeAll": "Mọi loại",
   "company.filterSizeBandAll": "Mọi số nhân viên",
+  "company.filterDormancyAll": "Mọi mức hoạt động",
+  "company.dormancy": "Mức hoạt động",
   "consent.confirmRecipient": "Gửi đến {address}",
   "consent.guardFailed": "Không thể tải quyền liên lạc.",
   "consent.permissionScope":
@@ -4847,6 +4854,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
   "co.suggest.kind.no_next_step": "Chưa có bước tiếp theo",
   "co.suggest.kind.lifecycle_conflict": "Mâu thuẫn vòng đời",
+  "co.suggest.kind.gone_dormant": "Đã im lặng",
   "co.suggest.kind.commitment_unmet": "Cam kết chưa hoàn thành",
   "co.suggest.kind.question_unanswered": "Câu hỏi chưa trả lời",
   "co.suggest.kind.risk_raised": "Rủi ro đã nêu",
@@ -6929,6 +6937,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.view.weekly": "Tuần",
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
+  "brief.updating": "Đang cập nhật…",
   "brief.briefedAt": "Margince tóm tắt lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
@@ -8879,9 +8888,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.owner_id": "Người chịu trách nhiệm",
   "analytics.field.partner_company_id": "Công ty đối tác",
   "analytics.field.partner_sourced": "Do đối tác mang về",
-  "analytics.field.period_month": "Tháng chốt",
-  "analytics.field.period_quarter": "Quý chốt",
-  "analytics.field.period_year": "Năm chốt",
+  "analytics.field.period_month": "Tháng",
+  "analytics.field.period_quarter": "Quý",
+  "analytics.field.period_year": "Năm",
   "analytics.field.phase": "Giai đoạn dự án",
   "analytics.field.pipeline_id": "Pipeline",
   "analytics.field.project": "Nhãn dự án",
@@ -14575,13 +14584,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.rule.pack": "Bộ quy tắc {rule}",
   "jurisdiction.documents.title": "Tài liệu",
   "jurisdiction.documents.empty":
-    "Gói của khu vực pháp lý này không có tài liệu.",
+    "Không có mẫu tài liệu tuân thủ tích hợp sẵn cho quốc gia này.",
   "jurisdiction.documents.emptyUnset":
     "Chưa đặt khu vực pháp lý, nên không có tài liệu để hiển thị.",
   "jurisdiction.documents.read": "Đọc",
   "jurisdiction.documents.close": "Đóng",
   "jurisdiction.documents.readFailed": "Không tải được tài liệu.",
   "jurisdiction.documents.note": "Cho {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* Các quy tắc, thời hạn và tài liệu trên trang này là bản nháp do AI tạo, không phải tư vấn pháp lý. Hãy nhờ luật sư kiểm tra trước khi dựa vào chúng.",
   "jurisdiction.audience.employer": "doanh nghiệp",
   "jurisdiction.audience.operator": "đơn vị vận hành",
   "jurisdiction.audience.employee": "nhân viên",
@@ -17816,6 +17827,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.result.failed": "Xử lý thất bại. Xem lần chạy trước khi thử lại.",
   "inquiry.handling": "Xử lý yêu cầu",
   "inquiry.review": "Xem lại cách xử lý",
+  "inquiry.stillNeeded": "Bắt buộc: {fields}",
   "inquiry.pausedConversionWarning":
     "Lưu kế hoạch này sẽ thay thế cách xử lý lead trước đây của biểu mẫu. Nếu lưu ở trạng thái tạm dừng, yêu cầu mới sẽ chưa có việc tự động cho đến khi bạn bật kế hoạch.",
   "inquiry.savePaused": "Lưu và tạm dừng",
@@ -22689,15 +22701,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.verdict.overdueToClose": "Quá hạn chốt",
   "deal.verdict.closePassed": "Ngày dự kiến chốt ({date}) đã qua.",
   "deal.verdict.notStarted": "Chưa bắt đầu",
-  "co.verdict.noContact": "Chưa liên hệ",
-  "co.verdict.addedOn": "Được thêm ngày {date}, chưa ghi nhận trao đổi nào.",
   "co.verdict.active": "Đang hoạt động",
-  "co.verdict.lastExchange": "Trao đổi gần nhất với công ty này vào {date}.",
-  "co.verdict.goingQuiet": "Đang im lặng",
-  "co.verdict.quietSince": "Không có trao đổi với ai ở đây kể từ {date}.",
+  "co.verdict.lastExchange": "Hoạt động gần nhất với công ty này vào {date}.",
+  "co.verdict.cooling": "Đang nguội dần",
   "co.verdict.dormant": "Không hoạt động",
-  "co.verdict.dormantSince":
-    "Không có deal đang mở và không có trao đổi kể từ {date}.",
+  "co.verdict.stale": "Đã ngừng liên lạc",
+  "co.verdict.silentFor":
+    "Không có hoạt động nào với công ty này trong {days} ngày, kể từ {date}. Một công ty bắt đầu nguội dần từ ngày {cooling}, không hoạt động từ ngày {dormant} và ngừng liên lạc từ ngày {stale}.",
+  "co.verdict.noActivity":
+    "Chưa ghi nhận hoạt động nào kể từ khi công ty được thêm vào ngày {date}.",
   "project.verdict.startsOn": "Bắt đầu vào {date}.",
   "project.verdict.overrunning": "Quá hạn",
   "project.verdict.endPassed": "Ngày kết thúc dự kiến ({date}) đã qua.",

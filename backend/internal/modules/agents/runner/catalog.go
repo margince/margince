@@ -64,8 +64,8 @@ type AgentSpec struct {
 const SweepQuietDays = 14
 
 // Catalog is the V1 agent set (B-EP06.22): the Morning Brief and the
-// overnight at-risk sweep — the two judgment tasks Surface A and the
-// deterministic workflow path structurally cannot do.
+// overnight at-risk sweep. Neither a user's AI assistant nor the
+// deterministic workflow path can do these two judgment tasks.
 //
 // The entries carry NO Tools: that half is declared in api/ai-tasks.yaml and
 // joined on by compose's scheduledAgents(). A caller that ranges this directly

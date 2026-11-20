@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=../margince.schema.json
+# Model setup: Google Gemini in the EU, through Vertex AI
 # config/presets/gemini_vertex_eu.yaml — every lane on Gemini served by Vertex AI
 # at an EU location, under eu_hosted.
 #

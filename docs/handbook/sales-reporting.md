@@ -196,7 +196,14 @@ Select an edition in the history to see the values, targets, graphs and records 
 
 ## How do I set targets or export figures?
 
-Open **Targets** and choose a figure that takes a target: sales won, qualified pipeline created, meetings held, accepted opportunities, leads qualified or partner pipeline. Select the owner or team, and month or fiscal quarter. A sales or partner figure can also be held to one pipeline; a lead or SDR figure counts every pipeline.
+Open **Targets** and choose a figure that takes a target. Sales won, qualified pipeline created, meetings held, accepted opportunities and leads qualified take one. So do partner pipeline, introductions made and meetings booked for colleagues. Select the owner or team, and month or fiscal quarter. A sales or partner pipeline figure can also be held to one pipeline. Every other figure counts every pipeline.
+
+Two of these figures count work done for colleagues:
+
+- **Introductions made**: the introductions a colleague made between another colleague and a contact. An asked introduction counts on the day it was completed. One recorded afterwards counts on the day it was recorded, not on the date it names. Permission to mention a name does not count.
+- **Meetings booked for colleagues**: the meetings a colleague booked, or had an agent book, for another colleague to host. They are counted on the day of booking, for the host the booking named. A meeting you host yourself does not count. Neither does a meeting entered after it took place, an imported one, or one from a transcript, a calendar sync or a public booking page. A booking cancelled later still counts.
+
+An introduction someone asked for is visible only to the two colleagues in it. For anyone else it is left out of these figures.
 
 Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**. A member with no target of their own counts with their published sales goals.
 

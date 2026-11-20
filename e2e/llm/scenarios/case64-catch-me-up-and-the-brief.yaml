@@ -9,6 +9,7 @@
 #
 # The prompt names no tool and no view.
 name: case64_catch_me_up_and_the_brief
+title: Catch me up, and show me the brief
 criteria: [1]
 writes: false
 

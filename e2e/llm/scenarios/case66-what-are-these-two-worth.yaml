@@ -10,6 +10,7 @@
 # Netzmodernisierung at 12,500.00 EUR, so the pair is 68,500.00 EUR. Neither
 # raw minor sum (6,850,000) nor a missed division (685,000) may appear.
 name: case66_what_are_these_two_worth
+title: What are these two deals worth together
 criteria: [1]
 writes: false
 

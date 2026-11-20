@@ -1,5 +1,6 @@
 # CASE 77 — A user who asks for it by name gets consent recorded through change_compliance, with the wording the contact agreed to.
 name: case77_record_her_yes
+title: Record her yes to our mail
 criteria: [1]
 writes: true
 

@@ -1,5 +1,6 @@
 # CASE 74 — Attaching and reading a file back are two calls. Naming the id on list_documents answers the bytes.
 name: case74_read_the_file_back
+title: Attach a file and read it back
 criteria: [1]
 writes: true
 

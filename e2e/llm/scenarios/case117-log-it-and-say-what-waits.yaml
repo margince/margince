@@ -12,6 +12,7 @@
 # returns, so an answer may not have seen it yet; it is not judged. The draft
 # waits in the queue, and asking again lists it.
 name: case117_log_it_and_say_what_waits
+title: Log it, and say what waits
 criteria: [2]
 
 # Both belong to this case alone: a pending review or a recap draft would show in

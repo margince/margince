@@ -1,5 +1,6 @@
 # CASE 85 — How a project is going has its own reading. It does not move the project's phase.
 name: case85_the_pilot_slipped
+title: The pilot slipped
 criteria: [1]
 writes: true
 

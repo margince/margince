@@ -921,6 +921,8 @@ export const en = {
   "reporting.arrivedOn": "Arrived on",
   "reporting.enteredOn": "Entered the stage on",
   "reporting.accruedOn": "Earned on",
+  "reporting.introducedOn": "Introduced on",
+  "reporting.bookedOn": "Booked on",
   "reporting.commissionAmount": "Commission",
   "reporting.hoursUnit": "Hours",
   "reporting.outOf": "Out of {total}",
@@ -1032,6 +1034,8 @@ export const en = {
   "reporting.daysUnit": "Days",
   "reporting.countUnit": "Count",
   "reporting.wholeCount": "Enter a whole count.",
+  "reporting.needsChart": "Add at least one chart.",
+  "reporting.needsInterval": "Give the custom interval an end after its start.",
   "reporting.retired": "Target retired",
   "reporting.comparisonHelp":
     "Choose adjacent completed periods. Snapshots of the same period cannot show period-over-period change.",
@@ -1784,7 +1788,7 @@ export const en = {
   "scheduling.reminder.pending": "Email reminder scheduled.",
   "scheduling.reminder.queued": "Email reminder queued for delivery.",
   "scheduling.reminder.unavailable":
-    "The reminder could not be sent. Check your email connection and email the guest directly.",
+    "The reminder could not be sent. If Margince’s email rules stopped it, your notifications say why. Email the guest directly.",
   "history.field.reminder_status": "Reminder status",
   "scheduling.myLink": "My booking link",
   "scheduling.linkIntro":
@@ -3691,6 +3695,8 @@ export const en = {
   "company.filterLifecycleAll": "Any stage",
   "company.filterRelTypeAll": "Any type",
   "company.filterSizeBandAll": "Any number of employees",
+  "company.filterDormancyAll": "Any activity",
+  "company.dormancy": "Activity",
   "consent.confirmRecipient": "Send to {address}",
   "consent.guardFailed": "Communication permissions could not be loaded.",
   "consent.permissionScope":
@@ -4921,6 +4927,7 @@ export const en = {
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "No next step",
   "co.suggest.kind.lifecycle_conflict": "Lifecycle conflict",
+  "co.suggest.kind.gone_dormant": "Gone quiet",
   "co.suggest.kind.commitment_unmet": "Commitment unmet",
   "co.suggest.kind.question_unanswered": "Question unanswered",
   "co.suggest.kind.risk_raised": "Risk raised",
@@ -7086,6 +7093,7 @@ export const en = {
   "brief.view.weekly": "Weekly",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
+  "brief.updating": "Updating…",
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
@@ -9087,9 +9095,9 @@ export const en = {
   "analytics.field.owner_id": "Owner",
   "analytics.field.partner_company_id": "Partner company",
   "analytics.field.partner_sourced": "Partner-sourced",
-  "analytics.field.period_month": "Close month",
-  "analytics.field.period_quarter": "Close quarter",
-  "analytics.field.period_year": "Close year",
+  "analytics.field.period_month": "Month",
+  "analytics.field.period_quarter": "Quarter",
+  "analytics.field.period_year": "Year",
   "analytics.field.phase": "Phase",
   "analytics.field.pipeline_id": "Pipeline",
   "analytics.field.project": "Project label",
@@ -14902,13 +14910,15 @@ export const en = {
   "jurisdiction.rule.pack": "Rule set {rule}",
   "jurisdiction.documents.title": "Documents",
   "jurisdiction.documents.empty":
-    "This jurisdiction’s pack ships no documents.",
+    "No built-in compliance templates are available for this country.",
   "jurisdiction.documents.emptyUnset":
     "No jurisdiction is set, so there are no documents to show.",
   "jurisdiction.documents.read": "Read",
   "jurisdiction.documents.close": "Close",
   "jurisdiction.documents.readFailed": "The document could not be loaded.",
   "jurisdiction.documents.note": "For {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* The rules, deadlines and documents on this page are AI-generated drafts, not legal advice. Have a lawyer check them before you rely on them.",
   "jurisdiction.audience.employer": "the employer",
   "jurisdiction.audience.operator": "the operator",
   "jurisdiction.audience.employee": "staff",
@@ -18124,6 +18134,7 @@ export const en = {
   "inquiry.result.failed": "Handling failed. Review the run before retrying.",
   "inquiry.handling": "Inquiry handling",
   "inquiry.review": "Review handling",
+  "inquiry.stillNeeded": "Required: {fields}",
   "inquiry.pausedConversionWarning":
     "Saving this plan replaces the old lead handling for this form. Save paused keeps the plan off: new submissions get no automatic task until you turn it on.",
   "inquiry.savePaused": "Save paused",
@@ -22974,16 +22985,15 @@ export const en = {
   "deal.verdict.overdueToClose": "Overdue to close",
   "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
   "deal.verdict.notStarted": "Not started",
-  "co.verdict.noContact": "No contact yet",
-  "co.verdict.addedOn":
-    "The account was added {date}. No exchange is recorded yet.",
   "co.verdict.active": "Active",
-  "co.verdict.lastExchange": "The last exchange with this account was {date}.",
-  "co.verdict.goingQuiet": "Going quiet",
-  "co.verdict.quietSince": "Nobody here has had an exchange since {date}.",
+  "co.verdict.lastExchange": "The last activity with this account was {date}.",
+  "co.verdict.cooling": "Cooling",
   "co.verdict.dormant": "Dormant",
-  "co.verdict.dormantSince":
-    "Nothing is open, and there has been no exchange since {date}.",
+  "co.verdict.stale": "Stale",
+  "co.verdict.silentFor":
+    "Nothing has happened with this account for {days} days, since {date}. An account cools from day {cooling}, goes dormant from day {dormant} and stale from day {stale}.",
+  "co.verdict.noActivity":
+    "No activity recorded since the account was added {date}.",
   "project.verdict.startsOn": "The project starts {date}.",
   "project.verdict.overrunning": "Overrunning",
   "project.verdict.endPassed": "The target end, {date}, has passed.",

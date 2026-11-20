@@ -50,7 +50,7 @@ var SignatureTemplate = config.DefineStored(config.Spec[string]{
 	},
 	Doc: "Workspace email signature template, used when the sender has no personal HTML; empty means none.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
+	RBACObject: installationSettingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the send path applies it to the sender's own sign-off
 })
 

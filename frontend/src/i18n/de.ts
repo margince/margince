@@ -971,6 +971,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Eingegangen am",
   "reporting.enteredOn": "In die Phase gekommen am",
   "reporting.accruedOn": "Angefallen am",
+  "reporting.introducedOn": "Vorgestellt am",
+  "reporting.bookedOn": "Gebucht am",
   "reporting.commissionAmount": "Provision",
   "reporting.hoursUnit": "Stunden",
   "reporting.outOf": "Von insgesamt {total}",
@@ -1087,6 +1089,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.daysUnit": "Tage",
   "reporting.countUnit": "Anzahl",
   "reporting.wholeCount": "Gib eine ganze Anzahl ein.",
+  "reporting.needsChart": "Füge mindestens ein Diagramm hinzu.",
+  "reporting.needsInterval":
+    "Gib dem eigenen Zeitraum ein Ende nach seinem Start.",
   "reporting.retired": "Ziel stillgelegt",
   "reporting.comparisonHelp":
     "Wähle benachbarte abgeschlossene Zeiträume. Snapshots desselben Zeitraums zeigen keinen Periodenvergleich.",
@@ -1862,7 +1867,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.reminder.pending": "E-Mail-Erinnerung geplant.",
   "scheduling.reminder.queued": "E-Mail-Erinnerung zum Versand vorgemerkt.",
   "scheduling.reminder.unavailable":
-    "Die Erinnerung konnte nicht gesendet werden. Prüfe deine E-Mail-Verbindung und schreibe dem Gast direkt.",
+    "Die Erinnerung konnte nicht gesendet werden. Haben die E-Mail-Regeln von Margince sie gestoppt, steht der Grund in deinen Benachrichtigungen. Schreib dem Gast direkt.",
   "history.field.reminder_status": "Erinnerungsstatus",
   "scheduling.myLink": "Dein Buchungslink",
   "scheduling.linkIntro":
@@ -3761,6 +3766,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.filterLifecycleAll": "Jede Phase",
   "company.filterRelTypeAll": "Jeder Typ",
   "company.filterSizeBandAll": "Jede Mitarbeiterzahl",
+  "company.filterDormancyAll": "Jede Aktivität",
+  "company.dormancy": "Aktivität",
   "consent.confirmRecipient": "An {address} senden",
   "consent.guardFailed": "Die Kontakterlaubnis konnte nicht geladen werden.",
   "consent.permissionScope":
@@ -4978,6 +4985,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.suggest.kind.stalled_deal": "Stockender Deal",
   "co.suggest.kind.no_next_step": "Kein nächster Schritt",
   "co.suggest.kind.lifecycle_conflict": "Widerspruch im Lebenszyklus",
+  "co.suggest.kind.gone_dormant": "Ruhig geworden",
   "co.suggest.kind.commitment_unmet": "Zusage nicht eingehalten",
   "co.suggest.kind.question_unanswered": "Frage unbeantwortet",
   "co.suggest.kind.risk_raised": "Risiko angesprochen",
@@ -6445,16 +6453,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
   "legalEntities.defaultCountry":
-    "Land: {country}. Die Standardfirma folgt dem Rechtsraum der Installation.",
+    "Land: {country}. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
   "legalEntities.defaultCountryNone":
-    "Kein Land gesetzt. Die Standardfirma folgt dem Rechtsraum der Installation.",
+    "Kein Land gesetzt. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
   "legalEntities.defaultCountryLink": "Unter Rechtsraum ändern",
-  "jurisdiction.entities.title": "Firmen",
+  "jurisdiction.entities.title": "Unternehmen",
   "jurisdiction.entities.lead":
-    "Das Land jeder Firma bestimmt das Recht für die Mails ihrer Leute und die Datensätze, die sie verantworten.",
+    "Das Land jedes Unternehmens bestimmt das Recht für die Mails seines Teams und die Datensätze, die sie verantworten.",
   "jurisdiction.entities.default": "{country}, die Auswahl oben",
   "jurisdiction.entities.none": "Kein Land gesetzt",
-  "jurisdiction.entities.edit": "Firmen ändern",
+  "jurisdiction.entities.edit": "Unternehmen ändern",
   "legalEntities.edit": "Bearbeiten",
   "legalEntities.archive": "Archivieren",
   "legalEntities.editTitle": "{name} bearbeiten",
@@ -7110,6 +7118,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.view.weekly": "Woche",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
+  "brief.updating": "Wird aktualisiert…",
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
@@ -9124,9 +9133,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
   "analytics.field.partner_sourced": "Von Partnern vermittelt",
-  "analytics.field.period_month": "Abschlussmonat",
-  "analytics.field.period_quarter": "Abschlussquartal",
-  "analytics.field.period_year": "Abschlussjahr",
+  "analytics.field.period_month": "Monat",
+  "analytics.field.period_quarter": "Quartal",
+  "analytics.field.period_year": "Jahr",
   "analytics.field.phase": "Phase",
   "analytics.field.pipeline_id": "Pipeline",
   "analytics.field.project": "Projektkennung",
@@ -14976,7 +14985,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.rule.pack": "Regelwerk {rule}",
   "jurisdiction.documents.title": "Dokumente",
   "jurisdiction.documents.empty":
-    "Das Paket dieses Rechtsraums enthält keine Dokumente.",
+    "Für dieses Land sind keine integrierten Compliance-Vorlagen verfügbar.",
   "jurisdiction.documents.emptyUnset":
     "Es gibt keine Dokumente zum Anzeigen, da kein Rechtsraum festgelegt ist.",
   "jurisdiction.documents.read": "Lesen",
@@ -14984,6 +14993,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.documents.readFailed":
     "Das Dokument konnte nicht geladen werden.",
   "jurisdiction.documents.note": "Für {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* Die Regeln, Fristen und Dokumente auf dieser Seite sind KI-generierte Entwürfe und keine Rechtsberatung. Lass sie von einer Anwältin oder einem Anwalt prüfen, bevor du dich auf sie verlässt.",
   "jurisdiction.audience.employer": "den Arbeitgeber",
   "jurisdiction.audience.operator": "die betreibende Stelle",
   "jurisdiction.audience.employee": "Beschäftigte",
@@ -18296,6 +18307,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bearbeitung fehlgeschlagen. Vor dem Wiederholen den Lauf prüfen.",
   "inquiry.handling": "Anfragen bearbeiten",
   "inquiry.review": "Bearbeitung prüfen",
+  "inquiry.stillNeeded": "Erforderlich: {fields}",
   "inquiry.pausedConversionWarning":
     "Wenn du diesen Plan speicherst, ersetzt er die bisherige Lead-Bearbeitung dieses Formulars. Mit „Pausiert speichern“ bleibt der Plan aus: Neue Anfragen erhalten erst nach dem Einschalten automatisch eine Aufgabe.",
   "inquiry.savePaused": "Pausiert speichern",
@@ -23304,18 +23316,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.verdict.closePassed":
     "Das erwartete Abschlussdatum ({date}) ist verstrichen.",
   "deal.verdict.notStarted": "Nicht begonnen",
-  "co.verdict.noContact": "Noch kein Kontakt",
-  "co.verdict.addedOn":
-    "Das Unternehmen wurde am {date} erstellt. Bisher ist kein Austausch erfasst.",
   "co.verdict.active": "Aktiv",
   "co.verdict.lastExchange":
-    "Der letzte Austausch mit diesem Unternehmen war am {date}.",
-  "co.verdict.goingQuiet": "Wird ruhig",
-  "co.verdict.quietSince":
-    "Seit {date} gab es mit niemandem hier einen Austausch.",
+    "Die letzte Aktivität mit diesem Unternehmen war am {date}.",
+  "co.verdict.cooling": "Kühlt ab",
   "co.verdict.dormant": "Ruhend",
-  "co.verdict.dormantSince":
-    "Es gibt keinen offenen Deal und seit {date} keinen Austausch.",
+  "co.verdict.stale": "Eingeschlafen",
+  "co.verdict.silentFor":
+    "Mit diesem Unternehmen ist seit {days} Tagen nichts passiert, seit dem {date}. Ein Unternehmen kühlt ab Tag {cooling} ab, ruht ab Tag {dormant} und gilt ab Tag {stale} als eingeschlafen.",
+  "co.verdict.noActivity":
+    "Keine Aktivität erfasst, seit das Unternehmen am {date} angelegt wurde.",
   "project.verdict.startsOn": "Das Projekt beginnt am {date}.",
   "project.verdict.overrunning": "Überzogen",
   "project.verdict.endPassed": "Das geplante Ende ({date}) ist verstrichen.",
