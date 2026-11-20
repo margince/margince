@@ -52,7 +52,6 @@ import {
   ComposeBody,
   ComposeFoot,
   ComposeFrame,
-  MailSendNotices,
   ReplyQuote,
 } from "./compose.parts";
 
@@ -405,7 +404,6 @@ export function ComposeWindow({
               onExplanationChange={reason.setText}
             >
               <ComposeQuestions
-                isChannelReply={isChannelReply}
                 fields={fields}
                 send={send}
                 anchorActivity={thread.anchorActivity}
@@ -472,13 +470,11 @@ function startsInTo(
 // What the message must say before Send: why it is written, and the deal a
 // follow-up is about. Nothing is checked until Send is pressed.
 function ComposeQuestions({
-  isChannelReply,
   fields,
   send,
   anchorActivity,
   dealChoice,
 }: Readonly<{
-  isChannelReply: boolean;
   fields: ComposeFields;
   send: ComposeSend;
   anchorActivity: Activity | undefined;
@@ -498,14 +494,6 @@ function ComposeQuestions({
         onDealChange={fields.account.setDealId}
         flagged={send.flagged}
       />
-      {!isChannelReply && (
-        <MailSendNotices
-          to={fields.to}
-          cc={fields.cc}
-          context={send.claimedContext}
-          newContacts={[]}
-        />
-      )}
     </>
   );
 }

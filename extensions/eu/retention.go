@@ -7,13 +7,11 @@ import "github.com/margince/margince/backend/pkg/extension/jurisdiction"
 
 // memberStateFloors are the statutory retention floors of each member state
 // other than Germany. A correspondence floor is listed only where the law
-// itself names business letters; elsewhere an email is kept only when it is
-// an accounting voucher, which the accounting class already covers. Where tax
-// law keeps the same records longer than commercial law, the longer period is
-// the floor. A law that counts from the end of the financial year is anchored
-// at calendar-year end, which never ends a floor early for a calendar year.
-// Slovenia is absent: its accounting period is set by a standard, not a
-// statute, and no period could be confirmed.
+// names business letters. Elsewhere an email is kept only as an accounting
+// voucher, which the accounting class covers. Where tax law keeps the same
+// records longer, the longer period is the floor. A period from the end of the
+// financial year is anchored at calendar-year end. Slovenia is absent: a
+// standard, not a statute, sets its period, and none could be confirmed.
 func memberStateFloors() map[jurisdiction.Code][]jurisdiction.RetentionClass {
 	return map[jurisdiction.Code][]jurisdiction.RetentionClass{
 		"at": {

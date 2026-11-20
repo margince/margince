@@ -88,7 +88,7 @@ To offer times in Margince, open the contact's **Meetings** tab, choose **Book a
 1. Pick two or three **Times to offer** in the calendar. Two times you offer cannot share a minute.
 2. Choose **Review email**, read the email, and send it.
 
-Margince checks the email when you press **Send** and reads the booking as the reason you write. A channel reply still asks a **Reason for contact**, filled from the booking.
+The email fills **Reason for contact** from the booking. A current seat on an open deal gives **Active deal**. Starting from an email gives **Follow-up they requested**. You can change the choice. With no matching context, choose a reason before sending.
 
 The contact gets a personal link with your times. It books one meeting, and runs out after 7 days or at the last time offered.
 Also called: suggest times, propose a slot, send options.

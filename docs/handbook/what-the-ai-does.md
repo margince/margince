@@ -29,7 +29,7 @@ Also called: overnight follow-up, follow-up task, no next step.
 ### How do I draft an email with AI?
 To have Margince draft an email, open the composer from a contact's page and choose **Draft email**. The button on the page reads **Email**, or **Write** where there are several channels. The composer is where you confirm: nothing goes out until you press **Send**.
 
-Check and edit the draft, then choose **Send**; nothing asks again. The AI never adds a sign-off; you set your signature in **Settings → Account**.
+Check and edit the draft, fill in **Reason for contact** when it asks, then choose **Send**; nothing asks again. The AI never adds a sign-off; you set your signature in **Settings → Account**.
 Also called: AI writer, write a reply, compose with AI.
 
 ### Can the AI make a task or note I typed read clearly?

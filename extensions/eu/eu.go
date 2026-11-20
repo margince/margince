@@ -3,12 +3,11 @@
 
 // Package eu holds the jurisdiction packs of the 27 EU member states as one
 // stable-tier extension, enabled by default in the vanilla tree. Each member
-// state's messaging rules compile from policy/<code>/, which layers its
-// national law on the ePrivacy layer every member state shares
-// (policy/regional/eu.md), and its retention floors sit in retention.go.
-// Germany also carries its request deadline and the documents an employer
-// signs. Core code never
-// contains a jurisdiction string, so this unit is where the member states live.
+// state's messaging rules compile from policy/<code>/. That layer adds its
+// national law to the layer every member state shares (policy/regional/eu.md).
+// Retention floors sit in retention.go. Germany also carries its request
+// deadline and the documents an employer signs. Core code never contains a
+// jurisdiction string, so this unit is where the member states live.
 package eu
 
 import (

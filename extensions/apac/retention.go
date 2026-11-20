@@ -5,14 +5,13 @@ package apac
 
 import "github.com/margince/margince/backend/pkg/extension/jurisdiction"
 
-// countryFloors are the statutory retention floors of each country. None of
-// these laws names business letters as such, so no country has a
-// correspondence floor: Japan and Korea keep only "important" business
-// documents, which a floor on every email would overstate. A law that counts
-// from the end of the financial year is anchored at calendar-year end; one
-// that counts from the transaction is anchored at its date. The Philippines
-// is absent: only its tax code keeps records, from the filing deadline, which
-// neither anchor can state.
+// countryFloors are the statutory retention floors of each country. No law
+// here names business letters, so no country has a correspondence floor.
+// Japan and Korea keep only "important" business documents. A floor on every
+// email would overstate that. A period from the end of the financial year is
+// anchored at calendar-year end. A period from the transaction is anchored at
+// its date. The Philippines is absent: its tax code counts from the filing
+// deadline, which neither anchor can state.
 func countryFloors() map[jurisdiction.Code][]jurisdiction.RetentionClass {
 	return map[jurisdiction.Code][]jurisdiction.RetentionClass{
 		"au": {fromRecord(7, "Corporations Act 2001, s286")},

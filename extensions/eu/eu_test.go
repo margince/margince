@@ -43,8 +43,7 @@ func TestEveryMemberStateRegistersOnePackAndOneRuleSet(t *testing.T) {
 }
 
 // Every member state but Slovenia carries an accounting floor that names its
-// law, and only the states whose law names business letters carry a
-// correspondence floor.
+// law. Only a state whose law names business letters has a letters floor.
 func TestEveryMemberStateDeclaresItsStatutoryFloors(t *testing.T) {
 	keepsLetters := []jurisdiction.Code{"at", "de", "es", "fi", "it", "lu", "mt", "pt"}
 	for _, p := range New().Jurisdictions {
