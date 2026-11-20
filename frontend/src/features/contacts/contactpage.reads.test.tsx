@@ -4,7 +4,15 @@ import {
   type QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { createQueryClient } from "../../app/queryclient";
 import { LocaleProvider } from "../../i18n";
@@ -43,6 +51,14 @@ function mount(routes: RouteMap, client: QueryClient = createQueryClient()) {
   );
   const rendered = render(page("p-1"));
   return { ...rendered, open: (id: string) => rendered.rerender(page(id)) };
+}
+
+// What the page says when its row read is refused. A 404 names no contact the
+// reader may see; any other refusal keeps the page's own sentence.
+function refusalOf(status: number): string {
+  return status === 404
+    ? en["record.gone.contact"]
+    : en["contact.page.notOpened"];
 }
 
 // A row answer the spec releases itself, so it can look at the page between
@@ -86,11 +102,64 @@ describe("the contact page's row read", () => {
       });
       mount(routes, client);
 
-      expect(
-        await screen.findByText(en["contact.page.notOpened"]),
-      ).toBeTruthy();
+      expect(await screen.findByText(refusalOf(status))).toBeTruthy();
     });
   }
+
+  it("offers the way back to the contacts when the row is not there", async () => {
+    const routes = liveRoutes();
+    routes["GET /contacts/p-1"] = () =>
+      jsonResponse({ status: 404, code: "not_found" }, 404);
+    const client = createQueryClient();
+    client.setDefaultOptions({
+      queries: { ...client.getDefaultOptions().queries, retry: false },
+    });
+    mount(routes, client);
+
+    await screen.findByText(en["record.gone.contact"]);
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Back to Contacts" }));
+    expect(window.location.hash).toBe("#/contacts");
+  });
+
+  // The contact can go between the two reads: the row answered, then the 360
+  // found it gone.
+  it("says the contact is not there when the 360 answers 404 after the row", async () => {
+    const routes = liveRoutes();
+    routes["GET /contacts/p-1/360"] = () =>
+      jsonResponse({ status: 404, code: "not_found" }, 404);
+    const client = createQueryClient();
+    client.setDefaultOptions({
+      queries: { ...client.getDefaultOptions().queries, retry: false },
+    });
+    mount(routes, client);
+
+    expect(await screen.findByText(en["record.gone.contact"])).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Back to Contacts" }),
+    ).toBeTruthy();
+  });
+
+  // The sentence replaces the page's wait, so it is announced as it arrives.
+  // The way back is something to reach, not something to hear.
+  it("announces that the contact is not there, with the way back outside it", async () => {
+    const routes = liveRoutes();
+    routes["GET /contacts/p-1"] = () =>
+      jsonResponse({ status: 404, code: "not_found" }, 404);
+    const client = createQueryClient();
+    client.setDefaultOptions({
+      queries: { ...client.getDefaultOptions().queries, retry: false },
+    });
+    mount(routes, client);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe(en["record.gone.contact"]);
+    expect(within(alert).queryByRole("button")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Back to Contacts" }),
+    ).toBeTruthy();
+  });
 
   it("asks for no 360 once the row is known archived", async () => {
     const asked: string[] = [];
@@ -237,9 +306,7 @@ describe("confirmed contact identity while the 360 loads", () => {
         },
         client,
       );
-      expect(
-        await screen.findByText(en["contact.page.notOpened"]),
-      ).toBeTruthy();
+      expect(await screen.findByText(refusalOf(status))).toBeTruthy();
       expect(
         screen.queryByRole("heading", { name: liveView.contact.full_name }),
       ).toBeNull();
@@ -303,9 +370,7 @@ describe("confirmed contact identity while the 360 loads", () => {
       expect(screen.queryByRole("heading")).toBeNull();
       expect(screen.queryAllByRole("button")).toHaveLength(0);
       act(() => refuse());
-      expect(
-        await screen.findByText(en["contact.page.notOpened"]),
-      ).toBeTruthy();
+      expect(await screen.findByText(refusalOf(status))).toBeTruthy();
       expect(screen.queryByText(en["record.archived"])).toBeNull();
       expect(
         screen.queryByRole("heading", { name: archivedContact.full_name }),

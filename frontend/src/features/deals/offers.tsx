@@ -14,6 +14,7 @@ import { navigate } from "../../lib/router";
 import { OfferTotalsPanel } from "./offerrecurring";
 import "./offers.css";
 
+import { RecordGone } from "../../components/recordgone";
 import {
   AcceptOfferAction,
   RegenerateOfferAction,
@@ -172,7 +173,11 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={offerQuery} pendingLabel={t("nav.offers")}>
+      <QueryGate
+        query={offerQuery}
+        pendingLabel={t("nav.offers")}
+        gone={<RecordGone kind="offer" />}
+      >
         {(offer) => (
           <>
             {/* The status is a fact about the record; the lifecycle verbs

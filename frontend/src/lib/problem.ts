@@ -395,3 +395,10 @@ export function refusedForGood(error: unknown): boolean {
     status !== 429
   );
 }
+
+// A record read no retry can answer. The id names no record the reader may see
+// (404, a row-scope miss too), or is no record id at all (422).
+export function readsNoRecord(err: unknown): boolean {
+  const status = problemStatus(err);
+  return status === 404 || status === 422;
+}

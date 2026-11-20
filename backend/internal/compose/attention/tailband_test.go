@@ -16,7 +16,14 @@ import (
 )
 
 // keysetTasks resumes after the task its position names, as the store's keyset does.
-type keysetTasks struct{ changedTaskBacklog }
+type keysetTasks struct {
+	windowRecorder
+	rows []Positioned[Task]
+}
+
+func (b *keysetTasks) CountTasks(context.Context, TaskWindow) (int, error) {
+	return len(b.rows), nil
+}
 
 func (b *keysetTasks) TasksAfter(_ context.Context, _ TaskWindow, after string, limit int) ([]Positioned[Task], bool, error) {
 	from := 0

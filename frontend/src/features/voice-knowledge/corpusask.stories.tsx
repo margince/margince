@@ -362,6 +362,15 @@ export const HandTyped: Story = {
   },
 };
 
+// A carried question past the limit. The box keeps it to be shortened, and the
+// counter and the refusal sit under it. Ask waits until it fits.
+export const CarriedTooLong: Story = {
+  render: askCard("How long are captured messages kept? ".repeat(28), () =>
+    jsonResponse(ANSWERED),
+  ),
+  play: askStaysRefused,
+};
+
 // Two sets, which is the only condition under which the picker exists — a
 // workspace with one is never asked which. It matters that the picker is drawn
 // ABOVE the question and pre-chosen: the box is never offered with no set

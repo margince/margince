@@ -10,7 +10,9 @@ import {
   overviewAddress,
 } from "./features/analytics/analytics.overview.scenarios.fixtures";
 import { installOverviewServer } from "./features/analytics/analytics.overview.server.fixtures";
+import type { CoreFeature } from "./lib/corefeatures";
 import { routeHash } from "./lib/router";
+import { meFixture, READS_RECORDS } from "./testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -82,4 +84,31 @@ export const InitialAnalytics: Story = {
 export const InitialAnalyticsDark: Story = {
   ...InitialAnalytics,
   globals: { theme: "dark" },
+};
+
+// An address no page answers, with its one way on. That is Home where Home is
+// on, and the first page the installation keeps where it turned Home off.
+function unknownAddress(disabled: readonly CoreFeature[]): Story["render"] {
+  return () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            allow: READS_RECORDS,
+            settingsAvailability: { disabled_features: [...disabled] },
+          }),
+        ),
+    });
+    return (
+      <StoryProviders>
+        <ScreenView screen={disabled.includes("home") ? "home" : "not-found"} />
+      </StoryProviders>
+    );
+  };
+}
+
+export const UnknownAddress: Story = { render: unknownAddress([]) };
+
+export const UnknownAddressWithHomeOff: Story = {
+  render: unknownAddress(["home"]),
 };
