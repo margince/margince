@@ -144,8 +144,8 @@ describe("the jurisdiction page", () => {
       await screen.findByText(en["jurisdiction.legalNote"]),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(`${en["jurisdiction.effects.title"]} *`),
-    ).toBeInTheDocument();
+      screen.getByRole("heading", { name: en["jurisdiction.effects.title"] }),
+    ).toHaveTextContent(`${en["jurisdiction.effects.title"]} *`);
   });
 
   it("names what a change weakens before it sends it", async () => {

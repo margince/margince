@@ -86,7 +86,12 @@ function LegalNote() {
 
 /** A panel title marked with the asterisk the legal note explains. */
 function Marked({ children }: Readonly<{ children: string }>) {
-  return <>{children} *</>;
+  return (
+    <>
+      {children}
+      <span aria-hidden="true"> *</span>
+    </>
+  );
 }
 
 // Untitled: the page's own heading names it, and the panels after it are titled
