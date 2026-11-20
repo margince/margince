@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+//gate:kind parity H2
+
+//go:build !integration
+
+package gates
 
 // The outgoing allowance counts what its name says: a call that sends something
 // out of the workspace. AI work that stays inside spends a change instead, even
@@ -9,21 +13,27 @@ package compose
 // list says.
 
 import (
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-func TestOnlyACallThatLeavesSpendsTheOutgoingAllowance(t *testing.T) {
+func servedSpecs() map[string]mcp.ToolSpec {
 	specs := map[string]mcp.ToolSpec{}
-	for _, spec := range servedSurface(t).Specs() {
+	for _, spec := range compose.NewRegistry(nil, compose.SendPath{}).Specs() {
 		specs[spec.Name] = spec
 	}
+	return specs
+}
+
+func TestOnlyACallThatLeavesSpendsTheOutgoingAllowance(t *testing.T) {
+	t.Parallel()
+	specs := servedSpecs()
 	for verb, want := range map[string]agentvolume.Counter{
 		"regenerate_company_brief": agentvolume.Writes,
 		"ask_about_company":        agentvolume.Writes,
@@ -46,32 +56,29 @@ func TestOnlyACallThatLeavesSpendsTheOutgoingAllowance(t *testing.T) {
 var guideToolRow = regexp.MustCompile("^\\| `([a-z_]+)` \\| [^|]+ \\| [^|]+ \\| (yes|no) \\|")
 
 func TestTheGuidesEgressColumnIsTheServedOne(t *testing.T) {
-	page, err := os.ReadFile(filepath.Join("..", "..", "..", "docs", "reference", "agent-tools.md"))
+	t.Parallel()
+	page, err := gatekit.ReadFile(catalogPage)
 	if err != nil {
-		t.Fatalf("reading the agent guide: %v", err)
+		t.Fatalf("reading %s: %v", catalogPage, err)
 	}
-	served := map[string]bool{}
-	for _, spec := range servedSurface(t).Specs() {
-		served[spec.Name] = spec.Egress
-	}
-	compared := 0
-	for _, line := range strings.Split(string(page), "\n") {
+	specs, compared := servedSpecs(), 0
+	for line := range strings.SplitSeq(string(page), "\n") {
 		row := guideToolRow.FindStringSubmatch(line)
 		if row == nil {
 			continue
 		}
-		egress, listed := served[row[1]]
+		spec, listed := specs[row[1]]
 		if !listed {
 			continue
 		}
 		compared++
-		if documented := row[2] == "yes"; documented != egress {
-			t.Errorf("the guide says %s leaves Margince: %s; the served list says %t", row[1], row[2], egress)
+		if documented := row[2] == "yes"; documented != spec.Egress {
+			t.Errorf("%s says %s leaves Margince: %s; the served list says %t", catalogPage, row[1], row[2], spec.Egress)
 		}
 	}
 	// The guide lists every published tool; a short count means the table
 	// moved and this compared too little to mean anything.
 	if compared < 40 {
-		t.Fatalf("only %d guide rows were compared against the served list", compared)
+		t.Fatalf("only %d rows of %s were compared against the served list", compared, catalogPage)
 	}
 }
