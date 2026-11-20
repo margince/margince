@@ -16,6 +16,7 @@ import (
 type txMemo struct {
 	mu     sync.Mutex
 	values map[string]any
+	after  []func()
 }
 
 var txMemos sync.Map
@@ -23,8 +24,31 @@ var txMemos sync.Map
 // openTxMemo gives tx a memo for its lifetime; the returned func ends it. A
 // savepoint's own pgx.Tx is a different value, so it has none and reads fresh.
 func openTxMemo(tx pgx.Tx) func() {
-	txMemos.Store(tx, &txMemo{values: make(map[string]any)})
-	return func() { txMemos.Delete(tx) }
+	memo := &txMemo{values: make(map[string]any)}
+	txMemos.Store(tx, memo)
+	return func() {
+		txMemos.Delete(tx)
+		memo.mu.Lock()
+		after := memo.after
+		memo.mu.Unlock()
+		for _, fn := range after {
+			fn()
+		}
+	}
+}
+
+// AfterTx runs fn once tx has ended, committed or not, and reports whether it
+// was registered. A transaction this package did not open, or a savepoint,
+// has no end to hook, and fn is not kept.
+func AfterTx(tx pgx.Tx, fn func()) bool {
+	memo, ok := memoOf(tx)
+	if !ok {
+		return false
+	}
+	memo.mu.Lock()
+	defer memo.mu.Unlock()
+	memo.after = append(memo.after, fn)
+	return true
 }
 
 func memoOf(tx pgx.Tx) (*txMemo, bool) {
