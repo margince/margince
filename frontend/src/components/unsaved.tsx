@@ -314,6 +314,12 @@ function LeaveQuestion({
   const saveButton = useRef<HTMLButtonElement>(null);
   const exits = useContext(ExitContext);
   const besideHeld = useContext(BesideContext)?.dirty ?? false;
+  // Each close of the question ends a round. A Save still writing after the
+  // reader stayed then cannot carry out the exit it was pressed for.
+  const round = useRef(0);
+  useEffect(() => {
+    if (!open) round.current += 1;
+  }, [open]);
   if (savers.length === 0 || (exitsBeside && besideHeld)) {
     return (
       <ConfirmModal
@@ -334,10 +340,12 @@ function LeaveQuestion({
     then();
   };
   const save = async () => {
+    const pressed = round.current;
     setSaving(true);
     setRefused(false);
     const saved = await Promise.all(savers.map((saver) => saver()));
     setSaving(false);
+    if (round.current !== pressed) return;
     if (!saved.every(Boolean)) setRefused(true);
     else if (!(exitsBeside && exits?.beside.current)) onLeave();
   };

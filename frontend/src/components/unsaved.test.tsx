@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -613,6 +614,33 @@ describe("useExitAsking", () => {
       await screen.findByRole("button", { name: "Discard changes" }),
     ).toBeVisible();
     expect(save).toHaveBeenCalledTimes(1);
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("keeps the session when the reader stays while Save writes", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn();
+    let written: (saved: boolean) => void = () => undefined;
+    const save = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          written = resolve;
+        }),
+    );
+    render(<SignOutBesideADock signOut={signOut} save={save} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    dockFills();
+    await user.click(await screen.findByRole("button", { name: "Cancel" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Message/ }), {
+      target: { value: "" },
+    });
+    await act(async () => {
+      written(true);
+    });
+
     expect(signOut).not.toHaveBeenCalled();
   });
 
