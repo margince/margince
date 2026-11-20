@@ -444,8 +444,8 @@ func TestDiscoverAdvertisesTheWholeWindowAndTheSameCapabilitiesAsInitialize(t *t
 }
 
 // A model reads the queue when its user asks or its own call was held, never
-// after every write: each sentence that names list_approvals is bounded by the
-// user's question, and a composition without the queue never names it.
+// after every write. Each sentence that names list_approvals is bounded by the
+// user's question. A composition without the queue never names it.
 func TestTheInstructionsNeverSendAModelToTheQueueOnItsOwn(t *testing.T) {
 	withQueue := modernDispatcher(t)
 	RegisterApprovalTools(withQueue.registry, stubInbox{})

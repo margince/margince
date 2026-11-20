@@ -102,9 +102,9 @@ const surfaceInstructions = "A governed CRM tool surface. Every call re-authenti
 	mcp.ConflictingSourcesRule + " " +
 	mcp.LocalTimeRule + " " + mcp.OwnershipRule
 
-// approvalsClaimRule bounds a claim about the queue without ordering a call:
-// an automation may stage a draft after a write returns, so an answer that
-// has not just read the queue cannot know it is empty.
+// approvalsClaimRule bounds a claim about the queue without ordering a call.
+// An automation may stage a draft after a write returns, so an answer that has
+// not just read the queue cannot know it is empty.
 const approvalsClaimRule = "Say that nothing is waiting for approval only when the user asked and " +
 	"you have just read list_approvals."
 

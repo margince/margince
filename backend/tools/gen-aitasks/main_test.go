@@ -100,9 +100,9 @@ degrade_to:
 	}
 }
 
-// The execution mode alone decides what a spent budget does, so it is one of
-// the two the router reads, and a task naming the old budget-policy field is
-// refused rather than read as if the field still decided anything.
+// The execution mode alone decides what a spent budget does, so it must be
+// one of the two the router reads. A task naming the old budget-policy field
+// is refused rather than read as if that field still decided anything.
 func TestParseContractRejectsAnUnknownExecutionModeAndTheBudgetPolicyField(t *testing.T) {
 	for name, task := range map[string]string{
 		"execution_mode must be":              "execution_mode: scheduled",

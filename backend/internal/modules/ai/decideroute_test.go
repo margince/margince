@@ -496,9 +496,8 @@ func TestTheLocalRouterTakesAFakeDecider(t *testing.T) {
 	}
 }
 
-// A bound lane answers a site it holds no certified row for, so the boot names
-// the model and the site rather than letting a missing record read as a lane
-// switched off.
+// A bound lane answers a site it holds no certified row for. The boot names the
+// model and the site, so a missing record never reads as a lane switched off.
 func TestABoundLaneAnswersAnUncertifiedSiteAndTheBootSaysSo(t *testing.T) {
 	cfg := FakeRoutingConfig()
 	cfg.Decisions = jevLane

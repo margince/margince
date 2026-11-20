@@ -191,11 +191,10 @@ type embedDef struct {
 	CostUnit string `yaml:"cost_unit"`
 }
 
-// taskDef is one tasks.<name> entry: the routing ladder, the
-// execution mode, the declaration fields the census
-// is built on (status, sites, payload posture, company-context policy,
-// cost-unit rule name), and an optional doc string carried through
-// to the generated constant's comment.
+// taskDef is one tasks.<name> entry: the routing ladder and the execution
+// mode. It also holds the declaration fields the census is built on (status,
+// sites, payload posture, company-context policy, cost-unit rule name).
+// An optional doc string is carried through to the generated constant's comment.
 type taskDef struct {
 	Ladder        []string `yaml:"ladder"`
 	ExecutionMode string   `yaml:"execution_mode"`

@@ -3,10 +3,10 @@
 
 package main
 
-// The decision table the report prints after the site table: every committed
-// decision record, whether it still describes the decision question this build
-// asks, and whether it earns a certified row. A bound lane answers every site
-// with or without one; the row is what an operator trusts the binding on.
+// The decision table the report prints after the site table. It lists every
+// committed decision record, whether it still describes this build's decision
+// question, and whether it earns a certified row. A bound lane answers every
+// site with or without one; the row is what an operator trusts the binding on.
 
 import (
 	"fmt"

@@ -16,10 +16,10 @@ import (
 	"strings"
 )
 
-// validate enforces the contract's own invariants: every tier a ladder
-// or degrade_to entry names must be declared in tiers, every task name
-// is a valid Go-identifier source, and the execution mode is one of the two
-// the runtime understands; it alone decides what a spent budget does.
+// validate enforces the contract's own invariants. Every tier a ladder or
+// degrade_to entry names must be declared in tiers. Every task name is a valid
+// Go-identifier source. The execution mode is one of the two the runtime
+// understands, and it alone decides what a spent budget does.
 // Status and sites are a closed pair too: a shipped task owes at least one
 // uniquely named site of a known kind, a planned task owes none. A declared
 // company-context policy must be internally coherent.

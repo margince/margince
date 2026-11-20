@@ -25,13 +25,13 @@ does with a call, see [agent-surface.md](agent-surface.md). For how the gate adm
                                                                           provider adapter
    task cold_start                                                        (anthropic | openai |
      ladder [cheap_cloud, premium]   ──walk on error/schema-fail──►       gemini | gemini_vertex |
-     execution_mode: interactive                                           ollama | vllm |
+                                                                           ollama | vllm |
                                                                            openai_compatible | fake)
 ```
 
 **Four rules hold this together:**
 
-1. **Contract first.** *What* a task is (its ladder, its execution mode) sits in `ai-tasks.yaml` and
+1. **Contract first.** *What* a task is (its ladder, its `execution_mode`) sits in `ai-tasks.yaml` and
    compiles into the binary. Changing that policy is a rebuild, held by the drift gate like `crm.yaml`.
    *Which* model serves a tier is runtime config. Policy and deployment stay apart.
 2. **One gate.** Every AI call (real, fake, or embedding) goes through the `ai.Router`. There is no
@@ -69,9 +69,9 @@ tasks:
 
 - **A tier** is a *class of model*, not a model. `local_small` and `local_large` are the tiers the
   `sovereign` profile keeps on the operator's own servers, where it moves every other rung. Under any
-  other profile a tier is whatever model the routing binds: most presets in `config/presets/` bind
-  `local_small` to a hosted cloud model, and only the presets for an own server keep it local.
-  `cheap_cloud` is fast and cheap and hosted. `premium` is strong hosted reasoning.
+  other profile a tier is whatever model the routing binds. Most presets in `config/presets/` bind
+  `local_small` to a hosted cloud model. Only the presets for an own server keep it local.
+- `cheap_cloud` is fast and cheap and hosted. `premium` is strong hosted reasoning.
   `frontier` is the strongest a deployment will pay for; `signal_extract` uses it.
 - A task's ladder is its **order to fall back**. The Router starts at the first tier, and walks to the
   next on a provider error or a failed schema check. So a short failure moves down a step, and does not
@@ -202,9 +202,9 @@ status screen, and the cost preview.
 
 **The budget is a soft limit.** The Router reads the month's spend before a call (`applyBudget` in
 `router.go`) and records the call's spend after it returns, with nothing reserved in between. Calls that
-start together all read the same spend, so each can pass a limit that together they cross; the overshoot
-grows with the number of calls in flight and their size. From 100% an `interactive` task still runs on
-`local_small`, so where that tier is a hosted model, interactive spend goes on with no upper bound.
+start together all read the same spend, so each can pass a limit that together they cross. How far the spend
+goes past the limit grows with the number of calls in flight and their size. From 100% a task a user waits on
+still runs on `local_small`. Where that tier is a hosted model, that spend goes on with no limit at all.
 
 Before saving a change, an admin can **preview** a new `BudgetConfig` or routing edit against live spend.
 The preview and the save share `Revision()`, a hash of the config in its standard form. A save is refused
@@ -258,9 +258,10 @@ does not start the job again, when the job's `attempt` has already reached `max_
 job spends one ordinary River attempt like any other retry. Waiting gives no extra attempts. The one
 exception is a voice build whose first job is gone, so a new one starts.
 
-The sweep resumes a site read whose requester is a human, or a system lane that `isSystemRead`
-(`compose/deepreadtriage.go`) names: capture auto-enrich and domain triage. That one predicate also sets
-the narrow page ceiling of a system read, so a new system lane declares itself once and resumes too.
+The sweep resumes a site read whose requester is a human or a system lane. `isSystemRead`
+(`compose/deepreadtriage.go`) names the system lanes: the capture lane's own reads and domain triage. That one predicate
+also sets the smaller page limit of a system read, so a new system lane declares itself once and resumes
+too.
 Company scans and voice builds know a human requester only. Any other requester fails with
 `"requester cannot be resolved"`.
 
@@ -293,7 +294,7 @@ No certification row is needed, only the answer checks above.
 [Certifying a site](../how-to/certify-a-decision-site.md) is advice: a measured record that an operator
 trusts it by, never something `Router.Decide` reads. A row needs at least 15 kept answers
 (`DecisionMinKept`). Where the bound lane's model has no row for a site, the API and worker log a
-warning at start and at each routing save that names the model and the sites. A fallback leaves its reason on the ladder's first
+warning at start and at each routing save. It names the model and the sites. A fallback leaves its reason on the ladder's first
 attempt: `decision_state_too_large`, `decision_error`, `decision_off_enum` or
 `decision_below_floor`.
 

@@ -7,7 +7,7 @@
 // credential SecretStripper that runs over every outbound payload.
 //
 // Model choice is config, not architecture (ADR-0020): vendor names
-// appear only here and in the routing setting — callers name capability
+// appear only here and in the routing setting; callers name capability
 // tiers. The stripper is hygiene, not privacy: privacy is the location
 // ladder (A8 revised), so nothing here pseudonymizes PII.
 //

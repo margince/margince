@@ -167,9 +167,10 @@ func TestPublishedSurfaceIsPure(t *testing.T) {
 var mintedModelTypes = map[string]bool{"*Router": true, "*FakeClient": true, "model.Client": true, "decision.Client": true}
 
 // modelClientConstructors is every exported function of internal/modules/ai
-// that mints a model client or a router in front of one, read from the
-// package so a new constructor is held the moment it exists. That package IS
+// that mints a model client or a router in front of one. It is read from the
+// package, so a new constructor is held the moment it exists. That package is
 // the one gate, and modelPathAssemblySeam names the only other callers.
+// Held by: TestNoModelClientOutsideTheGate (backend/gates/arch_test.go).
 func modelClientConstructors(t *testing.T) []string {
 	t.Helper()
 	dir := "internal/modules/ai"

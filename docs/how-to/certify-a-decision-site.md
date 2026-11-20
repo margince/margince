@@ -80,14 +80,14 @@ each one whether it **serves**.
 make gen
 ```
 
-This writes a row into `decisioncert_gen.go` for each decision record that is certified on at least
-15 kept answers (`DecisionMinKept`) and whose scenario stamps match this build. A comment on the row gives the path of the record. Generate the
+This writes a row into `decisioncert_gen.go` for each decision record that is certified and whose
+scenario stamps match this build. A row also needs at least 15 kept answers (`DecisionMinKept`). A comment on the row gives the path of the record. Generate the
 certification page again too
 (`cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert`).
 Then commit the record, the table and the page together.
 
 The lane answers the site whether this row exists or not. The row changes only what the certification
-page and the start-up log report about the binding: with no row, the API and worker warn at start and
+page and the start-up log report about the binding. With no row, the API and worker warn at start and
 at each routing save.
 
 ## 4. When the site changes: certify again or drop

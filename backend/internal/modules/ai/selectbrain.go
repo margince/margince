@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// ProviderConfig is one tier→provider binding from the routing setting — the only
+// ProviderConfig is one tier→provider binding from the routing setting, the only
 // place vendor names appear. It carries NO secret: a cloud provider's BYOK key
 // is read at boot from the provider's conventional environment variable (see
 // cloudKeyEnv), so secrets live in the environment, never a config file. The

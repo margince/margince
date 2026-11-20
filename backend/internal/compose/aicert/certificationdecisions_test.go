@@ -126,7 +126,7 @@ func fallbackReasonsCell(byReason map[string]int) string {
 }
 
 // A decision record reaches the page with its numbers and whether it earns a
-// certified row: a certified current one does, and a stale one says why not.
+// certified row. A certified current one does; a stale one says why not.
 func TestTheDecisionSectionShowsEachRecordAndWhetherItEarnsARow(t *testing.T) {
 	stats := &aicert.DecisionStats{
 		Kept: 15, KeptCorrect: 15, Fallbacks: 1, FallbackRate: 1.0 / 16,
