@@ -10,6 +10,7 @@ import {
 } from "../../components/projectownerfield";
 import { PHASE_LABEL } from "../../format/projectphase";
 import type { MessageKey } from "../../i18n/en";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 
 // The project form's vocabulary and transport, with no React in it: what the
 // create and edit dialogs ask, and
@@ -40,7 +41,12 @@ export function projectFields(
   }>,
 ): CreateField[] {
   return [
-    { key: "name", label: "project.name", required: true },
+    {
+      key: "name",
+      label: "project.name",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
     ...(opts.mode === "create"
       ? [
           {

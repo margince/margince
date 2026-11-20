@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   mapProjectCreate,
   mapProjectUpdate,
@@ -105,5 +106,20 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
       ended_at: null,
     });
     expect("phase" in patch).toBe(false);
+  });
+});
+
+// The name column holds a label, so the field stops typing where the server
+// would refuse, in both dialogs.
+describe("the project name field", () => {
+  const t = (key: string) => `<${key}>`;
+  it("stops at the label limit when creating and editing", () => {
+    for (const mode of ["create", "edit"] as const) {
+      const name = projectFields(t, {
+        owner: { owners: [], me: "u-me" },
+        mode,
+      }).find((field) => field.key === "name");
+      expect(name?.maxLength).toBe(TEXT_LIMITS.label);
+    }
   });
 });
