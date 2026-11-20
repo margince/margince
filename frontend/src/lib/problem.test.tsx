@@ -405,6 +405,29 @@ describe("problemMessageOf", () => {
     }
   });
 
+  it("says in the reader's language that a stage waits for legal, from the field fault's code", () => {
+    const refusal = new ProblemError({
+      code: "validation_error",
+      status: 422,
+      detail: "validation failed",
+      details: {
+        errors: [
+          {
+            field: "to_stage_id",
+            code: "legal_review_required",
+            message:
+              "this stage needs legal's approval, and the review is still waiting for an answer",
+          },
+        ],
+      },
+    });
+    for (const locale of ["en", "de", "vi"] as const) {
+      const line = problemMessageOf(refusal, (key) => translate(locale, key));
+      expect(line).toBe(translate(locale, "legalReview.advanceRefused"));
+      expect(line).not.toContain("waiting for an answer");
+    }
+  });
+
   it("prefers the surface's own copy for a failure the server never described", () => {
     expect(
       problemMessageOf(

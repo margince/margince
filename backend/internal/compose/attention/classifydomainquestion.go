@@ -48,6 +48,9 @@ func domainQuestionItem(q DomainQuestion) crmcontracts.AttentionItem {
 	switch q.ReasonCode {
 	case contacts.PendingForwardedIdentity:
 		actions = []crmcontracts.AttentionItemActions{verbDiscard, crmcontracts.AttentionItemActionsReopen}
+	case contacts.PendingForeignSite:
+		// No reopen: it would read the same foreign site and ask the same question.
+		actions = []crmcontracts.AttentionItemActions{verbKeep, verbDiscard}
 	case contacts.PendingVendorVerdict:
 		// No reopen: it would read the same front page and ask the same question.
 		actions = []crmcontracts.AttentionItemActions{verbKeep, verbKeepAsVendor, verbDiscard}

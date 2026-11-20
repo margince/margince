@@ -29,7 +29,6 @@
 internal/compose/briefs/briefsnoozelift.go
 internal/compose/capturewhichdeal.go
 internal/compose/company360/roleproposalwrite.go
-internal/compose/datatask_leadmail.go
 internal/compose/datatask_senderauth.go
 internal/compose/dealscout/sql.go
 internal/compose/introadvance.go
@@ -71,7 +70,6 @@ internal/modules/contacts/ensureactivity.go
 internal/modules/contacts/initialsrepair.go
 internal/modules/contacts/leadslaworkflow.go
 internal/modules/deals/championcover.go
-internal/modules/deals/engagement.go
 internal/modules/deals/evidenceauthorship.go
 internal/modules/privacy/sarjudgements.go
 internal/platform/auth/leadinquiry.go

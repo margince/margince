@@ -205,7 +205,7 @@ func fullRegistry(t *testing.T, opts ...RegistryOption) *Registry {
 	})
 	RegisterProject360Tool(r, func(context.Context, ids.UUID) (crmcontracts.Project360, error) {
 		return crmcontracts.Project360{}, nil
-	})
+	}, func(crmcontracts.Activity) string { return "" })
 	RegisterNetworkTools(r,
 		func(context.Context, ids.UUID) (WhoKnowsReading, error) { return WhoKnowsReading{}, nil },
 		func(context.Context, ids.UUID) (DealCoverageAnswer, error) { return DealCoverageAnswer{}, nil },

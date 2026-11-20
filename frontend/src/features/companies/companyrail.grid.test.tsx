@@ -3,11 +3,15 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { changeChoice } from "../../testing/choicedialog.testkit";
+import { pickOption } from "../../design-system/select-testing";
+import { en } from "../../i18n/en";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
+import { meFixture } from "../../testing/mefixture";
 import {
   company,
   emptyPage,
   jsonResponse,
+  openSection,
   renderCards,
   renderRail,
   stub,
@@ -17,6 +21,91 @@ import {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+// The owner is its own flow: Ownership's Edit opens the owner's dialog directly.
+async function changeOwner(name: string) {
+  const user = userEvent.setup();
+  const { dialog, chooser } = await openChoiceDialog(
+    user,
+    "Owner",
+    await screen.findByRole("button", { name: "Edit Ownership" }),
+  );
+  await pickOption(user, chooser, name);
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+}
+
+describe("the details' Edit links", () => {
+  it("offer each section's Edit to a reader who may change it, and no pencil on a row", async () => {
+    stub();
+    renderRail();
+    for (const section of ["About", "Address", "Ownership", "Registration"]) {
+      expect(
+        await screen.findByRole("button", { name: `Edit ${section}` }),
+      ).toHaveTextContent(/^Edit$/);
+    }
+    expect(screen.queryByRole("button", { name: /^Change / })).toBeNull();
+  });
+
+  it("offer none to a reader without the grant to change accounts", async () => {
+    stub({
+      "/me": () =>
+        jsonResponse({
+          ...meFixture({ allow: { company: ["read"] } }),
+          settings_availability: { lists: true },
+        }),
+    });
+    renderRail();
+    // Only a loaded /me draws the Lists group, so the grants have been read.
+    await screen.findByRole("region", { name: en["lists.record.title"] });
+    expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
+  });
+
+  it("open About with only About's fields", async () => {
+    stub();
+    renderRail();
+    const about = await openSection(userEvent.setup(), "About");
+    for (const name of [/^Industry/, /^Employees/, /^Lifecycle/]) {
+      expect(within(about).getByRole("combobox", { name })).toBeVisible();
+    }
+    expect(within(about).queryByLabelText("City")).toBeNull();
+    expect(
+      within(about).queryByRole("combobox", { name: /^Owner/ }),
+    ).toBeNull();
+    expect(within(about).queryByLabelText(/Legal name/)).toBeNull();
+  });
+
+  it("save an About change through the account's conditional PATCH", async () => {
+    let patch: { body: unknown; ifMatch: string | null } | undefined;
+    stub({
+      "/companies/o-1": async (request) => {
+        if (request.method === "PATCH") {
+          patch = {
+            body: await request.json(),
+            ifMatch: request.headers.get("If-Match"),
+          };
+          return jsonResponse({ ...company, version: 2 });
+        }
+        return jsonResponse(company);
+      },
+    });
+    renderRail();
+    const user = userEvent.setup();
+    const about = await openSection(user, "About");
+    await pickOption(
+      user,
+      within(about).getByRole("combobox", { name: /^Industry/ }),
+      "Manufacturing",
+    );
+    await user.click(within(about).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(patch).toEqual({
+        body: { industry: "manufacturing" },
+        ifMatch: "1",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
 });
 
 describe("CompanyRail", () => {
@@ -52,7 +141,7 @@ describe("CompanyRail", () => {
     );
     expect(screen.getByText("Industry")).toBeVisible();
     expect(screen.getByText("Employees")).toBeVisible();
-    expect(screen.getByText("Address")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Address" })).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Hide empty fields" }),
     ).toBeInTheDocument();
@@ -91,7 +180,7 @@ describe("CompanyRail", () => {
     await waitFor(() =>
       expect(screen.getByText("Mira Voss")).toBeInTheDocument(),
     );
-    await changeChoice(userEvent.setup(), "Owner", "Ravi Shah");
+    await changeOwner("Ravi Shah");
     await waitFor(() => expect(patchBody).toMatchObject({ owner_id: "u-2" }));
   });
 
@@ -139,7 +228,7 @@ describe("CompanyRail", () => {
     await waitFor(() =>
       expect(screen.getByText("Mira Voss")).toBeInTheDocument(),
     );
-    await changeChoice(userEvent.setup(), "Owner", "Ravi Shah");
+    await changeOwner("Ravi Shah");
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain(
         "The referenced record was not found.",
@@ -152,10 +241,7 @@ describe("CompanyRail", () => {
     );
   });
 
-  it("edits lifecycle in the grid through the header's own control", async () => {
-    // Only the rail renders in this suite. The header's copy of this control,
-    // and the claim of one implementation in two mount points, belong to
-    // company360.test.tsx, where both mount together.
+  it("edits lifecycle in the About dialog", async () => {
     let patchBody: unknown;
     stub({
       "/me": () =>
@@ -179,7 +265,14 @@ describe("CompanyRail", () => {
     renderRail();
     // The fixture is already "customer", so pick a different value, or the
     // no-op guard skips the write.
-    await changeChoice(userEvent.setup(), "Lifecycle", "Prospect");
+    const user = userEvent.setup();
+    const about = await openSection(user, "About");
+    await pickOption(
+      user,
+      within(about).getByRole("combobox", { name: /^Lifecycle/ }),
+      "Prospect",
+    );
+    await user.click(within(about).getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(patchBody).toMatchObject({ lifecycle: "prospect" }),
     );
@@ -219,13 +312,12 @@ describe("CompanyRail", () => {
       },
     });
     renderRail({ view: view({ company: threeDomains }) });
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Change Domain/ }),
-    );
-    const input = screen.getByDisplayValue("brandt.example");
-    await userEvent.clear(input);
-    await userEvent.type(input, "brandt-gmbh.example");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    const user = userEvent.setup();
+    const about = await openSection(user, "About");
+    const input = within(about).getByDisplayValue("brandt.example");
+    await user.clear(input);
+    await user.type(input, "brandt-gmbh.example");
+    await user.click(within(about).getByRole("button", { name: "Save" }));
     await waitFor(() => expect(patchBody).toBeTruthy());
     // The other two domains survive, and only the renamed primary changed.
     // Sending only the edited entry would drop them: the replace-set trap.
@@ -266,12 +358,13 @@ describe("CompanyRail", () => {
       },
     });
     renderRail();
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Change Domain/ }),
+    const user = userEvent.setup();
+    const about = await openSection(user, "About");
+    await user.click(
+      within(about).getByRole("button", { name: /^Remove row/ }),
     );
-    await userEvent.click(screen.getByRole("button", { name: /^Remove row/ }));
     expect(onSave).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(within(about).getByRole("button", { name: "Save" }));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith({ domains: [] }));
   });
 
@@ -297,13 +390,12 @@ describe("CompanyRail", () => {
       },
     });
     renderRail();
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Change Address/ }),
-    );
-    const input = screen.getByLabelText("City");
-    await userEvent.clear(input);
-    await userEvent.type(input, "Stuttgart");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    const user = userEvent.setup();
+    const address = await openSection(user, "Address");
+    const input = within(address).getByLabelText("City");
+    await user.clear(input);
+    await user.type(input, "Stuttgart");
+    await user.click(within(address).getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(patchBody).toMatchObject({
         // `country` survives from the existing address though this edit never

@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4541 |
-| Foreign keys | 633 |
+| Columns | 4542 |
+| Foreign keys | 634 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -44,7 +44,7 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 159 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 50 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 48 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 49 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 31 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 49 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
@@ -139,7 +139,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 90 | 48 |
+| [`activity`](activities.md#activity) | activities | 90 | 49 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -233,7 +233,7 @@ erDiagram
 | [`close_date_run`](deals.md#close_date_run) | deals | 15 | 2 |
 | [`close_date_run_member`](deals.md#close_date_run_member) | deals | 5 | 0 |
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
-| [`comms_outbound`](comms.md#comms_outbound) | comms | 46 | 5 |
+| [`comms_outbound`](comms.md#comms_outbound) | comms | 47 | 5 |
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 32 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 21 | 2 |

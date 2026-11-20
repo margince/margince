@@ -4331,6 +4331,7 @@ func (e BlockedDomainAdmission) Valid() bool {
 const (
 	BlockedDomainReasonCodeBulkSender        BlockedDomainReasonCode = "bulk_sender"
 	BlockedDomainReasonCodeCompanyCreated    BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeForeignSite       BlockedDomainReasonCode = "foreign_site"
 	BlockedDomainReasonCodeForwardedIdentity BlockedDomainReasonCode = "forwarded_identity"
 	BlockedDomainReasonCodeKeptAsCompany     BlockedDomainReasonCode = "kept_as_company"
 	BlockedDomainReasonCodeNearDuplicate     BlockedDomainReasonCode = "near_duplicate"
@@ -4348,6 +4349,8 @@ func (e BlockedDomainReasonCode) Valid() bool {
 	case BlockedDomainReasonCodeBulkSender:
 		return true
 	case BlockedDomainReasonCodeCompanyCreated:
+		return true
+	case BlockedDomainReasonCodeForeignSite:
 		return true
 	case BlockedDomainReasonCodeForwardedIdentity:
 		return true
@@ -4396,6 +4399,7 @@ func (e BlockedDomainSenderKind) Valid() bool {
 // Defines values for BlockedDomainSource.
 const (
 	BlockedDomainSourceAgent             BlockedDomainSource = "agent"
+	BlockedDomainSourceForeignSite       BlockedDomainSource = "foreign_site"
 	BlockedDomainSourceForwardedIdentity BlockedDomainSource = "forwarded_identity"
 	BlockedDomainSourceHeuristic         BlockedDomainSource = "heuristic"
 	BlockedDomainSourceHuman             BlockedDomainSource = "human"
@@ -4411,6 +4415,8 @@ const (
 func (e BlockedDomainSource) Valid() bool {
 	switch e {
 	case BlockedDomainSourceAgent:
+		return true
+	case BlockedDomainSourceForeignSite:
 		return true
 	case BlockedDomainSourceForwardedIdentity:
 		return true
@@ -11470,6 +11476,27 @@ func (e DealCoverageRiskKind) Valid() bool {
 	}
 }
 
+// Defines values for DealCoverageSeatReach.
+const (
+	DealCoverageSeatReachNotReached DealCoverageSeatReach = "not_reached"
+	DealCoverageSeatReachReached    DealCoverageSeatReach = "reached"
+	DealCoverageSeatReachUnknown    DealCoverageSeatReach = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the DealCoverageSeatReach enum.
+func (e DealCoverageSeatReach) Valid() bool {
+	switch e {
+	case DealCoverageSeatReachNotReached:
+		return true
+	case DealCoverageSeatReachReached:
+		return true
+	case DealCoverageSeatReachUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealFollowUpDraftRequestSegment.
 const (
 	DealFollowUpDraftRequestSegmentSlipping DealFollowUpDraftRequestSegment = "slipping"
@@ -14437,6 +14464,7 @@ func (e HealthSourceAvailability) Valid() bool {
 // Defines values for HealthSourceCondition.
 const (
 	HealthSourceConditionClear        HealthSourceCondition = "clear"
+	HealthSourceConditionInformation  HealthSourceCondition = "information"
 	HealthSourceConditionProcessing   HealthSourceCondition = "processing"
 	HealthSourceConditionRecovered    HealthSourceCondition = "recovered"
 	HealthSourceConditionRetrying     HealthSourceCondition = "retrying"
@@ -14450,6 +14478,8 @@ const (
 func (e HealthSourceCondition) Valid() bool {
 	switch e {
 	case HealthSourceConditionClear:
+		return true
+	case HealthSourceConditionInformation:
 		return true
 	case HealthSourceConditionProcessing:
 		return true
@@ -16651,6 +16681,33 @@ func (e LegalReviewOutcome) Valid() bool {
 	}
 }
 
+// Defines values for LegalReviewPacketContractStatus.
+const (
+	LegalReviewPacketContractStatusActive     LegalReviewPacketContractStatus = "active"
+	LegalReviewPacketContractStatusCancelled  LegalReviewPacketContractStatus = "cancelled"
+	LegalReviewPacketContractStatusDraft      LegalReviewPacketContractStatus = "draft"
+	LegalReviewPacketContractStatusExpired    LegalReviewPacketContractStatus = "expired"
+	LegalReviewPacketContractStatusSuperseded LegalReviewPacketContractStatus = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketContractStatus enum.
+func (e LegalReviewPacketContractStatus) Valid() bool {
+	switch e {
+	case LegalReviewPacketContractStatusActive:
+		return true
+	case LegalReviewPacketContractStatusCancelled:
+		return true
+	case LegalReviewPacketContractStatusDraft:
+		return true
+	case LegalReviewPacketContractStatusExpired:
+		return true
+	case LegalReviewPacketContractStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LegalReviewPacketDocumentCategory.
 const (
 	LegalReviewPacketDocumentCategoryContract LegalReviewPacketDocumentCategory = "contract"
@@ -16687,6 +16744,33 @@ func (e LegalReviewPacketDocumentDocState) Valid() bool {
 	case LegalReviewPacketDocumentDocStateDraft:
 		return true
 	case LegalReviewPacketDocumentDocStateFinal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalReviewPacketTouchKind.
+const (
+	LegalReviewPacketTouchKindCall    LegalReviewPacketTouchKind = "call"
+	LegalReviewPacketTouchKindEmail   LegalReviewPacketTouchKind = "email"
+	LegalReviewPacketTouchKindMeeting LegalReviewPacketTouchKind = "meeting"
+	LegalReviewPacketTouchKindMessage LegalReviewPacketTouchKind = "message"
+	LegalReviewPacketTouchKindNote    LegalReviewPacketTouchKind = "note"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketTouchKind enum.
+func (e LegalReviewPacketTouchKind) Valid() bool {
+	switch e {
+	case LegalReviewPacketTouchKindCall:
+		return true
+	case LegalReviewPacketTouchKindEmail:
+		return true
+	case LegalReviewPacketTouchKindMeeting:
+		return true
+	case LegalReviewPacketTouchKindMessage:
+		return true
+	case LegalReviewPacketTouchKindNote:
 		return true
 	default:
 		return false
@@ -21150,6 +21234,7 @@ func (e ReportSetupUnsupportedCode) Valid() bool {
 
 // Defines values for ReportingBlockKind.
 const (
+	ReportingBlockKindAccountCohort     ReportingBlockKind = "account_cohort"
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
 	ReportingBlockKindBreakdown         ReportingBlockKind = "breakdown"
 	ReportingBlockKindForecastSupport   ReportingBlockKind = "forecast_support"
@@ -21158,6 +21243,7 @@ const (
 	ReportingBlockKindOwnerAttainment   ReportingBlockKind = "owner_attainment"
 	ReportingBlockKindPipelineMovement  ReportingBlockKind = "pipeline_movement"
 	ReportingBlockKindSdrOutcomes       ReportingBlockKind = "sdr_outcomes"
+	ReportingBlockKindSourceQuality     ReportingBlockKind = "source_quality"
 	ReportingBlockKindStageAge          ReportingBlockKind = "stage_age"
 	ReportingBlockKindStageCohort       ReportingBlockKind = "stage_cohort"
 	ReportingBlockKindStageDistribution ReportingBlockKind = "stage_distribution"
@@ -21167,6 +21253,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingBlockKind enum.
 func (e ReportingBlockKind) Valid() bool {
 	switch e {
+	case ReportingBlockKindAccountCohort:
+		return true
 	case ReportingBlockKindBookingsTrend:
 		return true
 	case ReportingBlockKindBreakdown:
@@ -21182,6 +21270,8 @@ func (e ReportingBlockKind) Valid() bool {
 	case ReportingBlockKindPipelineMovement:
 		return true
 	case ReportingBlockKindSdrOutcomes:
+		return true
+	case ReportingBlockKindSourceQuality:
 		return true
 	case ReportingBlockKindStageAge:
 		return true
@@ -21216,6 +21306,7 @@ func (e ReportingCardWidth) Valid() bool {
 
 // Defines values for ReportingCardKind.
 const (
+	ReportingCardKindAccountCohort     ReportingCardKind = "account_cohort"
 	ReportingCardKindAssessment        ReportingCardKind = "assessment"
 	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
 	ReportingCardKindBreakdown         ReportingCardKind = "breakdown"
@@ -21226,6 +21317,7 @@ const (
 	ReportingCardKindPipelineMovement  ReportingCardKind = "pipeline_movement"
 	ReportingCardKindQuestion          ReportingCardKind = "question"
 	ReportingCardKindSdrOutcomes       ReportingCardKind = "sdr_outcomes"
+	ReportingCardKindSourceQuality     ReportingCardKind = "source_quality"
 	ReportingCardKindStageAge          ReportingCardKind = "stage_age"
 	ReportingCardKindStageCohort       ReportingCardKind = "stage_cohort"
 	ReportingCardKindStageDistribution ReportingCardKind = "stage_distribution"
@@ -21235,6 +21327,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingCardKind enum.
 func (e ReportingCardKind) Valid() bool {
 	switch e {
+	case ReportingCardKindAccountCohort:
+		return true
 	case ReportingCardKindAssessment:
 		return true
 	case ReportingCardKindBookingsTrend:
@@ -21254,6 +21348,8 @@ func (e ReportingCardKind) Valid() bool {
 	case ReportingCardKindQuestion:
 		return true
 	case ReportingCardKindSdrOutcomes:
+		return true
+	case ReportingCardKindSourceQuality:
 		return true
 	case ReportingCardKindStageAge:
 		return true
@@ -21421,6 +21517,7 @@ func (e ReportingMetricDefinitionTemporalBasis) Valid() bool {
 // Defines values for ReportingMetricID.
 const (
 	ReportingMetricIDAcceptedOpportunities         ReportingMetricID = "accepted_opportunities"
+	ReportingMetricIDAccountProgression            ReportingMetricID = "account_progression"
 	ReportingMetricIDBookingsMix                   ReportingMetricID = "bookings_mix"
 	ReportingMetricIDBookingsWon                   ReportingMetricID = "bookings_won"
 	ReportingMetricIDClosedWinRate                 ReportingMetricID = "closed_win_rate"
@@ -21442,6 +21539,7 @@ const (
 	ReportingMetricIDPartnerWon                    ReportingMetricID = "partner_won"
 	ReportingMetricIDQualifiedOpportunitiesCreated ReportingMetricID = "qualified_opportunities_created"
 	ReportingMetricIDQualifiedPipelineCreated      ReportingMetricID = "qualified_pipeline_created"
+	ReportingMetricIDSourceQuality                 ReportingMetricID = "source_quality"
 	ReportingMetricIDStageAge                      ReportingMetricID = "stage_age"
 	ReportingMetricIDStageConversion               ReportingMetricID = "stage_conversion"
 )
@@ -21450,6 +21548,8 @@ const (
 func (e ReportingMetricID) Valid() bool {
 	switch e {
 	case ReportingMetricIDAcceptedOpportunities:
+		return true
+	case ReportingMetricIDAccountProgression:
 		return true
 	case ReportingMetricIDBookingsMix:
 		return true
@@ -21492,6 +21592,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDQualifiedOpportunitiesCreated:
 		return true
 	case ReportingMetricIDQualifiedPipelineCreated:
+		return true
+	case ReportingMetricIDSourceQuality:
 		return true
 	case ReportingMetricIDStageAge:
 		return true
@@ -38005,6 +38107,15 @@ type AuthorizationRowScope string
 // AuthorizationSeatType The licensing seat. A read seat may read but never mutate over REST, whatever its role grants. A client that cannot read a recognized value MUST assume a read seat: the ceiling fails closed, so an omission never buys the ability to mutate.
 type AuthorizationSeatType string
 
+// AutoApplyInstallation defines model for AutoApplyInstallation.
+type AutoApplyInstallation struct {
+	Enabled bool `json:"enabled"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+}
+
 // AutomaticWorkColleague defines model for AutomaticWorkColleague.
 type AutomaticWorkColleague struct {
 	DisplayName string                       `json:"display_name"`
@@ -38336,7 +38447,14 @@ type AutomationRunTier string
 // AutonomySettings What the reader has decided about answering their own queue: one row per kind
 // that is eligible to apply automatically, whether or not they have ever met it.
 type AutonomySettings struct {
-	Data []KindAutonomy `json:"data"`
+	// AutoApplyEnabled The installation's switch over every row. False means nothing applies
+	// itself for anybody; the modes in `data` stay as the reader set them.
+	AutoApplyEnabled bool           `json:"auto_apply_enabled"`
+	Data             []KindAutonomy `json:"data"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
 // AvailableModel One model a vendor says it serves.
@@ -38588,7 +38706,7 @@ type BlockedDomain struct {
 	//   as a company.
 	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 	//   company this business works with. `sender_kind` says which, when it is known.
-	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
 	//   domain's open question, as `source` describes each one.
 	// - `unknown`: the row records a reason this server has no word for. `reason` still
 	//   carries its stored sentence.
@@ -38604,7 +38722,9 @@ type BlockedDomain struct {
 	// old to mint one from today's site; `near_duplicate` means more than one company
 	// here already carries the name it resolved to, and which of them this domain belongs
 	// to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-	// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+	// as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+	// `foreign_site` means the site names a different business than the domain, which may
+	// have changed hands.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -38621,7 +38741,7 @@ type BlockedDomainAdmission string
 //     as a company.
 //   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 //     company this business works with. `sender_kind` says which, when it is known.
-//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
 //     domain's open question, as `source` describes each one.
 //   - `unknown`: the row records a reason this server has no word for. `reason` still
 //     carries its stored sentence.
@@ -38637,7 +38757,9 @@ type BlockedDomainSenderKind string
 // old to mint one from today's site; `near_duplicate` means more than one company
 // here already carries the name it resolved to, and which of them this domain belongs
 // to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+// as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+// `foreign_site` means the site names a different business than the domain, which may
+// have changed hands.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -47872,6 +47994,9 @@ type Deal struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
+	// WaitEndsAt The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+	WaitEndsAt *time.Time `json:"wait_ends_at,omitempty"`
+
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
@@ -48041,6 +48166,9 @@ type DealAdvanced struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
+	// WaitEndsAt The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+	WaitEndsAt *time.Time `json:"wait_ends_at,omitempty"`
+
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
@@ -48178,6 +48306,12 @@ type DealCommitments struct {
 type DealCoverage struct {
 	DealId openapi_types.UUID `json:"deal_id"`
 
+	// Lines One entry per current colleague and readable seat who have exchanged mail or met,
+	// from the activities the caller may open, at the time of the read. A seat the caller
+	// cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+	// the edge sections are withheld: absence says nothing about who has talked.
+	Lines *[]DealCoverageLine `json:"lines,omitempty"`
+
 	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
 	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
 	// score is their warmest single relationship. `single_threaded_ours` reads the same
@@ -48205,6 +48339,31 @@ type DealCoverage struct {
 
 // DealCoverageSectionsOmitted defines model for DealCoverage.SectionsOmitted.
 type DealCoverageSectionsOmitted string
+
+// DealCoverageLine One colleague's exchange with one buyer seat, as the newest event in each direction.
+type DealCoverageLine struct {
+	ColleagueName string             `json:"colleague_name"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+
+	// LastInboundAt When the contact last wrote to this colleague.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
+	// LastMetAt The newest meeting or call of the pair that neither declined.
+	LastMetAt *time.Time `json:"last_met_at,omitempty"`
+
+	// LastMetPrecision How to read `last_met_at`.
+	LastMetPrecision *OccurredPrecision `json:"last_met_precision,omitempty"`
+
+	// LastOutboundAt When this colleague last wrote to the contact, or was copied on our mail to them.
+	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
+	UserId                openapi_types.UUID `json:"user_id"`
+}
 
 // DealCoverageRisk One finding, with the records behind it. `kind` names the rule so a surface can
 // explain the flag rather than assert it.
@@ -48239,8 +48398,22 @@ type DealCoverageSeat struct {
 
 	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
 	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
-	Role                 string             `json:"role"`
+
+	// Reach Whether a current colleague has exchanged mail with or met this seat, as the caller
+	// can prove it. `not_reached` only when no activity links the seat to a colleague at
+	// all. Anything withheld from the caller, or an exchange only with a colleague who has
+	// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+	// `activity` grant.
+	Reach *DealCoverageSeatReach `json:"reach,omitempty"`
+	Role  string                 `json:"role"`
 }
+
+// DealCoverageSeatReach Whether a current colleague has exchanged mail with or met this seat, as the caller
+// can prove it. `not_reached` only when no activity links the seat to a colleague at
+// all. Anything withheld from the caller, or an exchange only with a colleague who has
+// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+// `activity` grant.
+type DealCoverageSeatReach string
 
 // DealDocument One file in a deal's Files area: the attachment, whether it is hidden from this
 // deal, and where a captured file came from, so a reader can tell "the contract
@@ -52157,7 +52330,9 @@ type HealthSource struct {
 	Availability  HealthSourceAvailability `json:"availability"`
 
 	// Code Safe presentation code, never raw failure text.
-	Code               string                `json:"code"`
+	Code string `json:"code"`
+
+	// Condition `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
 	Condition          HealthSourceCondition `json:"condition"`
 	Count              *int                  `json:"count,omitempty" minimum:"0"`
 	ExpectationSeconds *int                  `json:"expectation_seconds,omitempty" minimum:"0"`
@@ -52167,14 +52342,17 @@ type HealthSource struct {
 	Permission         string                `json:"permission"`
 	Scope              HealthSourceScope     `json:"scope"`
 	Unit               *HealthSourceUnit     `json:"unit,omitempty"`
-	WindowEnd          *time.Time            `json:"window_end,omitempty"`
-	WindowStart        *time.Time            `json:"window_start,omitempty"`
+
+	// UnplacedChanges The `unplaced` source's breakdown of the machine changes in its window that the `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds the sum of these entries when more kinds occurred than are listed.
+	UnplacedChanges *[]HealthUnplacedChange `json:"unplaced_changes,omitempty"`
+	WindowEnd       *time.Time              `json:"window_end,omitempty"`
+	WindowStart     *time.Time              `json:"window_start,omitempty"`
 }
 
 // HealthSourceAvailability defines model for HealthSource.Availability.
 type HealthSourceAvailability string
 
-// HealthSourceCondition defines model for HealthSource.Condition.
+// HealthSourceCondition `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
 type HealthSourceCondition string
 
 // HealthSourceScope defines model for HealthSource.Scope.
@@ -52182,6 +52360,14 @@ type HealthSourceScope string
 
 // HealthSourceUnit defines model for HealthSource.Unit.
 type HealthSourceUnit string
+
+// HealthUnplacedChange defines model for HealthUnplacedChange.
+type HealthUnplacedChange struct {
+	// Action The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`.
+	Action     string `json:"action"`
+	Count      int    `json:"count" minimum:"1"`
+	EntityType string `json:"entity_type"`
+}
 
 // HeldEntityType defines model for HeldEntityType.
 type HeldEntityType string
@@ -55631,7 +55817,12 @@ type LegalReviewOutcome string
 type LegalReviewPacket struct {
 	// Binding Every other offer the buyer was sent or accepted. The approval binds to these too.
 	Binding *[]LegalReviewPacketOffer `json:"binding,omitempty"`
-	Deal    LegalReviewPacketDeal     `json:"deal"`
+
+	// Contracts The agreements filed against the deal, newest term first. Absent on a
+	// pack asked for before agreements were packed. An agreement this reader
+	// may not open, and every agreement for a reader without `deal.read`, is not listed.
+	Contracts *[]LegalReviewPacketContract `json:"contracts,omitempty"`
+	Deal      LegalReviewPacketDeal        `json:"deal"`
 
 	// Documents The deal's contract, legal and offer documents, newest first.
 	Documents []LegalReviewPacketDocument `json:"documents"`
@@ -55640,10 +55831,36 @@ type LegalReviewPacket struct {
 	History []LegalReviewPacketStage `json:"history"`
 
 	// Offer The current offer, or null when the deal has none.
-	Offer         *LegalReviewPacketOffer `json:"offer,omitempty"`
-	ValueCurrency *string                 `json:"value_currency,omitempty"`
-	ValueMinor    *int64                  `json:"value_minor,omitempty"`
+	Offer *LegalReviewPacketOffer `json:"offer,omitempty"`
+
+	// Tasks The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+	Tasks *[]LegalReviewPacketTask `json:"tasks,omitempty"`
+
+	// Touches The deal's latest calls, meetings, messages and notes, newest first. One
+	// this reader may not read, such as mail outside their audience, is not
+	// listed. Absent on an older pack.
+	Touches       *[]LegalReviewPacketTouch `json:"touches,omitempty"`
+	ValueCurrency *string                   `json:"value_currency,omitempty"`
+	ValueMinor    *int64                    `json:"value_minor,omitempty"`
 }
+
+// LegalReviewPacketContract One agreement as it stood at the request. Its title is read now for this
+// reader. The dates and notice terms are the ones frozen with the pack.
+type LegalReviewPacketContract struct {
+	AutoRenew            *bool                           `json:"auto_renew,omitempty"`
+	CancellationNoticeOn *openapi_types.Date             `json:"cancellation_notice_on,omitempty"`
+	ContractNumber       *string                         `json:"contract_number,omitempty"`
+	EndsOn               *openapi_types.Date             `json:"ends_on,omitempty"`
+	Id                   openapi_types.UUID              `json:"id"`
+	NoticePeriodDays     *int                            `json:"notice_period_days,omitempty"`
+	RenewalOn            *openapi_types.Date             `json:"renewal_on,omitempty"`
+	StartsOn             *openapi_types.Date             `json:"starts_on,omitempty"`
+	Status               LegalReviewPacketContractStatus `json:"status"`
+	Title                string                          `json:"title"`
+}
+
+// LegalReviewPacketContractStatus defines model for LegalReviewPacketContract.Status.
+type LegalReviewPacketContractStatus string
 
 // LegalReviewPacketDeal defines model for LegalReviewPacketDeal.
 type LegalReviewPacketDeal struct {
@@ -55739,6 +55956,27 @@ type LegalReviewPacketStage struct {
 	EnteredAt time.Time `json:"entered_at"`
 	StageName string    `json:"stage_name"`
 }
+
+// LegalReviewPacketTask One task that was open at the request. Its subject is read now.
+type LegalReviewPacketTask struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+	DueAt      *time.Time         `json:"due_at,omitempty"`
+	Subject    *string            `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouch One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+type LegalReviewPacketTouch struct {
+	ActivityId openapi_types.UUID         `json:"activity_id"`
+	Kind       LegalReviewPacketTouchKind `json:"kind"`
+	OccurredAt time.Time                  `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouchKind defines model for LegalReviewPacketTouch.Kind.
+type LegalReviewPacketTouchKind string
 
 // LegalReviewQueueItem One row of the reviewer's queue, with the facts it is sorted by.
 type LegalReviewQueueItem struct {
@@ -62919,6 +63157,10 @@ type ReportVocabulary struct {
 // `lead_cohort` follows the leads that arrived in the interval the same
 // way: one point, its `outcomes` saying whether each lead was accepted,
 // qualified, disqualified or is still open.
+// `account_cohort` follows the distinct accounts of those leads: one point,
+// its `outcomes` saying the furthest outcome any of an account's leads
+// reached. `source_quality` is one point per lead origin: how many leads
+// arrived from it and how many of them were linked to an opportunity.
 type ReportingBlockKind string
 
 // ReportingCaptureContext defines model for ReportingCaptureContext.
@@ -63020,6 +63262,10 @@ type ReportingChart struct {
 	// `lead_cohort` follows the leads that arrived in the interval the same
 	// way: one point, its `outcomes` saying whether each lead was accepted,
 	// qualified, disqualified or is still open.
+	// `account_cohort` follows the distinct accounts of those leads: one point,
+	// its `outcomes` saying the furthest outcome any of an account's leads
+	// reached. `source_quality` is one point per lead origin: how many leads
+	// arrived from it and how many of them were linked to an opportunity.
 	Kind              ReportingBlockKind  `json:"kind"`
 	Marker            *float64            `json:"marker,omitempty"`
 	Metric            ReportingMetricID   `json:"metric"`
@@ -72551,8 +72797,9 @@ type Worklist struct {
 	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
 	OptionalRelationshipsMoreAvailable *bool `json:"optional_relationships_more_available,omitempty"`
 
-	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
-	// due commitments were read across the team roster. Absent under every other scope.
+	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+	// Both read the due commitments across the reader's team roster, the reader included.
+	// Absent under every other scope.
 	//
 	// It exists because "nothing due" and "not looked at" differ. A teammate whose plan
 	// could not be read contributes no rows, and without this a lead would read their
@@ -73807,8 +74054,9 @@ type WorklistPinRequest struct {
 	Source string `json:"source"`
 }
 
-// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
-// due commitments were read across the team roster. Absent under every other scope.
+// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+// Both read the due commitments across the reader's team roster, the reader included.
+// Absent under every other scope.
 //
 // It exists because "nothing due" and "not looked at" differ. A teammate whose plan
 // could not be read contributes no rows, and without this a lead would read their
@@ -83610,6 +83858,9 @@ type PreviewAutomationJSONRequestBody = AutomationPreviewRequest
 // UpdateAutonomyJSONRequestBody defines body for UpdateAutonomy for application/json ContentType.
 type UpdateAutonomyJSONRequestBody = UpdateAutonomyRequest
 
+// UpdateAutoApplyInstallationJSONRequestBody defines body for UpdateAutoApplyInstallation for application/json ContentType.
+type UpdateAutoApplyInstallationJSONRequestBody = AutoApplyInstallation
+
 // BookMeetingJSONRequestBody defines body for BookMeeting for application/json ContentType.
 type BookMeetingJSONRequestBody BookMeetingJSONBody
 
@@ -90818,6 +91069,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["wait_ends_at"]; found {
+		err = json.Unmarshal(raw, &a.WaitEndsAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_ends_at': %w", err)
+		}
+		delete(object, "wait_ends_at")
+	}
+
 	if raw, found := object["wait_until"]; found {
 		err = json.Unmarshal(raw, &a.WaitUntil)
 		if err != nil {
@@ -91202,6 +91461,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.WaitEndsAt != nil {
+		object["wait_ends_at"], err = json.Marshal(a.WaitEndsAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_ends_at': %w", err)
 		}
 	}
 
@@ -91671,6 +91937,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["wait_ends_at"]; found {
+		err = json.Unmarshal(raw, &a.WaitEndsAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_ends_at': %w", err)
+		}
+		delete(object, "wait_ends_at")
+	}
+
 	if raw, found := object["wait_until"]; found {
 		err = json.Unmarshal(raw, &a.WaitUntil)
 		if err != nil {
@@ -92062,6 +92336,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.WaitEndsAt != nil {
+		object["wait_ends_at"], err = json.Marshal(a.WaitEndsAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_ends_at': %w", err)
 		}
 	}
 
@@ -98870,6 +99151,9 @@ type ServerInterface interface {
 	// Turn automatic application on or off for one kind.
 	// (PATCH /autonomy)
 	UpdateAutonomy(w http.ResponseWriter, r *http.Request)
+	// Switch automatic application on or off for the whole installation.
+	// (PUT /autonomy/installation)
+	UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request)
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
@@ -102854,6 +103138,12 @@ func (_ Unimplemented) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 // Turn automatic application on or off for one kind.
 // (PATCH /autonomy)
 func (_ Unimplemented) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Switch automatic application on or off for the whole installation.
+// (PUT /autonomy/installation)
+func (_ Unimplemented) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -118348,6 +118638,26 @@ func (siw *ServerInterfaceWrapper) UpdateAutonomy(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAutonomy(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAutoApplyInstallation operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAutoApplyInstallation(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -158015,6 +158325,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/autonomy", wrapper.UpdateAutonomy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/autonomy/installation", wrapper.UpdateAutoApplyInstallation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/availability", wrapper.GetAvailability)

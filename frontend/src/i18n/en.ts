@@ -1565,6 +1565,8 @@ export const en = {
   "reporting.conversion": "Stage conversion",
   "reporting.stage_cohort": "Stage conversion",
   "reporting.lead_cohort": "What became of new leads",
+  "reporting.account_cohort": "How far companies got",
+  "reporting.source_quality": "Lead source quality",
   "reporting.cohortStage": "Stage",
   "reporting.cohortEntered": "Entered",
   "reporting.cohortArrived": "Arrived",
@@ -1584,6 +1586,9 @@ export const en = {
   "reporting.cohortOutcome.accepted": "Handoff accepted",
   "reporting.cohortOutcome.qualified": "Qualified",
   "reporting.cohortOutcome.disqualified": "Disqualified",
+  "reporting.cohortOutcome.opportunity_linked": "Linked to a deal",
+  "reporting.cohortOutcome.not_linked": "Not linked yet",
+  "reporting.cohortLinkedRate": "Share linked",
   "reporting.cohortEntry.repeat": "Back in this stage",
   "reporting.cohortEntry.reopened": "Reopened after a close",
   "reporting.cohortStillOpenNote":
@@ -3945,7 +3950,6 @@ export const en = {
   "co.aside.visibleTheOwnerAndShared_one": "The owner · {count} share",
   "co.aside.visibleTheOwnerAndShared_other": "The owner · {count} shares",
   "co.aside.vatId": "VAT ID",
-  "co.aside.add": "Add…",
   "co.strip.unanswered": "Unanswered",
   "co.strip.engagement.never_contacted": "Never contacted",
   "co.strip.engagement.active": "Active",
@@ -6220,6 +6224,13 @@ export const en = {
   "deal.committee.seatWrote": "{role} · {engagement} · last wrote {date}",
   "deal.committee.carriesContact": "Handles most exchanges",
   "deal.committee.teamUnread": "Could not read who else works on this deal.",
+  "deal.committee.lines.title": "Who talks to whom",
+  "deal.committee.lines.mailed": "Sent to them {date}",
+  "deal.committee.lines.replied": "They wrote {date}",
+  "deal.committee.lines.met": "Met {date}",
+  "deal.committee.lines.pair": "{colleague} with {contact}: {how}",
+  "deal.committee.lines.unreached":
+    "No current colleague has reached {contact}",
   "deal.committee.missing.champion": "Missing: an engaged champion",
   "deal.committee.missing.firstContact": "Missing: a contact on their side",
   "deal.committee.missing.secondContact": "Only one contact. Add a second one.",
@@ -8342,6 +8353,10 @@ export const en = {
     "The recipient asked not to be contacted. Sending this email does not change their request.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
+  "sendPermission.reason.subjectLabelMissing":
+    "Marketing to a recipient in this country must start its subject with the label their law sets. Add it to the subject.",
+  "sendPermission.reason.subjectLabelsConflict":
+    "These recipients’ countries set different subject labels for marketing, and a subject starts with one. Send one message per label.",
   "sendPermission.reason.optedOutAfterRequest":
     "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
   "sendPermission.reason.permissionRequired":
@@ -9123,6 +9138,7 @@ export const en = {
   "analytics.outcomesOwnLensOnly":
     "This section measures one user’s records. Wider sections cover the rest of the lens.",
   "analytics.reportWinLoss": "Won and lost",
+  "analytics.reportLossEvents": "Every loss, one by one",
   "analytics.reportStageAge": "Time in stage",
   "analytics.baseValue": "Deal value · {currency}",
   "analytics.baseValueUnnamed": "Deal value",
@@ -12831,6 +12847,8 @@ export const en = {
     "No chat bot is connected. An administrator connects one in Settings.",
   "channelLink.refused.channelNotFound":
     "The bot is in no channel with this name. Add the bot to the channel in the chat, then try again.",
+  "channelLink.refused.nameRefused":
+    "The chat refused this channel name. Rename the record, or link an existing channel.",
   "channelLink.refused.channelNotPrivate":
     "This channel is public. Link a private channel instead.",
   "channelLink.refused.botNotMember":
@@ -12935,6 +12953,8 @@ export const en = {
     "Their website was read, but it does not name a company.",
   "worklist.domainQuestion.reason.forwarded":
     "Their website redirects to another website, so Margince could not confidently match their company.",
+  "worklist.domainQuestion.reason.foreignSite":
+    "The site names a different business than this domain. The domain may have changed hands.",
   "worklist.domainQuestion.reason.vendor":
     "Their website looks like a mail or hosting provider, which can host addresses for many companies.",
   "worklist.domainQuestion.reason.nearDuplicate":
@@ -13003,6 +13023,7 @@ export const en = {
   "blockedDomains.source.unevidenced": "No company found from the site",
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",
+  "blockedDomains.source.foreignSite": "Names a different business",
   "blockedDomains.source.vendorVerdict": "Reads as a mail or hosting vendor",
   "blockedDomains.rowAdmit": "Allow",
   "blockedDomains.rowRefuse": "Refuse",
@@ -17234,6 +17255,11 @@ export const en = {
   "autonomy.sub":
     "Each switch lets one kind of change run without your review. It applies to your work, not the whole team.",
   "autonomy.updateFailed": "Setting not saved",
+  "autonomy.installationOff":
+    "An admin turned automatic changes off for everyone. Nothing runs on its own, and your switches below stay as you set them.",
+  "autonomy.installationSwitch": "Automatic changes for everyone",
+  "autonomy.installationHelp":
+    "Off stops every automatic change. Everyone’s own switches stay as they set them.",
   "autonomy.noneDecidedYet":
     "You have not reviewed any of these proposals yet. Automatic changes can already run according to the switches below. Proposals depend on your records and the work routed to you.",
   "autonomy.noRecord": "No decisions of this kind yet.",
@@ -20672,6 +20698,8 @@ export const en = {
   "worklist.disposition.undoFailed":
     "Undo failed. The message is still off your list.",
   "worklist.disposition.failed": "Item was not removed. Retry.",
+  "worklist.disposition.gone":
+    "This item is no longer on your list. The list is up to date now.",
   "worklist.scope.label": "Whose work",
   "worklist.scope.mine": "Mine",
   "worklist.sourceUnavailable": "Source unavailable or not shared with you",
@@ -21862,17 +21890,10 @@ export const en = {
     "Nothing changed, so there is nothing to put back.",
   "magic.undoReason.notEvaluated":
     "This installation has not checked whether this can be put back.",
-  "magic.notShown_one": "{count} change is not shown: {reason}",
-  "magic.notShown_other": "{count} changes are not shown: {reason}",
-  "magic.notShown.unknownEntityType": "a record type this page cannot place",
-  "magic.notShown.outOfScope": "outside your own records",
-  "magic.visibleScope": "Only changes visible to you are shown.",
-  "magic.coverageIncomplete": "Some activity could not be counted.",
+  "magic.failed": "Recent changes did not load.",
   "magic.laneCut": "There are more than shown here.",
-  "magic.done.all_one": "{count} change, in full",
-  "magic.done.all_other": "All {count} changes, one by one",
-  "magic.done.atLeast_one": "{count} change, one by one",
-  "magic.done.atLeast_other": "{count} changes, one by one",
+  "magic.done.fold_one": "{count} change, one by one",
+  "magic.done.fold_other": "{count} changes, one by one",
   "magic.action.advance_stage": "A deal moved to its next stage",
   "magic.action.promote": "A lead became a deal",
   "magic.action.update": "A record was updated",
@@ -22522,6 +22543,8 @@ export const en = {
   "legalReview.docState.draft": "Draft",
   "legalReview.docState.current": "Current",
   "legalReview.docState.final": "Final",
+  "legalReview.advanceRefused":
+    "This stage needs legal’s approval first. Request a legal review, then move the deal.",
   "legalReview.packHistory": "Stage history",
   "legalReview.enteredStage": "{stage}, entered {date}",
   "legalReview.settingsTitle": "Legal review",
@@ -22547,6 +22570,21 @@ export const en = {
   "legalReview.offerLineRecurring_one": "{cadence} for {count} period",
   "legalReview.offerLineRecurring_other": "{cadence} for {count} periods",
   "legalReview.offerLineStaged": "Proposed, not yet in the total",
+  "legalReview.packContracts": "Agreements",
+  "legalReview.contractNotice": "Notice period",
+  "legalReview.contractNoticeDays_one": "{count} day",
+  "legalReview.contractNoticeDays_other": "{count} days",
+  "legalReview.contractCancelBy": "Notice given",
+  "legalReview.contractRenewal": "Renewal",
+  "legalReview.contractAutoRenews": "Renews automatically",
+  "legalReview.contractNoAutoRenew": "Does not renew automatically",
+  "legalReview.packTouches": "Latest contact",
+  "legalReview.packTasks": "Open tasks at the request",
+  "legalReview.taskDue": "Due {date}",
+  "legalReview.touchLine": "{kind}, {date}",
+  "legalReview.offerPdf": "PDF",
+  "legalReview.packOlder":
+    "This pack was made before agreements, contact and tasks were included.",
   "legalReview.packBinding": "Other offers sent to the buyer",
   "aiTask.name.account_scan": "Reading what an account needs",
   "aiTask.name.agent_loop": "Agent reasoning loop",
@@ -22611,6 +22649,7 @@ export const en = {
   "contact.handles.fewer": "Show fewer",
   "record.reach.label": "Email and phone",
   "record.details.hideEmpty": "Hide empty fields",
+  "record.details.editSection": "Edit {section}",
   "record.verb.email": "Email",
   "record.verb.call": "Call",
   "record.verb.meet": "Meet",
@@ -23034,6 +23073,7 @@ export const en = {
   "health.group.setup": "Not set up yet",
   "health.group.waiting": "Not confirmed yet",
   "health.group.passing": "Passing",
+  "health.group.information": "For information",
   "health.checkPassing": "Passing",
   "health.whatHappened": "What happened",
   "health.whyItMatters": "Why it matters",
@@ -23088,6 +23128,7 @@ export const en = {
   "health.condition.technical": "Needs technical attention",
   "health.condition.unverified": "Recovery not verified",
   "health.condition.recovered": "Recovered",
+  "health.condition.information": "Information",
   "health.source.jobs": "Background processing",
   "health.source.capture": "Mail capture",
   "health.source.intake": "Connector intake",
@@ -23097,6 +23138,12 @@ export const en = {
   "health.source.recovery": "Recovery evidence",
   "health.source.automatic": "Automatic work quality",
   "health.source.receipts": "Opt-out receipts",
+  "health.source.unplaced": "Changes Home leaves out",
+  "health.code.unplaced_none":
+    "No automatic change in the last 7 days is left out of Home",
+  "health.code.unplaced_counted":
+    "Some automatic changes in the last 7 days are not shown on Home",
+  "health.unplacedTotal": "Left out in the last 7 days",
   "health.scope": "Affected scope",
   "health.window": "Reporting window",
   "health.observed": "Latest observation",

@@ -193,6 +193,7 @@ var refusals = []struct {
 }{
 	{ErrBotNotConnected, http.StatusConflict, "channel_bot_not_connected", "No bot connected. Connect one in Settings."},
 	{ErrChannelNotFound, http.StatusNotFound, "channel_not_found", "Channel not found. Check the link."},
+	{ErrChannelNameRefused, http.StatusUnprocessableEntity, "channel_name_refused", "The chat refused this channel name. Rename the record, or link an existing channel."},
 	{ErrChannelNotPrivate, http.StatusUnprocessableEntity, "channel_not_private", "This channel is public. Pick a private channel."},
 	{ErrBotNotMember, http.StatusUnprocessableEntity, "channel_bot_not_member", "The bot is not in this channel. Add it, then try again."},
 	{ErrChannelAlreadyLinked, http.StatusConflict, "channel_already_linked", "This channel already belongs to another record."},

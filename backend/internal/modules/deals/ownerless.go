@@ -68,7 +68,7 @@ func (s *Store) OwnerlessDeals(ctx context.Context) ([]OwnerlessDeal, bool, erro
 			where = " AND " + scope
 		}
 		value, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d",
-			BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", arg(base)), "d"), arg)
+			BaseValueSQL("now()", fmt.Sprintf("$%d", arg(base)), "d"), arg)
 		if err != nil {
 			return err
 		}

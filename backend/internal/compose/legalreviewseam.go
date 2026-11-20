@@ -3,12 +3,9 @@
 
 package compose
 
-// The documents a legal review pack carries. Files belong to activities and
-// the pack to deals. Neither imports the other, so the edge is made here.
-//
-// Read through the deal's own Files area, under the caller's principal. A
-// file captured with a message follows that message's audience. So the pack
-// holds what the requester could open, and shows a reviewer what they can.
+// The documents a legal review pack carries, read through the deal's Files
+// area under the caller's principal. A file captured with a message follows
+// that message's audience, so the pack shows a reviewer what they can open.
 
 import (
 	"context"

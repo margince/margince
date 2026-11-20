@@ -37,6 +37,8 @@ export const reportingMetricNames: Record<
   bookings_mix: "Commercial mix",
   qualified_opportunities_created: "Qualified opportunities",
   initiative_pipeline: "Initiative pipeline by origin",
+  account_progression: "How far companies got",
+  source_quality: "Lead source quality",
 };
 
 export const reportingStoryScope = {

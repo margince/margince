@@ -9,6 +9,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -17,10 +18,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
-// TestTheChatEngineReadsActivityTextOnlyThroughSharedActivity holds the
+// activityRead matches a read of the activity table under any alias, case and
+// whitespace; activity_link and the like do not match.
+var activityRead = regexp.MustCompile(`(?i)\b(from|join)\s+activity\s+(as\s+)?[a-z_]\w*`)
+
+// TestTheChatEngineReadsActivityTextOnlyThroughSharedRow holds the
 // audience rule's one door. A second query of the activity table in the chat
 // engine could post text the workspace may not read.
-func TestTheChatEngineReadsActivityTextOnlyThroughSharedActivity(t *testing.T) {
+func TestTheChatEngineReadsActivityTextOnlyThroughSharedRow(t *testing.T) {
 	files, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatal(err)
@@ -45,15 +50,15 @@ func TestTheChatEngineReadsActivityTextOnlyThroughSharedActivity(t *testing.T) {
 					return true
 				}
 				text, err := strconv.Unquote(lit.Value)
-				if err == nil && strings.Contains(text, "FROM activity a") {
+				if err == nil && activityRead.MatchString(text) {
 					readers[file+":"+fn.Name.Name] = true
 				}
 				return true
 			})
 		}
 	}
-	if len(readers) != 1 || !readers["sync.go:sharedActivity"] {
-		t.Fatalf("activity text is read by %v; only sync.go:sharedActivity may read it", readers)
+	if len(readers) != 1 || !readers["sync.go:sharedRow"] {
+		t.Fatalf("activity text is read by %v; only sync.go:sharedRow may read it", readers)
 	}
 }
 

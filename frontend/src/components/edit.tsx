@@ -22,6 +22,7 @@ import {
   prefillRowsFromRecord,
   seedMissingFields,
 } from "./edit.prefill";
+import { useAnswerlessRows } from "./edit.rows";
 import "../design-system/querystates.css";
 
 // The agent rail's WROTE head for an edit, keyed by `recordKey` (agentrail-
@@ -252,28 +253,34 @@ export function EditRecordModal({
   useEffect(() => {
     onDirtyChange?.(dirty);
   }, [dirty, onDirtyChange]);
+  const answerless = useAnswerlessRows({ open, dirty, pending, onClose });
 
   return (
-    <RecordFormBody
-      dialog={{ open, title }}
-      fields={fields}
-      values={values}
-      setValues={setValues}
-      rows={rows}
-      setRows={setRows}
-      pending={pending}
-      error={error}
-      fieldRefusals={fieldRefusals}
-      refusedAt={refusedAt}
-      existing={existing}
-      resolveExisting={resolveExisting}
-      notice={notice}
-      onSubmit={(submitted, submittedRows) =>
-        onSubmit(submitted, submittedRows, opened)
-      }
-      onClose={onClose}
-      intent="save"
-    />
+    <>
+      <RecordFormBody
+        dialog={{ open, title }}
+        fields={fields}
+        values={values}
+        setValues={setValues}
+        rows={rows}
+        setRows={setRows}
+        pending={pending}
+        error={error}
+        fieldRefusals={fieldRefusals}
+        refusedAt={refusedAt}
+        existing={existing}
+        resolveExisting={resolveExisting}
+        notice={notice}
+        onSubmit={(submitted, submittedRows) =>
+          onSubmit(submitted, submittedRows, opened)
+        }
+        onClose={onClose}
+        intent="save"
+        answerlessRow={answerless.row}
+        unsaved={dirty}
+      />
+      {answerless.question}
+    </>
   );
 }
 

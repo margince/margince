@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -34,8 +35,8 @@ const (
 
 // The two membership actions (list_member_event_action_check).
 const (
-	memberAdded   = "added"
-	memberRemoved = "removed"
+	memberAdded   = auditentity.ListMemberAdded
+	memberRemoved = auditentity.ListMemberRemoved
 )
 
 const noteField = "note"

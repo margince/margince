@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { useState } from "react";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { Button } from "../design-system/atoms";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { ProblemError } from "../lib/problem";
 import { meFixture } from "../testing/mefixture";
@@ -218,6 +220,58 @@ export const LongNames: Story = {
 };
 export const LongNamesPhone: Story = {
   ...LongNames,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+function CallerOpenedPicker() {
+  const [open, setOpen] = useState(false);
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /users": (_, url) => rosterAnswer("colleagues", url),
+  });
+  return (
+    <StoryProviders>
+      <ToastProvider>
+        <Button variant="link" onClick={() => setOpen(true)}>
+          Edit
+        </Button>
+        <OwnerPick
+          opener="caller"
+          open={open}
+          onClose={() => setOpen(false)}
+          record={{ id: "p-1", version: 3, owner_id: "u-7" }}
+          assign={() => assign("lands")}
+          invalidate="projects"
+          recordKey="project"
+        />
+        <ToastRegion />
+      </ToastProvider>
+    </StoryProviders>
+  );
+}
+
+/** Opened by a section's Edit link: no trigger of its own, the sheet at every
+ *  width, and focus back on the link once the pick has landed. */
+export const OpenedByCaller: Story = {
+  render: () => <CallerOpenedPicker />,
+  play: async ({ canvasElement }) => {
+    const edit = await within(canvasElement).findByRole("button", {
+      name: "Edit",
+    });
+    await userEvent.click(edit);
+    const list = within(
+      await screen.findByRole("dialog", { name: "Change owner" }),
+    );
+    await userEvent.click(
+      await list.findByRole("option", { name: "Jane Doe" }),
+    );
+    await screen.findByText("Assigned to Jane Doe");
+    await waitFor(() => expect(edit).toBe(document.activeElement));
+  },
+};
+export const OpenedByCallerPhone: Story = {
+  ...OpenedByCaller,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

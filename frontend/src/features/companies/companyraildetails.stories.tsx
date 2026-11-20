@@ -2,16 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { CompanyRail } from "./companyrail";
 
-// The company's details under its head: set fields as rows, every empty one
-// folded behind one link, and writability gating the verbs, not the values.
+// The company's details under its head. Set fields are plain rows, and every
+// empty one folds behind one link. Each section a reader may change has an Edit.
 
 const meta: Meta = {
   title: "Records/Company 360/Details",
@@ -87,16 +89,14 @@ const sidecarFields: ProfileField[] = [
 function Details({
   company,
   profileFields = sidecarFields,
+  canUpdate = true,
 }: Readonly<{
   company: Company;
   profileFields?: readonly ProfileField[];
+  canUpdate?: boolean;
 }>) {
   installFetchStub({
-    "GET /me": () =>
-      jsonResponse({
-        user: { id: "u-1", display_name: "Mira Voss" },
-        authorization: { objects: { company: { update: true } } },
-      }),
+    "GET /me": meRoute({ company: canUpdate ? ["read", "update"] : ["read"] }),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-1", display_name: "Mira Voss" }],
@@ -114,8 +114,63 @@ function Details({
   );
 }
 
+// Each section a reader may change ends its label line in one Edit link.
 export const Editable: Story = {
   render: () => <Details company={company} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const section of ["About", "Address", "Ownership", "Registration"]) {
+      await expect(
+        await canvas.findByRole("button", { name: `Edit ${section}` }),
+      ).toBeVisible();
+    }
+  },
+};
+
+// A reader without the grant reads the same rows and gets no Edit.
+export const NoWriteGrant: Story = {
+  render: () => <Details company={company} canUpdate={false} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("DE811907980")).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: /^Edit / })).toBeNull();
+  },
+};
+
+// The owner is the one change under Ownership, so its Edit opens the owner.
+export const OwnerFlow: Story = {
+  render: () => <Details company={company} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Edit Ownership",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Owner" });
+    await waitFor(() => expect(dialog).toBeVisible());
+  },
+};
+
+// The VAT number is the one change under Registration, on its own write.
+export const VatFlow: Story = {
+  render: () => <Details company={company} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Edit Registration",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "VAT ID" });
+    await waitFor(() =>
+      expect(within(dialog).getByDisplayValue("DE811907980")).toBeVisible(),
+    );
+  },
+};
+
+export const VatFlowPhone: Story = {
+  ...VatFlow,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 // The address a crawled record actually has: none of it. The row folds behind
@@ -147,17 +202,15 @@ export const AddressPartlyFilled: Story = {
   ),
 };
 
-// Archived: every row still shows its value, none offers the edit affordance
-// — the one state that exercises the grid's `readOnlyReason` half, which no
-// amount of RBAC grant in the Editable story above can reach.
+// Archived: every row still shows its value, and no section offers its Edit.
 export const Archived: Story = {
   render: () => (
     <Details company={{ ...company, archived_at: "2026-07-15T00:00:00Z" }} />
   ),
 };
 
-// The legal identity nobody has stated: the VAT row invites a number, and the
-// registered address waits behind the empty-fields link.
+// The legal identity nobody has stated: the VAT row folds behind the
+// empty-fields link, and Registration's Edit still opens it.
 export const LegalIdentityUnstated: Story = {
   render: () => <Details company={company} profileFields={[]} />,
 };

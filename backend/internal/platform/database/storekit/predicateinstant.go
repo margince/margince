@@ -3,7 +3,11 @@
 
 package storekit
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+)
 
 // comparedExpr is the side of a scalar comparison the column sits on: the
 // column itself, or its lowercase for a field compared case-insensitively.
@@ -16,8 +20,7 @@ func comparedExpr(field Field) string {
 
 // compileInstantLeaf compiles a calendar-day comparison against a timestamp
 // column as bounds on that column. A day D runs from D's midnight to the next
-// one, both read in the session zone, UTC (database.PoolConfig), as CURRENT_DATE
-// is. So `eq` is the half-open range and each ordering picks the one bound that answers it.
+// one, both cut at the installation zone's midnight (occurredday.DayStartSQL). So `eq` is the half-open range and each ordering picks the one bound that answers it.
 func compileInstantLeaf(p Predicate, field Field, arg func(any) int) (string, error) {
 	value, err := scalarOperand(p.Value, field, p.Field, p.Op)
 	if err != nil {
@@ -27,8 +30,8 @@ func compileInstantLeaf(p Predicate, field Field, arg func(any) int) (string, er
 	if _, relative := value.(RelativeDays); !relative {
 		day += "::date"
 	}
-	start := "(" + day + ")::timestamptz"
-	next := "(" + day + " + 1)::timestamptz"
+	start := occurredday.DayStartSQL(day)
+	next := occurredday.DayStartSQL(day + " + 1")
 	column := field.Expr
 	switch p.Op {
 	case OpEq:

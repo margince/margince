@@ -187,7 +187,7 @@ func TestCompanyReadMessageCaseRefusesAnUnreachableExpectation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := companyReadMessageCases{}.Prepare(
-				fixtureJSON(t, tc.fixture), companyReadExpectationJSON(t, tc.kind, tc.changes),
+				fixtureJSON(t, tc.fixture), companyConversationExpectationJSON(t, tc.kind, tc.changes),
 			)
 			if err == nil {
 				t.Fatalf("an unreachable expectation prepared")

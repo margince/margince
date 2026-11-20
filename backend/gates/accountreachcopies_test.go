@@ -101,12 +101,38 @@ func TestTheStoredCompanyClockBoundsEmploymentLikeTheWalk(t *testing.T) {
 		if arms == 0 {
 			t.Errorf("%s has no employment arm the gate can find, so it checks nothing", name)
 		}
+		_, notCurrent := employmentArmsWithout(body, employment.CurrentMembershipSQL)
+		for _, alias := range notCurrent {
+			t.Errorf("%s's employment arm on %s does not carry %q, so the stored clock and the "+
+				"walk disagree about who still works there. Replace the function in a new migration "+
+				"with the predicate's current text.", name, alias, employment.CurrentMembershipSQL(alias))
+		}
 		for _, alias := range unbounded {
 			t.Errorf("%s's employment arm on %s does not carry %q, so mail from a "+
 				"contact's previous job sets the clock of the employer they have now. Replace the "+
 				"function in a new migration with the bound's current text.",
 				name, alias, employment.InPlaceForSQL(alias, "a"))
 		}
+	}
+}
+
+// last_activity_reach names the companies a contact's write may move. It has
+// to cover every employer the stored clock counts, so it spells the same
+// current-employment predicate.
+func TestTheClockReachCoversTheEmployersTheClockCounts(t *testing.T) {
+	t.Parallel()
+	reachFunction := regexp.MustCompile(`(?i)(CREATE\s+(?:OR\s+REPLACE\s+)?|DROP\s+)FUNCTION\s+(?:IF\s+EXISTS\s+)?(last_activity_reach)`)
+	body, ok := currentFunctionBodies(t, reachFunction)["last_activity_reach"]
+	if !ok {
+		t.Fatal("no migration defines last_activity_reach, so this gate checks nothing")
+	}
+	arms, notCurrent := employmentArmsWithout(body, employment.CurrentMembershipSQL)
+	if arms == 0 {
+		t.Error("last_activity_reach has no employment arm the gate can find, so it checks nothing")
+	}
+	for _, alias := range notCurrent {
+		t.Errorf("last_activity_reach's employment arm on %s does not carry %q, so a contact's "+
+			"write can miss an employer whose stored clock it moves", alias, employment.CurrentMembershipSQL(alias))
 	}
 }
 
@@ -155,6 +181,11 @@ var (
 // and names the alias of each arm that lacks employment.InPlaceForSQL. Comments
 // are dropped first, so a bound that is only mentioned does not count.
 func employmentArmsWithoutTheBound(body string) (int, []string) {
+	return employmentArmsWithout(body, func(alias string) string { return employment.InPlaceForSQL(alias, "a") })
+}
+
+// employmentArmsWithout is the census for one predicate, spelled for an alias.
+func employmentArmsWithout(body string, predicate func(alias string) string) (int, []string) {
 	code := stripSQLComments(sqlBlockComment.ReplaceAllString(body, " "))
 	arms := 0
 	var unbounded []string
@@ -162,7 +193,7 @@ func employmentArmsWithoutTheBound(body string) (int, []string) {
 		flat := normalizeSQL(part)
 		for _, m := range employmentKindArm.FindAllStringSubmatch(flat, -1) {
 			arms++
-			if !strings.Contains(flat, normalizeSQL(employment.InPlaceForSQL(m[1], "a"))) {
+			if !strings.Contains(flat, normalizeSQL(predicate(m[1]))) {
 				unbounded = append(unbounded, m[1])
 			}
 		}

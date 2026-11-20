@@ -12,6 +12,7 @@ package compose
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -201,7 +202,7 @@ func TestARequestWithoutASeatIsReplacedByTheSamePromisersNext(t *testing.T) {
 	for i, seat := range []*ids.UUID{nil, &a.e.Rep1} {
 		body, err := json.Marshal(CommitmentTaskProposal{
 			SourceActivityID: source, Summary: "Send the pricing", SeatID: seat, PromiserSeatID: &a.e.Rep1,
-			Locator: "same-promise", DueDate: []string{"", "2027-01-01"}[i],
+			Locator: "same-promise", DueDate: []string{"", clocktest.Now(t).AddDate(0, 1, 0).Format(time.DateOnly)}[i],
 		})
 		if err != nil {
 			t.Fatal(err)

@@ -33,6 +33,7 @@ import { type CreateConflict, fieldRefusals } from "./create.refusals";
 
 export { fieldControl } from "./create.controls";
 export {
+  answerless,
   type CreateField,
   type CreateFieldOption,
   dayOutOfRange,

@@ -51,6 +51,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   // The team chat link refusals: each detail is an English API sentence.
   ["channel_bot_not_connected", "channelLink.refused.botNotConnected"],
   ["channel_not_found", "channelLink.refused.channelNotFound"],
+  ["channel_name_refused", "channelLink.refused.nameRefused"],
   ["channel_not_private", "channelLink.refused.channelNotPrivate"],
   ["channel_bot_not_member", "channelLink.refused.botNotMember"],
   ["channel_already_linked", "channelLink.refused.channelAlreadyLinked"],
@@ -59,6 +60,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["website_form_busy", "webForms.handlingBusy"],
   // The server's detail lists the closed vocabulary by its wire spellings.
   ["win_evidence_required", "deals.winEvidenceRequired"],
+  // The detail is one English sentence per review state.
+  ["legal_review_required", "legalReview.advanceRefused"],
   ["run_in_flight", "import.reason.run_in_flight"],
   // A date-only meeting cannot hold its host's calendar hour.
   ["day_holds_host_slot", "activity.dayHoldsHostSlot"],

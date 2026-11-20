@@ -78,6 +78,14 @@ type Message struct {
 	EditedAt   time.Time
 	Subtype    string
 	IsBot      bool
+	Files      []File
+}
+
+// File is a file attached to a message, as the history read lists it. Its
+// content is never read.
+type File struct {
+	Name     string
+	MimeType string
 }
 
 // HistoryPage is one page of a channel's history, oldest first.
@@ -333,6 +341,9 @@ func refusalOf(raw []byte, route string) error {
 	return &CodeError{Route: route, Code: envelope.Error, wrapped: refusalKind(envelope.Error)}
 }
 
+// CodeNameTaken is Dispact's refusal of a channel name another channel holds.
+const CodeNameTaken = "name_taken"
+
 // refusalKind maps a Dispact error code to this package's typed errors.
 func refusalKind(code string) error {
 	switch code {
@@ -342,6 +353,8 @@ func refusalKind(code string) error {
 		return ErrNotMember
 	case "channel_not_found", "message_not_found", "is_archived":
 		return ErrChannelGone
+	case CodeNameTaken, "invalid_name":
+		return ErrNameRefused
 	case "internal_error", "channel_create_failed", "":
 		return ErrUnreachable
 	default:

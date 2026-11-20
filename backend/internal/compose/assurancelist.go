@@ -216,7 +216,7 @@ func findingPricedJoin(money findingMoney) string {
 // amount in the base currency at today's rate. Amounts in different currencies
 // compare as money, and one with no rate sorts after every priced one.
 var findingRank = `CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
-	` + deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "fa") + ` DESC NULLS LAST,
+	` + deals.BaseValueSQL("now()", installationBaseCurrencySQL, "fa") + ` DESC NULLS LAST,
 	e.last_seen_at DESC`
 
 // findingMoney is how a statement renders the columns of a finding that carry

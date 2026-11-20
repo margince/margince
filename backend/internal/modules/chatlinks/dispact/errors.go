@@ -19,8 +19,11 @@ var (
 	// ErrUnreachable means the chat could not be reached or answered with a fault.
 	ErrUnreachable = errors.New("dispact: the chat could not be reached")
 	// ErrRequestRejected means the chat refused the request as malformed, or as
-	// one it will not do, such as a name already taken.
+	// one it will not do.
 	ErrRequestRejected = errors.New("dispact: the chat refused the request")
+	// ErrNameRefused means the chat will not make a channel by this name: it is
+	// taken, or breaks the chat's naming rules.
+	ErrNameRefused = errors.New("dispact: the chat refused the channel name")
 )
 
 // StatusError keeps the HTTP status of a refusal next to its typed meaning.

@@ -19,7 +19,7 @@ import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { CONTRACT_STATUS_LABEL } from "../../lib/contractstatus";
 import { useHealthScope } from "../../lib/healthscope";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
@@ -45,14 +45,6 @@ const ASSERTABLE_STATUSES: ContractStatus[] = [
   "expired",
   "cancelled",
 ];
-
-export const CONTRACT_STATUS_LABEL: Record<ContractStatus, MessageKey> = {
-  draft: "contracts.status.draft",
-  active: "contracts.status.active",
-  expired: "contracts.status.expired",
-  cancelled: "contracts.status.cancelled",
-  superseded: "contracts.status.superseded",
-};
 
 // A terminal status has no valid transition out of it but a same-status no-op
 // (refuseInvalidTransition, contract_lifecycle.go), so offering "change status"

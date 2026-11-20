@@ -213,7 +213,7 @@ func openPipeline(
 		return pipeline{}, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT d.id, d.name, d.status, d.created_at, d.last_activity_at, d.wait_until, %[4]s,
+		SELECT d.id, d.name, d.status, d.created_at, d.last_activity_at, %[5]s, %[4]s,
 		       (SELECT count(*) FROM deal_stage_history h
 		         WHERE h.deal_id = d.id AND h.from_stage_id IS DISTINCT FROM h.to_stage_id),
 		       %[3]s,
@@ -228,7 +228,7 @@ func openPipeline(
 		FROM deal d
 		%[1]s
 		ORDER BY %[2]s, d.id`,
-		openDealsWhere(companyPos, dealScope), idlebase.SQL("d"), amountSQL, deals.MeetingAheadSQL("d")), args...)
+		openDealsWhere(companyPos, dealScope), idlebase.SQL("d"), amountSQL, deals.MeetingAheadSQL("d"), deals.PauseEndsSQL("d")), args...)
 	if err != nil {
 		return pipeline{}, fmt.Errorf("read the account's open pipeline: %w", err)
 	}

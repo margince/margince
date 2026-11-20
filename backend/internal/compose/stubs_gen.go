@@ -879,6 +879,10 @@ func (stubs) UpdateAutonomy(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UpdateAutonomy")
 }
 
+func (stubs) UpdateAutoApplyInstallation(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateAutoApplyInstallation")
+}
+
 func (stubs) GetAvailability(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAvailabilityParams) {
 	httperr.NotImplemented(w, r, "GetAvailability")
 }

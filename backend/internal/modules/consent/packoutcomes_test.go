@@ -4,7 +4,9 @@
 package consent
 
 import (
+	"maps"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -14,26 +16,52 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// The outcomes the engine gives under the shipped German and Vietnamese packs.
-// They are written as answers, not read off the rules. So a change to how a
-// pack is built cannot move them unseen.
+// The outcomes the engine gives under the shipped packs. They are written as
+// answers, not read off the rules. So a change to how a pack is built cannot
+// move them unseen.
 
-// shippedPackCodes registers each shipped pack under a test code of its own.
-// The real country codes stay free for every other test in this binary. The
-// p codes sit outside the range testMessagingRules hands out (qm-qz, xa-xz).
+// shippedPackCodes registers each shipped pack under a test code of its own,
+// handed out from shippedPackCodeRanges in the order of the real codes. The
+// real country codes stay free for every other test in this binary.
 func shippedPackCodes(t *testing.T) map[string]jurisdiction.Code {
 	t.Helper()
 	packs := shippedPacks(t)
-	if len(packs) != 2 {
-		t.Fatalf("%d packs ship; give each new one a test code here", len(packs))
+	var free []jurisdiction.Code
+	for _, r := range shippedPackCodeRanges {
+		for second := r.first; second <= r.last; second++ {
+			free = append(free, jurisdiction.Code(string([]rune{r.prefix, second})))
+		}
+	}
+	countries := slices.Sorted(maps.Keys(packs))
+	if len(countries) > len(free) {
+		t.Fatalf("%d packs ship and shippedPackCodeRanges holds %d codes", len(countries), len(free))
+	}
+	out := map[string]jurisdiction.Code{}
+	for i, country := range countries {
+		out[country] = free[i]
 	}
 	registerShipped.Do(func() {
-		de, vn := packs["de"], packs["vn"]
-		de.Jurisdiction, vn.Jurisdiction = "pd", "pv"
-		messagingrules.Register(de)
-		messagingrules.Register(vn)
+		for _, country := range countries {
+			rules := packs[country]
+			rules.Jurisdiction = out[country]
+			messagingrules.Register(rules)
+		}
 	})
-	return map[string]jurisdiction.Code{"de": "pd", "vn": "pv"}
+	return out
+}
+
+// shippedPackCodeRange is a prefix and the second letters handed out under it.
+type shippedPackCodeRange struct{ prefix, first, last rune }
+
+// shippedPackCodeRanges are the codes shippedPackCodes hands out, enough for
+// the EU and Asia-Pacific units with room to grow. They sit outside the ranges
+// testMessagingRules hands out, and
+// gates/messagingtestcodes_test.go fails a literal code another test in this
+// package registers inside them.
+var shippedPackCodeRanges = [...]shippedPackCodeRange{
+	{prefix: 'm', first: 'a', last: 'z'},
+	{prefix: 'n', first: 'a', last: 'z'},
+	{prefix: 'o', first: 'a', last: 'z'},
 }
 
 var registerShipped sync.Once
@@ -46,13 +74,16 @@ type packOutcome struct {
 	prefix            string
 }
 
+// existingCustomer is the Art. 13(2) exception with all four of its conditions.
+var existingCustomer = &messagingrules.MarketingException{
+	Kind: messagingrules.ExistingCustomer, RequiresSaleEvidence: true, RequiresCollectionTimeOptOut: true,
+	RequiresSimilarity: true, RequiresNoObjection: true,
+}
+
 var shippedOutcomes = map[string]packOutcome{
 	"de": {
 		reply: 365 * 24 * time.Hour, dealFollow: 182 * 24 * time.Hour,
-		exception: &messagingrules.MarketingException{
-			Kind: messagingrules.ExistingCustomer, RequiresSaleEvidence: true, RequiresCollectionTimeOptOut: true,
-			RequiresSimilarity: true, RequiresNoObjection: true,
-		},
+		exception:         existingCustomer,
 		unconsentedReason: commsauthz.ReasonMarketingPermissionRequired,
 	},
 	"vn": {
@@ -60,6 +91,52 @@ var shippedOutcomes = map[string]packOutcome{
 		unconsentedReason: commsauthz.ReasonMarketingConsentRequired,
 		capped:            true, prefix: "[QC]",
 	},
+	"at": memberStateOutcome(false, ""), "be": memberStateOutcome(true, ""), "bg": memberStateOutcome(false, ""),
+	"cy": memberStateOutcome(true, ""), "cz": memberStateOutcome(true, ""), "dk": memberStateOutcome(true, ""),
+	"ee": memberStateOutcome(true, ""), "es": memberStateOutcome(true, "Publicidad"), "fi": memberStateOutcome(true, ""),
+	"fr": memberStateOutcome(true, ""), "gr": memberStateOutcome(true, ""), "hr": memberStateOutcome(true, ""),
+	"hu": memberStateOutcome(false, ""), "ie": memberStateOutcome(false, ""), "it": memberStateOutcome(true, ""),
+	"lt": memberStateOutcome(true, ""), "lu": memberStateOutcome(true, ""), "lv": memberStateOutcome(true, ""),
+	"mt": memberStateOutcome(true, ""), "nl": memberStateOutcome(true, ""), "pl": memberStateOutcome(false, ""),
+	"pt": memberStateOutcome(true, ""), "ro": memberStateOutcome(true, ""), "se": memberStateOutcome(true, ""),
+	"si": memberStateOutcome(true, ""), "sk": memberStateOutcome(true, ""),
+	"au": apacOutcome(existingCustomer, commsauthz.ReasonMarketingPermissionRequired, ""),
+	"nz": apacOutcome(existingCustomer, commsauthz.ReasonMarketingPermissionRequired, ""),
+	"jp": apacOutcome(existingCustomer, commsauthz.ReasonMarketingPermissionRequired, ""),
+	"kr": apacOutcome(nil, commsauthz.ReasonMarketingConsentRequired, "(광고)"),
+	"cn": apacOutcome(nil, commsauthz.ReasonMarketingConsentRequired, "广告"),
+	"sg": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, "<ADV>"),
+	"hk": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"id": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"in": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"my": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"ph": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"th": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"tw": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+}
+
+// apacOutcome is what an Asia-Pacific pack other than Vietnam's gives: the
+// core windows, no cap, and its own exception, refusal and label.
+func apacOutcome(exception *messagingrules.MarketingException, unconsented, prefix string) packOutcome {
+	return packOutcome{
+		reply: 365 * 24 * time.Hour, dealFollow: 182 * 24 * time.Hour,
+		exception: exception, unconsentedReason: unconsented, prefix: prefix,
+	}
+}
+
+// memberStateOutcome is what an EU member-state pack other than Germany's
+// gives. With the existing-customer exception, advertising without consent
+// asks for a permission; without it, the refusal stands as the core gave it.
+func memberStateOutcome(exception bool, prefix string) packOutcome {
+	out := packOutcome{
+		reply: 365 * 24 * time.Hour, dealFollow: 182 * 24 * time.Hour,
+		unconsentedReason: commsauthz.ReasonNoMarketingConsent, prefix: prefix,
+	}
+	if exception {
+		out.exception = existingCustomer
+		out.unconsentedReason = commsauthz.ReasonMarketingPermissionRequired
+	}
+	return out
 }
 
 func TestTheShippedPacksGiveTheOutcomesTheyGaveBeforeTheyWereCompiled(t *testing.T) {
@@ -82,12 +159,12 @@ func TestTheShippedPacksGiveTheOutcomesTheyGaveBeforeTheyWereCompiled(t *testing
 		if got := requireConsentWhereNothingStandsIn(refused, where).ReasonCode; got != want.unconsentedReason {
 			t.Errorf("%s: advertising without consent is refused with %q, want %q", country, got, want.unconsentedReason)
 		}
-		applied, _, _ := applicableRules(where.Code)
+		applied, folded, _ := applicableRules(where.Code)
 		if (applied.FrequencyCap != nil) != want.capped {
 			t.Errorf("%s: capped = %v, want %v", country, applied.FrequencyCap != nil, want.capped)
 		}
-		unlabelled := subjectPrefixFindings(applied.SubjectPrefix, string(where.Code), "Offer")
-		labelled := subjectPrefixFindings(applied.SubjectPrefix, string(where.Code), want.prefix+" Offer")
+		unlabelled := subjectPrefixFindings(folded.SubjectPrefixes, "Offer")
+		labelled := subjectPrefixFindings(folded.SubjectPrefixes, want.prefix+" Offer")
 		if (len(unlabelled) > 0) != (want.prefix != "") || len(labelled) > 0 {
 			t.Errorf("%s: an unlabelled subject gave %v and a labelled one %v", country, unlabelled, labelled)
 		}
@@ -158,12 +235,13 @@ type shippedSend struct {
 
 // sendFindings answers the codes the engine's draft, subject and footer checks
 // raise for one send. A sender in the recipient's own country sends under that
-// pack; any other sender is established under no pack this test loads.
+// pack, and so does a fixture that names no sender. Any other sender is under
+// no pack this test loads.
 func sendFindings(t *testing.T, s shippedSend) []string {
 	t.Helper()
 	recipient := shippedPackCodes(t)[s.country]
 	sender := jurisdiction.Code(s.sender)
-	if s.sender == s.country {
+	if s.sender == s.country || s.sender == "" {
 		sender = recipient
 	}
 	var codes []string
@@ -171,8 +249,8 @@ func sendFindings(t *testing.T, s shippedSend) []string {
 		for _, f := range packDraftFindings(recipient, sender, s.subject, s.body) {
 			codes = append(codes, f.Requirement)
 		}
-		rules, _, _ := applicableRules(recipient)
-		for _, f := range subjectPrefixFindings(rules.SubjectPrefix, string(recipient), s.subject) {
+		_, folded, _ := applicableRules(recipient)
+		for _, f := range subjectPrefixFindings(folded.SubjectPrefixes, s.subject) {
 			codes = append(codes, f.Requirement)
 		}
 	}
@@ -185,4 +263,78 @@ func sendFindings(t *testing.T, s shippedSend) []string {
 	}
 	slices.Sort(codes)
 	return slices.Compact(codes)
+}
+
+// One subject begins with one label. A message under the Korean and the
+// Singapore packs owes two, so it is held whatever its subject says.
+func TestAMessageOwingTwoDifferentLabelsIsHeldUntilItsRecipientsAreSplit(t *testing.T) {
+	t.Parallel()
+	codes := shippedPackCodes(t)
+	_, korean, _ := applicableRules(codes["kr"])
+	if got := subjectPrefixFindings(korean.SubjectPrefixes, "(광고) Offer"); len(got) != 0 {
+		t.Errorf("a labelled subject under one pack gave %v", got)
+	}
+	_, twice, _ := applicableRules(codes["kr"], codes["kr"])
+	if got := subjectPrefixFindings(twice.SubjectPrefixes, "(광고) Offer"); len(got) != 0 {
+		t.Errorf("a label owed twice gave %v", got)
+	}
+	_, both, _ := applicableRules(codes["kr"], codes["sg"])
+	for _, subject := range []string{"(광고) Offer", "<ADV> Offer", "(광고) <ADV> Offer", "Offer"} {
+		got := subjectPrefixFindings(both.SubjectPrefixes, subject)
+		if len(got) != 1 || got[0].Requirement != RequirementSubjectPrefix || !strings.Contains(got[0].Detail, "split the recipients") {
+			t.Errorf("%q under the Korean and Singapore labels gave %v, want one finding that asks for a split", subject, got)
+		}
+	}
+}
+
+// Staging refuses a missing or conflicting label before anything is queued,
+// on the recipients it binds, and leaves a stop the sender meets first.
+func TestStagingRefusesTheLabelItsRecipientsOwe(t *testing.T) {
+	t.Parallel()
+	codes := shippedPackCodes(t)
+	kr, sg, de := RecipientCountry{Code: codes["kr"]}, RecipientCountry{Code: codes["sg"]}, RecipientCountry{Code: codes["de"]}
+	advertising := commsauthz.Decision{Resolved: commsauthz.CategoryMarketing, Verdict: commsauthz.VerdictAllow}
+	objected := commsauthz.Decision{
+		Resolved: commsauthz.CategoryMarketing, Verdict: commsauthz.VerdictDeny,
+		ReasonCode: commsauthz.ReasonObjection,
+	}
+	invoice := commsauthz.Decision{Resolved: commsauthz.CategoryInvoiceOrPayment, Verdict: commsauthz.VerdictAllow}
+	for _, tc := range []struct {
+		name      string
+		decisions []commsauthz.Decision
+		countries []RecipientCountry
+		subject   string
+		want      []string
+	}{
+		{"labelled", []commsauthz.Decision{advertising}, []RecipientCountry{kr}, "(광고) Offer", []string{""}},
+		{
+			"unlabelled",
+			[]commsauthz.Decision{advertising, advertising},
+			[]RecipientCountry{kr, de},
+			"Offer",
+			[]string{commsauthz.ReasonSubjectLabelMissing, ""},
+		},
+		{"not advertising", []commsauthz.Decision{invoice}, []RecipientCountry{kr}, "Invoice", []string{""}},
+		{
+			"a stop stays",
+			[]commsauthz.Decision{objected},
+			[]RecipientCountry{kr},
+			"Offer",
+			[]string{commsauthz.ReasonObjection},
+		},
+		{
+			"two labels",
+			[]commsauthz.Decision{advertising, advertising, advertising},
+			[]RecipientCountry{kr, sg, de},
+			"(광고) Offer",
+			[]string{commsauthz.ReasonSubjectLabelsConflict, commsauthz.ReasonSubjectLabelsConflict, ""},
+		},
+	} {
+		set := withSubjectLabels(commsauthz.DecisionSet{Decisions: slices.Clone(tc.decisions)}, tc.countries, tc.subject)
+		for i, d := range set.Decisions {
+			if d.ReasonCode != tc.want[i] || (tc.want[i] != "" && d.Verdict != commsauthz.VerdictDeny) {
+				t.Errorf("%s: recipient %d got %s %q, want %q", tc.name, i, d.Verdict, d.ReasonCode, tc.want[i])
+			}
+		}
+	}
 }

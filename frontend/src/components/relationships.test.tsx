@@ -380,12 +380,12 @@ describe("adding a relationship", () => {
 it("uses the shared current-role rule on the company list", () => {
   const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
   expect(
-    dateRange(baseRel({ employment_status: "former" }), t, "en", "UTC"),
+    dateRange(baseRel({ employment_status: "former" }), t, "en", "UTC", "UTC"),
   ).toBe("Former");
   expect(
-    dateRange(baseRel({ employment_status: "unknown" }), t, "en", "UTC"),
+    dateRange(baseRel({ employment_status: "unknown" }), t, "en", "UTC", "UTC"),
   ).toBe("");
   expect(
-    dateRange(baseRel({ employment_status: "current" }), t, "en", "UTC"),
+    dateRange(baseRel({ employment_status: "current" }), t, "en", "UTC", "UTC"),
   ).toBe("Current");
 });

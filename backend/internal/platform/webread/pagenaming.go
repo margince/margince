@@ -31,6 +31,16 @@ func (n pageNaming) title() string {
 	return n.tagTitle
 }
 
+// siteNameOrTitle prefers og:site_name, which names the site, over the
+// <title> tag, which often names the site beside the page. og:title names
+// only the page, so it is no stand-in for the site's name.
+func (n pageNaming) siteNameOrTitle() string {
+	if n.siteName != "" {
+		return n.siteName
+	}
+	return n.tagTitle
+}
+
 // readTitle takes the text of the first <title>, the tokenizer sitting on its
 // start tag. Text already unescapes the entities of a <title>.
 func (n *pageNaming) readTitle(tokenizer *html.Tokenizer) {

@@ -53,8 +53,8 @@ type ExcerptIn struct {
 	Speaker *contactbrief.Speaker
 }
 
-const excerptQuery = `
-	SELECT a.id, COALESCE(a.subject, ''), COALESCE(a.direction, ''), a.occurred_at,
+var excerptQuery = `
+	SELECT a.id, COALESCE(a.subject, ''), COALESCE(` + activities.WriterSideSQL("a", "true") + `, ''), a.occurred_at,
 	       left(COALESCE(a.body, ''), %[3]d)
 	FROM activity a
 	WHERE a.id = ANY($%[2]d)

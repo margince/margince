@@ -3,6 +3,7 @@
 
 import { useRef, useState } from "react";
 import {
+  type ListOpener,
   ListPopover,
   type ListPopoverOption,
 } from "../design-system/listpopover";
@@ -29,12 +30,26 @@ type OwnerPickProps = Readonly<{
   recordKey: string;
   /** The trigger's face and the list's name. */
   label?: string;
-  reasonId?: string;
   /** Another write on the record is out: every row refuses a pick until it lands. */
   pending?: boolean;
   /** Runs once the write has landed and the list has closed. */
   onAssigned?: () => void;
-}>;
+}> &
+  (
+    | Readonly<{
+        opener?: undefined;
+        open?: undefined;
+        onClose?: undefined;
+        reasonId?: string;
+      }>
+    | Readonly<{
+        /** Opened by a control elsewhere, such as a section's Edit link. */
+        opener: "caller";
+        open: boolean;
+        onClose: () => void;
+        reasonId?: undefined;
+      }>
+  );
 
 // The pick is the write: one more pick walks it back, so a confirm step would
 // only add a press.
@@ -47,10 +62,28 @@ export function OwnerPick({
   reasonId,
   pending = false,
   onAssigned,
+  open: callerOpen,
+  onClose,
 }: OwnerPickProps) {
   const t = useT();
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = callerOpen ?? ownOpen;
   const [opened, setOpened] = useState(record);
+  // A caller opens the list without a press here, so the record is pinned as it shows.
+  const [shown, setShown] = useState(open);
+  if (shown !== open) {
+    setShown(open);
+    if (open) {
+      setOpened(record);
+    }
+  }
+  const setOpen = (next: boolean) => {
+    if (onClose === undefined) {
+      setOwnOpen(next);
+    } else if (!next) {
+      onClose();
+    }
+  };
   // The shared roster rather than a search, so the list opens with names.
   const owners = useRecordOwnerOptions(open);
   const partial = useRosterPartial("user", open);
@@ -94,27 +127,27 @@ export function OwnerPick({
     : undefined;
   const title = label ?? t("ownerPick.change");
 
+  const change = (next: boolean) => {
+    // Held open while the write is out, so its refusal has somewhere to land.
+    if (!next && mutation.isPending) {
+      return;
+    }
+    setOpen(next);
+    // A refusal belongs to the attempt it answered, not to the next opening.
+    if (!mutation.isPending) {
+      mutation.reset();
+    }
+  };
+  const opening: ListOpener =
+    onClose === undefined
+      ? { label: title, reasonId, open, onOpenChange: change }
+      : { opener: "caller", open, onClose: () => change(false) };
+
   return (
     <ListPopover
-      label={title}
+      {...opening}
       title={title}
       searchLabel={t("ownerPick.search")}
-      reasonId={reasonId}
-      open={open}
-      onOpenChange={(next) => {
-        // Held open while the write is out, so its refusal has somewhere to land.
-        if (!next && mutation.isPending) {
-          return;
-        }
-        if (next) {
-          setOpened(record);
-        }
-        setOpen(next);
-        // A refusal belongs to the attempt it answered, not to the next opening.
-        if (!mutation.isPending) {
-          mutation.reset();
-        }
-      }}
       options={roster.isError ? [] : options}
       empty={roster.isError ? problemMessageOf(roster.error, t) : undefined}
       selected={record.owner_id ?? undefined}
