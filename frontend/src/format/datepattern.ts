@@ -103,8 +103,17 @@ export function readTypedDate(
   ) {
     return { refused: "shape" };
   }
+  // A month past 12 or a day past 31 is a misread order or a typo, not a day
+  // the calendar happens to lack.
+  if (!inRange(Number(month), 1, 12) || !inRange(Number(day), 1, 31)) {
+    return { refused: "shape" };
+  }
   const iso = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   return isISODate(iso) && isRealCalendarDay(iso)
     ? { day: iso }
     : { refused: "noSuchDay" };
+}
+
+function inRange(value: number, low: number, high: number): boolean {
+  return value >= low && value <= high;
 }

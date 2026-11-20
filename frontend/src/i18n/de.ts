@@ -3205,9 +3205,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gib den Betrag ohne Tausendertrennzeichen ein, etwa {example}.",
   "amount.refused.notNumber": "Gib den Betrag in Ziffern ein, etwa {example}.",
   "amount.refused.tooLarge": "Dieser Betrag ist zu groß zum Speichern.",
-  "amount.refused.noCurrency":
-    "Gib den Betrag ein, sobald seine Währung feststeht.",
-  "amount.waitsForCurrency": "Eingabe möglich, sobald die Währung geladen ist.",
+  "amount.refused.noCurrency": "Dieser Betrag braucht zuerst eine Währung.",
+  "amount.waitsForCurrency": "Eingabe möglich, sobald eine Währung feststeht.",
+  "amount.currencyUnread":
+    "Die Währung konnte nicht gelesen werden, darum kannst du noch keinen Betrag eingeben.",
   "amount.refused.negative": "Gib einen Betrag von null oder mehr ein.",
   "number.refused.ambiguous": "Gib die Zahl als {whole} oder {fraction} ein.",
   "number.refused.grouping":
@@ -6388,7 +6389,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability": "Abschlusschance",
   "deal.winProbability.hint":
     "Leer lassen, um die Abschlusschance der Phase zu verwenden.",
-  "deal.winProbability.invalid": "Gib eine ganze Zahl von 0 bis 100 ein.",
   "deal.winProbability.source.stage": "aus der Phase",
   "deal.winProbability.source.human": "von Hand gesetzt",
   "deal.winProbability.source.you": "von dir gesetzt",

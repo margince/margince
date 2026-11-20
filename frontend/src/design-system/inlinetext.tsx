@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
+import { emailFault } from "../lib/emailshape";
 import { Textarea, TextInput } from "./atoms";
 import { DateInput, isoOrBlank } from "./dateinput";
 import { EditableValue } from "./editablevalue";
@@ -44,8 +45,8 @@ function ReadOnlyText({
   );
 }
 
-// "decimal" is a number typed as text, for an amount whose decimal sign the
-// reader chooses rather than the browser.
+// "number" is a whole number; "decimal" may carry a decimal sign, which the
+// reader chooses rather than the browser. Both are typed as text.
 type TextKind = "text" | "email" | "number" | "date" | "decimal";
 
 /** The one control a text field's edit dialog holds. */
@@ -94,7 +95,9 @@ export function InlineTextControl({
     <TextInput
       {...control}
       type={numeric ? "text" : type}
-      inputMode={numeric ? "decimal" : undefined}
+      inputMode={
+        type === "number" ? "numeric" : numeric ? "decimal" : undefined
+      }
       value={draft}
       maxLength={maxLength}
       placeholder={suggested}
@@ -159,6 +162,7 @@ export function InlineText({
   onSave: (next: string) => Promise<void>;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const { open, editing } = useFieldEditor(canEdit, onEditingChange);
   const held = frame ?? ((resting: ReactNode) => resting);
   const linked = Boolean(link);
@@ -196,6 +200,11 @@ export function InlineText({
         label={label}
         value={value}
         settle={multiline ? undefined : asLine}
+        check={
+          type === "email"
+            ? (next) => emailFault(next, locale, label)
+            : undefined
+        }
         onClose={() => editing(false)}
         onSave={onSave}
         onDirtyChange={onDirtyChange}

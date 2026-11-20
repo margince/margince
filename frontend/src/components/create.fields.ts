@@ -40,6 +40,7 @@ export type CreateField = {
   type?:
     | "text"
     | "email"
+    // A whole number. Typed as text, with a keyboard of digits only.
     | "number"
     // A number typed as text (an amount, a rate), read by parseTypedDecimal.
     // Never type="number", whose decimal sign is the browser's.

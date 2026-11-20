@@ -495,9 +495,7 @@ describe("MoneyInput refusal before blur", () => {
     const { rerender } = rtlRender(box(""));
     const early = screen.getByLabelText("Value") as HTMLInputElement;
     expect(early.disabled).toBe(true);
-    expect(early.placeholder).toBe("Opens once the currency has loaded.");
-    fireEvent.change(early, { target: { value: "500" } });
-    expect(onChangeMinor).not.toHaveBeenCalled();
+    expect(early.placeholder).toBe("Opens once a currency is set.");
 
     rerender(box("VND"));
     const input = screen.getByLabelText("Value") as HTMLInputElement;

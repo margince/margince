@@ -11,7 +11,7 @@ import {
   typedMinorUnits,
 } from "../format/minorunits";
 import { type Locale, useLocale, useT } from "../i18n";
-import { TextInput } from "./atoms";
+import { Button, TextInput } from "./atoms";
 import { ErrorLine } from "./errorline";
 
 // A thin wrapper around a text TextInput that displays and edits MAJOR units
@@ -46,6 +46,7 @@ export function MoneyInput({
   display,
   onFocus,
   onRefusedChange,
+  currencyUnread,
   ...rest
 }: Readonly<
   Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
@@ -71,6 +72,9 @@ export function MoneyInput({
     // Told whether the box holds text it refuses, for a save outside a form
     // or dialog, where refuseUnreadableField cannot reach the box.
     onRefusedChange?: (refused: boolean) => void;
+    // Set when the read that supplies `currency` failed: the box says so and
+    // offers the retry, rather than waiting for a currency that is not coming.
+    currencyUnread?: Readonly<{ retry: () => void }>;
   }
 >) {
   const t = useT();
@@ -169,18 +173,7 @@ export function MoneyInput({
     }
   };
   if (noCurrency) {
-    return (
-      <TextInput
-        {...rest}
-        ref={input}
-        type="text"
-        inputMode="decimal"
-        value=""
-        readOnly
-        disabled
-        placeholder={t("amount.waitsForCurrency")}
-      />
-    );
+    return <NoCurrencyBox {...rest} currencyUnread={currencyUnread} />;
   }
   if (display && !editing && text !== "" && refusal === null) {
     return (
@@ -259,6 +252,49 @@ export function MoneyInput({
       />
       {refusal && (
         <ErrorLine id={errorId}>{t(refusal.key, refusal.params)}</ErrorLine>
+      )}
+    </>
+  );
+}
+
+// The box while it has no currency: shut, saying it waits for one, or that
+// the read supplying it failed, with that read's retry.
+function NoCurrencyBox({
+  currencyUnread,
+  ...rest
+}: Readonly<
+  Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
+    currencyUnread?: Readonly<{ retry: () => void }>;
+  }
+>) {
+  const t = useT();
+  const errorId = useId();
+  const describedBy = [rest["aria-describedby"], currencyUnread && errorId]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    <>
+      <TextInput
+        {...rest}
+        type="text"
+        inputMode="decimal"
+        value=""
+        readOnly
+        disabled
+        placeholder={currencyUnread ? undefined : t("amount.waitsForCurrency")}
+        aria-describedby={describedBy || undefined}
+      />
+      {currencyUnread && (
+        <ErrorLine
+          id={errorId}
+          actions={
+            <Button variant="ghost" onClick={currencyUnread.retry}>
+              {t("common.retry")}
+            </Button>
+          }
+        >
+          {t("amount.currencyUnread")}
+        </ErrorLine>
       )}
     </>
   );

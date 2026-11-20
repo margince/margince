@@ -73,6 +73,23 @@ async function submitWith(problem: unknown, locale: "en" | "de" = "en") {
 }
 
 describe("CreateAction field refusals", () => {
+  it("asks for a keyboard of digits only for a whole number", async () => {
+    render(
+      <CreateAction
+        requires={{ object: "deal", action: "create" }}
+        label="New deal"
+        fields={fields}
+        create={() => Promise.resolve({ id: "1" })}
+        invalidate="deals"
+        screen="deals"
+      />,
+    );
+    await userEvent.click(screen.getByText("New deal"));
+    expect(screen.getByLabelText("Value").getAttribute("inputmode")).toBe(
+      "numeric",
+    );
+  });
+
   it("shows a negative amount beside the amount, not at the foot", async () => {
     await submitWith(refusal("amount_minor", "amount_negative"));
     await waitFor(() =>

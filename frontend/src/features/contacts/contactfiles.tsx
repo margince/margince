@@ -215,7 +215,7 @@ function FileCuts({
   const t = useT();
   const countOf = (key: Category) =>
     files.filter((file) => file.category === key).length;
-  const cuts = categoryCuts(files, STEADY_CUTS);
+  const cuts = categoryCuts(files, STEADY_CUTS, value);
   return (
     <FilterPills
       label={t("docs.filterLabel")}

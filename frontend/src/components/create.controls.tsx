@@ -119,6 +119,12 @@ function referenceControl(
   );
 }
 
+// The keyboard a number box asks for: a whole number has no decimal sign.
+const TYPED_NUMBER_MODE: Partial<Record<string, "numeric" | "decimal">> = {
+  number: "numeric",
+  decimal: "decimal",
+};
+
 export function fieldControl(
   field: CreateField | SubField,
   control: FieldControl,
@@ -193,11 +199,7 @@ export function fieldControl(
       // A number box hands over "" for text it cannot read, so a typo would
       // save as no value. The field's validate reads the text instead.
       type={field.type === "email" ? "email" : "text"}
-      inputMode={
-        field.type === "decimal" || field.type === "number"
-          ? "decimal"
-          : undefined
-      }
+      inputMode={TYPED_NUMBER_MODE[field.type ?? "text"]}
       maxLength={field.maxLength}
       value={value}
       placeholder={field.placeholder}

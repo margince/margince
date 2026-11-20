@@ -43,6 +43,8 @@ export type FieldEditDialogProps = Readonly<{
   onDirtyChange?: (dirty: boolean) => void;
   /** What a save sends and compares with `value`, such as a trimmed line. */
   settle?: (draft: string) => string;
+  /** Why the settled draft cannot be saved, said on the field before any request. */
+  check?: (next: string) => string | undefined;
   children: (field: FieldEditControl) => ReactNode;
 }>;
 
@@ -83,6 +85,7 @@ export function FieldEditDialog({
   onSave,
   onDirtyChange,
   settle = asTyped,
+  check,
   children,
 }: FieldEditDialogProps) {
   const t = useT();
@@ -110,6 +113,11 @@ export function FieldEditDialog({
     // Storing what is already stored writes an audit row for no change.
     if (next === value) {
       onClose();
+      return;
+    }
+    const refused = check?.(next);
+    if (refused) {
+      setFailure(refused);
       return;
     }
     inFlight.current = true;

@@ -490,9 +490,7 @@ describe("the week ahead", () => {
       screen.getByRole("button", { name: en["plan.new.save"] }),
     );
 
-    expect(
-      await screen.findByText("There is no 99/99/9999 in the calendar."),
-    ).toBeTruthy();
+    expect(await screen.findByText("Enter a date as DD/MM/YYYY.")).toBeTruthy();
     expect(document.activeElement).toBe(
       screen.getByRole("textbox", { name: en["plan.new.due"] }),
     );

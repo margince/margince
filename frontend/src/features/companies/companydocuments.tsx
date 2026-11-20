@@ -245,7 +245,7 @@ export function CompanyDocumentsCard({
             onChange={setCategory}
             pills={[
               { value: "", label: t("docs.category.all"), count: live.length },
-              ...categoryCuts(live, STEADY_CUTS).map((key) => ({
+              ...categoryCuts(live, STEADY_CUTS, category).map((key) => ({
                 value: key,
                 label: t(labelFor(CATEGORY_LABELS, key)),
                 count: live.filter((doc) => doc.category === key).length,

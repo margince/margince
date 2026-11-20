@@ -117,7 +117,6 @@ function RecordField({
   }
 >) {
   const t = useT();
-  const { locale } = useLocale();
   const [opened, setOpened] = useState(props.record);
   const target = useDetailsFieldTarget(field.key);
   const [editing, setEditing] = useState(false);
@@ -152,7 +151,7 @@ function RecordField({
   const editable = props.canEdit && !reason;
   const canEdit = editable && (!pending || editing);
   const saveValue = async (next: string) => {
-    checkFieldValue(field, next, t, locale);
+    checkFieldValue(field, next, t);
     await mutation.mutateAsync({
       values: { [field.key]: next },
       rows: {},

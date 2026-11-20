@@ -37,16 +37,21 @@ const CATEGORY_ORDER: readonly string[] = Object.keys(CATEGORY_LABELS);
 /**
  * The category chips over a list of files. The `steady` ones always show; any
  * other category shows while a file holds it. So the chips add up to "All".
+ * The `selected` chip stays while it filters, so the reader can see and clear it.
  */
 export function categoryCuts(
   files: readonly Attachment[],
   steady: readonly DocumentCategory[],
+  selected: DocumentCategory | "",
 ): DocumentCategory[] {
   const rank = (category: string) => {
     const at = CATEGORY_ORDER.indexOf(category);
     return at === -1 ? CATEGORY_ORDER.length : at;
   };
   const held = new Set<DocumentCategory>();
+  if (selected !== "" && !steady.includes(selected)) {
+    held.add(selected);
+  }
   for (const file of files) {
     if (file.category && !steady.includes(file.category)) {
       held.add(file.category);

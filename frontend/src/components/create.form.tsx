@@ -213,7 +213,7 @@ export function RecordFormBody({
   const submit = singlePress((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
-    const malformed = emailFaults(shown, answers, rows, locale, t);
+    const malformed = boxFaults(shown, answers, rows, locale, t);
     if (requiredMissing || refusals.size > 0 || malformed.length > 0) {
       setTouched(new Set([...touched, ...missing.map((field) => field.key)]));
       faults.show(
@@ -393,9 +393,10 @@ export function RecordFormBody({
   );
 }
 
-// The email boxes whose text is no address, by field key. The forms set
-// noValidate, so this check answers in the app's language, not the browser's.
-function emailFaults(
+// What the browser checked before the forms set noValidate, by field key.
+// That is a row whose required value is blank, and an email box whose text is
+// no address. Said in the app's language, not the browser's.
+function boxFaults(
   fields: readonly CreateField[],
   values: Record<string, string>,
   rows: FormRows,
@@ -403,19 +404,36 @@ function emailFaults(
   t: (key: MessageKey) => string,
 ): (readonly [string, string])[] {
   return fields.flatMap((field) => {
+    if (answerless(field)) return [];
     const label = fieldLabel(field, t);
-    const valueField = field.rowFields?.[0];
-    const typed =
-      field.type === "email"
-        ? [values[field.key] ?? ""]
-        : field.type === "repeatable" && valueField?.type === "email"
-          ? (rows[field.key] ?? []).map((row) => row[valueField.key] ?? "")
-          : [];
-    const fault = typed
-      .map((text) => emailFault(text, locale, label))
-      .find((sentence) => sentence !== undefined);
-    return fault && !answerless(field) ? [[field.key, fault] as const] : [];
+    const fault =
+      field.type === "repeatable"
+        ? rowFault(field, rows[field.key] ?? [], locale, label)
+        : field.type === "email"
+          ? emailFault(values[field.key] ?? "", locale, label)
+          : undefined;
+    return fault ? [[field.key, fault] as const] : [];
   });
+}
+
+// A row is kept only with its required values: blanking an address must
+// not delete it. Its value box, when an email, must hold an address.
+function rowFault(
+  field: CreateField,
+  rows: readonly FormRow[],
+  locale: Locale,
+  label: string,
+): string | undefined {
+  const subFields = field.rowFields ?? [];
+  const blank = rows.some((row) =>
+    subFields.some((sub) => sub.required && !(row[sub.key] ?? "").trim()),
+  );
+  if (blank) return fieldCheckSentence("required", locale, label);
+  const valueField = subFields[0];
+  if (valueField?.type !== "email") return undefined;
+  return rows
+    .map((row) => emailFault(row[valueField.key] ?? "", locale, label))
+    .find((sentence) => sentence !== undefined);
 }
 
 // A check the form makes before sending, beyond the field's own validate: a

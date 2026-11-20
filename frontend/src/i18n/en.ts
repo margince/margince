@@ -3111,8 +3111,10 @@ export const en = {
     "Enter the amount without thousands separators, such as {example}.",
   "amount.refused.notNumber": "Enter the amount in digits, such as {example}.",
   "amount.refused.tooLarge": "This amount is too large to store.",
-  "amount.refused.noCurrency": "Enter the amount once its currency is known.",
-  "amount.waitsForCurrency": "Opens once the currency has loaded.",
+  "amount.refused.noCurrency": "This amount needs a currency first.",
+  "amount.waitsForCurrency": "Opens once a currency is set.",
+  "amount.currencyUnread":
+    "The currency could not be read, so no amount can be entered yet.",
   "amount.refused.negative": "Enter an amount of zero or more.",
   "number.refused.ambiguous": "Enter the number as {whole} or {fraction}.",
   "number.refused.grouping":
@@ -6354,7 +6356,6 @@ export const en = {
   "deal.standing.figure.probability": "Probability",
   "deal.winProbability": "Probability",
   "deal.winProbability.hint": "Leave empty to use the stage’s probability.",
-  "deal.winProbability.invalid": "Enter a whole number from 0 to 100.",
   "deal.winProbability.source.stage": "from the stage",
   "deal.winProbability.source.human": "set by hand",
   "deal.winProbability.source.you": "set by you",

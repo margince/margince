@@ -85,19 +85,31 @@ describe("a typed day", () => {
 describe("why a typed text names no day", () => {
   const dayFirst = datePattern("de", "locale");
 
-  it.each(["31.02.2026", "29.2.2027", "13.13.2026"])(
+  it.each(["31.02.2026", "29.2.2027", "31.4.2026"])(
     "says %s is a day the calendar does not have",
     (typed) => {
       expect(readTypedDate(typed, dayFirst)).toEqual({ refused: "noSuchDay" });
     },
   );
 
-  it.each(["6.5.26", "6.5/2026", "6 May 2026", "1.1.0999"])(
-    "says %s is not in a date's shape",
-    (typed) => {
-      expect(readTypedDate(typed, dayFirst)).toEqual({ refused: "shape" });
-    },
-  );
+  // Day and month swapped: no month 25 exists, so the order is what is wrong.
+  it("says a day-first text read month first is not in the date's shape", () => {
+    expect(readTypedDate("25.12.2026", datePattern("en", "mdy"))).toEqual({
+      refused: "shape",
+    });
+  });
+
+  it.each([
+    "6.5.26",
+    "6.5/2026",
+    "6 May 2026",
+    "1.1.0999",
+    "13.13.2026",
+    "32.1.2026",
+    "0.1.2026",
+  ])("says %s is not in a date's shape", (typed) => {
+    expect(readTypedDate(typed, dayFirst)).toEqual({ refused: "shape" });
+  });
 });
 
 // The box a reader types into and the date every page prints must agree, or a

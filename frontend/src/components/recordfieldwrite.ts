@@ -6,13 +6,12 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import type { Locale, useT } from "../i18n";
+import type { useT } from "../i18n";
 import { derivedRecordKeys } from "../lib/activitykeys";
-import { emailFault } from "../lib/emailshape";
 import type { EntityKind } from "../lib/entity";
 import { ProblemError, problemStatus } from "../lib/problem";
 import { invalidateRecord } from "../lib/recordwritekeys";
-import { type CreateField, type FormRows, fieldLabel } from "./create";
+import type { CreateField, FormRows } from "./create";
 import type { FieldRecord, RecordFieldSave } from "./recordfieldtypes";
 import { rawRecord } from "./recordfieldtypes";
 
@@ -69,14 +68,9 @@ export function checkFieldValue(
   field: CreateField,
   next: string,
   t: ReturnType<typeof useT>,
-  locale: Locale,
 ): void {
   if (field.required && !next.trim())
     throw new ProblemError({ detail: t("record.fieldRequired") });
-  const refusal =
-    field.validate?.(next, { [field.key]: next }) ??
-    (field.type === "email"
-      ? emailFault(next, locale, fieldLabel(field, t))
-      : undefined);
+  const refusal = field.validate?.(next, { [field.key]: next });
   if (refusal) throw new ProblemError({ detail: refusal });
 }

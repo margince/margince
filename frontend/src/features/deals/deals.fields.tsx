@@ -7,7 +7,9 @@ import type { LeadingCurrencies } from "../../format/currencychoices";
 import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { AcquisitionSource } from "../../lib/acquisitionsources.queries";
+import { percentLimit } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
+import { winProbabilityFault } from "../../lib/wholenumber";
 import type { Project } from "../projects/projects.form";
 import {
   dealCommercialFields,
@@ -17,21 +19,23 @@ import {
 import { dealProjectFields } from "./dealproject";
 import type { Deal } from "./deals";
 
-const WHOLE_PERCENT = /^(100|[1-9]?\d)$/;
-
 // The deal's own probability. Empty follows the stage, which is also how a
 // probability set on the deal is cleared. A won or lost deal has none to set:
 // its stage fixes it, and the server refuses one.
-function winProbabilityField(t: (k: MessageKey) => string): CreateField {
+function winProbabilityField(
+  t: (k: MessageKey) => string,
+  locale: Locale,
+): CreateField {
+  const label = {
+    label: t("deal.winProbability"),
+    limit: percentLimit(locale),
+  };
   return {
     key: "win_probability",
     label: "deal.winProbability",
     type: "number",
     hint: t("deal.winProbability.hint"),
-    validate: (value) =>
-      value.trim() === "" || WHOLE_PERCENT.test(value.trim())
-        ? undefined
-        : t("deal.winProbability.invalid"),
+    validate: (value) => winProbabilityFault(value, locale, label),
   };
 }
 
@@ -195,7 +199,7 @@ export function dealEditFields(
       withheld: opts.masked.includes("partner_company_id"),
       noneYet: opts.noPartnersYet,
     }),
-    ...(opts.closed ? [] : [winProbabilityField(t)]),
+    ...(opts.closed ? [] : [winProbabilityField(t, opts.locale)]),
     dealCloseDate(t, opts.locale),
     storableDay(
       { key: "wait_until", label: "deal.waitUntil", type: "date" },

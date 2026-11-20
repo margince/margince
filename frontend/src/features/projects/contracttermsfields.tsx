@@ -22,6 +22,7 @@ import {
   fieldCheckSentence,
   refusalSentences,
 } from "../../lib/problem";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import { ContractArrField } from "./contractarr";
 import type { ContractDraft, ValueBasis } from "./contractform";
 
@@ -144,15 +145,33 @@ export function useTermsFaults(
   return [terms, faultsRoot] as const;
 }
 
+/**
+ * The scale a contract's amounts are typed in: the agreement's own currency,
+ * else the installation's once that read lands. `unread` is set when the read
+ * failed and no currency is known, so the money boxes offer its retry.
+ */
+export function useContractCurrency(draftCurrency: string) {
+  const settings = useInstallationSettings();
+  const base = settings.data?.base_currency;
+  const currency = draftCurrency || base || "";
+  const unread =
+    currency === "" && settings.isError
+      ? { retry: () => void settings.refetch() }
+      : undefined;
+  return { base, currency, unread };
+}
+
 export function ContractTermsFields({
   draft,
   setDraft,
   currency,
+  currencyUnread,
   errors,
 }: Readonly<{
   draft: ContractDraft;
   setDraft: (draft: ContractDraft) => void;
   currency: string;
+  currencyUnread?: Readonly<{ retry: () => void }>;
   // The sentence that refuses a term, by its wire field (TERMS_WIRE).
   errors?: (field: TermsWire) => string | undefined;
 }>) {
@@ -197,6 +216,7 @@ export function ContractTermsFields({
             {...props}
             min={0}
             currency={currency}
+            currencyUnread={currencyUnread}
             valueMinor={draft.valueMinor}
             // An agreement on record may carry no value at all — the two money
             // columns are paired and both NULL until somebody prices it — so an
@@ -210,6 +230,7 @@ export function ContractTermsFields({
       <ContractArrField
         arrMinor={draft.arrMinor}
         currency={currency}
+        currencyUnread={currencyUnread}
         onChangeMinor={(arrMinor) => setDraft({ ...draft, arrMinor })}
       />
 

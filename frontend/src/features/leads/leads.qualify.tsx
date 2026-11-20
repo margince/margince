@@ -378,6 +378,11 @@ function QualificationForm({
                 valueMinor={amountMinor ?? 0}
                 blankWhenZero={amountMinor === null}
                 currency={currency ?? ""}
+                currencyUnread={
+                  installation.isError && !currency
+                    ? { retry: () => void installation.refetch() }
+                    : undefined
+                }
                 display={
                   currency
                     ? (minor) => formatMoney(minor, currency, locale)
