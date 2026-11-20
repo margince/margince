@@ -14,12 +14,17 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/redistest"
 )
 
 func TestARouteBackedWriteRepeatedUnderItsRetryKeyWritesOnce(t *testing.T) {
-	e := setupConnector(t)
+	// A real meter, so the test sees what the replay charged.
+	e := setupConnectorWith(t, compose.WithAgentVolume(agentvolume.New(redistest.Client(t), agentvolume.Limits{}, time.Hour)))
 	bearer, passport := apptest.PassportWithID(t, e.AppEnv, "retrying client", "read", "write")
 	const label = "Retry Keyed Lead Source"
 	create := func() string {

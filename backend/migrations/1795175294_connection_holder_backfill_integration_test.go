@@ -42,8 +42,9 @@ func TestTheConnectionHolderBackfillMovesOnlyLiveConnectedRows(t *testing.T) {
 		INSERT INTO oauth_grant (client_id, user_id, scopes) VALUES ('backfill', $1, ARRAY['read']) RETURNING id::text`, user)
 	connected := seedHolderPassport(t, conn, user, &grant)
 	minted := seedHolderPassport(t, conn, user, nil)
-	approval := seedValue(t, conn, `INSERT INTO approval (kind, proposed_change, diff_hash, proposed_by, expires_at)
-		VALUES ('enrich', '{}', 'h', 'agent', now() + interval '1 day') RETURNING id::text`)
+	approval := seedValue(t, conn, `INSERT INTO approval (kind, proposed_change, diff_hash, proposed_by, expires_at,
+		requested_decider_id, requested_decider_source) VALUES ('enrich', '{}', 'h', 'agent', now() + interval '1 day', $1, 'stager')
+		RETURNING id::text`, user)
 	liveTask := seedValue(t, conn, `INSERT INTO agent_task (approval_id, passport_id, tool, expires_at, created_at)
 		VALUES ($1, $2, 'enrich', now() + interval '1 hour', now()) RETURNING id::text`, approval, connected)
 	for _, row := range []struct{ holder, key string }{

@@ -34,9 +34,9 @@ func RouteRetryKey(ctx context.Context) string {
 // claims nothing, so the route's claim is the only one and a retry through
 // either door replays the same answer.
 //
-// The route claims only once the call runs, after any approval is redeemed. So
-// a keyed call that also presents an approval is refused: its retry would meet
-// the spent approval before the route could replay the first answer.
+// The route claims only once the call runs, after any approval is redeemed. So a
+// keyed call with an approval is refused. Its retry would meet the spent approval
+// before the route could replay the first answer.
 func (r *Registry) handKeyToRoute(ctx context.Context, spec mcp.ToolSpec, res reserved) (context.Context, reserved, error) {
 	if res.RetryKey == "" {
 		return ctx, res, nil
