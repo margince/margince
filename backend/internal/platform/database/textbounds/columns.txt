@@ -10,8 +10,6 @@ public.activity.capture_label label
 public.activity.capture_label_declined_ruleset document
 public.activity.captured_by document
 public.activity.channel_provider document
-public.activity.consent_class document
-public.activity.consent_purpose document
 public.activity.counterparty_email document
 public.activity.deal_topic_digest document
 public.activity.direction document

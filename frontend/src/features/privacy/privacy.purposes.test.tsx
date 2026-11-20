@@ -206,8 +206,9 @@ function stubCounts(allow: Record<string, string[]>): string[] {
               purpose_key: "transactional",
               class: "transactional",
               sends: 1200,
+              disputed: 3,
             },
-            { purpose_key: "retired_key", sends: 2 },
+            { purpose_key: "unknown", sends: 2, disputed: 0 },
           ],
         });
       }
@@ -241,8 +242,8 @@ describe("Mail sent per purpose", () => {
     });
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows.map((row) => row.textContent)).toEqual([
-      `${TRANSACTIONAL.label}${en["privacy.purposeClass.transactional"]}1,200`,
-      `retired_key${en["privacy.purposeClass.undefined"]}2`,
+      `${TRANSACTIONAL.label}${en["privacy.purposeClass.transactional"]}1,2003`,
+      `${en["privacy.purposeUnknown"]}${en["privacy.purposeClass.undefined"]}20`,
     ]);
     expect(asked).toEqual(["?days=30"]);
   });

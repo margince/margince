@@ -11855,10 +11855,12 @@ export const en = {
   "privacy.purposeClass.undefined": "Not defined",
   "privacy.purposeSends": "Sent in {days} days",
   "privacy.purposeSendsSub":
-    "Each mail names its purpose, and the purpose’s class decides whether it needs consent. Margince sends it under the class it names. Check these counts from the last {days} days: a newsletter should not show up as correspondence.",
+    "Each mail names its purpose and may say what kind of mail it is. Margince checks that against the record before it sends. These counts cover the last {days} days. Kind not borne out counts mail whose stated kind the record did not support, such as a newsletter sent as customer service.",
   "privacy.purposeSendsLoading": "Counting sent mail…",
   "privacy.purposeSendsEmpty":
     "No mail named a purpose in the last {days} days.",
+  "privacy.purposeDisputed": "Kind not borne out",
+  "privacy.purposeUnknown": "No known purpose",
   "privacy.purposeSendsTable": "Mail sent per purpose",
   "privacy.customerNotices": "Existing customers",
   "privacy.customerNoticesSub":

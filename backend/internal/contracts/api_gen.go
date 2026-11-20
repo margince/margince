@@ -44354,13 +44354,16 @@ type ConsentPurposeFrequency string
 
 // ConsentPurposeSendCount defines model for ConsentPurposeSendCount.
 type ConsentPurposeSendCount struct {
-	// Class The purpose's class when the message was sent. Absent for a key no purpose defines.
+	// Class The purpose's class. Absent under `unknown`.
 	Class *ConsentPurposeClass `json:"class,omitempty"`
 
-	// PurposeKey The purpose key the sends named.
+	// Disputed Of those, the messages whose claimed kind differs from the kind the record bore out.
+	Disputed int `json:"disputed"`
+
+	// PurposeKey The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none.
 	PurposeKey string `json:"purpose_key"`
 
-	// Sends Outbound messages that named this purpose in the window.
+	// Sends Messages staged under this purpose in the window.
 	Sends int `json:"sends"`
 }
 
@@ -100096,7 +100099,7 @@ type ServerInterface interface {
 	// Define a consent purpose — a human-only admin write.
 	// (POST /consent-purposes)
 	CreateConsentPurpose(w http.ResponseWriter, r *http.Request)
-	// How many messages went out under each declared consent purpose.
+	// How many messages went out under each declared consent purpose, and how many the record disputes.
 	// (GET /consent-purposes/send-counts)
 	ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request, params ListConsentPurposeSendCountsParams)
 	// List contacts (live by default; cursor-paginated).
@@ -104626,7 +104629,7 @@ func (_ Unimplemented) CreateConsentPurpose(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// How many messages went out under each declared consent purpose.
+// How many messages went out under each declared consent purpose, and how many the record disputes.
 // (GET /consent-purposes/send-counts)
 func (_ Unimplemented) ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request, params ListConsentPurposeSendCountsParams) {
 	w.WriteHeader(http.StatusNotImplemented)

@@ -429,7 +429,7 @@ type outboundChannelMessage struct {
 // where the receipt is recorded.
 func (m outboundChannelMessage) activity() LogActivityInput {
 	direction := "outbound"
-	return declaring(SentRecord(LogActivityInput{
+	return SentRecord(LogActivityInput{
 		SystemText: &systemtext.Message{Body: systemtext.Prose(systemtext.Quote, "")},
 		// The two axes, stated separately (ADR-0107/A158). The reply IS a
 		// message; what carries it is the anchor's own transport. Capture's
@@ -451,7 +451,7 @@ func (m outboundChannelMessage) activity() LogActivityInput {
 		// on this key, so a reply filed anywhere else is a reply that
 		// conversation never had.
 		ThreadKey: m.conversation.threadKey,
-	}), m.in.ConsentPurpose, m.in.MarketingPurpose)
+	})
 }
 
 // delivery is the same message as the delivery machinery receives it.

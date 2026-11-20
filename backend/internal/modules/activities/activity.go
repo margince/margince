@@ -65,9 +65,7 @@ type LogActivityInput struct {
 	correspondenceEntity ids.UUID
 	// statedCountries are the recipient countries the sender stated for this
 	// message, which the audit row names beside the send.
-	statedCountries []commsauthz.CountryOverride
-	// declared is the consent purpose a send named; empty on every other row.
-	declared           declaredPurpose
+	statedCountries    []commsauthz.CountryOverride
 	SystemText         *systemtext.Message
 	identityProver     AddressProver
 	DealFiling         *crmcontracts.ActivityDealFiling

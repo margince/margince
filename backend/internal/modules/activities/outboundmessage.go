@@ -91,7 +91,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		// nobody can read: it is a record that looks complete.
 		recorded += "\n\n[" + htmlAlternativeNote + "]"
 	}
-	return declaring(SentRecord(LogActivityInput{
+	return SentRecord(LogActivityInput{
 		correspondenceEntity: m.in.SendingEntity,
 		statedCountries:      m.statedCountries(),
 		SystemText:           outboundMessageText(m.recordedBody, m.htmlBody != ""),
@@ -112,7 +112,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		// correspondence-positive).
 		CounterpartyEmail:            primaryCounterparty(m.to, m.in.Recipients),
 		CounterpartyOutboundAttested: true,
-	}), m.in.ConsentPurpose, m.in.MarketingPurpose)
+	})
 }
 
 // SentRecord is the timeline row a send stores. Its subject and body are masked

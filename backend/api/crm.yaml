@@ -27451,16 +27451,19 @@ paths:
       tags: [Compliance]
       operationId: listConsentPurposeSendCounts
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
-      summary: How many messages went out under each declared consent purpose.
+      summary: How many messages went out under each declared consent purpose, and how many the record disputes.
       description: |
-        Needs `consent_config:read`. A send names its consent purpose, and the purpose's class
-        decides which consent rules apply to it. The send is allowed under the class it declares,
-        so this count is where a misclassified send shows afterwards: for example a marketing
-        campaign that went out as `business_correspondence`.
+        Needs `consent_config:read`. A send names a consent purpose, and may claim what kind of
+        message it is. The send engine records, for every message it stages, what was claimed and
+        what the record bore out. This read counts those staged messages per purpose in the window,
+        most sent first.
 
-        One entry per purpose and class, counting every outbound mail or channel message that named
-        that purpose in the window, most sent first. A send that named no purpose is not counted.
-        `class` is absent for a key no purpose defines.
+        `disputed` counts the messages whose claimed kind differs from the one the engine resolved:
+        for example a campaign claimed as customer service with nothing on record behind it. That is
+        where a mislabelled send shows.
+
+        A key that names no live purpose, and a message that named none, count under the purpose
+        key `unknown`, without a class. The answer holds at most 200 entries.
       parameters:
         - name: days
           in: query
@@ -62090,6 +62093,7 @@ components:
             objected, so naming one here is refused (422 `invalid`).
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -62121,6 +62125,7 @@ components:
             `invalid`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -62584,9 +62589,11 @@ components:
             allowed.
         marketing_purpose:
           type: string
+          maxLength: 200
           description: Which marketing purpose, when the context is `marketing`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             The deprecated purpose key, when the composer still has one. It authorizes
             nothing on its own, and it is accepted here for one reason: the SEND still
@@ -62648,8 +62655,10 @@ components:
           allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
         marketing_purpose:
           type: string
+          maxLength: 200
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             The deprecated purpose key, when the composer still has one. It authorizes
             nothing on its own, and it is accepted here for one reason: the SEND still
@@ -63062,6 +63071,7 @@ components:
             objected, so naming one here is refused (422 `invalid`).
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -63093,6 +63103,7 @@ components:
             `invalid`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -63182,6 +63193,7 @@ components:
             objected, so naming one here is refused (422 `invalid`).
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -63200,6 +63212,7 @@ components:
           description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -75598,13 +75611,14 @@ components:
 
     ConsentPurposeSendCount:
       type: object
-      required: [purpose_key, sends]
+      required: [purpose_key, sends, disputed]
       properties:
-        purpose_key: { type: string, description: 'The purpose key the sends named.' }
+        purpose_key: { type: string, description: 'The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none.' }
         class:
           allOf: [{ $ref: '#/components/schemas/ConsentPurposeClass' }]
-          description: The purpose's class when the message was sent. Absent for a key no purpose defines.
-        sends: { type: integer, description: 'Outbound messages that named this purpose in the window.' }
+          description: The purpose's class. Absent under `unknown`.
+        sends: { type: integer, description: 'Messages staged under this purpose in the window.' }
+        disputed: { type: integer, description: 'Of those, the messages whose claimed kind differs from the kind the record bore out.' }
 
     ConsentPurposeFrequency:
       type: string

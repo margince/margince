@@ -320,8 +320,8 @@ function PurposeTable({ purposes }: Readonly<{ purposes: ConsentPurpose[] }>) {
   );
 }
 
-// A send is allowed under the class its purpose declares, so this count is
-// where a newsletter sent as correspondence shows afterwards.
+// What the send engine judged each staged mail to be, per purpose. The
+// disputed count is where a mail sent under the wrong kind shows afterwards.
 function PurposeSendCounts({
   purposes,
 }: Readonly<{ purposes: readonly ConsentPurpose[] }>) {
@@ -338,13 +338,16 @@ function PurposeSendCounts({
     },
   });
   const counts = query.data?.data ?? [];
-  const labelOf = (key: string) =>
-    purposes.find((purpose) => purpose.key === key)?.label ?? key;
+  const labelOf = (count: PurposeSendCount) =>
+    count.class
+      ? (purposes.find((purpose) => purpose.key === count.purpose_key)?.label ??
+        count.purpose_key)
+      : t("privacy.purposeUnknown");
   const columns: DataTableColumn<PurposeSendCount>[] = [
     {
       key: "purpose",
       header: t("privacy.purpose"),
-      render: (count) => labelOf(count.purpose_key),
+      render: labelOf,
     },
     {
       key: "class",
@@ -363,6 +366,12 @@ function PurposeSendCounts({
       }),
       align: "end",
       render: (count) => formatNumber(count.sends, locale),
+    },
+    {
+      key: "disputed",
+      header: t("privacy.purposeDisputed"),
+      align: "end",
+      render: (count) => formatNumber(count.disputed, locale),
     },
   ];
   return (
@@ -394,7 +403,7 @@ function PurposeSendCounts({
             fold
             columns={columns}
             rows={counts}
-            rowKey={(count) => `${count.purpose_key}:${count.class ?? ""}`}
+            rowKey={(count) => count.purpose_key}
           />
         )}
       </CardBoundary>

@@ -180,22 +180,28 @@ export const KeyTaken: Story = {
   },
 };
 
-// A compliance reader also sees how much mail went out under each purpose, so
-// a newsletter sent as correspondence shows. A key no purpose defines keeps its
-// raw key and says its class is not defined.
+// A compliance reader also sees how much mail went out under each purpose, and
+// how much claimed a kind the record did not bear out. Keys no live purpose
+// defines are one row that names no key.
 const MAY_READ_SENDS: GrantSpec = { consent_config: ["read", "create"] };
 
 const SEND_COUNTS = {
   days: 30,
   data: [
-    { purpose_key: "transactional", class: "transactional", sends: 1240 },
+    {
+      purpose_key: "transactional",
+      class: "transactional",
+      sends: 1240,
+      disputed: 0,
+    },
     {
       purpose_key: "business_correspondence",
       class: "business_correspondence",
       sends: 318,
+      disputed: 41,
     },
-    { purpose_key: "marketing", class: "marketing", sends: 52 },
-    { purpose_key: "old_campaign", sends: 3 },
+    { purpose_key: "marketing", class: "marketing", sends: 52, disputed: 0 },
+    { purpose_key: "unknown", sends: 3, disputed: 1 },
   ],
 };
 

@@ -11591,10 +11591,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeClass.undefined": "Chưa định nghĩa",
   "privacy.purposeSends": "Đã gửi trong {days} ngày",
   "privacy.purposeSendsSub":
-    "Mỗi thư ghi rõ mục đích của nó, và loại của mục đích quyết định thư có cần sự đồng ý hay không. Margince gửi thư theo loại mà thư ghi. Hãy kiểm tra số liệu {days} ngày qua: bản tin không nên xuất hiện dưới dạng thư từ công việc.",
+    "Mỗi thư ghi mục đích và có thể nói thư thuộc loại gì. Margince đối chiếu điều đó với hồ sơ trước khi gửi. Số liệu tính cho {days} ngày qua. “Loại không được xác nhận” đếm các thư mà hồ sơ không xác nhận loại đã nêu, ví dụ một bản tin được gửi như chăm sóc khách hàng.",
   "privacy.purposeSendsLoading": "Đang đếm thư đã gửi…",
   "privacy.purposeSendsEmpty":
     "Không có thư nào ghi mục đích trong {days} ngày qua.",
+  "privacy.purposeDisputed": "Loại không được xác nhận",
+  "privacy.purposeUnknown": "Không có mục đích đã biết",
   "privacy.purposeSendsTable": "Thư đã gửi theo mục đích",
   "privacy.customerNotices": "Khách hàng hiện có",
   "privacy.customerNoticesSub":

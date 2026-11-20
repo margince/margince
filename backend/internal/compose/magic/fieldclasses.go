@@ -75,7 +75,7 @@ var internalColumns = map[string]map[string]bool{
 		"agenda_fingerprint", "audience", "body_completeness", "booking_interval_exact",
 		"bulk_mail_attested", "calendar_event", "calendar_method", "calendar_uid", "capture_label", "capture_label_declined_at",
 		"capture_label_declined_ruleset", "capture_labeled_at", "channel_provider", "claims_host_slot",
-		"consent_class", "consent_purpose", "counterparty_email", "counterparty_outbound_attested", "deal_topic_checked_at", "deal_topic_digest",
+		"counterparty_email", "counterparty_outbound_attested", "deal_topic_checked_at", "deal_topic_digest",
 		"direction", "domain_evidence_version",
 		// The chosen local clocks surface as the due, remind and meeting intent objects.
 		"due_wall", "due_zone", "meeting_wall", "meeting_zone", "remind_wall", "remind_zone",

@@ -179,5 +179,3 @@
 1795139172_a_deal_link_judgement_checks_its_length.down.sql | * | restores the two earlier text guards on activity_link; it changes no existing row
 1795144657_a_lead_link_may_ask_the_consent_question.down.sql | confirm_token | only the consent links a booking mailed to leads are deleted, and the per-address budget caps those at three per address per 90 days, so the set is a handful of rows
 1795144658_a_lead_link_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795155283_the_declared_purpose_checks_its_length.up.sql | * | runs unwrapped and replaces the two text guards on activity in place; the guards act on later writes only, and it changes no existing row
-1795155283_the_declared_purpose_checks_its_length.down.sql | * | runs only on a rollback; replaces the same guards without the new columns, and changes no existing row

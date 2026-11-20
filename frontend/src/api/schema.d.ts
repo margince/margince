@@ -18641,15 +18641,18 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * How many messages went out under each declared consent purpose.
-         * @description Needs `consent_config:read`. A send names its consent purpose, and the purpose's class
-         *     decides which consent rules apply to it. The send is allowed under the class it declares,
-         *     so this count is where a misclassified send shows afterwards: for example a marketing
-         *     campaign that went out as `business_correspondence`.
+         * How many messages went out under each declared consent purpose, and how many the record disputes.
+         * @description Needs `consent_config:read`. A send names a consent purpose, and may claim what kind of
+         *     message it is. The send engine records, for every message it stages, what was claimed and
+         *     what the record bore out. This read counts those staged messages per purpose in the window,
+         *     most sent first.
          *
-         *     One entry per purpose and class, counting every outbound mail or channel message that named
-         *     that purpose in the window, most sent first. A send that named no purpose is not counted.
-         *     `class` is absent for a key no purpose defines.
+         *     `disputed` counts the messages whose claimed kind differs from the one the engine resolved:
+         *     for example a campaign claimed as customer service with nothing on record behind it. That is
+         *     where a mislabelled send shows.
+         *
+         *     A key that names no live purpose, and a message that named none, count under the purpose
+         *     key `unknown`, without a class. The answer holds at most 200 entries.
          */
         get: operations["listConsentPurposeSendCounts"];
         put?: never;
@@ -55242,12 +55245,14 @@ export interface components {
          */
         ConsentPurposeClass: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
         ConsentPurposeSendCount: {
-            /** @description The purpose key the sends named. */
+            /** @description The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none. */
             purpose_key: string;
-            /** @description The purpose's class when the message was sent. Absent for a key no purpose defines. */
+            /** @description The purpose's class. Absent under `unknown`. */
             class?: components["schemas"]["ConsentPurposeClass"];
-            /** @description Outbound messages that named this purpose in the window. */
+            /** @description Messages staged under this purpose in the window. */
             sends: number;
+            /** @description Of those, the messages whose claimed kind differs from the kind the record bore out. */
+            disputed: number;
         };
         /**
          * @description How often the purpose's mail goes out, roughly. The subscription question states it.
