@@ -30,8 +30,7 @@ func TestAnUnreadableSideCostsEveryVerbRatherThanLeakingTheRecord(t *testing.T) 
 			ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: hidden,
 		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("a record this reader may not see must not fail the whole day: %v", err)
@@ -58,8 +57,7 @@ func TestAPairTheReaderCannotChangeIsShownWithoutAVerb(t *testing.T) {
 			ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
 			LeftID: alsoTheirs, RightID: theirs,
 		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -92,8 +90,7 @@ func TestOwningOneSideOfAPairOffersTheMergeAlone(t *testing.T) {
 				ID: ids.NewV7(), EntityType: "company", Confidence: 1,
 				LeftID: left, RightID: right,
 			}}},
-			&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-		)
+			&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 		out, err := svc.Assemble(pageReader())
 		if err != nil {
 			t.Fatalf("assembling: %v", err)
@@ -117,8 +114,7 @@ func TestAPairTheReaderCanChangeStillOffersTheVerb(t *testing.T) {
 			ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -155,8 +151,7 @@ func TestAPairTheMergeWouldRefuseStillOffersTheDismissal(t *testing.T) {
 			ID: pairID, EntityType: "company", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -190,8 +185,7 @@ func TestAnUnblockedPairStillOffersTheVerb(t *testing.T) {
 			ID: ids.NewV7(), EntityType: "company", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)

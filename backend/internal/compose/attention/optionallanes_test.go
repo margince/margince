@@ -78,8 +78,7 @@ func TestACommitmentCarriesThePromiseAndTheWordsItWasReadFrom(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{rows: []Commitment{promise("Referenzliste an Herrn Vogt schicken", due)}}, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -120,8 +119,7 @@ func TestAnOverduePromiseSaysSoRatherThanLeavingTheReaderToCompareDates(t *testi
 			promise("Termin bestätigen", readInstant.Add(3*time.Hour)),
 		}}, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -146,8 +144,7 @@ func TestBothDueDatedLanesStopAtTheSameEndOfDay(t *testing.T) {
 	tasks := &stubTasks{}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
-		commitments, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		commitments, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -168,8 +165,7 @@ func TestAWithheldCommitmentLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{err: apperrors.ErrPermissionDenied}, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -219,8 +215,7 @@ func TestABrokenCommitmentReadIsNamedRatherThanReadingAsAClearDay(t *testing.T) 
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{err: errors.New("the claim read fell over")}, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 
 	day, err := svc.Assemble(pageReader())
 	if err != nil {
@@ -306,8 +301,7 @@ func TestTheMeetingLaneAsksFromNowRatherThanFromTheStartOfTheDay(t *testing.T) {
 	meetings := &stubMeetings{}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		nil, nil, nil, meetings, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		nil, nil, nil, meetings, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -335,8 +329,7 @@ func TestTheOutcomeLaneReachesBackAFortnightRatherThanToThisMorning(t *testing.T
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		nil, nil, nil, &stubMeetings{}, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-		WithMeetingsAwaitingOutcome(unanswered),
-	)
+		WithMeetingsAwaitingOutcome(unanswered))
 	if _, err := svc.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -367,8 +360,7 @@ func TestAMeetingCarriesItsSubjectAndWhenItStarts(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
 		&stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "Vogt — Angebotsbesprechung", StartsAt: starts}}}, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -397,8 +389,7 @@ func TestAMeetingCarriesItsSubjectAndWhenItStarts(t *testing.T) {
 func TestAWithheldMeetingLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
-		&stubMeetings{err: apperrors.ErrPermissionDenied}, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		&stubMeetings{err: apperrors.ErrPermissionDenied}, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)

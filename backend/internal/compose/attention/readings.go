@@ -13,9 +13,8 @@ package attention
 // pill.
 
 import (
-	"time"
-
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )

@@ -127,8 +127,7 @@ func TestABriefEntryFoldsOnlyIntoTheReadersOwnQueue(t *testing.T) {
 	}
 
 	theirs := (&Service{taskOwner: colleague, taskScope: TasksOwnedBy}).worklistFrom(
-		context.Background(), day, scopeMine, "", 25, waitingRead{}, worklistCursor{}, nil,
-	)
+		context.Background(), day, scopeMine, "", 25, waitingRead{}, worklistCursor{}, nil)
 	if len(theirs.Queue) != 1 {
 		t.Fatalf("the colleague's queue has %d rows, want their deal alone", len(theirs.Queue))
 	}

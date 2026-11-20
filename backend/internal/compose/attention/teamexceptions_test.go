@@ -113,8 +113,7 @@ func materialDeal() ranked {
 			withDeal(900_000_00), withDealSubject(riskDeal)),
 		rankInstant,
 		materialBar{minor: 100_000_00, known: true},
-		dayMoney{},
-	)
+		dayMoney{})
 }
 
 func TestTeamExceptionsExcludeReadableDealsOutsideTheLiveRoster(t *testing.T) {

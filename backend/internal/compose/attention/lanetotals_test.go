@@ -63,8 +63,7 @@ func TestTheCommitmentsBadgeCountsWhatThereIsNotWhatFits(t *testing.T) {
 	promises := &stubCommitments{rows: promisesDue(plannedCap), total: plannedCap + 5}
 	s := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
 	day, err := s.Assemble(pageReader())
 	if err != nil {
@@ -100,8 +99,7 @@ func TestACountThisReaderMayNotMakeWithholdsItsLane(t *testing.T) {
 	promises := &stubCommitments{rows: promisesDue(2), countErr: apperrors.ErrPermissionDenied}
 	s := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
 	day, err := s.Assemble(pageReader())
 	if err != nil {

@@ -43,8 +43,7 @@ func TestEachScopeNarrowsTheWaitingScanToTheRowsItKeeps(t *testing.T) {
 			svc := NewService(
 				stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 				stubBriefing{}, nil, nil, nil, nil,
-				nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-			)
+				nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 			svc.waiting = waitingAsked{asked: &asked}
 			svc.teammates = roster{{UserID: theManager}, {UserID: theRep}}
 			svc.former = &countedFormerRead{ids: []ids.UUID{departed}}

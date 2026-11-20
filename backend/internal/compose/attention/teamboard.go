@@ -136,8 +136,7 @@ func (s *Service) teamLoad(ctx context.Context, roster []TeamMember, asOf time.T
 	if unbound := s.UnboundBoardSources(); len(unbound) > 0 {
 		return teamCounts{}, fmt.Errorf(
 			"team board assembled without its %s reader(s) — every column is required, so an "+
-				"unbound one would report a clean team", strings.Join(unbound, ", "),
-		)
+				"unbound one would report a clean team", strings.Join(unbound, ", "))
 	}
 	load := teamCounts{counts: map[ids.UUID]crmcontracts.TeamBoardCounts{}}
 	for _, add := range []func(context.Context, *teamCounts, []TeamMember, time.Time) error{

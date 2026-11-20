@@ -50,8 +50,7 @@ func TestAQuietDealSaysHowLongItHasBeenQuiet(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil,
 		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}}, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -98,8 +97,7 @@ func TestADealPastItsCloseDateReportsThatGroundRatherThanSilence(t *testing.T) {
 			QuietDays: 2, CloseOverdue: true, ExpectedCloseDate: &closed,
 		}}}, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -124,8 +122,7 @@ func TestAWithheldRiskLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil,
 		stubAtRisk{err: apperrors.ErrPermissionDenied}, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -150,8 +147,7 @@ func TestAFeedWithNoRiskReaderSendsNoRiskLane(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -177,8 +173,7 @@ func TestALapsedRelationshipCarriesItsSpanAndItsLastExchange(t *testing.T) {
 			{ContactID: contact, Name: "Dana Weiss", QuietDays: 63, LastAt: spoke},
 		}},
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -236,8 +231,7 @@ func TestAWithheldDecayLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil,
 		&stubDecay{err: apperrors.ErrPermissionDenied},
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("a refused lane must not fail the read: %v", err)
@@ -262,8 +256,7 @@ func TestAFeedWithNoDecayReaderSendsNoDecayLane(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)

@@ -21,8 +21,7 @@ func quietFor(contact ids.UUID) *stubDecay {
 func decayService(decay *stubDecay) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil,
-		decay, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		decay, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 }
 
 func TestAnOmittedRelationshipReadSkipsTheDecayLane(t *testing.T) {

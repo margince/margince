@@ -84,8 +84,7 @@ func TestTheDayIsOrderedAcrossItsSourcesAndNotOnlyWithinThem(t *testing.T) {
 		},
 	)
 
-	assertOrder(
-		t, got,
+	assertOrder(t, got,
 		"meeting",             // somebody else's clock, at a stated minute
 		waitActivity.String(), // somebody else's clock, all day
 		"promise",             // a promise the rep made

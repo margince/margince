@@ -112,8 +112,7 @@ func TestDoneTakesAMeetingTheReaderCannotAnswerOffTheirDay(t *testing.T) {
 		return NewService(
 			stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 			nil, nil, nil, &stubMeetings{}, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-			WithMeetingsAwaitingOutcome(unanswered),
-		).WithDone(done)
+			WithMeetingsAwaitingOutcome(unanswered)).WithDone(done)
 	}
 
 	spy := &doneStoreSpy{}

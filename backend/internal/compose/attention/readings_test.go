@@ -48,8 +48,7 @@ func TestTheReadingsDoNotShrinkAsAReaderPagesThroughTheQueue(t *testing.T) {
 		if *page.RevenueAtRiskMinor != *whole.RevenueAtRiskMinor {
 			t.Fatalf(
 				"page %d states %d at risk, the day states %d — the strip fell as the reader walked",
-				at, *page.RevenueAtRiskMinor, *whole.RevenueAtRiskMinor,
-			)
+				at, *page.RevenueAtRiskMinor, *whole.RevenueAtRiskMinor)
 		}
 	}
 }
@@ -268,14 +267,12 @@ func TestReviewCountsTheFoldedWorkRatherThanTheRowsDrawn(t *testing.T) {
 	if len(folded) >= len(considered) {
 		t.Fatalf(
 			"the fixture folded %d rows into %d — nothing folded, so this proves nothing",
-			len(considered), len(folded),
-		)
+			len(considered), len(folded))
 	}
 	if got.Review != len(considered) {
 		t.Fatalf(
 			"the strip states %d decisions over %d items folded into %d rows — it counted rows, not work",
-			got.Review, len(considered), len(folded),
-		)
+			got.Review, len(considered), len(folded))
 	}
 }
 
@@ -335,15 +332,13 @@ func TestALaneThisReaderWasRefusedMakesTheFiguresAFloor(t *testing.T) {
 			out := (&Service{}).worklistFrom(
 				t.Context(), day, scopeAll, "", 25,
 				waitingRead{}, worklistCursor{},
-				[]*crmcontracts.WorklistSourceUnavailable{withheld},
-			)
+				[]*crmcontracts.WorklistSourceUnavailable{withheld})
 
 			if !out.Readings.MoreAvailable {
 				t.Fatalf(
 					"the %s lane was refused and the strip still stated exact figures — "+
 						"a rep sees a confident zero over work nobody could look at",
-					refused.name,
-				)
+					refused.name)
 			}
 		})
 	}
@@ -363,8 +358,7 @@ func TestARefusedLaneReachesBothTheWarningListAndTheFigures(t *testing.T) {
 	out := (&Service{}).worklistFrom(
 		t.Context(), day, scopeAll, "", 25,
 		waitingRead{}, worklistCursor{},
-		[]*crmcontracts.WorklistSourceUnavailable{withheld},
-	)
+		[]*crmcontracts.WorklistSourceUnavailable{withheld})
 
 	named := false
 	for _, source := range out.SourcesUnavailable {
@@ -390,8 +384,7 @@ func TestThePermanentlyWithheldPrivacyLaneDoesNotMarkEveryDayAFloor(t *testing.T
 
 	got := readingsOf(
 		classifyDay(day, rankInstant, dayMoney{}), classifyDay(day, rankInstant, dayMoney{}), boundedSources(day),
-		unavailable(pageReader(), day),
-	)
+		unavailable(pageReader(), day))
 
 	if got.MoreAvailable {
 		t.Fatal("the always-withheld privacy lane marked an ordinary day as a floor")

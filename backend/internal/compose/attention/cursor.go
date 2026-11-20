@@ -101,8 +101,7 @@ func fingerprint(scope, filter string, owner ids.UUID) string {
 		protocol = "changed-snapshot1"
 	}
 	sum := sha256.Sum256([]byte(
-		scope + "\x00" + normalizedFilter(filter) + "\x00" + owner.String() + "\x00" + protocol,
-	))
+		scope + "\x00" + normalizedFilter(filter) + "\x00" + owner.String() + "\x00" + protocol))
 	return hex.EncodeToString(sum[:8])
 }
 

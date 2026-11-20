@@ -42,8 +42,7 @@ func doneCheckService(meeting ids.UUID, decay *stubDecay) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, nil, decay, &stubMeetings{rows: []Meeting{kickOff}},
-		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 }
 
 // A Done check reads the day in a snapshot of its own (#11272). Outside one,

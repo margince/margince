@@ -151,8 +151,7 @@ func (s *Service) worklistIn(
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
 	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
-		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...),
-	)
+		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
 	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
 	if withPins.omitDecay {
 		out.OptionalRelationships, out.OptionalRelationshipsMoreAvailable = nil, nil
@@ -201,8 +200,7 @@ func (s *Service) worklistFrom(
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	// One admission rule for every row the page, Focus and counts will read.
 	rows, refused := admitBySource(ctx, slices.Concat(
-		classifyDay(day, day.AsOf, s.money), s.planRows, s.followUps.rows, s.followUps.promises, waits,
-	))
+		classifyDay(day, day.AsOf, s.money), s.planRows, s.followUps.rows, s.followUps.promises, waits))
 	// What the night thought of each deal, onto whichever row is about it — the
 	// brief's own row, and the at-risk row the fold below keeps. Stamped BEFORE
 	// the fold so the surviving row can inherit a score even where the night's
@@ -493,8 +491,7 @@ func (s *Service) cut(
 		return drawn, false, 0, walkState{}, nil, nil
 	}
 	shown, more, reached, walk := s.pageOf(
-		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf,
-	)
+		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
 	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == "", nil}, shown, more, limit, cursor.Rest, rows)
 	return shown, more, reached, walk, rest, tailFailed
 }

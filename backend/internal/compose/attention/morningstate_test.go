@@ -67,8 +67,7 @@ func TestARiskCardCarriesTheDealsFacts(t *testing.T) {
 			DealID: ids.NewV7(), Name: "Fleet retrofit", QuietDays: 19,
 			StageID: &stage, OwnerID: &owner, AmountMinor: &amount, Currency: &currency,
 		}}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -101,8 +100,7 @@ func TestARiskCardWithNoFactsSendsNoFactsObject(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil,
 		stubAtRisk{rows: []RiskyDeal{{DealID: ids.NewV7(), Name: "Bare deal", QuietDays: 5}}},
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)

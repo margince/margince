@@ -254,8 +254,7 @@ func TestAMeetingFollowUpCountsCalendarDaysInTheInstallationZone(t *testing.T) {
 		"a day and a half later": {time.Date(2026, 9, 8, 10, 0, 0, 0, hcm), 2},
 	} {
 		ranked, actionable := classifyMeetingFollowUp(
-			AwaitedReply{ActivityID: ids.NewV7(), SentAt: met, DealID: ids.NewV7()}, c.asOf, hcm,
-		)
+			AwaitedReply{ActivityID: ids.NewV7(), SentAt: met, DealID: ids.NewV7()}, c.asOf, hcm)
 		if !actionable {
 			t.Fatalf("%s: no row", name)
 		}

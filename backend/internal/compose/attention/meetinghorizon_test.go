@@ -56,8 +56,7 @@ func horizonService(meetings *stubMeetings, horizon *stubHorizon) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, meetings,
-		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	).WithMeetingHorizon(horizon)
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).WithMeetingHorizon(horizon)
 }
 
 func readHorizonPage(t *testing.T, svc *Service, scope string) crmcontracts.Worklist {

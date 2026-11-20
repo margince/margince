@@ -531,8 +531,7 @@ func TestTheBriefingLaneIsItsOwnAndNotADecision(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: deal, Rank: 1}}}, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -606,8 +605,7 @@ func TestABriefingItemOffersItsOwnThreeVerbs(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}}, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -646,8 +644,7 @@ func TestEveryLaneIsReadOncePerFeed(t *testing.T) {
 	decay := &stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		commitments, stubAtRisk{}, decay, meetings, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		commitments, stubAtRisk{}, decay, meetings, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -668,8 +665,7 @@ func TestEveryLaneIsReadOncePerFeed(t *testing.T) {
 func TestAWithheldLaneAppearsInLanesOmittedExactlyOneTime(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		&stubCommitments{err: apperrors.ErrPermissionDenied}, stubAtRisk{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+		&stubCommitments{err: apperrors.ErrPermissionDenied}, stubAtRisk{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
