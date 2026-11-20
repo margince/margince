@@ -245,6 +245,7 @@ describe("CreateAction refusals of a row list or a set", () => {
   ];
 
   async function submitList(problem: unknown) {
+    const user = userEvent.setup();
     render(
       <CreateAction
         label="New contact"
@@ -254,9 +255,10 @@ describe("CreateAction refusals of a row list or a set", () => {
         screen="contacts"
       />,
     );
-    await userEvent.click(screen.getByText("New contact"));
-    await userEvent.type(screen.getByLabelText(/Deal.name/i), "Probe");
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await user.click(screen.getByText("New contact"));
+    await user.type(screen.getByLabelText(/Deal.name/i), "Probe");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    return user;
   }
 
   it("shows a refused address under the email rows", async () => {
@@ -273,7 +275,23 @@ describe("CreateAction refusals of a row list or a set", () => {
     );
   });
 
+  it("drops a refused address once its rows are edited", async () => {
+    const user = await submitList(refusal("emails", "email_invalid"));
+    expect(await screen.findByText("Check Email and try again.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Add email" }));
+    expect(screen.queryByText("Check Email and try again.")).toBeNull();
+  });
+
+  it("drops a refused set once another pick is made", async () => {
+    const user = await submitList(refusal("tags", "unknown_tag"));
+    expect(await screen.findByText("Check Tag and try again.")).toBeTruthy();
+    await user.click(screen.getByRole("combobox", { name: /^Tag/ }));
+    await user.click(screen.getByRole("option", { name: "A" }));
+    expect(screen.queryByText("Check Tag and try again.")).toBeNull();
+  });
+
   it("shows a picker's own refusal before the form sends", async () => {
+    const user = userEvent.setup();
     render(
       <CreateAction
         label="New contact"
@@ -287,7 +305,7 @@ describe("CreateAction refusals of a row list or a set", () => {
         screen="contacts"
       />,
     );
-    await userEvent.click(screen.getByText("New contact"));
+    await user.click(screen.getByText("New contact"));
     expect(await screen.findByText("Pick one tag at most.")).toBeTruthy();
   });
 });

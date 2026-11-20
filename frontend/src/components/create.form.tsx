@@ -229,10 +229,11 @@ export function RecordFormBody({
               field={field}
               formId={formId}
               labelHidden={titledByDialog}
-              error={refusals.get(field.key) ?? fieldRefusals?.get(field.key)}
+              error={refusals.get(field.key) ?? faults.of(field.key)}
               rows={rows[field.key] ?? []}
               setRows={(next) => {
                 setEdited(true);
+                faults.edited(field.key);
                 setRows({ ...rows, [field.key]: next });
               }}
             />
@@ -244,7 +245,7 @@ export function RecordFormBody({
               key={field.key}
               field={field}
               labelHidden={titledByDialog}
-              error={refusals.get(field.key) ?? fieldRefusals?.get(field.key)}
+              error={refusals.get(field.key) ?? faults.of(field.key)}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })
