@@ -34,7 +34,7 @@ func clearSubjectLegalReviewText[ID ids.UUID | ids.ContactID](
 	ctx context.Context, tx pgx.Tx, contactID ID, reason, cause string,
 ) error {
 	rows, err := tx.Query(ctx, `
-		UPDATE legal_review SET note = NULL, comments = NULL, version = version + 1, updated_at = now()
+		UPDATE legal_review SET note = NULL, comments = NULL
 		 WHERE deal_id IN (`+subjectDealIDsSQL+`)
 		   AND (note IS NOT NULL OR comments IS NOT NULL)
 		RETURNING id`, contactID)

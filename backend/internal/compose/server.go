@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/legalreviewdesk"
 	"github.com/margince/margince/backend/internal/compose/legalreviewrecords"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -63,6 +64,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		WithSettings(StoredConfig(pool)).
 		WithLocks(loadedLocks).
 		WithLegalReviewDocuments(legalReviewDocuments{store: activities.NewStore(InstallationDB(pool))}).
+		WithLegalReviewDesk(legalreviewdesk.Desk{Approvals: NewApprovalsService(InstallationDB(pool)), Notices: notices.NewStore(InstallationDB(pool))}).
 		WithLegalReviewRecords(legalreviewrecords.New(contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), activities.NewStore(InstallationDB(pool))))
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever

@@ -86,6 +86,9 @@ func (s *Store) DecideLegalReview(
 		}); err != nil {
 			return fmt.Errorf("emit legal_review.decided: %w", err)
 		}
+		if err := s.settleLegalReview(ctx, tx, id); err != nil {
+			return err
+		}
 		if in.Outcome == ReviewApproved {
 			if err := s.settleLegalReviewedCriteria(ctx, tx, ids.From[ids.DealKind](current.dealID), id, decidedAt); err != nil {
 				return err

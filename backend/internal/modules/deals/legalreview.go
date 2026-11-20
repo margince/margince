@@ -235,6 +235,9 @@ func (s *Store) RequestLegalReview(
 		}); err != nil {
 			return fmt.Errorf("emit legal_review.requested: %w", err)
 		}
+		if err := s.raiseLegalReview(ctx, tx, id, dealID, requester); err != nil {
+			return err
+		}
 		out, err = readReviewSummary(ctx, tx, id)
 		return err
 	})
@@ -364,6 +367,9 @@ func (s *Store) WithdrawLegalReview(ctx context.Context, id ids.UUID) (crmcontra
 			DealId: openapi_types.UUID(dealID.UUID), ReviewId: openapi_types.UUID(id),
 		}); err != nil {
 			return fmt.Errorf("emit legal_review.withdrawn: %w", err)
+		}
+		if err := s.settleLegalReview(ctx, tx, id); err != nil {
+			return err
 		}
 		out, err = readReviewSummary(ctx, tx, id)
 		return err
