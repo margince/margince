@@ -205,14 +205,12 @@ type MarketingOutcome string
 const (
 	// MarketingNotRequested is a form that carried no tick, or an unticked box.
 	MarketingNotRequested MarketingOutcome = "not_requested"
-	// MarketingPendingConfirmation is the ordinary success: the question was
-	// mailed and the grant waits on the subject answering it.
+	// MarketingPendingConfirmation answers every accepted tick on the public
+	// form, mailed or not, so the answer reveals nothing about the address.
 	MarketingPendingConfirmation MarketingOutcome = "pending_confirmation"
-	// MarketingNotAsked is a question this installation could not put. The
-	// record has no live mailbox, the purpose was archived after the form was
-	// published, or a mail lane refused it. A user's booking for a contact whose
-	// rules need their own request first is not asked either. The booking
-	// stands in every case.
+	// MarketingNotAsked is a question this installation could not put, such as
+	// one with no mail lane. A signed-in user's refused ask reports it too.
+	// The booking stands in every case.
 	MarketingNotAsked MarketingOutcome = "not_asked"
 )
 

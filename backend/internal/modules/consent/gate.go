@@ -275,21 +275,28 @@ func resolveContact(ctx context.Context, tx pgx.Tx, r connector.Recipient) (stri
 // events and no §7(3) flag, so there is nothing here for the class model to
 // add.
 func grantedForLead(ctx context.Context, tx pgx.Tx, leadID, purposeID string, requiresDOI bool) (bool, error) {
+	return subjectGrantedTx(ctx, tx, "lead_id", leadID, purposeID, requiresDOI)
+}
+
+// subjectGrantedTx is the confirmed-grant predicate: a granted state row and,
+// for a double opt-in purpose, a proof event with a confirmed mailbox. column
+// is one of the two compile-time subject columns of contact_consent.
+func subjectGrantedTx(ctx context.Context, tx pgx.Tx, column, subjectID, purposeID string, requiresDOI bool) (bool, error) {
 	var granted bool
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1
 		  FROM contact_consent pc
-		  WHERE pc.lead_id = $1 AND pc.purpose_id = $2
+		  WHERE pc.`+column+` = $1 AND pc.purpose_id = $2
 		    AND pc.state = 'granted'
 		    AND (NOT $3::boolean OR EXISTS (
 		      SELECT 1 FROM consent_event ce
-		      WHERE ce.lead_id = pc.lead_id AND ce.purpose_id = $2
+		      WHERE ce.`+column+` = pc.`+column+` AND ce.purpose_id = $2
 		        AND ce.new_state = 'granted' AND ce.double_opt_in_confirmed_at IS NOT NULL
 		        AND ce.issuance_trigger IS NOT NULL))
-		)`, leadID, purposeID, requiresDOI).Scan(&granted)
+		)`, subjectID, purposeID, requiresDOI).Scan(&granted)
 	if err != nil {
-		return false, fmt.Errorf("consent: read the lead's grant: %w", err)
+		return false, fmt.Errorf("consent: read the subject's grant: %w", err)
 	}
 	return granted, nil
 }

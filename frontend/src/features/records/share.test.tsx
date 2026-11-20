@@ -12,6 +12,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { meFixture } from "../../testing/mefixture";
 import { ShareScreen } from "./share";
 
 // AS-3/4/5 — the record-share screen (A52/ADR-0039): list who has manual
@@ -105,6 +107,21 @@ function grantEndpoint(posts: Record<string, unknown>[], listed: SeededGrant) {
   };
 }
 
+// A seat that may share every record kind: sharing asks the record's update.
+const SHARER = {
+  rowScope: "all",
+  allow: {
+    contact: ["read", "update"],
+    company: ["read", "update"],
+    deal: ["read", "update"],
+    lead: ["read", "update"],
+    project: ["read", "update"],
+  },
+} as const satisfies Parameters<typeof meFixture>[0];
+
+// The record read the screen makes before it offers a share.
+const RECORD_READ = /^\/v1\/(contacts|companies|deals|leads|projects)\/[^/]+$/;
+
 function installBaseFetch(
   overrides: Record<
     string,
@@ -120,6 +137,11 @@ function installBaseFetch(
         if (request.url.includes(match)) {
           return handler(request);
         }
+      }
+      const path = new URL(request.url).pathname;
+      if (path === "/v1/me") return jsonResponse(meFixture(SHARER));
+      if (RECORD_READ.test(path)) {
+        return jsonResponse({ id: path.split("/").pop(), writable: true });
       }
       if (request.url.includes("/users")) return jsonResponse(usersPage);
       if (request.url.includes("/teams")) return jsonResponse(teamsPage);
@@ -695,5 +717,80 @@ describe("ShareScreen", () => {
 
     expect(await screen.findByTestId("share-acl-list")).toBeTruthy();
     expect(screen.queryByText("This record cannot be shared.")).toBeNull();
+  });
+});
+
+// Sharing asks the record's own write authority (EnsureCanGrant), the answer
+// the server gives as `writable`. A reader without it sees who can see the
+// record and why they cannot change that, and no verb the server would refuse.
+describe("ShareScreen for a reader who may not share", () => {
+  const viewer = meFixture(SHARER).user?.id ?? "";
+
+  it("offers no grant and no revoke on a record the reader may not change", async () => {
+    installBaseFetch({
+      "/v1/deals/d-1": () => jsonResponse({ id: "d-1", writable: false }),
+      "/record-grants": () =>
+        jsonResponse({
+          data: [
+            existingGrant,
+            { ...existingGrant, id: "g-own", subject_id: viewer },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    expect(await screen.findByText(en["deal.notYoursToChange"])).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: en["share.grantAccess"] }),
+    ).toBeNull();
+    expect(screen.queryByTestId("share-grant-submit")).toBeNull();
+    // The one share such a reader may take away is the one made to them.
+    await waitFor(() =>
+      expect(screen.getAllByTestId("revoke-grant")).toHaveLength(1),
+    );
+  });
+
+  // Revoking asks the record's write authority on a row that need not be live
+  // (grants.go mayRevoke). An archived record keeps its Revoke for a seat with
+  // the update grant, while sharing anew stays refused.
+  it("keeps Revoke on an archived record for a seat that may change it", async () => {
+    installBaseFetch({
+      "/v1/deals/d-1": () =>
+        jsonResponse({
+          id: "d-1",
+          writable: false,
+          archived_at: "2026-01-02T00:00:00Z",
+        }),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    expect(await screen.findByText(en["deal.archivedReadOnly"])).toBeTruthy();
+    expect(screen.queryByTestId("share-grant-submit")).toBeNull();
+    expect(await screen.findByTestId("revoke-grant")).toBeTruthy();
+  });
+
+  // A /me that failed leaves every grant denied: the screen shows that rather
+  // than waiting, and the server decides any write.
+  it("does not wait forever when /me fails", async () => {
+    installBaseFetch({
+      "/v1/me": () => jsonResponse({ title: "Forbidden", status: 403 }, 403),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    expect(await screen.findByText(en["deal.notYoursToChange"])).toBeTruthy();
+    expect(await screen.findByTestId("share-acl-list")).toBeTruthy();
+  });
+
+  it("says a record the reader cannot see is not there, and offers nothing", async () => {
+    installBaseFetch({
+      "/v1/contacts/c-9": () =>
+        jsonResponse({ title: "Not Found", status: 404 }, 404),
+    });
+    render(<ShareScreen recordType="contact" recordId="c-9" />);
+
+    expect(await screen.findByText(en["share.missingRecord"])).toBeTruthy();
+    expect(screen.queryByText("c-9")).toBeNull();
+    expect(screen.queryByTestId("share-grant-submit")).toBeNull();
   });
 });

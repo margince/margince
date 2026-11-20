@@ -17,7 +17,7 @@ func gateObject(kind string) (string, error) {
 	}
 	declared, ok := recordkinds.Lookup(kind)
 	if !ok {
-		return "", fmt.Errorf("%s: no extension declares this record kind: %w", kind, apperrors.ErrPermissionDenied)
+		return "", fmt.Errorf("no extension declares the record kind %q: %w", kind, apperrors.ErrPermissionDenied)
 	}
 	return declared.Object, nil
 }

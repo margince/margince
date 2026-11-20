@@ -84,6 +84,12 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithConsumerMail(capture.MatcherTx)
 }
 
+// newBookerContacts is the contact path a public booking resolves its booker
+// through; rewireConfirmationLane rebuilds the booking edge with the same one.
+func newBookerContacts(pool *pgxpool.Pool) hostauthority.BookerContacts {
+	return hostauthority.BookerContacts{Store: newContactsStore(InstallationDB(pool)), Seats: identity.NewService(pool)}
+}
+
 // newActivitiesHandlers builds the timeline transport over the sibling
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
@@ -108,7 +114,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
-		WithPublicBooking(hostauthority.BookerContacts{Store: newContactsStore(InstallationDB(pool)), Seats: identity.NewService(pool)}, bookingConsentAdapter{
+		WithPublicBooking(newBookerContacts(pool), bookingConsentAdapter{
 			store: consent.NewStore(InstallationDB(pool)),
 		}).
 		// The RFC 8058 unsubscribe linker (B-E11.32): consent mints the

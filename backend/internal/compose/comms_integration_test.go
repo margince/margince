@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -116,14 +115,7 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	// The REAL delivery machinery, because this suite asserts that an
 	// unconsented send is refused and the engine refuses at staging — inside
 	// commsStager, which a double replaces.
-	adapter := commsAdapter{
-		store:  activities.NewStore(e.DB()),
-		gate:   consent.NewGate(consent.NewStore(InstallationDB(e.Pool))),
-		stager: realDeliveryStager(t, e),
-		// This installation holds its own records, which the send guard asks
-		// before it composes anything (comms_soraut.go). An adapter with no
-		// seam refuses rather than passes, so a suite that sends says so.
-	}
+	adapter := newCommsAdapter(e.Pool, nil, SendPath{Delivery: realDeliveryStager(t, e)})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 
 	anchorID := ids.NewV7()

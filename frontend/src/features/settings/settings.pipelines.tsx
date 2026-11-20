@@ -231,7 +231,8 @@ function NewPipeline({
       invalidate="pipelines"
       screen="settings"
       stay
-      reason={refusal}
+      requires={{ object: "pipeline", action: "create" }}
+      refusedReason={refusal}
       onCreated={(created) => onOpen(created.id)}
       conflict={{
         field: "name",

@@ -51,3 +51,16 @@ func TestRetainedDataAccessStillNeedsItsRoleGrant(t *testing.T) {
 		t.Fatalf("retained-data context changed its parent: %v", err)
 	}
 }
+
+// A kind the installation switched off is refused whatever the role holds, so
+// the refusal names no grant an admin could add.
+func TestASwitchedOffKindNamesNoMissingGrant(t *testing.T) {
+	public := corefeatures.New([]string{"contacts"}).Context(grantedCtx("contact", principal.ObjectGrant{Read: true}))
+	err := Require(public, "contact", principal.ActionRead)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a switched-off kind answered %v, want a permission refusal", err)
+	}
+	if refusal, named := errors.AsType[grantRefusal](err); named {
+		t.Errorf("a switched-off kind was refused as a missing grant %s", refusal.check)
+	}
+}

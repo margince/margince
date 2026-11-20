@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -45,6 +46,9 @@ type UpdateContactInput struct {
 	// RelationshipMark marks the contact; clearing it goes through Clear. The
 	// setter is read from the signed-in principal, never from the caller.
 	RelationshipMark *relationshipmark.Mark
+	// GreetingRegister is how a message to the contact opens; clearing it goes
+	// through Clear.
+	GreetingRegister *greetingregister.Register
 	Social           map[string]any
 	// LinkedInURL is the top-level spelling of Social's linkedin key; a
 	// cleared linkedin_url in Clear removes the link.
@@ -376,6 +380,9 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput, mark
 		return nil, err
 	}
 	if err := patchRelationshipMark(p, current, in, markSetter); err != nil {
+		return nil, err
+	}
+	if err := patchGreetingRegister(p, current, in); err != nil {
 		return nil, err
 	}
 	if err := setAddress(p, current.Address, in.Address, in.Trail); err != nil {

@@ -364,11 +364,12 @@ func wirePurpose(p Purpose) crmcontracts.ConsentPurpose {
 
 func wireState(st State) crmcontracts.ContactConsentState {
 	out := crmcontracts.ContactConsentState{
-		PurposeId:              openapi_types.UUID(st.PurposeID.UUID),
-		State:                  crmcontracts.ContactConsentStateState(st.State),
-		LawfulBasis:            st.LawfulBasis,
-		DoubleOptInConfirmedAt: st.DoubleOptInConfirmedAt,
-		UpdatedAt:              st.UpdatedAt,
+		PurposeId:                openapi_types.UUID(st.PurposeID.UUID),
+		State:                    crmcontracts.ContactConsentStateState(st.State),
+		LawfulBasis:              st.LawfulBasis,
+		DoubleOptInConfirmedAt:   st.DoubleOptInConfirmedAt,
+		ConfirmationPendingUntil: st.ConfirmationPendingUntil,
+		UpdatedAt:                st.UpdatedAt,
 	}
 	if st.PurposeKey != "" {
 		out.PurposeKey = &st.PurposeKey

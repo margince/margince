@@ -268,7 +268,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var visibility string
 	var sourceSystem, authorName, authorSeatName *string
 	var authorID *ids.UUID
-	var mark *string
+	var mark, greetingRegister *string
 	// Null where the contact was typed, and null where the reader may not open
 	// the record it was read from. The query cannot tell those apart, and a
 	// reader is owed the same answer either way.
@@ -281,7 +281,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt, &p.LegalHold,
-		&mark, &createdFrom,
+		&mark, &greetingRegister, &createdFrom,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -307,6 +307,10 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	if mark != nil {
 		m := crmcontracts.ContactRelationshipMark(*mark)
 		p.RelationshipMark = &m
+	}
+	if greetingRegister != nil {
+		g := crmcontracts.ContactGreetingRegister(*greetingRegister)
+		p.GreetingRegister = &g
 	}
 	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	p.ImportedFrom = provenance.ImportedFrom(sourceSystem)

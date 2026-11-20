@@ -45,6 +45,7 @@ import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
 import { AddToShortlistAction } from "../../../components/addtoshortlist";
 import { RequestLegalReviewAction } from "./deallegaltab";
+import { MovePipelineAction } from "./movepipeline";
 import { ReopenModal } from "./reopenmodal";
 
 type Deal = components["schemas"]["Deal"];
@@ -354,6 +355,7 @@ export function DealActions({
             disabledReasonId={refusedReasonId}
           />
         )}
+        <MovePipelineAction deal={deal} />
         <AddToShortlistAction entityType="deal" entityId={deal.id} />
         <RequestLegalReviewAction deal={deal} />
         {/* Reopen answers a CLOSED deal, so an open one has no reason to be

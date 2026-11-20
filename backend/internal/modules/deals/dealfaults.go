@@ -51,6 +51,9 @@ const amountField = "amount_minor"
 // stageIDColumn is the deal's stage, as a stage move writes and audits it.
 const stageIDColumn = "stage_id"
 
+// pipelineIDColumn is the deal's pipeline, which only a move between pipelines writes.
+const pipelineIDColumn = "pipeline_id"
+
 // lineItemsField is the field a refusal about a whole set of lines points at.
 const lineItemsField = "line_items"
 

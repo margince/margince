@@ -28,6 +28,6 @@ func GuardIncumbentSource(connectionStatus string) error {
 	if connectionStatus == incumbentConnectionActive {
 		return nil
 	}
-	return fmt.Errorf("%s: the incumbent connection is %q, a live-read import cannot run: %w",
-		ReasonIncumbentUnreachable, connectionStatus, apperrors.ErrConflict)
+	return fmt.Errorf("the incumbent connection is %q, so a live-read import cannot run (%s): %w",
+		connectionStatus, ReasonIncumbentUnreachable, apperrors.ErrConflict)
 }

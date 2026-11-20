@@ -272,7 +272,7 @@ describe("RecordPicker", () => {
     const user = userEvent.setup();
     const refused = new ProblemError({
       code: "permission_denied",
-      detail: "contact.update: permission denied",
+      detail: "your role does not grant update on contact",
     });
     rtlRender(
       <LocaleProvider initial="en">

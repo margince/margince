@@ -2754,6 +2754,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
   "history.field.first_name": "Vorname",
+  "history.field.greeting_register": "Anrede",
   "history.field.full_name": "Name",
   "history.field.win_probability": "Abschlusschance",
   "history.field.stage_id": "Phase",
@@ -3220,6 +3221,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
+  "record.accessUnknown":
+    "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
     "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.logActivityRefused":
@@ -3245,6 +3248,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.ceiling.noWider": "nicht weiter",
   "share.ceiling.post": ".",
   "share.unknownRecord": "Dieser Datensatz kann nicht geteilt werden.",
+  "share.missingRecord":
+    "Diesen Datensatz gibt es nicht, oder er ist nicht mit dir geteilt.",
   "share.grantAccess": "Zugriff gewähren",
   "share.subject": "Person oder Team",
   "share.holdsRead": "Hat Lesezugriff",
@@ -3833,6 +3838,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ob sich das senden lässt, ist noch nicht bekannt. Ein Neuladen der Seite prüft es erneut.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
+  "consent.confirmationPending":
+    "Wartet auf die Bestätigung per E-Mail. Der Link gilt bis {date}.",
   "consent.noPurposes":
     "Dieses Unternehmen erfasst noch keine Einwilligungszwecke.",
   "consent.defaultDeny":
@@ -6694,6 +6701,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Pipeline dieses Deals ist stillgelegt, daher sind ihre Phasen schreibgeschützt. Stelle die Pipeline in den Einstellungen wieder her, um den Deal zu verschieben.",
   "deal.stageOtherPipeline":
     "Diese Phase gehört zu einer anderen Pipeline. Wähle eine Phase der Pipeline dieses Deals.",
+  "deal.movePipeline": "In Pipeline verschieben",
+  "deal.movePipelinePick": "Pipeline wählen",
+  "deal.movePipelineDone": "Nach {pipeline} verschoben.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
@@ -7470,6 +7480,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.firstName": "Vorname",
   "create.lastName": "Nachname",
   "create.contactTitle": "Jobtitel",
+  "create.greetingRegister": "Anrede in Nachrichten",
+  "create.greetingRegisterHint": "Entwürfe an diesen Kontakt beginnen so.",
+  "create.greetingRegister.unset": "Margince entscheiden lassen",
+  "create.greetingRegister.formal": "Förmlich, mit Nachnamen",
+  "create.greetingRegister.familiar": "Vertraut, mit Vornamen",
   "create.acquisitionSource": "Herkunft des Kontakts",
   "create.acquisitionSourceHint":
     "Diese Angabe erscheint auf der Datenschutzseite des Kontakts.",
@@ -14505,10 +14520,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.home.seatLabel": "Dein Platz",
   "settings.home.seat.full": "Voller Platz: Änderungen erlaubt",
   "settings.home.seat.read": "Leseplatz: nur ansehen",
-  "settings.home.reachLabel": "Sichtbare Datensätze",
-  "settings.home.reach.own": "Deine eigenen Datensätze",
-  "settings.home.reach.team": "Datensätze deines Teams",
-  "settings.home.reach.all": "Alle Datensätze des Unternehmens",
+  "settings.home.reachLabel": "Datensätze, die du ändern darfst",
+  "settings.home.reach.none": "Keine",
+  "settings.home.reach.own": "Deine eigenen",
+  "settings.home.reach.team": "Deine und die deines Teams",
+  "settings.home.reach.all": "Alle im Unternehmen",
+  "settings.home.readLabel": "Datensätze, die du lesen darfst",
+  "settings.home.read.some":
+    "Alle {kinds}, außer privaten anderer, die nicht mit dir geteilt sind",
+  "settings.home.read.none": "Keine",
   "settings.home.access": "Dein Zugriff",
   "settings.home.accessLoading": "Dein Zugriff wird geladen…",
   "settings.boundary.deniedTitle": "Kein Zugriff auf diese Einstellungsseite",
@@ -15226,7 +15246,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "license.check.failed":
     "Das Lizenz-Token ließ sich nicht neu einlesen. Das letzte Ergebnis gilt weiter, und das Server-Log nennt den Grund.",
   "license.counting":
-    "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
+    "Volle Plätze, die nicht deaktiviert oder gesperrt sind. Agenten und Leseplätze zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",
   "settings.rates.fxIntro":
     "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später. Ein früheres Datum geht nur vor dem ersten Kurs der Währung. Ein Kurs, der schon gilt, ändert sich nie.",
@@ -15623,7 +15643,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.renameSubmit": "Name speichern",
   "roles.scopeTitle": "Wessen Datensätze Mitglieder ändern",
   "roles.scopeSub":
-    "Kontakte, Unternehmen, Leads und Deals bleiben für jede Rolle lesbar, die sie lesen darf. Diese Einstellung legt fest, was Mitglieder ändern dürfen und welche Projekte sie sehen.",
+    "Jede Rolle, die Kontakte, Unternehmen, Leads, Deals und Projekte lesen darf, liest alle davon. Diese Einstellung legt fest, welche davon Mitglieder ändern dürfen.",
   "roles.scope.own": "Eigene",
   "roles.scope.ownSub": "Datensätze, die dem Mitglied gehören.",
   "roles.scope.team": "Die der Teammitglieder",
@@ -15833,8 +15853,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.notArchived": "Team nicht archiviert",
   "users.teamNotChanged": "Mitgliedschaft nicht geändert",
   "users.access.title": "Zugriff des Mitglieds",
-  "users.access.identity":
-    "Liest alle Kontakte, Unternehmen, Leads und Deals dieses Unternehmens.",
+  "users.access.reads": "Liest alle {kinds} dieses Unternehmens.",
+  "users.access.readsNone": "Liest keine Datensätze.",
+  "users.access.writesNone": "Ändert keine Datensätze.",
   "users.access.writesAll": "Bearbeitet alle Datensätze.",
   "users.access.writesTeam":
     "Bearbeitet eigene Datensätze und die der Teams {teams}.",
@@ -18822,6 +18843,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "embedreindex.unbound":
     "Es gibt keinen Suchindex zum Neuaufbauen, da kein Embedding-Modell zugeordnet ist.",
   "embedreindex.unboundLink": "KI-Einstellungen öffnen",
+  "connectAi.first": "Zuerst eine KI verbinden",
+  "connectAi.link": "KI-Einstellungen öffnen",
   "embedreindex.statusLabel": "Indexstatus",
   "embedreindex.reindexLabel": "Änderungen neu indexieren",
   "embedreindex.reindexHelp":

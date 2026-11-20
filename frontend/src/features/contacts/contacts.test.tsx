@@ -18,7 +18,11 @@ import { activityTimeline } from "../../design-system/activitytimeline";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
 import { WriteToProvider } from "../../lib/writeto";
-import { meFixture, READS_RECORDS } from "../../testing/mefixture";
+import {
+  type GrantSpec,
+  meFixture,
+  READS_RECORDS,
+} from "../../testing/mefixture";
 import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { ContactsScreen } from "./contacts";
 
@@ -40,13 +44,19 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+// A seat that may add contacts: every create and the vCard import ask it.
+const WRITES_CONTACTS: GrantSpec = {
+  ...READS_RECORDS,
+  contact: ["read", "create", "update"],
+};
+
 function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   client.setQueryData(
     ["me"],
-    meFixture({ rowScope: "all", allow: READS_RECORDS }),
+    meFixture({ rowScope: "all", allow: WRITES_CONTACTS }),
   );
   return rtlRender(
     <QueryClientProvider client={client}>
@@ -458,7 +468,7 @@ describe("ContactsScreen — rich create (P-15)", () => {
     });
     client.setQueryData(
       ["me"],
-      meFixture({ rowScope: "all", allow: READS_RECORDS }),
+      meFixture({ rowScope: "all", allow: WRITES_CONTACTS }),
     );
     rtlRender(
       <QueryClientProvider client={client}>

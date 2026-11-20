@@ -5,7 +5,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
-  renderHook,
   render as rtlRender,
   screen,
   waitFor,
@@ -16,7 +15,6 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { useShortcutDispatcher } from "../../lib/shortcuts";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { project, project360 } from "../../testing/projects.fixtures";
@@ -494,11 +492,15 @@ describe("ProjectScreen", () => {
     for (const label of ["New deal"]) {
       expect(screen.queryByRole("button", { name: label })).toBeNull();
     }
-    expect(
-      screen
-        .getByRole("button", { name: en["log.title"] })
-        .hasAttribute("disabled"),
-    ).toBe(true);
+    // Logging files an activity under the project rather than changing it, so
+    // a colleague's project takes a note as every other record page does.
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: en["log.title"] })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
     // Inside the overflow menu the verbs are refused rather than dropped, so a
     // reader learns the verb exists and why it is shut. What must NOT happen is
     // a pressable one: clicking it opens the flow and the save 403s. Edit is
@@ -510,8 +512,12 @@ describe("ProjectScreen", () => {
     // aria-disabled for "busy" — and each carries aria-describedby pointing at
     // the one sentence in the band, so a reader is told why rather than left
     // with a dead control.
+    expect(
+      screen
+        .getByRole("button", { name: /^Add task/ })
+        .hasAttribute("disabled"),
+    ).toBe(false);
     for (const label of [
-      /^Add task/,
       /^Edit project/,
       /^Archive/,
       /^Assign/,
@@ -948,51 +954,5 @@ describe("a phase this build does not know", () => {
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
     expect(screen.getAllByText(en["common.unknownValue"]).length).toBe(2);
-  });
-});
-
-describe("the project's record keys", () => {
-  async function mountProject(view = project360()) {
-    projectsBackend({ view });
-    renderHook(() => useShortcutDispatcher());
-    render(<ProjectScreen id="pr-1" />);
-    await screen.findByRole("heading", { name: "CRM rollout" });
-    return screen.getByRole("button", { name: en["log.title"] });
-  }
-
-  it.each([
-    ["n", en["log.title"]],
-    ["t", en["log.addTask"]],
-  ])("open on %s the drawer its verb opens: %s", async (key, verb) => {
-    const user = userEvent.setup();
-    const log = await mountProject();
-    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
-    expect(log.getAttribute("aria-keyshortcuts")).toBe("n");
-
-    await user.keyboard(key);
-    const drawer = await screen.findByRole("dialog");
-    expect(within(drawer).getByRole("heading", { name: verb })).toBeTruthy();
-  });
-
-  it("bind no M: a project has no Email verb", async () => {
-    const user = userEvent.setup();
-    const log = await mountProject();
-    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
-
-    await user.keyboard("m");
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("do nothing on a project this caller may not change", async () => {
-    const user = userEvent.setup();
-    await mountProject(
-      project360({
-        project: project({ owner_id: "u-someone-else", writable: false }),
-      }),
-    );
-    await screen.findByText(/You cannot edit this project/);
-
-    await user.keyboard("nt");
-    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

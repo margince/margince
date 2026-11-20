@@ -90,6 +90,11 @@ recipient is given, the greeting carries no name ("Hallo," / "Hello,") rather
 than whatever name is nearest: the names inside a quoted message are its
 participants, and the one you want may not be among them.
 
+If a greeting_register field is given, the rep chose it for this recipient and it
+outranks anything the thread suggests, in every language. "formal" opens with the
+surname, "familiar" with the first name. Without it, read the register from the
+thread as before.
+
 A formal greeting takes the recipient's SURNAME; the familiar greeting takes
 their first name. Both are given to you as separate fields, named for what they
 are, and the two are not interchangeable: a formal opening built from a first

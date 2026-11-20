@@ -21,6 +21,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["gateway_unavailable", "common.gatewayUnavailable"],
   ["request_timed_out", "common.requestTimedOut"],
   ["assistant_unavailable", "common.assistantUnavailable"],
+  // No model is connected; the screens with a button for model work add the link.
+  ["ai_not_configured", "connectAi.first"],
   ["provider_out_of_credit", "common.providerOutOfCredit"],
   ["provider_unauthorized", "common.providerUnauthorized"],
   ["provider_unavailable", "common.providerUnavailable"],

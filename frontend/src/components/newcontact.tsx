@@ -46,9 +46,12 @@ async function createContact(
 export function NewContactAction({
   company,
   listCreate,
+  refusalId,
 }: Readonly<{
   company?: HomeCompany;
   listCreate?: Readonly<{ open: boolean }>;
+  // See CreateAction: the page's one sentence saying why.
+  refusalId?: string;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -59,6 +62,8 @@ export function NewContactAction({
   return (
     <CreateAction
       label={t("create.contact")}
+      requires={{ object: "contact", action: "create" }}
+      refusalId={refusalId}
       invalidate={company?.listKey ?? "contacts"}
       screen="contacts"
       listCreate={listCreate}
