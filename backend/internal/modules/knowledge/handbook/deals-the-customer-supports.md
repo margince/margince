@@ -14,23 +14,21 @@ below, and you can undo that.
 
 ## When an activity is not about the deal
 
-A mail or a meeting can be on a deal and still not be about it: a dinner with a
-friend who works at the customer, or a forum you both attend. On the deal's
-**History**, open **More actions** on that row and choose
-**Not about this deal**.
+A mail or a meeting can be on a deal and still not be about it. Think of a
+visit to a friend who works at the customer. On the deal's **History**, open
+**More actions** on that row and choose **Not about this deal**.
 
 The row stays on the deal and shows the mark **Not about this deal**. It no
-longer counts as activity on the deal: not for the last activity date, not for
-a quiet or stalled deal, not as a meeting ahead, and not as customer progress.
-The deal's last activity date moves back at once. To make it count again,
-choose **Undo** in the message that follows, or **About this deal** on the row.
+longer counts for the deal's last activity date or for a quiet or stalled deal.
+A coming meeting marked so does not hold the deal open, and it is not customer
+progress. To make it count again, choose **Undo** in the message that follows,
+or **About this deal** on the row.
 
-When Margince is not sure that an older mail it filed by itself is about the
-deal, it marks the row **Maybe not about this deal**. That row does not count
-either, until you choose **About this deal**. That doubt alone never closes a
-deal for silence. Margince never changes a mark you set, and a new import of
-the same mail keeps it. You decide each row by itself:
-a mark on one meeting of a series does not change the others.
+Margince may not be sure that an older mail it filed by itself is about the
+deal. It then marks the row **Maybe not about this deal**. That row does not
+count either, until you choose **About this deal**. On its own, it never closes
+a deal. Margince never changes a mark you set, and a new import keeps
+it. You decide each row by itself, even for a meeting that repeats.
 
 ## When the close date or the next step does not hold
 

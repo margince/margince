@@ -345,8 +345,7 @@ func TestAPastMeetingNobodyCalledOffIsCustomerProgress(t *testing.T) {
 	pipeline, open, _ := integration.DealFixture(t, e)
 	buyer, now := e.SeedContact(t, "Buyer", nil), clocktest.Now(t)
 	progressOf := func(deal ids.UUID) string {
-		return e.WsScalar(t, `SELECT coalesce(max(a.occurred_at)::text, 'none') FROM activity a
-			JOIN activity_link al ON al.activity_id = a.id
+		return e.WsScalar(t, `SELECT coalesce(max(a.occurred_at)::text, 'none') FROM activity a JOIN activity_link al ON al.activity_id = a.id
 			WHERE al.deal_id = $1 AND a.archived_at IS NULL AND `+customerProgressSQL("a", "al.deal_id", "$2"), deal, now)
 	}
 	past, ahead := now.AddDate(0, 0, -3), now.AddDate(0, 0, 3)

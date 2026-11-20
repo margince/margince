@@ -334,8 +334,7 @@ func TestTheRecoverySweepQueuesTheSameFiniteReconsideration(t *testing.T) {
 	}
 }
 
-// The recovery pass rechecks an older suggested link. It marks the link
-// unrelated when the model says the mail is not about the deal.
+// The recovery pass marks an older suggested link unrelated when the model rejects it.
 func TestTheRecoveryPassRechecksAnOlderSuggestedLink(t *testing.T) {
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
