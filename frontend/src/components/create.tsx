@@ -124,8 +124,8 @@ export function useCreateRecord<Created extends { id: string }>({
       onCreated?.(created);
       onDone(session);
       if (opens) {
-        // The form and its opener are gone with this page, so the record's
-        // name takes the focus (design-system/arrivalfocus.ts).
+        // Focus is not on the new record's page, so its name takes it once
+        // that page mounts (design-system/arrivalfocus.ts).
         const page = { screen, id: created.id };
         awaitArrival(page);
         navigate(page);

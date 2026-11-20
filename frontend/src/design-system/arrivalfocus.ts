@@ -21,20 +21,29 @@ export function useArrivalFocus<Target extends HTMLElement>(
 
 // The page a press is opening, set just before it navigates there. A page that
 // many places open cannot tell which mount a press caused, so the press says
-// so. It holds while the reader stays on that page: a title that mounts again
-// there, once the record has loaded, still takes the focus.
+// so. It holds while the reader stays on that page and has not yet pressed or
+// typed anything: a title that mounts again there, once the record has loaded,
+// still takes the focus, and after that the reader decides where focus goes.
 let awaited: Route | null = null;
 let stopWatching: (() => void) | null = null;
 
 /** Marks the page `route` names as opened by a press, for its title to take focus. */
 export function awaitArrival(route: Route): void {
-  stopWatching?.();
+  forgetArrival();
   awaited = route;
-  stopWatching = watchAddress(() => {
+  const stopAddress = watchAddress(() => {
     if (!onAwaitedPage()) {
       forgetArrival();
     }
   });
+  const options = { capture: true, once: true };
+  globalThis.addEventListener("pointerdown", forgetArrival, options);
+  globalThis.addEventListener("keydown", forgetArrival, options);
+  stopWatching = () => {
+    stopAddress();
+    globalThis.removeEventListener("pointerdown", forgetArrival, options);
+    globalThis.removeEventListener("keydown", forgetArrival, options);
+  };
 }
 
 function forgetArrival(): void {

@@ -17,6 +17,7 @@ import {
 } from "../../census/rules/panel.census";
 import { stable } from "../format/collate";
 import { LocaleProvider } from "../i18n";
+import { TOUCH_TARGET_PX } from "../testing/css";
 import { EmptyState } from "./atoms";
 import { PANEL_TONES, Panel, PanelBody, PanelIntro } from "./panel";
 
@@ -342,10 +343,6 @@ function tokenValue(name: string): string {
   expect(declared, `${name} is declared in tokens.css`).not.toBeNull();
   return (declared?.[1] ?? "").trim();
 }
-
-// The coarse-pointer floor every touch target stands at (`.segmented button`,
-// `.stat-card-open`); no token carries it.
-const TOUCH_TARGET_PX = 44;
 
 // A px value from tokens.css, followed through `var()` to the number.
 function tokenPx(name: string): number {

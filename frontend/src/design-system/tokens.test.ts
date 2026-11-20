@@ -537,8 +537,8 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       expect(normalize(dark["--bgPage"])).toBe("#0c1311");
     });
 
-    // A scrim sets a dialog apart by dimming the page it covers. A tint lighter
-    // than the ground brightens the page instead, which the old dark value did.
+    // A scrim sets a dialog apart by dimming the page it covers, in both
+    // themes. census/rules/overlayscrim.census.ts holds every layer to it.
     it("dims the page behind an overlay in both themes", () => {
       for (const [theme, pal] of Object.entries(themes)) {
         const ground = pal["--bgPage"];

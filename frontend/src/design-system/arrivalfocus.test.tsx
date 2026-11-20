@@ -4,7 +4,13 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { announceAddressChanged, navigate } from "../lib/router";
 import {
@@ -93,6 +99,19 @@ describe("useAwaitedArrivalFocus", () => {
     go({ screen: "contacts", id: "c1" });
     go({ screen: "contacts" });
     go({ screen: "contacts", id: "c1" });
+    render(<SharedPage />);
+    expect(title()).not.toHaveFocus();
+  });
+
+  // Once the reader has pressed or typed, a title that mounts again on that
+  // page must not take focus away from where they put it.
+  it.each([
+    ["a press", () => fireEvent.pointerDown(document.body)],
+    ["a key", () => fireEvent.keyDown(document.body, { key: "Tab" })],
+  ])("forgets the press after %s on the page", (_, input) => {
+    awaitArrival({ screen: "contacts", id: "c1" });
+    go({ screen: "contacts", id: "c1" });
+    input();
     render(<SharedPage />);
     expect(title()).not.toHaveFocus();
   });

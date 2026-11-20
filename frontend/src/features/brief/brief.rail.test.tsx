@@ -87,7 +87,7 @@ describe("BriefScreen — the context rail", () => {
 });
 
 // Every card in the rail reads as one sheet: the same small title and no band
-// or rule under it. A card that drew its own band read as part of another page.
+// or rule under it, whichever card it is.
 it("draws every rail card with the flat head, the payments card included", async () => {
   stubApi({
     "GET /me": () =>

@@ -876,8 +876,8 @@
   --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
-  /* The light scrim is a green ink lighter than this ground, so over it the
-     page behind a dialog grew brighter. Black dims every dark ground. */
+  /* A scrim must be darker than the ground it covers; the light theme's green
+     ink is lighter than this one, so the dark theme dims with black. */
   --overlayScrim: rgba(0, 0, 0, 0.55);
 
   /* Lifted teal mark: the light --tealText (#0e7490) is dark-on-dark over a
