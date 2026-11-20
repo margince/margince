@@ -20,8 +20,7 @@ Per task:
 | Field | Values | Means |
 |---|---|---|
 | `ladder` | ordered tiers | the **order to fall back**. The Router starts at the first rung, and walks to the next on a provider error or a failed schema check. A ladder with one rung (`site_extract`: `[premium]`) has no rung to fall to. |
-| `execution_mode` | `interactive` \| `background` | who is waiting: a human in the middle of work, or a worker job. |
-| `on_budget_exhausted` | `degrade` \| `queue` | what a spent monthly budget does. **Closed pairing rule:** `interactive` always pairs with `degrade`, `background` with `queue`. `queue` returns a typed deferral to the task's own lasting carrier; the Router never makes a job that nobody owns. |
+| `execution_mode` | `interactive` \| `background` | who is waiting: a human in the middle of work, or a worker job. It also decides what a spent monthly budget does: from 80% every task's ladder moves one tier down; from 100% an `interactive` task is pinned to `local_small`, and a `background` task returns a typed deferral to its own lasting carrier. The Router never makes a job that nobody owns. |
 | `status` | `shipped` \| `planned` | whether the task exists in this build. `shipped` means every site must be registered, have a case, and be covered by a scenario. `planned` means it may have no site, no scenario and no record. This is what stops a task that was never built from looking certified. |
 | `sites` | list | the named sites. A bare string is a site of kind `one_shot`; `{name: x, kind: y}` declares another kind. |
 | `sites[].kind` | `one_shot` \| `multi_turn` \| `agent_loop` | how the model is called, and so how much of the site one certification run can cover. A closed set: a new kind is a change to code and tests, because each needs a certification plan that can run it. |

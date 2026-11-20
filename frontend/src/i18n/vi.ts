@@ -2074,8 +2074,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Mô hình theo chính sách",
   "aiAdmin.decisionSkip.unbound":
     "Không dùng mô hình quyết định: chưa gán mô hình nào.",
-  "aiAdmin.decisionSkip.uncertified":
-    "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -16420,7 +16418,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aicalls.reason.decision_state_too_large":
     "Dữ liệu đầu vào quá lớn với mô hình quyết định",
   "aicalls.reason.decision_uncertified":
-    "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
+    "Mô hình quyết định chưa được chứng nhận cho tác vụ này (chỉ các lần gọi cũ)",
   "aicalls.reason.timeout": "Lần thử trước đã hết thời gian",
   "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Lượt gọi gần đây",
@@ -17257,8 +17255,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiRouting.lane.local_large":
     "Cấp cục bộ cao hơn; kiểm tra endpoint đã cấu hình",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy xuất trên các hồ sơ",
-  "aiRouting.lane.decisions":
-    "Câu hỏi có kiểu, hỏi trước các cấp khi đã được chứng nhận",
+  "aiRouting.lane.decisions": "Câu hỏi có kiểu, hỏi trước các cấp",
   "aiRouting.decisions.add": "Thêm mô hình quyết định",
   "aiRouting.decisions.remove": "Gỡ mô hình quyết định",
   "aiRouting.decisions.preset.openrouter": "Cấu hình sẵn: OpenRouter",
