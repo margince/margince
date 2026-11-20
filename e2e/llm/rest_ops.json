@@ -529,6 +529,7 @@
     "POST /v1/activities/{id}/send-email:preview": "preview_send_authorization",
     "POST /v1/activities/{id}/send-message": "send_message",
     "POST /v1/activities/{id}/transcript-proposals": "read_transcript_for_next_steps",
+    "POST /v1/activity-review-templates": "create_activity_review_template",
     "POST /v1/admin/data-tasks/control": "control_data_task",
     "POST /v1/admin/home-repair/activate": "activate_home_repair",
     "POST /v1/admin/home-repair/preview": "preview_home_repair",

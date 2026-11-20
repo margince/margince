@@ -274,6 +274,12 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 		}
 		return map[string]any{"id": template, "request_body": map[string]any{"version": version, "questions": questions}}
 	},
+	"create_activity_review_template": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{
+			"label": "Sweep win review", "outcome": "won",
+			"questions": []any{map[string]any{"key": "why", "label": "Why did we win?", "type": "text", "required": true}},
+		}}
+	},
 	"update_legal_review_settings": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"enabled": true}}
 	},

@@ -22,6 +22,7 @@ import (
 
 const (
 	reviewQuestionsField = "questions"
+	reviewActiveField    = "active"
 	reviewMultipleChoice = "multiselect"
 )
 
@@ -106,30 +107,29 @@ func validateReviewAnswers(questions []ReviewQuestion, answers map[string]string
 	return nil
 }
 
-// UpdateReviewTemplate changes only future questions. Submitted responses keep
-// their own snapshot; version checking prevents overwriting a concurrent edit.
+// UpdateReviewTemplate changes the questions future reviews ask, or retires or
+// restores the template. Submitted responses keep their own snapshot; version
+// checking prevents overwriting a concurrent edit.
 func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmcontracts.UpdateActivityReviewTemplateRequest) (crmcontracts.ActivityReviewTemplate, error) {
 	if err := auth.Require(ctx, "custom_field", principal.ActionUpdate); err != nil {
 		return crmcontracts.ActivityReviewTemplate{}, err
 	}
-	questions := make([]ReviewQuestion, len(req.Questions))
-	for i, q := range req.Questions {
-		questions[i] = ReviewQuestion{Key: q.Key, Label: q.Label, Type: string(q.Type), Required: q.Required}
-		if q.Options != nil {
-			questions[i].Options = *q.Options
-		}
-	}
-	if err := validateReviewQuestions(questions); err != nil {
-		return crmcontracts.ActivityReviewTemplate{}, err
-	}
 	// The table's trigger names a built-in question's catalog key while the
 	// question reads as shipped, so the save carries no key of its own.
-	raw, err := json.Marshal(questions)
-	if err != nil {
-		return crmcontracts.ActivityReviewTemplate{}, fmt.Errorf("encode template: %w", err)
+	var raw []byte
+	if req.Questions != nil {
+		questions := reviewQuestionsFromWire(*req.Questions)
+		if err := validateReviewQuestions(questions); err != nil {
+			return crmcontracts.ActivityReviewTemplate{}, err
+		}
+		encoded, err := json.Marshal(questions)
+		if err != nil {
+			return crmcontracts.ActivityReviewTemplate{}, fmt.Errorf("encode template: %w", err)
+		}
+		raw = encoded
 	}
 	var result crmcontracts.ActivityReviewTemplate
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
 		before, err := scanReviewTemplate(tx.QueryRow(ctx, `SELECT `+reviewTemplateColumns+` FROM activity_review_template WHERE id=$1 AND archived_at IS NULL FOR UPDATE`, id))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -140,15 +140,47 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 		if before.Version == nil || *before.Version != req.Version {
 			return apperrors.ErrConflict
 		}
-		result, err = scanReviewTemplate(tx.QueryRow(ctx, `UPDATE activity_review_template SET questions=$2 WHERE id=$1 RETURNING `+reviewTemplateColumns, id, raw))
+		// The audit pair holds only the fields the request changed.
+		was, now := map[string]any{}, map[string]any{}
+		if raw != nil {
+			was[reviewQuestionsField] = before.Questions
+		}
+		if req.Active != nil && *req.Active != before.Active {
+			was[reviewActiveField], now[reviewActiveField] = before.Active, *req.Active
+			if *req.Active {
+				if err := retireAskedTemplate(ctx, tx, string(before.Outcome)); err != nil {
+					return err
+				}
+			}
+		}
+		if len(was) == 0 {
+			result = before
+			return nil
+		}
+		result, err = scanReviewTemplate(tx.QueryRow(ctx,
+			`UPDATE activity_review_template SET questions = COALESCE($2, questions), active = COALESCE($3, active)
+			  WHERE id=$1 RETURNING `+reviewTemplateColumns, id, raw, req.Active))
+		if storekit.IsUniqueViolation(err) {
+			return apperrors.ErrConflict
+		}
 		if err != nil {
 			return fmt.Errorf("update template: %w", err)
 		}
-		// Audit-only catalog configuration, like custom_field. A template is not a
-		// record activity and has no event in the closed event catalog.
-		_, err = storekit.AuditWithEvidence(ctx, tx, "update", "activity_review_template", id,
-			map[string]any{reviewQuestionsField: before.Questions}, map[string]any{reviewQuestionsField: result.Questions}, nil)
-		return err
+		if raw != nil {
+			now[reviewQuestionsField] = result.Questions
+		}
+		return recordReviewTemplateWrite(ctx, tx, "update", id, was, now)
 	})
 	return result, err
+}
+
+func reviewQuestionsFromWire(wire []crmcontracts.ReviewQuestion) []ReviewQuestion {
+	questions := make([]ReviewQuestion, len(wire))
+	for i, q := range wire {
+		questions[i] = ReviewQuestion{Key: q.Key, Label: q.Label, Type: string(q.Type), Required: q.Required}
+		if q.Options != nil {
+			questions[i].Options = *q.Options
+		}
+	}
+	return questions
 }

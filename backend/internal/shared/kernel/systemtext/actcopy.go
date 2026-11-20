@@ -98,6 +98,7 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.move_deal_pipeline":                 {Words: langcopy.Phrase{En: "Move deal to another pipeline", De: "Deal in eine andere Pipeline verschieben", Vi: "Chuyển giao dịch sang pipeline khác"}},
 	"act.verbs.correct_project_health_assessment":  {Words: langcopy.Phrase{En: "Correct project health assessment", De: "Projektstand korrigieren", Vi: "Sửa tình trạng dự án"}},
 	"act.verbs.create_acquisition_source":          {Words: langcopy.Phrase{En: "Create acquisition source", De: "Akquisequelle hinzufügen", Vi: "Thêm nguồn khách hàng"}},
+	"act.verbs.create_activity_review_template":    {Words: langcopy.Phrase{En: "Create activity review template", De: "Fragen für Rückblicke hinzufügen", Vi: "Thêm bộ câu hỏi đánh giá kết quả"}},
 	"act.verbs.create_automation":                  {Words: langcopy.Phrase{En: "Create automation", De: "Automatisierung anlegen", Vi: "Tạo tự động hóa"}},
 	"act.verbs.create_contract":                    {Words: langcopy.Phrase{En: "Create contract", De: "Vertrag erfassen", Vi: "Ghi nhận hợp đồng"}},
 	"act.verbs.create_corpus":                      {Words: langcopy.Phrase{En: "Create corpus", De: "Wissenssammlung anlegen", Vi: "Tạo kho tri thức"}},

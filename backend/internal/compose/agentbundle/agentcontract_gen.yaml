@@ -21789,11 +21789,41 @@ paths:
       summary: The question sets an outcome review can ask.
       responses:
         '200':
-          description: Every live template.
+          description: Every template, active and retired.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ActivityReviewTemplateListResponse'}
       description: The question sets an outcome review can ask.
+    post:
+      tags: [Activities]
+      operationId: createActivityReviewTemplate
+      security: [{bearerAuth: []}]
+      summary: Add the question set an outcome's reviews ask from now on.
+      description: |-
+        A closing asks one review, so an outcome has at
+        most one active template: the new one is asked from now on, and the template asked before
+        is retired in the same write. Reviews already written keep their frozen questions. A key
+        another template uses answers 409.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateActivityReviewTemplateRequest'}
+      responses:
+        '201':
+          description: Created template.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ActivityReviewTemplate'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activity-review-templates/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -21801,9 +21831,13 @@ paths:
       tags: [Activities]
       operationId: updateActivityReviewTemplate
       security: [{bearerAuth: []}]
-      summary: Edit the questions for future outcome reviews.
+      summary: Edit the questions for future outcome reviews, or retire or restore a template.
       description: |-
-        Version conflicts return 409; submitted reviews retain their frozen questions and answers.
+        Version conflicts return 409; submitted reviews
+        retain their frozen questions and answers. `active: false` retires the template: a closing
+        with that outcome asks no review until a template for it is active again. There is no
+        delete, so an old review always names a template the list still shows. `active: true`
+        makes the template the one its outcome asks and retires the one asked before.
 
         Needs the passport permission Change records.
 
@@ -43270,9 +43304,22 @@ components:
         updated_at: {type: string, format: date-time}
     UpdateActivityReviewTemplateRequest:
       type: object
-      required: [version, questions]
+      description: Every field but `version` is optional; an omitted one is left alone.
+      required: [version]
       properties:
         version: {type: integer, format: int64, minimum: 1, description: Last read template version.}
+        questions: {type: array, minItems: 1, items: {$ref: '#/components/schemas/ReviewQuestion'}}
+        active: {type: boolean, description: 'false retires the template; true makes it the one its outcome asks.'}
+    CreateActivityReviewTemplateRequest:
+      type: object
+      required: [label, outcome, questions]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{0,62}$'
+          description: Derived from the label when omitted.
+        label: {type: string, minLength: 1, maxLength: 120}
+        outcome: {type: string, enum: [won, lost], description: 'Which outcome the template is asked for.'}
         questions: {type: array, minItems: 1, items: {$ref: '#/components/schemas/ReviewQuestion'}}
     ActivityReviewTemplateListResponse:
       type: object

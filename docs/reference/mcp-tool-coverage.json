@@ -4225,7 +4225,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3168,
+      "tokens": 3209,
       "agents": [],
       "required_by_cases": [
         "case106_turn_that_rule_off",
