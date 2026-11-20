@@ -42739,8 +42739,9 @@ components:
     CitedProvision:
       type: object
       description: |-
-        The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-        for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+        The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+        for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+        data-protection law settles. Shown beside the engine's sentence; it decides nothing.
         Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
         pack's next review is overdue, or the law has not taken effect or has expired. On a
         review it is the citation shown when the refusal was assessed, never today's.
@@ -42767,6 +42768,10 @@ components:
         missing_means: {type: array, items: {type: string}, description: 'Missing contact methods, such as email, phone or web.'}
         provision:
           $ref: '#/components/schemas/CitedProvision'
+        provisions:
+          type: array
+          items: {$ref: '#/components/schemas/CitedProvision'}
+          description: Every law cited for `kind`, `provision` first. Absent when none may be shown.
     SendAuthorizationPreviewRecipient:
       type: object
       required: [address, verdict, reason_code]
@@ -42775,6 +42780,12 @@ components:
         provision:
           allOf: [{$ref: '#/components/schemas/CitedProvision'}]
           description: The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+        provisions:
+          type: array
+          items: {$ref: '#/components/schemas/CitedProvision'}
+          description: |-
+            Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
+            sending entity's for a finding its data-protection law settles. Absent when none may be shown.
         footer_findings:
           type: array
           items: {$ref: '#/components/schemas/FooterFinding'}
@@ -48817,6 +48828,13 @@ components:
         can_be_overruled: {type: boolean, description: Whether a recorded reason may send this one message anyway.}
         category: {type: string, description: The category the engine resolved.}
         requested_category: {type: string, description: The category the sender claimed.}
+        provision:
+          allOf: [{$ref: '#/components/schemas/CitedProvision'}]
+          description: The first law cited for `reason_code`, absent when none may be shown.
+        provisions:
+          type: array
+          items: {$ref: '#/components/schemas/CitedProvision'}
+          description: Every law cited for `reason_code`, `provision` first. Absent when none may be shown.
     AnalyticsRefusal:
       description: >-
         A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
@@ -52904,6 +52922,12 @@ components:
         provision:
           allOf: [{$ref: '#/components/schemas/CitedProvision'}]
           description: The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
+        provisions:
+          type: array
+          items: {$ref: '#/components/schemas/CitedProvision'}
+          description: |-
+            Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
+            recipient's pack, then the sending entity's for a finding its data-protection law settles.
         category: {type: string}
         sending_entity_id: {type: string, format: uuid}
         sending_entity_name: {type: string}

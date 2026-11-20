@@ -66,8 +66,8 @@ func TestAChangedCitationNeedsAFreshAcknowledgement(t *testing.T) {
 			Recipient:   connector.Recipient{Email: "anna@example.test"},
 			SubjectKind: entityContact, SubjectID: ids.UUID{1}, Verdict: commsauthz.VerdictDeny,
 			ReasonCode: commsauthz.ReasonObjection, Mode: commsauthz.ModeEnforce,
-			Citations: map[string]commsauthz.Provision{
-				commsauthz.ReasonObjection: refusal, "objection_route": footer,
+			Citations: map[string][]commsauthz.Provision{
+				commsauthz.ReasonObjection: {refusal}, "objection_route": {footer},
 			},
 		}
 		return d.WithFooterFindings([]commsauthz.FooterFinding{{Kind: "objection_route"}})

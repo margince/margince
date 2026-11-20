@@ -122,6 +122,7 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			Verdict:    crmcontracts.SendAuthorizationPreviewRecipientVerdict(d.Verdict),
 			ReasonCode: d.ReasonCode,
 			Provision:  commsauthzwire.Provision(d.ProvisionFor(d.ReasonCode)),
+			Provisions: commsauthzwire.Provisions(d.ProvisionsFor(d.ReasonCode)),
 		}
 		if len(d.Evidence.FooterFindings) > 0 {
 			entry.FooterFindings = commsauthzwire.FooterFindings(d.Evidence.FooterFindings)

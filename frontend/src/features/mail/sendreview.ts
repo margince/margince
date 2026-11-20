@@ -185,20 +185,35 @@ function parseFooterFindings(
   });
 }
 
-// citedIn reads an entry's `provision` only when it is whole. A law with no
-// link or no part to name is dropped, and the row keeps its factual text.
+// citedIn reads an entry's `provision` and `provisions`, keeping each law only
+// when it is whole. A law with no link or no part to name is dropped, and the
+// row keeps its factual text.
 function citedIn(entry: object): {
   provision?: components["schemas"]["CitedProvision"];
+  provisions?: components["schemas"]["CitedProvision"][];
 } {
-  const raw: unknown = Reflect.get(entry, "provision");
-  if (!isRecord(raw)) return {};
+  const first = wholeProvision(Reflect.get(entry, "provision"));
+  const listed: unknown = Reflect.get(entry, "provisions");
+  const all = Array.isArray(listed)
+    ? listed.flatMap((raw: unknown) => wholeProvision(raw) ?? [])
+    : [];
+  return {
+    ...(first ? { provision: first } : {}),
+    ...(all.length ? { provisions: all } : {}),
+  };
+}
+
+function wholeProvision(
+  raw: unknown,
+): components["schemas"]["CitedProvision"] | undefined {
+  if (!isRecord(raw)) return undefined;
   const { instrument, provision, source_url: sourceUrl } = raw;
   if (
     typeof instrument !== "string" ||
     typeof provision !== "string" ||
     typeof sourceUrl !== "string"
   ) {
-    return {};
+    return undefined;
   }
-  return { provision: { instrument, provision, source_url: sourceUrl } };
+  return { instrument, provision, source_url: sourceUrl };
 }
