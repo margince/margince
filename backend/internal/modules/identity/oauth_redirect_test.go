@@ -199,7 +199,7 @@ func TestValidRedirectURIMatchesTheSharedCorpus(t *testing.T) {
 	if err := json.Unmarshal(raw, &corpus); err != nil {
 		t.Fatal(err)
 	}
-	if len(corpus) < 20 {
+	if len(corpus) < 50 {
 		t.Fatalf("the corpus holds %d cases, want its full census", len(corpus))
 	}
 	for _, c := range corpus {

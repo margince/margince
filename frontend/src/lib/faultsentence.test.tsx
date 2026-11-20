@@ -9,8 +9,8 @@ import {
   percentLimit,
   problemFieldSentencesOf,
   problemMessageOf,
-  wholeNumberFault,
 } from "./problem";
+import { wholeNumberFault } from "./wholenumber";
 
 const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
 

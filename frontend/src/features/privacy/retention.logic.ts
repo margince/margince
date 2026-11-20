@@ -2,7 +2,8 @@ import type { components } from "../../api/schema";
 import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
-import { problemCodeOf, wholeNumberFault } from "../../lib/problem";
+import { problemCodeOf } from "../../lib/problem";
+import { wholeNumberFault } from "../../lib/wholenumber";
 
 // The retention-authoring screen's pure half: the authorable vocabulary, the
 // three states a stored policy can be in, and the two server refusals this
@@ -171,7 +172,8 @@ export function isDuplicateScope(error: unknown): boolean {
 }
 
 // The window the server stores: at least a day, at most a century
-// (`retainDaysCeiling` in backend/internal/modules/privacy/retentionpolicystore.go).
+// (`RetainDaysCeiling` in backend/internal/modules/privacy/retentionpolicystore.go,
+// held equal by backend/gates/frontendretaindays_test.go).
 export const RETAIN_DAYS = { min: 1, max: 36500 } as const;
 
 /**

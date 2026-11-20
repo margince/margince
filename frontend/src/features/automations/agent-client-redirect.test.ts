@@ -17,7 +17,7 @@ describe("the server's redirect URI corpus", () => {
   );
 
   it("reads the full corpus", () => {
-    expect(corpus.length).toBeGreaterThanOrEqual(20);
+    expect(corpus.length).toBeGreaterThanOrEqual(50);
   });
 
   it.each(corpus)("answers $note as the server does", (entry) => {

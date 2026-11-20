@@ -28,7 +28,6 @@ import {
   percentLimit,
   refusalSentences,
   unwrap,
-  wholeNumberFault,
 } from "../../lib/problem";
 // Shared with every upload form, which reads the ceiling off this same record.
 // One query, one key: two hooks on one key would let whichever mounted first
@@ -37,6 +36,7 @@ import {
   INSTALLATION_SETTINGS_KEY,
   useInstallationSettings,
 } from "../../lib/uploadlimit";
+import { wholeNumberFault } from "../../lib/wholenumber";
 import {
   LANGUAGE_DEPENDENT_QUERY_PREFIXES,
   SETTINGS_IN_SERVER_TEXT,

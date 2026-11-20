@@ -122,6 +122,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendproviders_test.go` | H3 | The routing form offers the adapters and profiles the server accepts, and no others. |
 | `frontendrelativedays_test.go` | H1 | The filter builder bounds a "days ago" count where the engine does. |
 | `frontendremoteimagebox_test.go` | H3 | The approval card offers the drawn signature only where the list's markup carries the box marker. |
+| `frontendretaindays_test.go` | H3 | The retention editor refuses a window past its ceiling before it sends one. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat may do rather than which role it holds. |
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one list row carries, or the chip strip's "+N" counts a number nobody has. |
 | `frontendrunreasons_test.go` | H2 | The browser puts a troubled run's reason code into words. |

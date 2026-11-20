@@ -164,7 +164,7 @@ func alreadyDeactivated(status string) bool {
 // suspended member is held for a different reason (a lockout, say), and this
 // path must not quietly clear it.
 func refuseUnlessDeactivated(status string) error {
-	if status != userStatusDeactivated {
+	if !alreadyDeactivated(status) {
 		return errNotDeactivated
 	}
 	return nil
