@@ -129,6 +129,38 @@ function useHit(
 }
 
 /**
+ * Whether the reader has moved focus elsewhere since the panel opened.
+ *
+ * The panel's code can still be loading after the press, and the panel takes
+ * focus only when it mounts. A reader who tabbed on in that gap has answered
+ * for themselves, and the panel must not pull them back.
+ */
+function useFocusMovedOn(
+  open: boolean,
+  panel: RefObject<HTMLElement | null>,
+): RefObject<boolean> {
+  const moved = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const onFocusIn = (event: FocusEvent) => {
+      if (
+        !(event.target instanceof Node && panel.current?.contains(event.target))
+      ) {
+        moved.current = true;
+      }
+    };
+    document.addEventListener("focusin", onFocusIn);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      moved.current = false;
+    };
+  }, [open, panel]);
+  return moved;
+}
+
+/**
  * What the one button on this rail is called, spend included.
  *
  * A function rather than an expression in the component because the component
@@ -289,6 +321,7 @@ export function AgentRail({
     trigger,
     panel,
   });
+  const focusMovedOn = useFocusMovedOn(open, panel);
 
   const frame = usePanelFrame(block, well, bar, open, phone);
   const money =
@@ -370,6 +403,7 @@ export function AgentRail({
                 signals={signals}
                 model={model}
                 panel={panel}
+                focusMovedOn={focusMovedOn}
                 frame={frame}
                 line={line}
                 running={server.running}

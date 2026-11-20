@@ -177,6 +177,7 @@ async function openPanel(answers: Answers = {}, locale: "en" | "de" = "en") {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.doUnmock("./agentpanel");
 });
 
 describe("the agent panel's hierarchy", () => {
@@ -290,7 +291,86 @@ describe("the agent panel's focus", () => {
 
     expect(document.activeElement?.className).toBe("artoggle");
   });
+
+  // The panel's code arrives after the press. These hold that code back, so
+  // the reader can act while it is on its way.
+  it("takes focus in once its code arrives, when the reader stayed on the button", async () => {
+    const panel = await railWithHeldPanel();
+    await panel.press();
+
+    panel.release();
+
+    const opened = await panel.opened();
+    await waitFor(() =>
+      expect(opened.contains(document.activeElement)).toBe(true),
+    );
+  });
+
+  it("leaves focus where the reader moved it while its code was on its way", async () => {
+    const panel = await railWithHeldPanel();
+    await panel.press();
+    const elsewhere = document.getElementById("elsewhere");
+    act(() => elsewhere?.focus());
+
+    panel.release();
+
+    await panel.opened();
+    expect(document.activeElement).toBe(elsewhere);
+  });
 });
+
+// The rail as a fresh module whose panel import waits for `release`: the lazy
+// panel keeps its first import, so each case needs its own.
+async function railWithHeldPanel() {
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  vi.resetModules();
+  vi.doMock("./agentpanel", async (importOriginal) => {
+    await held;
+    return importOriginal();
+  });
+  const { AgentRail: HeldRail } = await import("./agentrail");
+  const { LocaleProvider: HeldLocale } = await import("../i18n");
+  // The fresh modules hold their own catalogs, which the setup file never filled.
+  await (await import("../i18n/catalogs")).loadLocale("en");
+  stubApi({});
+  const user = userEvent.setup();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const { container } = render(
+    <QueryClientProvider client={client}>
+      <HeldLocale initial="en">
+        <HeldRail />
+        <button type="button" id="elsewhere">
+          Elsewhere
+        </button>
+      </HeldLocale>
+    </QueryClientProvider>,
+  );
+  return {
+    press: async () => {
+      const trigger = await waitFor(() => {
+        const button = container.querySelector<HTMLElement>(".artoggle");
+        if (!button)
+          throw new Error("no .artoggle button in the rendered tree");
+        return button;
+      });
+      await user.click(trigger);
+      expect(document.activeElement).toBe(trigger);
+      expect(document.querySelector(".arpanel")).toBeNull();
+    },
+    release: () => act(release),
+    opened: () =>
+      waitFor(() => {
+        const opened = document.querySelector(".arpanel");
+        if (!opened) throw new Error("The agent panel has not loaded");
+        return opened;
+      }),
+  };
+}
 
 describe("the agent panel's report", () => {
   // The mark used to carry the orb's CURRENT tone at a fading opacity, so a

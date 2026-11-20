@@ -187,6 +187,7 @@ export function AgentPanel({
   model,
   spend,
   panel,
+  focusMovedOn,
   frame,
 }: Readonly<{
   state: MarginceCoreState;
@@ -201,6 +202,8 @@ export function AgentPanel({
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
   spend: Spend;
   panel: RefObject<HTMLElement | null>;
+  /** Set once focus lands outside the panel after the press that opened it. */
+  focusMovedOn: RefObject<boolean>;
   frame: PanelFrame;
 }>) {
   const { locale } = useLocale();
@@ -210,10 +213,13 @@ export function AgentPanel({
   // not offered.
   const mayOpenLog = useCan("ai_diagnostics", "read");
   // Only a press opens the panel. It mounts after its frame is measured and its
-  // code has loaded, so focus moves in here rather than at the press.
+  // code has loaded, so focus moves in here rather than at the press. A reader
+  // who moved focus elsewhere meanwhile keeps it there.
   useEffect(() => {
-    stopsIn(panel.current)[0]?.focus();
-  }, [panel]);
+    if (!focusMovedOn.current) {
+      stopsIn(panel.current)[0]?.focus();
+    }
+  }, [panel, focusMovedOn]);
   return (
     <section
       className="arpanel"
