@@ -7,7 +7,7 @@ import { type ReactNode, useState } from "react";
 import { expect, waitFor, within } from "storybook/test";
 import { Card } from "../design-system/atoms";
 import type { Route } from "../lib/router";
-import type { GrantSpec } from "../testing/mefixture";
+import { type GrantSpec, READS_DESTINATIONS } from "../testing/mefixture";
 import {
   setupReminderGrants,
   setupReminderRoutes,
@@ -63,8 +63,12 @@ const NARROW_VIEWPORT = {
   },
 };
 
+// The seat reads every destination, so the rail beside the bar is the whole one.
 function stubSession(routes: RouteMap = {}, allow: GrantSpec = {}) {
-  installFetchStub({ "GET /me": meRoute(allow), ...routes });
+  installFetchStub({
+    "GET /me": meRoute({ ...READS_DESTINATIONS, ...allow }),
+    ...routes,
+  });
 }
 
 // The record's name is seeded, so the page under the bar shows it.

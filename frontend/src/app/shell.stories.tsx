@@ -25,7 +25,7 @@ import type { Locale } from "../i18n";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
 import { SETTINGS_PAGES } from "../lib/settingscatalog";
-import type { GrantSpec } from "../testing/mefixture";
+import { type GrantSpec, READS_DESTINATIONS } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -83,13 +83,13 @@ const COMPANY_BADGE =
  * banners ask `automation:update` and `embedding_reindex:read` — so a hand-written
  * body carrying no `authorization` at all answers every one of them closed. That
  * looks exactly like a deliberate denial on screen, which is how a frame comes to
- * be named for something it never draws. `meRoute({})` is the honest default here:
- * an admin on a full seat holding no object grants.
+ * be named for something it never draws. The seat reads every destination, since
+ * the rail leaves out one its seat cannot read; `allow` adds to that.
  */
 function stubSession(allow: GrantSpec = {}, about: RouteMap = {}) {
   installFetchStub({
     ...SHELL_ROUTES,
-    "GET /me": meRoute(allow),
+    "GET /me": meRoute({ ...READS_DESTINATIONS, ...allow }),
     ...about,
   });
 }
