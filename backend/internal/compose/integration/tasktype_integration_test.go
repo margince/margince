@@ -145,12 +145,10 @@ func TestAReplyOrReachOutNamesTheWayItsConversationWent(t *testing.T) {
 	}
 }
 
-// A reply task names the way its message came in only when the reader may read
-// that message. ReplyChannel projects the source activity's kind, which the
-// task's own audience does not admit. A caller who holds the task but stands
-// outside the source's audience gets no channel, not the kind of a message they
-// cannot open. The control is a workspace source the reader can see, which still
-// names email, so a nil is the gate, not an unrelated miss.
+// A reply task projects its source's channel kind only to a reader who may
+// read that source. A caller outside the source's audience gets nil, not the
+// kind of a message they cannot open. The workspace case is the control: a
+// source the reader can see still names email, so the nil is the gate.
 func TestAReplyWithdrawsTheKindOfASourceTheReaderCannotSee(t *testing.T) {
 	s := setupStanding(t)
 	email := crmcontracts.ActivityReplyChannelEmail
