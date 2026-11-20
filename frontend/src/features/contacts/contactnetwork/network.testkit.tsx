@@ -59,20 +59,21 @@ function asksAnswer(
   if (pending) {
     return new Promise<Response>(() => {});
   }
-  if (fail) {
-    return new Response(
-      JSON.stringify({ status: 500, code: "internal", detail: "down" }),
-      { status: 500, headers: { "content-type": "application/problem+json" } },
-    );
-  }
-  return jsonResponse({ data: asks });
+  return fail ? serverError() : jsonResponse({ data: asks });
+}
+
+function serverError(): Response {
+  return new Response(
+    JSON.stringify({ status: 500, code: "internal", detail: "down" }),
+    { status: 500, headers: { "content-type": "application/problem+json" } },
+  );
 }
 
 function stub(
   graph: ContactGraph,
   allow: GrantSpec = {},
   asks: readonly IntroRequest[] = [],
-  captureGaps: readonly unknown[] = [],
+  captureGaps: readonly unknown[] | "fail" = [],
   asksPending = false,
   asksFail = false,
 ) {
@@ -88,6 +89,9 @@ function stub(
         return jsonResponse(graph);
       }
       if (url.endsWith("/network")) {
+        if (captureGaps === "fail") {
+          return serverError();
+        }
         return jsonResponse({
           contact_id: CONTACT,
           colleagues: [],
@@ -118,7 +122,8 @@ export function renderTab(
   beside: Readonly<{
     asks?: readonly IntroRequest[];
     view?: Moments;
-    captureGaps?: readonly unknown[];
+    // The colleagues without a mailbox, or "fail" for a read that fails.
+    captureGaps?: readonly unknown[] | "fail";
     // The ask list never answers, for a case about the page before it does.
     asksPending?: boolean;
     // The ask list answers with a server error.

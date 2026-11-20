@@ -99,6 +99,31 @@ describe("a contact nobody here reaches", () => {
     ).toBeTruthy();
   });
 
+  it("keeps a failed mailbox read with its Retry, and does not read it again on its own", async () => {
+    renderTab(alone(), "en", {}, { captureGaps: "fail" });
+    const reads = () =>
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([input]) =>
+          String(input instanceof Request ? input.url : input).endsWith(
+            "/network",
+          ),
+        ).length;
+
+    expect(
+      await screen.findByText(en["contact.network.captureGapsFailed"]),
+    ).toBeTruthy();
+    await waitFor(() => expect(reads()).toBeGreaterThanOrEqual(2));
+    await act(async () => {});
+    expect(
+      screen.getByText(en["contact.network.captureGapsFailed"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: en["common.retry"] }),
+    ).toBeTruthy();
+    expect(reads()).toBeLessThanOrEqual(2);
+  });
+
   it("keeps the Retry of an introduction list that could not be read", async () => {
     renderTab(alone(), "en", {}, { asksFail: true });
 
