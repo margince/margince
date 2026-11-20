@@ -165,6 +165,7 @@ export function WorklistBody({
       <div className="worklist-columns">
         <div className="worklist-lanes">
           <WorklistHeader
+            embedded={embedded}
             day={day}
             loaded={queue}
             scope={scope}
@@ -290,9 +291,11 @@ export function WorklistBody({
                   band holding nothing can say so. Ranks are still counted over
                   the whole queue, so a row's number is its place on the page
                   and not its place within its heading. */}
-                    {bandSections(day, queue).map((section) => (
+                    {bandSections(day, queue).map((section, at, all) => (
                       <QueueBand
-                        key={section.band}
+                        // The band and how often it opened before, which a
+                        // row leaving the run does not change.
+                        key={`${section.band}:${all.slice(0, at).filter((earlier) => earlier.band === section.band).length}`}
                         section={section}
                         canReportEmpty={canReportEmptyBands(hasMore)}
                         rows={QueueRows}

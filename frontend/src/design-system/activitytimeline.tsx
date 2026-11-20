@@ -1,4 +1,3 @@
-import { displayedBody, displayedSubject } from "../lib/systemdisplay";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -9,6 +8,7 @@ import type { Locale, useT } from "../i18n";
 import { callOutcomeLabel } from "../lib/calloutcome";
 import { meetingInvitationLabel } from "../lib/meetinginvitation";
 import { correspondenceSide } from "../lib/messagevoice";
+import { displayedBody, displayedSubject } from "../lib/systemdisplay";
 import { markdownLines } from "./markdown-text";
 import {
   type ContactOn,

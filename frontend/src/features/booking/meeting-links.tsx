@@ -226,7 +226,7 @@ function LinkCell({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
   return (
     <CellStack>
-      <span className="t-name">
+      <span className="t-name meeting-link-title">
         {profile.title}{" "}
         <span className="t-caption">{t("scheduling.mainLink")}</span>
       </span>

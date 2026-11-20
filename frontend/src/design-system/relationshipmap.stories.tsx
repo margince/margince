@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect } from "storybook/test";
 import { RelationshipMap, type RelationshipMapLabels } from "./relationshipmap";
 import type { RelationshipMapModel } from "./relationshipmap.layout";
 
@@ -272,4 +273,52 @@ export const BesideDetailsPane: Story = {
       </div>
     ),
   ],
+};
+
+const LONG_NAME = "Benjamin Alpha-Hartmann";
+
+export const LongNames: Story = {
+  args: {
+    focusId: "p-1",
+    model: {
+      ...FULL,
+      nodes: FULL.nodes.map((node) => {
+        if (node.id === "p-1") {
+          return { ...node, label: LONG_NAME };
+        }
+        if (node.id === "p-2") {
+          return {
+            ...node,
+            label: "MaximilianeOberhauserWittgensteinPapadopoulos",
+            sublabel: "Head of Procurement and Strategic Sourcing EMEA",
+          };
+        }
+        if (node.id === "u-2") {
+          return { ...node, label: "Konstantinos Papadopoulos-Brandt" };
+        }
+        return node;
+      }),
+      lanes: FULL.lanes.map((lane) =>
+        lane.id === "influencer"
+          ? { ...lane, label: "Technical evaluation and procurement committee" }
+          : lane,
+      ),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await document.fonts.ready;
+    for (const node of canvasElement.querySelectorAll<SVGGElement>(
+      ".rmap-node",
+    )) {
+      const box = node.querySelector("rect")?.getBBox();
+      for (const text of node.querySelectorAll("text")) {
+        const drawn = text.getBBox();
+        await expect(drawn.x + drawn.width).toBeLessThanOrEqual(
+          (box?.x ?? 0) + (box?.width ?? 0),
+        );
+      }
+    }
+    const named = canvasElement.querySelector('[data-node-id="p-1"]');
+    await expect(named?.getAttribute("aria-label")).toContain(LONG_NAME);
+  },
 };

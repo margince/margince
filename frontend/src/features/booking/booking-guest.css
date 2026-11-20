@@ -17,6 +17,8 @@
   flex-direction: column;
   gap: var(--space-3);
   align-self: stretch;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   border-inline-end: 1px solid var(--borderSubtle);
   padding-inline-end: var(--space-6);
 }
