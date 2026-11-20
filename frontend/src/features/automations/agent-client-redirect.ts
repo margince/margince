@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The server's rule for a redirect URI a client may register
-// (`validRedirectURI` in backend/internal/modules/identity/oauth_redirect.go),
-// so the form refuses a URI as it is added rather than after a round trip.
+// The server's rule for a redirect URI a client may register, as
+// `validRedirectURI` in backend/internal/modules/identity/oauth_redirect.go.
+// The form refuses a URI as it is added, not after a round trip.
 // testdata/redirecturi.json beside the Go rule holds both to one corpus.
 
 // Go's Hostname() drops the brackets of an IPv6 literal; this reads them raw.
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
-// Scheme, then the host of an authority, read from the text as typed: `URL`
-// lower-cases a host and adds the `//` an opaque `https:x` lacks, and Go does
+// Scheme, then the host of an authority, read from the text as typed. `URL`
+// lower-cases a host and adds the `//` an opaque `https:x` lacks; Go does
 // neither.
 const AUTHORITY =
   /^([a-z][a-z0-9+.-]*):\/\/(?:[^@/?#]*@)?(\[[^\]/?#]*\]|[^:/?#]*)/i;

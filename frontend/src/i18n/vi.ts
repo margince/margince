@@ -131,7 +131,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.retirement.survivor_inactive":
     "Thành viên giữ lại đang bị tắt. Bật lại để đăng nhập và thêm vào nhóm.",
   "users.retirement.unknown": "Xử lý công việc còn lại trước khi tiếp tục.",
-  "users.retirement.blocked_one": "Xử lý mục này trước khi tiếp tục",
+  "users.retirement.blocked_one": "Xử lý các mục này trước khi tiếp tục",
   "users.retirement.blocked_other": "Xử lý các mục này trước khi tiếp tục",
   "users.retirement.address": "Địa chỉ đăng nhập",
   "users.retirement.protected_email":
@@ -17901,7 +17901,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đăng ký gửi đi, nhận HTTP POST có chữ ký cho các sự kiện đã chọn.",
   "webhooks.new": "Đăng ký mới",
   "webhooks.notConfigured":
-    "Webhook cần một khóa ký do người vận hành máy chủ Margince của bạn đặt (webhook_key). Chưa thể gửi gì cho đến lúc đó.",
+    "Webhook cần một khóa ký (webhook_key) do bên vận hành máy chủ Margince của bạn đặt. Chưa thể gửi gì cho đến lúc đó.",
   "webhooks.state.active": "Đang hoạt động",
   "webhooks.state.paused": "Đã tạm dừng",
   "webhooks.updated": "Đã cập nhật {date}",

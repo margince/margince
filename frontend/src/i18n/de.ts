@@ -18388,7 +18388,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ausgehende Abonnements, die für ausgewählte Ereignisse signierte HTTP-POSTs erhalten.",
   "webhooks.new": "Neues Abonnement",
   "webhooks.notConfigured":
-    "Webhooks brauchen einen Signaturschlüssel, den die Person setzt, die deinen Margince-Server betreibt (webhook_key). Bis dahin wird nichts gesendet.",
+    "Webhooks brauchen einen Signaturschlüssel (webhook_key), den das Team setzt, das deinen Margince-Server betreibt. Bis dahin wird nichts gesendet.",
   "webhooks.state.active": "Aktiv",
   "webhooks.state.paused": "Pausiert",
   "webhooks.updated": "Aktualisiert am {date}",

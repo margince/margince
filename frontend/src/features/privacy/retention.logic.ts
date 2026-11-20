@@ -176,8 +176,8 @@ export const RETAIN_DAYS = { min: 1, max: 36500 } as const;
 
 /**
  * A retain-days field's value as the contract wants it, or null when what was
- * typed is not a window. Refusing it here keeps the Save button honest rather
- * than sending a body the server can only 422.
+ * typed is not a window. Save stays off for it, so no body goes out that the
+ * server can only refuse.
  */
 export function parseRetainDays(input: string): number | null {
   const trimmed = input.trim();

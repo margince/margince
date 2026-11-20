@@ -161,9 +161,9 @@ export function fieldCheckSentence(
 }
 
 /**
- * What is wrong with a whole number typed in a box, worded as the server's
- * refusal of it would be; nothing when it is a whole number from `min` to
- * `max`. Spaces around it are allowed. A blank box is the caller's to judge.
+ * What is wrong with a whole number typed in a box, in the server's words for
+ * the same refusal. Nothing when it is a whole number from `min` to `max`.
+ * Spaces around it are allowed. A blank box is the caller's to judge.
  */
 export function wholeNumberFault(
   typed: string,

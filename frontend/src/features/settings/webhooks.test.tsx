@@ -374,7 +374,7 @@ describe("WebhooksCard — markup", () => {
     ["a list the seat can manage", WEBHOOK_OPERATOR, 200, true, "example.test"],
     ["a list the seat only reads", {}, 200, true, "example.test"],
     ["a deployment without a signing key", {}, 200, false, "example.test"],
-    ["a deployment answering not configured", {}, 503, false, "enabled"],
+    ["a deployment answering not configured", {}, 503, false, "webhook_key"],
   ];
   it.each(states)(
     "nests validly in %s",

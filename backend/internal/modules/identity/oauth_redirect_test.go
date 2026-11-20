@@ -185,7 +185,7 @@ func TestNoIssuerIsSentWhenNoResourceIsConfigured(t *testing.T) {
 
 // The corpus is shared with
 // frontend/src/features/automations/agent-client-redirect.test.ts, so the
-// register form refuses a URI before sending it exactly when this does.
+// register form refuses a URI before sending it when this does.
 func TestValidRedirectURIMatchesTheSharedCorpus(t *testing.T) {
 	t.Parallel()
 	raw, err := os.ReadFile("testdata/redirecturi.json")

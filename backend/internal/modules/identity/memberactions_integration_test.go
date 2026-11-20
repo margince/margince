@@ -248,8 +248,8 @@ func TestTheRosterOffersTheSoleAdminARoleChangeThatKeepsAdmin(t *testing.T) {
 	}
 }
 
-// Removal is offered only on a deactivated member: the retirement preview
-// blocks it on anyone else, so an offer there leads to a dialog that cannot
+// Removal is offered only on a deactivated member. The retirement preview
+// blocks it on anyone else, and an offer there opens a dialog that cannot
 // confirm.
 func TestTheRosterOffersRemovalOnlyOnADeactivatedMember(t *testing.T) {
 	e := setupRevocationEnv(t, "allowed-remove")
