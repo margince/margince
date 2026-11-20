@@ -60,8 +60,8 @@ func filingOf(verdict DealVerdict, result string) *Filing {
 	case failed != nil:
 		return &Filing{Actor: failed.Unit, Hook: failed.Hook, Result: string(HookFailed), Reason: failed.Reason}
 	case ignored != nil && ignored.Hook == hookDeal:
-		// A refused deal answer shows even after a parties change: it is the
-		// one a unit's author looks for when the mail is not filed where expected.
+		// A refused deal answer shows even after a parties change. A unit's author
+		// looks for it when the mail is not filed where they expected.
 		return &Filing{Actor: ignored.Unit, Hook: ignored.Hook, Result: string(HookIgnored), Reason: ignored.Reason}
 	case changed != nil:
 		return &Filing{Actor: changed.Unit, Hook: changed.Hook, Result: changedResult(*changed, verdict, result), Reason: changed.Reason}
