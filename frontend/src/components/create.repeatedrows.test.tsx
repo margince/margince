@@ -35,6 +35,7 @@ function Form({
   const { locale } = useLocale();
   return (
     <CreateAction
+      requires={{ object: "contact", action: "create" }}
       label="Open"
       fields={fields(t, locale)}
       create={(values, rows) => {
@@ -43,15 +44,13 @@ function Form({
       }}
       invalidate="contacts"
       screen="contacts"
-      requires={{ object: "contact", action: "create" }}
     />
   );
 }
 
 async function fillRows(fields: FieldSource, add: string, entries: string[]) {
   const sent: unknown[] = [];
-  const client = new QueryClient();
-  seedWriter(client);
+  const client = seedWriter(new QueryClient());
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

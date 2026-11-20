@@ -255,12 +255,12 @@ describe("CreateAction refusals of a row list or a set", () => {
     const user = userEvent.setup();
     render(
       <CreateAction
+        requires={{ object: "contact", action: "create" }}
         label="New contact"
         fields={listFields}
         create={() => throwProblem(problem)}
         invalidate="contacts"
         screen="contacts"
-        requires={{ object: "contact", action: "create" }}
       />,
     );
     await user.click(screen.getByText("New contact"));
@@ -302,6 +302,7 @@ describe("CreateAction refusals of a row list or a set", () => {
     const user = userEvent.setup();
     render(
       <CreateAction
+        requires={{ object: "contact", action: "create" }}
         label="New contact"
         fields={listFields.map((field) =>
           field.type === "multiselect"
@@ -311,7 +312,6 @@ describe("CreateAction refusals of a row list or a set", () => {
         create={() => throwProblem(refusal("tags", "unknown_tag"))}
         invalidate="contacts"
         screen="contacts"
-        requires={{ object: "contact", action: "create" }}
       />,
     );
     await user.click(screen.getByText("New contact"));
