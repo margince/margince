@@ -135,6 +135,9 @@ var rowScopedResponses = map[string]expectedTarget{
 	// A body with no reference of its own is the easiest kind to wave through
 	// and still hands back whatever its parent contains.
 	"ContactConsentState": {table: "contact", pathParam: "id"},
+	// A consent mail's answer names the contact's own live address, so it is
+	// read about the contact in the path.
+	"ConfirmRequestIssued": {table: "contact", pathParam: "id"},
 	// The company's evidence sidecars. Neither carries an id or an owner of
 	// its own — the claim belongs to the company named in the path and
 	// inherits exactly its visibility, so the probe is the parent's.

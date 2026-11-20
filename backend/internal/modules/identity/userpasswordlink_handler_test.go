@@ -231,7 +231,7 @@ func TestInviteIsRefusedWhenNothingCouldDeliverTheCredential(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/users",
 		strings.NewReader(`{"email":"nobody@acme.test","display_name":"No Body","role":"rep"}`))
 	admin := Identity{UserID: ids.UserID{UUID: ids.NewV7()}, Roles: []string{"admin"}, SeatType: "full"}
-	NewHandlers(&Service{}).InviteUser(rec, req.WithContext(withIdentity(req.Context(), admin)))
+	NewHandlers(&Service{}).InviteUser(rec, req.WithContext(withIdentity(req.Context(), admin)), crmcontracts.InviteUserParams{})
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("invite with no delivery channel = %d, want 409: %s", rec.Code, rec.Body)
 	}

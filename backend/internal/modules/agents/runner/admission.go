@@ -4,6 +4,7 @@
 package runner
 
 import (
+	"context"
 	"errors"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -15,13 +16,23 @@ import (
 // turn took, and must read the same word this package writes.
 const AdmissionRefused = "refused"
 
+// refusalText is what the model reads about a refused call. The allowlist
+// refusal is the runner's own words. Anything else is told as the MCP door
+// tells it, so an unclassified fault's text never reaches a model.
+func (r *Runner) refusalText(ctx context.Context, tool string, err error) string {
+	if errors.Is(err, errOutsideAgentSpec) {
+		return err.Error()
+	}
+	return r.tools.Explain(ctx, tool, err)
+}
+
 // observeRefusal feeds a refusal back as an observation and returns the
 // trace step for it. A DECLARED capability gap is called out as terminal,
 // because it is not a fault the model can route around by trying again — and
 // this is the loop with a step budget, so a re-plan that re-calls the same
 // tool spends the run on a permanent no.
-func observeRefusal(win *window, step modelStep, err error, meta Meta, resp model.Response) Step {
-	observation := "tool call refused: " + err.Error()
+func observeRefusal(win *window, step modelStep, explained string, err error, meta Meta, resp model.Response) Step {
+	observation := "tool call refused: " + explained
 	// Telling the model not to retry is an ORDER, so it rides the directive
 	// argument: inside the fence it would be text the prompt has already
 	// declared to be data the model must disregard (observeThen's own doc). The
@@ -44,7 +55,8 @@ func observeRefusal(win *window, step modelStep, err error, meta Meta, resp mode
 	if directive != "" {
 		suffix = " — " + directive
 	}
-	recorded := truncateTo(observation, traceObservationLimit-len(suffix)) + suffix
+	// A human reads the trace, so it keeps the real cause the model never sees.
+	recorded := truncateTo("tool call refused: "+err.Error(), traceObservationLimit-len(suffix)) + suffix
 	return Step{
 		Tool: step.Tool, Args: step.Args, Observation: recorded,
 		ModelID: meta.ModelID, Tier: meta.Tier, TokensIn: resp.InputTokens, TokensOut: resp.OutputTokens,

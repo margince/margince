@@ -122,15 +122,24 @@ const clientToolCeiling = 100
 // client sees two tools, which tells them apart.
 const publishedToolCeiling = 48
 
+// publishedCatalogByteCeiling is the most bytes the all-scope tools/list may
+// hold. A client reads the whole list before its first call. A router keeps the
+// count above low and still carries the text of every action it fronts.
+//
+// It is the measured size plus room for a copy fix, and no room for a new
+// action's text. Raising it is a decision made in the pull request that needs it.
+const publishedCatalogByteCeiling = 288_000
+
 type mcpInfoFile struct {
 	Totals struct {
-		Tools     int `json:"tools"`
-		Resources int `json:"resources"`
+		Tools        int `json:"tools"`
+		Resources    int `json:"resources"`
+		CatalogBytes int `json:"tool_catalog_bytes"`
 	} `json:"totals"`
 }
 
-func TestThePublishedToolCountStaysUnderItsCeiling(t *testing.T) {
-	t.Parallel()
+func readMCPInfo(t *testing.T) mcpInfoFile {
+	t.Helper()
 	raw, err := gatekit.ReadFile(mcpInfoPath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", mcpInfoPath, err)
@@ -139,6 +148,28 @@ func TestThePublishedToolCountStaysUnderItsCeiling(t *testing.T) {
 	if err := json.Unmarshal(raw, &info); err != nil {
 		t.Fatalf("parsing %s: %v", mcpInfoPath, err)
 	}
+	return info
+}
+
+func TestThePublishedToolListStaysUnderItsByteCeiling(t *testing.T) {
+	t.Parallel()
+	info := readMCPInfo(t)
+	if info.Totals.CatalogBytes == 0 {
+		t.Fatalf("%s reports an empty tool list, so the size ceiling would measure nothing", mcpInfoPath)
+	}
+	if info.Totals.CatalogBytes > publishedCatalogByteCeiling {
+		t.Errorf("the all-scope tool list is %d bytes, over its ceiling of %d (about %d tokens at four bytes "+
+			"a token). Every assistant reads it before its first call. Trim what the change added, or raise "+
+			"publishedCatalogByteCeiling in the same pull request and say what the list grew by and why.",
+			info.Totals.CatalogBytes, publishedCatalogByteCeiling, info.Totals.CatalogBytes/4)
+	}
+	t.Logf("all-scope tool list: %d bytes of a %d-byte ceiling, about %d tokens",
+		info.Totals.CatalogBytes, publishedCatalogByteCeiling, info.Totals.CatalogBytes/4)
+}
+
+func TestThePublishedToolCountStaysUnderItsCeiling(t *testing.T) {
+	t.Parallel()
+	info := readMCPInfo(t)
 	// A zero here is the under-recognising failure this directory's rules warn
 	// about: the file moved or its shape changed, the count reads as nothing,
 	// and a ceiling comparison passes while measuring no surface at all.
