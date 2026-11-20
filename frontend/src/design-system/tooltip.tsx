@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 import { isImeCommit } from "../lib/imecommit";
 import { coveredByLayer } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
+import { hidesLines } from "./lineclamp";
 import "./tooltip.css";
 
 // The gap between the anchor's box and the tip, and the margin the tip keeps
@@ -134,8 +135,20 @@ function clipped(element: Element | null): boolean {
     element !== null &&
     !element.classList.contains("sr-only") &&
     (element.scrollWidth > element.clientWidth ||
+      clampedLines(element) ||
       Array.from(element.children).some(clipped))
   );
+}
+
+// Asks for the clamp itself: a box under `overflow: visible` draws text taller
+// than itself whole.
+function clampedLines(element: Element): boolean {
+  if (!hidesLines(element)) {
+    return false;
+  }
+  const lines =
+    getComputedStyle(element).getPropertyValue("-webkit-line-clamp");
+  return lines !== "" && lines !== "none";
 }
 
 /** A control's own name is always worth showing: it is not on screen at all. */
@@ -298,9 +311,17 @@ function useTip<T extends HTMLElement>(
     if (!earnsTabStop) {
       return;
     }
-    const measure = () => setReachable(worthShowing(anchor.current));
+    let live = true;
+    const measure = () => {
+      if (live) setReachable(worthShowing(anchor.current));
+    };
+    // A late web font can rewrap the text with no resize and no render.
+    document.fonts?.ready.then(measure, measure);
     globalThis.addEventListener("resize", measure);
-    return () => globalThis.removeEventListener("resize", measure);
+    return () => {
+      live = false;
+      globalThis.removeEventListener("resize", measure);
+    };
   }, [earnsTabStop, worthShowing]);
 
   // Which of the two ways the tip is up matters to the Escape key alone.

@@ -455,6 +455,12 @@
   overflow: hidden;
   overflow-wrap: anywhere;
 }
+/* Above the stretched link, like the owner, or the pointer never reaches the
+   name and the tip with the whole of a clamped one never opens. */
+.deal-card .deal-name-text {
+  position: relative;
+  z-index: 1;
+}
 .deal-card .deal-figure {
   display: flex;
   align-items: baseline;
@@ -940,8 +946,13 @@
  * cleaner for a taller, denser field set. */
 .detail-grid {
   display: grid;
-  grid-template-columns: 140px 1fr;
+  grid-template-columns: 140px minmax(0, 1fr);
   gap: 8px 16px;
+}
+/* A value is data: a served segment need not hold a space to break at. */
+.detail-grid > dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 /* A value that is a list of its own, such as a partner's open tasks, needs
  * the panel's width on a phone, so below the fold it goes under its term. */
