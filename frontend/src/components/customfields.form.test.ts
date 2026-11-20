@@ -119,6 +119,23 @@ describe("customFieldToFormField", () => {
     expect(field.required).toBeFalsy();
   });
 
+  it("refuses a day the server cannot store before sending, naming the bounds", () => {
+    const field = customFieldToFormField(
+      cf({
+        label: "Renewal date",
+        column_name: "cf_renewal_date",
+        type: "date",
+      }),
+      BOOL_LABELS,
+      T,
+    );
+    expect(field.validate?.("9999-12-31")).toMatch(
+      /^Renewal date must be from .*0001 to .*9999\.$/,
+    );
+    expect(field.validate?.("2026-03-01")).toBeUndefined();
+    expect(field.validate?.("")).toBeUndefined();
+  });
+
   it("names the label and options in the reader's language, keeping stored values", () => {
     const services = cf({
       label: "Services",
@@ -185,6 +202,22 @@ describe("customFieldToFormField", () => {
     expect(customFieldsToBody({ cf_field: " 0f9e " }, [record], "en")).toEqual({
       cf_field: "0f9e",
     });
+  });
+
+  it("refuses a url value the server would refuse, and takes a web address", () => {
+    const field = customFieldToFormField(cf({ type: "url" }), BOOL_LABELS, T);
+    expect(field.type).toBe("text");
+    for (const refused of [
+      "javascript:alert(1)",
+      "data:text/html,x",
+      "example.com/offer",
+    ]) {
+      expect(field.validate?.(refused), refused).toBe(
+        "Enter a web address that starts with http:// or https://.",
+      );
+    }
+    expect(field.validate?.("HTTP://EXAMPLE.COM/offer")).toBeUndefined();
+    expect(field.validate?.("")).toBeUndefined();
   });
 
   it("renders a boolean as a Yes/No select using the supplied labels", () => {

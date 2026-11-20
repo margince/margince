@@ -14,6 +14,7 @@ import {
   problemFieldSentencesOf,
   problemMessage,
   problemMessageOf,
+  refusalSentences,
   throwProblem,
   unwrap,
   writeMayHaveLanded,
@@ -658,6 +659,182 @@ describe("a field refusal read in the reader's language", () => {
         german,
       ),
     ).toBe(german("common.errorNoCause"));
+  });
+});
+
+describe("refusalSentences", () => {
+  const english = Object.assign(t, { locale: "en" as const });
+  const fieldRefusal = (...faults: Record<string, unknown>[]) =>
+    new ProblemError({
+      status: 422,
+      code: "validation_error",
+      detail: "an English sentence from the server",
+      details: { errors: faults },
+    });
+
+  it("puts each fault the form shows on its field and leaves the foot empty", () => {
+    const { byField, rest } = refusalSentences(
+      fieldRefusal({ field: "name", code: "required", message: "x" }),
+      english,
+      { name: "Name" },
+    );
+    expect(byField.get("name")).toBe("Name is required.");
+    expect(rest).toBeNull();
+  });
+
+  it("keeps a fault on a field the form does not show for the foot", () => {
+    const { byField, rest } = refusalSentences(
+      fieldRefusal(
+        { field: "name", code: "required", message: "x" },
+        {
+          field: "pipeline_id",
+          code: "invalid_uuid",
+          message: "pipeline_id must be a UUID",
+        },
+      ),
+      english,
+      { name: "Name" },
+    );
+    expect(byField.get("name")).toBe("Name is required.");
+    expect(rest).toBe("Check this value and try again.");
+  });
+
+  it("keeps the server's sentence at the foot when it names no wire key", () => {
+    const { rest } = refusalSentences(
+      fieldRefusal(
+        { field: "name", code: "required", message: "x" },
+        {
+          field: "close_from",
+          code: "range_inverted",
+          message: "The range starts after it ends.",
+        },
+      ),
+      english,
+      { name: "Name" },
+    );
+    expect(rest).toBe("The range starts after it ends.");
+  });
+
+  it("words that foot fault in German, where no server sentence is shown", () => {
+    const german = Object.assign(
+      (key: Parameters<typeof translate>[1]) => translate("de", key),
+      { locale: "de" as const },
+    );
+    const { rest } = refusalSentences(
+      fieldRefusal(
+        { field: "name", code: "required", message: "x" },
+        { field: "pipeline_id", code: "invalid_uuid", message: "x" },
+      ),
+      german,
+      { name: "Name" },
+    );
+    expect(rest).toBe(german("common.fieldInvalid"));
+  });
+
+  it("puts a conflict on the form's unique field, in the form's words", () => {
+    const { byField, rest } = refusalSentences(
+      new ProblemError({
+        status: 409,
+        code: "conflict",
+        detail: "x: conflict",
+      }),
+      english,
+      { name: "Name" },
+      { conflict: { field: "name", sentence: t("tags.nameTaken") } },
+    );
+    expect(byField.get("name")).toBe("A tag with this name already exists.");
+    expect(rest).toBeNull();
+  });
+
+  it("puts a conflict of the form's own code on its field, and no other", () => {
+    const clash = (code: string) =>
+      new ProblemError({ status: 409, code, detail: "an API sentence" });
+    const options = {
+      conflict: {
+        field: "name",
+        sentence: t("pipeline.nameTaken"),
+        code: "pipeline_name_taken",
+      },
+    };
+    expect(
+      refusalSentences(
+        clash("pipeline_name_taken"),
+        english,
+        {},
+        options,
+      ).byField.get("name"),
+    ).toBe(t("pipeline.nameTaken"));
+    const plain = refusalSentences(clash("conflict"), english, {}, options);
+    expect(plain.byField.size).toBe(0);
+    expect(plain.rest).toBe("an API sentence");
+  });
+
+  it("says a refusal with no field at the foot", () => {
+    const { byField, rest } = refusalSentences(
+      new ProblemError({ status: 403, code: "permission_denied", detail: "x" }),
+      english,
+      { name: "Name" },
+    );
+    expect(byField.size).toBe(0);
+    expect(rest).toBe(t("common.permissionDenied"));
+  });
+
+  it("says nothing before a write is fieldRefusal", () => {
+    expect(refusalSentences(null, english, {})).toEqual({
+      byField: new Map(),
+      rest: null,
+    });
+  });
+});
+
+describe("the refusals a screen words itself", () => {
+  const codeRefusal = (code: string) =>
+    new ProblemError({ status: 409, code, detail: "an API sentence" });
+  for (const [code, key] of [
+    ["email_taken", "users.emailTaken"],
+    ["removed_member_email", "users.removedEmail"],
+    ["deal_room_document_already_present", "room.docs.alreadyPresent"],
+  ] as const) {
+    for (const locale of ["en", "de", "vi"] as const) {
+      it(`words ${code} in ${locale}`, () => {
+        const reader = Object.assign(
+          (k: Parameters<typeof translate>[1]) => translate(locale, k),
+          { locale },
+        );
+        expect(problemMessageOf(codeRefusal(code), reader)).toBe(
+          translate(locale, key),
+        );
+      });
+    }
+  }
+
+  it("tells a reader of a lapsed offer where its date is changed", () => {
+    const lapsed = new ProblemError({
+      status: 422,
+      code: "validation_error",
+      detail:
+        "the offer was valid until 2026-11-15; regenerate it with a later date",
+      details: {
+        errors: [
+          {
+            field: "valid_until",
+            code: "offer_lapsed",
+            message:
+              "the offer was valid until 2026-11-15; regenerate it with a later date",
+          },
+        ],
+      },
+    });
+    for (const locale of ["en", "de", "vi"] as const) {
+      const reader = Object.assign(
+        (k: Parameters<typeof translate>[1]) => translate(locale, k),
+        { locale },
+      );
+      expect(problemMessageOf(lapsed, reader)).toBe(
+        translate(locale, "offer.lapsed"),
+      );
+    }
+    expect(problemMessageOf(lapsed, t)).toContain("Edit header");
   });
 });
 

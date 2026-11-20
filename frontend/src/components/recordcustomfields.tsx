@@ -92,7 +92,7 @@ function readings(
     }
     const href = customFieldHref(display);
     // Not a picklist: InlineChoice holds no link inside its pill.
-    if (href && field.type === "text")
+    if (href && (field.type === "text" || field.type === "url"))
       renderValues[field.column_name] = (
         <OffsiteLink href={href}>{display}</OffsiteLink>
       );

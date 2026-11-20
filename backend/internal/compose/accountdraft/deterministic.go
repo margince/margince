@@ -93,6 +93,11 @@ func greeting(in Input) string {
 // something to say. The order is A132's: a commitment we made outranks the
 // deal it belongs to, which outranks the account in general.
 func deterministicOpener(in Input) string {
+	// A floor cannot tell which history an explicit intent bears on, so it
+	// leaves all of it out rather than open on an unrelated topic.
+	if in.Intent != "" {
+		return ""
+	}
 	lines := draftfloor.SubstanceFor(in.Envelope.Lang())
 	if in.Commitment != nil {
 		return draftfloor.Fill(lines.Commitment, in.Commitment.Name)

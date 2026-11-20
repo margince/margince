@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 3,
     "never_driven": 8,
     "permitted_but_never_required": 3,
-    "tokens_served_but_never_driven": 6518,
+    "tokens_served_but_never_driven": 6525,
     "use_case_cases": 73,
     "acceptance_criteria_named": 120,
     "tools_added_by_shipped_units": 0,
@@ -3911,7 +3911,7 @@
   "tools": [
     {
       "name": "read_view",
-      "tokens": 1889,
+      "tokens": 1896,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -4262,7 +4262,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 2841,
+      "tokens": 2877,
       "agents": [
         "overnight_at_risk_sweep"
       ],

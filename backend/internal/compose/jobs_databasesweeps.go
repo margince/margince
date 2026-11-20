@@ -8,16 +8,20 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/meetingprofile"
+	"github.com/margince/margince/backend/internal/compose/promisekept"
 	"github.com/margince/margince/backend/internal/compose/transcriptaudience"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // addDatabaseOnlySweepJobs registers every periodic pass that needs nothing but
@@ -53,6 +57,7 @@ func addDatabaseOnlySweepJobs(
 	addDeclaredWorker[CapturedDealRefileSweepArgs](reg, &capturedDealRefileSweepWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[MeetingProfileRetractSweepArgs](reg, meetingProfileRetractWorker{meetingprofile.Sweep{Pool: pool}})
 	addDeclaredWorker[TranscriptAudienceSweepArgs](reg, transcriptAudienceWorker{transcriptaudience.Sweep{Pool: pool}})
+	addDeclaredWorker[PromiseKeptSweepArgs](reg, promiseKeptWorker{NewPromiseKeptSweep(pool)})
 	addDeclaredWorker[InitiativeEnrolmentSweepArgs](reg, initiativeEnrolmentSweepWorker{initiativeenrolment.Sweep{Store: NewInitiativeStore(pool), Pool: pool}})
 	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now, features: corefeatures.New(disabled)})
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{
@@ -106,6 +111,30 @@ func addDatabaseOnlySweepJobs(
 	addDeclaredWorker[WaitingHorizonRefreshArgs](reg, newWaitingHorizonRefreshWorker(pool, log))
 	addDeclaredWorker[EvidenceAuthorshipArgs](reg, newEvidenceAuthorshipWorker(pool, log))
 	addBriefGenerateJobs(reg, pool, log, briefMail)
+}
+
+// PromiseKeptSweepArgs schedules one pass of promisekept.Sweep.
+type PromiseKeptSweepArgs struct{}
+
+// Kind keeps the persisted River job identity stable.
+func (PromiseKeptSweepArgs) Kind() string { return "promise_kept_sweep" }
+
+// FleetWide keeps tenant work inside the per-workspace sweep.
+func (PromiseKeptSweepArgs) FleetWide() {}
+
+type promiseKeptWorker struct{ promisekept.Sweep }
+
+// NewPromiseKeptSweep wires the sweep to the one rule that names a promise's owner.
+func NewPromiseKeptSweep(pool *pgxpool.Pool) promisekept.Sweep {
+	askedOf := func(ctx context.Context, tx pgx.Tx, source ids.UUID, seat *ids.UUID) (ids.UUID, error) {
+		asked, _, err := commitmentAskedOf(ctx, tx, Commitment{SourceActivityID: source, Seat: seat})
+		return asked, err
+	}
+	return promisekept.Sweep{Pool: pool, Store: contacts.NewStore(InstallationDB(pool)), AskedOf: askedOf}
+}
+
+func (w promiseKeptWorker) Work(ctx context.Context, _ *river.Job[PromiseKeptSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
 }
 
 // InitiativeEnrolmentSweepArgs is the fleet job that dates sales initiative membership.

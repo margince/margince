@@ -11,10 +11,11 @@ import {
 } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider, translate } from "../i18n";
+import { ProblemError } from "../lib/problem";
 import { KeyCode } from "./keyedname";
-import { NameDialog } from "./namedialog";
+import { NameDialog, nameRefusal } from "./namedialog";
 
 afterEach(cleanup);
 
@@ -198,4 +199,61 @@ it("prints both when the label differs from the title", () => {
   render(<Titled title="Rename deal" label="Deal name" />);
   expect(screen.getByText("Rename deal")).toBeVisible();
   expect(screen.getByText("Deal name")).not.toHaveClass("sr-only");
+});
+
+describe("nameRefusal", () => {
+  const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
+
+  it("puts a conflict on the name, in the caller's words", () => {
+    const taken = new ProblemError({
+      status: 409,
+      code: "conflict",
+      detail: 'a team named "Ops" already exists: conflict',
+    });
+    expect(nameRefusal(taken, t, "users.teamDuplicate")).toEqual({
+      problem: null,
+      nameProblem: t("users.teamDuplicate"),
+    });
+  });
+
+  it("puts only the caller's own code on the name when it names one", () => {
+    const taken = new ProblemError({
+      status: 409,
+      code: "custom_field_label_taken",
+      detail: "a custom field with this label already exists",
+    });
+    const busy = new ProblemError({
+      status: 409,
+      code: "conflict",
+      detail: "The table is busy. Try again.",
+    });
+    const code = "custom_field_label_taken";
+    expect(nameRefusal(taken, t, "cf.labelTaken", code)).toEqual({
+      problem: null,
+      nameProblem: t("cf.labelTaken"),
+    });
+    expect(nameRefusal(busy, t, "cf.labelTaken", code)).toEqual({
+      problem: "The table is busy. Try again.",
+      nameProblem: null,
+    });
+  });
+
+  it("keeps any other refusal under the form", () => {
+    const denied = new ProblemError({
+      status: 403,
+      code: "permission_denied",
+      detail: "x",
+    });
+    expect(nameRefusal(denied, t, "users.teamDuplicate")).toEqual({
+      problem: t("common.permissionDenied"),
+      nameProblem: null,
+    });
+  });
+
+  it("says nothing before a write is refused", () => {
+    expect(nameRefusal(null, t, "users.teamDuplicate")).toEqual({
+      problem: null,
+      nameProblem: null,
+    });
+  });
 });

@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // maxBulkRelink bounds how many activities one explicit-id relink may name.
@@ -69,6 +70,8 @@ type RelinkActivityInput struct {
 	unfiledOnly bool
 	// evidence is the reason an automatic writer records in the audit row.
 	evidence map[string]any
+	// relevance is the classifier's mark on a new deal link; empty for none.
+	relevance string
 }
 
 // RelinkActivity is the single-relink door: admits the request, then commits
@@ -205,10 +208,10 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 		return false, held, err
 	}
 	tag, err := tx.Exec(ctx, storekit.SQLf(`
-		INSERT INTO activity_link (activity_id, entity_type, %s)
-		VALUES ($1, $2, $3)
+		INSERT INTO activity_link (activity_id, entity_type, %s, deal_relevance, relevance_source)
+		VALUES ($1, $2, $3, NULLIF($4, ''), CASE WHEN $4 <> '' THEN $5 END)
 		ON CONFLICT (activity_id, entity_type, `+linkIDCoalesce+`) DO NOTHING`, column),
-		id, in.EntityType, in.EntityID)
+		id, in.EntityType, in.EntityID, in.relevance, relstrength.RelevanceByClassifier)
 	if err != nil {
 		return false, held, err
 	}
@@ -243,6 +246,9 @@ func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 		}
 	}
 	after := map[string]any{"entity_type": in.EntityType, fieldEntityID: in.EntityID, "replaced": in.ReplaceExistingOfType}
+	if in.relevance != "" {
+		after[fieldDealRelevance], after[fieldRelevanceSource] = in.relevance, relstrength.RelevanceByClassifier
+	}
 	// A contact linked later is the sender only when the message's stated
 	// address proves it.
 	if in.EntityType == linkEntityContact {

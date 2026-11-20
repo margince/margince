@@ -90,13 +90,15 @@ const (
 
 // DealVerdict is the rule's answer. Deal is set only for DealLinked, and
 // Question only for DealAmbiguous. Basis is the rung that decided, and
-// Candidates the deals a topic check weighs for a suggestion.
+// Candidates the deals a topic check weighs for a suggestion. Relevance is the
+// topic check's mark on a deal it confirmed, empty when no check answered.
 type DealVerdict struct {
 	Outcome    DealOutcome
 	Deal       ids.UUID
 	Question   WhichDeal
 	Basis      DealBasis
 	Candidates []ids.UUID
+	Relevance  string
 }
 
 // dealFiling is who decides and who writes. Live capture is both. The repair

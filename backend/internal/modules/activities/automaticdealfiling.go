@@ -34,9 +34,12 @@ const (
 // taken only if the activity still has no deal link under its row lock. A deal
 // link that landed first, a human's included, is kept and reported. The link
 // is written with its audit row, the evidence given, and the relink event a
-// filing's consumers read.
-func FileOnDealIfUnfiledTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any) (DealFiling, error) {
-	in := RelinkActivityInput{EntityType: linkEntityDeal, EntityID: deal, unfiledOnly: true, evidence: evidence}
+// filing's consumers read. A non-empty relevance is the classifier's mark on
+// the new link.
+func FileOnDealIfUnfiledTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any, relevance string,
+) (DealFiling, error) {
+	in := RelinkActivityInput{EntityType: linkEntityDeal, EntityID: deal, unfiledOnly: true, evidence: evidence, relevance: relevance}
 	wrote, _, err := relinkActivityRow(ctx, tx, id, in, linkColumn(linkEntityDeal))
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
@@ -73,8 +76,8 @@ func RetractMachineLeadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, lea
 	return retractMachineLinkTx(ctx, tx, id, linkEntityLead, lead, human, evidence)
 }
 
-// RetractMachineDealTx takes one deal link off an activity, only while no human
-// or agent ever filed the activity on a deal.
+// RetractMachineDealTx takes one deal link off an activity. It does so only
+// while no human or agent ever filed the activity on a deal or marked a link.
 func RetractMachineDealTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any) (bool, error) {
 	human := filingByHand{sql: provenance.HumanDealFilingSQL("$1"), args: []any{id}}
 	return retractMachineLinkTx(ctx, tx, id, linkEntityDeal, deal, human, evidence)

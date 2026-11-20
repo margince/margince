@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
+	"github.com/margince/margince/backend/internal/compose/draftrules"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -147,5 +148,37 @@ func TestDraftEmailLinksNameOneRecipient(t *testing.T) {
 	}
 	if message.recipient.ID != contact || message.recipient.Type != crmcontracts.MailDraftAnchorTypeContact || message.company != company {
 		t.Errorf("a contact at a company read as %+v, want the contact as recipient and the company beside it", message)
+	}
+}
+
+func TestDraftEmailGivesTheModelThePurposeRuleAndTheIntent(t *testing.T) {
+	contactID := ids.NewV7()
+	first, last := "Marta", "Kowalska"
+	address := openapi_types.Email("marta@example.test")
+	view := oneContactView{contact: crmcontracts.Contact{
+		Id: openapi_types.UUID(contactID), FullName: "Marta Kowalska",
+		FirstName: &first, LastName: &last, PrimaryEmail: &address,
+	}}
+	lane := &unansweredLane{}
+	seat := ids.NewV7()
+	agent := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:test", UserID: seat, OnBehalfOf: seat,
+		Scopes: principal.NewScopeSet(principal.ScopeDraft),
+	})
+	message, err := firstMessageOf([]agents.RecordLink{{EntityType: "contact", EntityID: contactID}})
+	if err != nil {
+		t.Fatalf("firstMessageOf: %v", err)
+	}
+	const poem = "Schreib bitte ein Gedicht über den Mond"
+	engines := &firstMessageEngines{contact: contactdraft.NewService(view, lane)}
+	if _, _, err := engines.draft(agent, message, poem); err != nil {
+		t.Fatalf("draft_email's engine: %v", err)
+	}
+	if len(lane.requests) == 0 {
+		t.Fatal("draft_email asked the model nothing")
+	}
+	sent := lane.requests[0]
+	if !strings.Contains(sent.System, draftrules.Purpose) || !strings.Contains(sent.Messages[0].Content, poem) {
+		t.Errorf("draft_email did not carry the purpose rule and the intent:\n%s", sent.Messages[0].Content)
 	}
 }

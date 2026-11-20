@@ -42,6 +42,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 - `audit_log_pkey`: `unique, btree (id)`
 - `idx_audit_actor`: `btree (actor_id, occurred_at DESC)`
+- `idx_audit_claim_status`: `btree (((after ->> 'claim_id')), occurred_at DESC, id DESC) WHERE (after ? 'claim_status')`
 - `idx_audit_entity`: `btree (entity_type, entity_id, occurred_at DESC)`
 - `idx_audit_erasure_reason`: `btree (((evidence ->> 'reason'))) WHERE ((action = 'erase') AND (entity_type = 'contact'))`
 - `idx_audit_log_batch`: `btree (batch_id) WHERE (batch_id IS NOT NULL)`

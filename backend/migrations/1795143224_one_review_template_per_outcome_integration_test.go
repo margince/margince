@@ -26,7 +26,7 @@ func TestTheOneTemplateMigrationKeepsTheOldestActiveTemplate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1795108620")); err != nil {
+	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1795139172")); err != nil {
 		t.Fatalf("up to the migration before: %v", err)
 	}
 	// The two seeded rows share one created_at, so the id decides between them.
