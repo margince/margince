@@ -18449,8 +18449,8 @@ export interface paths {
          * How many records hold each choice of a picklist or multiselect field.
          * @description What removing a choice would clear, asked before an options edit is confirmed. Every
          *     record of the field's object counts, archived ones included, because the edit clears
-         *     them all. Each current choice is listed, with zero where no record holds it. Needs the
-         *     grant that edits a field's options.
+         *     them all. Each current choice is listed, with zero where no record holds it. A read:
+         *     it needs `custom_field:read` and read on the field's object.
          */
         get: operations["listCustomFieldChoiceUse"];
         put?: never;
@@ -18525,7 +18525,10 @@ export interface paths {
          *     a picklist value becomes null, and a multiselect keeps its other choices. Archived
          *     records are cleared too. Each changed record gets its own audit entry and its
          *     object's `*.updated` event, and the answer's `records_changed` counts them.
-         *     `listCustomFieldChoiceUse` tells the caller that count before they confirm. A Live
+         *     `listCustomFieldChoiceUse` tells the caller that count before they confirm. Removing a
+         *     choice also needs the grant to update the field's object, or the edit answers 403. A
+         *     record that cannot change, such as an activity under a retention hold, refuses the
+         *     edit with a 409 that says so. A Live
          *     List whose filter names a removed choice keeps evaluating and matches no record
          *     through it.
          */
@@ -92523,7 +92526,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description The field is retired (options are frozen — retirement is terminal), a record that holds a removed choice belongs to a member who has left and must be handed on first, or the target table is busy with concurrent activity — the last is retryable. */
+            /** @description The field is retired (options are frozen — retirement is terminal), a record that holds a removed choice belongs to a member who has left and must be handed on first, a record that holds one is under a retention hold, or the target table is busy with concurrent activity — the last is retryable. */
             409: {
                 headers: {
                     [name: string]: unknown;

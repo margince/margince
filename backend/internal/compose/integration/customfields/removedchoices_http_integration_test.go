@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -202,5 +203,58 @@ func TestRemovingAMultiselectChoiceKeepsTheOtherChoices(t *testing.T) {
 	}
 	if got := readRecord(t, e, "/v1/companies/"+other)[col]; !reflect.DeepEqual(got, []any{"Care"}) {
 		t.Fatalf("the company without Audit reads %v, want [Care] untouched", got)
+	}
+}
+
+// A record that cannot change refuses the clear, and the edit answers 409 with
+// the reason instead of failing on every retry. Nothing is cleared.
+func TestARecordThatCannotChangeRefusesTheEditWithAConflict(t *testing.T) {
+	e := schemaWiredEnv(t)
+	ctx := t.Context()
+
+	t.Run("a deal a departed member still owns", func(t *testing.T) {
+		field := newField(t, e, integration.AnyMap{"object": "deal", "label": "Handover region", "type": "picklist", "options": []string{"North", "West"}, "source": "manual"})
+		stages := apptest.DiscoverSeededPipeline(t, e)
+		_, deal := createWithCF(t, e, "/v1/deals", integration.AnyMap{
+			"name": "Orphaned renewal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "source": "manual", field.ColumnName: "North",
+		})
+		var gone string
+		if err := e.Owner.QueryRow(ctx, `INSERT INTO app_user (email, display_name) VALUES ('gone@choices.test', 'Gone') RETURNING id`).Scan(&gone); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := e.Owner.Exec(ctx, `UPDATE deal SET owner_id = $1 WHERE id = $2`, gone, deal); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := e.Owner.Exec(ctx, `UPDATE app_user SET status = 'deactivated', removed_at = now() WHERE id = $1`, gone); err != nil {
+			t.Fatal(err)
+		}
+		assertRefusedEdit(t, e, field.ID, "member who has left")
+		var held string
+		if err := e.Owner.QueryRow(ctx, `SELECT `+field.ColumnName+` FROM deal WHERE id = $1`, deal).Scan(&held); err != nil || held != "North" {
+			t.Fatalf("the departed member's deal holds %q (%v), want North kept", held, err)
+		}
+	})
+
+	t.Run("an activity under a retention hold", func(t *testing.T) {
+		field := newField(t, e, integration.AnyMap{"object": "activity", "label": "Call temperature", "type": "picklist", "options": []string{"Hot", "Cold"}, "source": "manual"})
+		if _, err := e.Owner.Exec(ctx, `
+			INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by,
+			                      archived_at, restricted_at, restricted_until, retention_class,
+			                      retention_class_at, restricted_reason, `+field.ColumnName+`)
+			VALUES ('email', 'Held', 'body', now(), 'gmail', 'connector:gmail',
+			        now(), now(), now() + interval '5 years', 'commercial_correspondence',
+			        now(), 'commercial_correspondence', 'Hot')`); err != nil {
+			t.Fatal(err)
+		}
+		assertRefusedEdit(t, e, field.ID, "retention hold")
+	})
+}
+
+func assertRefusedEdit(t *testing.T, e *apptest.AppEnv, fieldID, reason string) {
+	t.Helper()
+	var problem customFieldProblem
+	status := e.Call(t, "PATCH", "/v1/custom-fields/"+fieldID+"/options", integration.AnyMap{"options": []string{"Cold", "West"}}, nil, &problem)
+	if status != http.StatusConflict || !strings.Contains(problem.Detail, reason) {
+		t.Fatalf("edit options → %d %+v, want 409 naming %q", status, problem, reason)
 	}
 }

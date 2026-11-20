@@ -18220,8 +18220,7 @@ paths:
       description: |-
         What removing a choice would clear, asked before an options edit is confirmed. Every
         record of the field's object counts, archived ones included, because the edit clears
-        them all. Each current choice is listed, with zero where no record holds it. Needs the
-        grant that edits a field's options.
+        them all. Each current choice is listed, with zero where no record holds it.
       responses:
         '200':
           description: The records holding each choice.
@@ -18320,7 +18319,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: >-
-            The field is retired (options are frozen — retirement is terminal), a record that holds a removed choice belongs to a member who has left and must be handed on first, or the target table is busy with concurrent activity — the last is retryable.
+            The field is retired (options are frozen — retirement is terminal), a record that holds a removed choice belongs to a member who has left and must be handed on first, a record that holds one is under a retention hold, or the target table is busy with concurrent activity — the last is retryable.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}

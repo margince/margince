@@ -38,3 +38,14 @@ func TestIsWebAddress(t *testing.T) {
 		}
 	}
 }
+
+// A link only followed, such as one in a sent mail, may be longer than one a
+// field stores.
+func TestALongAddressIsFollowableButNotStored(t *testing.T) {
+	t.Parallel()
+	long := "https://example.com/" + strings.Repeat("a", WebAddressCharacters)
+	if !FollowableWebAddress(long) || IsWebAddress(long) {
+		t.Fatalf("a %d-character address: followable %v, storable %v; want true, false",
+			len(long), FollowableWebAddress(long), IsWebAddress(long))
+	}
+}

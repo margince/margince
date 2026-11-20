@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"maps"
 	"reflect"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -190,16 +192,37 @@ func Emit(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, entityTyp
 
 //craft:ignore naked-any event payloads are serialized to the outbox's JSON envelope
 func emitEnvelope(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, entityType string, entityID ids.UUID, payload any) (events.Envelope, error) {
-	p, err := Actor(ctx)
+	staged, err := stageEnvelope(ctx, auditID, eventType, entityType, entityID, payload)
 	if err != nil {
 		return events.Envelope{}, err
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO `+TableOutbox+` (stream, envelope) VALUES ($1, $2)`,
+		staged.stream, staged.body); err != nil {
+		return events.Envelope{}, err
+	}
+	return staged.env, nil
+}
+
+// stagedEvent is one outbox row ready to insert.
+type stagedEvent struct {
+	stream string
+	body   []byte
+	env    events.Envelope
+}
+
+//craft:ignore naked-any event payloads are serialized to the outbox's JSON envelope
+func stageEnvelope(ctx context.Context, auditID ids.UUID, eventType, entityType string, entityID ids.UUID, payload any) (stagedEvent, error) {
+	p, err := Actor(ctx)
+	if err != nil {
+		return stagedEvent{}, err
 	}
 	correlationID, ok := principal.CorrelationID(ctx)
 	if !ok {
 		// Every write path opens an operation scope (the HTTP middleware,
 		// a consumer re-binding its trigger); a missing one is a
 		// programming error, caught before the row hits the events.
-		return events.Envelope{}, errors.New("store: no correlation id bound to context")
+		return stagedEvent{}, errors.New("store: no correlation id bound to context")
 	}
 
 	env := events.Envelope{
@@ -225,30 +248,39 @@ func emitEnvelope(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, e
 	if payload != nil {
 		raw, err := json.Marshal(payload)
 		if err != nil {
-			return events.Envelope{}, err
+			return stagedEvent{}, err
 		}
 		env.Payload = raw
 	}
 
 	stream, err := events.StreamFor(eventType)
 	if err != nil {
-		return events.Envelope{}, err
+		return stagedEvent{}, err
 	}
 	if err := env.Validate(); err != nil {
-		return events.Envelope{}, err
+		return stagedEvent{}, err
 	}
 
 	body, err := json.Marshal(env)
 	if err != nil {
-		return events.Envelope{}, err
+		return stagedEvent{}, err
 	}
-	_, err = tx.Exec(ctx,
-		`INSERT INTO `+TableOutbox+` (stream, envelope) VALUES ($1, $2)`,
-		stream, body)
-	if err != nil {
-		return events.Envelope{}, err
+	return stagedEvent{stream: stream, body: body, env: env}, nil
+}
+
+// insertEvents writes staged outbox rows in one statement.
+func insertEvents(ctx context.Context, tx pgx.Tx, staged []stagedEvent) error {
+	if len(staged) == 0 {
+		return nil
 	}
-	return env, nil
+	args := make([]any, 0, 2*len(staged))
+	rows := make([]string, 0, len(staged))
+	for _, event := range staged {
+		args = append(args, event.stream, event.body)
+		rows = append(rows, "($"+strconv.Itoa(len(args)-1)+", $"+strconv.Itoa(len(args))+")")
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO `+TableOutbox+` (stream, envelope) VALUES `+strings.Join(rows, ", "), args...)
+	return err
 }
 
 // EmitEvent is Emit with the event type and entity type derived FROM the

@@ -113,6 +113,9 @@ func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, op
 	if err := serializeSchemaChange(ctx, tx, f.Object); err != nil {
 		return crmcontracts.CustomField{}, err
 	}
+	if err := lockForTheAlter(ctx, tx, f.Object); err != nil {
+		return crmcontracts.CustomField{}, err
+	}
 	changed, err := s.clearRemovedChoices(ctx, tx, f, removedChoices(oldOptions, options))
 	if err != nil {
 		return crmcontracts.CustomField{}, err

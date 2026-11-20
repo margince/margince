@@ -8,17 +8,30 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // RemoveCustomChoices clears choices an admin removed from a contract field off
-// every contract that holds one. Each contract announces it as
-// contract.updated, as an edit of the field does.
+// every contract that holds one. Each goes through applyContractUpdate, the one
+// writer of a contract update, so it is audited and announced as an edit is.
+// Archived contracts are cleared too, because the field's CHECK covers them.
 func RemoveCustomChoices(ctx context.Context, tx pgx.Tx, column fieldcatalog.Column, removed []string) (int, error) {
-	return storekit.ClearRemovedChoices(ctx, tx, contractObject, column, removed, func(changed map[string]any) events.Payload {
-		return crmcontracts.PublicEventContractUpdated{ChangedFields: changed}
-	})
+	changes, err := storekit.LockRemovedChoices(ctx, tx, contractObject, column, removed)
+	if err != nil {
+		return 0, err
+	}
+	only := []fieldcatalog.Column{{Name: column.Name, Type: column.Type}}
+	for _, change := range changes {
+		patch := storekit.NewPatch()
+		if err := storekit.SetCustomFieldPatch(patch, only,
+			map[string]any{column.Name: change.After}, map[string]any{column.Name: change.Before}); err != nil {
+			return 0, err
+		}
+		if err := applyContractUpdate(ctx, tx, ids.ContractID{UUID: change.ID}, patch, nil, storekit.IncludeArchived, "removed choice"); err != nil {
+			return 0, err
+		}
+	}
+	return len(changes), nil
 }
