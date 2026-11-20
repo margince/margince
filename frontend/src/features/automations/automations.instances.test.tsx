@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { de } from "../../i18n/de";
 import { en } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
@@ -22,6 +23,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { AutomationsAdmin, type AutomationsView } from "./automations";
+import { TEMPLATE_WORDS } from "./automations.catalogwords";
 import {
   AUTOMATION_CATALOG,
   configuredAutomations,
@@ -45,6 +47,7 @@ function mount(
   allow: GrantSpec = OPERATOR,
   routes: RouteMap = {},
   view: AutomationsView = "mine",
+  locale: "en" | "de" = "en",
 ) {
   installFetchStub({
     "GET /me": meRoute(allow),
@@ -58,7 +61,7 @@ function mount(
     ...routes,
   });
   render(
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <AutomationsAdmin view={view} />
     </StoryProviders>,
   );
@@ -66,8 +69,11 @@ function mount(
 
 const row = (id: string) => screen.findByTestId(`automation-${id}`);
 
-const templateText = (key: string) =>
-  AUTOMATION_CATALOG.find((entry) => entry.key === key)?.description ?? "";
+const templateWords = (key: string) => {
+  const words = TEMPLATE_WORDS[key];
+  if (!words) throw new Error(`No words for the template ${key}`);
+  return { name: en[words.name], description: en[words.description] };
+};
 
 describe("the configured automations table", () => {
   it("names the authorizer for a reader without editing rights", async () => {
@@ -336,12 +342,11 @@ describe("the starter library", () => {
     const template = await screen.findByTestId("template-renewal_reminder");
     expect(template).not.toHaveTextContent(/clock:|create_task|->/);
     expect(template).toHaveTextContent(en["auto.trigger.renewal"]);
-    await user.click(
-      within(template).getByText(templateText("renewal_reminder")),
-    );
+    const renewal = templateWords("renewal_reminder");
+    await user.click(within(template).getByText(renewal.name));
     const dialog = await screen.findByRole("dialog");
     expect(
-      within(dialog).getByRole("heading", { name: "Renewal reminder" }),
+      within(dialog).getByRole("heading", { name: renewal.name }),
     ).toBeInTheDocument();
   });
 
@@ -372,7 +377,7 @@ describe("the starter library", () => {
     );
     expect(
       within(await screen.findByRole("dialog")).getByText(
-        templateText("stage_change_notify"),
+        templateWords("stage_change_notify").description,
       ),
     ).toBeInTheDocument();
   });
@@ -383,7 +388,69 @@ describe("the starter library", () => {
     const template = await screen.findByTestId("template-renewal_reminder");
     expect(template.className).not.toContain("rowlink");
     expect(within(template).queryByRole("button")).toBeNull();
-    await user.click(within(template).getByText("Renewal reminder"));
+    await user.click(
+      within(template).getByText(templateWords("renewal_reminder").name),
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("a rule's Actions menu", () => {
+  it.each([
+    [en["auto.runs.open"], en["auto.runs.title"]],
+    [en["auto.preview.open"], en["auto.preview.title"]],
+  ])(
+    "closes after %s and puts focus on the panel it opened",
+    async (item, panel) => {
+      const user = userEvent.setup();
+      mount();
+      const trigger = within(await row("au-1")).getByRole("button", {
+        name: "Actions for Quiet accounts follow-up",
+      });
+      await user.click(trigger);
+      await user.click(screen.getByRole("button", { name: item }));
+      expect(trigger).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("button", { name: item })).toBeNull();
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole("region", { name: panel }),
+        ),
+      );
+    },
+  );
+});
+
+describe("the catalog's words", () => {
+  it("reads the starter library in the reader's language", async () => {
+    mount(OPERATOR, {}, "library", "de");
+    const template = await screen.findByTestId("template-route_lead");
+    expect(template).toHaveTextContent(de["auto.template.route_lead.name"]);
+    expect(template).not.toHaveTextContent(/Route new lead|Creates/);
+  });
+
+  it("names a rule that keeps its template's name in the reader's language", async () => {
+    const seeded = configuredAutomations(RECORDED_AT).map((rule) =>
+      rule.id === "au-2" ? { ...rule, name: "Prepare for a renewal" } : rule,
+    );
+    mount(
+      OPERATOR,
+      {
+        "GET /automations": () =>
+          jsonResponse({ data: seeded, page: { next_cursor: null } }),
+      },
+      "mine",
+      "de",
+    );
+    expect(await row("au-2")).toHaveTextContent(
+      de["auto.template.renewal_reminder.name"],
+    );
+    expect(await row("au-1")).toHaveTextContent("Quiet accounts follow-up");
+  });
+
+  it("says a task goes to the record owner without a capital mid-sentence", async () => {
+    mount();
+    expect(await row("au-2")).toHaveTextContent(
+      en["auto.recipient.tasksToOwner"],
+    );
   });
 });

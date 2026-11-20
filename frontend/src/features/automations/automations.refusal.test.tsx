@@ -79,7 +79,12 @@ function jsonResponse(body: unknown, status = 200) {
 // Everything the surface reads, plus one write that the server refuses. `write`
 // names the method the refusal answers, so the create path (POST) and the edit
 // path (PATCH) can share one backend.
-function refusing(write: "POST" | "PATCH", detail: string) {
+function refusing(
+  write: "POST" | "PATCH",
+  detail: string,
+  refusal: Record<string, unknown> = { title: "Refused", status: 409, detail },
+  writes: unknown[] = [],
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -93,7 +98,8 @@ function refusing(write: "POST" | "PATCH", detail: string) {
         return jsonResponse({ data: [entry] });
       }
       if (method === write) {
-        return jsonResponse({ title: "Refused", status: 409, detail }, 409);
+        writes.push(await (request ?? new Request(url, init)).clone().json());
+        return jsonResponse(refusal, Number(refusal.status));
       }
       return jsonResponse({
         data: [configured],
@@ -174,5 +180,71 @@ describe("a refused write does not survive the dialog that earned it", () => {
       within(dialog).getByRole("button", { name: "Cancel" }),
     );
     expect(within(await openRowEditor()).queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("a rule's name", () => {
+  const nameField = (dialog: HTMLElement) =>
+    within(dialog).getByRole("textbox", { name: "Name" });
+
+  it.each([
+    ["empty", ""],
+    ["blank", "   "],
+  ])("stays open on an %s name and says so at the field", async (_, typed) => {
+    const user = userEvent.setup();
+    const writes: unknown[] = [];
+    refusing("PATCH", "unused", undefined, writes);
+    render(<AutomationsAdmin />);
+    await screen.findByText(configured.name);
+    const dialog = await openRowEditor();
+    await user.clear(nameField(dialog));
+    if (typed) await user.type(nameField(dialog), typed);
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    const error = within(dialog).getByText("Give the automation a name.");
+    expect(nameField(dialog).getAttribute("aria-describedby")).toContain(
+      error.id,
+    );
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(writes).toEqual([]);
+  });
+
+  it("stops at the longest name the server keeps", async () => {
+    refusing("PATCH", "unused");
+    render(<AutomationsAdmin />);
+    await screen.findByText(configured.name);
+    expect(nameField(await openRowEditor())).toHaveAttribute(
+      "maxLength",
+      "120",
+    );
+  });
+
+  it("puts the server's refusal of the name at the Name field", async () => {
+    const user = userEvent.setup();
+    refusing("PATCH", "unused", {
+      title: "Unprocessable",
+      status: 422,
+      code: "validation_error",
+      details: {
+        errors: [
+          {
+            field: "name",
+            code: "too_long",
+            message: "This value is at most 120 characters.",
+            max: 120,
+          },
+        ],
+      },
+    });
+    render(<AutomationsAdmin />);
+    await screen.findByText(configured.name);
+    const dialog = await openRowEditor();
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    const alerts = await within(dialog).findAllByRole("alert");
+    expect(alerts).toHaveLength(1);
+    expect(nameField(dialog).getAttribute("aria-describedby")).toContain(
+      alerts[0]?.id,
+    );
   });
 });

@@ -20,6 +20,7 @@ import { problemMessageOf } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
+import { ruleName } from "./automations.catalogwords";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
 import { type AutomationPatch, patchAutomation } from "./automations.patch";
@@ -35,6 +36,9 @@ import "./automations.css";
 type Automation = components["schemas"]["Automation"];
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Inspecting = Readonly<{ runs: boolean; preview: boolean }>;
+type Panel = keyof Inspecting;
+// The panel a menu choice opened, which takes focus once it mounts.
+type FocusRequest = Readonly<{ id: string; panel: Panel; seq: number }>;
 
 const CLOSED: Inspecting = { runs: false, preview: false };
 const RUNS_ONLY: Inspecting = { runs: true, preview: false };
@@ -74,6 +78,7 @@ export function ConfiguredAutomations({
     Readonly<Record<string, Inspecting>>
   >({});
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
   const [populationReview, setPopulationReview] = useState<{
     automation: Automation;
     patch: AutomationPatch;
@@ -96,11 +101,19 @@ export function ConfiguredAutomations({
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ["automations"] }),
   });
-  const toggle = (id: string, panel: keyof Inspecting) =>
+  const toggle = (id: string, panel: Panel, opening: boolean) => {
     setInspecting((prior) => {
       const was = prior[id] ?? CLOSED;
       return { ...prior, [id]: { ...was, [panel]: !was[panel] } };
     });
+    setFocusRequest((prior) =>
+      opening ? { id, panel, seq: (prior?.seq ?? 0) + 1 } : null,
+    );
+  };
+  const rows = automations.map((automation) => ({
+    ...automation,
+    name: ruleName(automation, entryFor(automation.key), t),
+  }));
   const columns = instanceColumns({
     t,
     now,
@@ -113,7 +126,7 @@ export function ConfiguredAutomations({
         canDelete={canDelete}
         inspecting={inspecting[automation.id] ?? CLOSED}
         focusAfterDelete={focusAfterDelete}
-        onToggle={(panel) => toggle(automation.id, panel)}
+        onToggle={(panel, opening) => toggle(automation.id, panel, opening)}
         onEdit={() => {
           edit.reset();
           setEditing((prior) => ({
@@ -139,7 +152,7 @@ export function ConfiguredAutomations({
         fold
         label={t("auto.instances")}
         columns={columns}
-        rows={automations}
+        rows={rows}
         rowKey={(automation) => automation.id}
         rowTestId={(automation) => `automation-${automation.id}`}
         detail={
@@ -149,23 +162,30 @@ export function ConfiguredAutomations({
                 toggleLabel: (automation) =>
                   t("auto.runsFor", { name: automation.name }),
                 expanded: new Set(
-                  automations
+                  rows
                     .filter((one) => anyOpen(inspecting[one.id]))
                     .map((one) => one.id),
                 ),
-                onToggle: (id) =>
+                onToggle: (id) => {
+                  setFocusRequest(null);
                   setInspecting((prior) => ({
                     ...prior,
                     [id]: anyOpen(prior[id]) ? CLOSED : RUNS_ONLY,
-                  })),
+                  }));
+                },
                 render: (automation) => {
                   const open = inspecting[automation.id] ?? CLOSED;
+                  const focus =
+                    focusRequest?.id === automation.id
+                      ? focusRequest
+                      : undefined;
                   return (
                     <AutomationInspectors
                       automationId={automation.id}
                       runsOpen={open.runs}
                       previewOpen={open.preview}
                       canConfigure={canViewRuns}
+                      focus={focus && { panel: focus.panel, seq: focus.seq }}
                     />
                   );
                 },
@@ -191,7 +211,7 @@ export function ConfiguredAutomations({
             initialParams={editing.automation.params}
             submitLabel={t("trust.save")}
             pending={edit.isPending}
-            refusal={<ErrorLine error={edit.error} />}
+            error={edit.error}
             onSubmit={(name, params) => {
               // The version as the list now holds it, not as it stood at open.
               const current =
@@ -447,7 +467,8 @@ function AutomationVerbs({
   canDelete: boolean;
   inspecting: Inspecting;
   focusAfterDelete?: () => HTMLElement | null;
-  onToggle: (panel: keyof Inspecting) => void;
+  /** `opening` says the press opens the panel, which then takes focus. */
+  onToggle: (panel: Panel, opening: boolean) => void;
   onEdit: () => void;
 }>) {
   const t = useT();
@@ -459,18 +480,12 @@ function AutomationVerbs({
       {canEdit && <Button onClick={onEdit}>{t("trust.edit")}</Button>}
       {canViewRuns && (
         <>
-          <Button
-            variant={inspecting.runs ? "primary" : "ghost"}
-            aria-pressed={inspecting.runs}
-            onClick={() => onToggle("runs")}
-          >
+          {/* Not `aria-pressed`: the menu stays open under a press that sets
+              something, and these open a panel the row's chevron closes. */}
+          <Button onClick={() => onToggle("runs", !inspecting.runs)}>
             {t("auto.runs.open")}
           </Button>
-          <Button
-            variant={inspecting.preview ? "primary" : "ghost"}
-            aria-pressed={inspecting.preview}
-            onClick={() => onToggle("preview")}
-          >
+          <Button onClick={() => onToggle("preview", !inspecting.preview)}>
             {t("auto.preview.open")}
           </Button>
         </>

@@ -1,12 +1,14 @@
-import { type ReactNode, useId, useState } from "react";
+import { useId, useState } from "react";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { Button, Checkbox, Field, TextInput } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { type FieldLabels, refusalSentences } from "../../lib/problem";
+import { templateDescription } from "./automations.catalogwords";
 import { DateFieldSelect } from "./automations.datefield";
 import { ListParamSelect } from "./automations.lists";
 import {
@@ -15,30 +17,24 @@ import {
   paramsFromValues,
   scalarText,
 } from "./automations.params";
+import {
+  isRequired,
+  missingParam,
+  optionLabel,
+  paramLabel,
+} from "./automations.paramwords";
 import { recipeSentence } from "./automations.recipe";
 import { StageParamSelect } from "./automations.stageparams";
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];
 
-const PARAM_LABELS: Record<string, MessageKey> = {
-  recipient: "auto.renewal.recipient",
-  include_imported_changes: "auto.lists.includeImports",
-  object: "auto.renewal.object",
-  date_field: "auto.renewal.dateField",
-  days_before: "auto.renewal.leadTime",
-  recurs_yearly: "auto.renewal.annual",
-  task_title: "auto.stages.taskTitle",
-  pipeline_id: "auto.stages.pipeline",
-  stage_ids: "auto.stages.destinations",
-  task_timezone: "auto.deadlineTimezone",
-  customer_list_id: "auto.quiet.customerList",
-  no_activity_days: "auto.quiet.days",
-  check_in_days: "auto.quiet.days",
-};
+// The longest name the server stores.
+const NAME_LIMIT = 120;
+const NAME = "name";
 
-// The dialog an automation is named and parameterised through, and the one
-// control that draws a single declared parameter. Create in the admin panel and
+// The dialog an automation is named and parameterised through, and the
+// control that draws one declared parameter. Create in the admin panel and
 // edit on a row both open it.
 
 function ParamFieldControl({
@@ -47,6 +43,7 @@ function ParamFieldControl({
   object,
   watchedList,
   pipelineId,
+  error,
   onChange,
 }: Readonly<{
   field: ParamField;
@@ -55,42 +52,11 @@ function ParamFieldControl({
   /** The Live List a list rule watches, which narrows its Shortlist picker. */
   watchedList: string;
   pipelineId: string;
+  error?: string;
   onChange: (value: string) => void;
 }>) {
   const t = useT();
-  const labelKey = PARAM_LABELS[field.key];
-  const label = labelKey ? t(labelKey) : field.key;
-  if (field.kind === "pipeline" || field.kind === "stages") {
-    const kind = field.kind;
-    return (
-      <Field
-        label={t(
-          field.kind === "pipeline"
-            ? "auto.stages.pipeline"
-            : "auto.stages.destinations",
-        )}
-      >
-        {(control) => (
-          <StageParamSelect
-            kind={kind}
-            pipelineId={pipelineId}
-            value={value}
-            onChange={onChange}
-            control={control}
-          />
-        )}
-      </Field>
-    );
-  }
-  if (field.kind === "timezone") {
-    return (
-      <Field label={t("auto.deadlineTimezone")}>
-        {(control) => (
-          <TimezoneSelect {...control} value={value} onChange={onChange} />
-        )}
-      </Field>
-    );
-  }
+  const label = paramLabel(field, t);
   if (field.kind === "boolean") {
     return (
       <div className="field">
@@ -104,68 +70,94 @@ function ParamFieldControl({
       </div>
     );
   }
-  if (
-    field.kind === "live_list" ||
-    field.kind === "shortlist" ||
-    field.kind === "record_list"
-  ) {
-    const kind = field.kind;
-    return (
-      <Field label={label}>
-        {(control) => (
-          <ListParamSelect
-            kind={kind}
-            value={value}
-            watchedList={watchedList}
-            onChange={onChange}
-            control={control}
-            allowedTypes={field.entityTypes}
-          />
-        )}
-      </Field>
-    );
-  }
   return (
-    <Field label={label}>
-      {(control) =>
-        field.kind === "date_field" ? (
-          <DateFieldSelect
-            object={object}
-            value={value}
-            onChange={onChange}
-            control={control}
-          />
-        ) : field.kind === "enum" ? (
-          <Select
-            {...control}
-            options={(field.options ?? []).map((v) => ({
-              value: v,
-              label:
-                field.key === "recipient" &&
-                (v === "record_owner" || v === "authorizer")
-                  ? t(
-                      v === "record_owner"
-                        ? "auto.renewal.recordOwner"
-                        : "auto.renewal.authorizer",
-                    )
-                  : v,
-            }))}
-            value={value}
-            onChange={onChange}
-          />
-        ) : (
-          <TextInput
-            {...control}
-            type={field.kind === "integer" ? "number" : "text"}
-            min={field.min}
-            max={field.max}
-            required
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-          />
-        )
-      }
+    <Field label={label} required={isRequired(field)} error={error}>
+      {(control) => {
+        switch (field.kind) {
+          case "pipeline":
+          case "stages":
+            return (
+              <StageParamSelect
+                kind={field.kind}
+                pipelineId={pipelineId}
+                value={value}
+                onChange={onChange}
+                control={control}
+              />
+            );
+          case "timezone":
+            return (
+              <TimezoneSelect {...control} value={value} onChange={onChange} />
+            );
+          case "live_list":
+          case "shortlist":
+          case "record_list":
+            return (
+              <ListParamSelect
+                kind={field.kind}
+                value={value}
+                watchedList={watchedList}
+                onChange={onChange}
+                control={control}
+                allowedTypes={field.entityTypes}
+              />
+            );
+          case "date_field":
+            return (
+              <DateFieldSelect
+                object={object}
+                value={value}
+                onChange={onChange}
+                control={control}
+              />
+            );
+          case "enum":
+            return (
+              <Select
+                {...control}
+                options={(field.options ?? []).map((option) => ({
+                  value: option,
+                  label: optionLabel(field, option, t),
+                }))}
+                value={value}
+                onChange={onChange}
+              />
+            );
+          default:
+            return (
+              <TextInput
+                {...control}
+                type={field.kind === "integer" ? "number" : "text"}
+                min={field.min}
+                max={field.max}
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+              />
+            );
+        }
+      }}
     </Field>
+  );
+}
+
+// Inside the dialog, so the claim reaches the dialog's own leave question.
+function DraftGuard({ dirty }: Readonly<{ dirty: boolean }>) {
+  useUnsavedGuard(dirty);
+  return null;
+}
+
+function seedValues(
+  fields: readonly ParamField[],
+  initialParams: Automation["params"] | undefined,
+): Record<string, string> {
+  return Object.fromEntries(
+    fields.map((field) => {
+      const configured = initialParams?.[field.key];
+      return [
+        field.key,
+        configured === undefined ? field.initial : scalarText(configured),
+      ];
+    }),
   );
 }
 
@@ -178,7 +170,7 @@ export function AutomationDialog({
   initialParams,
   submitLabel,
   pending,
-  refusal,
+  error,
   onSubmit,
   onClose,
 }: Readonly<{
@@ -188,28 +180,99 @@ export function AutomationDialog({
   initialParams?: Automation["params"];
   submitLabel: string;
   pending: boolean;
-  /** Printed inside the dialog: it covers the row that would report it. */
-  refusal?: ReactNode;
+  /** The server's refusal of the last submit, drawn inside the dialog. */
+  error?: unknown;
   onSubmit: (name: string, params: Record<string, unknown>) => void;
   onClose: () => void;
 }>) {
   const t = useT();
   const formId = useId();
+  const fields = paramFields(entry.params_schema);
+  const [name, setName] = useState(initialName);
+  const [nameBlank, setNameBlank] = useState(false);
+  const [seeded] = useState(() => seedValues(fields, initialParams));
+  const [values, setValues] = useState(seeded);
+  const dirty =
+    name !== initialName ||
+    Object.entries(values).some(([key, value]) => value !== seeded[key]);
+  const labels: FieldLabels = {
+    [NAME]: t("auto.name"),
+    ...Object.fromEntries(
+      fields.map((field) => [`params.${field.key}`, paramLabel(field, t)]),
+    ),
+  };
+  const refused = refusalSentences(error, t, labels);
+  const missing = missingParam(fields, values, t);
+
   return (
     <RecordFormDialog
       open={open}
       title={initialName}
       onClose={onClose}
-      fieldCount={1 + paramFields(entry.params_schema).length}
+      fieldCount={1 + fields.length}
       form={
-        <AutomationForm
-          formId={formId}
-          entry={entry}
-          initialName={initialName}
-          initialParams={initialParams}
-          refusal={refusal}
-          onSubmit={onSubmit}
-        />
+        <form
+          id={formId}
+          className="form-stack"
+          // The form words its own refusals at the field; a browser bubble
+          // would say something else, once, and nowhere a reader can return to.
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            const trimmed = name.trim();
+            if (trimmed === "") {
+              setNameBlank(true);
+              return;
+            }
+            onSubmit(trimmed, paramsFromValues(fields, values));
+          }}
+        >
+          {templateDescription(entry, t) && (
+            <p>{templateDescription(entry, t)}</p>
+          )}
+          <p className="t-caption">{recipeSentence(entry, t)}</p>
+          <Field
+            label={t("auto.name")}
+            required
+            error={
+              nameBlank ? t("auto.nameRequired") : refused.byField.get(NAME)
+            }
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                maxLength={NAME_LIMIT}
+                value={name}
+                onChange={(event) => {
+                  setNameBlank(false);
+                  setName(event.target.value);
+                }}
+              />
+            )}
+          </Field>
+          {fields.map((field) => (
+            <ParamFieldControl
+              key={field.key}
+              field={field}
+              value={values[field.key] ?? field.initial}
+              object={values.object ?? ""}
+              watchedList={values.list_id ?? ""}
+              pipelineId={values.pipeline_id ?? ""}
+              error={refused.byField.get(`params.${field.key}`)}
+              onChange={(next) =>
+                setValues((current) => ({
+                  ...current,
+                  ...(field.kind === "pipeline" && next !== current[field.key]
+                    ? { stage_ids: "[]" }
+                    : {}),
+                  [field.key]: next,
+                }))
+              }
+            />
+          ))}
+          <ErrorLine>{refused.rest}</ErrorLine>
+          <DraftGuard dirty={dirty} />
+        </form>
       }
       actions={
         <>
@@ -223,90 +286,12 @@ export function AutomationDialog({
             form={formId}
             variant="primary"
             pending={pending}
+            reason={missing}
           >
             {submitLabel}
           </Button>
         </>
       }
     />
-  );
-}
-
-export function AutomationForm({
-  formId,
-  entry,
-  initialName,
-  initialParams,
-  refusal,
-  onSubmit,
-}: Readonly<{
-  formId: string;
-  entry: CatalogEntry;
-  initialName: string;
-  initialParams?: Automation["params"];
-  refusal?: ReactNode;
-  onSubmit: (name: string, params: Record<string, unknown>) => void;
-}>) {
-  const t = useT();
-  const fields = paramFields(entry.params_schema);
-  const [name, setName] = useState(initialName);
-  const [seeded] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      fields.map((field) => {
-        const configured = initialParams?.[field.key];
-        return [
-          field.key,
-          configured === undefined ? field.initial : scalarText(configured),
-        ];
-      }),
-    ),
-  );
-  const [values, setValues] = useState(seeded);
-  useUnsavedGuard(
-    name !== initialName ||
-      Object.entries(values).some(([key, value]) => value !== seeded[key]),
-  );
-
-  return (
-    <form
-      id={formId}
-      className="form-stack"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit(name.trim() || entry.name, paramsFromValues(fields, values));
-      }}
-    >
-      {entry.description && <p>{entry.description}</p>}
-      <p className="t-caption">{recipeSentence(entry, t)}</p>
-      <Field label={t("auto.name")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        )}
-      </Field>
-      {fields.map((field) => (
-        <ParamFieldControl
-          key={field.key}
-          field={field}
-          value={values[field.key] ?? field.initial}
-          object={values.object ?? ""}
-          watchedList={values.list_id ?? ""}
-          pipelineId={values.pipeline_id ?? ""}
-          onChange={(next) =>
-            setValues((current) => ({
-              ...current,
-              ...(field.kind === "pipeline" && next !== current[field.key]
-                ? { stage_ids: "[]" }
-                : {}),
-              [field.key]: next,
-            }))
-          }
-        />
-      ))}
-      {refusal}
-    </form>
   );
 }

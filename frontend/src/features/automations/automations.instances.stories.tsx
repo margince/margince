@@ -131,6 +131,11 @@ export const RunHistoryOpen: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await user.click(await body.findByRole("button", { name: "Runs" }));
     await canvas.findByText("This automation has not fired yet.");
+    // The menu closes after the choice and the panel it opened takes focus.
+    await expect(body.queryByRole("button", { name: "Runs" })).toBeNull();
+    await expect(canvasElement.ownerDocument.activeElement).toBe(
+      canvas.getByRole("region", { name: "Run history" }),
+    );
     await expect(
       canvas.queryByRole("combobox", { name: "Outcome" }),
     ).toBeNull();

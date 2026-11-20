@@ -523,7 +523,7 @@ describe("AutomationPreview", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "Read-only dry run. No records are changed and nothing is sent.",
+          "Read-only preview. No records are changed and nothing is sent.",
         ),
       ).toBeTruthy(),
     );

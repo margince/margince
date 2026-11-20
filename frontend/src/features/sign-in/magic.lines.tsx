@@ -394,13 +394,16 @@ function standsForMany(line: MagicLine): boolean {
 /**
  * What to call the record this line is about.
  *
- * The entity's own label first, then the caption the approval was staged under,
- * then the mailbox a connector is failing on. Absent rather than invented: a
- * line naming a record it cannot label still says what happened.
+ * The entity's own label first, then the caption the approval was staged under.
+ * Then the mailbox a connector is failing on, then a failed rule's name. Absent
+ * rather than invented: a line naming a record it cannot label still says what
+ * happened. A sentence never repeats these values, since the subject draws them.
  */
 function subjectLabel(line: MagicLine): string | undefined {
   const values = line.summary.values;
-  return line.entity?.label ?? values?.target ?? values?.account;
+  return (
+    line.entity?.label ?? values?.target ?? values?.account ?? values?.name
+  );
 }
 
 // The record's address, through the entity registry rather than a switch

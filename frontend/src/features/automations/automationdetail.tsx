@@ -3,7 +3,7 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ban, Check, Clock, type LucideIcon, Minus, X } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Badge, Field, SegmentedControl } from "../../design-system/atoms";
@@ -158,7 +158,8 @@ const FILTER_LABELS: Record<Outcome, MessageKey> = {
 export function AutomationRuns({
   automationId,
   titled,
-}: Readonly<{ automationId: string; titled?: boolean }>) {
+  focusKey,
+}: Readonly<{ automationId: string; titled?: boolean; focusKey?: number }>) {
   const t = useT();
   const [outcome, setOutcome] = useState<Outcome | undefined>(undefined);
 
@@ -213,7 +214,11 @@ export function AutomationRuns({
   }
 
   return (
-    <Inspector title={t("auto.runs.title")} titled={titled ?? false}>
+    <Inspector
+      title={t("auto.runs.title")}
+      titled={titled ?? false}
+      focusKey={focusKey}
+    >
       {filterable && (
         <Field label={t("auto.runs.outcome")} className="auto-run-filter">
           {(field) => (
@@ -246,13 +251,29 @@ export function AutomationRuns({
 function Inspector({
   title,
   titled,
+  focusKey,
   children,
-}: Readonly<{ title: string; titled: boolean; children: ReactNode }>) {
+}: Readonly<{
+  title: string;
+  titled: boolean;
+  /** Changes each time a menu choice opens this panel, which then takes focus. */
+  focusKey?: number;
+  children: ReactNode;
+}>) {
   const headingId = useId();
+  const section = useRef<HTMLElement | null>(null);
+  // Passive, so it lands after the menu that opened this puts focus back on
+  // its own trigger.
+  useEffect(() => {
+    if (focusKey !== undefined) section.current?.focus();
+  }, [focusKey]);
   return (
     <section
+      ref={section}
+      tabIndex={-1}
       className="auto-inspector"
       aria-labelledby={titled ? headingId : undefined}
+      aria-label={titled ? undefined : title}
     >
       {titled && (
         <Heading size="xsmall" as="h3" id={headingId}>
@@ -280,7 +301,8 @@ const WINDOW_LABELS: Record<WindowOption, MessageKey> = {
 export function AutomationPreview({
   automationId,
   titled,
-}: Readonly<{ automationId: string; titled?: boolean }>) {
+  focusKey,
+}: Readonly<{ automationId: string; titled?: boolean; focusKey?: number }>) {
   const t = useT();
   const { locale } = useLocale();
   const [windowDays, setWindowDays] = useState<WindowOption>("30");
@@ -303,7 +325,11 @@ export function AutomationPreview({
   };
 
   return (
-    <Inspector title={t("auto.preview.title")} titled={titled ?? false}>
+    <Inspector
+      title={t("auto.preview.title")}
+      titled={titled ?? false}
+      focusKey={focusKey}
+    >
       {!eventPreview && result?.historical_preview_available !== false && (
         <div className="auto-preview-window">
           <span className="t-label">{t("auto.preview.window")}</span>
@@ -382,22 +408,35 @@ export function AutomationInspectors({
   runsOpen,
   previewOpen,
   canConfigure,
+  focus,
 }: Readonly<{
   automationId: string;
   runsOpen: boolean;
   previewOpen: boolean;
   canConfigure: boolean;
+  /** The panel a menu choice just opened, which takes focus. */
+  focus?: Readonly<{ panel: "runs" | "preview"; seq: number }>;
 }>) {
   if (!canConfigure) {
     return null;
   }
+  const focusKey = (panel: "runs" | "preview") =>
+    focus?.panel === panel ? focus.seq : undefined;
   return (
     <>
       {runsOpen && (
-        <AutomationRuns automationId={automationId} titled={previewOpen} />
+        <AutomationRuns
+          automationId={automationId}
+          titled={previewOpen}
+          focusKey={focusKey("runs")}
+        />
       )}
       {previewOpen && (
-        <AutomationPreview automationId={automationId} titled={runsOpen} />
+        <AutomationPreview
+          automationId={automationId}
+          titled={runsOpen}
+          focusKey={focusKey("preview")}
+        />
       )}
     </>
   );

@@ -54,14 +54,15 @@ export const Closed: Story = {
   ),
 };
 
-// Every item shape one menu holds: a label that wraps, a SET row it does not
-// close under, a refused row, and the destructive verb.
+// Every item shape one menu holds: a label that wraps, a refused row and the
+// destructive verb. A SET row, a switch the reader may flip with others, keeps
+// the menu open.
 export const Open: Story = {
   render: () => (
     <OverflowMenu label="More actions">
       <Button>Email everyone on this account</Button>
       <Button>Merge with…</Button>
-      <Button aria-expanded="true">Runs</Button>
+      <Button aria-pressed="true">Show archived items</Button>
       <Button>
         Set up the partner programme for this account and its subsidiaries
       </Button>

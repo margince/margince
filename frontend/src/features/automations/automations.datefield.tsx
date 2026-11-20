@@ -2,12 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../../api/client";
+import { AppLink } from "../../design-system/applink";
 import type { FieldControl } from "../../design-system/atoms";
 import type { SelectOption } from "../../design-system/select";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { routeHash } from "../../lib/router";
+import { settingsHref } from "../../lib/settingsrouting";
 import "./automations.datefield.css";
 
 // renewal_reminder's date_field param (GH-706) names a workspace's own cf_*
@@ -48,6 +52,22 @@ function isCustomFieldQueryObject(
   value: string,
 ): value is CustomFieldQueryObject {
   return CUSTOM_FIELD_QUERY_OBJECTS.has(value);
+}
+
+const RECORDS_SETTINGS_HREF = routeHash(settingsHref("records"));
+
+function WhereDateFieldsAreAdded() {
+  const t = useT();
+  const [before, after = ""] = t("auto.dateField.empty").split("{place}");
+  return (
+    <>
+      {before}
+      <AppLink href={RECORDS_SETTINGS_HREF}>
+        {t("auto.dateField.place")}
+      </AppLink>
+      {after}
+    </>
+  );
 }
 
 export function DateFieldSelect({
@@ -100,13 +120,14 @@ export function DateFieldSelect({
   // fetch behind it failed.
   const disabled =
     !known || fields.isError || (fields.isSuccess && options.length === 0);
-  const hint = !known
-    ? t("auto.dateField.needsObject")
-    : fields.isError
-      ? t("auto.dateField.loadError")
-      : fields.isSuccess && options.length === 0
-        ? t("auto.dateField.empty")
-        : undefined;
+  let hint: ReactNode;
+  if (!known) {
+    hint = t("auto.dateField.needsObject");
+  } else if (fields.isError) {
+    hint = t("auto.dateField.loadError");
+  } else if (fields.isSuccess && options.length === 0) {
+    hint = <WhereDateFieldsAreAdded />;
+  }
 
   return (
     <>
