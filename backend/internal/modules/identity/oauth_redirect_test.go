@@ -4,9 +4,11 @@
 package identity
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 )
@@ -178,5 +180,31 @@ func TestNoIssuerIsSentWhenNoResourceIsConfigured(t *testing.T) {
 		authorizeRequest{RedirectURI: "https://client.example/cb"}, url.Values{"code": {"c1"}})
 	if strings.Contains(w.Header().Get("Location"), oauthParamIssuer+"=") {
 		t.Errorf("Location %q carries iss with no issuer configured", w.Header().Get("Location"))
+	}
+}
+
+// The corpus is shared with
+// frontend/src/features/automations/agent-client-redirect.test.ts, so the
+// register form refuses a URI before sending it exactly when this does.
+func TestValidRedirectURIMatchesTheSharedCorpus(t *testing.T) {
+	t.Parallel()
+	raw, err := os.ReadFile("testdata/redirecturi.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var corpus []struct {
+		Note, URI string
+		Valid     bool
+	}
+	if err := json.Unmarshal(raw, &corpus); err != nil {
+		t.Fatal(err)
+	}
+	if len(corpus) < 20 {
+		t.Fatalf("the corpus holds %d cases, want its full census", len(corpus))
+	}
+	for _, c := range corpus {
+		if got := validRedirectURI(c.URI); got != c.Valid {
+			t.Errorf("%s: validRedirectURI(%q) = %v, the corpus says %v", c.Note, c.URI, got, c.Valid)
+		}
 	}
 }

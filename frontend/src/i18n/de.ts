@@ -10175,6 +10175,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentClients.enable": "Aktivieren",
   "agentClients.disable": "Deaktivieren",
   "agentClients.disabled": "Deaktiviert",
+  "agentClients.active": "Aktiv",
   "agentClients.neverUsed": "Nie",
   "agentClients.usersFolded_one": "Nutzende: {count}",
   "agentClients.usersFolded_other": "Nutzende: {count}",
@@ -10219,6 +10220,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verwende https oder http auf localhost oder 127.0.0.1, ohne Fragment.",
   "agentClients.register.redirectCount":
     "Füge 1 bis 10 Weiterleitungs-URIs hinzu.",
+  "agentClients.register.fixRedirect":
+    "Korrigiere oder entferne die markierte Weiterleitungs-URI.",
   "agentClients.result.title": "Client registriert",
   "agentClients.result.secretOnceTitle": "Kopiere das Secret jetzt",
   "agentClients.result.secretOnceBody":

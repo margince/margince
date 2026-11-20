@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
 import {
+  act,
   cleanup,
   fireEvent,
   screen,
@@ -133,7 +134,7 @@ describe("Register a client", () => {
     const dialog = await openDialog(user);
     await fill(user, dialog, {
       name: "Tool",
-      redirect: "http://evil.test/cb",
+      redirect: "https://tool.example/cb",
     });
     await user.click(
       within(dialog).getByRole("button", { name: "Register client" }),
@@ -250,6 +251,82 @@ describe("Register a client", () => {
     );
     await user.click(form.getByRole("button", { name: /Register client/ }));
     expect(await screen.findByText("Client registered")).toBeTruthy();
+  });
+
+  it("keeps the callbacks closed after an address is added, until the reader types", async () => {
+    const user = userEvent.setup();
+    registering();
+    renderWithClient(<AgentClientsCard />);
+    const dialog = await openDialog(user);
+    const field = within(dialog).getByRole("combobox", {
+      name: /Redirect URIs/,
+    });
+    await user.type(field, "https://example.com/callback{Enter}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    await user.type(field, "http://localhost:1234/cb{Enter}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    await user.keyboard("h");
+    expect(screen.getByRole("listbox")).toBeTruthy();
+  });
+
+  it("refuses a URI the server would refuse as it is added, and marks it", async () => {
+    const user = userEvent.setup();
+    const calls = registering();
+    renderWithClient(<AgentClientsCard />);
+    const dialog = await openDialog(user);
+    const form = within(dialog);
+    await fill(user, dialog, { name: "Tool", redirect: GEMINI_REDIRECT });
+    const field = form.getByRole("combobox", { name: /Redirect URIs/ });
+    await user.type(field, "ftp://x/cb{Enter}");
+    expect(form.queryByRole("button", { name: "Remove ftp://x/cb" })).toBeNull();
+    expect((field as HTMLInputElement).value).toBe("ftp://x/cb");
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(
+      form.getByText(
+        "Use https, or http on localhost or 127.0.0.1, with no fragment.",
+      ),
+    ).toBeTruthy();
+    expect(
+      form.getByText("Fix or remove the marked redirect URI."),
+    ).toBeTruthy();
+    await user.click(form.getByRole("button", { name: /Register client/ }));
+    expect(calls.some((call) => call.key.startsWith("POST"))).toBe(false);
+
+    await user.clear(field);
+    await user.click(form.getByRole("button", { name: /Register client/ }));
+    expect(await screen.findByText("Client registered")).toBeTruthy();
+  });
+
+  it("keeps the secret open on Escape, until Done", async () => {
+    const user = userEvent.setup();
+    registering();
+    renderWithClient(<AgentClientsCard />);
+    const dialog = await openDialog(user);
+    await fill(user, dialog, { name: "Tool", redirect: GEMINI_REDIRECT });
+    await user.click(
+      within(dialog).getByRole("button", { name: "Register client" }),
+    );
+    await screen.findByText("Client registered");
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("textbox", { name: "Client secret" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByText(SECRET)).toBeNull());
+  });
+
+  it("sends one registration for two presses in one render", async () => {
+    const user = userEvent.setup();
+    const calls = registering();
+    renderWithClient(<AgentClientsCard />);
+    const dialog = await openDialog(user);
+    await fill(user, dialog, { name: "Tool", redirect: GEMINI_REDIRECT });
+    const form = dialog.querySelector("form");
+    if (form === null) throw new Error("the dialog has no form");
+    act(() => {
+      form.requestSubmit();
+      form.requestSubmit();
+    });
+    expect(await screen.findByText("Client registered")).toBeTruthy();
+    expect(calls.filter((call) => call.key.startsWith("POST"))).toHaveLength(1);
   });
 
   // Codex sends no secret, so it connects on its own and is not offered here.

@@ -10164,6 +10164,7 @@ export const en = {
   "agentClients.enable": "Enable",
   "agentClients.disable": "Disable",
   "agentClients.disabled": "Disabled",
+  "agentClients.active": "Active",
   "agentClients.neverUsed": "Never",
   "agentClients.usersFolded_one": "{count} user",
   "agentClients.usersFolded_other": "{count} users",
@@ -10205,6 +10206,7 @@ export const en = {
   "agentClients.register.redirectInvalid":
     "Use https, or http on localhost or 127.0.0.1, with no fragment.",
   "agentClients.register.redirectCount": "Add 1 to 10 redirect URIs.",
+  "agentClients.register.fixRedirect": "Fix or remove the marked redirect URI.",
   "agentClients.result.title": "Client registered",
   "agentClients.result.secretOnceTitle": "Copy the secret now",
   "agentClients.result.secretOnceBody":

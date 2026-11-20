@@ -9893,6 +9893,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentClients.enable": "Bật",
   "agentClients.disable": "Tắt",
   "agentClients.disabled": "Đã tắt",
+  "agentClients.active": "Đang hoạt động",
   "agentClients.neverUsed": "Chưa dùng",
   "agentClients.usersFolded_one": "{count} thành viên",
   "agentClients.usersFolded_other": "{count} thành viên",
@@ -9934,6 +9935,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentClients.register.redirectInvalid":
     "Dùng https, hoặc http trên localhost hay 127.0.0.1, không có phân đoạn sau dấu #.",
   "agentClients.register.redirectCount": "Thêm từ 1 đến 10 URI chuyển hướng.",
+  "agentClients.register.fixRedirect":
+    "Sửa hoặc xóa URI chuyển hướng được đánh dấu.",
   "agentClients.result.title": "Đã đăng ký ứng dụng",
   "agentClients.result.secretOnceTitle": "Sao chép khóa bí mật ngay",
   "agentClients.result.secretOnceBody":
