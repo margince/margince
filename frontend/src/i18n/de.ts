@@ -3032,6 +3032,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.placeholder": "Suchen oder Margince fragen",
   "palette.empty": "Keine Treffer.",
   "palette.recent": "Zuletzt verwendet",
+  "palette.recentSearch": "Suche",
   "palette.clearRecent": "Leeren",
   "palette.filter": "Nur zeigen",
   "palette.filterAll": "Alle",

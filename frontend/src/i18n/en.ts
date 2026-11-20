@@ -2937,6 +2937,7 @@ export const en = {
   "palette.placeholder": "Search or ask Margince",
   "palette.empty": "No matches.",
   "palette.recent": "Recent",
+  "palette.recentSearch": "Search",
   "palette.clearRecent": "Clear",
   "palette.filter": "Show only",
   "palette.filterAll": "All",

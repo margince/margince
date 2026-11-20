@@ -2939,6 +2939,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "palette.placeholder": "Tìm kiếm hoặc hỏi Margince",
   "palette.empty": "Không có kết quả.",
   "palette.recent": "Gần đây",
+  "palette.recentSearch": "Tìm kiếm",
   "palette.clearRecent": "Xóa",
   "palette.filter": "Chỉ hiện",
   "palette.filterAll": "Tất cả",
