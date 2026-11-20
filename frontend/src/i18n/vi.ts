@@ -945,6 +945,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Ngày đến",
   "reporting.enteredOn": "Ngày vào giai đoạn",
   "reporting.accruedOn": "Ngày ghi nhận",
+  "reporting.introducedOn": "Ngày giới thiệu",
+  "reporting.bookedOn": "Ngày đặt",
   "reporting.commissionAmount": "Hoa hồng",
   "reporting.hoursUnit": "Giờ",
   "reporting.outOf": "Trên tổng {total}",

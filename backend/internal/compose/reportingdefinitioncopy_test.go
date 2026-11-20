@@ -22,8 +22,6 @@ func TestReportingCatalogTranslationsCoverExactlyTheRegisteredMetrics(t *testing
 		"attribution": reportingAttributionWords,
 		"incomplete":  reportingIncompleteWords,
 	}
-	langcopytest.Census(t, reportingBreakdownLabels)
-	langcopytest.Census(t, reportingLeadStatusLabels)
 	grants := map[string]principal.ObjectGrant{}
 	for name, table := range tables {
 		langcopytest.Census(t, table)

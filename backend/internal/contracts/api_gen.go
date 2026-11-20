@@ -21664,6 +21664,7 @@ const (
 	ReportingMetricIDClosedWinRate                 ReportingMetricID = "closed_win_rate"
 	ReportingMetricIDForecastLanding               ReportingMetricID = "forecast_landing"
 	ReportingMetricIDInitiativePipeline            ReportingMetricID = "initiative_pipeline"
+	ReportingMetricIDIntroductionsMade             ReportingMetricID = "introductions_made"
 	ReportingMetricIDLeadCohortOutcomes            ReportingMetricID = "lead_cohort_outcomes"
 	ReportingMetricIDLeadFirstResponse             ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves               ReportingMetricID = "lead_status_moves"
@@ -21672,6 +21673,7 @@ const (
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
 	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
+	ReportingMetricIDMeetingsBookedForColleagues   ReportingMetricID = "meetings_booked_for_colleagues"
 	ReportingMetricIDMeetingsHeld                  ReportingMetricID = "meetings_held"
 	ReportingMetricIDOpenPipeline                  ReportingMetricID = "open_pipeline"
 	ReportingMetricIDPartnerActivity               ReportingMetricID = "partner_activity"
@@ -21702,6 +21704,8 @@ func (e ReportingMetricID) Valid() bool {
 		return true
 	case ReportingMetricIDInitiativePipeline:
 		return true
+	case ReportingMetricIDIntroductionsMade:
+		return true
 	case ReportingMetricIDLeadCohortOutcomes:
 		return true
 	case ReportingMetricIDLeadFirstResponse:
@@ -21717,6 +21721,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadsPromoted:
 		return true
 	case ReportingMetricIDLeadsQualified:
+		return true
+	case ReportingMetricIDMeetingsBookedForColleagues:
 		return true
 	case ReportingMetricIDMeetingsHeld:
 		return true
