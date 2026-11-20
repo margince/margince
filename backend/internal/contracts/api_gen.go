@@ -32825,7 +32825,7 @@ type AccessPreview struct {
 		Object    string                           `json:"object"`
 	} `json:"field_masks"`
 
-	// IdentityRead Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+	// IdentityRead Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
 	IdentityRead *AccessPreviewIdentityRead `json:"identity_read,omitempty"`
 
 	// MemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
@@ -32845,7 +32845,7 @@ type AccessPreview struct {
 // AccessPreviewFieldMasksCondition defines model for AccessPreview.FieldMasks.Condition.
 type AccessPreviewFieldMasksCondition string
 
-// AccessPreviewIdentityRead Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+// AccessPreviewIdentityRead Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
 type AccessPreviewIdentityRead string
 
 // AccessPreviewMemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
@@ -60446,6 +60446,15 @@ type Problem struct {
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
 	// `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
 	// The `Retry-After` header says how many seconds until the call can succeed.
+	//
+	// A 403 that the caller's roles answer carries `missing_grant`: what those roles
+	// lack, in the notation the tool table uses for a tool's requirement, with
+	// alternatives joined by `,`. An object action (`deal.update`, `deal.create|update`)
+	// is a grant an admin adds to a role. `admin` asks for the admin role, and
+	// `scope:team` for a role whose row scope reaches team records or more. Each is
+	// lifted by an admin changing the caller's roles. A refusal that no role change
+	// lifts, such as a Deal Room participant's or a record kind the installation
+	// switched off, carries none.
 	Details *map[string]interface{} `json:"details,omitempty"`
 
 	// Instance URI of the specific occurrence.

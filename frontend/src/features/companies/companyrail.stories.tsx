@@ -148,6 +148,16 @@ function Rail({
     // (useMe's no-authorization fallback) and no field would be editable.
     "GET /me": me,
     "GET /records/company/o-1/lists": () => jsonResponse({ data: onLists }),
+    "GET /records/company/o-1/tags": () =>
+      jsonResponse({
+        data: (view?.tags ?? []).map((tag) => ({
+          tag_id: tag.id,
+          name: tag.name,
+          archived: false,
+          assigned_at: "2026-06-01T09:00:00Z",
+        })),
+        withheld: false,
+      }),
     // Payment is the third health meter, sourced from usePaymentHealth off
     // this endpoint rather than off view.health. A no_connection reply
     // leaves payment undefined and the meter never draws, so every story in

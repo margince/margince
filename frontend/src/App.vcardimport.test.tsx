@@ -12,9 +12,15 @@ import {
   sessionOnlyFetch,
   teardownApp,
 } from "./testing/appharness";
+import { meFixture, READS_RECORDS } from "./testing/mefixture";
 // The screens these cases open, loaded while the file is collected. A screen's
 // first import costs seconds; inside a case it races the case's own waiters.
 import "./features/contacts/contacts";
+
+// The import writes contacts, so the seat holds the two grants it asks.
+const IMPORTER = meFixture({
+  allow: { ...READS_RECORDS, contact: ["read", "create", "update"] },
+});
 
 // `#/contacts/import` is asserted through the real router, shell and trail:
 // the screens alone cannot see `import` being read as a contact id.
@@ -42,7 +48,16 @@ beforeEach(() => {
     value: ["en-US"],
     configurable: true,
   });
-  fetchSpy = vi.fn(sessionOnlyFetch());
+  const session = sessionOnlyFetch();
+  fetchSpy = vi.fn(async (input: Request | string | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (!url.endsWith("/v1/me")) {
+      return session(input);
+    }
+    return new Response(JSON.stringify(IMPORTER), {
+      headers: { "Content-Type": "application/json" },
+    });
+  });
   vi.stubGlobal("fetch", fetchSpy);
 });
 

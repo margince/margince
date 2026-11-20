@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -19,7 +19,7 @@ import "./contact360.css";
 //
 // The two stories differ in the ONE fact the modal reads off the record:
 // whether this contact already holds a job nobody has ended. That decides
-// whether "current employer" starts ticked, and a box that started on the
+// whether "primary employer" starts ticked, and a box that started on the
 // other answer would show a state the save never writes.
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -115,6 +115,23 @@ export const FirstEmployer: Story = {
 export const AlongsideACurrentJob: Story = {
   render: panel(HOLDS_A_JOB),
   play: openTheDialog,
+};
+
+// A past job, entered in one step. Former takes the primary box away: a job
+// that has ended cannot be the one they hold now.
+export const PastJob: Story = {
+  render: panel(NO_JOB),
+  play: async (context) => {
+    await openTheDialog(context);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("combobox", { name: "Employment status" }),
+    );
+    await user.click(screen.getByRole("option", { name: "Former" }));
+    await expect(
+      screen.getByRole("checkbox", { name: "This is their primary employer" }),
+    ).toBeDisabled();
+  },
 };
 
 // The same dialog in the dark theme: the overlay, the modal ground and the

@@ -69,8 +69,6 @@ function Details({
         data: [{ id: PARENT, display_name: "Brandt Holding AG" }],
         page: { has_more: false, next_cursor: null },
       }),
-    [`GET /records/company/${record.id}/tags`]: () =>
-      jsonResponse({ data: [], withheld: false }),
   });
   return (
     <StoryProviders>

@@ -5,8 +5,8 @@
 // (lib/problem.ts), never in the server's own words.
 //
 // The server composes a refusal's detail from its error text, so a raw
-// `permission_denied` reads "contact.update: permission denied". Rendering it
-// shows the refused reader the shape of the authority model.
+// `permission_denied` reads "your role does not grant update on contact", in
+// English only. Rendering it shows the refused reader the shape of the authority model.
 // `problemMessageOf` replaces that arm with catalog copy.
 //
 // The subject set is every `catch` binding under src/, found by parsing, so a

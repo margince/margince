@@ -21,6 +21,7 @@ import {
   answerless,
   type CreateField,
   dayOutOfRange,
+  type FormRow,
   type FormRows,
   fieldLabel,
   rowsRequirementMet,
@@ -32,6 +33,7 @@ import {
   offeredHint,
   usePrefilledPick,
 } from "./create.offered";
+import { repeatedRowValue } from "./createrows";
 import { RepeatableRowsField } from "./repeatablerowsfield";
 import "./create.css";
 
@@ -43,6 +45,16 @@ export const SUBMIT_COPY = {
 } as const satisfies Record<string, { label: MessageKey; busy: MessageKey }>;
 
 export type SubmitIntent = keyof typeof SUBMIT_COPY;
+
+function repeatedRowRefusal(
+  field: CreateField,
+  rows: readonly FormRow[],
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  const valueKey = field.rowFields?.[0]?.key;
+  const value = valueKey ? repeatedRowValue(rows, valueKey) : undefined;
+  return value === undefined ? undefined : t("field.rowRepeated", { value });
+}
 
 // Fields, error and Cancel/Save, shared by create and edit: only the values'
 // origin and the submit intent differ, and those stay with each modal's owner.
@@ -148,6 +160,9 @@ export function RecordFormBody({
     shown.flatMap((field) => {
       if (answerless(field)) return [];
       const refusal =
+        (field.rowsUnique
+          ? repeatedRowRefusal(field, rows[field.key] ?? [], t)
+          : undefined) ??
         field.validate?.(values[field.key] ?? "", values, rows) ??
         ownCheck(field, values[field.key] ?? "", touched, locale, t);
       return refusal ? [[field.key, refusal] as const] : [];
@@ -214,9 +229,11 @@ export function RecordFormBody({
               field={field}
               formId={formId}
               labelHidden={titledByDialog}
+              error={refusals.get(field.key) ?? faults.of(field.key)}
               rows={rows[field.key] ?? []}
               setRows={(next) => {
                 setEdited(true);
+                faults.edited(field.key);
                 setRows({ ...rows, [field.key]: next });
               }}
             />
@@ -228,6 +245,7 @@ export function RecordFormBody({
               key={field.key}
               field={field}
               labelHidden={titledByDialog}
+              error={refusals.get(field.key) ?? faults.of(field.key)}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })

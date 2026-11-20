@@ -10,12 +10,15 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
-import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
 import { searchCompanyCandidates } from "./contactemployers";
+import {
+  type EmploymentStatusChoice,
+  EmploymentStatusFields,
+} from "./employmentstatusfields";
 import "../../design-system/querystates.css";
 
 type Item = components["schemas"]["EmploymentImportItem"];
@@ -250,7 +253,7 @@ function EmploymentMatchModal({
   const [domain, setDomain] = useState(item.domain ?? "");
   const [started, setStarted] = useState(item.started ?? "");
   const [ended, setEnded] = useState(item.ended ?? "");
-  const [status, setStatus] = useState<"current" | "former" | "">(
+  const [status, setStatus] = useState<EmploymentStatusChoice>(
     item.employment_status === "unknown" ? "" : item.employment_status,
   );
   return (
@@ -299,33 +302,14 @@ function EmploymentMatchModal({
             />
           )}
         </Field>
-        <Field label={t("employment.end")} hint={t("employment.dateHint")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={ended}
-              onChange={(e) => setEnded(e.target.value)}
-              disabled={pending}
-            />
-          )}
-        </Field>
-        <Field label={t("employment.statusLabel")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={status}
-              placeholder={t("employment.keepImportedStatus")}
-              onChange={(value) => {
-                if (value === "current" || value === "former") setStatus(value);
-              }}
-              options={[
-                { value: "current", label: t("employment.status.current") },
-                { value: "former", label: t("employment.status.former") },
-              ]}
-              disabled={pending}
-            />
-          )}
-        </Field>
+        <EmploymentStatusFields
+          status={status}
+          onStatusChange={setStatus}
+          end={ended}
+          onEndChange={setEnded}
+          disabled={pending}
+          statusPlaceholder={t("employment.keepImportedStatus")}
+        />
         <ErrorLine error={error} />
       </div>
       <div className="actions">
