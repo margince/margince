@@ -16,7 +16,7 @@ import { useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import { useCreateOrFindTag, useTagVocabulary } from "../lib/tags.queries";
-import { CreateTagWay, TagListFooter } from "./tagwayforward";
+import { CreateTagWay, TagListFooter, useEmptyTagWords } from "./tagwayforward";
 
 export type PickedTag = Readonly<{ id: string; name: string }>;
 
@@ -41,6 +41,7 @@ export function TagVerbs({
   const vocabulary = useTagVocabulary();
   const create = useCreateOrFindTag();
   const canCreate = useCan("tag", "create");
+  const emptyWords = useEmptyTagWords(vocabulary, canCreate);
   const [picked, setPicked] = useState<PickedTag | null>(null);
   const options = useMemo(
     () =>
@@ -78,13 +79,8 @@ export function TagVerbs({
         }}
         selected={picked?.id}
         options={vocabulary.isError ? [] : options}
-        empty={
-          vocabulary.isError
-            ? problemMessageOf(vocabulary.error, t)
-            : canCreate
-              ? t("tags.noMatchYouCanCreate")
-              : t("tags.noMatch")
-        }
+        empty={emptyWords.empty}
+        none={emptyWords.none}
         emptyAction={
           canCreate && !vocabulary.isError
             ? (term, done) => (

@@ -1838,6 +1838,22 @@
                 "null"
               ],
               "default": true
+            },
+            "unused_limit": {
+              "description": "Most clients that AI tools made themselves (at /oauth/register or by a metadata document) and that no sign-in has used yet; a new one past it removes the oldest such client.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "default": 1000
+            },
+            "unused_retention": {
+              "description": "How long a client an AI tool made itself, and that no sign-in has used, is kept before the hourly sweep deletes it.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": "24h0m0s"
             }
           }
         },

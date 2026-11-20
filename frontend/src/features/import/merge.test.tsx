@@ -145,7 +145,7 @@ describe("the contact merge picker", () => {
     );
     expect(
       within(dialog).getByText(
-        "Merge Anna Berg into Anna Berg (Company B · a.berg@example.com)? This archives Anna Berg.",
+        "Merge Anna Berg into Anna Berg (Company B · a.berg@example.com)? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty standard fields from it. The other is archived and keeps its custom field values. A merge cannot be undone.",
       ),
     ).toBeTruthy();
   });

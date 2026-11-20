@@ -1,8 +1,16 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { translate } from "../../i18n";
+import { de } from "../../i18n/de";
+import { en } from "../../i18n/en";
+import { vi } from "../../i18n/vi";
 import { readerTask, sentenceTitled, whenText } from "../../lib/worklistcopy";
-import { taskRow } from "../../testing/brief.fixtures";
-import { noticeDetail, sharedResponsibility } from "./worklist.reader";
+import { failedApprovalRow, taskRow } from "../../testing/brief.fixtures";
+import {
+  codedDetail,
+  EFFECT_FAILURE_WORDS,
+  noticeDetail,
+  sharedResponsibility,
+} from "./worklist.reader";
 
 const t = (
   key: Parameters<typeof translate>[1],
@@ -255,4 +263,37 @@ it("reads a task's due moment by its time-of-day flag", () => {
   expect(when("2026-09-16T15:00:00Z", true)).toBe(
     t("worklist.when.due", { when: "16/09/2026, 15:00" }),
   );
+});
+
+describe("an approved change that did not take effect", () => {
+  const failed = failedApprovalRow();
+
+  it.each(Object.entries(EFFECT_FAILURE_WORDS))(
+    "words %s in every language",
+    (_, key) => {
+      for (const catalog of [en, de, vi])
+        expect(catalog[key].trim()).not.toBe("");
+      expect(de[key]).not.toBe(en[key]);
+      expect(vi[key]).not.toBe(en[key]);
+    },
+  );
+
+  it("reads in the reader's language on the row and in its why", () => {
+    const lapsed = { ...failed, effect_failure_code: "approval_lapsed" };
+    const german = (key: Parameters<typeof translate>[1]) =>
+      translate("de", key);
+    expect(noticeDetail(lapsed, viewer, german)).toBe(
+      de["worklist.effectFailure.approval_lapsed"],
+    );
+    expect(codedDetail(lapsed, german)).toBe(
+      de["worklist.effectFailure.approval_lapsed"],
+    );
+  });
+
+  it("keeps the server's sentence for an absent or unknown code", () => {
+    expect(noticeDetail(failed, viewer, t)).toBe(failed.detail);
+    expect(
+      codedDetail({ ...failed, effect_failure_code: "newer_code" }, t),
+    ).toBe(failed.detail);
+  });
 });

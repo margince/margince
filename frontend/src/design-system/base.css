@@ -714,3 +714,23 @@ kbd {
     filter: brightness(0.96);
   }
 }
+
+/* A floating layer lifted into the top layer (toplayer.ts) carries
+   popover="manual". The browser's own popover box (inset 0, auto margin,
+   border, padding, Canvas colours, scrolling, fit-content size) is put back
+   to the initial values at zero specificity, so each component's rules place
+   and paint it as they did before. Such a layer is mounted only while it is
+   open, so it is laid out from its first render: a placement that measures it
+   before showPopover() runs reads its real box. */
+:where([popover]) {
+  display: block;
+  inset: auto;
+  inline-size: auto;
+  block-size: auto;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  overflow: visible;
+  color: inherit;
+  background: none;
+}

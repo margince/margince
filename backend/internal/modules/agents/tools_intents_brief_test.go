@@ -151,7 +151,7 @@ func TestEveryRecordTheBriefNamesIsChargedToTheReadBound(t *testing.T) {
 	)}
 	tool := prepForMeeting{retriever: inertRetriever{}, brief: stub.read}
 
-	ctx, facts := withEnvelopeFacts(context.Background())
+	ctx, facts := withEnvelopeFacts(context.Background(), tool.Spec())
 	args, err := json.Marshal(map[string]any{
 		"record_type": string(datasource.EntityActivity), "record_id": meeting,
 	})

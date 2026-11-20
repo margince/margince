@@ -235,7 +235,7 @@ describe("AuditLogCard", () => {
     render(<AuditLogCard />);
     expect(
       await screen.findByRole("button", {
-        name: "Show change detail: Created on onboarding wizard state",
+        name: `Show change detail: Created on ${en["audit.kind.onboarding_wizard_state"]}`,
       }),
     ).toBeInTheDocument();
   });
@@ -254,7 +254,9 @@ describe("AuditLogCard", () => {
     const cells = within(row).getAllByRole("cell");
     expect(cells[1]).toHaveTextContent("Anna Weber");
     expect(cells[2]).toHaveTextContent("Created");
-    expect(cells[3]).toHaveTextContent("onboarding wizard state");
+    expect(cells[3]).toHaveTextContent(
+      en["audit.kind.onboarding_wizard_state"],
+    );
   });
 
   it.each([

@@ -4,7 +4,8 @@
 import type { components } from "../api/schema";
 import { Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { forReader } from "../format/collate";
+import { type Locale, useLocale, useT } from "../i18n";
 import {
   RosterFailedLine,
   useRoster,
@@ -62,12 +63,18 @@ export function userOption(entry: {
     : { value: entry.id, label: entry.id };
 }
 
+// By name, in the order the owner filter of a list uses, so one colleague sits
+// in one place in every list of colleagues.
 function ownerOptions(
   roster: ReturnType<typeof useRoster>,
   admits: (entry: RosterEntry) => boolean,
+  locale: Locale,
 ): UserOptions {
   return {
-    options: (roster.data ?? []).filter(admits).map(userOption),
+    options: (roster.data ?? [])
+      .filter(admits)
+      .map(userOption)
+      .sort((a, b) => forReader(a.label, b.label, locale)),
     roster,
   };
 }
@@ -77,7 +84,8 @@ function ownerOptions(
  * this, and so does a website form's owner of new leads.
  */
 export function useRecordOwnerOptions(enabled = true): UserOptions {
-  return ownerOptions(useRoster("user", enabled), mayOwnRecords);
+  const { locale } = useLocale();
+  return ownerOptions(useRoster("user", enabled), mayOwnRecords, locale);
 }
 
 /**
@@ -85,12 +93,14 @@ export function useRecordOwnerOptions(enabled = true): UserOptions {
  * and lies inside the reader's own write scope, as the server answers it.
  */
 export function useRunAsOwnerOptions(enabled = true): UserOptions {
+  const { locale } = useLocale();
   return ownerOptions(
     useRoster("user", enabled),
     (entry) =>
       mayOwnRecords(entry) &&
       "display_name" in entry &&
       entry.assignable !== false,
+    locale,
   );
 }
 
@@ -189,7 +199,7 @@ export function namedColleaguesFirst(
 
 /**
  * The assignee picker for a task being written: the workspace's contacts, less
- * agent seats, plus a leading "Unassigned".
+ * agent seats, plus a leading "Me". A task that names nobody goes to its writer.
  *
  * Renders nothing while `active` is false, and its roster walk is deferred to
  * that same flag — a note or meeting is not held by a colleague, so neither the
@@ -222,7 +232,7 @@ export function TaskAssigneeField({
         {(control) => (
           <Select
             {...control}
-            options={[{ value: "", label: t("log.unassigned") }, ...options]}
+            options={[{ value: "", label: t("log.assigneeMe") }, ...options]}
             value={value}
             onChange={onChange}
           />

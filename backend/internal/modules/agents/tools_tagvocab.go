@@ -200,10 +200,11 @@ type mergeTags struct {
 func (t mergeTags) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "merge_tags", Title: "Fold one tag into another", Version: toolVersionV1,
-		AskUserFirst:  true,
-		Description:   mergeTagsCopy.render(),
-		Instead:       mergeTagsCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		ProductMadeAnswer: true,
+		AskUserFirst:      true,
+		Description:       mergeTagsCopy.render(),
+		Instead:           mergeTagsCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
 		Unlisted:  true,
 		OpenAPIOp: "mergeTags",
 		InputSchema: schema(`{"type":"object","required":["tag_id","into_tag_id"],"properties":{

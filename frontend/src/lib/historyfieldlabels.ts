@@ -1,5 +1,6 @@
 import { profileFieldLabelKey } from "../format/companyprofilelabels";
 import type { MessageKey } from "../i18n/en";
+import { ADDRESS_COLUMN_LABELS } from "./addresscolumns";
 
 // What a changed field is CALLED, for a reader who never sees a column name
 // anywhere else on the record.
@@ -105,14 +106,9 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 // Apart from both maps above, because no `Update<Type>Request` names these and
 // no hand-built image writes them, so each census would call them orphans.
 // The address parts are the record's columns; the request nests them under
-// `address`, and they take the words the Address dialog shows.
+// `address`, and they read the words the Address dialog reads.
 const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
-  ["address_line1", "create.addressLine1"],
-  ["address_line2", "create.addressLine2"],
-  ["address_postal_code", "create.postalCode"],
-  ["address_city", "create.city"],
-  ["address_region", "create.region"],
-  ["address_country", "create.country"],
+  ...ADDRESS_COLUMN_LABELS,
   ["stage_id", "history.field.stage_id"],
   ["win_probability_override", "history.field.win_probability_override"],
   ["win_probability_set_by", "history.field.win_probability_set_by"],

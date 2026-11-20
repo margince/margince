@@ -255,13 +255,19 @@ func validAgentClientInput(in RegisterAgentClientInput) (string, []string, error
 			uris = append(uris, uri)
 		}
 	}
-	if len(uris) == 0 || len(uris) > maxAgentClientRedirects {
+	if len(uris) == 0 || !withinRedirectLimit(uris) {
 		return "", nil, &InvalidAgentClientFieldError{
 			Field: agentClientFieldURIs, Code: "redirect_uri_count",
 			Message: fmt.Sprintf("give 1 to %d redirect URIs", maxAgentClientRedirects),
 		}
 	}
 	return name, uris, nil
+}
+
+// withinRedirectLimit is the one bound on how many redirect URIs a client holds,
+// whether an admin typed them or the client registered itself.
+func withinRedirectLimit(uris []string) bool {
+	return len(uris) <= maxAgentClientRedirects
 }
 
 // RotateAgentClientSecret replaces an admin-registered client's secret. The old one

@@ -6,6 +6,7 @@ import { Button } from "./atoms";
 import { coveredByDialog } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
 import { usePortalPanelFocus } from "./portalfocus";
+import { useTopLayer } from "./toplayer";
 import type { ConfidenceLevel, Provenance } from "./trust";
 import { ProvenanceTag } from "./trust";
 import "./evidencemark.css";
@@ -79,6 +80,7 @@ export function EvidenceMark({
   const panelId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
+  useTopLayer(panelRef, open);
   // The receipt opens under a pointer that has SETTLED on the value, and
   // closes once the pointer has left both the value and the receipt: a claim
   // is checked by resting on it, not by clicking through to it. The click
@@ -190,6 +192,7 @@ export function EvidenceMark({
           // a screen reader can jump to, and only one is ever open.
           <section
             ref={panelRef}
+            popover="manual"
             id={panelId}
             className="evmark-panel"
             aria-label={t("evidence.explain", { value: subject })}

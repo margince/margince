@@ -552,6 +552,23 @@ describe("Call on a logged call", () => {
     expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
   });
 
+  it("titles a call logged with no subject by how it ended", () => {
+    renderCard(
+      viewWith([
+        { ...callRow, subject: null, body: null, call_outcome: "reached" },
+      ]),
+    );
+
+    expect(screen.getByText("Reached")).toBeTruthy();
+  });
+
+  it("says how a call with a subject ended beside its kind", () => {
+    renderCard(viewWith([{ ...callRow, call_outcome: "voicemail" }]));
+
+    expect(screen.getByText("Called about the renewal")).toBeTruthy();
+    expect(screen.getByText(/Call · Left a voicemail · /)).toBeTruthy();
+  });
+
   it("offers no Call when the contact has no phone", () => {
     renderCard(viewWith([callRow]));
 

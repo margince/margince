@@ -201,7 +201,7 @@ Open **Targets** and choose a figure that takes a target. Sales won, qualified p
 Two of these figures count work done for colleagues:
 
 - **Introductions made**: the introductions a colleague made between another colleague and a contact. An asked introduction counts on the day it was completed. One recorded afterwards counts on the day it was recorded, not on the date it names. Permission to mention a name does not count.
-- **Meetings booked for colleagues**: the meetings a colleague booked, or had an agent book, for another colleague to host. They are counted on the day of booking, for the host the booking named. A meeting you host yourself does not count. Neither does a meeting entered after it took place, an imported one, or one from a transcript, a calendar sync or a public booking page. A booking cancelled later still counts.
+- **Meetings booked for colleagues**: the meetings a colleague booked, or had an agent book, for another colleague to host. They count for the colleague who booked them, on the day of booking. A meeting you host yourself does not count. Neither does a meeting entered after it took place, an imported one, or one from a transcript, a calendar sync or a public booking page. A booking cancelled later still counts.
 
 An introduction someone asked for is visible only to the two colleagues in it. For anyone else it is left out of these figures.
 

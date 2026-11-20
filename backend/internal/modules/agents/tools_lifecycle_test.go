@@ -444,14 +444,25 @@ func advertisedEnum(t *testing.T, inputSchema json.RawMessage, arg string) []str
 // So the assertion is made against the schema's own spelling, read out of the
 // spec rather than restated here.
 func TestRelinkTierReadsTheArgumentShapeTheToolActuallyDeclares(t *testing.T) {
-	// The three relink doors share one resolver and one argument name; each
-	// is walked with the body its own InputSchema declares.
+	// The two relink doors that can be confirmed share one resolver and one
+	// argument name; each is walked with the body its own InputSchema declares.
 	for name, spec := range map[string]mcp.ToolSpec{
 		"relink_activity":   relinkActivity{}.Spec(),
-		"relink_thread":     relinkThread{}.Spec(),
 		"relink_activities": relinkActivities{}.Spec(),
 	} {
 		t.Run(name, func(t *testing.T) { assertRelinkTierReadsEntityType(t, name, spec) })
+	}
+}
+
+// A thread move is raised to confirmation whatever its destination, so it
+// always reaches the staging refusal and never runs a whole conversation.
+func TestEveryThreadMoveNeedsConfirmation(t *testing.T) {
+	spec := relinkThread{}.Spec()
+	for _, destination := range []string{"project", "contact", "company", "deal", "lead"} {
+		args := json.RawMessage(`{"thread_key":"t","entity_type":"` + destination + `","entity_id":"` + ids.NewV7().String() + `"}`)
+		if got := spec.TierResolver(mcp.TierResolverInput{Args: args}); got != mcp.TierConfirmationRequired {
+			t.Errorf("relink_thread onto %s resolved tier %v, want confirmation required", destination, got)
+		}
 	}
 }
 

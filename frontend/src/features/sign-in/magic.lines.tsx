@@ -80,6 +80,13 @@ export function MagicLaneSection({
   );
 }
 
+// A sentence that is a whole clause sets its record off after it as a label.
+// Other lines read as one phrase that runs into their record.
+const SUBJECT_AS_LABEL: ReadonlySet<string> = new Set([
+  "magic.action.automation_troubled",
+  "magic.action.approval_capture_counterparty",
+]);
+
 function MagicLineRow({
   line,
   since,
@@ -116,7 +123,13 @@ function MagicLineRow({
         </div>
       ) : (
         <p className="magic-line-text">
-          {lineSentence(line, t)} <LineSubject line={line} since={since} />{" "}
+          {lineSentence(line, t)}{" "}
+          {SUBJECT_AS_LABEL.has(line.summary.key) && subjectLabel(line) && (
+            <span className="magic-line-sep" aria-hidden="true">
+              ·
+            </span>
+          )}
+          <LineSubject line={line} since={since} />{" "}
           {detail.length > 0 && (
             <span className="t-caption">
               {detail.map((part) => (
@@ -394,13 +407,16 @@ function standsForMany(line: MagicLine): boolean {
 /**
  * What to call the record this line is about.
  *
- * The entity's own label first, then the caption the approval was staged under,
- * then the mailbox a connector is failing on. Absent rather than invented: a
- * line naming a record it cannot label still says what happened.
+ * The entity's own label first, then the caption the approval was staged under.
+ * Then the mailbox a connector is failing on, then a failed rule's name. Absent
+ * rather than invented: a line naming a record it cannot label still says what
+ * happened. A sentence never repeats these values, since the subject draws them.
  */
 function subjectLabel(line: MagicLine): string | undefined {
   const values = line.summary.values;
-  return line.entity?.label ?? values?.target ?? values?.account;
+  return (
+    line.entity?.label ?? values?.target ?? values?.account ?? values?.name
+  );
 }
 
 // The record's address, through the entity registry rather than a switch

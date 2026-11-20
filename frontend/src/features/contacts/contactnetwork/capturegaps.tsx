@@ -25,6 +25,21 @@ function useContactCaptureGaps(id: string) {
   });
 }
 
+// The last answer was a failure, also while a retry runs. The notice's own
+// mount starts one, and hiding the failure then would drop its Retry.
+function readFailed(network: ReturnType<typeof useContactCaptureGaps>) {
+  return network.errorUpdatedAt > network.dataUpdatedAt;
+}
+
+/**
+ * Whether CaptureGapsNotice draws anything, for a host that must not frame
+ * nothing. It reads the notice's own query, so it asks the server nothing new.
+ */
+export function useCaptureGapsShown(contactId: string): boolean {
+  const network = useContactCaptureGaps(contactId);
+  return readFailed(network) || (network.data?.capture_gaps ?? []).length > 0;
+}
+
 /**
  * CaptureGapsNotice says that later mail may be missing because a colleague on
  * the threads has not connected a mailbox. It draws nothing when there is none,
@@ -39,7 +54,7 @@ export function CaptureGapsNotice({
   const plural = usePlural();
   const { locale } = useLocale();
   const network = useContactCaptureGaps(contactId);
-  if (network.isError) {
+  if (readFailed(network)) {
     return (
       <ErrorLine
         actions={

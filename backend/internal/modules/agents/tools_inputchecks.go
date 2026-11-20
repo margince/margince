@@ -37,10 +37,11 @@ type listInputChecks struct {
 func (t listInputChecks) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "list_input_checks", Title: "What the forecast's inputs still need",
-		Version:       toolVersionV1,
-		Description:   listInputChecksCopy.render(),
-		Instead:       listInputChecksCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Version:           toolVersionV1,
+		Description:       listInputChecksCopy.render(),
+		Instead:           listInputChecksCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listInputChecks",
 		InputSchema: schema(`{"type":"object","properties":{
 			"scope_kind":{"type":"string","enum":["workspace","team","owner"],"description":"Only the findings on the deals of this population. Omit for every finding you can see."},
