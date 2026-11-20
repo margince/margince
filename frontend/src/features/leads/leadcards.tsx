@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
@@ -14,6 +15,7 @@ import {
 import type { RecordTimeline } from "../../design-system/recordtimeline";
 import { emailSummaryText } from "../../format/emailtext";
 import { useT } from "../../i18n";
+import { contactQuery } from "../../lib/contact.queries";
 import type { Lead } from "./leads";
 import { type PromotionRecord, promotionSummary } from "./leads.promotion";
 import { usePromotePreview } from "./leads.qualify";
@@ -88,7 +90,7 @@ export function LeadEnquiryCard({
  * If they are qualified: what the server's promotion preview says happens to
  * the contact, and that a deal can be opened in the same step. The preview
  * names no deal, so the card names none either. Once the lead is qualified the
- * same card says "Qualified as" and links the contact it became.
+ * same card says "Qualified as" and links the contact, company and deal it made.
  */
 export function LeadQualifyPreviewCard({
   lead,
@@ -102,17 +104,7 @@ export function LeadQualifyPreviewCard({
     lead.status !== "disqualified";
   const preview = usePromotePreview(lead.id, open);
   if (lead.promoted_contact_id && !lead.merged_into_id) {
-    return (
-      <OverviewCard title={t("lead.card.qualifiedAs")}>
-        <OverviewList>
-          <OverviewRow
-            title={t("lead.card.qualifiedContact")}
-            sub={promotionSummary(promotion, t)}
-            right={<EntityRef kind="contact" id={lead.promoted_contact_id} />}
-          />
-        </OverviewList>
-      </OverviewCard>
-    );
+    return <QualifiedAsCard lead={lead} promotion={promotion} />;
   }
   if (!open) {
     return null;
@@ -128,6 +120,47 @@ export function LeadQualifyPreviewCard({
           title={t("lead.card.qualifiedDeal")}
           sub={t("lead.card.qualifiedDealOptional")}
         />
+      </OverviewList>
+    </OverviewCard>
+  );
+}
+
+// Every record the qualification left: the contact, the company the contact
+// works for today and the deal the call opened or joined. The company is read
+// off the contact's `employer`, which is where promotion put it.
+function QualifiedAsCard({
+  lead,
+  promotion,
+}: Readonly<{ lead: Lead; promotion: PromotionRecord }>) {
+  const t = useT();
+  const contact = useQuery(contactQuery(lead.promoted_contact_id ?? undefined));
+  const employer = contact.data?.employer;
+  return (
+    <OverviewCard title={t("lead.card.qualifiedAs")}>
+      <OverviewList>
+        <OverviewRow
+          title={t("lead.card.qualifiedContact")}
+          sub={promotionSummary(promotion, t)}
+          right={<EntityRef kind="contact" id={lead.promoted_contact_id} />}
+        />
+        {employer && (
+          <OverviewRow
+            title={t("lead.card.qualifiedCompany")}
+            right={
+              <EntityRef
+                kind="company"
+                id={employer.company_id}
+                name={employer.company_name}
+              />
+            }
+          />
+        )}
+        {lead.qualified_deal_id && (
+          <OverviewRow
+            title={t("lead.card.qualifiedDeal")}
+            right={<EntityRef kind="deal" id={lead.qualified_deal_id} />}
+          />
+        )}
       </OverviewList>
     </OverviewCard>
   );

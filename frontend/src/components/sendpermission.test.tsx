@@ -594,7 +594,7 @@ describe("one status for the message", () => {
         resolved_category: "active_deal_followup",
       },
       "This message needs one more detail",
-      "Choose the deal for this follow-up.",
+      "This follow-up is not tied to an open deal.",
     ],
     [
       { reason_code: "no_marketing_consent" },
@@ -644,7 +644,7 @@ describe("one status for the message", () => {
       screen.getByText("This message needs one more detail"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Choose the deal for this follow-up."),
+      screen.getByText("This follow-up is not tied to an open deal."),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("No recorded reason to contact this recipient"),
@@ -670,7 +670,7 @@ describe("one status for the message", () => {
       </LocaleProvider>,
     );
     expect(
-      screen.getByText("Choose the deal for this follow-up."),
+      screen.getByText("This follow-up is not tied to an open deal."),
     ).toBeInTheDocument();
   });
 

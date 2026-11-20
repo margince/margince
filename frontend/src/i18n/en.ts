@@ -8513,7 +8513,8 @@ export const en = {
     "Sending is refused until a reason is recorded.",
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
-  "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.dealFact":
+    "This follow-up is not tied to an open deal.",
   "sendPermission.reason.footerIncomplete":
     "Read the footer details below. You can send this email with a recorded reason.",
   "sendPermission.footer.language": "{detail} in {language}",
@@ -22359,6 +22360,7 @@ export const en = {
   "lead.card.askedOpen": "Open message",
   "lead.card.qualified": "If they are qualified",
   "lead.card.qualifiedContact": "Contact",
+  "lead.card.qualifiedCompany": "Company",
   "lead.card.qualifiedDeal": "Deal",
   "lead.card.qualifiedDealOptional": "You can open one in the same step",
   "lead.card.qualifiedNewContact": "A new contact",

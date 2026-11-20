@@ -14,7 +14,12 @@ import { LIBRARY_TYPES } from "../../lib/filtersaddress";
 import { useLists } from "../../lib/lists.queries";
 import { useAllSavedViews } from "../../lib/savedviews.queries";
 import type { UrlParams } from "../../lib/urlstate";
-import { filterSentence, useSentenceWords } from "./filtersentence";
+import {
+  filterSentence,
+  mergeReferencedIds,
+  referencedIdsOf,
+  useSentenceWords,
+} from "./filtersentence";
 import {
   type LibraryCut,
   type LibraryGroup,
@@ -170,7 +175,6 @@ function usePaused(value: string): string {
 export function useCaptions(
   items: readonly LibraryItem[],
 ): (item: LibraryItem) => string {
-  const words = useSentenceWords();
   const wanted = new Set<FilterResource>(
     items
       .filter((item) => treeOf(item) !== null && !purposeOf(item))
@@ -187,6 +191,17 @@ export function useCaptions(
     lead: useFilterVocabulary("lead", wanted.has("lead")),
     project: useFilterVocabulary("project", wanted.has("project")),
   };
+  const words = useSentenceWords(
+    mergeReferencedIds(
+      items.map((item) => {
+        const tree = treeOf(item);
+        return referencedIdsOf(
+          tree ? [tree] : [],
+          vocabularies[resourceOf(item)]?.data?.fields,
+        );
+      }),
+    ),
+  );
   return (item) => {
     const purpose = purposeOf(item);
     if (purpose) {

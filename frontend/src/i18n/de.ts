@@ -8523,7 +8523,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
-  "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
+  "sendPermission.reason.dealFact":
+    "Dieses Follow-up gehört zu keinem offenen Deal.",
   "sendPermission.reason.footerIncomplete":
     "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
   "sendPermission.footer.language": "{detail} auf {language}",
@@ -22670,6 +22671,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.card.askedOpen": "Nachricht öffnen",
   "lead.card.qualified": "Wenn qualifiziert",
   "lead.card.qualifiedContact": "Kontakt",
+  "lead.card.qualifiedCompany": "Unternehmen",
   "lead.card.qualifiedDeal": "Deal",
   "lead.card.qualifiedDealOptional": "Kann im selben Schritt erstellt werden",
   "lead.card.qualifiedNewContact": "Ein neuer Kontakt",

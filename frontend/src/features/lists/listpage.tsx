@@ -33,7 +33,11 @@ import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { FocusedPending, FocusedState } from "./filterhead";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
-import { filterSentence, useSentenceWords } from "./filtersentence";
+import {
+  filterSentence,
+  referencedIdsOf,
+  useSentenceWords,
+} from "./filtersentence";
 import { ListChangeSummary } from "./listchanges";
 import { ListHistoryPanel } from "./listhistory";
 import {
@@ -254,7 +258,6 @@ function ListFacts({ list }: Readonly<{ list: List }>) {
  */
 function ListFilterLine({ list }: Readonly<{ list: List }>) {
   const t = useT();
-  const words = useSentenceWords();
   const live = list.list_type === "dynamic";
   const vocabulary = useFilterVocabulary(list.entity_type, live);
   // Decoding mints a fresh id for every node, so it runs once per definition.
@@ -263,6 +266,7 @@ function ListFilterLine({ list }: Readonly<{ list: List }>) {
     [live, list.definition],
   );
   const fields = vocabulary.data?.fields;
+  const words = useSentenceWords(referencedIdsOf(tree ? [tree] : [], fields));
   if (tree === null || fields === undefined) {
     return null;
   }

@@ -18,9 +18,17 @@ const meta: Meta<typeof LeadQualifyPreviewCard> = {
   decorators: [
     (Story) => {
       installFetchStub({
-        ...recordNamesRoutes({ contact: { "c-1": "Dana Buyer" } }),
+        ...recordNamesRoutes({
+          contact: { "c-1": "Dana Buyer" },
+          company: { "co-1": "Pad AG" },
+          deal: { "d-1": "Pad AG renewal" },
+        }),
         "GET /contacts/c-1": () =>
-          jsonResponse({ id: "c-1", full_name: "Dana Buyer" }),
+          jsonResponse({
+            id: "c-1",
+            full_name: "Dana Buyer",
+            employer: { company_id: "co-1", company_name: "Pad AG" },
+          }),
       });
       return (
         <StoryProviders>
@@ -42,6 +50,7 @@ const meta: Meta<typeof LeadQualifyPreviewCard> = {
       updated_at: "2026-06-20T08:00:00Z",
       promoted_at: "2026-06-20T08:00:00Z",
       promoted_contact_id: "c-1",
+      qualified_deal_id: "d-1",
     },
     promotion: {
       outcome: "merged",

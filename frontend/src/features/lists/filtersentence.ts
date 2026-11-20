@@ -7,6 +7,9 @@
 // reader meets one wording for one filter wherever it appears.
 // census/rules/filtersentence.census.ts fails any other module spelling an operator.
 
+import { useQueries } from "@tanstack/react-query";
+import { entityNameObserverQuery } from "../../components/entityref.queries";
+import { useRoster } from "../../components/roster";
 import {
   formatDateAbbrev,
   formatMoney,
@@ -25,6 +28,8 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { fieldLabel, type VocabularyField } from "../../lib/filterdata";
+import { valueFor } from "../../lib/labelfor";
+import { useMemberNames } from "../../lib/membernames";
 import {
   type FilterOp,
   isGroup,
@@ -103,9 +108,114 @@ export type SentenceWords = Readonly<{
   retiredTags?: ReadonlySet<string>;
   /** Tag names by id, so a tag clause names its tags instead of counting them. */
   tagNames?: ReadonlyMap<string, string>;
+  /** Company, colleague and team names by id, for the clauses that point at them. */
+  recordNames?: ReadonlyMap<string, string>;
 }>;
 
-export function useSentenceWords(): SentenceWords {
+/** The references a sentence names by looking the record up, not by counting. */
+const NAMED_REFERENCES = ["company", "app_user", "team"] as const;
+type NamedReference = (typeof NAMED_REFERENCES)[number];
+
+function isNamedReference(value: string | undefined): value is NamedReference {
+  return NAMED_REFERENCES.some((kind) => kind === value);
+}
+
+/** The ids of each named reference that a sentence will have to name. */
+export type ReferencedIds = Readonly<Record<NamedReference, readonly string[]>>;
+
+const NO_REFERENCES: ReferencedIds = { company: [], app_user: [], team: [] };
+
+/**
+ * The ids the clauses of these trees hold for a field that points at a company,
+ * a colleague or a team. A caller hands them to `useSentenceWords`, which reads
+ * the names; nothing else walks a tree for them.
+ */
+export function referencedIdsOf(
+  trees: readonly Node[],
+  fields: readonly VocabularyField[] | undefined,
+): ReferencedIds {
+  const clauses: Clause[] = [];
+  const walk = (node: Node) => {
+    if (isGroup(node)) {
+      node.children.forEach(walk);
+      return;
+    }
+    clauses.push({ field: node.field, op: node.op, operand: node.value });
+  };
+  trees.forEach(walk);
+  return referencedIdsOfClauses(clauses, fields);
+}
+
+/** The same ids for loose clauses, such as the ones a Live List verdict states. */
+export function referencedIdsOfClauses(
+  clauses: readonly Pick<Clause, "field" | "operand">[],
+  fields: readonly VocabularyField[] | undefined,
+): ReferencedIds {
+  const found = new Map<string, Set<string>>();
+  for (const { field, operand } of clauses) {
+    const kind = fields?.find((known) => known.name === field)?.references;
+    if (!isNamedReference(kind)) {
+      continue;
+    }
+    const ids = found.get(kind) ?? new Set<string>();
+    for (const id of Array.isArray(operand) ? operand : [operand]) {
+      if (typeof id === "string" && id !== "") {
+        ids.add(id);
+      }
+    }
+    found.set(kind, ids);
+  }
+  const idsOf = (kind: NamedReference) => [...(found.get(kind) ?? [])];
+  return {
+    company: idsOf("company"),
+    app_user: idsOf("app_user"),
+    team: idsOf("team"),
+  };
+}
+
+/** The ids of several walks as one, each id once. */
+export function mergeReferencedIds(
+  parts: readonly ReferencedIds[],
+): ReferencedIds {
+  const all = (kind: NamedReference) => [
+    ...new Set(parts.flatMap((part) => part[kind])),
+  ];
+  return {
+    company: all("company"),
+    app_user: all("app_user"),
+    team: all("team"),
+  };
+}
+
+function useRecordNames(
+  refs: ReferencedIds,
+): ReadonlyMap<string, string> | undefined {
+  const companies = useQueries({
+    queries: refs.company.map((id) => ({
+      ...entityNameObserverQuery("company", id),
+    })),
+  });
+  const members = useMemberNames(refs.app_user);
+  // roster-failure: only names ids; a team without a name is counted instead.
+  const teams = useRoster("team", refs.team.length > 0);
+  const names = new Map(members);
+  refs.company.forEach((id, index) => {
+    const name = companies[index]?.data;
+    if (name) {
+      names.set(id, name);
+    }
+  });
+  for (const entry of teams.data ?? []) {
+    if ("name" in entry && refs.team.includes(entry.id)) {
+      names.set(entry.id, entry.name);
+    }
+  }
+  return names;
+}
+
+export function useSentenceWords(
+  refs: ReferencedIds = NO_REFERENCES,
+): SentenceWords {
   const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
@@ -121,7 +231,16 @@ export function useSentenceWords(): SentenceWords {
   const tagNames = new Map(
     (catalog.data?.data ?? []).map((tag) => [tag.id, tag.name]),
   );
-  return { t, plural, locale, zone: readerZone, retiredTags, tagNames };
+  const recordNames = useRecordNames(refs);
+  return {
+    t,
+    plural,
+    locale,
+    zone: readerZone,
+    retiredTags,
+    tagNames,
+    recordNames,
+  };
 }
 
 /** One clause as a filter states it: a stored leaf, or a verdict's clause. */
@@ -176,7 +295,7 @@ export function clauseWords(
   const text = operandText(operand, known, words);
   const said = {
     field,
-    op: t(clauseOperatorKey(clause, known)),
+    op: t(clauseOperatorKey(clause, known, words)),
     operand: text === "" ? t("filters.sentence.pendingValue") : text,
   };
   return retiredTagCount(operand, known, words) > 0
@@ -210,8 +329,11 @@ function retiredTagCount(
 function clauseOperatorKey(
   { op, operand }: Clause,
   field: VocabularyField | undefined,
+  words: SentenceWords,
 ): MessageKey {
-  if (op === "in" && field?.references) {
+  const named =
+    field !== undefined && recordNamesText(operand, field, words) !== undefined;
+  if (op === "in" && field?.references && !named) {
     return "filters.sentence.inCounted";
   }
   if (op === "in" && Array.isArray(operand) && operand.length === 1) {
@@ -340,7 +462,9 @@ function typedOperandText(
   if (!field.references || operand === "") {
     return undefined;
   }
-  const named = tagNamesText(operand, field, words);
+  const named =
+    tagNamesText(operand, field, words) ??
+    recordNamesText(operand, field, words);
   if (named !== undefined) {
     return named;
   }
@@ -350,7 +474,11 @@ function typedOperandText(
   if (retired === ids) {
     return plural("filters.sentence.ref.retiredTag", ids, count);
   }
-  const counted = plural(REFERENCE_NOUN[field.references], ids, count);
+  const noun = valueFor(REFERENCE_NOUN, field.references, undefined);
+  if (noun === undefined) {
+    return undefined;
+  }
+  const counted = plural(noun, ids, count);
   return retired === 0
     ? counted
     : t("filters.sentence.someRetired", {
@@ -384,6 +512,27 @@ function tagNamesText(
   );
   return names.every((name) => name !== undefined)
     ? names.map((name) => `"${name}"`).join(", ")
+    : undefined;
+}
+
+/**
+ * The names of the companies, colleagues or teams a clause points at.
+ * Undefined when any has no name yet, so the sentence counts them all.
+ */
+function recordNamesText(
+  operand: unknown,
+  field: VocabularyField,
+  { recordNames }: SentenceWords,
+): string | undefined {
+  if (!isNamedReference(field.references) || recordNames === undefined) {
+    return undefined;
+  }
+  const refs: unknown[] = Array.isArray(operand) ? operand : [operand];
+  const names = refs.map((id) =>
+    typeof id === "string" ? recordNames.get(id) : undefined,
+  );
+  return names.every((name) => name !== undefined)
+    ? names.join(", ")
     : undefined;
 }
 
