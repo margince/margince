@@ -15,9 +15,9 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 // "Nothing needs you today" is an answer. Inferring headings from rows cannot
 // give it, because the absence leaves no row to hang it on.
 //
-// Preserve the server's order. Prospecting and existing work may interleave
-// as deadlines and value change, so a heading labels each consecutive run.
-// Declared bands supply empty headings; they never regroup the rows.
+// Each band draws once, where its first row falls in the server's order. Later
+// pages and the backlog tail can name a band again; those rows join its one
+// heading. Declared bands supply empty headings; they never reorder the bands.
 
 type Band = NonNullable<WorklistItem["band"]>;
 
@@ -28,27 +28,30 @@ export type BandSection = Readonly<{
 }>;
 
 /**
- * The page's sections, in the QUEUE's order.
+ * The page's sections, one per band, in the order the QUEUE first names each.
  *
- * Each is a run of consecutive rows naming one band. A band the server declared
- * but the loaded rows do not reach yields an empty run in the server's own
- * position, which is what lets the page say the band is clear.
+ * A band the server declared but the loaded rows do not reach yields an empty
+ * section in the server's own position, which is what lets the page say the
+ * band is clear.
  */
 export function bandSections(
   day: Worklist,
   queue: readonly WorklistItem[],
 ): BandSection[] {
   const runs: { band: Band; items: WorklistItem[] }[] = [];
+  const held = new Map<Band, WorklistItem[]>();
   for (const item of queue) {
     if (!item.band) {
       continue;
     }
-    const open = runs.at(-1);
-    if (open?.band === item.band) {
-      open.items.push(item);
+    const items = held.get(item.band);
+    if (items) {
+      items.push(item);
       continue;
     }
-    runs.push({ band: item.band, items: [item] });
+    const opened = [item];
+    held.set(item.band, opened);
+    runs.push({ band: item.band, items: opened });
   }
   // The server's bands, minus the ones whose work is no longer drawn here.
   //
@@ -95,6 +98,20 @@ function withDeclaredEmpties(
     out.push({ band, items: [] });
   }
   return [...out, ...runs.slice(at)];
+}
+
+/**
+ * The rows in the order the page draws them: band by band, then the unbanded.
+ * Rank numbers count this order, so they ascend down the page.
+ */
+export function drawnOrder(
+  day: Worklist,
+  queue: readonly WorklistItem[],
+): readonly WorklistItem[] {
+  return [
+    ...bandSections(day, queue).flatMap((section) => section.items),
+    ...unbandedRows(queue),
+  ];
 }
 
 /**

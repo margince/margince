@@ -113,6 +113,48 @@ describe("the headings follow the QUEUE", () => {
   });
 });
 
+describe("a band draws under one heading as more rows load", () => {
+  // Later pages and the backlog tail name bands the first page already drew.
+  // Each band keeps one heading where it first appears, and the numbers count
+  // the rows as drawn.
+  it("joins a band named again to its first heading", async () => {
+    const warn = vi.spyOn(console, "error").mockImplementation(() => {});
+    stub(
+      day({
+        bands: [
+          { band: "now", shown: 2 },
+          { band: "keep_momentum", shown: 2 },
+        ],
+        queue: [
+          row({ id: "a", title: "Call the buyer", band: "now" }),
+          row({ id: "b", title: "Send the quote", band: "keep_momentum" }),
+          row({ id: "c", title: "Answer the request", band: "now" }),
+          row({ id: "d", title: "Book the review", band: "keep_momentum" }),
+        ],
+        summary: { urgent: 2, due: 0, lower_priority: 2, total: 4 },
+      }),
+    );
+    renderWorklist("en");
+
+    await screen.findByText("Book the review");
+    expect(headings()).toEqual(["Now", "Keep momentum"]);
+    const drawn = [...document.querySelectorAll(".worklist-queue-band")].map(
+      (band) => band.textContent ?? "",
+    );
+    expect(drawn[0]).toContain("Answer the request");
+    expect(drawn[1]).toContain("Send the quote");
+    expect(
+      [...document.querySelectorAll(".worklist-rank")].map(
+        (n) => n.textContent,
+      ),
+    ).toEqual(["1", "2", "3", "4"]);
+    expect(
+      warn.mock.calls.some((call) => String(call[0]).includes("same key")),
+    ).toBe(false);
+    warn.mockRestore();
+  });
+});
+
 describe("a server that sends no bands still draws headings", () => {
   // `bands` is optional in the contract, so a client talking to an older server
   // gets none. The page falls back to the bands its rows name — which is the

@@ -134,7 +134,17 @@ func (s *Service) withTail(
 	above := s.aboveTheTail(ranking)
 	page.dealsAbove = dealsReported(ranking, above)
 	tail, rest, failed := s.backlogTail(ctx, page, limit-len(shown), from, above)
-	return append(shown, tail...), rest, failed
+	return append(shown, crowdedOut(tail)...), rest, failed
+}
+
+// crowdedOut marks every tail row crowded. The tail holds what a bounded lane
+// left out of the ranking, so its rows sit below the ranked ones and must not
+// head a band above them (bandOfRow).
+func crowdedOut(tail []ranked) []ranked {
+	for i := range tail {
+		tail[i].crowded = true
+	}
+	return tail
 }
 
 // aboveTheTail is what the ranked rows hold: the frozen walk when one is

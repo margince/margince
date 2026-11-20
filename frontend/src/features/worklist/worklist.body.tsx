@@ -11,6 +11,7 @@ import type { WorklistView } from "../../lib/worklistviews";
 import {
   bandSections,
   canReportEmptyBands,
+  drawnOrder,
   unbandedRows,
 } from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
@@ -56,6 +57,16 @@ const HiddenBacklogPanel = lazy(async () => ({
 const TeamOversight = lazy(async () => ({
   default: (await import("./worklist.gap")).TeamOversight,
 }));
+
+// Today draws by band, so its numbers count the drawn order.
+function positionsOf(
+  day: Worklist,
+  queue: readonly WorklistItem[],
+  view: WorklistView,
+): ReadonlyMap<string, number> {
+  const drawn = view === "today" ? drawnOrder(day, queue) : queue;
+  return new Map(drawn.map((item, at) => [rowIdentity(item), at] as const));
+}
 
 export function WorklistBody({
   embedded = false,
@@ -139,9 +150,7 @@ export function WorklistBody({
     // list that starts at 4 and skips 5 cannot tell a correct number from a
     // broken one. A rank answers "where in this list", and the day's own order
     // is what put the rows in these lists.
-    positions: new Map(
-      queue.map((item, at) => [rowIdentity(item), at] as const),
-    ),
+    positions: positionsOf(day, queue, view),
     owner,
     // The resolved selection, not the raw state. The pane falls back to the
     // first row when the reader has chosen nothing. A highlight reading the
@@ -165,6 +174,7 @@ export function WorklistBody({
       <div className="worklist-columns">
         <div className="worklist-lanes">
           <WorklistHeader
+            embedded={embedded}
             day={day}
             loaded={queue}
             scope={scope}
