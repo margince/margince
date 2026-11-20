@@ -48,6 +48,39 @@ describe("a health reading the health job wrote", () => {
   });
 });
 
+describe("a health reading a colleague recorded", () => {
+  const reading = (assessedAt: string) =>
+    deliveringProject360({
+      health: {
+        current: {
+          id: "h-1",
+          project_id: "pr-1",
+          state: "at_risk",
+          note: "The supplier slipped two weeks.",
+          assessed_at: assessedAt,
+          source: "human",
+          source_author: "Lena Fischer",
+          created_at: assessedAt,
+          superseded: false,
+        },
+      },
+    });
+
+  it("keeps who assessed it and when beside the note, and claims no CRM source", () => {
+    standing(reading("2026-08-12T09:00:00Z"));
+    expect(screen.getByText("Assessed 12 Aug by Lena Fischer.")).toBeTruthy();
+    expect(screen.getByText("The supplier slipped two weeks.")).toBeTruthy();
+    expect(screen.queryByText("From CRM records")).toBeNull();
+  });
+
+  it("names the year of a reading made in another year", () => {
+    standing(reading("2025-12-02T09:00:00Z"));
+    expect(
+      screen.getByText("Assessed 2 Dec 2025 by Lena Fischer."),
+    ).toBeTruthy();
+  });
+});
+
 describe("the project's phase ladder", () => {
   it("writes each rung's days and a dash for a rung never reached", () => {
     render(

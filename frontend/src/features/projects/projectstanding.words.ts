@@ -55,14 +55,13 @@ export function phaseName(phase: string, t: Translator): string {
   return isProjectPhase(phase) ? t(labelFor(PHASE_LABEL, phase)) : phase;
 }
 
+// Who judged it and when, so a reading weeks old does not pass for today's.
 function assessedSentence(
   reading: Extract<ProjectReading, { kind: "assessed" }>,
+  view: Project360,
   ctx: Ctx,
 ): string {
-  if (reading.note) {
-    return reading.note;
-  }
-  const date = day(reading.assessedAt, ctx);
+  const date = dayNearYear(reading.assessedAt, view, ctx);
   return reading.author
     ? ctx.t("project.standing.assessedBy", { date, author: reading.author })
     : ctx.t("project.standing.assessedOn", { date });
@@ -72,12 +71,18 @@ function assessedSentence(
 export function projectVerdict(view: Project360, ctx: Ctx): StandingVerdict {
   const reading = projectReading(view);
   switch (reading.kind) {
-    case "assessed":
-      return {
-        word: ctx.t(labelFor(STATE_WORD, reading.state)),
-        sentence: assessedSentence(reading, ctx),
-        tone: reading.tone,
-      };
+    case "assessed": {
+      const word = ctx.t(labelFor(STATE_WORD, reading.state));
+      // The health job's note is its reason, the sentence its tag stands by.
+      return reading.byAI && reading.note
+        ? { word, sentence: reading.note, tone: reading.tone }
+        : {
+            word,
+            sentence: assessedSentence(reading, view, ctx),
+            note: reading.note,
+            tone: reading.tone,
+          };
+    }
     case "withheld":
       return { word: ctx.t("state.withheld"), tone: "neutral" };
     default:
