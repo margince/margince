@@ -13,9 +13,11 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { forgetListAddresses, rememberListAddress } from "../lib/listreturn";
 import { ScreenAddress } from "../lib/screenaddress";
 import { setSingleKeyShortcutsOn } from "../lib/shortcuts";
+import { meFixture, seedWriter } from "../testing/mefixture";
 import { CreateAction, type CreateField } from "./create";
 
 afterEach(() => {
@@ -35,13 +37,15 @@ function mount(
     listCreate?: { open: boolean };
     create?: () => Promise<{ id: string }>;
     drawnFor?: string;
+    client?: QueryClient;
   }>,
 ) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={props.client ?? seedWriter(new QueryClient())}>
       <LocaleProvider initial="en">
         <ScreenAddress.Provider value={props.drawnFor ?? null}>
           <CreateAction
+            requires={{ object: "contact", action: "create" }}
             label="New contact"
             fields={fields}
             create={props.create ?? (async () => ({ id: "c1" }))}
@@ -169,5 +173,87 @@ describe("the list's create button", () => {
     const button = screen.getByRole("button", { name: "New contact" });
     expect(button.getAttribute("aria-keyshortcuts")).toBeNull();
     expect(button.getAttribute("title")).toBeNull();
+  });
+});
+
+describe("a list's create the seat may not take", () => {
+  it("leaves its own address and opens no form", async () => {
+    window.location.hash = "#/contacts/new";
+    const client = new QueryClient();
+    client.setQueryData(["me"], meFixture({ allow: { contact: ["read"] } }));
+    mount({ listCreate: { open: true }, client });
+
+    await waitFor(() => expect(window.location.hash).toBe("#/contacts"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("opens no form before /me answers, then leaves when it refuses", async () => {
+    window.location.hash = "#/contacts/new";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    const client = new QueryClient();
+    mount({ listCreate: { open: true }, client });
+
+    await screen.findByRole("button", { name: /New contact/ });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    act(() => {
+      client.setQueryData(["me"], meFixture({ allow: { contact: ["read"] } }));
+    });
+    await waitFor(() => expect(window.location.hash).toBe("#/contacts"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it("says a read seat needs a full seat, though its role may create", async () => {
+    const client = new QueryClient();
+    client.setQueryData(
+      ["me"],
+      meFixture({ seat: "read", allow: { contact: ["read", "create"] } }),
+    );
+    mount({ client });
+
+    const verb = await screen.findByRole("button", { name: /New contact/ });
+    expect(verb.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(en["settings.seatRefused"])).toBeTruthy();
+  });
+
+  // A /me that settled with no snapshot leaves the access unknown: the verb
+  // is refused with a way to recover rather than opening a form.
+  it("refuses the verb while the seat's access could not be read", async () => {
+    window.location.hash = "#/contacts/new";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 403 })),
+    );
+    mount({ listCreate: { open: true }, client: new QueryClient() });
+
+    expect(await screen.findByText(en["record.accessUnknown"])).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("a save that answers after its form closed", () => {
+  it("leaves a form opened since then open", async () => {
+    let finish: (created: { id: string }) => void = () => undefined;
+    const created = new Promise<{ id: string }>((resolve) => {
+      finish = resolve;
+    });
+    mount({ create: () => created });
+
+    fireEvent.click(await screen.findByRole("button", { name: /New contact/ }));
+    fireEvent.change(await screen.findByRole("textbox", { name: /Name/ }), {
+      target: { value: "Ada" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: /New contact/ }));
+    await screen.findByRole("dialog");
+
+    await act(async () => finish({ id: "c1" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });

@@ -6,15 +6,10 @@
 // disagree with itself about whether the record is writable.
 
 import type { components } from "../../api/schema";
-import { useT } from "../../i18n";
-import { useRecordWriteRefusal } from "../../lib/capability";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 
 type Project = components["schemas"]["Project"];
 
 export function useProjectVerbRefusal(project: Project): string | undefined {
-  const t = useT();
-  return useRecordWriteRefusal("project", project, {
-    archived: t("project.archivedReadOnly"),
-    notYours: t("project.notYoursToChange"),
-  });
+  return useKindWriteRefusal("project", project);
 }

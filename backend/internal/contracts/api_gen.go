@@ -5932,6 +5932,24 @@ func (e Company360ContactConsent) Valid() bool {
 	}
 }
 
+// Defines values for Company360ContactGreetingRegister.
+const (
+	Company360ContactGreetingRegisterFamiliar Company360ContactGreetingRegister = "familiar"
+	Company360ContactGreetingRegisterFormal   Company360ContactGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the Company360ContactGreetingRegister enum.
+func (e Company360ContactGreetingRegister) Valid() bool {
+	switch e {
+	case Company360ContactGreetingRegisterFamiliar:
+		return true
+	case Company360ContactGreetingRegisterFormal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Company360ContactTitleSource.
 const (
 	Company360ContactTitleSourceCanonical Company360ContactTitleSource = "canonical"
@@ -7990,6 +8008,24 @@ func (e ConsumerMailDomainKind) Valid() bool {
 	case ConsumerMailDomainKindExtra:
 		return true
 	case ConsumerMailDomainKindNever:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactGreetingRegister.
+const (
+	ContactGreetingRegisterFamiliar ContactGreetingRegister = "familiar"
+	ContactGreetingRegisterFormal   ContactGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the ContactGreetingRegister enum.
+func (e ContactGreetingRegister) Valid() bool {
+	switch e {
+	case ContactGreetingRegisterFamiliar:
+		return true
+	case ContactGreetingRegisterFormal:
 		return true
 	default:
 		return false
@@ -11470,6 +11506,27 @@ func (e DealCoverageRiskKind) Valid() bool {
 	case DealCoverageRiskKindSingleThreadedTheirs:
 		return true
 	case DealCoverageRiskKindStakeholderLeft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealCoverageSeatReach.
+const (
+	DealCoverageSeatReachNotReached DealCoverageSeatReach = "not_reached"
+	DealCoverageSeatReachReached    DealCoverageSeatReach = "reached"
+	DealCoverageSeatReachUnknown    DealCoverageSeatReach = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the DealCoverageSeatReach enum.
+func (e DealCoverageSeatReach) Valid() bool {
+	switch e {
+	case DealCoverageSeatReachNotReached:
+		return true
+	case DealCoverageSeatReachReached:
+		return true
+	case DealCoverageSeatReachUnknown:
 		return true
 	default:
 		return false
@@ -16660,6 +16717,33 @@ func (e LegalReviewOutcome) Valid() bool {
 	}
 }
 
+// Defines values for LegalReviewPacketContractStatus.
+const (
+	LegalReviewPacketContractStatusActive     LegalReviewPacketContractStatus = "active"
+	LegalReviewPacketContractStatusCancelled  LegalReviewPacketContractStatus = "cancelled"
+	LegalReviewPacketContractStatusDraft      LegalReviewPacketContractStatus = "draft"
+	LegalReviewPacketContractStatusExpired    LegalReviewPacketContractStatus = "expired"
+	LegalReviewPacketContractStatusSuperseded LegalReviewPacketContractStatus = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketContractStatus enum.
+func (e LegalReviewPacketContractStatus) Valid() bool {
+	switch e {
+	case LegalReviewPacketContractStatusActive:
+		return true
+	case LegalReviewPacketContractStatusCancelled:
+		return true
+	case LegalReviewPacketContractStatusDraft:
+		return true
+	case LegalReviewPacketContractStatusExpired:
+		return true
+	case LegalReviewPacketContractStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LegalReviewPacketDocumentCategory.
 const (
 	LegalReviewPacketDocumentCategoryContract LegalReviewPacketDocumentCategory = "contract"
@@ -16696,6 +16780,33 @@ func (e LegalReviewPacketDocumentDocState) Valid() bool {
 	case LegalReviewPacketDocumentDocStateDraft:
 		return true
 	case LegalReviewPacketDocumentDocStateFinal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalReviewPacketTouchKind.
+const (
+	LegalReviewPacketTouchKindCall    LegalReviewPacketTouchKind = "call"
+	LegalReviewPacketTouchKindEmail   LegalReviewPacketTouchKind = "email"
+	LegalReviewPacketTouchKindMeeting LegalReviewPacketTouchKind = "meeting"
+	LegalReviewPacketTouchKindMessage LegalReviewPacketTouchKind = "message"
+	LegalReviewPacketTouchKindNote    LegalReviewPacketTouchKind = "note"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketTouchKind enum.
+func (e LegalReviewPacketTouchKind) Valid() bool {
+	switch e {
+	case LegalReviewPacketTouchKindCall:
+		return true
+	case LegalReviewPacketTouchKindEmail:
+		return true
+	case LegalReviewPacketTouchKindMeeting:
+		return true
+	case LegalReviewPacketTouchKindMessage:
+		return true
+	case LegalReviewPacketTouchKindNote:
 		return true
 	default:
 		return false
@@ -21159,6 +21270,7 @@ func (e ReportSetupUnsupportedCode) Valid() bool {
 
 // Defines values for ReportingBlockKind.
 const (
+	ReportingBlockKindAccountCohort     ReportingBlockKind = "account_cohort"
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
 	ReportingBlockKindBreakdown         ReportingBlockKind = "breakdown"
 	ReportingBlockKindForecastSupport   ReportingBlockKind = "forecast_support"
@@ -21167,6 +21279,7 @@ const (
 	ReportingBlockKindOwnerAttainment   ReportingBlockKind = "owner_attainment"
 	ReportingBlockKindPipelineMovement  ReportingBlockKind = "pipeline_movement"
 	ReportingBlockKindSdrOutcomes       ReportingBlockKind = "sdr_outcomes"
+	ReportingBlockKindSourceQuality     ReportingBlockKind = "source_quality"
 	ReportingBlockKindStageAge          ReportingBlockKind = "stage_age"
 	ReportingBlockKindStageCohort       ReportingBlockKind = "stage_cohort"
 	ReportingBlockKindStageDistribution ReportingBlockKind = "stage_distribution"
@@ -21176,6 +21289,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingBlockKind enum.
 func (e ReportingBlockKind) Valid() bool {
 	switch e {
+	case ReportingBlockKindAccountCohort:
+		return true
 	case ReportingBlockKindBookingsTrend:
 		return true
 	case ReportingBlockKindBreakdown:
@@ -21191,6 +21306,8 @@ func (e ReportingBlockKind) Valid() bool {
 	case ReportingBlockKindPipelineMovement:
 		return true
 	case ReportingBlockKindSdrOutcomes:
+		return true
+	case ReportingBlockKindSourceQuality:
 		return true
 	case ReportingBlockKindStageAge:
 		return true
@@ -21225,6 +21342,7 @@ func (e ReportingCardWidth) Valid() bool {
 
 // Defines values for ReportingCardKind.
 const (
+	ReportingCardKindAccountCohort     ReportingCardKind = "account_cohort"
 	ReportingCardKindAssessment        ReportingCardKind = "assessment"
 	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
 	ReportingCardKindBreakdown         ReportingCardKind = "breakdown"
@@ -21235,6 +21353,7 @@ const (
 	ReportingCardKindPipelineMovement  ReportingCardKind = "pipeline_movement"
 	ReportingCardKindQuestion          ReportingCardKind = "question"
 	ReportingCardKindSdrOutcomes       ReportingCardKind = "sdr_outcomes"
+	ReportingCardKindSourceQuality     ReportingCardKind = "source_quality"
 	ReportingCardKindStageAge          ReportingCardKind = "stage_age"
 	ReportingCardKindStageCohort       ReportingCardKind = "stage_cohort"
 	ReportingCardKindStageDistribution ReportingCardKind = "stage_distribution"
@@ -21244,6 +21363,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingCardKind enum.
 func (e ReportingCardKind) Valid() bool {
 	switch e {
+	case ReportingCardKindAccountCohort:
+		return true
 	case ReportingCardKindAssessment:
 		return true
 	case ReportingCardKindBookingsTrend:
@@ -21263,6 +21384,8 @@ func (e ReportingCardKind) Valid() bool {
 	case ReportingCardKindQuestion:
 		return true
 	case ReportingCardKindSdrOutcomes:
+		return true
+	case ReportingCardKindSourceQuality:
 		return true
 	case ReportingCardKindStageAge:
 		return true
@@ -21430,6 +21553,7 @@ func (e ReportingMetricDefinitionTemporalBasis) Valid() bool {
 // Defines values for ReportingMetricID.
 const (
 	ReportingMetricIDAcceptedOpportunities         ReportingMetricID = "accepted_opportunities"
+	ReportingMetricIDAccountProgression            ReportingMetricID = "account_progression"
 	ReportingMetricIDBookingsMix                   ReportingMetricID = "bookings_mix"
 	ReportingMetricIDBookingsWon                   ReportingMetricID = "bookings_won"
 	ReportingMetricIDClosedWinRate                 ReportingMetricID = "closed_win_rate"
@@ -21451,6 +21575,7 @@ const (
 	ReportingMetricIDPartnerWon                    ReportingMetricID = "partner_won"
 	ReportingMetricIDQualifiedOpportunitiesCreated ReportingMetricID = "qualified_opportunities_created"
 	ReportingMetricIDQualifiedPipelineCreated      ReportingMetricID = "qualified_pipeline_created"
+	ReportingMetricIDSourceQuality                 ReportingMetricID = "source_quality"
 	ReportingMetricIDStageAge                      ReportingMetricID = "stage_age"
 	ReportingMetricIDStageConversion               ReportingMetricID = "stage_conversion"
 )
@@ -21459,6 +21584,8 @@ const (
 func (e ReportingMetricID) Valid() bool {
 	switch e {
 	case ReportingMetricIDAcceptedOpportunities:
+		return true
+	case ReportingMetricIDAccountProgression:
 		return true
 	case ReportingMetricIDBookingsMix:
 		return true
@@ -21501,6 +21628,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDQualifiedOpportunitiesCreated:
 		return true
 	case ReportingMetricIDQualifiedPipelineCreated:
+		return true
+	case ReportingMetricIDSourceQuality:
 		return true
 	case ReportingMetricIDStageAge:
 		return true
@@ -25558,6 +25687,24 @@ func (e UpdateCompanyRequestVisibility) Valid() bool {
 	case UpdateCompanyRequestVisibilityOwner:
 		return true
 	case UpdateCompanyRequestVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateContactRequestGreetingRegister.
+const (
+	UpdateContactRequestGreetingRegisterFamiliar UpdateContactRequestGreetingRegister = "familiar"
+	UpdateContactRequestGreetingRegisterFormal   UpdateContactRequestGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the UpdateContactRequestGreetingRegister enum.
+func (e UpdateContactRequestGreetingRegister) Valid() bool {
+	switch e {
+	case UpdateContactRequestGreetingRegisterFamiliar:
+		return true
+	case UpdateContactRequestGreetingRegisterFormal:
 		return true
 	default:
 		return false
@@ -32678,7 +32825,7 @@ type AccessPreview struct {
 		Object    string                           `json:"object"`
 	} `json:"field_masks"`
 
-	// IdentityRead Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+	// IdentityRead Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
 	IdentityRead *AccessPreviewIdentityRead `json:"identity_read,omitempty"`
 
 	// MemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
@@ -32698,7 +32845,7 @@ type AccessPreview struct {
 // AccessPreviewFieldMasksCondition defines model for AccessPreview.FieldMasks.Condition.
 type AccessPreviewFieldMasksCondition string
 
-// AccessPreviewIdentityRead Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+// AccessPreviewIdentityRead Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
 type AccessPreviewIdentityRead string
 
 // AccessPreviewMemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
@@ -33056,7 +33203,7 @@ type Activity struct {
 	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
-	// ReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
@@ -33136,7 +33283,7 @@ type ActivityMeetingStatus string
 // a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
 
-// ActivityReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+// ActivityReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 type ActivityReplyChannel string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
@@ -41079,9 +41226,12 @@ type Company360Contact struct {
 	ContactId openapi_types.UUID                  `json:"contact_id"`
 
 	// DealRoles This contact's stakeholder roles on the account's deals (champion, economic_buyer, …).
-	DealRoles    []Company360DealRole `json:"deal_roles"`
-	FullName     string               `json:"full_name"`
-	PrimaryEmail *string              `json:"primary_email,omitempty"`
+	DealRoles []Company360DealRole `json:"deal_roles"`
+	FullName  string               `json:"full_name"`
+
+	// GreetingRegister The register a rep set for opening a message to this contact; null when none is set.
+	GreetingRegister *Company360ContactGreetingRegister `json:"greeting_register,omitempty"`
+	PrimaryEmail     *string                            `json:"primary_email,omitempty"`
 
 	// ProviderTitle A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed.
 	ProviderTitle *string `json:"provider_title,omitempty"`
@@ -41112,6 +41262,9 @@ type Company360Contact struct {
 
 // Company360ContactConsent defines model for Company360Contact.Consent.
 type Company360ContactConsent string
+
+// Company360ContactGreetingRegister The register a rep set for opening a message to this contact; null when none is set.
+type Company360ContactGreetingRegister string
 
 // Company360ContactTitleSource Which title the roster is showing — the installation's own record, or the provider fallback. Null when there is no title at all.
 type Company360ContactTitleSource string
@@ -42977,7 +43130,7 @@ type CompanyProfileInput struct {
 	CustomerPains    *string `json:"customer_pains,omitempty"`
 	DesiredOutcomes  *string `json:"desired_outcomes,omitempty"`
 
-	// DisplayName The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters.
+	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.
 	DisplayName string  `json:"display_name"`
 	History     *string `json:"history,omitempty"`
 	Icp         *string `json:"icp,omitempty"`
@@ -44159,8 +44312,11 @@ type Contact struct {
 	FirstName *string          `json:"first_name,omitempty"`
 
 	// FullName Always present (display name).
-	FullName string             `json:"full_name"`
-	Id       openapi_types.UUID `json:"id"`
+	FullName string `json:"full_name"`
+
+	// GreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+	GreetingRegister *ContactGreetingRegister `json:"greeting_register,omitempty"`
+	Id               openapi_types.UUID       `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -44221,6 +44377,9 @@ type Contact struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ContactGreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+type ContactGreetingRegister string
 
 // ContactRelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 type ContactRelationshipMark string
@@ -44839,12 +44998,14 @@ type ContactConsentGuardEntryVerdict string
 
 // ContactConsentState A contact's current consent for one purpose.
 type ContactConsentState struct {
-	DoubleOptInConfirmedAt *time.Time               `json:"double_opt_in_confirmed_at,omitempty"`
-	LawfulBasis            *string                  `json:"lawful_basis,omitempty"`
-	PurposeId              openapi_types.UUID       `json:"purpose_id"`
-	PurposeKey             *string                  `json:"purpose_key,omitempty"`
-	State                  ContactConsentStateState `json:"state"`
-	UpdatedAt              *time.Time               `json:"updated_at,omitempty"`
+	// ConfirmationPendingUntil When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
+	ConfirmationPendingUntil *time.Time               `json:"confirmation_pending_until,omitempty"`
+	DoubleOptInConfirmedAt   *time.Time               `json:"double_opt_in_confirmed_at,omitempty"`
+	LawfulBasis              *string                  `json:"lawful_basis,omitempty"`
+	PurposeId                openapi_types.UUID       `json:"purpose_id"`
+	PurposeKey               *string                  `json:"purpose_key,omitempty"`
+	State                    ContactConsentStateState `json:"state"`
+	UpdatedAt                *time.Time               `json:"updated_at,omitempty"`
 }
 
 // ContactConsentStateState defines model for ContactConsentState.State.
@@ -48213,6 +48374,12 @@ type DealCommitments struct {
 type DealCoverage struct {
 	DealId openapi_types.UUID `json:"deal_id"`
 
+	// Lines One entry per current colleague and readable seat who have exchanged mail or met,
+	// from the activities the caller may open, at the time of the read. A seat the caller
+	// cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+	// the edge sections are withheld: absence says nothing about who has talked.
+	Lines *[]DealCoverageLine `json:"lines,omitempty"`
+
 	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
 	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
 	// score is their warmest single relationship. `single_threaded_ours` reads the same
@@ -48240,6 +48407,31 @@ type DealCoverage struct {
 
 // DealCoverageSectionsOmitted defines model for DealCoverage.SectionsOmitted.
 type DealCoverageSectionsOmitted string
+
+// DealCoverageLine One colleague's exchange with one buyer seat, as the newest event in each direction.
+type DealCoverageLine struct {
+	ColleagueName string             `json:"colleague_name"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+
+	// LastInboundAt When the contact last wrote to this colleague.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
+	// LastMetAt The newest meeting or call of the pair that neither declined.
+	LastMetAt *time.Time `json:"last_met_at,omitempty"`
+
+	// LastMetPrecision How to read `last_met_at`.
+	LastMetPrecision *OccurredPrecision `json:"last_met_precision,omitempty"`
+
+	// LastOutboundAt When this colleague last wrote to the contact, or was copied on our mail to them.
+	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
+	UserId                openapi_types.UUID `json:"user_id"`
+}
 
 // DealCoverageRisk One finding, with the records behind it. `kind` names the rule so a surface can
 // explain the flag rather than assert it.
@@ -48274,8 +48466,22 @@ type DealCoverageSeat struct {
 
 	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
 	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
-	Role                 string             `json:"role"`
+
+	// Reach Whether a current colleague has exchanged mail with or met this seat, as the caller
+	// can prove it. `not_reached` only when no activity links the seat to a colleague at
+	// all. Anything withheld from the caller, or an exchange only with a colleague who has
+	// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+	// `activity` grant.
+	Reach *DealCoverageSeatReach `json:"reach,omitempty"`
+	Role  string                 `json:"role"`
 }
+
+// DealCoverageSeatReach Whether a current colleague has exchanged mail with or met this seat, as the caller
+// can prove it. `not_reached` only when no activity links the seat to a colleague at
+// all. Anything withheld from the caller, or an exchange only with a colleague who has
+// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+// `activity` grant.
+type DealCoverageSeatReach string
 
 // DealDocument One file in a deal's Files area: the attachment, whether it is hidden from this
 // deal, and where a captured file came from, so a reader can tell "the contract
@@ -55679,7 +55885,12 @@ type LegalReviewOutcome string
 type LegalReviewPacket struct {
 	// Binding Every other offer the buyer was sent or accepted. The approval binds to these too.
 	Binding *[]LegalReviewPacketOffer `json:"binding,omitempty"`
-	Deal    LegalReviewPacketDeal     `json:"deal"`
+
+	// Contracts The agreements filed against the deal, newest term first. Absent on a
+	// pack asked for before agreements were packed. An agreement this reader
+	// may not open, and every agreement for a reader without `deal.read`, is not listed.
+	Contracts *[]LegalReviewPacketContract `json:"contracts,omitempty"`
+	Deal      LegalReviewPacketDeal        `json:"deal"`
 
 	// Documents The deal's contract, legal and offer documents, newest first.
 	Documents []LegalReviewPacketDocument `json:"documents"`
@@ -55688,10 +55899,36 @@ type LegalReviewPacket struct {
 	History []LegalReviewPacketStage `json:"history"`
 
 	// Offer The current offer, or null when the deal has none.
-	Offer         *LegalReviewPacketOffer `json:"offer,omitempty"`
-	ValueCurrency *string                 `json:"value_currency,omitempty"`
-	ValueMinor    *int64                  `json:"value_minor,omitempty"`
+	Offer *LegalReviewPacketOffer `json:"offer,omitempty"`
+
+	// Tasks The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+	Tasks *[]LegalReviewPacketTask `json:"tasks,omitempty"`
+
+	// Touches The deal's latest calls, meetings, messages and notes, newest first. One
+	// this reader may not read, such as mail outside their audience, is not
+	// listed. Absent on an older pack.
+	Touches       *[]LegalReviewPacketTouch `json:"touches,omitempty"`
+	ValueCurrency *string                   `json:"value_currency,omitempty"`
+	ValueMinor    *int64                    `json:"value_minor,omitempty"`
 }
+
+// LegalReviewPacketContract One agreement as it stood at the request. Its title is read now for this
+// reader. The dates and notice terms are the ones frozen with the pack.
+type LegalReviewPacketContract struct {
+	AutoRenew            *bool                           `json:"auto_renew,omitempty"`
+	CancellationNoticeOn *openapi_types.Date             `json:"cancellation_notice_on,omitempty"`
+	ContractNumber       *string                         `json:"contract_number,omitempty"`
+	EndsOn               *openapi_types.Date             `json:"ends_on,omitempty"`
+	Id                   openapi_types.UUID              `json:"id"`
+	NoticePeriodDays     *int                            `json:"notice_period_days,omitempty"`
+	RenewalOn            *openapi_types.Date             `json:"renewal_on,omitempty"`
+	StartsOn             *openapi_types.Date             `json:"starts_on,omitempty"`
+	Status               LegalReviewPacketContractStatus `json:"status"`
+	Title                string                          `json:"title"`
+}
+
+// LegalReviewPacketContractStatus defines model for LegalReviewPacketContract.Status.
+type LegalReviewPacketContractStatus string
 
 // LegalReviewPacketDeal defines model for LegalReviewPacketDeal.
 type LegalReviewPacketDeal struct {
@@ -55787,6 +56024,27 @@ type LegalReviewPacketStage struct {
 	EnteredAt time.Time `json:"entered_at"`
 	StageName string    `json:"stage_name"`
 }
+
+// LegalReviewPacketTask One task that was open at the request. Its subject is read now.
+type LegalReviewPacketTask struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+	DueAt      *time.Time         `json:"due_at,omitempty"`
+	Subject    *string            `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouch One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+type LegalReviewPacketTouch struct {
+	ActivityId openapi_types.UUID         `json:"activity_id"`
+	Kind       LegalReviewPacketTouchKind `json:"kind"`
+	OccurredAt time.Time                  `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouchKind defines model for LegalReviewPacketTouch.Kind.
+type LegalReviewPacketTouchKind string
 
 // LegalReviewQueueItem One row of the reviewer's queue, with the facts it is sorted by.
 type LegalReviewQueueItem struct {
@@ -58183,6 +58441,12 @@ type MorningDigestConnectorsProvider string
 // MorningDigestConnectorsStatus defines model for MorningDigest.Connectors.Status.
 type MorningDigestConnectorsStatus string
 
+// MoveDealPipelineRequest defines model for MoveDealPipelineRequest.
+type MoveDealPipelineRequest struct {
+	// PipelineId The live pipeline to move the deal to. It must differ from the deal's own.
+	PipelineId openapi_types.UUID `json:"pipeline_id"`
+}
+
 // MyAgentGrant One rep's standing answer for one scheduled agent.
 type MyAgentGrant struct {
 	// CredentialFundsAgent Whether that passport still covers what this agent does. Read at request time
@@ -60170,10 +60434,27 @@ type Problem struct {
 	// name, so a screen can word the code in the reader's language; `message` stays
 	// the English sentence.
 	//
+	// A value its field cannot hold names the field's path (`address.city` for a key of a
+	// nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+	// `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+	// `invalid_type` for any other shape. A body that is not one JSON object, and a value
+	// inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+	// carries its bounds as `params.min` and `params.max`, as the schema spells them;
+	// a date-time range states them as ISO dates.
+	//
 	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
 	// `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
 	// The `Retry-After` header says how many seconds until the call can succeed.
+	//
+	// A 403 that the caller's roles answer carries `missing_grant`: what those roles
+	// lack, in the notation the tool table uses for a tool's requirement, with
+	// alternatives joined by `,`. An object action (`deal.update`, `deal.create|update`)
+	// is a grant an admin adds to a role. `admin` asks for the admin role, and
+	// `scope:team` for a role whose row scope reaches team records or more. Each is
+	// lifted by an admin changing the caller's roles. A refusal that no role change
+	// lifts, such as a Deal Room participant's or a record kind the installation
+	// switched off, carries none.
 	Details *map[string]interface{} `json:"details,omitempty"`
 
 	// Instance URI of the specific occurrence.
@@ -62959,6 +63240,10 @@ type ReportVocabulary struct {
 // `lead_cohort` follows the leads that arrived in the interval the same
 // way: one point, its `outcomes` saying whether each lead was accepted,
 // qualified, disqualified or is still open.
+// `account_cohort` follows the distinct accounts of those leads: one point,
+// its `outcomes` saying the furthest outcome any of an account's leads
+// reached. `source_quality` is one point per lead origin: how many leads
+// arrived from it and how many of them were linked to an opportunity.
 type ReportingBlockKind string
 
 // ReportingCaptureContext defines model for ReportingCaptureContext.
@@ -63060,6 +63345,10 @@ type ReportingChart struct {
 	// `lead_cohort` follows the leads that arrived in the interval the same
 	// way: one point, its `outcomes` saying whether each lead was accepted,
 	// qualified, disqualified or is still open.
+	// `account_cohort` follows the distinct accounts of those leads: one point,
+	// its `outcomes` saying the furthest outcome any of an account's leads
+	// reached. `source_quality` is one point per lead origin: how many leads
+	// arrived from it and how many of them were linked to an opportunity.
 	Kind              ReportingBlockKind  `json:"kind"`
 	Marker            *float64            `json:"marker,omitempty"`
 	Metric            ReportingMetricID   `json:"metric"`
@@ -69364,7 +69653,10 @@ type UpdateContactRequest struct {
 	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
 	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
 	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
-	LastName  *string              `json:"last_name,omitempty" singleline:"true"`
+
+	// GreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+	GreetingRegister *UpdateContactRequestGreetingRegister `json:"greeting_register,omitempty"`
+	LastName         *string                               `json:"last_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
 	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
@@ -69414,6 +69706,9 @@ type UpdateContactRequest struct {
 	Visibility           *UpdateContactRequestVisibility `json:"visibility,omitempty"`
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
+
+// UpdateContactRequestGreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+type UpdateContactRequestGreetingRegister string
 
 // UpdateContactRequestRelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 type UpdateContactRequestRelationshipMark string
@@ -78791,6 +79086,26 @@ type ListDealMarginceChangesParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// MoveDealPipelineParams defines parameters for MoveDealPipeline.
+type MoveDealPipelineParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// UndoDealPipelineMoveParams defines parameters for UndoDealPipelineMove.
+type UndoDealPipelineMoveParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // RestoreDealMoveParams defines parameters for RestoreDealMove.
 type RestoreDealMoveParams struct {
 	// Fingerprint The `fingerprint` of the move that was set aside, unchanged.
@@ -84015,6 +84330,9 @@ type UseDealEstimateJSONRequestBody = DealRevisionRequest
 // UpdateDealLineJSONRequestBody defines body for UpdateDealLine for application/json ContentType.
 type UpdateDealLineJSONRequestBody = UpdateDealLineRequest
 
+// MoveDealPipelineJSONRequestBody defines body for MoveDealPipeline for application/json ContentType.
+type MoveDealPipelineJSONRequestBody = MoveDealPipelineRequest
+
 // DismissDealMoveJSONRequestBody defines body for DismissDealMove for application/json ContentType.
 type DismissDealMoveJSONRequestBody = DismissDealMoveRequest
 
@@ -86866,6 +87184,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "full_name")
 	}
 
+	if raw, found := object["greeting_register"]; found {
+		err = json.Unmarshal(raw, &a.GreetingRegister)
+		if err != nil {
+			return fmt.Errorf("error reading 'greeting_register': %w", err)
+		}
+		delete(object, "greeting_register")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -87179,6 +87505,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	object["full_name"], err = json.Marshal(a.FullName)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
+	}
+
+	if a.GreetingRegister != nil {
+		object["greeting_register"], err = json.Marshal(a.GreetingRegister)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'greeting_register': %w", err)
+		}
 	}
 
 	object["id"], err = json.Marshal(a.Id)
@@ -96403,6 +96736,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "full_name")
 	}
 
+	if raw, found := object["greeting_register"]; found {
+		err = json.Unmarshal(raw, &a.GreetingRegister)
+		if err != nil {
+			return fmt.Errorf("error reading 'greeting_register': %w", err)
+		}
+		delete(object, "greeting_register")
+	}
+
 	if raw, found := object["last_name"]; found {
 		err = json.Unmarshal(raw, &a.LastName)
 		if err != nil {
@@ -96518,6 +96859,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["full_name"], err = json.Marshal(a.FullName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
+		}
+	}
+
+	if a.GreetingRegister != nil {
+		object["greeting_register"], err = json.Marshal(a.GreetingRegister)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'greeting_register': %w", err)
 		}
 	}
 
@@ -99845,6 +100193,12 @@ type ServerInterface interface {
 	// Every change Margince made to this deal, newest first.
 	// (GET /deals/{id}/margince-changes)
 	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
+	// Move an open deal to another pipeline, onto its first open stage.
+	// (POST /deals/{id}/move-pipeline)
+	MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams)
+	// Put a deal back on the pipeline and stage its last move left.
+	// (POST /deals/{id}/move-pipeline/undo)
+	UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id Id, params UndoDealPipelineMoveParams)
 	// Put a set-aside move back on the deal card, the undo behind "Not now".
 	// (DELETE /deals/{id}/move/dismiss)
 	RestoreDealMove(w http.ResponseWriter, r *http.Request, id Id, params RestoreDealMoveParams)
@@ -104732,6 +105086,18 @@ func (_ Unimplemented) UpdateDealLine(w http.ResponseWriter, r *http.Request, id
 // Every change Margince made to this deal, newest first.
 // (GET /deals/{id}/margince-changes)
 func (_ Unimplemented) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Move an open deal to another pipeline, onto its first open stage.
+// (POST /deals/{id}/move-pipeline)
+func (_ Unimplemented) MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a deal back on the pipeline and stage its last move left.
+// (POST /deals/{id}/move-pipeline/undo)
+func (_ Unimplemented) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id Id, params UndoDealPipelineMoveParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -132693,6 +133059,120 @@ func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// MoveDealPipeline operation middleware
+func (siw *ServerInterfaceWrapper) MoveDealPipeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MoveDealPipelineParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MoveDealPipeline(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoDealPipelineMove operation middleware
+func (siw *ServerInterfaceWrapper) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoDealPipelineMoveParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoDealPipelineMove(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RestoreDealMove operation middleware
 func (siw *ServerInterfaceWrapper) RestoreDealMove(w http.ResponseWriter, r *http.Request) {
 
@@ -159019,6 +159499,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move-pipeline", wrapper.MoveDealPipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move-pipeline/undo", wrapper.UndoDealPipelineMove)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/deals/{id}/move/dismiss", wrapper.RestoreDealMove)

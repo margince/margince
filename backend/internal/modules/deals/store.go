@@ -70,6 +70,8 @@ type Store struct {
 	suggestionEffects SuggestionEffects
 	// reviewDocs lists the documents a legal review pack carries.
 	reviewDocs LegalReviewDocuments
+	// reviewRecords lists the agreements and activity a review pack carries.
+	reviewRecords LegalReviewRecords
 }
 
 // InstallationValue resolves ONE installation-identity value inside a

@@ -116,7 +116,7 @@ func TestAPatchRetypesATaskAndATypeOnAnotherKindIsRefused(t *testing.T) {
 	}
 }
 
-func TestAReplyNamesTheWayItsMessageCameIn(t *testing.T) {
+func TestAReplyOrReachOutNamesTheWayItsConversationWent(t *testing.T) {
 	s := setupStanding(t)
 	for _, tc := range []struct {
 		name, sourceKind string
@@ -126,7 +126,9 @@ func TestAReplyNamesTheWayItsMessageCameIn(t *testing.T) {
 		{"a reply to a call", "call", crmcontracts.TaskTypeReply, new(crmcontracts.ActivityReplyChannelCall)},
 		{"a reply to a note", "note", crmcontracts.TaskTypeReply, nil},
 		{"a reply with no source", "", crmcontracts.TaskTypeReply, nil},
-		{"a reach out after a call", "call", crmcontracts.TaskTypeReachOut, nil},
+		{"a reach out after a mail", "email", crmcontracts.TaskTypeReachOut, new(crmcontracts.ActivityReplyChannelEmail)},
+		{"a reach out after a call", "call", crmcontracts.TaskTypeReachOut, new(crmcontracts.ActivityReplyChannelCall)},
+		{"a meeting after a call", "call", crmcontracts.TaskTypeMeet, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			contact := s.contactAt(t, "Ida Brandt", "")

@@ -30,6 +30,7 @@ import { useCanWriteRecord } from "../../lib/capability";
 import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
+import { useRecordCarriesTags } from "../../lib/tags.queries";
 import { CompanyContactCard } from "./companycontactcard";
 import {
   companyWebsite,
@@ -41,6 +42,7 @@ import {
   useOwnershipSection,
   useRegistrationSection,
 } from "./companyrailgroups";
+import { CompanyTagsSection } from "./companyrailtags";
 
 // The company's details under its head: About, Ownership, Registration and
 // Lists as flat groups. Every empty field folds behind one link, and the
@@ -326,6 +328,7 @@ function useAboutRows(
   const industries = useIndustryOptions(company.industry);
   const website = companyWebsite(company);
   const wayIn = useWayIn(company, view, loading);
+  const tagged = useRecordCarriesTags("company", company.id, view?.tags);
   const choice = (
     key: "size_band" | "lifecycle" | "industry",
     label: MessageKey,
@@ -373,6 +376,24 @@ function useAboutRows(
           },
         ]
       : []),
+    // An archived company takes no tags, so it has no Tags row to fold.
+    ...(company.archived_at
+      ? []
+      : [
+          {
+            key: "tags",
+            term: t("tags.panelTitle"),
+            block: true,
+            empty: !tagged,
+            value: (
+              <CompanyTagsSection
+                company={company}
+                companyId={company.id}
+                bare
+              />
+            ),
+          },
+        ]),
   ];
 }
 

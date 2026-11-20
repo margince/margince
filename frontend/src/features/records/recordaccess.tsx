@@ -26,7 +26,6 @@ import { useToast } from "../../design-system/toast";
 import { VisibilityBadge } from "../../design-system/visibility";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
 import { fromHere } from "../../lib/navigatefrom";
 import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
@@ -34,6 +33,7 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { HandoverOffer } from "./handoveroffer";
 import { HandoverRequest } from "./handoverrequest";
 import "./recordaccess.css";
@@ -71,8 +71,6 @@ const COPY = {
     published: "recordAccess.contact.published",
     madePrivate: "recordAccess.contact.madePrivate",
     leftYourAccess: "recordAccess.contact.leftYourAccess",
-    archived: "contact.rail.archivedReadOnly",
-    notYours: "contact.notYoursToChange",
   },
   company: {
     title: "recordAccess.company.title",
@@ -83,8 +81,6 @@ const COPY = {
     published: "recordAccess.company.published",
     madePrivate: "recordAccess.company.madePrivate",
     leftYourAccess: "recordAccess.company.leftYourAccess",
-    archived: "record.archivedReadOnly",
-    notYours: "record.notYoursToChange",
   },
 } as const satisfies Record<RecordKind, Record<string, MessageKey>>;
 
@@ -107,10 +103,7 @@ export function RecordAccess({
   const copy = COPY[kind];
   // The page's own write rule (grant, seat, row, archive) rather than the
   // row's `writable` alone, which offered a read seat a switch it cannot use.
-  const refusal = useRecordWriteRefusal(kind, record, {
-    archived: t(copy.archived),
-    notYours: t(copy.notYours),
-  });
+  const refusal = useKindWriteRefusal(kind, record);
   const sentence = useAudienceSentence(kind, record);
   const viewerId = useViewerId();
   const failure = (error: unknown) => problemMessageOf(error, t);

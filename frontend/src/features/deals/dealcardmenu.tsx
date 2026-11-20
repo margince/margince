@@ -22,7 +22,7 @@ import { useCanWriteRecord } from "../../lib/capability";
 import { appHref } from "../../lib/recordaddress";
 import { routeHash } from "../../lib/router";
 import type { Deal, Stage } from "./deals";
-import { dealCloseDateField } from "./deals.fields";
+import { dealCloseDate, dealCloseDateField } from "./deals.fields";
 import { archiveDeal, openDealEdit, saveDealEdit } from "./deals.write";
 
 type CardVerbs = Pick<DealCardActions, "onSummary" | "onEmail" | "onAddTask">;
@@ -150,16 +150,17 @@ function DealMoves({
 function DealCloseDate({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const { locale } = useLocale();
+  const closeDate = dealCloseDate(t, locale);
   const write = useRailText(
     {
       kind: "deal",
       record: openDealEdit(deal, locale),
-      fields: [dealCloseDateField],
+      fields: [closeDate],
       canEdit: true,
       save: (values, _rows, opened) =>
         saveDealEdit(opened, values, deal.masked_fields ?? [], locale),
     },
-    dealCloseDateField,
+    closeDate,
   );
   const { open, editing } = useFieldEditor(
     write.canEdit,

@@ -3718,7 +3718,7 @@ paths:
         Renaming the installation's own company (`is_anchor`) renames the installation in the same
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-        past 200 characters (`too_long`); other companies' names have no length cap.
+        past 120 characters (`too_long`), the limit of every company name typed by hand.
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
@@ -4678,6 +4678,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'A scan would have to be queued and no AI model is connected (`code: ai_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /companies/{id}/growth-fit:
     parameters:
@@ -5257,6 +5262,11 @@ paths:
               schema: { $ref: '#/components/schemas/SiteReadStarted' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
           description: No URL to read (no override, company has no domain).
           content:
@@ -6961,6 +6971,79 @@ paths:
                     code: approval_required
                     detail: Advancing to a closed-won stage is confirm-first; supply an approval token.
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deals/{id}/move-pipeline:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: moveDealPipeline
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Move an open deal to another pipeline, onto its first open stage.
+      description: |
+        Puts the deal on the first open stage of a live pipeline other than its own. A caller
+        cannot choose the stage. It is a stage advance in every other way: it writes one
+        `deal_stage_history` row and one `advance_stage` audit row, emits `deal.stage_changed`,
+        sets the probability from the new stage, and the legal review gate and the object and row
+        permissions of an advance hold. The stage the deal leaves keeps its exit criteria; only a
+        required legal review blocks a move, and the first open stage has no gated stage before
+        it. The history row keeps no stage positions, because the positions of two pipelines do
+        not compare. The pipeline row is locked shared, so a retirement or a reorder waits for
+        the move.
+
+        A stale `If-Match` answers 409. A won or lost deal answers 422 `deal_closed`, the
+        pipeline the deal is in answers 422 `same_pipeline`, a retired pipeline answers 422
+        `pipeline_retired`, and a pipeline with no open stage answers 422
+        `pipeline_has_no_open_stage`.
+      x-mcp-tool: { verb: move_deal_pipeline, router: change_state, action: move_deal_pipeline, tier: auto_execute, scope: write, served_by: route }
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MoveDealPipelineRequest' }
+      responses:
+        '200':
+          description: The deal on its new stage, and the probability the move set.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealAdvanced' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deals/{id}/move-pipeline/undo:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: undoDealPipelineMove
+      security: [ { cookieAuth: [] } ]   # human session only — taking back a move is the mover's own act
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Put a deal back on the pipeline and stage its last move left.
+      description: |
+        Undoes the deal's latest stage move when it was a move to another pipeline. The source
+        pipeline and stage come from that move's `deal_stage_history` row, and the undo writes its
+        own row with `reversal_of` naming it. Anything that moved the deal since, an earlier undo
+        included, answers 422 `move_not_undoable`. A source pipeline retired since answers 422
+        `pipeline_retired`. A stale `If-Match` answers 409.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: The deal back on its earlier stage.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealAdvanced' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /deals/{id}/close-day:
@@ -10497,6 +10580,11 @@ paths:
               schema: { $ref: '#/components/schemas/TranscriptReadStarted' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
           description: This activity carries no transcript, or its transcript is blank or too long for one reading.
           content:
@@ -12010,11 +12098,11 @@ paths:
                     enum: [not_requested, pending_confirmation, not_asked]
                     x-extensible-enum: true
                     description: |
-                      `not_requested` — the form carried no tick. `pending_confirmation` — the question
-                      was queued for delivery and the grant waits on the subject answering it; queued
-                      is not delivered. `not_asked` — the question could not be put, or this
-                      installation has no lane to put it on; the booking stands and no subscription
-                      mail follows.
+                      `not_requested` — the form carried no tick. `pending_confirmation` — the tick was
+                      accepted. If this address can receive our mail, a confirmation link is on its way,
+                      and nothing is subscribed until it is opened. The answer is the same whatever the
+                      address's state, so it reveals nothing about it. `not_asked` — this installation
+                      has no mail lane, so no subscription mail follows. The booking stands in every case.
         '409': { description: 'Slot no longer available (`code: slot_taken`).', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
         '422': { $ref: '#/components/responses/ValidationError' }
         '502': { $ref: '#/components/responses/CalendarUnavailable' }
@@ -18581,6 +18669,7 @@ paths:
             - deals-by-stage
             - forecast
             - leads-by-status
+            - loss-events
             - meeting-conversion
             - open-deals-per-company
             - pipeline-current
@@ -37099,6 +37188,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The process role wired no model path or no job runner — declared absent, never a silent no-op.
@@ -38202,7 +38296,7 @@ paths:
         Renaming the installation's own company (`is_anchor`) renames the installation in the same
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-        past 200 characters (`too_long`); other companies' names have no length cap.
+        past 120 characters (`too_long`), the limit of every company name typed by hand.
       x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -45432,6 +45526,24 @@ components:
           type: array
           description: The deal's contract, legal and offer documents, newest first.
           items: { $ref: '#/components/schemas/LegalReviewPacketDocument' }
+        contracts:
+          type: array
+          description: |
+            The agreements filed against the deal, newest term first. Absent on a
+            pack asked for before agreements were packed. An agreement this reader
+            may not open, and every agreement for a reader without `deal.read`, is not listed.
+          items: { $ref: '#/components/schemas/LegalReviewPacketContract' }
+        touches:
+          type: array
+          description: |
+            The deal's latest calls, meetings, messages and notes, newest first. One
+            this reader may not read, such as mail outside their audience, is not
+            listed. Absent on an older pack.
+          items: { $ref: '#/components/schemas/LegalReviewPacketTouch' }
+        tasks:
+          type: array
+          description: The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+          items: { $ref: '#/components/schemas/LegalReviewPacketTask' }
 
     LegalReviewPacketDeal:
       type: object
@@ -45495,6 +45607,46 @@ components:
       properties:
         stage_name: { type: string }
         entered_at: { type: string, format: date-time }
+
+    LegalReviewPacketContract:
+      type: object
+      description: |
+        One agreement as it stood at the request. Its title is read now for this
+        reader. The dates and notice terms are the ones frozen with the pack.
+      required: [id, title, status]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        contract_number: { type: [string, 'null'] }
+        status: { type: string, enum: [draft, active, expired, cancelled, superseded], x-extensible-enum: true }
+        starts_on: { type: [string, 'null'], format: date }
+        ends_on: { type: [string, 'null'], format: date }
+        renewal_on: { type: [string, 'null'], format: date }
+        cancellation_notice_on: { type: [string, 'null'], format: date }
+        notice_period_days: { type: [integer, 'null'] }
+        auto_renew: { type: [boolean, 'null'] }
+
+    LegalReviewPacketTouch:
+      type: object
+      description: One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+      required: [activity_id, kind, occurred_at, occurred_precision]
+      properties:
+        activity_id: { type: string, format: uuid }
+        kind: { type: string, enum: [call, email, meeting, message, note], x-extensible-enum: true }
+        occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+        subject: { type: [string, 'null'] }
+
+    LegalReviewPacketTask:
+      type: object
+      description: One task that was open at the request. Its subject is read now.
+      required: [activity_id]
+      properties:
+        activity_id: { type: string, format: uuid }
+        subject: { type: [string, 'null'] }
+        due_at: { type: [string, 'null'], format: date-time }
 
     LegalReviewPacketDocument:
       type: object
@@ -47681,10 +47833,27 @@ components:
             name, so a screen can word the code in the reader's language; `message` stays
             the English sentence.
 
+            A value its field cannot hold names the field's path (`address.city` for a key of a
+            nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+            `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+            `invalid_type` for any other shape. A body that is not one JSON object, and a value
+            inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+            carries its bounds as `params.min` and `params.max`, as the schema spells them;
+            a date-time range states them as ISO dates.
+
             A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
             `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
             `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
             The `Retry-After` header says how many seconds until the call can succeed.
+
+            A 403 that the caller's roles answer carries `missing_grant`: what those roles
+            lack, in the notation the tool table uses for a tool's requirement, with
+            alternatives joined by `,`. An object action (`deal.update`, `deal.create|update`)
+            is a grant an admin adds to a role. `admin` asks for the admin role, and
+            `scope:team` for a role whose row scope reaches team records or more. Each is
+            lifted by an admin changing the caller's roles. A refusal that no role change
+            lifts, such as a Deal Room participant's or a record kind the installation
+            switched off, carries none.
 
     # ---- pagination envelope ----
     PageInfo:
@@ -48482,6 +48651,15 @@ components:
             one was named at creation. Absent on a contact a member typed, and
             absent to a reader who may not open that record, so the contact
             still reads rather than being refused.
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          x-extensible-enum: true
+          description: >-
+            How a message to this contact opens: `formal` takes the surname, `familiar` the first
+            name. A rep sets it once and every draft to the contact uses it ahead of what the
+            thread suggests. Null means nobody set it, and a draft reads the register from the
+            correspondence.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -49105,6 +49283,12 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          description: >-
+            Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null)
+            so drafts read the register from the correspondence again.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -50966,6 +51150,11 @@ components:
             from the company links only the recipients this is true for. A read-only share
             grants no attach right. The server rechecks every write.
         title: { type: [string, 'null'] }
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          x-extensible-enum: true
+          description: The register a rep set for opening a message to this contact; null when none is set.
         provider_title:
           type: [string, 'null']
           description: >-
@@ -54030,6 +54219,16 @@ components:
             `our_side` has carried a display name from the start, and a buyer-side seat
             that carries only an id is the same list rendered half-anonymous.
         role:      { type: string }
+        reach:
+          type: string
+          enum: [reached, not_reached, unknown]
+          x-extensible-enum: true
+          description: |
+            Whether a current colleague has exchanged mail with or met this seat, as the caller
+            can prove it. `not_reached` only when no activity links the seat to a colleague at
+            all. Anything withheld from the caller, or an exchange only with a colleague who has
+            left, is `unknown`. Absent for a seat the caller cannot read, and without the
+            `activity` grant.
         engaged:
           type: boolean
           description: 'A two-way exchange in the window — both directions, not just our sends.'
@@ -54043,6 +54242,21 @@ components:
         last_inbound_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
+
+    DealCoverageLine:
+      type: object
+      description: One colleague's exchange with one buyer seat, as the newest event in each direction.
+      required: [user_id, contact_id, colleague_name]
+      properties:
+        user_id:    { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        colleague_name: { type: string }
+        last_inbound_at:  { type: [string, 'null'], format: date-time, description: When the contact last wrote to this colleague. }
+        last_inbound_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_inbound_at`." }
+        last_outbound_at: { type: [string, 'null'], format: date-time, description: "When this colleague last wrote to the contact, or was copied on our mail to them." }
+        last_outbound_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_outbound_at`." }
+        last_met_at:      { type: [string, 'null'], format: date-time, description: The newest meeting or call of the pair that neither declined. }
+        last_met_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_met_at`." }
 
     DealCoverageRisk:
       type: object
@@ -55162,6 +55376,14 @@ components:
             score is their warmest single relationship. `single_threaded_ours` reads the same
             entries, so its colleague is always one of them.
           items: { $ref: '#/components/schemas/ContactNetworkColleague' }
+        lines:
+          type: array
+          description: |
+            One entry per current colleague and readable seat who have exchanged mail or met,
+            from the activities the caller may open, at the time of the read. A seat the caller
+            cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+            the edge sections are withheld: absence says nothing about who has talked.
+          items: { $ref: '#/components/schemas/DealCoverageLine' }
         risks:        { type: array, items: { $ref: '#/components/schemas/DealCoverageRisk' } }
         sections_omitted:
           type: array
@@ -57196,6 +57418,11 @@ components:
           type: string
           format: date
           description: The calendar day the deal closed, in the installation's zone. Not after today.
+    MoveDealPipelineRequest:
+      type: object
+      required: [pipeline_id]
+      properties:
+        pipeline_id: { type: string, format: uuid, description: The live pipeline to move the deal to. It must differ from the deal's own. }
     AdvanceDealRequest:
       type: object
       required: [to_stage_id]
@@ -59541,9 +59768,10 @@ components:
           x-extensible-enum: true
           readOnly: true
           description: >-
-            Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`),
-            so the answer goes back the way the message came in. Null for every other type, and for
-            a reply with no source of one of these kinds.
+            Task only. For a `reply` or `reach_out` task, the kind of the activity it follows
+            (`source_activity_id`), so the answer goes back the way the conversation went: a promise
+            made in a mail is kept by mail. Null for every other type, and for a task with no source
+            of one of these kinds.
         email_target:
           $ref: '#/components/schemas/ActivityEmailTarget'
         source:
@@ -65428,6 +65656,8 @@ components:
       - bookings_mix
       - qualified_opportunities_created
       - initiative_pipeline
+      - account_progression
+      - source_quality
       x-extensible-enum: true
     ReportingBlockKind:
       type: string
@@ -65442,6 +65672,10 @@ components:
         `lead_cohort` follows the leads that arrived in the interval the same
         way: one point, its `outcomes` saying whether each lead was accepted,
         qualified, disqualified or is still open.
+        `account_cohort` follows the distinct accounts of those leads: one point,
+        its `outcomes` saying the furthest outcome any of an account's leads
+        reached. `source_quality` is one point per lead origin: how many leads
+        arrived from it and how many of them were linked to an opportunity.
       enum:
       - bookings_trend
       - stage_distribution
@@ -65455,6 +65689,8 @@ components:
       - breakdown
       - stage_cohort
       - lead_cohort
+      - account_cohort
+      - source_quality
       x-extensible-enum: true
     ReportingStatus:
       type: string
@@ -65887,6 +66123,8 @@ components:
       - breakdown
       - stage_cohort
       - lead_cohort
+      - account_cohort
+      - source_quality
       - question
       - assessment
       x-extensible-enum: true
@@ -67961,8 +68199,9 @@ components:
           enum: [workspace]
           x-extensible-enum: true
           description: >-
-            Customer identity (contact, company, lead, deal) is readable by every seat that
-            holds the object grant; row scope governs projects and writes.
+            Customer identity and the work done for it (contact, company, lead, deal,
+            project) is readable by every seat that holds the object grant; row scope
+            governs writes.
         objects:
           type: object
           additionalProperties:
@@ -73312,7 +73551,7 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too, so it carries the installation name''s rule: `422 required` when blank, `422 too_long` past 200 characters.' }
+        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
         legal_name: { type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
@@ -75473,6 +75712,10 @@ components:
         state: { type: string, enum: [unknown, granted, withdrawn], x-extensible-enum: true }
         lawful_basis: { type: [string, 'null'] }
         double_opt_in_confirmed_at: { type: [string, 'null'], format: date-time }
+        confirmation_pending_until:
+          type: [string, 'null']
+          format: date-time
+          description: When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
         updated_at: { type: [string, 'null'], format: date-time }
 
     ConsentEvent:

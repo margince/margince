@@ -25,12 +25,12 @@ import { formatDateAbbrev, formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { CONTRACT_STATUS_LABEL } from "../../lib/contractstatus";
 import { labelFor } from "../../lib/labelfor";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import { projectRoleLabel } from "../records/record360";
-import { CONTRACT_STATUS_LABEL } from "./contractlifecycle";
 import {
   AddProjectStakeholder,
   RemoveProjectStakeholder,

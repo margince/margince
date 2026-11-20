@@ -7,11 +7,13 @@ import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useT } from "../../i18n";
+import { isEntityKind } from "../../lib/entity";
 import {
   problemCodeOf,
   problemMessageOf,
   throwProblem,
 } from "../../lib/problem";
+import { invalidateRecord } from "../../lib/recordwritekeys";
 
 // The share screen's refusal wording and its revoke dialog.
 
@@ -67,8 +69,12 @@ export function RevokeGrantDialog({
         throwProblem(error);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_done, held) => {
       queryClient.invalidateQueries({ queryKey: grantsKey });
+      // A share the reader held may have been what let them change the record.
+      if (isEntityKind(held.record_type)) {
+        void invalidateRecord(queryClient, held.record_type, held.record_id);
+      }
       onClose();
     },
     onError: (error) => {

@@ -35,6 +35,13 @@ import (
 // tests exercise the door without a model lane anywhere.
 func transcriptDoorApp(t *testing.T, slug, name, email string) *apptest.AppEnv {
 	t.Helper()
+	return transcriptDoorAppWithModel(t, name, email, nil)
+}
+
+// transcriptDoorAppWithModel is the door with a model check on its runner; nil
+// checks nothing, which is the worker's posture.
+func transcriptDoorAppWithModel(t *testing.T, name, email string, bound func() bool) *apptest.AppEnv {
+	t.Helper()
 	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
 	if appDSN == "" {
 		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
@@ -50,6 +57,7 @@ func transcriptDoorApp(t *testing.T, slug, name, email string) *apptest.AppEnv {
 	if err != nil {
 		t.Fatalf("jobs.NewInserter: %v", err)
 	}
+	inserter.WithModelBound(bound)
 	e := apptest.SetupAppWithOptions(t, compose.WithTranscriptRead(inserter))
 	// The door enqueues in the same transaction as the run record, so the job
 	// schema has to exist before the FIRST request, not merely before a worker.
@@ -237,5 +245,24 @@ func TestAReadingOfATranscriptThatDoesNotExistIsNotFound(t *testing.T) {
 	missing := "00000000-0000-7000-8000-000000000000"
 	if status := e.Call(t, "POST", "/v1/activities/"+missing+"/transcript-proposals", nil, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("reading a transcript that does not exist → %d, want 404", status)
+	}
+}
+
+// With no model connected a transcript still lands over REST and nothing is
+// read, and asking for a reading says to connect an AI.
+func TestATranscriptLandsWithNoModelAndAskingForAReadingIsRefused(t *testing.T) {
+	e := transcriptDoorAppWithModel(t, "Transcript Unbound", "ada@unbound.test", func() bool { return false })
+	activityID := logTranscript(t, e, transcriptText)
+
+	if status := e.Call(t, "GET", "/v1/activities/"+activityID+"/transcript-proposals/latest",
+		nil, nil, nil); status != http.StatusNotFound {
+		t.Errorf("the reading of a transcript that landed with no model → %d, want 404: no read row may be left behind", status)
+	}
+	var problem struct {
+		Code string `json:"code"`
+	}
+	if status := e.Call(t, "POST", "/v1/activities/"+activityID+"/transcript-proposals",
+		nil, nil, &problem); status != http.StatusConflict || problem.Code != "ai_not_configured" {
+		t.Errorf("asking for a reading with no model → %d %q, want 409 ai_not_configured", status, problem.Code)
 	}
 }

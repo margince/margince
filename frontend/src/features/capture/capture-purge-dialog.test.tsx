@@ -53,7 +53,7 @@ it("says nothing was destroyed when the purge is refused", async () => {
             title: "Forbidden",
             status: 403,
             code: "permission_denied",
-            detail: "activity.delete: permission denied",
+            detail: "your role does not grant delete on activity",
           }),
           {
             status: 403,

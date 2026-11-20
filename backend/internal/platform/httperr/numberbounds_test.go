@@ -70,4 +70,7 @@ func TestTheProviderSeamNamesAnOutOfRangeFieldAsTheRESTDecodeDoes(t *testing.T) 
 	if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(body, `"field":"limit"`) || !strings.Contains(body, `"code":"out_of_range"`) {
 		t.Errorf("answered %d %s, want 422 naming limit as out_of_range", rec.Code, body)
 	}
+	if !strings.Contains(body, `"params":{"max":"25","min":"1"}`) {
+		t.Errorf("answered %s, want the bounds 1 to 25 as params", body)
+	}
 }

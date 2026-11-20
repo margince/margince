@@ -25,6 +25,8 @@ import { useViewerZone } from "../../lib/viewerzone";
 import {
   type EntryFieldChange,
   entryFieldChanges,
+  PRESS_WORDS,
+  type PressIntent,
   provenanceOfEntry,
 } from "./history.logic";
 import { HistoryEdgeDetail } from "./historyedge";
@@ -138,11 +140,7 @@ function UndoButton({
   changes,
   currency,
   restore,
-  // The verb this press means. One engine, two intents: putting a change back
-  // and putting a REVERSAL back are the same write, and the second one redoes
-  // what the first undid — so the label is the caller's to name, and the two
-  // must never read the same on adjacent rows.
-  label = "history.undo.action",
+  intent = "undo",
 }: Readonly<{
   entry: AuditHistoryEntry;
   kind: EntityKind;
@@ -150,8 +148,9 @@ function UndoButton({
   changes: readonly EntryFieldChange[];
   currency: string | null | undefined;
   restore: RecordRestore;
-  label?: MessageKey;
+  intent?: PressIntent;
 }>) {
+  const words = PRESS_WORDS[intent];
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -231,14 +230,14 @@ function UndoButton({
         busyLabel={t("history.undo.busy")}
         onClick={press}
       >
-        {t(label)}
+        {t(words.label)}
       </Button>
       {refused && <span>{refused}</span>}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
-        title={t("history.undo.confirmTitle")}
-        confirmLabel={t(label)}
+        title={t(words.title)}
+        confirmLabel={t(words.label)}
         pending={putBack.isPending}
         onConfirm={() =>
           putBack.mutate({ kind, id, auditId: entry.id, version })
@@ -252,7 +251,7 @@ function UndoButton({
                 ? t("history.undo.confirmEdgeBody", {
                     other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
                   })
-                : plural("history.undo.confirmBody", changes.length, {
+                : plural(words.body, changes.length, {
                     count: formatNumber(changes.length, locale),
                   })}
           </p>
@@ -286,7 +285,7 @@ function HistoryEntryRow({
   currency,
   restore,
   note,
-  undoLabel,
+  intent,
 }: Readonly<{
   entry: AuditHistoryEntry;
   kind: EntityKind;
@@ -298,7 +297,7 @@ function HistoryEntryRow({
   // cannot say it: that a reversal undid something older than this page, or
   // that the change on this row has since been undone by the row above it.
   note?: string;
-  undoLabel?: MessageKey;
+  intent?: PressIntent;
 }>) {
   const t = useT();
   const viewerId = useViewerId();
@@ -338,7 +337,7 @@ function HistoryEntryRow({
             changes={changes}
             currency={currency}
             restore={restore}
-            label={undoLabel}
+            intent={intent}
           />
         )}
       </span>
@@ -395,7 +394,7 @@ export function RecordHistory({
                   locale={locale}
                   currency={currency}
                   restore={panelRestore}
-                  undoLabel="history.undo.redo"
+                  intent="redo"
                 />
                 <HistoryEntryRow
                   entry={row.reversed}
@@ -423,11 +422,7 @@ export function RecordHistory({
                     ? t("history.reversal.unpaired")
                     : undefined
                 }
-                undoLabel={
-                  row.kind === "unpairedReversal"
-                    ? "history.undo.redo"
-                    : undefined
-                }
+                intent={row.kind === "unpairedReversal" ? "redo" : undefined}
               />
             ),
           )}

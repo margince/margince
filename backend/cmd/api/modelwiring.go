@@ -290,6 +290,7 @@ func jobEnqueueOptions(
 	if err != nil {
 		return nil, err
 	}
+	inserter.WithModelBound(func() bool { return modelPath != nil && modelPath.Bound() })
 	deepRead := compose.WithDeepRead(inserter, nil)
 	// The account scan queues on this role and reads on the worker; the api's
 	// own lane serves only the in-request floor, and the fingerprint carries

@@ -680,6 +680,7 @@
     "POST /v1/deals/{id}/legal-reviews": "request_legal_review",
     "POST /v1/deals/{id}/lines": "add_deal_line",
     "POST /v1/deals/{id}/lines/estimate": "use_deal_estimate",
+    "POST /v1/deals/{id}/move-pipeline": "move_deal_pipeline",
     "POST /v1/deals/{id}/move/dismiss": "dismiss_deal_move",
     "POST /v1/deals/{id}/offers": "create_record",
     "POST /v1/deals/{id}/outcome-reviews": "create_deal_outcome_review",

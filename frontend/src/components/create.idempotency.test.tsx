@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { seedWriter } from "../testing/mefixture";
 import { CreateAction, type CreateField } from "./create";
 
 afterEach(cleanup);
@@ -21,9 +22,10 @@ function mount(
   create: (v: unknown, r: unknown, key: string) => Promise<{ id: string }>,
 ) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={seedWriter(new QueryClient())}>
       <LocaleProvider initial="en">
         <CreateAction
+          requires={{ object: "contact", action: "create" }}
           label="New thing"
           fields={fields}
           create={create}

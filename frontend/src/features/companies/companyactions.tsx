@@ -107,6 +107,7 @@ export function NewDealAction({
   return (
     <CreateAction
       label={t("co.deal.new", { name: companyName })}
+      requires={{ object: "deal", action: "create" }}
       // The page that offered the verb is the page that has to show the deal.
       invalidate={projectId ? "project" : "company360"}
       screen="deals"
@@ -154,6 +155,7 @@ function NewProjectDialog({
   return (
     <CreateAction
       label={t("co.project.new", { name: companyName })}
+      requires={{ object: "project", action: "create" }}
       // The record that offered the verb is the record that has to show the
       // project.
       invalidate="company360"

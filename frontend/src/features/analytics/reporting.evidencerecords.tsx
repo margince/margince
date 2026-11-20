@@ -44,6 +44,8 @@ const metricDateHeading: Partial<
   partner_commission: "reporting.accruedOn",
   stage_conversion: "reporting.enteredOn",
   lead_cohort_outcomes: "reporting.arrivedOn",
+  account_progression: "reporting.arrivedOn",
+  source_quality: "reporting.arrivedOn",
 };
 
 // A cohort member's row carries its days to an outcome, or open so far, where
@@ -51,6 +53,7 @@ const metricDateHeading: Partial<
 const COHORT_METRICS: readonly ReportingEvidenceRef["metric"][] = [
   "stage_conversion",
   "lead_cohort_outcomes",
+  "account_progression",
 ];
 
 // A record's figure is a deal's value unless the metric counts or times it, or

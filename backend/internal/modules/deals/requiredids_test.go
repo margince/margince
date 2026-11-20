@@ -136,6 +136,19 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 			},
 		},
 		{
+			name:  "MoveDealPipelineRequest",
+			shape: reflect.TypeFor[crmcontracts.MoveDealPipelineRequest](),
+			call: func(t *testing.T, body []byte) error {
+				t.Helper()
+				var req crmcontracts.MoveDealPipelineRequest
+				if err := json.Unmarshal(body, &req); err != nil {
+					t.Fatalf("probe body does not decode: %v", err)
+				}
+				_, err := moveDealPipelineInput(req, nil)
+				return err
+			},
+		},
+		{
 			name:  "CreateStageRequest",
 			shape: reflect.TypeFor[crmcontracts.CreateStageRequest](),
 			call: func(t *testing.T, body []byte) error {

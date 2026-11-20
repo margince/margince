@@ -2079,6 +2079,14 @@ func (stubs) ListDealMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "ListDealMarginceChanges")
 }
 
+func (stubs) MoveDealPipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MoveDealPipelineParams) {
+	httperr.NotImplemented(w, r, "MoveDealPipeline")
+}
+
+func (stubs) UndoDealPipelineMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UndoDealPipelineMoveParams) {
+	httperr.NotImplemented(w, r, "UndoDealPipelineMove")
+}
+
 func (stubs) RestoreDealMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RestoreDealMoveParams) {
 	httperr.NotImplemented(w, r, "RestoreDealMove")
 }

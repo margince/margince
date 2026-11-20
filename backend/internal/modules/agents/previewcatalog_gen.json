@@ -394,6 +394,8 @@
      "geocode if enabled",
     "granted":
      "granted",
+    "greeting_register":
+     "Greeting",
     "gross_minor":
      "Gross",
     "guest_answers_changed":
@@ -5302,6 +5304,26 @@
      "Unknown",
     "granted/boolean/true":
      "Yes",
+    "greeting_register/lifecycle/customer":
+     "Customer",
+    "greeting_register/lifecycle/disqualified":
+     "Disqualified",
+    "greeting_register/lifecycle/former_customer":
+     "Former customer",
+    "greeting_register/lifecycle/live":
+     "Live",
+    "greeting_register/lifecycle/onboarding":
+     "Onboarding",
+    "greeting_register/lifecycle/opportunity":
+     "Opportunity",
+    "greeting_register/lifecycle/prospect":
+     "Prospect",
+    "greeting_register/lifecycle/target":
+     "Target",
+    "greeting_register/lifecycle/unknown":
+     "Unknown",
+    "greeting_register/boolean/true":
+     "Yes",
     "gross_minor/lifecycle/customer":
      "Customer",
     "gross_minor/lifecycle/disqualified":
@@ -9092,6 +9114,18 @@
      "Acquisition source",
     "merge_profile_field/text/address":
      "Address",
+    "merge_profile_field/text/address_city":
+     "City",
+    "merge_profile_field/text/address_country":
+     "Country code (ISO 3166)",
+    "merge_profile_field/text/address_line1":
+     "Street and number",
+    "merge_profile_field/text/address_line2":
+     "Address line 2",
+    "merge_profile_field/text/address_postal_code":
+     "Postal code",
+    "merge_profile_field/text/address_region":
+     "State or region",
     "merge_profile_field/text/admission":
      "Domain intake check",
     "merge_profile_field/text/admission_reason":
@@ -9198,6 +9232,8 @@
      "FX rate date",
     "merge_profile_field/text/fx_rate_to_base":
      "FX rate",
+    "merge_profile_field/text/greeting_register":
+     "Greeting",
     "merge_profile_field/text/guest_answers_changed":
      "Guest answers updated from the calendar",
     "merge_profile_field/text/guest_links_added":
@@ -9424,6 +9460,18 @@
      "Acquisition source",
     "merge_profile_field/lifecycle/address":
      "Address",
+    "merge_profile_field/lifecycle/address_city":
+     "City",
+    "merge_profile_field/lifecycle/address_country":
+     "Country code (ISO 3166)",
+    "merge_profile_field/lifecycle/address_line1":
+     "Street and number",
+    "merge_profile_field/lifecycle/address_line2":
+     "Address line 2",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Postal code",
+    "merge_profile_field/lifecycle/address_region":
+     "State or region",
     "merge_profile_field/lifecycle/admission":
      "Domain intake check",
     "merge_profile_field/lifecycle/admission_reason":
@@ -9530,6 +9578,8 @@
      "FX rate date",
     "merge_profile_field/lifecycle/fx_rate_to_base":
      "FX rate",
+    "merge_profile_field/lifecycle/greeting_register":
+     "Greeting",
     "merge_profile_field/lifecycle/guest_answers_changed":
      "Guest answers updated from the calendar",
     "merge_profile_field/lifecycle/guest_links_added":
@@ -17114,6 +17164,12 @@
      "Not set",
     "granted/execution":
      "Set when applied",
+    "greeting_register/boolean":
+     "No",
+    "greeting_register/empty":
+     "Not set",
+    "greeting_register/execution":
+     "Set when applied",
     "gross_minor/boolean":
      "No",
     "gross_minor/empty":
@@ -20396,6 +20452,8 @@
      "geocode if enabled",
     "granted":
      "granted",
+    "greeting_register":
+     "Anrede",
     "gross_minor":
      "Brutto",
     "guest_answers_changed":
@@ -25304,6 +25362,26 @@
      "Unbekannt",
     "granted/boolean/true":
      "Ja",
+    "greeting_register/lifecycle/customer":
+     "Kunde",
+    "greeting_register/lifecycle/disqualified":
+     "Disqualifiziert",
+    "greeting_register/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "greeting_register/lifecycle/live":
+     "Live",
+    "greeting_register/lifecycle/onboarding":
+     "Onboarding",
+    "greeting_register/lifecycle/opportunity":
+     "Chance",
+    "greeting_register/lifecycle/prospect":
+     "Interessent",
+    "greeting_register/lifecycle/target":
+     "Zielunternehmen",
+    "greeting_register/lifecycle/unknown":
+     "Unbekannt",
+    "greeting_register/boolean/true":
+     "Ja",
     "gross_minor/lifecycle/customer":
      "Kunde",
     "gross_minor/lifecycle/disqualified":
@@ -29094,6 +29172,18 @@
      "Akquisitionsquelle",
     "merge_profile_field/text/address":
      "Adresse",
+    "merge_profile_field/text/address_city":
+     "Stadt",
+    "merge_profile_field/text/address_country":
+     "Ländercode (ISO 3166)",
+    "merge_profile_field/text/address_line1":
+     "Straße und Hausnummer",
+    "merge_profile_field/text/address_line2":
+     "Adresszusatz",
+    "merge_profile_field/text/address_postal_code":
+     "Postleitzahl",
+    "merge_profile_field/text/address_region":
+     "Bundesland oder Region",
     "merge_profile_field/text/admission":
      "Eingangsprüfung der Domain",
     "merge_profile_field/text/admission_reason":
@@ -29200,6 +29290,8 @@
      "Datum des Wechselkurses",
     "merge_profile_field/text/fx_rate_to_base":
      "Wechselkurs",
+    "merge_profile_field/text/greeting_register":
+     "Anrede",
     "merge_profile_field/text/guest_answers_changed":
      "Antworten der Gäste aus dem Kalender aktualisiert",
     "merge_profile_field/text/guest_links_added":
@@ -29426,6 +29518,18 @@
      "Akquisitionsquelle",
     "merge_profile_field/lifecycle/address":
      "Adresse",
+    "merge_profile_field/lifecycle/address_city":
+     "Stadt",
+    "merge_profile_field/lifecycle/address_country":
+     "Ländercode (ISO 3166)",
+    "merge_profile_field/lifecycle/address_line1":
+     "Straße und Hausnummer",
+    "merge_profile_field/lifecycle/address_line2":
+     "Adresszusatz",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Postleitzahl",
+    "merge_profile_field/lifecycle/address_region":
+     "Bundesland oder Region",
     "merge_profile_field/lifecycle/admission":
      "Eingangsprüfung der Domain",
     "merge_profile_field/lifecycle/admission_reason":
@@ -29532,6 +29636,8 @@
      "Datum des Wechselkurses",
     "merge_profile_field/lifecycle/fx_rate_to_base":
      "Wechselkurs",
+    "merge_profile_field/lifecycle/greeting_register":
+     "Anrede",
     "merge_profile_field/lifecycle/guest_answers_changed":
      "Antworten der Gäste aus dem Kalender aktualisiert",
     "merge_profile_field/lifecycle/guest_links_added":
@@ -37116,6 +37222,12 @@
      "Nicht gesetzt",
     "granted/execution":
      "Wird beim Anwenden festgelegt",
+    "greeting_register/boolean":
+     "Nein",
+    "greeting_register/empty":
+     "Nicht gesetzt",
+    "greeting_register/execution":
+     "Wird beim Anwenden festgelegt",
     "gross_minor/boolean":
      "Nein",
     "gross_minor/empty":
@@ -40398,6 +40510,8 @@
      "geocode if enabled",
     "granted":
      "granted",
+    "greeting_register":
+     "Cách chào",
     "gross_minor":
      "Sau thuế",
     "guest_answers_changed":
@@ -45306,6 +45420,26 @@
      "Chưa rõ",
     "granted/boolean/true":
      "Có",
+    "greeting_register/lifecycle/customer":
+     "Khách hàng",
+    "greeting_register/lifecycle/disqualified":
+     "Đã loại",
+    "greeting_register/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "greeting_register/lifecycle/live":
+     "Đang vận hành",
+    "greeting_register/lifecycle/onboarding":
+     "Đang triển khai",
+    "greeting_register/lifecycle/opportunity":
+     "Cơ hội",
+    "greeting_register/lifecycle/prospect":
+     "Tiềm năng",
+    "greeting_register/lifecycle/target":
+     "Mục tiêu",
+    "greeting_register/lifecycle/unknown":
+     "Chưa rõ",
+    "greeting_register/boolean/true":
+     "Có",
     "gross_minor/lifecycle/customer":
      "Khách hàng",
     "gross_minor/lifecycle/disqualified":
@@ -49096,6 +49230,18 @@
      "Nguồn tiếp cận",
     "merge_profile_field/text/address":
      "Địa chỉ",
+    "merge_profile_field/text/address_city":
+     "Thành phố",
+    "merge_profile_field/text/address_country":
+     "Mã quốc gia (ISO 3166)",
+    "merge_profile_field/text/address_line1":
+     "Số nhà và tên đường",
+    "merge_profile_field/text/address_line2":
+     "Địa chỉ dòng 2",
+    "merge_profile_field/text/address_postal_code":
+     "Mã bưu chính",
+    "merge_profile_field/text/address_region":
+     "Tỉnh hoặc vùng",
     "merge_profile_field/text/admission":
      "Kiểm tra đầu vào tên miền",
     "merge_profile_field/text/admission_reason":
@@ -49202,6 +49348,8 @@
      "Ngày tỷ giá",
     "merge_profile_field/text/fx_rate_to_base":
      "Tỷ giá",
+    "merge_profile_field/text/greeting_register":
+     "Cách chào",
     "merge_profile_field/text/guest_answers_changed":
      "Phản hồi của khách được cập nhật từ lịch",
     "merge_profile_field/text/guest_links_added":
@@ -49428,6 +49576,18 @@
      "Nguồn tiếp cận",
     "merge_profile_field/lifecycle/address":
      "Địa chỉ",
+    "merge_profile_field/lifecycle/address_city":
+     "Thành phố",
+    "merge_profile_field/lifecycle/address_country":
+     "Mã quốc gia (ISO 3166)",
+    "merge_profile_field/lifecycle/address_line1":
+     "Số nhà và tên đường",
+    "merge_profile_field/lifecycle/address_line2":
+     "Địa chỉ dòng 2",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Mã bưu chính",
+    "merge_profile_field/lifecycle/address_region":
+     "Tỉnh hoặc vùng",
     "merge_profile_field/lifecycle/admission":
      "Kiểm tra đầu vào tên miền",
     "merge_profile_field/lifecycle/admission_reason":
@@ -49534,6 +49694,8 @@
      "Ngày tỷ giá",
     "merge_profile_field/lifecycle/fx_rate_to_base":
      "Tỷ giá",
+    "merge_profile_field/lifecycle/greeting_register":
+     "Cách chào",
     "merge_profile_field/lifecycle/guest_answers_changed":
      "Phản hồi của khách được cập nhật từ lịch",
     "merge_profile_field/lifecycle/guest_links_added":
@@ -57117,6 +57279,12 @@
     "granted/empty":
      "Chưa đặt",
     "granted/execution":
+     "Được xác định khi áp dụng",
+    "greeting_register/boolean":
+     "Không",
+    "greeting_register/empty":
+     "Chưa đặt",
+    "greeting_register/execution":
      "Được xác định khi áp dụng",
     "gross_minor/boolean":
      "Không",

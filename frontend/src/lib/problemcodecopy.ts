@@ -21,6 +21,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["gateway_unavailable", "common.gatewayUnavailable"],
   ["request_timed_out", "common.requestTimedOut"],
   ["assistant_unavailable", "common.assistantUnavailable"],
+  // No model is connected; the screens with a button for model work add the link.
+  ["ai_not_configured", "connectAi.first"],
   ["provider_out_of_credit", "common.providerOutOfCredit"],
   ["provider_unauthorized", "common.providerUnauthorized"],
   ["provider_unavailable", "common.providerUnavailable"],
@@ -60,6 +62,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["website_form_busy", "webForms.handlingBusy"],
   // The server's detail lists the closed vocabulary by its wire spellings.
   ["win_evidence_required", "deals.winEvidenceRequired"],
+  // The detail is one English sentence per review state.
+  ["legal_review_required", "legalReview.advanceRefused"],
   ["run_in_flight", "import.reason.run_in_flight"],
   // A date-only meeting cannot hold its host's calendar hour.
   ["day_holds_host_slot", "activity.dayHoldsHostSlot"],
@@ -77,6 +81,31 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["phone_malformed", "common.phone.malformed"],
   // The detail speaks of a promotion; the screen calls it a qualification.
   ["contact_has_deal", "lead.demoteContactHasDeal"],
+  // A contact's address, profile, country and date refusals: the detail names
+  // wire keys and the request schema.
+  ["email_names_no_one", "create.emailNamesNoOne"],
+  ["address_erased", "create.addressErased"],
+  ["linkedin_url_malformed", "create.linkedinMalformed"],
+  ["linkedin_url_not_linkedin", "create.linkedinNotLinkedin"],
+  ["linkedin_url_not_profile", "create.linkedinNotProfile"],
+  ["invalid_date_range", "create.dateRangeReversed"],
+  ["invalid_country_code", "create.countryCodeInvalid"],
+  // Invite and Deal Room refusals: each detail is an English API sentence.
+  ["email_taken", "users.emailTaken"],
+  ["removed_member_email", "users.emailReserved"],
+  ["deal_room_document_already_present", "room.docs.alreadyPresent"],
+  // The detail says to regenerate, which a draft cannot; one sentence serves both.
+  ["offer_lapsed", "offer.lapsed"],
+  // A name or membership clash a screen words as its own field's refusal.
+  ["pipeline_name_taken", "pipeline.nameTaken"],
+  ["pipeline_default_taken", "pipeline.defaultTaken"],
+  ["custom_field_label_taken", "cf.labelTaken"],
+  ["already_on_list", "lists.alreadyOnShortlist"],
+  // The currency rate refusals name wire fields and the server's digit limits.
+  ["fx_rate_base_self", "settings.rates.fromIsBase"],
+  ["fx_rate_currency", "settings.rates.fromNotCurrency"],
+  ["fx_rate_positive", "settings.rates.rateNotPositive"],
+  ["fx_rate_past", "settings.rates.pastDate"],
 ]);
 
 // The held refusal names no record; its words depend only on whether the

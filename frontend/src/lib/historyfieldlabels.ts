@@ -49,6 +49,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["full_name", "history.field.full_name"],
   ["fx_rate_date", "history.field.fx_rate_date"],
   ["fx_rate_to_base", "history.field.fx_rate_to_base"],
+  ["greeting_register", "history.field.greeting_register"],
   ["industry", "history.field.industry"],
   ["assess_against_entity_id", "history.field.assess_against_entity_id"],
   ["is_done", "history.field.is_done"],
@@ -103,7 +104,15 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 // `win_probability` is recorded as the figure set on the deal and who set it.
 // Apart from both maps above, because no `Update<Type>Request` names these and
 // no hand-built image writes them, so each census would call them orphans.
+// The address parts are the record's columns; the request nests them under
+// `address`, and they take the words the Address dialog shows.
 const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
+  ["address_line1", "create.addressLine1"],
+  ["address_line2", "create.addressLine2"],
+  ["address_postal_code", "create.postalCode"],
+  ["address_city", "create.city"],
+  ["address_region", "create.region"],
+  ["address_country", "create.country"],
   ["stage_id", "history.field.stage_id"],
   ["win_probability_override", "history.field.win_probability_override"],
   ["win_probability_set_by", "history.field.win_probability_set_by"],

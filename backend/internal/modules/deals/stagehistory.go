@@ -80,7 +80,11 @@ func stageMoveProvenance(ctx context.Context) (string, *ids.UUID) {
 // a later reorder of the pipeline cannot change which way this move went.
 func stagePositionsAtMove(ctx context.Context, tx pgx.Tx, from *ids.UUID, to ids.StageID) (*int, *int, error) {
 	var fromPosition, toPosition *int
-	err := tx.QueryRow(ctx, `SELECT (SELECT "position" FROM stage WHERE id = $1), (SELECT "position" FROM stage WHERE id = $2)`, from, to).
+	// Positions of two pipelines do not compare, so a move between them keeps none.
+	err := tx.QueryRow(ctx, `
+		SELECT CASE WHEN f.pipeline_id = t.pipeline_id THEN f."position" END,
+		       CASE WHEN f.pipeline_id = t.pipeline_id THEN t."position" END
+		  FROM stage t LEFT JOIN stage f ON f.id = $1 WHERE t.id = $2`, from, to).
 		Scan(&fromPosition, &toPosition)
 	if err != nil {
 		return nil, nil, fmt.Errorf("record stage history: reading the stage order: %w", err)

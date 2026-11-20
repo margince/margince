@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -107,6 +107,40 @@ export const RegenerateRefused: Story = {
       await screen.findByRole("button", { name: /Regenerate revision/ }),
     );
     await screen.findByRole("alert");
+  },
+};
+
+/** A draft past its valid-until day says where to change it. */
+export const SendLapsed: Story = {
+  render: () => {
+    installFetchStub({
+      ...reader,
+      "POST /offers/o-1/send": () =>
+        jsonResponse(
+          {
+            status: 422,
+            code: "validation_error",
+            detail: "the offer was valid until 2026-11-15",
+            details: {
+              errors: [
+                {
+                  field: "valid_until",
+                  code: "offer_lapsed",
+                  message: "the offer was valid until 2026-11-15",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+    });
+    return <Actions offer={draftOffer} />;
+  },
+  play: async () => {
+    await userEvent.click(await screen.findByTestId("send-offer"));
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(dialog.getByRole("button", { name: "Send" }));
+    await dialog.findByText(/^The Valid until date of this offer has passed\./);
   },
 };
 

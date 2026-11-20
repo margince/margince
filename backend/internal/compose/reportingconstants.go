@@ -57,6 +57,8 @@ const (
 	reportingPartnerCommission             = "partner_commission"
 	reportingPartnerActivity               = "partner_activity"
 	reportingBreakdown                     = "breakdown"
+	reportingAccountProgression            = "account_progression"
+	reportingSourceQuality                 = "source_quality"
 	reportingAmountField                   = "amount_minor"
 	reportingPartnerField                  = "partner_company_id"
 )

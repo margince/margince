@@ -36,6 +36,7 @@ it("narrows a new activity field to the types the admin picks", async () => {
           <FieldBuilder
             object="activity"
             pending={false}
+            error={null}
             onSubmit={onSubmit}
             onCancel={noop}
           />
@@ -50,6 +51,7 @@ it("narrows a new activity field to the types the admin picks", async () => {
   await user.click(screen.getByRole("button", { name: "Add field" }));
   expect(onSubmit).toHaveBeenCalledWith(
     expect.objectContaining({ object: "activity", activityKinds: ["meeting"] }),
+    expect.any(Function),
   );
 });
 
@@ -61,6 +63,7 @@ it("asks no types of a field on another object", () => {
           <FieldBuilder
             object="deal"
             pending={false}
+            error={null}
             onSubmit={noop}
             onCancel={noop}
           />

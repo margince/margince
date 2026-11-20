@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { Button } from "../../design-system/atoms";
+import { useConnectAiGate } from "../../design-system/connectai";
 import { ErrorLine } from "../../design-system/errorline";
 import { SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
@@ -204,24 +205,28 @@ export function BuildButton({
   describedBy?: string;
 }>) {
   const t = useT();
+  const aiGate = useConnectAiGate(`voice-build-ai-${profile.id}`);
   return (
-    <Button
-      variant={variant}
-      // A refusal the reader can act on, attached to the control rather than
-      // left in a `title` no screen reader announces on a disabled button.
-      reasonId={run.blocked === null ? undefined : describedBy}
-      aria-describedby={describedBy}
-      disabled={!run.build.isPending && (run.tooThin || intakeBusy)}
-      pending={run.build.isPending}
-      busyLabel={t("settings.voice.building")}
-      onClick={() => run.build.mutate()}
-    >
-      {t(
-        (profile.profile_version ?? 0) > 0
-          ? "settings.voice.rebuild"
-          : "settings.voice.buildFirst",
-      )}
-    </Button>
+    <>
+      <Button
+        variant={variant}
+        // A refusal the reader can act on, attached to the control rather than
+        // left in a `title` no screen reader announces on a disabled button.
+        reasonId={run.blocked === null ? aiGate.reasonId : describedBy}
+        aria-describedby={describedBy}
+        disabled={!run.build.isPending && (run.tooThin || intakeBusy)}
+        pending={run.build.isPending}
+        busyLabel={t("settings.voice.building")}
+        onClick={() => run.build.mutate()}
+      >
+        {t(
+          (profile.profile_version ?? 0) > 0
+            ? "settings.voice.rebuild"
+            : "settings.voice.buildFirst",
+        )}
+      </Button>
+      {aiGate.notice}
+    </>
   );
 }
 

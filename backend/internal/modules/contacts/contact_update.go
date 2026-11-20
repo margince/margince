@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -45,6 +46,9 @@ type UpdateContactInput struct {
 	// RelationshipMark marks the contact; clearing it goes through Clear. The
 	// setter is read from the signed-in principal, never from the caller.
 	RelationshipMark *relationshipmark.Mark
+	// GreetingRegister is how a message to the contact opens; clearing it goes
+	// through Clear.
+	GreetingRegister *greetingregister.Register
 	Social           map[string]any
 	// LinkedInURL is the top-level spelling of Social's linkedin key; a
 	// cleared linkedin_url in Clear removes the link.
@@ -213,13 +217,11 @@ func contactChangeImages(
 			before["social"], after["social"] = was, now
 		}
 	}
-	if in.Emails != nil {
-		before["emails"] = current.Emails
-		after["emails"] = in.Emails
+	if sets.emails {
+		before["emails"], after["emails"] = current.Emails, sets.emailRows
 	}
-	if in.Phones != nil {
-		before["phones"] = current.Phones
-		after["phones"] = in.Phones
+	if sets.phones {
+		before["phones"], after["phones"] = current.Phones, sets.phoneRows
 	}
 	return before, after
 }
@@ -237,13 +239,14 @@ func linkedInURLFolded(in UpdateContactInput) (UpdateContactInput, error) {
 	return in, nil
 }
 
-// readContactToEdit reads the row the edit decides on. An edit that moves a name
-// part decides full_name from the stored parts, so it reads them under the row
-// lock. That lock comes first in the lock order (lockorder.go).
+// readContactToEdit reads the row the edit decides on. A name edit decides from
+// the stored parts, and a set edit records the stored rows as its before image.
+// So both read under the row lock, which comes first in the lock order
+// (lockorder.go).
 func readContactToEdit(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
-	if movesANamePart(in) {
+	if movesANamePart(in) || in.FullName != nil || in.Emails != nil || in.Phones != nil {
 		if _, err := storekit.LockRow(ctx, tx, "contact", id.UUID, storekit.LiveOnly); err != nil {
 			return crmcontracts.Contact{}, err
 		}
@@ -277,11 +280,48 @@ func contactEditPatch(
 }
 
 // updateAsWritten completes the input with what the request implies: the core
-// fields cleared to NULL, and the display name that follows the name parts.
+// fields cleared to NULL, the name parts a rename drops, and the display name.
 func updateAsWritten(current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column) UpdateContactInput {
-	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
+	in = withRestatedNamePartsDropped(current, in)
+	in.Clear = append(storekit.CoreFieldClears(in.Clear, active, in.CustomFields), namePartsARenameDrops(current, in)...)
 	in.FullName = displayNameAfter(current, in)
 	return in
+}
+
+// withRestatedNamePartsDropped forgets a supplied name part equal to the stored
+// one: restating a part moves nothing, so a rename still drops it.
+func withRestatedNamePartsDropped(current crmcontracts.Contact, in UpdateContactInput) UpdateContactInput {
+	if in.FirstName != nil && *in.FirstName == derefString(current.FirstName) {
+		in.FirstName = nil
+	}
+	if in.LastName != nil && *in.LastName == derefString(current.LastName) {
+		in.LastName = nil
+	}
+	return in
+}
+
+// namePartsARenameDrops lists each stored name part the new display name no
+// longer holds as a run of its words. A greeting then never reads the name of
+// the contact it was before. A part the update states decides itself.
+func namePartsARenameDrops(current crmcontracts.Contact, in UpdateContactInput) []string {
+	if in.FullName == nil || *in.FullName == current.FullName {
+		return nil
+	}
+	words := nameWords(foldedNameKey(*in.FullName))
+	var dropped []string
+	for _, part := range [...]struct {
+		column string
+		stored *string
+		stated bool
+	}{
+		{columnFirstName, current.FirstName, in.FirstName != nil || slices.Contains(in.Clear, columnFirstName)},
+		{columnLastName, current.LastName, in.LastName != nil || slices.Contains(in.Clear, columnLastName)},
+	} {
+		if name := derefString(part.stored); !part.stated && name != "" && !containsRun(words, nameWords(foldedNameKey(name))) {
+			dropped = append(dropped, part.column)
+		}
+	}
+	return dropped
 }
 
 // displayNameAfter is the full_name an update writes. A display name that was
@@ -340,6 +380,9 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput, mark
 		return nil, err
 	}
 	if err := patchRelationshipMark(p, current, in, markSetter); err != nil {
+		return nil, err
+	}
+	if err := patchGreetingRegister(p, current, in); err != nil {
 		return nil, err
 	}
 	if err := setAddress(p, current.Address, in.Address, in.Trail); err != nil {

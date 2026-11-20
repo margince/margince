@@ -155,6 +155,8 @@ export function ProductsAdmin() {
   const leading = useLeadingCurrencies();
   const { locale } = useLocale();
   const fields = productFields(t, leading, locale);
+  // A product's one unique value is its SKU.
+  const skuTaken = { field: "sku", sentence: t("product.skuTaken") };
   const [translating, setTranslating] = useState<Product | null>(null);
 
   const createProduct = async (values: Record<string, string>) => {
@@ -257,6 +259,7 @@ export function ProductsAdmin() {
               record={editableProduct(p, locale)}
               update={updateProduct(p)}
               fields={fields}
+              conflict={skuTaken}
             />
           )}
           {canUpdate && (
@@ -296,18 +299,18 @@ export function ProductsAdmin() {
       className="listsection"
       title={t("product.title")}
       titleAction={
-        canCreate ? (
-          <CreateAction
-            label={t("product.new")}
-            invalidate="products"
-            // `stay`: a fresh product has no page of its own to open. The list
-            // it joins is already on screen.
-            screen="settings"
-            stay
-            create={createProduct}
-            fields={fields}
-          />
-        ) : undefined
+        <CreateAction
+          label={t("product.new")}
+          requires={{ object: "product", action: "create" }}
+          invalidate="products"
+          // `stay`: a fresh product has no page of its own to open. The list
+          // it joins is already on screen.
+          screen="settings"
+          stay
+          create={createProduct}
+          fields={fields}
+          conflict={skuTaken}
+        />
       }
     >
       <PanelBody className="listsection-intro">

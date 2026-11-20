@@ -1631,6 +1631,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.conversion": "Weiterkommen pro Phase",
   "reporting.stage_cohort": "Weiterkommen pro Phase",
   "reporting.lead_cohort": "Was aus neuen Leads wurde",
+  "reporting.account_cohort": "Wie weit Unternehmen kamen",
+  "reporting.source_quality": "Qualität der Lead-Quellen",
   "reporting.cohortStage": "Phase",
   "reporting.cohortEntered": "Eingetreten",
   "reporting.cohortArrived": "Eingegangen",
@@ -1652,6 +1654,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.accepted": "Übergabe angenommen",
   "reporting.cohortOutcome.qualified": "Qualifiziert",
   "reporting.cohortOutcome.disqualified": "Disqualifiziert",
+  "reporting.cohortOutcome.opportunity_linked": "Mit einem Deal verknüpft",
+  "reporting.cohortOutcome.not_linked": "Noch nicht verknüpft",
+  "reporting.cohortLinkedRate": "Anteil verknüpft",
   "reporting.cohortEntry.repeat": "Erneut in dieser Phase",
   "reporting.cohortEntry.reopened": "Nach Abschluss wieder geöffnet",
   "reporting.cohortStillOpenNote":
@@ -2539,6 +2544,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.undo.redo": "Erneut anwenden",
   "history.undo.busy": "Änderung wird rückgängig gemacht…",
   "history.undo.confirmTitle": "Diese Änderung rückgängig machen?",
+  "history.undo.redoConfirmTitle": "Diese Änderung erneut anwenden?",
+  "history.undo.redoConfirmBody_one":
+    "{count} Feld erhält wieder seinen Wert vor dem Rückgängigmachen:",
+  "history.undo.redoConfirmBody_other":
+    "{count} Felder erhalten wieder ihre Werte vor dem Rückgängigmachen:",
   "history.undo.confirmEdgeBody":
     "Damit ändert sich die Verknüpfung mit {other}. Beide Datensätze bleiben bestehen, nur die Verknüpfung zwischen ihnen ändert sich.",
   "history.undo.confirmCreateBody":
@@ -2745,6 +2755,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
   "history.field.first_name": "Vorname",
+  "history.field.greeting_register": "Anrede",
   "history.field.full_name": "Name",
   "history.field.win_probability": "Abschlusschance",
   "history.field.stage_id": "Phase",
@@ -3055,6 +3066,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.phone.empty": "Gib eine Telefonnummer ein.",
   "common.fieldTooLongMax": "{field}: höchstens {max} Zeichen.",
   "common.valueTooLongMax": "Dieser Wert darf höchstens {max} Zeichen haben.",
+  "common.fieldRequiredNamed": "{field} ist erforderlich.",
+  "common.fieldNotInteger": "Gib für {field} eine ganze Zahl ein.",
+  "common.valueNotInteger": "Gib eine ganze Zahl ein.",
+  "common.fieldNotNumber": "Gib für {field} eine Zahl ein.",
+  "common.valueNotNumber": "Gib eine Zahl ein.",
+  "common.fieldNotEmail": "Gib für {field} eine E-Mail-Adresse ein.",
+  "common.valueNotEmail": "Gib eine E-Mail-Adresse ein.",
+  "common.fieldNotDate": "Gib für {field} ein gültiges Datum ein.",
+  "common.valueNotDate": "Gib ein gültiges Datum ein.",
+  "common.fieldNotDateTime":
+    "Gib für {field} ein gültiges Datum mit Uhrzeit ein.",
+  "common.valueNotDateTime": "Gib ein gültiges Datum mit Uhrzeit ein.",
+  "common.fieldNotInSet": "Wähle für {field} einen der angebotenen Werte.",
+  "common.valueNotInSet": "Wähle einen der angebotenen Werte.",
+  "common.fieldInvalidNamed": "Prüfe {field} und versuche es erneut.",
+  "common.fieldBetween": "{field} muss zwischen {min} und {max} liegen.",
+  "common.valueBetween": "Gib einen Wert von {min} bis {max} ein.",
+  "common.fieldAtLeast": "{field} muss mindestens {min} sein.",
+  "common.valueAtLeast": "Gib einen Wert von mindestens {min} ein.",
+  "common.fieldAtMost": "{field} darf höchstens {max} sein.",
+  "common.valueAtMost": "Gib einen Wert von höchstens {max} ein.",
+  "common.fieldOutOfRange": "{field} liegt außerhalb des erlaubten Bereichs.",
+  "common.valueOutOfRange":
+    "Dieser Wert liegt außerhalb des erlaubten Bereichs.",
+  "common.fieldRepeated":
+    "{field} enthält denselben Wert zweimal. Entferne die Wiederholung.",
+  "common.valueRepeated":
+    "Derselbe Wert steht zweimal in der Liste. Entferne die Wiederholung.",
+  "common.fieldOneLine": "Gib {field} in einer Zeile ein.",
+  "common.valueOneLine": "Gib den Wert in einer Zeile ein.",
+  "common.fieldDateInFuture": "{field} darf nicht in der Zukunft liegen.",
+  "common.dateInFuture": "Dieses Datum darf nicht in der Zukunft liegen.",
+  "common.fieldDecimalPlaces": "Erlaubte Nachkommastellen für {field}: {max}.",
+  "common.valueDecimalPlaces": "Erlaubte Nachkommastellen: {max}.",
   "common.valueTooLong": "Dieser Wert ist zu lang.",
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
@@ -3177,6 +3222,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
+  "record.accessUnknown":
+    "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
     "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.logActivityRefused":
@@ -3202,6 +3249,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.ceiling.noWider": "nicht weiter",
   "share.ceiling.post": ".",
   "share.unknownRecord": "Dieser Datensatz kann nicht geteilt werden.",
+  "share.missingRecord":
+    "Diesen Datensatz gibt es nicht, oder er ist nicht mit dir geteilt.",
   "share.grantAccess": "Zugriff gewähren",
   "share.subject": "Person oder Team",
   "share.holdsRead": "Hat Lesezugriff",
@@ -3790,6 +3839,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ob sich das senden lässt, ist noch nicht bekannt. Ein Neuladen der Seite prüft es erneut.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
+  "consent.confirmationPending":
+    "Wartet auf die Bestätigung per E-Mail. Der Link gilt bis {date}.",
   "consent.noPurposes":
     "Dieses Unternehmen erfasst noch keine Einwilligungszwecke.",
   "consent.defaultDeny":
@@ -5736,6 +5787,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.emptyBody":
     "Füge dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
   "tags.pickerLabel": "Tags suchen",
+  "tags.nameTaken": "Einen Tag mit diesem Namen gibt es schon.",
   "tags.alreadyAdded": "Bereits hinzugefügt",
   "tags.offerCompanyTitle": "{company} auch mit {tag} taggen?",
   "tags.offerCompanyAccept": "{company} taggen",
@@ -6646,6 +6698,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Pipeline dieses Deals ist stillgelegt, daher sind ihre Phasen schreibgeschützt. Stelle die Pipeline in den Einstellungen wieder her, um den Deal zu verschieben.",
   "deal.stageOtherPipeline":
     "Diese Phase gehört zu einer anderen Pipeline. Wähle eine Phase der Pipeline dieses Deals.",
+  "deal.movePipeline": "In Pipeline verschieben",
+  "deal.movePipelinePick": "Pipeline wählen",
+  "deal.movePipelineDone": "Nach {pipeline} verschoben.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
@@ -6892,6 +6947,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.termsText": "Bedingungstext",
   "offer.lines": "Positionen",
   "offer.addLine": "Position hinzufügen",
+  "offer.positionTaken": "Eine andere Zeile hat schon diese Position.",
+  "offer.lapsed":
+    "Das Datum „Gültig bis“ dieses Angebots ist überschritten. Ändere es bei einem Entwurf unter „Kopfdaten bearbeiten“ oder erzeuge für ein gesendetes Angebot eine neue Revision.",
   "offer.position": "Position",
   "offer.description": "Beschreibung",
   "offer.unit": "Einheit",
@@ -7420,6 +7478,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.firstName": "Vorname",
   "create.lastName": "Nachname",
   "create.contactTitle": "Jobtitel",
+  "create.greetingRegister": "Anrede in Nachrichten",
+  "create.greetingRegisterHint": "Entwürfe an diesen Kontakt beginnen so.",
+  "create.greetingRegister.unset": "Margince entscheiden lassen",
+  "create.greetingRegister.formal": "Förmlich, mit Nachnamen",
+  "create.greetingRegister.familiar": "Vertraut, mit Vornamen",
   "create.acquisitionSource": "Herkunft des Kontakts",
   "create.acquisitionSourceHint":
     "Diese Angabe erscheint auf der Datenschutzseite des Kontakts.",
@@ -7450,12 +7513,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.companyPicked":
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
   "create.companyNew":
-    "Erstellt ein neues Unternehmen, sofern keines aus der Liste ausgewählt wird.",
+    "Verknüpft das Unternehmen mit diesem Namen oder legt es an, wenn es keines gibt.",
   "create.companyPrefilled":
     "Über die Domain der geschäftlichen E-Mail-Adresse einem bestehenden Unternehmen zugeordnet.",
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
   "create.amountNegative": "Gib einen Betrag von null oder mehr ein.",
+  "create.emailNamesNoOne":
+    "Diese Adresse gehört zu einem Versandsystem, an dem niemand antwortet. Gib die eigene Adresse des Kontakts ein.",
+  "create.addressErased":
+    "Dieser Wert wurde auf Wunsch der betroffenen Person gelöscht und kann nicht wieder gespeichert werden.",
+  "create.linkedinMalformed":
+    "Das ist kein Link. Füge die Adresse der LinkedIn-Seite ein.",
+  "create.linkedinNotLinkedin":
+    "Gib einen Link zu einer Seite auf linkedin.com ein.",
+  "create.linkedinNotProfile":
+    "Gib einen Link zu einem persönlichen Profil ein, etwa linkedin.com/in/name.",
+  "create.dateRangeReversed":
+    "Das Enddatum liegt vor dem Startdatum. Wähle ein späteres Enddatum.",
+  "create.countryCodeInvalid":
+    "Gib das Land als Code aus zwei Buchstaben ein, etwa DE oder US.",
   "create.referenceNotFound":
     "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",
@@ -7464,6 +7541,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.expectedClose": "Erwarteter Abschluss",
 
   "keyCode.label": "Schlüssel: {key}",
+  "field.rowRepeated": "{value} steht in zwei Zeilen. Entferne eine davon.",
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",
   "field.editEmails": "E-Mail-Adressen bearbeiten",
@@ -9139,6 +9217,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.outcomesOwnLensOnly":
     "Dieser Bereich misst die Datensätze eines einzelnen Nutzerkontos. Die breiteren Bereiche decken den Rest der Sicht ab.",
   "analytics.reportWinLoss": "Gewonnen und verloren",
+  "analytics.reportLossEvents": "Jeder Verlust einzeln",
   "analytics.reportStageAge": "Verweildauer je Phase",
   "analytics.baseValue": "Deal-Wert · {currency}",
   "analytics.baseValueUnnamed": "Deal-Wert",
@@ -11348,6 +11427,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.correctionAccept": "Annehmen und aktualisieren",
   "privacy.correctionReject": "Unverändert lassen",
   "privacy.purposesRegistry": "Registrierte Zwecke",
+  "privacy.purposeKeyTaken": "Diesen Schlüssel verwendet bereits {label}.",
+  "privacy.purposeKeyTakenUnnamed":
+    "Ein anderer Zweck verwendet diesen Schlüssel bereits.",
   "privacy.purposeKey": "Schlüssel",
   "privacy.purposeLabel": "Bezeichnung",
   "privacy.purposeDoi": "Double-Opt-in erforderlich",
@@ -11949,6 +12031,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "pipeline.new": "Neue Pipeline",
   "pipeline.createRefused":
     "Deine Rolle darf keine Pipelines anlegen. Frage einen Admin.",
+  "pipeline.defaultTaken":
+    "Eine andere Pipeline ist schon der Standard. Lege diese mit „Kein Standard“ an und nutze danach „Zum Standard machen“.",
+  "pipeline.nameTaken": "Eine Pipeline mit diesem Namen gibt es schon.",
   "pipeline.name": "Name",
   "pipeline.default": "Standard",
   "pipeline.notDefault": "Kein Standard",
@@ -13923,6 +14008,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Stellen Sie Ihre Frage unter dem betreffenden Dokument. Die Frage geht direkt an {steward}.",
   "buyer.closedOn": "Geschlossen am {date}",
   "room.docs.title": "Dokumente und Diskussionen",
+  "room.docs.alreadyPresent": "Diese Datei ist schon im Raum.",
   "room.docs.empty": "Noch keine Dokumente im Raum.",
   "room.docs.fileLabel": "Datei aus diesem Deal",
   "room.docs.fileHint":
@@ -14320,6 +14406,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "coverage.risk.stakeholder_left": "Stakeholder ist ausgeschieden",
   "coverage.risk.going_cold": "Kühlt ab",
 
+  "cf.labelTaken":
+    "Dieser Datensatztyp hat schon ein eigenes Feld mit dieser Bezeichnung.",
   "cf.title": "Eigene Felder",
   "cf.formSection": "Eigene Felder",
   "cf.subtitle":
@@ -14373,6 +14461,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird automatisch abgeleitet und ist ab dem Livegang fest. Das Präfix cf_ verhindert Konflikte mit Kernfeldern.",
   "cf.typeLabel": "Typ",
   "cf.currencyCode": "Währungscode",
+  "cf.currencyNotCode":
+    "Gib einen Währungscode aus 3 Buchstaben ein, etwa EUR, CHF oder USD.",
   "cf.currencyHint":
     "Dreistelliger ISO-4217-Code, zum Beispiel EUR oder USD. Beträge werden auf den Cent genau gespeichert.",
   "cf.options": "Optionen",
@@ -14448,10 +14538,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.home.seatLabel": "Dein Platz",
   "settings.home.seat.full": "Voller Platz: Änderungen erlaubt",
   "settings.home.seat.read": "Leseplatz: nur ansehen",
-  "settings.home.reachLabel": "Sichtbare Datensätze",
-  "settings.home.reach.own": "Deine eigenen Datensätze",
-  "settings.home.reach.team": "Datensätze deines Teams",
-  "settings.home.reach.all": "Alle Datensätze des Unternehmens",
+  "settings.home.reachLabel": "Datensätze, die du ändern darfst",
+  "settings.home.reach.none": "Keine",
+  "settings.home.reach.own": "Deine eigenen",
+  "settings.home.reach.team": "Deine und die deines Teams",
+  "settings.home.reach.all": "Alle im Unternehmen",
+  "settings.home.readLabel": "Datensätze, die du lesen darfst",
+  "settings.home.read.some":
+    "Alle {kinds}, außer privaten anderer, die nicht mit dir geteilt sind",
+  "settings.home.read.none": "Keine",
   "settings.home.access": "Dein Zugriff",
   "settings.home.accessLoading": "Dein Zugriff wird geladen…",
   "settings.boundary.deniedTitle": "Kein Zugriff auf diese Einstellungsseite",
@@ -15169,7 +15264,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "license.check.failed":
     "Das Lizenz-Token ließ sich nicht neu einlesen. Das letzte Ergebnis gilt weiter, und das Server-Log nennt den Grund.",
   "license.counting":
-    "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
+    "Volle Plätze, die nicht deaktiviert oder gesperrt sind. Agenten und Leseplätze zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",
   "settings.rates.fxIntro":
     "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später. Ein früheres Datum geht nur vor dem ersten Kurs der Währung. Ein Kurs, der schon gilt, ändert sich nie.",
@@ -15187,6 +15282,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.rates.modelEmpty": "Noch keine Modellpreise.",
   "settings.rates.modelModalTitle": "Modellpreis festlegen",
   "settings.rates.notSaved": "Wert nicht gespeichert",
+  "settings.rates.fromIsBase":
+    "Das ist die Basiswährung, ihr Kurs ist immer 1. Wähle eine andere Währung.",
+  "settings.rates.fromNotCurrency":
+    "Gib einen Währungscode aus 3 Buchstaben ein, etwa EUR, CHF oder USD.",
+  "settings.rates.rateNotPositive":
+    "Gib einen Kurs größer als null ein, mit höchstens 10 Stellen vor und 10 nach dem Komma.",
+  "settings.rates.pastDate":
+    "Ein vergangenes Datum geht nur vor dem ersten Kurs dieser Währung. Wähle heute oder ein späteres Datum.",
   "taxRates.title": "Steuersätze",
   "taxRates.withheld": "Nur Admin oder Ops sehen die Steuersätze.",
   "taxRates.intro":
@@ -15558,7 +15661,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.renameSubmit": "Name speichern",
   "roles.scopeTitle": "Wessen Datensätze Mitglieder ändern",
   "roles.scopeSub":
-    "Kontakte, Unternehmen, Leads und Deals bleiben für jede Rolle lesbar, die sie lesen darf. Diese Einstellung legt fest, was Mitglieder ändern dürfen und welche Projekte sie sehen.",
+    "Jede Rolle, die Kontakte, Unternehmen, Leads, Deals und Projekte lesen darf, liest alle davon. Diese Einstellung legt fest, welche davon Mitglieder ändern dürfen.",
   "roles.scope.own": "Eigene",
   "roles.scope.ownSub": "Datensätze, die dem Mitglied gehören.",
   "roles.scope.team": "Die der Teammitglieder",
@@ -15757,6 +15860,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.newTeamLabel": "Neues Team",
   "users.newTeamOpen": "Neues Team",
   "users.teamNameLabel": "Teamname",
+  "users.emailTaken":
+    "Ein Mitglied mit dieser E-Mail-Adresse gibt es schon. Wurde es deaktiviert, reaktiviere es stattdessen.",
+  "users.emailReserved":
+    "Diese Adresse gehörte einem endgültig entfernten Mitglied und bleibt reserviert.",
   "users.teamDuplicate":
     "Ein Team mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "users.newTeamPlaceholder": "Zum Beispiel DACH Sales",
@@ -15764,8 +15871,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.notArchived": "Team nicht archiviert",
   "users.teamNotChanged": "Mitgliedschaft nicht geändert",
   "users.access.title": "Zugriff des Mitglieds",
-  "users.access.identity":
-    "Liest alle Kontakte, Unternehmen, Leads und Deals dieses Unternehmens.",
+  "users.access.reads": "Liest alle {kinds} dieses Unternehmens.",
+  "users.access.readsNone": "Liest keine Datensätze.",
+  "users.access.writesNone": "Ändert keine Datensätze.",
   "users.access.writesAll": "Bearbeitet alle Datensätze.",
   "users.access.writesTeam":
     "Bearbeitet eigene Datensätze und die der Teams {teams}.",
@@ -15956,7 +16064,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companySave": "Unternehmenskontext speichern",
   "settings.companySaved": "Gespeichert",
   "settings.companySaveFailed": "Unternehmenskontext nicht gespeichert",
-  "settings.companyNameTooLong": "Kürze den Unternehmensnamen.",
   "settings.companyRefreshFailed": "Analyse der Website nicht abgeschlossen",
   "settings.companyApplyFailed": "Änderungen nicht übernommen",
   "settings.companyRefreshWarnings": "Warnungen aus dieser Analyse",
@@ -15995,6 +16102,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einträge der Preisliste, aus denen Angebotspositionen übernommen werden.",
   "product.new": "Neues Produkt",
   "product.edit": "Produkt bearbeiten",
+  "product.skuTaken": "Ein anderes Produkt hat diese Artikelnummer bereits.",
   "product.taxCategory": "Steuerkategorie",
   "product.taxCategoryUnset": "Nicht eingeordnet",
   "product.taxCategoryFilter": "Steuerkategorie",
@@ -18758,6 +18866,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "embedreindex.unbound":
     "Es gibt keinen Suchindex zum Neuaufbauen, da kein Embedding-Modell zugeordnet ist.",
   "embedreindex.unboundLink": "KI-Einstellungen öffnen",
+  "connectAi.first": "Zuerst eine KI verbinden",
+  "connectAi.link": "KI-Einstellungen öffnen",
   "embedreindex.statusLabel": "Indexstatus",
   "embedreindex.reindexLabel": "Änderungen neu indexieren",
   "embedreindex.reindexHelp":
@@ -19183,7 +19293,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.employer": "Arbeitgeber",
   "contact.rail.allCompaniesConnected":
     "Alle Treffer sind bereits mit diesem Kontakt verknüpft.",
-  "contact.rail.isCurrentEmployer": "Das ist der aktuelle Arbeitgeber",
+  "contact.rail.isPrimaryEmployer": "Das ist der Hauptarbeitgeber",
   "contact.rail.markEnded": "Als beendet markieren",
   "contact.rail.removeEmploymentTitle":
     "Verknüpfung zum Unternehmen entfernen?",
@@ -19855,6 +19965,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.page": "Liste",
   "lists.loading": "Liste wird geladen",
   "lists.kind.live": "Live-Liste",
+  "lists.alreadyOnShortlist": "Bereits auf dieser Shortlist.",
+  "lists.alreadyOnOption": "{name} (bereits enthalten)",
   "lists.kind.shortlist": "Shortlist",
   "lists.type.contact": "Kontakte",
   "lists.type.company": "Unternehmen",
@@ -20471,6 +20583,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.committee.carriesContact": "Führt den Großteil des Austauschs",
   "deal.committee.teamUnread":
     "Nicht lesbar, wer sonst an diesem Deal arbeitet.",
+  "deal.committee.lines.title": "Wer mit wem spricht",
+  "deal.committee.lines.mailed": "An sie gesendet am {date}",
+  "deal.committee.lines.replied": "Hat am {date} geschrieben",
+  "deal.committee.lines.met": "Am {date} getroffen",
+  "deal.committee.lines.pair": "{colleague} mit {contact}: {how}",
+  "deal.committee.lines.unreached":
+    "Niemand aus deinem aktuellen Team hat {contact} erreicht",
   "deal.committee.missing.champion": "Es fehlt: ein Champion im Austausch",
   "deal.committee.missing.firstContact":
     "Es fehlt: ein Kontakt auf Kundenseite",
@@ -22813,6 +22932,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.docState.draft": "Entwurf",
   "legalReview.docState.current": "Aktuell",
   "legalReview.docState.final": "Endfassung",
+  "legalReview.advanceRefused":
+    "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Frage eine Rechtsprüfung an und verschiebe den Deal danach.",
   "legalReview.packHistory": "Phasenverlauf",
   "legalReview.enteredStage": "{stage}, erreicht {date}",
   "legalReview.settingsTitle": "Rechtsprüfung",
@@ -22838,6 +22959,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.offerLineRecurring_one": "{cadence} über {count} Periode",
   "legalReview.offerLineRecurring_other": "{cadence} über {count} Perioden",
   "legalReview.offerLineStaged": "Vorgeschlagen, noch nicht in der Summe",
+  "legalReview.packContracts": "Verträge",
+  "legalReview.contractNotice": "Kündigungsfrist",
+  "legalReview.contractNoticeDays_one": "{count} Tag",
+  "legalReview.contractNoticeDays_other": "{count} Tage",
+  "legalReview.contractCancelBy": "Kündigung erklärt",
+  "legalReview.contractRenewal": "Verlängerung",
+  "legalReview.contractAutoRenews": "Verlängert sich automatisch",
+  "legalReview.contractNoAutoRenew": "Verlängert sich nicht automatisch",
+  "legalReview.packTouches": "Letzter Kontakt",
+  "legalReview.packTasks": "Offene Aufgaben zum Zeitpunkt der Anfrage",
+  "legalReview.taskDue": "Fällig am {date}",
+  "legalReview.touchLine": "{kind}, {date}",
+  "legalReview.offerPdf": "PDF",
+  "legalReview.packOlder":
+    "Dieses Paket entstand, bevor Verträge, Kontakte und Aufgaben dazugehörten.",
   "legalReview.packBinding": "Weitere an die Käuferseite gesendete Angebote",
   "aiTask.name.account_scan": "Analyse des Kundenbedarfs",
   "aiTask.name.agent_loop": "Agentensteuerung",

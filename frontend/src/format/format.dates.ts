@@ -1,6 +1,7 @@
 import type { components } from "../api/schema";
 import type { Locale } from "../i18n";
 import { calendarDay, middayInstant } from "./calendarday";
+import { datePattern } from "./datepattern";
 import { INTL_LOCALE } from "./intllocale";
 import {
   dateTimePreferences,
@@ -131,6 +132,29 @@ export function formatDateAbbrev(
     month: "short",
     year: "numeric",
   }).format(displayDay(utcIso, zone));
+}
+
+/**
+ * A date known only to its month, as "Mar 2021": `formatDateAbbrev` without
+ * the day. It names a calendar month, not a moment, so no zone moves it. A
+ * fixed date format writes the month and year in that format's order.
+ */
+export function formatMonthAbbrev(day: string, locale: Locale): string {
+  const year = day.slice(0, 4);
+  const month = day.slice(5, 7);
+  const format = dateTimePreferences().dateFormat;
+  if (format !== "locale") {
+    const { order, separator } = datePattern(locale, format);
+    return order
+      .filter((part) => part !== "day")
+      .map((part) => (part === "year" ? year : month))
+      .join(separator);
+  }
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(Number(year), Number(month) - 1, 1)));
 }
 
 /**

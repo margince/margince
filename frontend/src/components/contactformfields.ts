@@ -184,6 +184,18 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+// The register the form holds: unset and an unknown value both clear it, and a
+// form that never showed the field leaves it alone.
+function greetingRegisterChoice(
+  values: Record<string, unknown>,
+): UpdateContactRequest["greeting_register"] {
+  if (!Object.hasOwn(values, "greeting_register")) {
+    return undefined;
+  }
+  const choice = values.greeting_register;
+  return choice === "formal" || choice === "familiar" ? choice : null;
+}
+
 // Builds the PATCH body.
 //
 // `emails` and `phones` REPLACE their sets rather than adding to them, which is
@@ -208,6 +220,7 @@ export function mapContactUpdate(
     first_name: scalar("first_name"),
     last_name: scalar("last_name"),
     title: scalar("title"),
+    greeting_register: greetingRegisterChoice(values),
     owner_id: scalar("owner_id"),
     visibility:
       values.visibility === "workspace" || values.visibility === "owner"
@@ -273,6 +286,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         contactPhoneInputs(rows).length
           ? undefined
           : t("create.contactChannelRequired"),
+      wireField: "linkedin_url",
     },
     {
       key: "emails",
@@ -298,6 +312,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         },
       ],
       primaryKey: "is_primary",
+      rowsUnique: true,
       typeKey: "email_type",
       typeDefault: "work",
     },
@@ -355,24 +370,40 @@ const STATED_SOURCE_LABEL: Readonly<
   other: "create.source.other",
 };
 
-// The split name parts are taken once, for a mail merge's greeting. The
-// employer is an edge, edited on the Company card.
+// The employer is an edge, edited on the Company card.
 const CREATE_ONLY = new Set([
-  "first_name",
-  "last_name",
   contactCompanyField.key,
   "acquisition_source",
   "acquisition_note",
 ]);
 
+// The register a rep sets once so every draft to the contact opens the same way.
+// The empty option clears it, which hands the choice back to Margince.
+function greetingRegisterField(t: ReturnType<typeof useT>): CreateField {
+  return {
+    key: "greeting_register",
+    label: "create.greetingRegister",
+    type: "select",
+    options: [
+      { value: "", label: t("create.greetingRegister.unset") },
+      { value: "formal", label: t("create.greetingRegister.formal") },
+      { value: "familiar", label: t("create.greetingRegister.familiar") },
+    ],
+    hint: t("create.greetingRegisterHint"),
+  };
+}
+
 export function contactEditFields(t: ReturnType<typeof useT>): CreateField[] {
   return contactCreateFields(t)
     .filter((field) => !CREATE_ONLY.has(field.key))
-    .map((field) =>
-      field.key === "social.linkedin"
-        ? { ...field, validate: undefined }
-        : field,
-    );
+    .flatMap((field) => {
+      if (field.key === "social.linkedin") {
+        return [{ ...field, validate: undefined }];
+      }
+      return field.key === "title"
+        ? [field, greetingRegisterField(t)]
+        : [field];
+    });
 }
 
 // Compare replace-sets in their request shape; row ids and server metadata

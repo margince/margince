@@ -35,6 +35,7 @@ export function ConfirmModal({
   confirmRef,
   unsaved,
   unsavedBody,
+  bodyRef,
   children,
 }: Readonly<{
   open: boolean;
@@ -89,6 +90,8 @@ export function ConfirmModal({
   /** The caller holds a draft, so a close other than the confirm asks first. */
   unsaved?: boolean;
   unsavedBody?: string;
+  /** The body around the fields, where a form looks for its first refusal. */
+  bodyRef?: Ref<HTMLDivElement>;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -134,7 +137,7 @@ export function ConfirmModal({
       </Heading>
       {body && (
         // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it hears ⌘/Ctrl+Enter from a note inside it; Confirm stays the control
-        <div className="form-stack" onKeyDown={confirmFromNote}>
+        <div ref={bodyRef} className="form-stack" onKeyDown={confirmFromNote}>
           {children}
           {error && <ErrorLine>{error}</ErrorLine>}
         </div>

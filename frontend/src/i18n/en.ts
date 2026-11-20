@@ -1565,6 +1565,8 @@ export const en = {
   "reporting.conversion": "Stage conversion",
   "reporting.stage_cohort": "Stage conversion",
   "reporting.lead_cohort": "What became of new leads",
+  "reporting.account_cohort": "How far companies got",
+  "reporting.source_quality": "Lead source quality",
   "reporting.cohortStage": "Stage",
   "reporting.cohortEntered": "Entered",
   "reporting.cohortArrived": "Arrived",
@@ -1584,6 +1586,9 @@ export const en = {
   "reporting.cohortOutcome.accepted": "Handoff accepted",
   "reporting.cohortOutcome.qualified": "Qualified",
   "reporting.cohortOutcome.disqualified": "Disqualified",
+  "reporting.cohortOutcome.opportunity_linked": "Linked to a deal",
+  "reporting.cohortOutcome.not_linked": "Not linked yet",
+  "reporting.cohortLinkedRate": "Share linked",
   "reporting.cohortEntry.repeat": "Back in this stage",
   "reporting.cohortEntry.reopened": "Reopened after a close",
   "reporting.cohortStillOpenNote":
@@ -2448,6 +2453,11 @@ export const en = {
   "history.undo.redo": "Redo",
   "history.undo.busy": "Undoing change…",
   "history.undo.confirmTitle": "Undo this change?",
+  "history.undo.redoConfirmTitle": "Redo this change?",
+  "history.undo.redoConfirmBody_one":
+    "{count} field goes back to its value before the undo:",
+  "history.undo.redoConfirmBody_other":
+    "{count} fields go back to their values before the undo:",
   "history.undo.confirmEdgeBody":
     "This changes the link with {other}. Both records stay; only the link between them changes.",
   "history.undo.confirmCreateBody":
@@ -2636,6 +2646,7 @@ export const en = {
   "history.field.ended_at": "Ended",
   "history.field.expected_close_date": "Expected close",
   "history.field.first_name": "First name",
+  "history.field.greeting_register": "Greeting",
   "history.field.full_name": "Name",
   "history.field.win_probability": "Probability",
   "history.field.stage_id": "Stage",
@@ -2962,6 +2973,37 @@ export const en = {
   "common.phone.empty": "Enter a phone number.",
   "common.fieldTooLongMax": "{field}: at most {max} characters.",
   "common.valueTooLongMax": "This value is at most {max} characters.",
+  "common.fieldRequiredNamed": "{field} is required.",
+  "common.fieldNotInteger": "Enter a whole number for {field}.",
+  "common.valueNotInteger": "Enter a whole number.",
+  "common.fieldNotNumber": "Enter a number for {field}.",
+  "common.valueNotNumber": "Enter a number.",
+  "common.fieldNotEmail": "Enter an email address for {field}.",
+  "common.valueNotEmail": "Enter an email address.",
+  "common.fieldNotDate": "Enter a valid date for {field}.",
+  "common.valueNotDate": "Enter a valid date.",
+  "common.fieldNotDateTime": "Enter a valid date and time for {field}.",
+  "common.valueNotDateTime": "Enter a valid date and time.",
+  "common.fieldNotInSet": "Choose one of the offered values for {field}.",
+  "common.valueNotInSet": "Choose one of the offered values.",
+  "common.fieldInvalidNamed": "Check {field} and try again.",
+  "common.fieldBetween": "{field} must be from {min} to {max}.",
+  "common.valueBetween": "Enter a value from {min} to {max}.",
+  "common.fieldAtLeast": "{field} must be at least {min}.",
+  "common.valueAtLeast": "Enter a value of at least {min}.",
+  "common.fieldAtMost": "{field} must be at most {max}.",
+  "common.valueAtMost": "Enter a value of at most {max}.",
+  "common.fieldOutOfRange": "{field} is outside the allowed range.",
+  "common.valueOutOfRange": "This value is outside the allowed range.",
+  "common.fieldRepeated":
+    "{field} lists the same value twice. Remove the repeat.",
+  "common.valueRepeated": "The same value is listed twice. Remove the repeat.",
+  "common.fieldOneLine": "Enter {field} on one line.",
+  "common.valueOneLine": "Enter this value on one line.",
+  "common.fieldDateInFuture": "{field} cannot be in the future.",
+  "common.dateInFuture": "This date cannot be in the future.",
+  "common.fieldDecimalPlaces": "Decimal places allowed in {field}: {max}.",
+  "common.valueDecimalPlaces": "Decimal places allowed: {max}.",
   "common.valueTooLong": "This value is too long.",
   "common.undo": "Undo",
   "common.close": "Close",
@@ -3087,6 +3129,8 @@ export const en = {
     "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
+  "record.accessUnknown":
+    "Your access could not be read. Reload the page to check it again.",
   "contact.attachRefused":
     "You can only read this contact. Ask its owner for write access.",
   "record.logActivityRefused":
@@ -3111,6 +3155,8 @@ export const en = {
   "share.ceiling.noWider": "no wider",
   "share.ceiling.post": ".",
   "share.unknownRecord": "This record cannot be shared.",
+  "share.missingRecord":
+    "This record does not exist, or it is not shared with you.",
   "share.grantAccess": "Grant access",
   "share.subject": "Person or team",
   "share.holdsRead": "Has read",
@@ -3725,6 +3771,8 @@ export const en = {
     "Whether this can be sent is not known yet. Reload the page to check again.",
   "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
+  "consent.confirmationPending":
+    "Waiting for them to confirm by email. The link works until {date}.",
   "consent.noPurposes": "This company tracks no consent purposes yet.",
   "consent.defaultDeny":
     "This history records consent for each purpose. Communication permission may also depend on other recorded grounds; the message is checked again before sending.",
@@ -5671,6 +5719,7 @@ export const en = {
   "tags.emptyBody":
     "Add lasting context such as an event, a relationship or a cohort.",
   "tags.pickerLabel": "Search tags",
+  "tags.nameTaken": "A tag with this name already exists.",
   "tags.alreadyAdded": "Already added",
   "tags.offerCompanyTitle": "Also tag {company} with {tag}?",
   "tags.offerCompanyAccept": "Tag {company}",
@@ -6188,6 +6237,13 @@ export const en = {
   "deal.committee.seatWrote": "{role} · {engagement} · last wrote {date}",
   "deal.committee.carriesContact": "Handles most exchanges",
   "deal.committee.teamUnread": "Could not read who else works on this deal.",
+  "deal.committee.lines.title": "Who talks to whom",
+  "deal.committee.lines.mailed": "Sent to them {date}",
+  "deal.committee.lines.replied": "They wrote {date}",
+  "deal.committee.lines.met": "Met {date}",
+  "deal.committee.lines.pair": "{colleague} with {contact}: {how}",
+  "deal.committee.lines.unreached":
+    "No current colleague has reached {contact}",
   "deal.committee.missing.champion": "Missing: an engaged champion",
   "deal.committee.missing.firstContact": "Missing: a contact on their side",
   "deal.committee.missing.secondContact": "Only one contact. Add a second one.",
@@ -6602,6 +6658,9 @@ export const en = {
     "This deal’s pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
   "deal.stageOtherPipeline":
     "That stage belongs to another pipeline. Pick a stage of the pipeline the deal is in.",
+  "deal.movePipeline": "Move to pipeline",
+  "deal.movePipelinePick": "Pick a pipeline",
+  "deal.movePipelineDone": "Moved to {pipeline}.",
   "deal.reopen": "Reopen",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
@@ -6846,6 +6905,9 @@ export const en = {
   "offer.termsText": "Terms text",
   "offer.lines": "Line items",
   "offer.addLine": "Add line",
+  "offer.positionTaken": "Another line already has this position.",
+  "offer.lapsed":
+    "The Valid until date of this offer has passed. Change it under Edit header on a draft, or regenerate a sent offer.",
   "offer.position": "Position",
   "offer.description": "Description",
   "offer.unit": "Unit",
@@ -7433,6 +7495,11 @@ export const en = {
   "create.firstName": "First name",
   "create.lastName": "Last name",
   "create.contactTitle": "Title",
+  "create.greetingRegister": "How to greet them",
+  "create.greetingRegisterHint": "Drafts to this contact open this way.",
+  "create.greetingRegister.unset": "Let Margince decide",
+  "create.greetingRegister.formal": "Formal, by surname",
+  "create.greetingRegister.familiar": "Familiar, by first name",
   "create.acquisitionSource": "Where this contact came from",
   "create.acquisitionSourceHint":
     "The contact sees this on their privacy page.",
@@ -7462,12 +7529,25 @@ export const en = {
   "create.companyName": "Company",
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
-    "Creates a new company unless one is picked from the list.",
+    "Links the company with this name, or creates it if there is none.",
   "create.companyPrefilled":
     "Matched to an existing company by the work email domain.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
   "create.amountNegative": "Enter an amount of zero or more.",
+  "create.emailNamesNoOne":
+    "This address belongs to a sending system that nobody answers. Enter the contact’s own address.",
+  "create.addressErased":
+    "This value was erased at its owner’s request and cannot be stored again.",
+  "create.linkedinMalformed":
+    "This is not a link. Paste the address of the LinkedIn page.",
+  "create.linkedinNotLinkedin": "Enter a link to a page on linkedin.com.",
+  "create.linkedinNotProfile":
+    "Enter a link to someone’s own profile, such as linkedin.com/in/name.",
+  "create.dateRangeReversed":
+    "The end date is before the start date. Choose a later end date.",
+  "create.countryCodeInvalid":
+    "Enter the country as its two-letter code, such as DE or US.",
   "create.referenceNotFound":
     "This record no longer exists, or you cannot see it.",
   "create.currency": "Currency",
@@ -7476,6 +7556,7 @@ export const en = {
   "create.expectedClose": "Expected close",
 
   "keyCode.label": "Key: {key}",
+  "field.rowRepeated": "{value} is in two rows. Remove one of them.",
   "field.addEmail": "Add email",
   "field.addPhone": "Add phone",
   "field.editEmails": "Edit emails",
@@ -9092,6 +9173,7 @@ export const en = {
   "analytics.outcomesOwnLensOnly":
     "This section measures one user’s records. Wider sections cover the rest of the lens.",
   "analytics.reportWinLoss": "Won and lost",
+  "analytics.reportLossEvents": "Every loss, one by one",
   "analytics.reportStageAge": "Time in stage",
   "analytics.baseValue": "Deal value · {currency}",
   "analytics.baseValueUnnamed": "Deal value",
@@ -11309,6 +11391,8 @@ export const en = {
   "privacy.purposesRegistry": "Registered purposes",
   "privacy.purposesReadOnly":
     "Read-only. Adding a purpose needs a permission your role does not have.",
+  "privacy.purposeKeyTaken": "This key is already used by {label}.",
+  "privacy.purposeKeyTakenUnnamed": "Another purpose already uses this key.",
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeDoi": "Requires double opt-in",
@@ -11886,6 +11970,9 @@ export const en = {
   "retention.scopeExtension": "Records kept by extensions",
   "pipeline.new": "New pipeline",
   "pipeline.createRefused": "Your role cannot create pipelines. Ask an admin.",
+  "pipeline.defaultTaken":
+    "Another pipeline is the default. Create this one as Not default, then use Make default on it.",
+  "pipeline.nameTaken": "A pipeline with this name already exists.",
   "pipeline.name": "Name",
   "pipeline.default": "Default",
   "pipeline.notDefault": "Not default",
@@ -13870,6 +13957,7 @@ export const en = {
     "Ask your question under the relevant document; it goes directly to {steward}.",
   "buyer.closedOn": "Closed on {date}",
   "room.docs.title": "Documents and threads",
+  "room.docs.alreadyPresent": "This file is already in the room.",
   "room.docs.empty": "No documents in the room yet.",
   "room.docs.fileLabel": "File from this deal",
   "room.docs.fileHint":
@@ -14249,6 +14337,8 @@ export const en = {
   "coverage.risk.stakeholder_left": "Stakeholder has left",
   "coverage.risk.going_cold": "Going cold",
 
+  "cf.labelTaken":
+    "This record type already has a custom field with this label.",
   "cf.title": "Custom fields",
   "cf.formSection": "Custom fields",
   "cf.subtitle":
@@ -14302,6 +14392,7 @@ export const en = {
     "Derived automatically and fixed once live. The cf_ prefix prevents collisions with core fields.",
   "cf.typeLabel": "Type",
   "cf.currencyCode": "Currency code",
+  "cf.currencyNotCode": "Enter a 3-letter currency code, like EUR, CHF or USD.",
   "cf.currencyHint":
     "Three-letter ISO 4217 code, for example EUR or USD. Amounts are stored to the cent.",
   "cf.options": "Options",
@@ -14381,10 +14472,15 @@ export const en = {
   "settings.home.seatLabel": "Your seat",
   "settings.home.seat.full": "Full seat: changes allowed",
   "settings.home.seat.read": "Read-only seat: view only",
-  "settings.home.reachLabel": "Visible records",
-  "settings.home.reach.own": "Your own records",
-  "settings.home.reach.team": "Your team\u2019s records",
-  "settings.home.reach.all": "All company records",
+  "settings.home.reachLabel": "Records you can change",
+  "settings.home.reach.none": "None",
+  "settings.home.reach.own": "Your own",
+  "settings.home.reach.team": "Yours and your team\u2019s",
+  "settings.home.reach.all": "All in the company",
+  "settings.home.readLabel": "Records you can read",
+  "settings.home.read.some":
+    "All {kinds}, except colleagues\u2019 private ones not shared with you",
+  "settings.home.read.none": "None",
   "settings.home.access": "Your access",
   "settings.home.accessLoading": "Loading your access…",
   "settings.boundary.deniedTitle": "No access to this settings page",
@@ -15075,7 +15171,7 @@ export const en = {
   "license.check.failed":
     "The license token could not be read again. The last result stands, and the server log says why.",
   "license.counting":
-    "Full seats that are not deactivated or suspended, agents included. Read-only seats are unlimited and not counted.",
+    "Full seats that are not deactivated or suspended. Agents and read-only seats are not counted.",
   "settings.rates.fxTitle": "Currency rates",
   "settings.rates.fxIntro":
     "Exchange rates that convert foreign-currency amounts to the base currency. New rates take effect today or later. A past date works only before the currency’s first rate. A rate already in force never changes.",
@@ -15092,6 +15188,14 @@ export const en = {
   "settings.rates.modelEmpty": "No model rates yet.",
   "settings.rates.modelModalTitle": "Set model price",
   "settings.rates.notSaved": "Rate not saved",
+  "settings.rates.fromIsBase":
+    "This is the base currency, and its rate is always 1. Choose another currency.",
+  "settings.rates.fromNotCurrency":
+    "Enter a 3-letter currency code, like EUR, CHF or USD.",
+  "settings.rates.rateNotPositive":
+    "Enter a rate greater than zero, with at most 10 digits before the decimal point and 10 after it.",
+  "settings.rates.pastDate":
+    "A past date works only before this currency’s first rate. Choose today or a later date.",
   "taxRates.title": "Tax rates",
   "taxRates.withheld": "Only an Admin or Ops can see the tax rates.",
   "taxRates.intro":
@@ -15452,7 +15556,7 @@ export const en = {
   "roles.renameSubmit": "Save name",
   "roles.scopeTitle": "Whose records members change",
   "roles.scopeSub":
-    "Contacts, companies, leads and deals stay readable to every role allowed to read them. This decides what members may change, and which projects they see.",
+    "Every role allowed to read contacts, companies, leads, deals and projects reads all of them. This decides which of them members may change.",
   "roles.scope.own": "Their own",
   "roles.scope.ownSub": "Records the member owns.",
   "roles.scope.team": "Their teams’",
@@ -15646,6 +15750,10 @@ export const en = {
   "users.newTeamLabel": "New team",
   "users.newTeamOpen": "New team",
   "users.teamNameLabel": "Team name",
+  "users.emailTaken":
+    "A member with this email already exists. If they were deactivated, reactivate them instead.",
+  "users.emailReserved":
+    "This address belonged to a permanently removed member and stays reserved.",
   "users.teamDuplicate":
     "A team with this name already exists. Choose another name.",
   "users.newTeamPlaceholder": "For example, DACH Sales",
@@ -15653,8 +15761,9 @@ export const en = {
   "users.notArchived": "Team not archived",
   "users.teamNotChanged": "Membership not changed",
   "users.access.title": "User access",
-  "users.access.identity":
-    "Reads every contact, company, lead and deal in the company.",
+  "users.access.reads": "Reads all {kinds} in the company.",
+  "users.access.readsNone": "Reads no records.",
+  "users.access.writesNone": "Changes no records.",
   "users.access.writesAll": "Edits every record.",
   "users.access.writesTeam":
     "Edits their own records and those of the teams {teams}.",
@@ -15840,7 +15949,6 @@ export const en = {
   "settings.companySave": "Save company context",
   "settings.companySaved": "Saved",
   "settings.companySaveFailed": "Company context not saved",
-  "settings.companyNameTooLong": "Shorten the company name.",
   "settings.companyRefreshFailed": "Website read did not finish",
   "settings.companyApplyFailed": "Changes not applied",
   "settings.companyRefreshWarnings": "Warnings from this read",
@@ -15877,6 +15985,7 @@ export const en = {
   "product.readOnly": "Read-only. Your role cannot change products.",
   "product.new": "New product",
   "product.edit": "Edit product",
+  "product.skuTaken": "Another product already has this SKU.",
   "product.taxCategory": "Tax category",
   "product.taxCategoryUnset": "Not classified",
   "product.taxCategoryFilter": "Tax category",
@@ -18537,6 +18646,8 @@ export const en = {
   "embedreindex.unbound":
     "No embedding model is bound, so there is no search index to rebuild.",
   "embedreindex.unboundLink": "Open AI settings",
+  "connectAi.first": "Connect an AI first",
+  "connectAi.link": "Open AI settings",
   "embedreindex.statusLabel": "Index status",
   "embedreindex.reindexLabel": "Reindex changes",
   "embedreindex.reindexHelp":
@@ -18964,7 +19075,7 @@ export const en = {
   "contact.rail.employer": "Employer",
   "contact.rail.allCompaniesConnected":
     "All matches are already linked to this contact.",
-  "contact.rail.isCurrentEmployer": "This is their current employer",
+  "contact.rail.isPrimaryEmployer": "This is their primary employer",
   "contact.rail.markEnded": "Mark as ended",
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":
@@ -19651,6 +19762,8 @@ export const en = {
   "lists.page": "List",
   "lists.loading": "Loading list",
   "lists.kind.live": "Live List",
+  "lists.alreadyOnShortlist": "Already on this Shortlist.",
+  "lists.alreadyOnOption": "{name} (already on it)",
   "lists.kind.shortlist": "Shortlist",
   "lists.type.contact": "Contacts",
   "lists.type.company": "Companies",
@@ -22498,6 +22611,8 @@ export const en = {
   "legalReview.docState.draft": "Draft",
   "legalReview.docState.current": "Current",
   "legalReview.docState.final": "Final",
+  "legalReview.advanceRefused":
+    "This stage needs legal’s approval first. Request a legal review, then move the deal.",
   "legalReview.packHistory": "Stage history",
   "legalReview.enteredStage": "{stage}, entered {date}",
   "legalReview.settingsTitle": "Legal review",
@@ -22523,6 +22638,21 @@ export const en = {
   "legalReview.offerLineRecurring_one": "{cadence} for {count} period",
   "legalReview.offerLineRecurring_other": "{cadence} for {count} periods",
   "legalReview.offerLineStaged": "Proposed, not yet in the total",
+  "legalReview.packContracts": "Agreements",
+  "legalReview.contractNotice": "Notice period",
+  "legalReview.contractNoticeDays_one": "{count} day",
+  "legalReview.contractNoticeDays_other": "{count} days",
+  "legalReview.contractCancelBy": "Notice given",
+  "legalReview.contractRenewal": "Renewal",
+  "legalReview.contractAutoRenews": "Renews automatically",
+  "legalReview.contractNoAutoRenew": "Does not renew automatically",
+  "legalReview.packTouches": "Latest contact",
+  "legalReview.packTasks": "Open tasks at the request",
+  "legalReview.taskDue": "Due {date}",
+  "legalReview.touchLine": "{kind}, {date}",
+  "legalReview.offerPdf": "PDF",
+  "legalReview.packOlder":
+    "This pack was made before agreements, contact and tasks were included.",
   "legalReview.packBinding": "Other offers sent to the buyer",
   "aiTask.name.account_scan": "Reading what an account needs",
   "aiTask.name.agent_loop": "Agent reasoning loop",

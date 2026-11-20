@@ -151,8 +151,8 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contac
 }
 
 // CaptureLeadBookingConsent records the operational grant on the live lead a
-// booking landed on. A marketing tick is not asked about: the confirmation
-// link is minted against a contact's own primary address.
+// booking landed on. No link is minted for a lead. A tick still gets the
+// neutral answer a contact's gets, so the door cannot tell the two apart.
 func (a bookingConsentAdapter) CaptureLeadBookingConsent(ctx context.Context, leadID ids.LeadID, c activities.BookingConsent) (activities.MarketingOutcome, error) {
 	record := bookingConsentRecord(ids.Nil, c)
 	record.ContactID, record.LeadID = ids.ContactID{}, leadID
@@ -166,7 +166,7 @@ func (a bookingConsentAdapter) CaptureLeadBookingConsent(ctx context.Context, le
 	if c.Marketing == nil {
 		return activities.MarketingNotRequested, nil
 	}
-	return activities.MarketingNotAsked, nil
+	return activities.MarketingPendingConfirmation, nil
 }
 
 // RecordBookingInquiry stamps the qualifying event a public booking IS: the
@@ -218,17 +218,10 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 	issued, err := a.store.IssueBookedConsentLink(ctx,
 		ids.From[ids.ContactKind](contactID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom, m.AskedBySubject)
 	if err == nil {
-		// STAGED, not merely minted. issueLink answers a token it could not
-		// send rather than failing — an installation with no relay gets a link
-		// it can see was not posted — so a nil error alone says the row exists,
-		// never that anybody will receive it.
-		//
-		// This adapter builds its own consent store, and the confirmation lane
-		// is rewired onto the handlers' store rather than that one. So on the
-		// production wiring today the mail is never staged, and reporting the
-		// nil error as pending_confirmation would tell every booker a question
-		// is coming when none is.
-		if !issued.Staged {
+		// Only an installation with no mail lane is reported as not asked, as
+		// that is the same for every visitor. Every state-dependent outcome
+		// (staged, pending, granted, stopped, over budget) reads the same.
+		if issued.NoMailLane {
 			return activities.MarketingNotAsked, nil
 		}
 		return activities.MarketingPendingConfirmation, nil
@@ -272,7 +265,7 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 	// means authority changed between two consecutive writes. That is rare and
 	// it is exactly why it must not be reported as "we could not ask": a
 	// booking form is not the place to discover a permission failure silently.
-	return bookingMarketingFailure(err)
+	return bookingMarketingFailure(err, m.AskedBySubject)
 }
 
 func bookingConsentRecord(contactID ids.UUID, c activities.BookingConsent) consent.RecordInput {
@@ -290,9 +283,15 @@ func bookingConsentRecord(contactID ids.UUID, c activities.BookingConsent) conse
 	}
 }
 
-func bookingMarketingFailure(err error) (activities.MarketingOutcome, error) {
+// bookingMarketingFailure answers a refused question. The anonymous door gets
+// the neutral outcome whatever the subject's state, so it cannot probe an
+// address. A signed-in user's booking keeps the detailed answer.
+func bookingMarketingFailure(err error, askedBySubject bool) (activities.MarketingOutcome, error) {
 	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
 		return activities.MarketingNotRequested, err
+	}
+	if askedBySubject {
+		return activities.MarketingPendingConfirmation, nil
 	}
 	return activities.MarketingNotAsked, nil
 }
