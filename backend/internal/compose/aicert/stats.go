@@ -27,17 +27,7 @@ func wilsonBounds(passed, runs int) (lower, upper float64) {
 	centre := p + z2/(2*n)
 	radius := confidenceZ * math.Sqrt(p*(1-p)/n+z2/(4*n*n))
 	denom := 1 + z2/n
-	lower, upper = (centre-radius)/denom, (centre+radius)/denom
-	// At 0 and at n of n the two terms cancel exactly on paper, and a machine
-	// that fuses multiply-add leaves a residue of 1e-18 on either side of the
-	// edge. The rendered page must read the same on every machine.
-	if passed == 0 {
-		lower = 0
-	}
-	if passed == runs {
-		upper = 1
-	}
-	return lower, upper
+	return (centre - radius) / denom, (centre + radius) / denom
 }
 
 // ReliabilityInterval is the Wilson interval on a pass rate, from the formula
@@ -54,6 +44,16 @@ func ReliabilityIntervalOf(passed, runs int) *ReliabilityInterval {
 		return nil
 	}
 	lower, upper := wilsonBounds(passed, runs)
+	// At 0 and at n of n the two terms cancel exactly on paper, and a machine
+	// that fuses multiply-add leaves a residue of 1e-18 on either side of the
+	// edge. The rendered page must read the same on every machine. The verdict
+	// reads wilsonBounds itself, so this changes no grade.
+	if passed == 0 {
+		lower = 0
+	}
+	if passed == runs {
+		upper = 1
+	}
 	return &ReliabilityInterval{Lower: lower, Upper: upper}
 }
 
