@@ -216,6 +216,35 @@ describe("WhoCanSeePanel", () => {
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
+  // The Sharing page also shows each share's end date as a chip; both read alike.
+  it("writes a share's end date the way the share chip does", async () => {
+    serve(
+      answer({
+        data: [
+          owner,
+          member("u-share", "Priya Shah", {
+            group: "shared",
+            read_reasons: [
+              {
+                code: "user_share",
+                access: "read",
+                expires_at: "2026-11-23T12:00:00Z",
+              },
+            ],
+          }),
+        ],
+        page: { has_more: false, total: 2 },
+        group_counts: { owner: 1, shared: 1, team_shared: 0, everyone: 0 },
+      }),
+    );
+    render(<WhoCanSeePanel kind="contact" recordId="c-1" />);
+
+    const shared = await screen.findByTestId("who-can-see-shared");
+    expect(
+      within(shared).getByText("Shared directly until 23 Nov 2026"),
+    ).toBeTruthy();
+  });
+
   // Pages are read at different times, so one member can come back on two.
   it("lists a member once when two pages both carry them", async () => {
     const user = userEvent.setup();

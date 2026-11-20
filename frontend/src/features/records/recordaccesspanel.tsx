@@ -27,7 +27,7 @@ import {
 } from "../../design-system/panel";
 import { LoadMoreButton, QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor, UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
@@ -315,7 +315,7 @@ export function WhoCanSeePanel({
 
   const words: ReasonWords = {
     t,
-    date: (iso) => formatDate(iso, locale, zone),
+    date: (iso) => formatDateAbbrev(iso, locale, zone),
   };
   return (
     <Panel title={t("whoCanSee.title")}>
