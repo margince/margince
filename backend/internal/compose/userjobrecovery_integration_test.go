@@ -264,8 +264,10 @@ func TestADocumentReadingIsHandedBackAndClosedOnItsLastTry(t *testing.T) {
 		{"model failed on the last try", ai.ErrAllTiersFailed, false, oneOffJobMaxAttempts, activities.ExtractionReadFailed, "did not answer"},
 		{"timed out on the last try", context.Canceled, true, oneOffJobMaxAttempts, activities.ExtractionReadFailed, "could not finish"},
 	} {
-		attachment, err := store.UploadAttachment(env.Admin(), activities.AttachmentInput{EntityType: "deal", EntityID: deal,
-			Filename: tc.name + ".txt", ContentType: "text/plain", Content: strings.NewReader("Price: 10 EUR.")})
+		attachment, err := store.UploadAttachment(env.Admin(), activities.AttachmentInput{
+			EntityType: "deal", EntityID: deal,
+			Filename: tc.name + ".txt", ContentType: "text/plain", Content: strings.NewReader("Price: 10 EUR."),
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -281,8 +283,10 @@ func TestADocumentReadingIsHandedBackAndClosedOnItsLastTry(t *testing.T) {
 		worker := newDocumentExtractWorker(env.Pool, brain, blob, discardLogger())
 		workErr := worker.Work(ctx, &river.Job[DocumentExtractArgs]{
 			JobRow: &rivertype.JobRow{Attempt: tc.attempt, MaxAttempts: oneOffJobMaxAttempts},
-			Args: DocumentExtractArgs{Workspace: env.WS, AttachmentID: ids.UUID(attachment.Id),
-				ExtractionReadID: reading.ID, RequestedBy: "human:" + env.AdminUser.String()},
+			Args: DocumentExtractArgs{
+				Workspace: env.WS, AttachmentID: ids.UUID(attachment.Id),
+				ExtractionReadID: reading.ID, RequestedBy: "human:" + env.AdminUser.String(),
+			},
 		})
 		cancel()
 		after, err := store.GetExtractionRead(env.Admin(), ids.UUID(attachment.Id), reading.ID)

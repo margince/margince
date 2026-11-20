@@ -102,8 +102,8 @@ func (w *documentExtractWorker) Work(ctx context.Context, job *river.Job[Documen
 		return w.read(owned, args)
 	})
 	if jobs.Exhausted(job.JobRow, err) {
-		// As for a transcript: the reading was handed back for a try that will
-		// not come, so it closes here, on a context the timeout did not cancel.
+		// As for a transcript, the reading was handed back for a try that will
+		// not come. It closes here, on a context the timeout did not cancel.
 		closeCtx, cancel := terminalCtx(wsCtx)
 		defer cancel()
 		said := documentCopyFor(string(w.language.Resolve(closeCtx)))

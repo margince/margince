@@ -13,8 +13,8 @@ import (
 )
 
 // Postponement is a refusal that names when the same work may be tried
-// again: a dependency that said "not now", such as the AI budget stop or a
-// blocked provider. It is no failure, so the job waits rather than spends a
+// again. A dependency said "not now", such as the AI budget stop or a blocked
+// provider. It is no failure, so the job waits rather than spends a
 // try. The error types satisfy it by method, so this package imports none of
 // their owners.
 type Postponement interface {
@@ -38,7 +38,7 @@ func postponed(ctx context.Context, kind string, err error) error {
 	return rescheduleFor(ctx, kind, "postponed", until.RetryAt().Sub(postponementClock()), err)
 }
 
-// Exhausted reports whether err ends the job for good: River will not run it
+// Exhausted reports whether err ends the job for good. River will not run it
 // again, and the error is no snooze or postponement that brings it back. A
 // worker that handed its item back for a retry closes it instead.
 func Exhausted(row *rivertype.JobRow, err error) bool {

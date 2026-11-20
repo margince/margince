@@ -45,9 +45,9 @@ func TestSessionSlotsAreSharedAndReturned(t *testing.T) {
 	again()
 }
 
-// Every worker is registered through sessionBudgetWorker, so a deferral a
-// worker returns as it came waits as a snooze within the reschedule bounds,
-// instead of spending one of the job's tries.
+// Every worker is registered through sessionBudgetWorker. A deferral a worker
+// returns as it came waits as a snooze within the reschedule bounds, and
+// spends none of the job's tries.
 func TestAJobToldNotNowSleepsAndSpendsNoTry(t *testing.T) {
 	far := clocktest.Now(t).Add(264 * time.Hour)
 	other := errors.New("the database went away")

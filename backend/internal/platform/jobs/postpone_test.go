@@ -28,8 +28,9 @@ func (e notNow) RetryAt() time.Time { return e.at }
 // sees it, inside the reschedule bounds. It is logged as a wait, not a failure.
 func TestAPostponementWaitsWithinTheRescheduleBounds(t *testing.T) {
 	now := time.Date(2026, 11, 20, 9, 0, 0, 0, time.UTC)
+	previous := postponementClock
 	postponementClock = func() time.Time { return now }
-	t.Cleanup(func() { postponementClock = time.Now })
+	t.Cleanup(func() { postponementClock = previous })
 	var logged bytes.Buffer
 	restore := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, nil)))
