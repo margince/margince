@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
-import { STORAGE_KEYS } from "../lib/storage";
+import { STORAGE_KEYS, writeStored } from "../lib/storage";
 import { setThemeChoice } from "../lib/theme";
 import { bookingProfile } from "../testing/book.testkit";
 import { meFixture } from "../testing/mefixture";
@@ -38,12 +38,16 @@ const THEME_KEY = STORAGE_KEYS.theme.name;
 // the machine, which the suite's matchMedia stub answers with light.
 beforeEach(() => {
   setThemeChoice("system");
+  // A fresh seat has setup to finish; the rows asked about here are the
+  // menu's own, so the setup reminder is hidden for these cases.
+  writeStored(STORAGE_KEYS.setupReminderHidden, "1");
 });
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.localStorage.removeItem(THEME_KEY);
+  window.localStorage.removeItem(STORAGE_KEYS.setupReminderHidden.name);
 });
 
 // Seeded through the cache rather than a fetch stub: `useMe` reads ["me"], and

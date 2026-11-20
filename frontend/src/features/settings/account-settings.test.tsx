@@ -146,3 +146,28 @@ it("turns single-key shortcuts off for this browser on the flip", async () => {
   expect(singleKeyShortcutsOn()).toBe(false);
   expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
 });
+
+it("scrolls to the language and time zone card a setup step points at, then clears the dial", async () => {
+  window.location.hash = "#/settings/account?focus=account-language";
+  const scrolled: (string | null)[] = [];
+  vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (
+    this: Element,
+  ) {
+    scrolled.push(this.id);
+  });
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  await screen.findByRole("combobox", { name: "Time zone" });
+  await vi.waitFor(() => expect(scrolled).toEqual(["account-language"]));
+  expect(window.location.hash).toBe("#/settings/account");
+  window.location.hash = "";
+});

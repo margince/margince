@@ -20,7 +20,9 @@ import {
   usePassports,
 } from "./passports.queries";
 import { useSchedulingProfile } from "./scheduling-profile-query";
+import { useMe } from "./session";
 import type { SettingsPageId, SettingsReach } from "./settingscatalog";
+import { usePermissionsSeen } from "./setup-permissions";
 import { readStored, STORAGE_KEYS, watchStored, writeStored } from "./storage";
 import { useVoiceProfile } from "./voice-profile";
 import {
@@ -44,9 +46,27 @@ export type SetupStepId =
   | "model"
   | "mail"
   | "calendar"
+  | "timezone"
+  | "language"
+  | "permissions"
   | "ai"
   | "voice"
   | "booking";
+
+/** The address dial that sends the Account page to its language and time
+ *  zone card, and the card's anchor. */
+export const ACCOUNT_FOCUS_PARAM = "focus";
+export const ACCOUNT_LANGUAGE_SECTION = "account-language";
+
+/** The dials a step's action adds to its page: the language and time zone
+ *  steps scroll the Account page to their card. */
+export function stepDials(
+  id: SetupStepId,
+): ReadonlyMap<string, string> | undefined {
+  return id === "timezone" || id === "language"
+    ? new Map([[ACCOUNT_FOCUS_PARAM, ACCOUNT_LANGUAGE_SECTION]])
+    : undefined;
+}
 
 /** Why an unfinished step reads differently from its plain reason. */
 export type SetupStepReason =
@@ -79,6 +99,9 @@ export type SetupStep = Readonly<{
     /** The server's count of words still missing for a first build. */
     wordsRemaining: number | null;
   }> | null;
+  /** The zone the time zone step is saved on, or null while none is stored.
+   *  Absent on every other step. */
+  zone?: string | null;
   /** The AI tool step's connection, named as the reader approved it, or null
    *  while none is connected. Absent on every other step. */
   agent?: Readonly<{ name: string | null }> | null;
@@ -99,6 +122,19 @@ export type SetupReads = Readonly<{
   /** Whether the installation can call a model, or null where this reader
    *  cannot bind one or the read has not answered. */
   modelReady: boolean | null;
+  /** What the reader's own seat says about the three personal steps, or null
+   *  while it has not answered. */
+  personal: PersonalFacts | null;
+}>;
+
+/** The personal steps' facts: three answers every seat can give. */
+export type PersonalFacts = Readonly<{
+  /** The reader picked the zone themselves, not the browser or an agent. */
+  timezoneChosen: boolean;
+  zone: string | null;
+  /** The reader chose a language for their account. */
+  languageChosen: boolean;
+  permissionsSeen: boolean;
 }>;
 
 type Draft = Omit<SetupStep, "state"> & Readonly<{ done: boolean }>;
@@ -258,10 +294,30 @@ function bookingStep(
     : draft("booking", "meetings", { blocked: true, reason: "needsCalendar" });
 }
 
+// The three steps the Account page answers, open to every seat.
+function personalSteps(personal: PersonalFacts): Draft[] {
+  return [
+    {
+      ...draft("timezone", "account", { done: personal.timezoneChosen }),
+      zone: personal.zone,
+    },
+    draft("language", "account", { done: personal.languageChosen }),
+    draft("permissions", "account", { done: personal.permissionsSeen }),
+  ];
+}
+
 /** The steps this reader is asked to finish, in the order they are shown. */
 export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
-  const { acts, connectors, voice, scheduling, passports, now, modelReady } =
-    reads;
+  const {
+    acts,
+    connectors,
+    voice,
+    scheduling,
+    passports,
+    now,
+    modelReady,
+    personal,
+  } = reads;
   // A role or seat that cannot capture is never asked to connect anything.
   const connections =
     acts.has("connections") &&
@@ -278,6 +334,7 @@ export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
       : null,
     connections && mailStep(connections),
     calendar,
+    ...(personal ? personalSteps(personal) : []),
     acts.has("agents") && passports ? aiStep(passports, now) : null,
     acts.has("voice") && voice ? voiceStep(voice) : null,
     acts.has("meetings") && scheduling
@@ -340,6 +397,8 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
   const scheduling = useSchedulingProfile({ enabled: acts.has("meetings") });
   const connector = useConnectorState({ enabled: acts.has("agents") });
   const model = useModelRead(acts);
+  const me = useMe();
+  const permissions = usePermissionsSeen();
   const aiConnects = acts.has("agents") && connector.data?.enabled === true;
   const passports = usePassports({
     enabled: aiConnects,
@@ -357,6 +416,7 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     acts.has("agents") && connector,
     aiConnects && passports,
     model.asked,
+    me,
   ];
   // A refused or failed read drops the steps it feeds rather than claiming
   // them open. The voice step stays as unknown instead: dropping it could
@@ -370,6 +430,14 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     passports: aiConnects ? (passports.data?.data ?? null) : null,
     now: passports.dataUpdatedAt,
     modelReady: model.ready,
+    personal: me.data
+      ? {
+          timezoneChosen: me.data.user.timezone_chosen === true,
+          zone: me.data.user.timezone ?? null,
+          languageChosen: me.data.user.locale !== undefined,
+          permissionsSeen: permissions.seen,
+        }
+      : null,
   });
   const done = steps.filter((step) => step.state === "done").length;
   return {

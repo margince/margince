@@ -9,10 +9,15 @@ import { Meter } from "../design-system/readings";
 import { useSettingsReach } from "../features/settings/settingsnav";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import type { Route } from "../lib/router";
+import { routeHash } from "../lib/router";
 import type { SettingsReach } from "../lib/settingscatalog";
 import { settingsHref } from "../lib/settingsrouting";
-import { type SetupChecklist, useSetupChecklist } from "../lib/setup-checklist";
+import {
+  type SetupChecklist,
+  stepDials,
+  useSetupChecklist,
+} from "../lib/setup-checklist";
+import { hashWithParams } from "../lib/urlstate";
 import "./setup-reminder.css";
 import "./topbar-popover.css";
 
@@ -31,15 +36,23 @@ export function useSetupReminder(enabled = true): SetupChecklist | null {
   return setup;
 }
 
+function nextStep(setup: SetupChecklist) {
+  return (
+    setup.steps.find((step) => step.state === "current") ??
+    setup.steps.find((step) => step.state !== "done")
+  );
+}
+
 /**
  * Where the reminder leads without its panel: the page of the step to do next.
- * While every open step waits on someone else, it is the first open one.
+ * While every open step waits on someone else, it is the first open one. The
+ * address carries the dials that bring that step into view.
  */
-export function nextStepRoute(setup: SetupChecklist): Route {
-  const next =
-    setup.steps.find((step) => step.state === "current") ??
-    setup.steps.find((step) => step.state !== "done");
-  return settingsHref(next?.page);
+export function nextStepHref(setup: SetupChecklist): string {
+  const next = nextStep(setup);
+  const path = routeHash(settingsHref(next?.page));
+  const dials = next ? stepDials(next.id) : undefined;
+  return dials ? hashWithParams(path, dials) : path;
 }
 
 /** "Finish setup" and its count, as the trigger and the account menu print it. */

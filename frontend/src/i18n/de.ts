@@ -16979,6 +16979,31 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.action.calendar": "Kalender verbinden",
   "setup.action.voice": "Beispiele hinzufügen",
   "setup.action.booking": "Einschalten",
+  "setup.step.timezone": "Wähle, wo du arbeitest",
+  "setup.caption.timezone":
+    "Legt deine Zeitzone fest. Zeiten, Buchungen und E-Mails richten sich danach.",
+  "setup.action.timezone": "Ort wählen",
+  "setup.step.timezoneDone": "Zeiten folgen {zone}.",
+  "setup.step.timezoneDoneUnnamed": "Deine Zeitzone ist gewählt.",
+  "setup.step.language": "Wähle deine Sprache",
+  "setup.caption.language":
+    "Margince zeigt seine Bildschirme in dieser Sprache.",
+  "setup.action.language": "Sprache wählen",
+  "setup.step.languageDone": "Deine Sprache ist gespeichert.",
+  "setup.step.permissions": "Sieh, was Margince darf",
+  "setup.caption.permissions":
+    "Was es liest, was es schreibt und wie du es rückgängig machst.",
+  "setup.action.permissions": "Lesen",
+  "setup.step.permissionsDone": "Du hast gelesen, was Margince darf.",
+  "setup.permissions.title": "Was Margince liest und schreibt",
+  "setup.permissions.reads":
+    "Es liest nur die E-Mails und den Kalender, die du verbindest. Du trennst sie jederzeit in den Einstellungen unter Verbindungen.",
+  "setup.permissions.writes":
+    "Es legt Gelesenes bei Kontakten, Unternehmen und Deals ab, erstellt Aufgaben und Notizen und entwirft Antworten. Aus der App geht nichts raus, bis du auf Senden drückst.",
+  "setup.permissions.undo":
+    "Was es ändert, steht in der Worklist unter Für dich erledigt. Die meisten Änderungen machst du dort rückgängig.",
+  "setup.permissions.confirm": "Verstanden",
+  "setup.permissions.later": "Später",
   "settings.home.setup.title": "Deine Einrichtung",
   "connectors.tile.notSetUp": "Nicht eingerichtet",
   "connectors.tile.askAdmin": "Ein Admin schaltet {vendor} unter {page} frei.",

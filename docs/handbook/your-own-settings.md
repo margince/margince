@@ -14,7 +14,7 @@ You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "pass
 Also called: my profile, my account, preferences, user settings.
 
 ### How do I finish setting up Margince?
-To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**. It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link.
+To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**. It lists the steps: connect your mail, connect your calendar, choose where you work, choose your language, see what Margince may do, add writing samples and turn on your booking link. Every member sees the three personal steps, so a colleague invited to an existing workspace has them too. **Choose where you work** sets your time zone, and **Choose your language** sets the language, both on **Account**; the step's button scrolls there. **See what Margince may do** opens a short note on what Margince reads and writes. It is done once you choose **Got it**, and this browser remembers it.
 
 While steps are open, **Finish setup** at the top of the screen shows how many are done, and **Hide until next sign-in** puts it away. Once every step is done, **Your setup** and **Finish setup** are gone, and each step's page stays on **Overview**. If a step comes undone, **Your setup** comes back, and so does **Finish setup** unless you chose **Hide until next sign-in**. On a phone, **Finish setup** is a row in the account menu, right after **Help and feedback**. It opens the page of your next step. Also called: setup list, getting started, onboarding steps.
 

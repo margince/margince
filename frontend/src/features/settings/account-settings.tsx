@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
 import {
   Avatar,
@@ -14,6 +14,7 @@ import { describedByIds } from "../../design-system/describedby";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { IdentityFact, IdentityLine } from "../../design-system/identityline";
+import { useJumpTo } from "../../design-system/jumpbar";
 import { LanguageSelect } from "../../design-system/languageselect";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
@@ -28,6 +29,10 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallState } from "../../lib/pwa";
 import { useLogout, useMe } from "../../lib/session";
 import {
+  ACCOUNT_FOCUS_PARAM,
+  ACCOUNT_LANGUAGE_SECTION,
+} from "../../lib/setup-checklist";
+import {
   setSingleKeyShortcutsOn,
   useSingleKeyShortcuts,
 } from "../../lib/shortcuts";
@@ -38,6 +43,7 @@ import {
   type ThemeChoice,
   useThemeChoice,
 } from "../../lib/theme";
+import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
 import { useSaveMyTimezone, useViewerZone } from "../../lib/viewerzone";
 import { MfaSettingRow } from "../sign-in/mfacard";
 import { PasswordSettingRow } from "../sign-in/passwordcard";
@@ -146,15 +152,32 @@ function SignInPanel() {
   );
 }
 
+// The setup checklist's language and time zone steps land here, with the card
+// scrolled into view. The dial is cleared so the same step moves focus again.
+function useSetupFocus() {
+  const [params] = useUrlParams();
+  const jump = useJumpTo();
+  const { replaceDial } = useAddressWriters();
+  const asked = params.get(ACCOUNT_FOCUS_PARAM) === ACCOUNT_LANGUAGE_SECTION;
+  useEffect(() => {
+    if (!asked) return;
+    jump(ACCOUNT_LANGUAGE_SECTION);
+    replaceDial(ACCOUNT_FOCUS_PARAM, undefined);
+  }, [asked, jump, replaceDial]);
+}
+
 function LanguagePanel() {
   const t = useT();
+  useSetupFocus();
   return (
-    <Panel title={t("account.languageCard")}>
-      <SettingList bleed="settings">
-        <LanguageSettingRow />
-        <TimeZoneSettingRow />
-      </SettingList>
-    </Panel>
+    <div id={ACCOUNT_LANGUAGE_SECTION} tabIndex={-1}>
+      <Panel title={t("account.languageCard")}>
+        <SettingList bleed="settings">
+          <LanguageSettingRow />
+          <TimeZoneSettingRow />
+        </SettingList>
+      </Panel>
+    </div>
   );
 }
 
