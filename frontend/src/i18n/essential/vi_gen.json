@@ -581,6 +581,8 @@
   "reporting.daysUnit": "Ngày",
   "reporting.countUnit": "Số lượng",
   "reporting.wholeCount": "Nhập số nguyên.",
+  "reporting.needsChart": "Thêm ít nhất một biểu đồ.",
+  "reporting.needsInterval": "Ngày kết thúc của khoảng tùy chỉnh phải sau ngày bắt đầu.",
   "reporting.retired": "Mục tiêu đã ngừng",
   "reporting.comparisonHelp": "Chọn các kỳ đã hoàn tất liền kề nhau. Ảnh chụp của cùng một kỳ không cho thấy thay đổi giữa các kỳ.",
   "reporting.loadOlder": "Tải ảnh chụp cũ hơn",
