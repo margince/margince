@@ -158,32 +158,56 @@ func TestAnActivityPeriodCountsOnlyWhatTheReaderMaySee(t *testing.T) {
 		map[string]string{"2026-05": "2"})
 }
 
-// A saved period filter keeps the dates it named under the zone it was saved
-// in. Saved in Berlin and asked on this UTC installation, 2026 still starts at
-// Berlin's midnight.
-func TestAKeptActivityPeriodKeepsItsDatesWhenTheZoneMoves(t *testing.T) {
-	e := Setup(t)
-	admin := e.Admin()
-	fileActivity(admin, t, e, "meeting", berlinNewYearsEve, nil)
-	fileActivity(admin, t, e, "meeting", berlinNewYearsDay, nil)
-
-	kept := analyticsquery.CalendarBasis{Timezone: "Europe/Berlin", FiscalStartMonth: 1}
+// keptYearCount asks how many activities fall in 2026 as the basis zone named
+// it. Floor 1: a handful of meetings sit below the default floor, which would
+// withhold the answer.
+func keptYearCount(ctx context.Context, t *testing.T, e *Env, zone string) string {
+	t.Helper()
+	kept := analyticsquery.CalendarBasis{Timezone: zone, FiscalStartMonth: 1}
 	q := analyticsquery.Query{
 		Entity:   "activities-by-kind",
 		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "activities"}},
 		Filters:  []analyticsquery.Filter{{Field: "period_year", Op: analyticsquery.OpEq, Value: "2026", Basis: &kept}},
 	}
-	// Floor 1: two meetings sit below the default floor, which would withhold
-	// the answer this test reads.
 	var answer compose.AnalyticsAnswer
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		answer, err = compose.RunAnalyticsQuery(admin, tx, q, analyticsquery.Floor(1))
+		answer, err = compose.RunAnalyticsQuery(ctx, tx, q, analyticsquery.Floor(1))
 		return err
 	}); err != nil {
-		t.Fatalf("asking for 2026 as Berlin named it: %v", err)
+		t.Fatalf("asking for 2026 as %s named it: %v", zone, err)
 	}
-	if len(answer.Rows) != 1 || cell(answer.Rows[0], "activities") != "1" {
-		t.Errorf("2026 as Berlin named it, asked under UTC = %+v, want the one meeting after Berlin's midnight", answer.Rows)
+	if len(answer.Rows) != 1 {
+		t.Fatalf("2026 as %s named it = %+v, want one row", zone, answer.Rows)
+	}
+	return cell(answer.Rows[0], "activities")
+}
+
+// A saved period filter keeps the dates it named under the zone it was saved
+// in, for a timed meeting and a date-only one alike.
+func TestAKeptActivityPeriodKeepsItsDatesWhenTheZoneMoves(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	fileActivity(admin, t, e, "meeting", berlinNewYearsEve, nil)
+	fileActivity(admin, t, e, "meeting", berlinNewYearsDay, nil)
+	subject := "dated, not timed"
+	date := time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
+	if _, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, OccurredAt: &date, OccurredPrecision: "day", Source: "manual",
+	}); err != nil {
+		t.Fatalf("logging a date-only meeting: %v", err)
+	}
+
+	// Saved in Berlin, asked on this UTC installation: 2026 starts at Berlin's
+	// midnight.
+	if got := keptYearCount(admin, t, e, "Europe/Berlin"); got != "1" {
+		t.Errorf("2026 as Berlin named it, asked under UTC = %s, want the one meeting after Berlin's midnight", got)
+	}
+	// 26 hours apart. 31 December begun at midnight twelve hours behind UTC is
+	// already 2026 in Kiritimati, so only a date begun in the saved zone stays
+	// in 2025.
+	setReportingZone(t, e, "Etc/GMT+12")
+	if got := keptYearCount(admin, t, e, "Pacific/Kiritimati"); got != "2" {
+		t.Errorf("2026 as Kiritimati named it, asked twelve hours behind UTC = %s, want the two timed meetings and not the date-only 31 December", got)
 	}
 }

@@ -101,6 +101,39 @@ func TestAKeptPeriodFiltersByItsDatesAndNotByItsLabel(t *testing.T) {
 	}
 }
 
+// A kept period reads a date-only row's date in the zone it was saved under,
+// bound once. An anchor that reads no zone binds none, since Postgres refuses
+// a parameter the statement never uses.
+func TestAKeptPeriodReadsADateInItsSavedZone(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		anchor, clause string
+		zoneBound      bool
+	}{
+		{"start(t, <<zone>>)", "(start(t, $1) >= $2 AND start(t, $1) < $3)", true},
+		{"t.closed_at", "(t.closed_at >= $1 AND t.closed_at < $2)", false},
+	} {
+		schema := periodSchema()
+		deals := schema.Entities["deals"]
+		field := deals.Fields["period_year"]
+		field.Period = &PeriodField{Anchor: c.anchor, Zone: "<<zone>>", Grain: GrainYear}
+		deals.Fields["period_year"] = field
+		plan, err := Compile(Query{
+			Entity: "deals", Measures: []Measure{{Fn: CountAll}},
+			Filters: []Filter{{Field: "period_year", Op: OpEq, Value: "2026", Basis: &januaryBerlin}},
+		}, schema, noScope)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(plan.SQL, c.clause) {
+			t.Errorf("%s rendered %s, want %s", c.anchor, plan.SQL, c.clause)
+		}
+		if zone, _ := plan.Args[0].(string); (zone == januaryBerlin.Timezone) != c.zoneBound {
+			t.Errorf("%s binds %v first, want the saved zone bound: %v", c.anchor, plan.Args, c.zoneBound)
+		}
+	}
+}
+
 // Every comparison keeps its meaning over labels that sort in time order.
 func TestEveryComparisonOnAKeptPeriodMeetsTheRightEdge(t *testing.T) {
 	t.Parallel()

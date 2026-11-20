@@ -232,7 +232,7 @@ func periodDimensions(anchor string) map[string]string {
 
 // colActivityAt is the activities report's period anchor: when the activity
 // happened, a date-only entry on its own date.
-var colActivityAt = occurredday.LocalDayInstantSQL("t", reportZoneToken)
+var colActivityAt = occurredday.StartInSQL("t.occurred_at", "t.occurred_precision", reportZoneToken)
 
 // periodAnchors are the instants a report cuts period buckets from. A period
 // field over one of them can keep the dates it named when it was saved.
@@ -260,7 +260,7 @@ func periodFieldOf(name, expr string) *analyticsquery.PeriodField {
 	}
 	for _, anchor := range periodAnchors {
 		if periodDimensions(anchor)[name] == expr {
-			return &analyticsquery.PeriodField{Anchor: anchor, Grain: grain}
+			return &analyticsquery.PeriodField{Anchor: anchor, Zone: reportZoneToken, Grain: grain}
 		}
 	}
 	return nil

@@ -5,6 +5,7 @@ package analyticsquery
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -31,10 +32,23 @@ const (
 )
 
 // PeriodField marks a field whose value is a period bucket's label. Anchor is
-// the SQL of the instant that places a row in its bucket.
+// the SQL of the instant that places a row in its bucket. Zone is the token in
+// Anchor that stands for the zone a date-only row's date begins in.
 type PeriodField struct {
 	Anchor string
+	Zone   string
 	Grain  PeriodGrain
+}
+
+// AnchorIn is Anchor with a date-only row's date begun in the zone bind
+// renders, so a kept period places the row by the calendar its bounds were cut
+// in. bind runs only when Anchor reads a zone: Postgres refuses a parameter the
+// statement never uses.
+func (p PeriodField) AnchorIn(bind func() string) string {
+	if p.Zone == "" || !strings.Contains(p.Anchor, p.Zone) {
+		return p.Anchor
+	}
+	return strings.ReplaceAll(p.Anchor, p.Zone, bind())
 }
 
 // PeriodSpan answers the half-open interval a bucket label names under one
@@ -75,7 +89,7 @@ func periodClause(period PeriodField, f Filter, arg func(any) string) (string, e
 	if err != nil {
 		return "", err
 	}
-	anchor := period.Anchor
+	anchor := period.AnchorIn(func() string { return arg(f.Basis.Timezone) })
 	switch f.Op {
 	case OpEq:
 		return "(" + anchor + " >= " + arg(from) + " AND " + anchor + " < " + arg(to) + ")", nil
