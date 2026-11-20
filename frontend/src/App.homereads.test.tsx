@@ -96,6 +96,21 @@ it("keeps the day's read in flight when the probe answers with the deal grant", 
   expect(days[0]?.signal?.aborted).toBe(false);
 });
 
+it("sends no deal read for a reader the probe answers without the deal grant", async () => {
+  writeStored(STORAGE_KEYS.sessionSeen, "1");
+  const { seen } = server(
+    { "/me": () => json(meFixture({ roles: ["rep"] })) },
+    [],
+  );
+  renderApp();
+  await waitFor(() =>
+    expect(asked(seen, "/installation/settings")).toBeDefined(),
+  );
+  expect(asked(seen, "/worklist")).toBeDefined();
+  expect(asked(seen, "/brief")).toBeUndefined();
+  expect(asked(seen, "/magic")).toBeUndefined();
+});
+
 it("stops Home's reads once the gate sends the reader to describe the company", async () => {
   writeStored(STORAGE_KEYS.sessionSeen, "1");
   const { seen } = server(

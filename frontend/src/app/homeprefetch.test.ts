@@ -133,18 +133,24 @@ it("lets go of the day's Worklist once its read answers", async () => {
   expect(day()?.getObserversCount()).toBe(0);
 });
 
-it("does not read the brief or the done-for-you receipt for a reader without deal read", async () => {
+it("reads the brief and the done-for-you receipt only through the deal prefetch", async () => {
   const fetched = vi
     .spyOn(globalThis, "fetch")
     .mockImplementation(async () => Response.json({}));
-  prefetchHome(createQueryClient(), new Map());
+  const paths = () =>
+    fetched.mock.calls.map(
+      ([input]) =>
+        new URL(input instanceof Request ? input.url : String(input)).pathname,
+    );
+  const client = createQueryClient();
+  prefetchHome(client, new Map());
   await new Promise((resolve) => setTimeout(resolve, 0));
-  const paths = fetched.mock.calls.map(
-    ([input]) =>
-      new URL(input instanceof Request ? input.url : String(input)).pathname,
-  );
-  expect(paths.some((path) => path.endsWith("/brief"))).toBe(false);
-  expect(paths.some((path) => path.endsWith("/magic"))).toBe(false);
+  expect(paths().some((path) => /\/(brief|magic)$/.test(path))).toBe(false);
+  prefetchHomeDeals(client, new Map());
+  await vi.waitFor(() => {
+    expect(paths().some((path) => path.endsWith("/brief"))).toBe(true);
+    expect(paths().some((path) => path.endsWith("/magic"))).toBe(true);
+  });
 });
 
 it("starts the deal-only reads only once the grant is known", () => {

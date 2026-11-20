@@ -48,7 +48,10 @@ const opensMorning = (params: UrlParams) =>
 // Each read uses its hook's own options, so the screen joins a request in
 // flight. An answer already back is noted, so the screen's mount does not fetch
 // it again (liveOnMount in queryclient.ts).
-export function prefetchHome(client: QueryClient, params: UrlParams): () => void {
+export function prefetchHome(
+  client: QueryClient,
+  params: UrlParams,
+): () => void {
   if (!opensMorning(params)) {
     return () => undefined;
   }
@@ -76,7 +79,10 @@ export function prefetchHome(client: QueryClient, params: UrlParams): () => void
 // prefetch would leave an error in the cache for the screen to show. They start
 // apart from the day, which is in flight when the grant arrives and would be
 // aborted and sent again by a shared cleanup.
-export function prefetchHomeDeals(client: QueryClient, params: UrlParams): void {
+export function prefetchHomeDeals(
+  client: QueryClient,
+  params: UrlParams,
+): void {
   if (!opensMorning(params)) {
     return;
   }

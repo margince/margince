@@ -62,7 +62,7 @@ import {
   writeStored,
 } from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
-import { currentParams, useAddressWriters } from "./lib/urlstate";
+import { useAddressWriters } from "./lib/urlstate";
 import {
   renderableViewerZone,
   useBrowserZoneOnFirstSignIn,
