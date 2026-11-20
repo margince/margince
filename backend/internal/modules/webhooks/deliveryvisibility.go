@@ -238,6 +238,10 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 		// the same shape as the commission above. A room cannot exist without a
 		// deal, so there is no second anchor to fall back to.
 		return s.dealRoomVisibleTo(ctx, entityID)
+	case "legal_review":
+		// A review is visible through its deal, behind the legal_review grant that
+		// gates reading the review itself.
+		return s.legalReviewVisibleTo(ctx, entityID)
 	case "approval":
 		// An approval (and its coldstart.* echoes) carries staged-change
 		// detail — summary, edited_change, target ids — so it is gated on
@@ -353,6 +357,28 @@ func (s *Store) dealRoomVisibleTo(ctx context.Context, roomID ids.UUID) (bool, e
 	var dealID ids.UUID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT deal_id FROM deal_room WHERE id = $1`, roomID).Scan(&dealID)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return s.rowScopedVisible(ctx, "deal", func(c context.Context, tx pgx.Tx) error {
+		return auth.EnsureVisible(c, tx, "deal", dealID)
+	})
+}
+
+// legalReviewVisibleTo gates a review subject on legal_review.read, then on the
+// row-scope visibility of its deal. An absent review reads as not-visible.
+func (s *Store) legalReviewVisibleTo(ctx context.Context, reviewID ids.UUID) (bool, error) {
+	readable, err := objectReadable(ctx, "legal_review")
+	if err != nil || !readable {
+		return false, err
+	}
+	var dealID ids.UUID
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT deal_id FROM legal_review WHERE id = $1`, reviewID).Scan(&dealID)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil

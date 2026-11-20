@@ -336,6 +336,10 @@ var piiTables = map[string]piiHandling{
 	// agreed or proposed, and how sure the writer was, is a conclusion drawn
 	// from what the subject wrote.
 	"deal_stage_evidence": {erasureWrite: true, sarRead: true},
+	// A legal review's note and comments are colleagues' free text about a deal
+	// and can name its stakeholders. Erasure clears the text and keeps the row,
+	// whose outcome settles the deal's stage gate.
+	"legal_review": {erasureWrite: true, sarRead: true},
 	// A handoff names the subject it was about, and its note is what one seat
 	// wrote about them to another. The judgement — accepted, or refused for this
 	// reason — is a decision contacts made about that contact, the same holding

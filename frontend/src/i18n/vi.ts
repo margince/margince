@@ -18160,6 +18160,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quyết định của bên mua về tài liệu",
   "webhooks.event.deal_room.decision_recorded.when":
     "Hiện không còn gửi. Giữ lại cho hệ thống nhận vẫn đọc sự kiện cũ.",
+  "webhooks.eventGroup.legal_reviews": "Rà soát pháp lý",
+  "webhooks.event.legal_review.requested.label": "Đã yêu cầu rà soát pháp lý",
+  "webhooks.event.legal_review.requested.when":
+    "Một deal được gửi cho bộ phận pháp lý rà soát.",
+  "webhooks.event.legal_review.decided.label": "Đã trả lời rà soát pháp lý",
+  "webhooks.event.legal_review.decided.when":
+    "Bộ phận pháp lý duyệt một deal hoặc yêu cầu chỉnh sửa.",
+  "webhooks.event.legal_review.withdrawn.label": "Đã rút yêu cầu rà soát pháp lý",
+  "webhooks.event.legal_review.withdrawn.when":
+    "Một yêu cầu gửi bộ phận pháp lý được rút lại.",
   "webhooks.eventGroup.introductions": "Giới thiệu",
   "webhooks.event.intro_request.created.label": "Đã yêu cầu giới thiệu",
   "webhooks.event.intro_request.created.when":

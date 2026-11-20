@@ -18450,6 +18450,16 @@ export const en = {
     "Buyer decision on a document",
   "webhooks.event.deal_room.decision_recorded.when":
     "Never sent today. Kept for receivers that still read older events.",
+  "webhooks.eventGroup.legal_reviews": "Legal reviews",
+  "webhooks.event.legal_review.requested.label": "Legal review requested",
+  "webhooks.event.legal_review.requested.when":
+    "A deal is sent to legal for review.",
+  "webhooks.event.legal_review.decided.label": "Legal review answered",
+  "webhooks.event.legal_review.decided.when":
+    "Legal approves a deal or asks for changes.",
+  "webhooks.event.legal_review.withdrawn.label": "Legal review withdrawn",
+  "webhooks.event.legal_review.withdrawn.when":
+    "A request to legal is taken back.",
   "webhooks.eventGroup.introductions": "Introductions",
   "webhooks.event.intro_request.created.label": "Introduction requested",
   "webhooks.event.intro_request.created.when":

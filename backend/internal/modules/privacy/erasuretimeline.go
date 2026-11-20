@@ -188,6 +188,9 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	if err := deleteSubjectHandoffs(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
+	if err := clearSubjectLegalReviewText(ctx, tx, contactID, reason, causeContactErasure); err != nil {
+		return nil, err
+	}
 	return redacted, nil
 }
 

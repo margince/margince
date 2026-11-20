@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -79,7 +80,8 @@ func (s *Store) DecideLegalReview(
 		if err != nil {
 			return fmt.Errorf("audit the legal review outcome: %w", err)
 		}
-		if err := storekit.EmitPipelinePayload(ctx, tx, auditID, crmcontracts.InternalEventLegalReviewDecided{
+		if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventLegalReviewDecided{
+			DealId: openapi_types.UUID(current.dealID), ReviewId: openapi_types.UUID(id),
 			Outcome: string(in.Outcome),
 		}); err != nil {
 			return fmt.Errorf("emit legal_review.decided: %w", err)

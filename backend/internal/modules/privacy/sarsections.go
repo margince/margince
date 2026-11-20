@@ -145,6 +145,13 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 		{&pkg.Deals, `SELECT d.id, d.name, d.status, d.amount_minor, d.currency
 		   FROM deal d JOIN relationship r ON r.deal_id = d.id
 		   WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $1 AND r.archived_at IS NULL`, nil},
+		// What legal was asked and answered about the deals they hold a stake in,
+		// in the colleagues' own words. Held about the deal rather than the person,
+		// but erased with them, so the export owes it on the same ground.
+		{&pkg.LegalReviews, `SELECT lr.deal_id, lr.status, lr.created_at AS requested_at,
+		          lr.decided_at, lr.note, lr.comments
+		   FROM legal_review lr
+		   WHERE lr.deal_id IN (` + subjectDealIDsSQL + `)`, nil},
 		{
 			&pkg.Leads, `SELECT l.id, l.full_name, l.email, l.title, l.company_name, l.status, l.created_at
 		   FROM lead l

@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -229,8 +230,9 @@ func (s *Store) RequestLegalReview(
 		if err != nil {
 			return fmt.Errorf("audit the legal review request: %w", err)
 		}
-		if err := storekit.EmitPipelinePayload(ctx, tx, auditID,
-			crmcontracts.InternalEventLegalReviewRequested{HasNote: hasNote}); err != nil {
+		if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventLegalReviewRequested{
+			DealId: openapi_types.UUID(dealID.UUID), ReviewId: openapi_types.UUID(id),
+		}); err != nil {
 			return fmt.Errorf("emit legal_review.requested: %w", err)
 		}
 		out, err = readReviewSummary(ctx, tx, id)
@@ -358,8 +360,9 @@ func (s *Store) WithdrawLegalReview(ctx context.Context, id ids.UUID) (crmcontra
 		if err != nil {
 			return fmt.Errorf("audit the legal review withdrawal: %w", err)
 		}
-		if err := storekit.EmitPipelinePayload(ctx, tx, auditID,
-			crmcontracts.InternalEventLegalReviewWithdrawn{}); err != nil {
+		if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventLegalReviewWithdrawn{
+			DealId: openapi_types.UUID(dealID.UUID), ReviewId: openapi_types.UUID(id),
+		}); err != nil {
 			return fmt.Errorf("emit legal_review.withdrawn: %w", err)
 		}
 		out, err = readReviewSummary(ctx, tx, id)

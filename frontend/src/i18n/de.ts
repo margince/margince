@@ -18655,6 +18655,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Entscheidung der Käuferseite zu einem Dokument",
   "webhooks.event.deal_room.decision_recorded.when":
     "Wird derzeit nicht gesendet. Bleibt für Empfangssysteme erhalten, die noch ältere Ereignisse lesen.",
+  "webhooks.eventGroup.legal_reviews": "Rechtsprüfungen",
+  "webhooks.event.legal_review.requested.label": "Rechtsprüfung angefragt",
+  "webhooks.event.legal_review.requested.when":
+    "Ein Deal wird zur Prüfung an die Rechtsabteilung geschickt.",
+  "webhooks.event.legal_review.decided.label": "Rechtsprüfung beantwortet",
+  "webhooks.event.legal_review.decided.when":
+    "Die Rechtsabteilung gibt einen Deal frei oder verlangt Änderungen.",
+  "webhooks.event.legal_review.withdrawn.label": "Rechtsprüfung zurückgezogen",
+  "webhooks.event.legal_review.withdrawn.when":
+    "Eine Anfrage an die Rechtsabteilung wird zurückgenommen.",
   "webhooks.eventGroup.introductions": "Vorstellungen",
   "webhooks.event.intro_request.created.label": "Vorstellung angefragt",
   "webhooks.event.intro_request.created.when":
