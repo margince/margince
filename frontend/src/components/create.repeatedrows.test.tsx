@@ -10,6 +10,7 @@ import {
   useLocale,
   useT,
 } from "../i18n";
+import { seedWriter } from "../testing/mefixture";
 import { companyCreateFields } from "./companyform";
 import { contactCreateFields } from "./contactformfields";
 import { CreateAction, type CreateField } from "./create";
@@ -42,6 +43,7 @@ function Form({
       }}
       invalidate="contacts"
       screen="contacts"
+      requires={{ object: "contact", action: "create" }}
     />
   );
 }
@@ -49,6 +51,7 @@ function Form({
 async function fillRows(fields: FieldSource, add: string, entries: string[]) {
   const sent: unknown[] = [];
   const client = new QueryClient();
+  seedWriter(client);
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

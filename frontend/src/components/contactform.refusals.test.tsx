@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { type Locale, LocaleProvider, useT } from "../i18n";
 import { throwProblem } from "../lib/problem";
+import { seedWriter } from "../testing/mefixture";
 import { contactCreateFields } from "./contactformfields";
 import { CreateAction } from "./create";
 
@@ -38,6 +39,7 @@ function NewContact({ problem }: Readonly<{ problem: unknown }>) {
       create={() => throwProblem(problem)}
       invalidate="contacts"
       screen="contacts"
+      requires={{ object: "contact", action: "create" }}
     />
   );
 }
@@ -46,6 +48,7 @@ async function submit(problem: unknown, locale: Locale = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  seedWriter(client);
   const { container } = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
