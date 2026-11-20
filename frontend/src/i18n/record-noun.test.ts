@@ -92,6 +92,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.why.met",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -208,6 +209,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contactCase.intro",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -242,6 +244,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
 
     // The meeting's organizer is a human, not the CRM contact record type.
     "meetingChange.line.details",
+    "worklist.ask.invitation",
     "worklist.ask.changedInvitation",
     "worklist.ask.meeting.updated",
     "worklist.ask.meeting.canceled",
@@ -403,6 +406,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contactCase.intro",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",

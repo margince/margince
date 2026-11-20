@@ -20351,7 +20351,7 @@
     "creation_acquired_at":
      "Erfasst am",
     "creation_acquisition":
-     "Warum dieser Kontakt angelegt wird",
+     "Warum dieser Kontakt erstellt wird",
     "creation_duplicate":
      "Vorgeschlagene Dublette",
     "creation_email_correspondence":
@@ -21035,7 +21035,7 @@
     "promotion_company_industry":
      "Branche des Unternehmens",
     "promotion_company_proposed":
-     "Unternehmen zum Verknüpfen oder Anlegen",
+     "Unternehmen zum Verknüpfen oder Erstellen",
     "promotion_consent_before":
      "Einwilligung vor der Qualifizierung",
     "promotion_contact_email":

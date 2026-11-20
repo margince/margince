@@ -2842,6 +2842,7 @@ export const en = {
   "shell.shortcuts.sendEmail": "Send email",
   "shell.shortcuts.submitDialog": "Submit dialog",
   "shell.shortcuts.then": "then",
+  "shell.shortcuts.ctrl": "Ctrl",
   "shell.shortcuts.or": "or",
   "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
   "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
@@ -3215,8 +3216,12 @@ export const en = {
   "share.whoHasAccess": "Shared with",
   "share.grantedBy": "granted by",
   "share.revoke": "Revoke",
+  "share.revokeFor": "Revoke access to {record} for {name}",
   "share.revokeConfirm":
-    "Revoke this access? It ends at the next request and cannot be undone.",
+    "Revoke {access} access to {record} for {name}? It ends at the next request and cannot be undone.",
+  "share.granted": "{name} now has {access} access to {record}.",
+  "share.thisRecord": "this record",
+  "share.until": "Until {date}",
   "share.approvalRequired":
     "This share takes effect only after approval. It is not applied yet.",
   "share.teamMembers_one": "Team · {count} member",
@@ -3226,6 +3231,7 @@ export const en = {
   "share.rosterErrorTeams": "Teams did not load. People are shown below.",
   "share.rosterErrorBoth": "People and teams did not load.",
   "share.rosterEmpty": "No people or teams to share with.",
+  "share.rosterNoMatch": "No member or team matches your search.",
 
   "merge.contact": "Merge contact",
   "merge.company": "Merge company",
@@ -9365,6 +9371,7 @@ export const en = {
   "analytics.share.listCreated": "Created {date}",
   "analytics.share.listExpires": "Expires {date}",
   "analytics.share.populationCompany": "Whole company",
+  "analytics.scope.workspace": "Whole company",
   "analytics.share.populationTeam": "Team",
   "analytics.share.populationOwner": "Colleague",
   "analytics.share.closeTitle": "Close this link?",
@@ -23303,7 +23310,7 @@ export const en = {
     "No exchange with this contact is recorded yet.",
   "contactCase.title": "Possible duplicates",
   "contactCase.intro":
-    "Tick the contacts that are the same person. Then choose which record to keep and who owns it.",
+    "Tick the contacts that are the same person. Then choose which one stays and who owns it.",
   "contactCase.loading": "Loading possible duplicates…",
   "contactCase.none": "This contact has no open duplicates.",
   "contactCase.settledElsewhere":
@@ -23340,8 +23347,10 @@ export const en = {
   "contactCase.merge_other": "Merge {count} contacts",
   "contactCase.member.owner": "Owner: {name}",
   "contactCase.member.unowned": "No owner",
-  "contactCase.member.keep": "Keep this record’s details",
-  "contactCase.member.keepNamed": "Keep details of {name}",
+  "contactCase.member.stays": "{name} stays",
+  "contactCase.survivor.legend": "Which contact stays?",
+  "contactCase.survivor.hint":
+    "The other ticked contacts merge into it and are archived.",
   "contactCase.member.dismissedWith":
     "Marked as a different person from {names}.",
   "contactCase.notAllowed.tooLarge":
@@ -23366,11 +23375,13 @@ export const en = {
   "contactCase.field.domain": "Domain",
   "contactCase.field.other": "Detail",
   "contactCase.evidence.title": "Why they look alike",
+  "contactCase.evidence.hint":
+    "Not the same person stops only that pair from being suggested. A contact you leave unticked stays a possible duplicate.",
   "contactCase.evidence.pair": "{left} and {right}",
   "contactCase.evidence.different": "Different people",
   "contactCase.preview.title": "What the merge does",
-  "contactCase.preview.keeps": "{name} remains, owned by {owner}.",
-  "contactCase.preview.mergedTitle": "Merged into it",
+  "contactCase.preview.keeps": "{name} stays, owned by {owner}.",
+  "contactCase.preview.mergedTitle": "Merged into it and archived",
   "contactCase.preview.sharesTitle": "Keeps access",
   "contactCase.preview.noShares": "No other owner.",
   "contactCase.preview.shareWrite": "{name}, can edit",
