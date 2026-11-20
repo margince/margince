@@ -244,7 +244,7 @@ export type NewList = Readonly<{
   listType: List["list_type"];
   definition?: Record<string, unknown>;
   purpose?: string;
-  sharing?: List["sharing"];
+  sharing: List["sharing"];
   /** Only with team sharing; null or absent is the owner's teams. */
   teamId?: string | null;
 }>;
@@ -261,7 +261,7 @@ export function useCreateList() {
             list_type: input.listType,
             definition: input.definition,
             purpose: input.purpose || undefined,
-            sharing: input.sharing ?? "team",
+            sharing: input.sharing,
             team_id: input.teamId ?? undefined,
           },
         }),

@@ -19433,6 +19433,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.date.mode": "C\u00e1ch nh\u1eadp ng\u00e0y",
   "filters.date.daysAgoCount":
     "{field}: s\u1ed1 ng\u00e0y tr\u01b0\u1edbc h\u00f4m nay",
+  "filters.date.daysAgoInvalid": "Nhập số ngày là số nguyên từ 0 đến {max}.",
   "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
   "filters.propose.label": "Mô tả {records} cần tìm",
   "filters.propose.hint":
@@ -19481,6 +19482,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.sharing.private": "Chỉ riêng tôi",
   "lists.sharing.team": "M\u1ed9t nh\u00f3m",
   "lists.sharing.workspace": "Cả công ty",
+  "lists.sharing.noTeamHint": "Bạn không thuộc nhóm nào.",
   "lists.sharingLabel": "Ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y",
   "lists.sharingHint":
     "Chia sẻ danh sách không cho phép ai xem hồ sơ mà họ vốn không có quyền xem.",

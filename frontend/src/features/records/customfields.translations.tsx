@@ -12,6 +12,7 @@ import {
   translationValues,
 } from "../../components/labeltranslations";
 import { useT } from "../../i18n";
+import { CUSTOM_FIELDS_KEY } from "../../lib/customfields.query";
 import { unwrap } from "../../lib/problem";
 
 type CustomField = components["schemas"]["CustomField"];
@@ -83,7 +84,7 @@ export function CustomFieldTranslate({
       labelled
       label={t("cf.translate")}
       savedMessage={t("cf.translated", { label: field.label })}
-      invalidate="custom-fields"
+      invalidate={CUSTOM_FIELDS_KEY}
       recordKey="custom_field"
       record={translateRecord(field)}
       fields={translateFields(field, t)}

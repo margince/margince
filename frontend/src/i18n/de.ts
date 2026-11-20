@@ -19966,6 +19966,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",
   "filters.date.daysAgoCount": "{field}: Tage vor heute",
+  "filters.date.daysAgoInvalid":
+    "Gib eine ganze Zahl von 0 bis {max} Tagen ein.",
   "filters.saveListConfirm": "Liste speichern",
   "filters.propose.label": "Beschreibe die {records}, die du suchst",
   "filters.propose.hint":
@@ -20015,6 +20017,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.sharing.private": "Privat",
   "lists.sharing.team": "Ein Team",
   "lists.sharing.workspace": "Alle",
+  "lists.sharing.noTeamHint": "Du bist in keinem Team.",
   "lists.sharingLabel": "Wer sie finden kann",
   "lists.sharingHint":
     "Wer eine Liste sieht, sieht dadurch keinen Datensatz, den er nicht schon sehen durfte.",

@@ -9,11 +9,12 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ScreenView } from "./App.views";
+import { withListPage } from "./components/listqueryparams";
 import { LocaleProvider } from "./i18n";
 import { navigateReplacing, useHash, useRoute } from "./lib/router";
 import { settingsRouteTarget } from "./lib/settingsrouting";
 import { useUnsavedGuard } from "./lib/unsavedclaims";
-import { type UrlParams, useUrlParams } from "./lib/urlstate";
+import { currentParams, type UrlParams, useUrlParams } from "./lib/urlstate";
 import { meFixture, READS_RECORDS } from "./testing/mefixture";
 
 // Each routed screen shows the address it reads, carries a draft, and exposes
@@ -141,6 +142,23 @@ describe("a screen held on screen past a move", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(
       await screen.findByText("reads #/contacts?page=4 as contacts"),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("a list the reader has left", () => {
+  it("cannot send the list they opened back to page one", async () => {
+    renderRouted("#/companies");
+    await screen.findByRole("region", { name: "companies" });
+    await moveTo("#/contacts?page=3");
+    await screen.findByText("reads #/contacts?page=3 as contacts");
+
+    // The write a list's reset makes when its narrowing changes on the way out.
+    act(() => writers.get("companies")?.(withListPage(currentParams(), 1)));
+
+    expect(window.location.hash).toBe("#/contacts?page=3");
+    expect(
+      screen.getByText("reads #/contacts?page=3 as contacts"),
     ).toBeInTheDocument();
   });
 });

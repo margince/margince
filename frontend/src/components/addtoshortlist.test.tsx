@@ -15,6 +15,7 @@ import {
   MEMBER_ID,
   SHORTLIST_ID,
   shortlist,
+  TEAM_ID,
 } from "../testing/lists.fixtures";
 import { ME_ANSWERED, MeAnswered } from "../testing/sessionprobe";
 import {
@@ -159,6 +160,65 @@ describe("Add to Shortlist on a record page", () => {
       entity_type: "company",
       entity_id: MEMBER_ID,
       note: "reference",
+    });
+  });
+});
+
+describe("a new Shortlist named in the dialog", () => {
+  async function createNamed(teams: readonly string[]) {
+    const created: unknown[] = [];
+    const NEW_ID = "01a0f000-0000-7000-8000-0000000000aa";
+    installFetchStub({
+      "GET /me": listsMe(true, teams),
+      "GET /lists": () => jsonResponse({ data: [], page: { has_more: false } }),
+      "POST /lists": (body) => {
+        created.push(body);
+        return jsonResponse({ ...shortlist, id: NEW_ID }, 201);
+      },
+      [`POST /lists/${NEW_ID}/members`]: () =>
+        jsonResponse(
+          {
+            id: "m",
+            list_id: NEW_ID,
+            entity_type: "company",
+            entity_id: MEMBER_ID,
+          },
+          201,
+        ),
+    });
+    const user = userEvent.setup();
+    action();
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.addToShortlist"] }),
+    );
+    await user.click(
+      await screen.findByRole("combobox", { name: en["lists.shortlist"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", {
+        name: en["lists.newShortlistOption"],
+      }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: en["lists.name"] }),
+      "Fair leads",
+    );
+    await user.click(screen.getByRole("button", { name: en["lists.add"] }));
+    await vi.waitFor(() => expect(created).toHaveLength(1));
+    return created[0];
+  }
+
+  it("is shared with the reader's teams when they are in one", async () => {
+    expect(await createNamed([TEAM_ID])).toMatchObject({
+      name: "Fair leads",
+      sharing: "team",
+    });
+  });
+
+  it("is kept to the reader when they are in no team", async () => {
+    expect(await createNamed([])).toMatchObject({
+      name: "Fair leads",
+      sharing: "private",
     });
   });
 });

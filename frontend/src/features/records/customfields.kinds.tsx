@@ -12,11 +12,11 @@ import { MultiSelect } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { customFieldsQuery } from "../../lib/customfields.query";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 
 type CustomField = components["schemas"]["CustomField"];
-type CustomFieldList = components["schemas"]["CustomFieldListResponse"];
 type ActivityKind = NonNullable<
   components["schemas"]["RenameCustomFieldRequest"]["activity_kinds"]
 >[number];
@@ -91,8 +91,8 @@ export function useSetActivityKinds() {
         }),
       ),
     onSuccess: (saved, input) => {
-      queryClient.setQueryData<CustomFieldList>(
-        ["custom-fields", input.field.object],
+      queryClient.setQueryData(
+        customFieldsQuery(input.field.object).queryKey,
         (old) =>
           old && {
             ...old,

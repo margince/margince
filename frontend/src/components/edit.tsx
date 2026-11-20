@@ -6,6 +6,7 @@ import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { derivedRecordKeys } from "../lib/activitykeys";
+import { catalogOfRecord } from "../lib/customfields.logic";
 import { sameEditValue } from "../lib/independentedit";
 import { ProblemError, problemExistingId } from "../lib/problem";
 import type { Route } from "../lib/router";
@@ -15,7 +16,7 @@ import {
   RecordFormBody,
   usePublishedValues,
 } from "./create";
-import { catalogOfRecord, useSettledOpen } from "./create.dialog";
+import { useSettledOpen } from "./create.dialog";
 import { type CreateConflict, fieldRefusals } from "./create.refusals";
 import {
   prefillFromRecord,

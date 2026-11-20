@@ -236,6 +236,33 @@ describe("what the builder offers", () => {
     expect(screen.queryByText("owner id")).toBeNull();
   });
 
+  it("offers a custom field by its catalog label", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    const labelled = VOCAB.map((field) =>
+      field.name === "cf_loyalty_tier"
+        ? { ...field, label: "Loyalty Tier" }
+        : field,
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <FilterBuilder
+          tree={newGroup("and", [newLeaf("cf_loyalty_tier", "eq", "gold")])}
+          onChange={() => {}}
+          fields={labelled}
+        />
+      </QueryClientProvider>,
+    );
+
+    const field = screen.getByRole("combobox", { name: "Field" });
+    expect(field.textContent).toContain("Loyalty Tier");
+    await user.click(field);
+
+    expect(screen.getByRole("option", { name: "Loyalty Tier" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "loyalty tier" })).toBeNull();
+    expect(screen.getByRole("option", { name: "deal score" })).toBeTruthy();
+  });
+
   it("does not mark a core field as custom", () => {
     resetIDsForTest();
     render(
@@ -536,6 +563,21 @@ describe("editing the tree", () => {
     expect(after.and[0].field).toBe("created_at");
     expect(after.and[0].op).toBe("eq");
     expect(after.and[0].value).toBe("");
+  });
+
+  it("keeps a count of days when only the operator changes", async () => {
+    const user = userEvent.setup();
+    const week = { days_ago: 7 };
+    render(
+      <Harness start={newGroup("and", [newLeaf("created_at", "eq", week)])} />,
+    );
+    const operator = screen.getByRole("combobox", { name: "Operator" });
+    await pickOption(user, operator, "is on or after");
+    expect(wire().and[0]).toMatchObject({ op: "gte", value: week });
+    expect(screen.getByRole("textbox", { name: /days before/ })).toHaveProperty(
+      "value",
+      "7",
+    );
   });
 
   it("starts a yes/no field on the arm its control shows", async () => {
