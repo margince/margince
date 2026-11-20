@@ -8255,7 +8255,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể gửi tin nhắn này tới {address} ở dạng hiện tại.",
   "compose.sendAnyway.finding.none":
     "Không thể gửi tin nhắn này ở dạng hiện tại.",
-  "compose.sendAnyway.cited": "Lưu ý: gửi tới {address} có thể vi phạm",
   "compose.citation.law": "Quy định:",
   "compose.sendAnyway.editOnly": "Sửa tin nhắn hoặc bỏ địa chỉ này để gửi.",
   "compose.sendAnyway.more_one": "Thêm {count} kết quả",

@@ -10,7 +10,7 @@ import {
   useRef,
 } from "react";
 import type { components } from "../../api/schema";
-import { CitedAttention, CitedLaws } from "../../components/citedlaw";
+import { CitedLaws, FindingWithLaw } from "../../components/citedlaw";
 import { Button, Field, Textarea } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { describedByIds } from "../../design-system/describedby";
@@ -173,7 +173,12 @@ export function SendAnywayRows({
         id={warningId}
         title={
           lead?.provision ? (
-            <CitedAttention address={lead.address} provision={lead.provision} />
+            <FindingWithLaw
+              sentence={t(findingKey(lead.reason_code), {
+                address: lead.address,
+              })}
+              provision={lead.provision}
+            />
           ) : lead ? (
             t(findingKey(lead.reason_code), { address: lead.address })
           ) : (
@@ -181,9 +186,6 @@ export function SendAnywayRows({
           )
         }
       >
-        {lead?.provision && (
-          <p>{t(findingKey(lead.reason_code), { address: lead.address })}</p>
-        )}
         {!state.canSendAnyway && <p>{t("compose.sendAnyway.editOnly")}</p>}
         {state.changed && <p>{t("directSend.changed")}</p>}
         <MoreFindings refusals={review.refusals.slice(1)} />

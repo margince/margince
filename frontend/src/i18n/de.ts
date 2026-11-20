@@ -8473,8 +8473,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Nachricht kann so nicht an {address} gesendet werden.",
   "compose.sendAnyway.finding.none":
     "Diese Nachricht kann so nicht gesendet werden.",
-  "compose.sendAnyway.cited":
-    "Achtung: Eine E-Mail an {address} verstößt vielleicht gegen",
   "compose.citation.law": "Vorschrift:",
   "compose.sendAnyway.editOnly":
     "Bearbeite die Nachricht oder entferne diese Empfangsadresse, um sie zu senden.",

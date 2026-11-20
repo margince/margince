@@ -8465,7 +8465,6 @@ export const en = {
     "This message cannot be sent to {address} as it stands.",
   "compose.sendAnyway.finding.none":
     "This message cannot be sent as it stands.",
-  "compose.sendAnyway.cited": "Attention: sending to {address} may break",
   "compose.citation.law": "Law:",
   "compose.sendAnyway.editOnly":
     "Edit the message or remove this recipient to send it.",
