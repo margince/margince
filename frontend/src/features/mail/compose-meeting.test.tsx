@@ -18,6 +18,7 @@ import {
   stubRoutes,
   WHY_ASK,
 } from "./compose.testkit";
+import { MEETING_NOTE } from "./composemeeting";
 import { ComposeWindow } from "./composewindow";
 
 // The reason picker offers five answers. "We met in person" notes the meeting
@@ -76,16 +77,14 @@ afterEach(() => {
 });
 
 describe("we met in person", () => {
-  it("holds Send until the rep says where they met, and notes nothing", async () => {
+  it("asks nothing more than the pick", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const sent = stubRoutes(CONTACT_WRITER);
+    stubRoutes(CONTACT_WRITER);
     await openAndWrite(user);
     await pickWhy(user, "We met in person");
-    await pressSend(user);
 
-    expect(await screen.findByText("Say where you met.")).toBeTruthy();
-    expect(count(sent, MEETING)).toBe(0);
-    expect(count(sent, "POST /emails")).toBe(0);
+    expect(screen.queryByRole("textbox", { name: /where/i })).toBeNull();
+    expect(screen.queryByLabelText("Date")).toBeNull();
   });
 
   it("notes the meeting first, then sends it as a requested follow-up", async () => {
@@ -96,10 +95,6 @@ describe("we met in person", () => {
     });
     await openAndWrite(user);
     await pickWhy(user, "We met in person");
-    await user.type(
-      screen.getByLabelText(/Where did you meet\?/),
-      "Hannover Messe, stand B12",
-    );
     await pressSend(user);
 
     await waitFor(() => expect(count(sent, "POST /emails")).toBe(1));
@@ -107,7 +102,7 @@ describe("we met in person", () => {
     expect(keys.indexOf(MEETING)).toBeLessThan(keys.indexOf("POST /emails"));
     expect(sent.find((entry) => entry.key === MEETING)?.body).toMatchObject({
       kind: "in_person",
-      note: "Hannover Messe, stand B12",
+      note: MEETING_NOTE,
     });
     expect(
       sent.find((entry) => entry.key === "POST /emails")?.body,
@@ -124,7 +119,6 @@ describe("we met in person", () => {
     });
     await openAndWrite(user);
     await pickWhy(user, "We met in person");
-    await user.type(screen.getByLabelText(/Where did you meet\?/), "Fair");
     await pressSend(user);
     await waitFor(() => expect(count(sent, "POST /emails")).toBe(1));
     await pressSend(user);
@@ -142,7 +136,6 @@ describe("we met in person", () => {
     });
     await openAndWrite(user);
     await pickWhy(user, "We met in person");
-    await user.type(screen.getByLabelText(/Where did you meet\?/), "Fair");
     await pressSend(user);
 
     expect(

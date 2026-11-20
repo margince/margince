@@ -37,8 +37,7 @@ import { ComposeWindow } from "./composewindow";
 const EIGHT_WAITS_TEST_MS =
   ASYNC_UTIL_TIMEOUT_MS * 8 + SLOWEST_MEASURED_TEST_MS;
 
-const INLINE_TEXT =
-  "The send check still blocks this message. Send anyway sends only this message and grants no permission for later ones. Your name, your reason and the message are kept in a record that cannot be edited.";
+const INLINE_TEXT = "Why send this one message anyway?";
 
 const REVIEW = {
   id: "r-1",
@@ -54,7 +53,7 @@ const REVIEW = {
   warning: { version: "override-v2", text: "The modal's longer words." },
   warnings: [
     { version: "override-v2", text: "The modal's longer words." },
-    { version: "inline-v1", text: INLINE_TEXT },
+    { version: "inline-v2", text: INLINE_TEXT },
   ],
 };
 
@@ -120,7 +119,8 @@ async function fillMessage(user: UserEvent) {
 // The callout's title. The details behind the count list only the findings
 // after it.
 const leadFinding = () => screen.findByText("a@x.com objected to marketing.");
-const reasonField = () => screen.findByLabelText(/Reason for sending/);
+const reasonField = () =>
+  screen.findByLabelText(/Why send this one message anyway\?/);
 const sendAnyway = () => screen.findByRole("button", { name: "Send anyway" });
 
 beforeEach(installComposeClock);
@@ -200,7 +200,9 @@ describe("the email composer that decides at Send", () => {
     await pressSend(user);
 
     expect(await leadFinding()).toBeTruthy();
-    expect(screen.getByText(INLINE_TEXT)).toBeTruthy();
+    expect(await reasonField()).toBeTruthy();
+    // The finding is the whole warning: no explanation paragraph beneath it.
+    expect(screen.queryByText(/grants no permission/)).toBeNull();
     expect(screen.getByText("1 more finding")).toBeTruthy();
     expect(
       screen.getByText(/^No reason to contact b@x\.com is on record\./),
@@ -286,7 +288,7 @@ describe("the email composer that decides at Send", () => {
     expect(decisions[0]?.body).toEqual({
       reason_code: "other",
       explanation: "They asked on the phone.",
-      warning_version: "inline-v1",
+      warning_version: "inline-v2",
       assessment_revision: "rev-1",
       shown_reasons: ["marketing_objection", "no_compatible_evidence"],
       acknowledged: true,
@@ -612,7 +614,7 @@ describe("the email composer that decides at Send", () => {
   );
 
   it(
-    "shows the country a refusal was judged under, and the refreshed one",
+    "keeps the warning to its finding, and asks again on a refreshed review",
     async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const judged = (
@@ -645,19 +647,13 @@ describe("the email composer that decides at Send", () => {
       await openComposer();
       await fillMessage(user);
       await pressSend(user);
-      expect(
-        await screen.findByText("Country: Germany, from the contact’s address"),
-      ).toBeTruthy();
+      expect(await leadFinding()).toBeTruthy();
+      // The warning is its first line: the country it was judged under is not
+      // repeated beneath it.
+      expect(screen.queryByText(/^Country:/)).toBeNull();
       await user.type(await reasonField(), "Asked by phone.");
       await user.click(await sendAnyway());
-      expect(
-        await screen.findByText(
-          "Country: none, cleared by the sender for this message",
-        ),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText("Country: Germany, from the contact’s address"),
-      ).toBeNull();
+      expect(await screen.findByText(/The email checks changed/)).toBeTruthy();
       await user.click(await sendAnyway());
       await waitFor(() => expect(decisions).toBe(2));
       const second = sent.filter(
@@ -723,7 +719,9 @@ describe("the email composer that decides at Send", () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Send anyway" })).toBeNull();
-    expect(screen.queryByLabelText(/Reason for sending/)).toBeNull();
+    expect(
+      screen.queryByLabelText(/Why send this one message anyway\?/),
+    ).toBeNull();
   });
 
   it("offers no Send anyway for a warning version this build does not know", async () => {
@@ -736,7 +734,7 @@ describe("the email composer that decides at Send", () => {
             ...REVIEW,
             warnings: [
               REVIEW.warnings[0],
-              { version: "inline-v2", text: "Newer words." },
+              { version: "inline-v3", text: "Newer words." },
             ],
           },
         ),
@@ -746,6 +744,6 @@ describe("the email composer that decides at Send", () => {
     await pressSend(user);
     await leadFinding();
     expect(screen.queryByRole("button", { name: "Send anyway" })).toBeNull();
-    expect(screen.queryByText(INLINE_TEXT)).toBeNull();
+    expect(screen.queryByLabelText(INLINE_TEXT)).toBeNull();
   });
 });

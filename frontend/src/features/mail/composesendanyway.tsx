@@ -184,14 +184,7 @@ export function SendAnywayRows({
         {lead?.provision && (
           <p>{t(findingKey(lead.reason_code), { address: lead.address })}</p>
         )}
-        <p>
-          {t(
-            state.canSendAnyway
-              ? "compose.sendAnyway.warning"
-              : "compose.sendAnyway.editOnly",
-          )}
-        </p>
-        {lead && <LeadDetails lead={lead} />}
+        {!state.canSendAnyway && <p>{t("compose.sendAnyway.editOnly")}</p>}
         {state.changed && <p>{t("directSend.changed")}</p>}
         <MoreFindings refusals={review.refusals.slice(1)} />
       </Callout>
@@ -205,26 +198,6 @@ export function SendAnywayRows({
         />
       )}
       {state.failed && <ErrorLine>{t("compose.sendAnyway.failed")}</ErrorLine>}
-    </>
-  );
-}
-
-// What the leading finding adds under the warning: the country it was judged
-// under, and the footer details the message would leave out.
-function LeadDetails({ lead }: Readonly<{ lead: RefusedRecipient }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const country = refusalCountryText(lead, t, locale);
-  const footers = lead.footer_findings ?? [];
-  return (
-    <>
-      {country && <p>{country}</p>}
-      {footers.length > 0 && (
-        <p>
-          {footerFindingsText(footers, t, locale)}{" "}
-          <CitedLaws provisions={footers.map((finding) => finding.provision)} />
-        </p>
-      )}
     </>
   );
 }

@@ -55733,7 +55733,7 @@ export interface components {
             /**
              * @description Every warning this review is served with to this reader; a decision may name any of their
              *     versions and no other. `warning` is always among them. The sender of a held message is
-             *     also served the composer's short warning (`inline-v1`), which a decision from any other
+             *     also served the composer's short warning (`inline-v2`), which a decision from any other
              *     reader is refused for naming.
              */
             warnings?: components["schemas"]["OverrideWarning"][];

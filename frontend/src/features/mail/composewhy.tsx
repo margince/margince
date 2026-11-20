@@ -1,9 +1,7 @@
 import { ShieldAlert } from "lucide-react";
-import { Field, TextInput } from "../../design-system/atoms";
-import { DateInput } from "../../design-system/dateinput";
+import { Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
-import type { ISODate } from "../../format/datepattern";
 import { useT } from "../../i18n";
 import {
   asksWhy,
@@ -64,9 +62,7 @@ export function ComposeWhy({
             {t("compose.whyMissingText")}
           </>
         ) : (
-          <>
-            <strong>{t("compose.why")}:</strong> {t(reasonHint(reason))}
-          </>
+          t(reasonHint(reason))
         )}
       </p>
       <Field
@@ -82,46 +78,6 @@ export function ComposeWhy({
             value={reason}
             placeholder={t("compose.whyPick")}
             onChange={(value) => choose(value as ComposeReason | "")}
-          />
-        )}
-      </Field>
-      {meeting.on && <MeetingFields meeting={meeting} flagged={flagged} />}
-    </div>
-  );
-}
-
-// Where and when the rep met the contact. Where is the evidence; the day
-// starts on today and cannot lie ahead.
-function MeetingFields({
-  meeting,
-  flagged,
-}: Readonly<{ meeting: Meeting; flagged: ReadonlySet<MissingField> }>) {
-  const t = useT();
-  return (
-    <div className="compose-strip-meeting">
-      <Field
-        label={t("compose.met.where")}
-        required
-        error={flagged.has("meeting") ? t("compose.met.missing") : undefined}
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            value={meeting.where}
-            maxLength={500}
-            placeholder={t("compose.met.wherePlaceholder")}
-            onChange={(event) => meeting.setWhere(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field label={t("compose.met.when")}>
-        {(control) => (
-          <DateInput
-            {...control}
-            value={meeting.day}
-            max={meeting.today as ISODate}
-            today={meeting.today as ISODate}
-            onChange={(event) => meeting.setDay(event.target.value)}
           />
         )}
       </Field>

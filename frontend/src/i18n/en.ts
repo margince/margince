@@ -8250,10 +8250,6 @@ export const en = {
   "compose.whyHint.customer": "Service mail, no unsubscribe link.",
   "compose.whyHint.marketing":
     "Adds an unsubscribe link and the company footer. Needs their consent or a past purchase.",
-  "compose.met.where": "Where did you meet?",
-  "compose.met.wherePlaceholder": "Trade fair, customer visit, event",
-  "compose.met.when": "Date",
-  "compose.met.missing": "Say where you met.",
   "compose.met.failed":
     "The meeting was not saved, so nothing was sent. Try again.",
   "sendPermission.stopWithReason": "Sending needs your reason",
@@ -8471,13 +8467,11 @@ export const en = {
     "This message cannot be sent as it stands.",
   "compose.sendAnyway.cited": "Attention: sending to {address} may break",
   "compose.citation.law": "Law:",
-  "compose.sendAnyway.warning":
-    "The send check still blocks this message. Send anyway sends only this message and grants no permission for later ones. Your name, your reason and the message are kept in a record that cannot be edited.",
   "compose.sendAnyway.editOnly":
     "Edit the message or remove this recipient to send it.",
   "compose.sendAnyway.more_one": "{count} more finding",
   "compose.sendAnyway.more_other": "{count} more findings",
-  "compose.sendAnyway.reasonLabel": "Reason for sending",
+  "compose.sendAnyway.reasonLabel": "Why send this one message anyway?",
   "compose.sendAnyway.confirm": "Send anyway",
   "compose.sendAnyway.marked": "named in the warning",
   "compose.sendAnyway.failed": "The message was not sent. Retry Send anyway.",

@@ -68,13 +68,7 @@ async function sendFrom(args: SendRequest, keyed: IntentKeys) {
 
 // What the send is waiting for, in reading order. A pressed Send names each
 // field on the field, so the button never refuses by going grey.
-export type MissingField =
-  | "to"
-  | "subject"
-  | "body"
-  | "context"
-  | "deal"
-  | "meeting";
+export type MissingField = "to" | "subject" | "body" | "context" | "deal";
 
 export function missingToSend(
   isChannelReply: boolean,
@@ -88,8 +82,6 @@ export function missingToSend(
     asksContext: boolean;
     // An Active deal claim with a deal to choose and none chosen.
     needsDeal?: boolean;
-    // "We met in person" without saying where.
-    needsMeeting?: boolean;
   },
 ): readonly MissingField[] {
   const missing: MissingField[] = [];
@@ -108,9 +100,6 @@ export function missingToSend(
   }
   if (fields.needsDeal) {
     missing.push("deal");
-  }
-  if (fields.needsMeeting) {
-    missing.push("meeting");
   }
   return missing;
 }
@@ -252,7 +241,6 @@ export function useComposeSend({
     context: fields.context,
     asksContext: asksWhy(anchorActivity),
     needsDeal,
-    needsMeeting: meeting?.missing,
   });
   const links = composedLinks(
     { entityType, entityId, dealId },

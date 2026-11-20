@@ -24,8 +24,8 @@ import { ComposeWindow } from "./composewindow";
 // invites a second send of mail that has gone.
 
 const INLINE_WARNING = {
-  version: "inline-v1",
-  text: "The send check still blocks this message.",
+  version: "inline-v2",
+  text: "Why send this one message anyway?",
 };
 
 const REVIEW = {
@@ -135,13 +135,8 @@ describe("sending with a recorded exception", () => {
     await fillSendableForm(user);
     await pressSend(user);
 
-    expect(
-      await screen.findByText(
-        "Country: Vietnam, set by the sender for this message",
-      ),
-    ).toBeTruthy();
     await user.type(
-      await screen.findByLabelText(/Reason for sending/),
+      await screen.findByLabelText(/Why send this one message anyway\?/),
       "They asked for it on the phone.",
     );
     await user.click(screen.getByRole("button", { name: "Send anyway" }));
@@ -165,7 +160,7 @@ describe("sending with a recorded exception", () => {
         ?.body,
     ).toMatchObject({
       assessment_revision: "current-warnings",
-      warning_version: "inline-v1",
+      warning_version: "inline-v2",
       acknowledged: true,
       explanation: "They asked for it on the phone.",
       shown_reasons: [reason],

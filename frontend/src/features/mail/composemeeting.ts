@@ -4,12 +4,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../../api/client";
-import { calendarDay, middayInstant } from "../../format/calendarday";
-import type { ISODate } from "../../format/datepattern";
 import { useCan, useCanMutate } from "../../lib/capability";
 import { contact360Query } from "../../lib/contact.queries";
 import { unwrap } from "../../lib/problem";
-import { useViewerZone } from "../../lib/viewerzone";
 
 /** The record a meeting face to face is noted on: the one the mail is about. */
 export type MeetingSubject = Readonly<{
@@ -18,22 +15,17 @@ export type MeetingSubject = Readonly<{
 }>;
 
 /**
- * "We met in person": where and when, noted on the contact before the send.
- *
- * The meeting is the evidence the engine reads for a personal follow-up, so it
- * is written first and the send follows. It is written once per where and day:
- * a second press after a refused send does not note the same meeting twice.
+ * "We met in person": the rep's word that they met, noted on the contact before
+ * the send. The meeting is the evidence the engine reads for a personal
+ * follow-up, so it is written first. It is written once per composition, so a
+ * second press after a refused send does not note it twice.
  */
 export function useMeeting(open: boolean, subject: MeetingSubject | null) {
-  const zone = useViewerZone();
   const queries = useQueryClient();
   const mayMutate = useCanMutate();
   const mayWriteContact = useCan("contact", "update");
   const mayWriteLead = useCan("lead", "update");
-  const today = calendarDay(new Date(), zone);
   const [on, setOn] = useState(false);
-  const [where, setWhere] = useState("");
-  const [day, setDay] = useState<ISODate | "">(today);
   const [failed, setFailed] = useState(false);
   const recorded = useRef("");
   // A closed composer forgets the meeting, so the next message starts unpicked.
@@ -42,9 +34,8 @@ export function useMeeting(open: boolean, subject: MeetingSubject | null) {
     setWasOpen(open);
     if (!open) {
       setOn(false);
-      setWhere("");
-      setDay(today);
       setFailed(false);
+      recorded.current = "";
     }
   }
   const canRecord =
@@ -53,19 +44,16 @@ export function useMeeting(open: boolean, subject: MeetingSubject | null) {
     (subject.kind === "contact" ? mayWriteContact : mayWriteLead);
   const record = async () => {
     if (!subject || !on) return;
-    const met = day === "" ? today : day;
-    const note = where.trim();
-    const key = `${subject.kind}:${subject.id}:${met}:${note}`;
+    const key = `${subject.kind}:${subject.id}`;
     if (recorded.current === key) return;
     setFailed(false);
     const path = { params: { path: { id: subject.id } } };
     const body = {
       kind: "in_person" as const,
-      note,
+      // The sender's own statement is the whole evidence of a meeting.
+      note: MEETING_NOTE,
+      occurred_at: new Date().toISOString(),
       asks_for_quote: false,
-      // Today's meeting happened by now; noon would lie in the future.
-      occurred_at:
-        met === today ? new Date().toISOString() : middayInstant(met, zone),
     };
     try {
       unwrap(
@@ -94,16 +82,12 @@ export function useMeeting(open: boolean, subject: MeetingSubject | null) {
     canRecord,
     on: on && canRecord,
     setOn,
-    where,
-    setWhere,
-    day,
-    setDay,
-    today,
     failed,
-    /** Where is the one fact a hand-noted meeting must carry. */
-    missing: on && canRecord && where.trim() === "",
     record,
   };
 }
+
+/** The note a stated meeting carries. Stored data, so it is not translated. */
+export const MEETING_NOTE = "Met in person, as stated by the sender.";
 
 export type Meeting = ReturnType<typeof useMeeting>;

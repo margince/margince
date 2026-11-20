@@ -8253,10 +8253,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.whyHint.customer": "Service-Mail, ohne Abmeldelink.",
   "compose.whyHint.marketing":
     "Fügt einen Abmeldelink und die Firmenangaben hinzu. Braucht ihre Einwilligung oder einen früheren Kauf.",
-  "compose.met.where": "Wo war das Treffen?",
-  "compose.met.wherePlaceholder": "Messe, Kundenbesuch, Veranstaltung",
-  "compose.met.when": "Datum",
-  "compose.met.missing": "Gib an, wo das Treffen war.",
   "compose.met.failed":
     "Das Treffen wurde nicht gespeichert, daher wurde nichts gesendet. Versuch es erneut.",
   "sendPermission.stopWithReason": "Senden braucht deine Begründung",
@@ -8480,13 +8476,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendAnyway.cited":
     "Achtung: Eine E-Mail an {address} verstößt vielleicht gegen",
   "compose.citation.law": "Vorschrift:",
-  "compose.sendAnyway.warning":
-    "Die Versandprüfung blockiert diese Nachricht weiterhin. Trotzdem senden sendet nur diese Nachricht und erlaubt keine späteren. Dein Name, deine Begründung und die Nachricht werden in einem Eintrag gespeichert, der nicht geändert werden kann.",
   "compose.sendAnyway.editOnly":
     "Bearbeite die Nachricht oder entferne diese Empfangsadresse, um sie zu senden.",
   "compose.sendAnyway.more_one": "{count} weiterer Befund",
   "compose.sendAnyway.more_other": "{count} weitere Befunde",
-  "compose.sendAnyway.reasonLabel": "Grund für den Versand",
+  "compose.sendAnyway.reasonLabel":
+    "Warum diese eine Nachricht trotzdem senden?",
   "compose.sendAnyway.confirm": "Trotzdem senden",
   "compose.sendAnyway.marked": "im Hinweis genannt",
   "compose.sendAnyway.failed":

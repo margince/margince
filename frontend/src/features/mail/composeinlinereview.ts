@@ -23,7 +23,7 @@ type CommunicationReview = components["schemas"]["CommunicationReview"];
  * was served with. This build knows the words of this one alone, so any other
  * version leaves the finding with no Send anyway.
  */
-export const INLINE_WARNING_VERSION = "inline-v1";
+export const INLINE_WARNING_VERSION = "inline-v2";
 
 // Review states with nothing left to decide; the server refuses a decision on them.
 const SETTLED_STATES = new Set(["resolved", "superseded", "cancelled"]);

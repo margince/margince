@@ -154,7 +154,7 @@ Also called: draft in another language, write the email in German, change the em
 ### Why are you writing?
 The **Reason for contact** field says why you are writing. The line beside it says what your answer does to the email. The answers are:
 
-- **We met in person**: you were with them in person, for example at an event or a visit, and have their card. Say where in **Where did you meet?** and pick the **Date**. **Send** saves the meeting on the contact, then sends. This covers personal mail for a year after the meeting, never marketing.
+- **We met in person**: you were with them in person, for example at an event or a visit, and have their card. **Send** saves the meeting on the contact, then sends. This covers personal mail for a year after the meeting, never marketing.
 - **They asked for it**: they asked you to write, or asked for a quote. Their request must be on record.
 - **Open deal**: the email is about a deal they are on. Pick it in **Deal this follow-up is about**.
 - **Existing customer**: support, an invoice, a contract or their account.
@@ -169,7 +169,7 @@ Some purposes that Margince knows, such as a security notice, are not offered he
 ### Why can't I send an email to this contact?
 When Margince does not send an email, the bar above **Send** names the first reason. An example is "{address} objected to marketing.". The bar also names the law behind it, with a link to its text. With more than one reason, "{count} more findings" lists the other recipients and reasons. The recipients it names are marked in **To**, **Cc** and **Bcc**.
 
-- **Send anyway**: when your reason may lift every refusal, the bar asks a **Reason for sending**. Write it and press **Send anyway**. This sends only this message and grants no permission for later ones. The recipient's choice stays as it is: the next message is refused again. Your name, your reason and the message are kept in a record that cannot be edited. Reps hold this right by default.
+- **Send anyway**: when your reason may lift every refusal, the bar asks **Why send this one message anyway?**. Write your reason and press **Send anyway**. This sends only this message and grants no permission for later ones. The recipient's choice stays as it is: the next message is refused again. Your name, your reason and the message are kept in a record that cannot be edited. Reps hold this right by default.
 - When the refusal cannot be lifted with a reason, the bar says "Edit the message or remove this recipient to send it." Examples are an address that does not take mail, or one on several records or none. Correct the address, merge the records or remove that recipient.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 
@@ -209,7 +209,7 @@ connected only to read mail, without permission to send. Reconnect it and allow
 sending. A mailbox you connected before Margince could send cannot be changed in
 place. The **Reconnect your mailbox** link opens Settings → Connections.
 
-**Company footer.** The check names missing text, language, contact details or links. Read what is kept or left out, write one **Reason for sending** and press **Send anyway**. This covers one email and keeps consent as it is. Changed details need a new confirmation; your reason stays in the box.
+**Company footer.** Business mail carries the company name, address and privacy contact. When one is missing, the bar says so. An admin fills them in once under **Settings → Company**, and every later email carries the footer.
 
 Mail to several contacts keeps To, Cc and Bcc as written and leaves out private links. Read and confirm this with your reason. A contact's private link is never shared.
 
