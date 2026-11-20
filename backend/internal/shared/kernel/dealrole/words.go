@@ -29,7 +29,7 @@ func Recorded(role string) string {
 }
 
 // Label is a role in the reader's language, or "" for a role outside the
-// vocabulary: a typed value such as "contact" has no meaning to translate.
+// vocabulary. A typed value such as "contact" has no meaning to translate.
 func Label(role, language string) string {
 	phrase, ok := roleWords[Recorded(role)]
 	if !ok {

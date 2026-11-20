@@ -249,9 +249,8 @@ func fingerprintOf(evidence []crmcontracts.ContactMomentEvidence) string {
 // recordedSeat names this contact's seat on the deal in the reader's words,
 // falling back to what is true when no built-in role was recorded.
 //
-// The fallback is the load-bearing half: a stakeholder edge may carry no role
-// or a typed one, and a sentence that named it anyway would print a word
-// with no meaning in any language.
+// A stakeholder edge may carry no role or a typed one. A sentence that named
+// it anyway would print a word with no meaning in any language.
 func (said momentCopy) recordedSeat(role *string) string {
 	if role == nil {
 		return said.Say(momentWords.Stakeholder)

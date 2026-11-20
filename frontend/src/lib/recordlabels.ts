@@ -106,13 +106,12 @@ const LEGACY_DEAL_ROLE_LABELS: Readonly<Record<string, MessageKey>> = {
 };
 
 /**
- * dealRoleLabel names a stakeholder's role on a deal, or "" when the stored
- * role is free text outside the vocabulary: a typed "contact" means nothing to
- * translate, so callers leave the role out.
+ * dealRoleLabel names a stakeholder's role on a deal, or "" for a typed role
+ * outside the vocabulary. A typed "contact" means nothing to translate, so
+ * callers leave the role out.
  *
- * It lives in the kit rather than on the company page because a deal role is
- * not a company's fact: contact360, the coverage card and the project sections
- * all name the same roles.
+ * It lives in the kit because a deal role is not a company's fact. The
+ * contact page, the coverage card and the project sections name the same roles.
  */
 export function dealRoleLabel(
   role: string,
@@ -150,7 +149,7 @@ export function roleFromTyped(
   const typed = roleWords(text);
   const known = [...offered, ...vocabulary.keys];
   // An offered role outside the vocabulary has no label, so its key's words
-  // stand in for it here: the reader typed them back from the open form.
+  // stand in for it. The reader typed them back from the open form.
   const role = known.find((candidate) =>
     [vocabulary.label(candidate, t), candidate, candidate.replace(/_/g, " ")]
       .filter(Boolean)
@@ -172,10 +171,9 @@ const PROJECT_ROLE_LABELS: Record<ProjectStakeholderRole, MessageKey> = {
 /**
  * projectRoleLabel names a stakeholder's seat on a project.
  *
- * Beside dealRoleLabel because it IS dealRoleLabel plus four words: the project
- * vocabulary is the deal one with the delivery roles added, and the card that
- * draws a seat and the dialog that offers one must not each keep their own copy
- * of that list. A typed role outside both gets "", as in dealRoleLabel.
+ * The project vocabulary is the deal one plus the delivery roles. The card that
+ * draws a seat and the dialog that offers one share this list. A typed role
+ * outside both gets "", as in dealRoleLabel.
  */
 export function projectRoleLabel(
   role: string,

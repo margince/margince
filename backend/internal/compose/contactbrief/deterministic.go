@@ -129,9 +129,9 @@ func changeLine(change ChangeIn, say spoken) string {
 	}
 }
 
-// readableBand names a strength band, falling back to the stored key for a band
-// this build does not know — the same rule readableKey follows, for the same
-// reason: inventing a label for a value nobody defined would be a claim.
+// readableBand names a strength band, or shows the stored key for a band this
+// build does not know. readableKey follows the same rule: a label for a value
+// nobody defined would be a claim.
 func readableBand(band string, say spoken) string {
 	if band == "" {
 		return say.Say(floor.UnrecordedBand)

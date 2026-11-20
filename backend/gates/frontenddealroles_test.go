@@ -5,8 +5,8 @@
 
 package gates
 
-// A stored deal role is free text, and both sides decide the same question:
-// is it a built-in role, so it is named, or a typed one, so it is left out.
+// A stored deal role is free text, and both sides decide the same question.
+// A built-in role is named, and a typed one is left out.
 // The server answers it with dealrole.Label, the browser with dealRoleLabel.
 //
 // If the two lists differ, one role shows in the meeting brief and is missing
