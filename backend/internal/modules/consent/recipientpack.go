@@ -96,12 +96,12 @@ func keptUnderPack(basis commsauthz.Basis) bool {
 }
 
 // settlePackBasisTx is the one place a supported resolution's basis meets a
-// pack without legitimate interests. Preview, staging and transmit reach it
-// through resolveAndRecord, and the privacy page through settleUsesTx. A basis
-// the law does not name becomes the subject's consent to a purpose covering
-// this use, or no basis at all.
+// pack without legitimate interests: the recipient's or the sending entity's.
+// Preview, staging and transmit reach it through resolveAndRecord, and the
+// privacy page through settleUsesTx. A basis the law does not name becomes the
+// subject's consent to a purpose covering this use, or no basis at all.
 func settlePackBasisTx(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolution) (resolution, error) {
-	rules, _, found := applicableRules(subject.Country.Code)
+	rules, found := subject.Country.dataProtectionRules()
 	if !found || !rules.NoLegitimateInterests || keptUnderPack(res.Basis) {
 		return res, nil
 	}

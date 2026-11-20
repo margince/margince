@@ -100,7 +100,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	}
 	// Each recipient's country, resolved once: the decision and its recorded
 	// stamp read this one answer.
-	countries, err := recipientCountries(ctx, tx, req.Recipients, func(connector.Recipient) commsauthz.Request { return req })
+	countries, err := g.store.recipientCountries(ctx, tx, req.Recipients, func(connector.Recipient) commsauthz.Request { return req })
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}

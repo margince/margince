@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../api/schema";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { useT } from "../i18n";
+import type { CitedProvision } from "./citedprovisions";
 
-type CitedProvision = components["schemas"]["CitedProvision"];
-
-// The law a refusal or finding rests on, as the recipient's pack cites it. The
-// server sends one only while it may be shown. Without one, the caller shows
-// its factual sentence alone.
+// The law a refusal or finding rests on, as the packs binding the message cite
+// it: the recipient's, then the sending entity's. The server sends one only
+// while it may be shown. Without one, the caller shows its factual sentence
+// alone.
 
 /** The provision, linked to its official text. Not translated. */
 export function CitedLaw({
@@ -23,19 +22,26 @@ export function CitedLaw({
 }
 
 /**
- * A finding with the law it rests on in brackets, as one sentence: "No reason
- * to contact … is on record (GDPR Art. 6(1))." The law is linked.
+ * A finding with the laws it rests on in brackets, as one sentence: "No reason
+ * to contact … is on record (GDPR Art. 6(1); Law 91/2025/QH15 Art. 9)." Each
+ * law is linked. Without one, the sentence alone.
  */
 export function FindingWithLaw({
   sentence,
-  provision,
-}: Readonly<{ sentence: string; provision: CitedProvision }>) {
+  provisions,
+}: Readonly<{ sentence: string; provisions: readonly CitedProvision[] }>) {
+  if (provisions.length === 0) return <>{sentence}</>;
   return (
     <>
       {sentence.replace(/\.\s*$/, "")} (
-      <OffsiteLink href={provision.source_url}>
-        {`${shortInstrument(provision.instrument)} ${provision.provision}`}
-      </OffsiteLink>
+      {provisions.map((provision, index) => (
+        <span key={`${provision.instrument}\u0000${provision.provision}`}>
+          {index > 0 ? "; " : null}
+          <OffsiteLink href={provision.source_url}>
+            {`${shortInstrument(provision.instrument)} ${provision.provision}`}
+          </OffsiteLink>
+        </span>
+      ))}
       ).
     </>
   );

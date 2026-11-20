@@ -21,6 +21,7 @@ import {
   type SendStatus,
 } from "../lib/sendstatus";
 import { CitedLaws } from "./citedlaw";
+import { lawsOf } from "./citedprovisions";
 import { LawfulBasisCallout } from "./lawfulbasiswarning";
 
 // What the engine decided about this message, said where the rep is writing it.
@@ -291,8 +292,8 @@ function CitedLawsOf({
   refused,
 }: Readonly<{ refused: readonly RefusedRecipient[] }>) {
   const provisions = refused.flatMap((item) => [
-    item.provision,
-    ...(item.footerFindings ?? []).map((finding) => finding.provision),
+    ...lawsOf(item),
+    ...(item.footerFindings ?? []).flatMap(lawsOf),
   ]);
   if (!provisions.some(Boolean)) return null;
   return (

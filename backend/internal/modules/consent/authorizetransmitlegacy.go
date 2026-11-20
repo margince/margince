@@ -60,7 +60,7 @@ func (g *Gate) transmitCountries(ctx context.Context, req commsauthz.TransmitReq
 		}
 		// Only the staged evidence picks a country; the thread and the links
 		// do not, so neither is read here.
-		out, err = recipientCountries(ctx, tx, req.Recipients, func(r connector.Recipient) commsauthz.Request {
+		out, err = g.store.recipientCountries(ctx, tx, req.Recipients, func(r connector.Recipient) commsauthz.Request {
 			return stagedRequestFor(req, r, claims, "", nil)
 		})
 		return err

@@ -62,18 +62,14 @@ type packRules struct {
 // in an address.
 func packRulesFor(country RecipientCountry) packRules {
 	out := packRules{reply: defaultReplyWindow, dealFollow: defaultDealFollowUpWindow}
+	// The windows bound a legitimate interest, so the sender's pack shortens
+	// them too. The marketing exception stays the recipient's pack's alone.
+	if windows, found := country.dataProtectionRules(); found {
+		out.reply, out.dealFollow = shorterOf(out.reply, windows.ReplyWindow), shorterOf(out.dealFollow, windows.DealFollowUpWindow)
+	}
 	rules, _, applicable := applicableRules(country.Code)
 	if !applicable {
 		return out
-	}
-	// Zero means the pack says nothing about this window, which is not the same
-	// as a pack asking for zero — Rules.Validate refuses a negative one and the
-	// published contract documents zero as "the core default".
-	if rules.ReplyWindow > 0 && rules.ReplyWindow < out.reply {
-		out.reply = rules.ReplyWindow
-	}
-	if rules.DealFollowUpWindow > 0 && rules.DealFollowUpWindow < out.dealFollow {
-		out.dealFollow = rules.DealFollowUpWindow
 	}
 	// THE EXCEPTION IS THE PACK'S TO DECLARE, and a jurisdiction that declares
 	// none grants none. A declared one still grants nothing today: the verdict
@@ -85,4 +81,14 @@ func packRulesFor(country RecipientCountry) packRules {
 		}
 	}
 	return out
+}
+
+// shorterOf is the core default shortened by a pack's window. Zero means the
+// pack says nothing about it, which is not a pack asking for zero: Validate
+// refuses a negative one and the contract documents zero as the core default.
+func shorterOf(core, declared time.Duration) time.Duration {
+	if declared > 0 && declared < core {
+		return declared
+	}
+	return core
 }

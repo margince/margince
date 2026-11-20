@@ -137,7 +137,7 @@ func TestThePreviewCarriesTheRefusalsCitedLaw(t *testing.T) {
 		{
 			Recipient: connector.Recipient{Email: "anna@example.de"}, Verdict: commsauthz.VerdictDeny,
 			ReasonCode: commsauthz.ReasonObjection, Mode: commsauthz.ModeEnforce,
-			Citations: map[string]commsauthz.Provision{commsauthz.ReasonObjection: law},
+			Citations: map[string][]commsauthz.Provision{commsauthz.ReasonObjection: {law}},
 		},
 		{
 			Recipient: connector.Recipient{Email: "binh@example.vn"}, Verdict: commsauthz.VerdictDeny,

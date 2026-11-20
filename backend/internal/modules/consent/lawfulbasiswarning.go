@@ -3,9 +3,9 @@
 
 package consent
 
-// The warning before a send to a recipient whose pack has no legitimate-interest
-// basis. It applies when the record holds no basis that pack accepts for the
-// use (settlePackBasisTx).
+// The warning before a send under a pack with no legitimate-interest basis: the
+// recipient's or the sending entity's. It applies when the record holds no
+// basis that pack accepts for the use (settlePackBasisTx).
 //
 // The preview marks the recipient and the screen warns. The user sending
 // confirms for each recipient's record, and staging spends one confirmation
@@ -113,7 +113,10 @@ func (s *Store) confirmOneTx(ctx context.Context, tx pgx.Tx, user ids.UUID, subj
 	if err != nil {
 		return false, err
 	}
-	if rules, _, found := applicableRules(country.Code); !found || !rules.NoLegitimateInterests {
+	if country.Sender, err = s.senderCountryTx(ctx, tx); err != nil {
+		return false, err
+	}
+	if rules, found := country.dataProtectionRules(); !found || !rules.NoLegitimateInterests {
 		return false, nil
 	}
 	column := confirmationColumn(subject.Kind)

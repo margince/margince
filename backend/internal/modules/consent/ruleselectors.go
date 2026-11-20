@@ -8,8 +8,10 @@ package consent
 // Marketing rules (consent or an exception, the advertising ceiling, the
 // advertising label, the objection route) follow the recipient's country. Data
 // protection (who the controller is, who answers about the data, request
-// deadlines) follows the country of the sending legal entity. Each recipient of
-// a message is put to the marketing selector on their own.
+// deadlines) follows the country of the sending legal entity. The lawful basis
+// a message needs answers to both laws, the stricter winning: the recipient's
+// reaches them where they are, the sender's binds the sender wherever the
+// recipient is. Each recipient of a message is put to the selectors on their own.
 //
 // A recipient's country comes from the record, unless the sender stated or
 // cleared it for this one message. An email domain, the sender's country or
@@ -95,6 +97,28 @@ func recipientCountryStated(ctx context.Context, tx pgx.Tx, r connector.Recipien
 type RecipientCountry struct {
 	Code   jurisdiction.Code
 	Source CountrySource
+	// Sender is the data-protection country of the legal entity the message
+	// goes out for. Its pack's data-protection rules bind beside Code's. Empty
+	// where no send is being judged, and then only the recipient's pack binds.
+	Sender jurisdiction.Code
+}
+
+// dataProtectionCodes are the countries whose data-protection rules bind a
+// message to this recipient: their own, then the sender's when it differs.
+func (c RecipientCountry) dataProtectionCodes() []jurisdiction.Code {
+	codes := []jurisdiction.Code{c.Code}
+	if c.Sender != "" && c.Sender != c.Code {
+		codes = append(codes, c.Sender)
+	}
+	return codes
+}
+
+// dataProtectionRules folds the recipient's pack and the sender's into the
+// stricter answer for the lawful basis and the evidence windows. ok is false
+// when neither country has a pack.
+func (c RecipientCountry) dataProtectionRules() (messagingrules.Rules, bool) {
+	rules, _, ok := applicableRules(c.dataProtectionCodes()...)
+	return rules, ok
 }
 
 // Known reports whether the record stated a country.
@@ -148,10 +172,10 @@ func subjectOfRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient) (
 // them is decided. The cap lock, the verdict, the cap count and the recorded
 // stamp all read this one answer. So a record edited mid-send cannot make one
 // step judge under a pack another step did not.
-func recipientCountries(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient, requestFor func(connector.Recipient) commsauthz.Request) ([]RecipientCountry, error) {
+func (s *Store) recipientCountries(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient, requestFor func(connector.Recipient) commsauthz.Request) ([]RecipientCountry, error) {
 	out := make([]RecipientCountry, 0, len(recipients))
 	for _, r := range recipients {
-		country, err := recipientRequestCountry(ctx, tx, r, requestFor(r))
+		country, err := s.recipientRequestCountry(ctx, tx, r, requestFor(r))
 		if err != nil {
 			return nil, err
 		}

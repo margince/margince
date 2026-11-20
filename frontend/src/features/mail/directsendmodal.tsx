@@ -22,6 +22,7 @@ import { api } from "../../api/client";
 import { intentKeys } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
 import { CitedLaws, FindingWithLaw } from "../../components/citedlaw";
+import { lawsOf } from "../../components/citedprovisions";
 import { Button, Checkbox, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
@@ -347,11 +348,7 @@ function ConfirmationFooter({
       {refusal.footer_findings?.length ? (
         <p>
           {footerFindingsText(refusal.footer_findings, t, locale)}{" "}
-          <CitedLaws
-            provisions={refusal.footer_findings.map(
-              (finding) => finding.provision,
-            )}
-          />
+          <CitedLaws provisions={refusal.footer_findings.flatMap(lawsOf)} />
         </p>
       ) : null}
     </>
@@ -385,16 +382,12 @@ function confirmationMissing(
   return undefined;
 }
 
-// Why the engine refused this recipient, with the law it rests on where the
-// recipient's pack cites one.
+// Why the engine refused this recipient, with the laws it rests on where a pack
+// binding the message cites one.
 function ReasonWithLaw({ refusal }: Readonly<{ refusal: RefusedRecipient }>) {
   const t = useT();
   const sentence = t(
     sendPermissionReasonKey(refusal.reason_code, {}, refusal.category),
   );
-  return refusal.provision ? (
-    <FindingWithLaw sentence={sentence} provision={refusal.provision} />
-  ) : (
-    sentence
-  );
+  return <FindingWithLaw sentence={sentence} provisions={lawsOf(refusal)} />;
 }

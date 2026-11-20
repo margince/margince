@@ -43,6 +43,9 @@ type RefusedRecipient struct {
 	// Provision is the law cited for ReasonCode at assessment, zero when none
 	// was shown. Stored, so a later pack never puts new law beside it.
 	Provision commsauthz.Provision `json:"provision,omitzero"`
+	// Provisions is every law cited for ReasonCode at assessment, Provision
+	// first. Empty on a snapshot from before it, which then shows Provision.
+	Provisions []commsauthz.Provision `json:"provisions,omitempty"`
 	// CanBeOverruled is the preview's own answer for this refusal. It is told
 	// to the sender and never stored: a stored copy would outlive the rule.
 	CanBeOverruled bool `json:"-"`
@@ -84,6 +87,7 @@ func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
 		SubjectKind:   d.SubjectKind,
 		ReasonCode:    d.ReasonCode,
 		Provision:     d.ProvisionFor(d.ReasonCode),
+		Provisions:    d.ProvisionsFor(d.ReasonCode),
 		Category:      string(d.Resolved),
 		Requested:     string(d.Requested),
 		PurposeID:     d.PurposeID,

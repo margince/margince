@@ -13,6 +13,8 @@ type FooterFinding struct {
 	// Provision explains the finding and is never compared: the same omission
 	// under other law is still the same omission.
 	Provision Provision `json:"provision,omitzero"`
+	// Provisions is every law cited for the kind, Provision first.
+	Provisions []Provision `json:"provisions,omitempty"`
 }
 
 // SameFooterFindings reports whether two lists name the same missing
