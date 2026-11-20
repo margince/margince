@@ -223,7 +223,8 @@ func TestAnAgentStepTheRouterDeclinedReachesTheRunnerAsItsReason(t *testing.T) {
 	if err := meter.Record(ctx, ai.Usage{Task: ai.TaskAgentLoop, Tier: ai.TierCheapCloud, TokensIn: 10}); err != nil {
 		t.Fatalf("spending the allowance: %v", err)
 	}
-	cfg, err := ai.ParseRouting([]byte("profile: eu_hosted\ntiers:\n  cheap_cloud: {provider: fake, model: m}\n"))
+	cfg, err := ai.ParseRouting([]byte("profile: eu_hosted\ntiers:\n  cheap_cloud: {provider: fake, model: m}\n" +
+		"embeddings: {provider: fake, model: e, dimensions: 8}\n"))
 	if err != nil {
 		t.Fatalf("ParseRouting: %v", err)
 	}
