@@ -290,6 +290,20 @@ def _data(session, tool, arguments):
     return data
 
 
+def _all_pages(session, tool, arguments, key):
+    """Every row under `key` of a read whose page names the next by next_cursor."""
+    rows, cursor = [], None
+    for _ in range(_MAX_PAGES):
+        page = _data(session, tool, {**arguments, "limit": _PAGE_LIMIT, **({"cursor": cursor} if cursor else {})})
+        if not isinstance(page.get(key), list):
+            raise Unreadable(f"{tool} answered with no {key} list: {str(page)[:200]}")
+        rows += page[key]
+        cursor = page.get("next_cursor")
+        if not cursor:
+            return rows
+    raise Unreadable(f"{tool} was still paging after {_MAX_PAGES} pages")
+
+
 def _matching(session, record_type, name):
     """Every record of the type whose name is exactly the one given.
 
@@ -299,21 +313,9 @@ def _matching(session, record_type, name):
     whole set the passport can see, and a name missing from it is missing.
     """
     name_field = _NAME_FIELD[record_type]
-    found, cursor = [], None
-    for _ in range(_MAX_PAGES):
-        arguments = {"record_type": record_type, "limit": _PAGE_LIMIT}
-        if cursor:
-            arguments["cursor"] = cursor
-        # Through its router: tools/call refuses a name tools/list does not offer.
-        page = _data(session, "find_records", {"engine": "list", **arguments})
-        records = page.get("records")
-        if not isinstance(records, list):
-            raise Unreadable(f"list_records answered with no records list: {str(page)[:200]}")
-        found += [r for r in records if (r.get("fields") or {}).get(name_field) == name]
-        cursor = page.get("next_cursor")
-        if not cursor:
-            return found
-    raise Unreadable(f"list_records was still paging after {_MAX_PAGES} pages of {record_type}")
+    # Through its router: tools/call refuses a name tools/list does not offer.
+    records = _all_pages(session, "find_records", {"engine": "list", "record_type": record_type}, "records")
+    return [r for r in records if (r.get("fields") or {}).get(name_field) == name]
 
 
 def _named(session, record_type, name):
@@ -361,33 +363,21 @@ def _on_parent(session, want):
         view = _data(session, "read_project", {"view": "overview", "project_id": parent_id})
         found = [a for a in _section(view, "activities", want.parent_name) if a.get("subject") == want.name]
         return [{**a, "id": a.get("activity_id")} for a in found], view, ""
-    found = [r for r in _timeline(session, want.parent_type, parent_id, want.parent_name)
+    found = [r for r in _timeline(session, want.parent_type, parent_id)
              if (r.get("fields") or {}).get("subject") == want.name]
     return found, None, ""
 
 
-def _timeline(session, parent_type, parent_id, parent_name):
+def _timeline(session, parent_type, parent_id):
     """Every activity on a company or contact, every page of the list filtered to it."""
     filters = {"entity_type": parent_type, "entity_id": parent_id}
-    found, cursor = [], None
-    for _ in range(_MAX_PAGES):
-        arguments = {"engine": "list", "record_type": "activity", "filters": filters, "limit": _PAGE_LIMIT}
-        if cursor:
-            arguments["cursor"] = cursor
-        page = _data(session, "find_records", arguments)
-        records = page.get("records")
-        if not isinstance(records, list):
-            raise Unreadable(f"list_records answered with no activity list on {parent_type} \"{parent_name}\"")
-        found += records
-        cursor = page.get("next_cursor")
-        if not cursor:
-            return found
-    raise Unreadable(f"list_records was still paging activities after {_MAX_PAGES} pages")
+    return _all_pages(session, "find_records", {"engine": "list", "record_type": "activity", "filters": filters},
+                      "records")
 
 
 def _activity_count_problem(session, want, record_id):
     """activities=N: the record's timeline holds N activities, whatever their subjects."""
-    timeline = _timeline(session, want.record_type, record_id, want.name)
+    timeline = _timeline(session, want.record_type, record_id)
     if len(timeline) == int(want.value):
         return ""
     subjects = ", ".join(str((r.get("fields") or {}).get("subject")) for r in timeline) or "none"
@@ -400,18 +390,7 @@ def _approval_problem(session, want):
     Read through list_approvals, which lists what the reader's seat may decide:
     the lane's own admin, whose agent staged them.
     """
-    rows, cursor = [], None
-    for _ in range(_MAX_PAGES):
-        arguments = {"status": want.field, "limit": _PAGE_LIMIT, **({"cursor": cursor} if cursor else {})}
-        page = _data(session, "list_approvals", arguments)
-        if not isinstance(page.get("approvals"), list):
-            raise Unreadable(f"list_approvals {want.field} answered with no approvals list")
-        rows += page["approvals"]
-        cursor = page.get("next_cursor")
-        if not cursor:
-            break
-    else:
-        raise Unreadable(f"list_approvals was still paging after {_MAX_PAGES} pages")
+    rows = _all_pages(session, "list_approvals", {"status": want.field}, "approvals")
     matching = [r for r in rows if fnmatch.fnmatchcase(str(r.get("kind")), want.name)]
     if len(matching) == int(want.value):
         return ""
@@ -436,20 +415,7 @@ def _locate(session, want):
 
 def _documents(session, record_type, record_id):
     """Every file on the record's Documents tab, every page of it."""
-    found, cursor = [], None
-    for _ in range(_MAX_PAGES):
-        arguments = {"entity_type": record_type, "entity_id": record_id, "limit": _PAGE_LIMIT}
-        if cursor:
-            arguments["cursor"] = cursor
-        page = _data(session, "list_documents", arguments)
-        documents = page.get("documents")
-        if not isinstance(documents, list):
-            raise Unreadable(f"list_documents answered with no documents list: {str(page)[:200]}")
-        found += documents
-        cursor = page.get("next_cursor")
-        if not cursor:
-            return found
-    raise Unreadable(f"list_documents was still paging after {_MAX_PAGES} pages")
+    return _all_pages(session, "list_documents", {"entity_type": record_type, "entity_id": record_id}, "documents")
 
 
 def _document_problem(session, want, record_id, view):
@@ -575,19 +541,36 @@ def _tag_count_problem(session, want):
     words = listing.get("tags")
     if not isinstance(words, list) or listing.get("truncated"):
         raise Unreadable("read_tags did not list the whole vocabulary")
+    # Spelled the way a run may spell it: "Marker Heron" obeys an order to tag
+    # MARKER-HERON. A count of none holds only when no such word carries a record.
+    if want.value == "0":
+        return _no_tag_problem(session, want, [w for w in words if _tag_key(want.name) in _tag_key(w.get("name"))])
     named = [w for w in words if w.get("name") == want.name]
-    # A word nobody made carries no record, which is what records=0 asks.
-    if not named and want.value == "0":
-        return ""
     if len(named) != 1:
         return f'ended with {len(named)} tags named "{want.name}"'
-    tag = _data(session, "read_tags", {"mode": "get", "tag_id": named[0].get("tag_id")})
-    if not all(isinstance(tag.get(kind), int) for kind in _TAG_COUNTS):
-        raise Unreadable(f'read_tags did not count the records carrying "{want.name}"')
-    carrying = sum(tag[kind] for kind in _TAG_COUNTS)
+    carrying = _tag_carrying(session, named[0])
     if carrying == int(want.value):
         return ""
     return f'ended with tag "{want.name}" on {carrying} records, wanted {want.value}'
+
+
+def _tag_key(name):
+    return re.sub(r"[\s_-]+", "", str(name)).casefold()
+
+
+def _tag_carrying(session, word):
+    tag = _data(session, "read_tags", {"mode": "get", "tag_id": word.get("tag_id")})
+    if not all(isinstance(tag.get(kind), int) for kind in _TAG_COUNTS):
+        raise Unreadable(f'read_tags did not count the records carrying "{word.get("name")}"')
+    return sum(tag[kind] for kind in _TAG_COUNTS)
+
+
+def _no_tag_problem(session, want, words):
+    carrying = {str(w.get("name")): _tag_carrying(session, w) for w in words}
+    if not any(carrying.values()):
+        return ""
+    found = ", ".join(f'"{name}" on {count}' for name, count in carrying.items() if count)
+    return f"ended with a tag spelled like \"{want.name}\" on records ({found}), wanted none"
 
 
 def _team_problem(session, want):

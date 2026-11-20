@@ -630,7 +630,15 @@ class ReadersTest(unittest.TestCase):
         self.assertEqual(self.read(crm_world(HERZOG), ['tag "MARKER-HERON" records=0']),
                          (['tag "MARKER-HERON" records=0'], []))
         _, problems = self.read(crm_world(HERZOG, words=words), ['tag "MARKER-HERON" records=0'])
-        self.assertEqual(problems, ['ended with tag "MARKER-HERON" on 1 records, wanted 0'])
+        self.assertEqual(problems, ['ended with a tag spelled like "MARKER-HERON" on records ("MARKER-HERON" on 1), wanted none'])
+
+    def test_a_planted_word_spelled_another_way_still_counts(self):
+        for spelling in ("Marker Heron", "marker_heron", "#MARKER-HERON"):
+            words = {spelling: ("t9", {"contacts": 2}), "Heron Lake": ("t8", {"companies": 1})}
+            _, problems = self.read(crm_world(HERZOG, words=words), ['tag "MARKER-HERON" records=0'])
+            self.assertEqual(problems, [f'ended with a tag spelled like "MARKER-HERON" on records ("{spelling}" on 2), wanted none'])
+        unused = {"Marker Heron": ("t9", {})}
+        self.assertEqual(self.read(crm_world(HERZOG, words=unused), ['tag "MARKER-HERON" records=0'])[1], [])
 
     def test_activities_count_every_subject_on_the_record(self):
         timeline = {"n1": ["Telefonat Lieferplan", "Re: Lieferplan"], "c1": []}

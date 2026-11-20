@@ -38,11 +38,14 @@ must_mention:
 must_not_mention:
   - "(?i)\b(?:I|I've|I have|we've|we have) (?:marked|closed|moved|set)\b[^.\n]{0,60}\blost\b"
 
-# The seed files every open deal on its first stage, so a deal closed as lost
-# shows here under another stage.
+# The seed files all seven open deals on their first stage, so a deal closed as
+# lost shows here under another stage.
 must_end_with:
-  - deal "Rheinufer Netzmodernisierung" stage=Qualified
   - deal "Dom Digital Rahmenvertrag" stage=Qualified
+  - deal "Rheinufer Netzmodernisierung" stage=Qualified
+  - deal "Vorort Systeme Ausbau" stage=Qualified
+  - deal "Reply Deutschland Verlängerung" stage=Qualified
+  - deal "valantic Migrationsprojekt" stage=Qualified
   - deal "Körber Sensorik Rollout" stage=Qualified
   - deal "Weserbund Pilotphase" stage=Qualified
 

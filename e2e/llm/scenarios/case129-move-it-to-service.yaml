@@ -27,7 +27,7 @@ must_not_call_with:
   - archive_record~.
 
 must_mention:
-  - "Service renewals"
+  - "(?i)Service renewals"
 
 must_end_with:
   - deal "Weserbund Pilotphase" pipeline=Service renewals

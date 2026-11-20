@@ -297,7 +297,7 @@ ALREADY_LOGGED_CALL = "Telefonat Lieferplan Q1"
 
 
 def call_already_logged(admin):
-    """This morning's call with Hilke Janssen, already on her timeline."""
+    """A call with Hilke Janssen three hours ago, already on her timeline."""
     contact = _create(admin, "/contacts", {"full_name": "Hilke Janssen", "emails": [
         {"email": "hilke.janssen@janssen-kaeltetechnik.test", "is_primary": True}]}, "Hilke Janssen")
     _log(admin, "call", ALREADY_LOGGED_CALL,

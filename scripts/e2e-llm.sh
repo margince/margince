@@ -329,7 +329,8 @@ use_passport() {
     research) PASSPORT="$PASSPORT_RESEARCH"; READER_PASSPORT="$PASSPORT_RESEARCH" ;;
     rep) PASSPORT="$PASSPORT_REP" ;;
     readonly) PASSPORT="$PASSPORT_READONLY" ;;
-    *) PASSPORT="$PASSPORT_NARROW" ;;
+    "") PASSPORT="$PASSPORT_NARROW" ;;
+    *) echo "HARNESS: no passport is named '$1'; check.py PASSPORTS lists the names" >&2; exit 2 ;;
   esac
   write_mcp_config
 }
@@ -362,25 +363,12 @@ mint_passport() {
     -d '{"email":"admin@demo.test","password":"demo-password-123"}' \
     "$APP_BASE/v1/auth/login" >/dev/null
 
-  PASSPORT="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
-    -d '{"label":"e2e-llm","scopes":["read","write"]}' \
-    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")')"
-  [[ -n "$PASSPORT" ]] || { echo "could not mint a passport" >&2; exit 1; }
-
-  PASSPORT_NARROW="$PASSPORT"
-  PASSPORT_WIDE="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
-    -d '{"label":"e2e-llm-send","scopes":["read","write","draft","send"]}' \
-    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")')"
+  PASSPORT_NARROW="$(mint_with "$COOKIES" e2e-llm '["read","write"]')"
+  [[ -n "$PASSPORT_NARROW" ]] || { echo "could not mint a passport" >&2; exit 1; }
+  PASSPORT="$PASSPORT_NARROW"
+  PASSPORT_WIDE="$(mint_with "$COOKIES" e2e-llm-send '["read","write","draft","send"]')"
   [[ -n "$PASSPORT_WIDE" ]] || { echo "could not mint the draft+send passport" >&2; exit 1; }
-  PASSPORT_RESEARCH="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
-    -d '{"label":"e2e-llm-research","scopes":["read","write","enrich"]}' \
-    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")')"
+  PASSPORT_RESEARCH="$(mint_with "$COOKIES" e2e-llm-research '["read","write","enrich"]')"
   [[ -n "$PASSPORT_RESEARCH" ]] || { echo "could not mint the enrich passport" >&2; exit 1; }
   PASSPORT_READONLY="$(mint_with "$COOKIES" e2e-llm-readonly '["read"]')"
   [[ -n "$PASSPORT_READONLY" ]] || { echo "could not mint the read-only passport" >&2; exit 1; }

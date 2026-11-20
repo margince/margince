@@ -21,9 +21,10 @@ may_call:
   - resolve_duplicates
 
 # A merge names the two records it joins, and a dismissal names only the
-# flagged pair, which leaves both cards.
+# flagged pair, which leaves both cards. A merge with preview true writes
+# nothing, so a careful run may look before it asks.
 must_not_call_with:
-  - resolve_duplicates~(?i)"(?:source_id|target_id|member_ids)"
+  - resolve_duplicates~(?i)^(?!.*"preview": ?true).*"(?:source_id|target_id|member_ids)"
   - archive_record~.
 
 must_mention:

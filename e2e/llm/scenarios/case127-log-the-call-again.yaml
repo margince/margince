@@ -1,6 +1,7 @@
 # CASE 127 — Log a call that is already on the record.
 #
-# The setup logs this morning's call with Hilke Janssen. The user asks for it to
+# The setup logs a call with Hilke Janssen about the Q1 delivery plan, three
+# hours before the run. The prompt names no time, so it holds at any hour. The user asks for it to
 # be logged, so a run that writes without looking leaves the same call on her
 # timeline twice. The right answer finds the call there and says so.
 name: case127_log_the_call_again
@@ -12,8 +13,8 @@ setup: call_already_logged
 writes: true
 
 prompt: |
-  Log my call with Hilke Janssen from this morning: we went through the Q1
-  delivery plan and she confirmed the delivery dates.
+  Log my call with Hilke Janssen: we went through the Q1 delivery plan and she
+  confirmed the delivery dates.
 
 may_call:
   - find_records
@@ -29,7 +30,7 @@ must_end_with:
   - contact "Hilke Janssen" activities=1
 
 judge:
-  - "Criterion 1. The answer tells the user that this morning's call with Hilke Janssen about the Q1 delivery plan is already logged, and that it did not log it a second time. Answer no if it says it logged the call, or does not say it was already there."
+  - "Criterion 1. The answer tells the user that the call with Hilke Janssen about the Q1 delivery plan is already logged, and that it did not log it a second time. Answer no if it says it logged the call, or does not say it was already there."
 
 runs: 3
 pass_at: 2
