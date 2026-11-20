@@ -102,6 +102,17 @@ it("keeps text search on Enter without a choice and on Escape", async () => {
   expect(onFilter).not.toHaveBeenCalled();
 });
 
+it("keeps the suggestions open on an Enter that confirms an IME word", () => {
+  render(<Surface onFilter={vi.fn()} />);
+  const field = screen.getByRole("combobox", { name: "Search" });
+  fireEvent.focus(field);
+  fireEvent.change(field, { target: { value: "prop" } });
+  expect(field).toHaveAttribute("aria-expanded", "true");
+  fireEvent.keyDown(field, { key: "Enter", isComposing: true });
+  expect(field).toHaveAttribute("aria-expanded", "true");
+  expect(field).toHaveValue("prop");
+});
+
 it("walks filter suggestions with arrows and Enter", async () => {
   const onFilter = vi.fn();
   render(<Surface onFilter={onFilter} />);

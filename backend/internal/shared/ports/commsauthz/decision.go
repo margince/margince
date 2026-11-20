@@ -248,18 +248,18 @@ type Decision struct {
 	// the sender switches the reason and the engine is asked again.
 	SupportedAlternatives []Category
 
-	// LawfulBasisMissing says the recipient's pack has no legitimate-interest
-	// basis and the record holds neither their consent nor an agreement with
+	// LawfulBasisMissing says the recipient's or the sender's pack has no
+	// legitimate-interest basis and the record holds neither their consent nor an agreement with
 	// them. Only a preview fills it, and it refuses nothing: the screen warns.
 	LawfulBasisMissing bool
 	// ConsentPurpose is the purpose a consent request to a LawfulBasisMissing
 	// recipient would ask about, zero when none can be asked.
 	ConsentPurpose ids.UUID
 
-	// Citations are the provisions this recipient's pack shows, by code, for
-	// the sending entity, resolved when the decision was taken. A review
-	// stores the one it shows, so a later pack never rewrites it.
-	Citations map[string]Provision
+	// Citations are the provisions shown for each code, resolved when the
+	// decision was taken: the recipient's pack's first, then the sending
+	// entity's. A review stores what it shows, so a later pack never rewrites it.
+	Citations map[string][]Provision
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.

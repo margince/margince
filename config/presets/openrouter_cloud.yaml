@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=../margince.schema.json
+# Model setup: Open models from OpenAI and Mistral, through OpenRouter
 # config/presets/openrouter_cloud.yaml — every lane through the OpenRouter broker.
 #
 # WHAT THIS PRESET IS NOT CERTIFIED FOR: it binds a model to every task, and the

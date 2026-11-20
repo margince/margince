@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // resolution is what the engine concluded a message is, and why.
@@ -348,6 +349,7 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 			out.category = commsauthz.Category(*claimed)
 		}
 		out.evidence = evidenceFrom(evidence, address)
+		out.sender = stagedSenderFrom(evidence)
 		if entity != nil {
 			out.entity = *entity
 		}
@@ -489,4 +491,7 @@ type stagedClaim struct {
 	purposeKey string
 	// dataProtection is the country the staged footer was rendered under.
 	dataProtection *string
+	// sender is the sending entity's country staging judged under, empty for
+	// a row staged before it was recorded.
+	sender jurisdiction.Code
 }

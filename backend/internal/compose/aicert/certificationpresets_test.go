@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -37,10 +38,20 @@ var aiCertPresetDir = filepath.Join("..", "..", "..", "..", "config", "presets")
 
 const aiCertPresetLink = corpusLinkPrefix + "config/presets/"
 
+// aiCertPresetTitle reads a preset's plain name. The schema admits no key for
+// it, so it is a comment line the product never reads.
+var aiCertPresetTitle = regexp.MustCompile(`(?m)^# Model setup: (\S.*\S)\s*$`)
+
 // aiCertPreset is one preset file folded over every task this build ships.
 type aiCertPreset struct {
-	File    string `json:"file"`
+	File string `json:"file"`
+	// Title is the file's `# Model setup:` line: the name a client knows the
+	// setup by, where the file name is a builder's.
+	Title   string `json:"title"`
 	Profile string `json:"profile"`
+	// WhereDataGoes is the profile in a client's words, carried in the payload
+	// so a page rendered from it says what this one says.
+	WhereDataGoes string `json:"where_data_goes"`
 	// Tiers is the ladder rungs this preset binds, in the schema's own tier
 	// order, so two presets read side by side line up.
 	Tiers []aiCertPresetTier `json:"tiers"`
@@ -132,14 +143,20 @@ func loadAICertPresets(t *testing.T) []aiCertPreset {
 		if err != nil {
 			t.Fatalf("reading preset %s: %v", entry.Name(), err)
 		}
+		title := aiCertPresetTitle.FindSubmatch(raw)
+		if title == nil {
+			t.Fatalf("preset %s has no `# Model setup: <plain name>` line, so the page could name it only by its file", entry.Name())
+		}
 		cfg, err := ai.ParsePreset(raw)
 		if err != nil {
 			t.Fatalf("preset %s does not parse, so this page would describe a binding nobody can deploy: %v",
 				entry.Name(), err)
 		}
-		presets = append(presets, aiCertPreset{
-			File: entry.Name(), Profile: string(cfg.Profile), Tiers: tiersOfPreset(cfg),
-		})
+		preset := aiCertPreset{
+			File: entry.Name(), Title: string(title[1]), Profile: string(cfg.Profile), Tiers: tiersOfPreset(cfg),
+		}
+		preset.WhereDataGoes = aiCertWhereDataGoes(preset)
+		presets = append(presets, preset)
 	}
 	// NOT a tolerated zero: an empty read renders a section claiming the tree
 	// ships no presets, which is a statement rather than a missing one.

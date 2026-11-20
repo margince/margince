@@ -474,6 +474,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook, at the root and in any directory that needs one of its own. |
 | `runledgerretention_test.go` | H3 | Every ledger of executions either states its window or says why it has none. |
 | `satellite_lifecycle_test.go` | H2 | Every table with a contact\_id column is reached by the retention anonymizer, the merge relink and the archive cascade, or says why not. |
+| `scenariojobtitle_test.go` | H2 | Each assistant job's `title:` line is its name on the result pages a client reads, so it says the job in a user's words. |
 | `scorecolumnbounds_test.go` | H2 | Every column holding a bounded quantity states the bound in the schema. |
 | `scrubbedentitytypes_test.go` | H2 | Which record types a scrub verb is ever written against. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |

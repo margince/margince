@@ -1087,6 +1087,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.daysUnit": "Tage",
   "reporting.countUnit": "Anzahl",
   "reporting.wholeCount": "Gib eine ganze Anzahl ein.",
+  "reporting.needsChart": "Füge mindestens ein Diagramm hinzu.",
+  "reporting.needsInterval":
+    "Gib dem eigenen Zeitraum ein Ende nach seinem Start.",
   "reporting.retired": "Ziel stillgelegt",
   "reporting.comparisonHelp":
     "Wähle benachbarte abgeschlossene Zeiträume. Snapshots desselben Zeitraums zeigen keinen Periodenvergleich.",
@@ -14947,7 +14950,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.rule.pack": "Regelwerk {rule}",
   "jurisdiction.documents.title": "Dokumente",
   "jurisdiction.documents.empty":
-    "Das Paket dieses Rechtsraums enthält keine Dokumente.",
+    "Für dieses Land sind keine integrierten Compliance-Vorlagen verfügbar.",
   "jurisdiction.documents.emptyUnset":
     "Es gibt keine Dokumente zum Anzeigen, da kein Rechtsraum festgelegt ist.",
   "jurisdiction.documents.read": "Lesen",
@@ -18259,6 +18262,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bearbeitung fehlgeschlagen. Vor dem Wiederholen den Lauf prüfen.",
   "inquiry.handling": "Anfragen bearbeiten",
   "inquiry.review": "Bearbeitung prüfen",
+  "inquiry.stillNeeded": "Erforderlich: {fields}",
   "inquiry.pausedConversionWarning":
     "Wenn du diesen Plan speicherst, ersetzt er die bisherige Lead-Bearbeitung dieses Formulars. Mit „Pausiert speichern“ bleibt der Plan aus: Neue Anfragen erhalten erst nach dem Einschalten automatisch eine Aufgabe.",
   "inquiry.savePaused": "Pausiert speichern",

@@ -60,9 +60,16 @@ func (g *Gate) transmitCountries(ctx context.Context, req commsauthz.TransmitReq
 		}
 		// Only the staged evidence picks a country; the thread and the links
 		// do not, so neither is read here.
-		out, err = recipientCountries(ctx, tx, req.Recipients, func(r connector.Recipient) commsauthz.Request {
+		out, err = g.store.resolveRecipientCountries(ctx, tx, req.Recipients, func(r connector.Recipient) commsauthz.Request {
 			return stagedRequestFor(req, r, claims, "", nil)
 		})
+		// An entity edited while the message waits does not change the law it
+		// was staged under.
+		for i, r := range req.Recipients {
+			if staged := claims[decisionRecipientKey(r)].sender; staged != "" && i < len(out) {
+				out[i].Sender = staged
+			}
+		}
 		return err
 	})
 	return out, err

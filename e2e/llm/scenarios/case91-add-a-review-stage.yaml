@@ -1,5 +1,6 @@
 # CASE 91 — Adding a stage shapes the pipeline. It moves no deal, so it is change_settings and not change_state.
 name: case91_add_a_review_stage
+title: Add a review stage to the pipeline
 criteria: [1]
 writes: true
 

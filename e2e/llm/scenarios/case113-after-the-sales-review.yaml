@@ -2,6 +2,7 @@
 # decision on its deal and the rep's forecast call, in minor units. Neither is a
 # plain task, a note or an edit to the deal.
 name: case113_after_the_sales_review
+title: After the sales review
 criteria: [1, 2]
 writes: true
 

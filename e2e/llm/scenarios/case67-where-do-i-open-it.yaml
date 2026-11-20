@@ -10,6 +10,7 @@
 # The harness reads the answer and the calls, not the tool results, so it cannot
 # compare the link's id to the deal's; it holds the shape of a deal page.
 name: case67_where_do_i_open_it
+title: Where do I open it
 criteria: [1]
 writes: false
 

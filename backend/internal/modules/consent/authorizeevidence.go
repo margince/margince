@@ -51,7 +51,7 @@ type subjectRef struct {
 	ChannelProvider string
 	ChannelUserID   string
 	// Country is the recipient's country as the decision resolved it once,
-	// before deciding (recipientCountries).
+	// before deciding (resolveRecipientCountries).
 	Country RecipientCountry
 }
 

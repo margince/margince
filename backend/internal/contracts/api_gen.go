@@ -40655,8 +40655,9 @@ type ChatEpisode struct {
 	Url string `json:"url"`
 }
 
-// CitedProvision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+// CitedProvision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+// for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+// data-protection law settles. Shown beside the engine's sentence; it decides nothing.
 // Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
 // pack's next review is overdue, or the law has not taken effect or has expired. On a
 // review it is the citation shown when the refusal was assessed, never today's.
@@ -50221,8 +50222,9 @@ type DraftContentFinding struct {
 	// Language The language the draft must lead with, for `advertising_language_first`.
 	Language *string `json:"language,omitempty"`
 
-	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+	// Provision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+	// for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+	// data-protection law settles. Shown beside the engine's sentence; it decides nothing.
 	// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
 	// pack's next review is overdue, or the law has not taken effect or has expired. On a
 	// review it is the citation shown when the refusal was assessed, never today's.
@@ -51797,12 +51799,16 @@ type FooterFinding struct {
 	// MissingMeans Missing contact methods, such as email, phone or web.
 	MissingMeans []string `json:"missing_means"`
 
-	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+	// Provision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+	// for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+	// data-protection law settles. Shown beside the engine's sentence; it decides nothing.
 	// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
 	// pack's next review is overdue, or the law has not taken effect or has expired. On a
 	// review it is the citation shown when the refusal was assessed, never today's.
 	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `kind`, `provision` first. Absent when none may be shown.
+	Provisions *[]CitedProvision `json:"provisions,omitempty"`
 }
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
@@ -62696,8 +62702,13 @@ type RefusedRecipient struct {
 	// FooterPreview Configured disclosure text included in this message. Contains no recipient credentials.
 	FooterPreview *[]string `json:"footer_preview,omitempty"`
 
-	// Provision The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
-	Provision         *CitedProvision              `json:"provision,omitempty"`
+	// Provision The first law cited for `reason_code` when the refusal was assessed: the recipient's
+	// pack's, or the sending entity's when only that pack cites one.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
+	// recipient's pack, then the sending entity's for a finding its data-protection law settles.
+	Provisions        *[]CitedProvision            `json:"provisions,omitempty"`
 	ReasonCode        string                       `json:"reason_code"`
 	RequestedCategory *string                      `json:"requested_category,omitempty"`
 	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
@@ -66609,8 +66620,13 @@ type SendAuthorizationPreviewRecipient struct {
 	// contact gets. Absent or false for an address a record already holds.
 	NewContact *bool `json:"new_contact,omitempty"`
 
-	// Provision The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+	// Provision The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+	// when only that pack cites one. Absent when none may be shown.
 	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
+	// sending entity's for a finding its data-protection law settles. Absent when none may be shown.
+	Provisions *[]CitedProvision `json:"provisions,omitempty"`
 
 	// ReasonCode Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
 	// `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
@@ -67177,8 +67193,15 @@ type SendRefusalRecipient struct {
 	CanBeOverruled bool `json:"can_be_overruled"`
 
 	// Category The category the engine resolved.
-	Category   *string `json:"category,omitempty"`
-	ReasonCode string  `json:"reason_code"`
+	Category *string `json:"category,omitempty"`
+
+	// Provision The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+	// when only that pack cites one. Absent when none may be shown.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `reason_code`, `provision` first. Absent when none may be shown.
+	Provisions *[]CitedProvision `json:"provisions,omitempty"`
+	ReasonCode string            `json:"reason_code"`
 
 	// RequestedCategory The category the sender claimed.
 	RequestedCategory *string `json:"requested_category,omitempty"`

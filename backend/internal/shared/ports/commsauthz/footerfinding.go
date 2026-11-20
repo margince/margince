@@ -10,9 +10,11 @@ type FooterFinding struct {
 	Kind         string   `json:"kind"`
 	Language     string   `json:"language"`
 	MissingMeans []string `json:"missing_means"`
-	// Provision explains the finding and is never compared: the same omission
-	// under other law is still the same omission.
+	// Provision explains the finding. SameFooterFindings leaves it out: the
+	// same omission under other law is still the same omission.
 	Provision Provision `json:"provision,omitzero"`
+	// Provisions holds each law cited for the kind, Provision first.
+	Provisions []Provision `json:"provisions,omitempty"`
 }
 
 // SameFooterFindings reports whether two lists name the same missing

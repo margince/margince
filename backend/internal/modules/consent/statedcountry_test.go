@@ -60,7 +60,7 @@ func TestTheStagedEvidenceCarriesTheStatedCountry(t *testing.T) {
 		"set":     {{Address: "anna@example.test", Country: "at"}},
 		"cleared": {{Address: "anna@example.test"}},
 	} {
-		raw, err := evidenceJSON(commsauthz.Evidence{RecipientCountries: stated})
+		raw, err := evidenceJSON(commsauthz.Evidence{RecipientCountries: stated}, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -69,7 +69,7 @@ func TestTheStagedEvidenceCarriesTheStatedCountry(t *testing.T) {
 			t.Errorf("%s: carried %+v, want %+v", name, got, stated)
 		}
 	}
-	raw, err := evidenceJSON(commsauthz.Evidence{})
+	raw, err := evidenceJSON(commsauthz.Evidence{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}

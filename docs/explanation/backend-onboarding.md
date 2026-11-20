@@ -137,10 +137,10 @@ the tables of [reference/configuration.md](../reference/configuration.md). The s
   work needs a worker beside it (next point).
 - **`cmd/worker`**: the background reader. It runs the relay on its own, the River jobs on a schedule,
   and retention. It also runs the automation trigger runtime (event dispatch off `cg:workflows`, plus
-  the clock time scan) and the runner of Surface B.
+  the clock time scan) and the runner of the night helpers.
   - **It is not optional.** `cmd/api` runs no River runner at all. Without a worker, outbound mail is
     staged and never sent. A failed webhook delivery sits `retrying` forever, and never reaches its
-    dead letter budget. No GDPR retention pass runs, and no brief from Surface B is scheduled.
+    dead letter budget. No GDPR retention pass runs, and no brief from the night helpers is scheduled.
   - For a split deployment, run `cmd/api --inline-relay=false` beside one or more workers. Run a worker
     in any case. River picks one leader, so two copies of the worker never run a job twice.
 - **`cmd/migrate`**: `up`, `down` and the other commands that [configuration.md](../reference/programs.md#cmdmigrate-schema-migrations)
