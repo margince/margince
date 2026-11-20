@@ -317,6 +317,11 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		if err := stampInvitationAttendees(ctx, tx, ids.From[ids.ActivityKind](row.ID), host, row.Appointment.Roster); err != nil {
 			return err
 		}
+		if invitationSource(ctx) == publicBookingSource {
+			if _, err := s.CloseTasksAnsweredByBookingTx(ctx, tx, ids.From[ids.ActivityKind](row.ID), host, invitationLinks(in, intent)); err != nil {
+				return err
+			}
+		}
 		if !intent.Lead.IsZero() {
 			if s.leadQualifyTasks != nil {
 				if err := s.leadQualifyTasks.FileLeadBookingTx(ctx, tx, intent.Lead, row.ID); err != nil {
