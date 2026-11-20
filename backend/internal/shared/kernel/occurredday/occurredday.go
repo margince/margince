@@ -370,6 +370,17 @@ func AheadSQL(alias, now string) string {
 		    AND %[3]s > %[2]s))`, alias, now, EndSQL(alias))
 }
 
+// LocalDayInstantSQL is an instant on the local date the activity under alias
+// names in zone: an instant as stored, a day entry at noon of its own date in
+// zone. A period cut from it in zone then holds a day entry by its date, which
+// noon UTC alone misses east of UTC+12. alias and zone are SQL the caller
+// renders.
+func LocalDayInstantSQL(alias, zone string) string {
+	return fmt.Sprintf(`(CASE WHEN %[1]s.occurred_precision = 'day'
+		THEN timezone(%[2]s, timezone('UTC', %[1]s.occurred_at))
+		ELSE %[1]s.occurred_at END)`, alias, zone)
+}
+
 // InstallationZoneSQL is the installation zone as SQL reads it: the row of
 // identity.Timezone, else that entry's default. A subquery, so a statement
 // judging many meetings reads the zone once and binds nothing.

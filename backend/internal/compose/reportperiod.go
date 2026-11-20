@@ -4,11 +4,9 @@
 package compose
 
 // The period bucket vocabulary (reporting REPORT-PARAM-4..7) and win-loss
-// (REPORT-KEY-8 / REPORT-VOCAB-1), its first consumer. They live together
-// because they ship and change together: the bucket has exactly one caller
-// today, and a shared vocabulary with one caller is a file two readers have to
-// open to answer one question. A second key adopting periods is what splits
-// them.
+// (REPORT-KEY-8 / REPORT-VOCAB-1), its first consumer. loss-events,
+// activities-by-kind and the company rollup cut the same buckets over their
+// own anchors.
 //
 // Separate from report.go because that file sits at the package's file-length
 // cap, which reportcatalog.go's header already records as deliberate.
@@ -17,6 +15,7 @@ import (
 	"maps"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -231,9 +230,19 @@ func periodDimensions(anchor string) map[string]string {
 	}
 }
 
+// colActivityAt is the activities report's period anchor: when the activity
+// happened, a date-only entry on its own date.
+var colActivityAt = occurredday.LocalDayInstantSQL("t", reportZoneToken)
+
 // periodAnchors are the instants a report cuts period buckets from. A period
 // field over one of them can keep the dates it named when it was saved.
-var periodAnchors = []string{colClosedAt, colLossAt}
+var periodAnchors = []string{colClosedAt, colLossAt, colActivityAt}
+
+// withPeriodDimensions adds the three period grains over anchor to fields.
+func withPeriodDimensions(fields map[string]string, anchor string) map[string]string {
+	maps.Copy(fields, periodDimensions(anchor))
+	return fields
+}
 
 // periodGrains names each period field's grain.
 var periodGrains = map[string]analyticsquery.PeriodGrain{
@@ -324,7 +333,7 @@ func winLossSpec() reportSpec {
 		// carry no row scope at all.
 		fieldSizeBand: colCompanySizeBand,
 	}
-	maps.Copy(dimensions, periodDimensions(colClosedAt))
+	withPeriodDimensions(dimensions, colClosedAt)
 
 	return reportSpec{
 		entity: datasource.EntityDeal,
