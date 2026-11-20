@@ -133,11 +133,11 @@ Everything below is the detail behind the two tables above: which tools each job
 | | |
 |---|---:|
 | Tools the assistant is offered | 48 |
-| … some case requires | 37 |
+| … some case requires | 36 |
 | … some case requires as one of a set | 3 |
-| … **no case requires** | 8 |
-| … of those, permitted somewhere but never required | 3 |
-| Prompt tokens spent on tools no case requires | 6544 |
+| … **no case requires** | 9 |
+| … of those, permitted somewhere but never required | 4 |
+| Prompt tokens spent on tools no case requires | 7018 |
 | Use cases | 73 |
 | Acceptance criteria the cases declare, each with a statement | 120 |
 
@@ -250,9 +250,9 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
-| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
-| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
-| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
+| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | - |
+| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | - |
+| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | - |
 | [case118_is_the_crane_job_at_risk](../../e2e/llm/scenarios/case118-is-the-crane-job-at-risk.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A project's health is read with its reason | - |
 | [case118_is_the_crane_job_at_risk](../../e2e/llm/scenarios/case118-is-the-crane-job-at-risk.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** A project's health is read with its reason | - |
 | [case118_is_the_crane_job_at_risk](../../e2e/llm/scenarios/case118-is-the-crane-job-at-risk.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** A project's health is read with its reason | - |
@@ -581,7 +581,6 @@ Every run of every case requiring this tool passed, for the model named.
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
@@ -622,7 +621,6 @@ Every run of every case requiring this tool passed, for the model named.
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
@@ -656,7 +654,6 @@ Every run of every case requiring this tool passed, for the model named.
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
@@ -741,7 +738,7 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 8 tools no use case requires, **2 are graded elsewhere** and 6 are untried by any lane.
+So of the 9 tools no use case requires, **2 are graded elsewhere** and 7 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -751,6 +748,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `run_research` | 1365 | - | `case108_ask_sofia_for_an_intro` | - |
 | `change_record_parts` | 1017 | - | - | - |
 | `change_relationships` | 816 | - | - | - |
+| `list_approvals` | 474 | - | `case117_log_it_and_say_what_waits`, `case1_log_it`, `case32_two_words_for_one_thing`, `case46_get_us_in_a_room`, `case59_file_it_on_the_meeting_and_the_contract` | - |
 | `decide_approvals` | 465 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
 | `enrich` | 395 | `enrich` | - | - |

@@ -1060,12 +1060,22 @@ judges "$c67" case67 gives-no-link 1 "the judge says NO to: Criterion 1."
 # CASE 117 — nothing the task did not cause. A bare count of the rest is
 # allowed; the queue listed by name fails the regex and the judge, and the same
 # queue described without a name fails the judge alone. The recap draft lands a
-# few seconds after the write, so an answer that has not seen it yet still holds.
+# few seconds after the write, so an answer that says nothing waits fails.
 c117="case117-log-it-and-say-what-waits.yaml"
 judges "$c117" case117 reports-only-the-draft 0 "!the judge says NO"
 judges "$c117" case117 reports-the-draft-and-counts-the-rest 0 "!the judge says NO"
-judges "$c117" case117 reports-nothing-waiting-yet 0 "!the judge says NO"
+judges "$c117" case117 reports-nothing-waiting-yet 1 "said 'Nothing this work started is waiting'" "!the judge says NO"
 judges "$c117" case117 lists-the-whole-queue 1 "the judge says NO to: Criterion 2." "Brandst"
+# The same passing answer with its list_approvals call removed still passes:
+# reading the queue is allowed, never required.
+grep -v '"name": "mcp__margince__list_approvals"' "$root/e2e/llm/testdata/case117/reports-only-the-draft.jsonl" >"$work/case117-no-queue-read.jsonl"
+if ! python3 "$check" --check "$root/e2e/llm/scenarios/$c117" "$work/case117-no-queue-read.jsonl" >"$work/case117.out" 2>&1; then
+	echo "FAIL: case117/no-queue-read — a run that never reads the queue fails"
+	sed 's/^/    /' "$work/case117.out"
+	failures=$((failures + 1))
+else
+	echo "ok: case117/no-queue-read"
+fi
 
 c62="case62-held-meetings-to-opportunities.yaml"
 judges "$c62" case62 gives-both-counts 0 "!the judge says NO"

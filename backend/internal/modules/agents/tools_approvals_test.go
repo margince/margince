@@ -194,8 +194,8 @@ func TestExplicitMutedReviewReachesTheSharedInbox(t *testing.T) {
 	}
 }
 
-// The records a task touched reach the seam as one list, so the finish-time
-// check reads what those records left waiting and nothing else.
+// The records a task touched reach the seam as one list, so a read of the
+// queue by target answers what those records left waiting and nothing else.
 func TestEveryTargetANamedRecordReachesTheSharedInbox(t *testing.T) {
 	inbox := &fakeInbox{}
 	contact, activity := ids.NewV7(), ids.NewV7()
