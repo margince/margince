@@ -9,6 +9,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -449,5 +450,43 @@ func TestAStaleDayIsNeverServedAcrossAChangeInWhoMayReadWhat(t *testing.T) {
 				t.Errorf("%s: Home served %+v (stale %v, %d fresh reads), want one fresh read and no stale copy", name, got, stale, reads)
 			}
 		})
+	}
+}
+
+// An administrator changes what a member may read through writes the member's own
+// request never makes, so no per-writer mark reaches their cache. The access
+// fence must end the kept day, fresh or marked behind a write.
+func TestAMemberChangeByAnotherUserNeverLeavesTheKeptDayServed(t *testing.T) {
+	changes := map[string]string{
+		"their role assignment is removed":    `DELETE FROM role_assignment WHERE user_id = $1`,
+		"a role's permissions are narrowed":   `UPDATE role SET permissions = '{}'::jsonb WHERE id IN (SELECT role_id FROM role_assignment WHERE user_id = $1)`,
+		"they are removed from their team":    `DELETE FROM team_membership WHERE user_id = $1`,
+		"their seat becomes read only":        `UPDATE app_user SET seat_type = 'read' WHERE id = $1`,
+		"a field mask is added to their role": `INSERT INTO field_mask (role_key, object, field, condition) SELECT r.key, 'partner', 'margin_tier', 'always' FROM role r JOIN role_assignment a ON a.role_id = r.id WHERE a.user_id = $1 ON CONFLICT (role_key, object, field) DO UPDATE SET condition = 'always'`,
+	}
+	for name, change := range changes {
+		for _, behind := range []bool{false, true} {
+			t.Run(name+fmt.Sprintf(" (behind a write: %v)", behind), func(t *testing.T) {
+				e := Setup(t)
+				c := homecache.New(e.Pool)
+				ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+				e.WsExec(t, `WITH r AS (INSERT INTO role (key, name, permissions) VALUES ('fence_probe', 'Fence probe', '{"contact": {"read": true}}') RETURNING id)
+					INSERT INTO role_assignment (role_id, user_id) SELECT id, $1 FROM r`, e.Rep1)
+				keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
+				if behind {
+					if err := c.Forget(ctx, []ids.UUID{e.Rep1}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if n := e.WsCount(t, `WITH changed AS (`+strings.Replace(change, "$1", "'"+e.Rep1.String()+"'", 1)+` RETURNING 1) SELECT count(*) FROM changed`); n == 0 {
+					t.Fatal("the change touched no row, so the case proves nothing")
+				}
+				reads := 0
+				got, stale := serveToday(ctx, t, c, e.Rep1, &reads)
+				if stale || reads != 1 || got.View == nil || *got.View != crmcontracts.WorklistViewToday {
+					t.Errorf("Home served %+v (stale %v, %d fresh reads), want one fresh read and no kept copy", got, stale, reads)
+				}
+			})
+		}
 	}
 }

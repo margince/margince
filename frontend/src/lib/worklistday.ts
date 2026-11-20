@@ -48,8 +48,13 @@ export function worklistDayOptions(
       ? { refetchOnWindowFocus: true }
       : {
           refetchInterval: (query: {
-            state: { data?: { pages: Worklist[] } };
-          }) => homeDayWait(query.state.data?.pages ?? [], Date.now()),
+            state: { data?: { pages: Worklist[] }; dataUpdatedAt: number };
+          }) =>
+            homeDayWait(
+              query.state.data?.pages ?? [],
+              Date.now(),
+              query.state.dataUpdatedAt,
+            ),
         }),
     initialPageParam: undefined as string | undefined,
     // React Query aborts the signal once no screen still observes this key, and
@@ -148,19 +153,31 @@ const DUE_SLACK_MS = 1_000;
 const LONGEST_WAIT_MS = 60 * 60_000;
 
 // A kept answer served past its freshness is read again behind it on the
-// server; asking shortly after picks up the fresh one. The same stale answer
-// three times means that read is failing, and the day waits as usual.
+// server; asking shortly after picks up the fresh one. Three stale answers in a
+// row mean that read is failing, and the day waits as usual. After a pause
+// longer than the retries span, a stale answer starts a new run. That is the
+// one after the reader's own write, and it gets its short retries again.
 export const HOME_DAY_STALE_RETRY_MS = 3_000;
 const HOME_DAY_STALE_RETRIES = 3;
-const staleSeen = { asOf: "", times: 0 };
+const HOME_DAY_STALE_RUN_GAP_MS = 4 * HOME_DAY_STALE_RETRY_MS;
+const staleRun = { lastAnswerAt: 0, answers: 0 };
 
-/** When Home's day is read again: its next due row, or once it is stale. */
-export function homeDayWait(pages: Worklist[], now: number): number {
-  const first = pages[0];
-  if (first?.served_stale) {
-    staleSeen.times = staleSeen.asOf === first.as_of ? staleSeen.times + 1 : 1;
-    staleSeen.asOf = first.as_of;
-    if (staleSeen.times <= HOME_DAY_STALE_RETRIES)
+/** When Home's day is read again: its next due row, or once it is stale.
+ *  answeredAt is when the newest response arrived; each response counts once,
+ *  however often this is asked about it. */
+export function homeDayWait(
+  pages: Worklist[],
+  now: number,
+  answeredAt: number = now,
+): number {
+  if (pages[0]?.served_stale) {
+    if (answeredAt !== staleRun.lastAnswerAt) {
+      const sinceLast = answeredAt - staleRun.lastAnswerAt;
+      const newRun = sinceLast < 0 || sinceLast > HOME_DAY_STALE_RUN_GAP_MS;
+      staleRun.answers = newRun ? 1 : staleRun.answers + 1;
+      staleRun.lastAnswerAt = answeredAt;
+    }
+    if (staleRun.answers <= HOME_DAY_STALE_RETRIES)
       return HOME_DAY_STALE_RETRY_MS;
   }
   const due = untilNextDue(pages, now);
