@@ -28,6 +28,7 @@ import { useLocale, useT } from "../../i18n";
 import type { CfObject, CfType } from "../../lib/customfields.logic";
 import { useViewerZone } from "../../lib/viewerzone";
 import { AuditEntryLine } from "../settings/audit";
+import { CustomFieldChoices } from "./customfields.choices";
 import { ActivityKindsSelect } from "./customfields.kinds";
 import { objectLabels, typeLabels } from "./customfields.labels";
 import { CustomFieldTranslate } from "./customfields.translations";
@@ -306,6 +307,7 @@ function FieldMenu({
         <Button aria-haspopup="dialog" onClick={onRename}>
           {t("cf.edit")}
         </Button>
+        <CustomFieldChoices field={field} />
         <CustomFieldTranslate field={field} />
         <Button aria-haspopup="dialog" onClick={onArchive}>
           {t("cf.archive")}

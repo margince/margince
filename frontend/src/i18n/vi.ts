@@ -14037,6 +14037,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.removeOption": "Gỡ lựa chọn",
   "cf.optionPlaceholder": "Nhãn lựa chọn",
   "cf.lastOptionBlocked": "Danh sách lựa chọn cần ít nhất một lựa chọn",
+  "cf.type.url": "Địa chỉ web",
+  "cf.url.invalid": "Nhập địa chỉ web bắt đầu bằng http:// hoặc https://.",
+  "cf.choices.edit": "Sửa lựa chọn",
+  "cf.choices.title": "Lựa chọn của “{label}”",
+  "cf.choices.checking": "Đang đếm số bản ghi giữ từng lựa chọn",
+  "cf.choices.held_one": "{count} bản ghi",
+  "cf.choices.held_other": "{count} bản ghi",
+  "cf.choices.clears_one":
+    "Khi lưu, các lựa chọn đã xóa sẽ bị gỡ khỏi {count} bản ghi.",
+  "cf.choices.clears_other":
+    "Khi lưu, các lựa chọn đã xóa sẽ bị gỡ khỏi {count} bản ghi.",
+  "cf.choices.saved_one":
+    "Đã lưu lựa chọn của “{label}”. {count} bản ghi đã thay đổi.",
+  "cf.choices.saved_other":
+    "Đã lưu lựa chọn của “{label}”. {count} bản ghi đã thay đổi.",
   "cf.gate.title": "Thêm trường này?",
   "cf.gate.body":
     "Khi xác nhận, trường này sẽ thành cột hoạt động trên mọi {object}: trên trang 360, trong tìm kiếm và bộ lọc, danh sách, bản xuất và API. Thao tác thêm này sẽ được ghi vào nhật ký hoạt động.",

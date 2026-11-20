@@ -284,6 +284,7 @@ var Declared = map[string][]string{
 	"GET /v1/context-search":                                                   {"limit", "query", "record_types"},
 	"GET /v1/contracts/{id}":                                                   {},
 	"GET /v1/custom-fields":                                                    {"cursor", "limit", "object", "sort", "status"},
+	"GET /v1/custom-fields/{id}/choices":                                       {},
 	"GET /v1/custom-fields/{id}/lists":                                         {},
 	"GET /v1/data-subject-requests":                                            {"cursor", "limit", "status"},
 	"GET /v1/data-subject-requests/deadline":                                   {"kind", "received_at"},

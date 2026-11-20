@@ -185,7 +185,7 @@ func (s *ListSort) orderExpr() string {
 	if expr == "" {
 		expr = quoteColumnIdentifier(s.name)
 	}
-	if s.kind == fieldcatalog.TypeText || s.kind == fieldcatalog.TypePicklist {
+	if s.kind == fieldcatalog.TypeText || s.kind == fieldcatalog.TypePicklist || s.kind == fieldcatalog.TypeURL {
 		return fmt.Sprintf("left(%s, %d)", expr, sortKeyPrefixChars)
 	}
 	return expr

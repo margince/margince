@@ -10085,6 +10085,7 @@ const (
 	CreateCustomFieldRequestTypePicklist    CreateCustomFieldRequestType = "picklist"
 	CreateCustomFieldRequestTypeRecord      CreateCustomFieldRequestType = "record"
 	CreateCustomFieldRequestTypeText        CreateCustomFieldRequestType = "text"
+	CreateCustomFieldRequestTypeUrl         CreateCustomFieldRequestType = "url"
 )
 
 // Valid indicates whether the value is a known member of the CreateCustomFieldRequestType enum.
@@ -10105,6 +10106,8 @@ func (e CreateCustomFieldRequestType) Valid() bool {
 	case CreateCustomFieldRequestTypeRecord:
 		return true
 	case CreateCustomFieldRequestTypeText:
+		return true
+	case CreateCustomFieldRequestTypeUrl:
 		return true
 	default:
 		return false
@@ -10859,6 +10862,7 @@ const (
 	CustomFieldTypePicklist    CustomFieldType = "picklist"
 	CustomFieldTypeRecord      CustomFieldType = "record"
 	CustomFieldTypeText        CustomFieldType = "text"
+	CustomFieldTypeUrl         CustomFieldType = "url"
 )
 
 // Valid indicates whether the value is a known member of the CustomFieldType enum.
@@ -10879,6 +10883,8 @@ func (e CustomFieldType) Valid() bool {
 	case CustomFieldTypeRecord:
 		return true
 	case CustomFieldTypeText:
+		return true
+	case CustomFieldTypeUrl:
 		return true
 	default:
 		return false
@@ -13349,6 +13355,7 @@ const (
 	FilterVocabularyFieldTypePicklist    FilterVocabularyFieldType = "picklist"
 	FilterVocabularyFieldTypeRecord      FilterVocabularyFieldType = "record"
 	FilterVocabularyFieldTypeText        FilterVocabularyFieldType = "text"
+	FilterVocabularyFieldTypeUrl         FilterVocabularyFieldType = "url"
 )
 
 // Valid indicates whether the value is a known member of the FilterVocabularyFieldType enum.
@@ -13375,6 +13382,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeRecord:
 		return true
 	case FilterVocabularyFieldTypeText:
+		return true
+	case FilterVocabularyFieldTypeUrl:
 		return true
 	default:
 		return false
@@ -47669,6 +47678,9 @@ type CustomField struct {
 	// Options Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
 	Options *[]string `json:"options,omitempty"`
 
+	// RecordsChanged Only on the answer to `updateCustomFieldOptions`: how many records held a choice the edit removed and had it cleared.
+	RecordsChanged *int `json:"records_changed,omitempty" minimum:"0"`
+
 	// Reportable Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object.
 	Reportable bool `json:"reportable"`
 
@@ -47681,7 +47693,7 @@ type CustomField struct {
 	// Status retired = soft: hidden from the API and filtering, column and values preserved.
 	Status CustomFieldStatus `json:"status"`
 
-	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
 	Type      CustomFieldType `json:"type"`
 	UpdatedAt time.Time       `json:"updated_at"`
 
@@ -47701,8 +47713,21 @@ type CustomFieldObject string
 // CustomFieldStatus retired = soft: hidden from the API and filtering, column and values preserved.
 type CustomFieldStatus string
 
-// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
 type CustomFieldType string
+
+// CustomFieldChoiceCount defines model for CustomFieldChoiceCount.
+type CustomFieldChoiceCount struct {
+	Choice string `json:"choice"`
+
+	// Records Records that hold the choice, archived ones included.
+	Records int `json:"records" minimum:"0"`
+}
+
+// CustomFieldChoiceUse How many records hold each current choice of a picklist or multiselect field.
+type CustomFieldChoiceUse struct {
+	Choices []CustomFieldChoiceCount `json:"choices"`
+}
 
 // CustomFieldListResponse defines model for CustomFieldListResponse.
 type CustomFieldListResponse struct {
@@ -51379,7 +51404,7 @@ type FilterVocabularyField struct {
 	// `id`, so only a core field can carry a reference.
 	References *FilterVocabularyFieldReferences `json:"references,omitempty"`
 
-	// Type The six custom-field types, plus `id` for a reference to another record,
+	// Type The custom-field types, plus `id` for a reference to another record,
 	// `domain` for a host column and `distance` for a place on the earth. A `distance`
 	// field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
 	// `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -51410,7 +51435,7 @@ type FilterVocabularyFieldOperators string
 // `id`, so only a core field can carry a reference.
 type FilterVocabularyFieldReferences string
 
-// FilterVocabularyFieldType The six custom-field types, plus `id` for a reference to another record,
+// FilterVocabularyFieldType The custom-field types, plus `id` for a reference to another record,
 // `domain` for a host column and `distance` for a place on the earth. A `distance`
 // field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
 // `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -100010,6 +100035,9 @@ type ServerInterface interface {
 	// Rename a custom field or change whether create dialogs offer it (not a schema change).
 	// (PATCH /custom-fields/{id})
 	RenameCustomField(w http.ResponseWriter, r *http.Request, id Id, params RenameCustomFieldParams)
+	// How many records hold each choice of a picklist or multiselect field.
+	// (GET /custom-fields/{id}/choices)
+	ListCustomFieldChoiceUse(w http.ResponseWriter, r *http.Request, id Id)
 	// The Live Lists whose filter names this custom field.
 	// (GET /custom-fields/{id}/lists)
 	ListCustomFieldLiveLists(w http.ResponseWriter, r *http.Request, id Id)
@@ -104723,6 +104751,12 @@ func (_ Unimplemented) CreateCustomField(w http.ResponseWriter, r *http.Request,
 // Rename a custom field or change whether create dialogs offer it (not a schema change).
 // (PATCH /custom-fields/{id})
 func (_ Unimplemented) RenameCustomField(w http.ResponseWriter, r *http.Request, id Id, params RenameCustomFieldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How many records hold each choice of a picklist or multiselect field.
+// (GET /custom-fields/{id}/choices)
+func (_ Unimplemented) ListCustomFieldChoiceUse(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -129598,6 +129632,40 @@ func (siw *ServerInterfaceWrapper) RenameCustomField(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RenameCustomField(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCustomFieldChoiceUse operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomFieldChoiceUse(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomFieldChoiceUse(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -159357,6 +159425,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/custom-fields/{id}", wrapper.RenameCustomField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/custom-fields/{id}/choices", wrapper.ListCustomFieldChoiceUse)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/custom-fields/{id}/lists", wrapper.ListCustomFieldLiveLists)

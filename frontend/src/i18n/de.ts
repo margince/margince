@@ -14435,6 +14435,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.removeOption": "Option entfernen",
   "cf.optionPlaceholder": "Bezeichnung der Option",
   "cf.lastOptionBlocked": "Eine Auswahlliste braucht mindestens eine Option",
+  "cf.type.url": "Webadresse",
+  "cf.url.invalid":
+    "Gib eine Webadresse ein, die mit http:// oder https:// beginnt.",
+  "cf.choices.edit": "Auswahl bearbeiten",
+  "cf.choices.title": "Auswahl von „{label}“",
+  "cf.choices.checking": "Zähle die Datensätze mit jeder Auswahl",
+  "cf.choices.held_one": "{count} Datensatz",
+  "cf.choices.held_other": "{count} Datensätze",
+  "cf.choices.clears_one":
+    "Beim Speichern wird die entfernte Auswahl aus {count} Datensatz gelöscht.",
+  "cf.choices.clears_other":
+    "Beim Speichern wird die entfernte Auswahl aus {count} Datensätzen gelöscht.",
+  "cf.choices.saved_one":
+    "Auswahl von „{label}“ gespeichert. {count} Datensatz geändert.",
+  "cf.choices.saved_other":
+    "Auswahl von „{label}“ gespeichert. {count} Datensätze geändert.",
   "cf.gate.title": "Dieses Feld hinzufügen?",
   "cf.gate.body":
     "Nach der Bestätigung wird es zu einer aktiven Spalte auf jedem {object}: auf der 360-Seite, in Suche und Filtern, Listen, Export und der API. Das Hinzufügen wird im Audit-Log erfasst.",

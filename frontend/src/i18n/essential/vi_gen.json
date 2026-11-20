@@ -3868,6 +3868,7 @@
   "auto.runs.reasonCode.blocked": "một bước kiểm tra quyền hoặc một phê duyệt bị từ chối đã dừng nó",
   "cf.labelTaken": "Loại bản ghi này đã có trường tùy chỉnh mang nhãn này.",
   "cf.formSection": "Trường tùy chỉnh",
+  "cf.url.invalid": "Nhập địa chỉ web bắt đầu bằng http:// hoặc https://.",
   "settings.home": "Tổng quan",
   "settings.home.sub": "Mọi trang cài đặt có thể mở, xếp theo nhóm.",
   "settings.page.account.sub": "Cách đồng nghiệp thấy bạn, cách bạn đăng nhập, cùng ngôn ngữ và giao diện Margince dùng cho bạn.",
