@@ -9,7 +9,10 @@ import {
   openThemeFlyout,
   stubSession,
 } from "../testing/accountmenu-story";
+import { bookingProfile } from "../testing/book.testkit";
+import { meFixture } from "../testing/mefixture";
 import { PORTRAIT, WHITE_PORTRAIT } from "../testing/seatphotos";
+import { jsonResponse } from "../testing/story-utils";
 import { AccountMenu } from "./account";
 import { AccountPanel } from "./accountpanel";
 import { ThemeSubmenu } from "./accounttheme";
@@ -137,6 +140,46 @@ export const TopBarMenuPhoto: Story = {
   },
   render: () => {
     stubSession({ avatar_url: PORTRAIT });
+    return <AccountMenuFrame />;
+  },
+};
+
+/**
+ * A name with no space in it. The menu stops at its ceiling, and the name ends
+ * in an ellipsis instead of widening the menu.
+ */
+export const TopBarMenuLongName: Story = {
+  name: "Top bar menu with a long name",
+  play: async (context) => {
+    await openMenu(context);
+    const menu = await within(document.body).findByRole("menu");
+    await expect(menu.getBoundingClientRect().width).toBeLessThanOrEqual(360);
+  },
+  render: () => {
+    stubSession({ display_name: "Maximiliane".repeat(10) });
+    return <AccountMenuFrame />;
+  },
+};
+
+/** A seat that may book and has no link yet is offered to set one up. */
+export const TopBarMenuNoBookingLink: Story = {
+  name: "Top bar menu before a booking link exists",
+  play: async (context) => {
+    await openMenu(context);
+    await within(document.body).findByRole("menuitem", {
+      name: "Set up my booking link",
+    });
+  },
+  render: () => {
+    stubSession(
+      {},
+      {
+        "GET /me": () =>
+          jsonResponse(meFixture({ allow: { activity: ["read", "create"] } })),
+        "GET /scheduling/profile": () =>
+          jsonResponse({ ...bookingProfile, enabled: false, slug: "" }),
+      },
+    );
     return <AccountMenuFrame />;
   },
 };

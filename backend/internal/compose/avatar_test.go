@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/picturerefusal"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/webread"
@@ -104,6 +105,18 @@ func TestAGIFAnSVGAndANonImageAreRefusedAsAPicture(t *testing.T) {
 		if _, err := normalizeAvatar(source); !errors.Is(err, errAvatarFormat) {
 			t.Errorf("%s: %v, want the unsupported-format refusal", name, err)
 		}
+	}
+}
+
+// phonePhoto is a 4032x3024 JPEG, the 12-megapixel shape most phone cameras take.
+func phonePhoto(t *testing.T) []byte {
+	return encodedPicture(t, jpegOf, image.NewGray(image.Rect(0, 0, 4032, 3024)))
+}
+
+func TestAPicturePastThePixelBoundIsRefusedForItsPixelsNotItsFormat(t *testing.T) {
+	_, err := normalizeAvatar(phonePhoto(t))
+	if !errors.Is(err, picturerefusal.TooManyPixels) {
+		t.Fatalf("a 12-megapixel JPEG gave %v, want the too-many-pixels refusal", err)
 	}
 }
 

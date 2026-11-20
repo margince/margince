@@ -131,6 +131,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das verbleibende Mitglied ist deaktiviert. Für Anmeldung und Teamzuordnung wieder aktivieren.",
   "users.retirement.unknown":
     "Die verbleibende Arbeit vor dem Fortfahren klären.",
+  "users.retirement.blocked_one": "Kläre das, bevor du weitermachst",
+  "users.retirement.blocked_other": "Kläre diese Punkte, bevor du weitermachst",
+  "users.retirement.address": "Anmeldeadresse",
   "users.retirement.protected_email":
     "Diese Anmeldeadresse wurde bereits verwendet und kann hier nicht geändert werden.",
   "users.mergeSource": "Doppeltes Konto",
@@ -1870,6 +1873,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Erinnerung konnte nicht gesendet werden. Haben die E-Mail-Regeln von Margince sie gestoppt, steht der Grund in deinen Benachrichtigungen. Schreib dem Gast direkt.",
   "history.field.reminder_status": "Erinnerungsstatus",
   "scheduling.myLink": "Dein Buchungslink",
+  "scheduling.setUpMyLink": "Buchungslink einrichten",
   "scheduling.linkIntro":
     "Ein Link für deine E-Mail-Signatur, Nachrichten und Website. Gäste wählen einen Termin innerhalb deiner Verfügbarkeit.",
   "scheduling.copyLink": "Link kopieren",
@@ -2071,7 +2075,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.reset": "{date} UTC",
   "aiAdmin.fixed":
     "Ein festes Kontingent für das Unternehmen ersetzt die Berechnung pro Nutzerkonto.",
-  "aiAdmin.formula":
+  "aiAdmin.formula_one":
+    "Aktive Nutzende mit vollem Platz: {users} × {tokens} Token pro Nutzerkonto und Monat.",
+  "aiAdmin.formula_other":
     "Aktive Nutzende mit vollem Platz: {users} × {tokens} Tokens pro Nutzerkonto und Monat.",
   "aiAdmin.floor":
     "Ohne berechtigte Nutzende wird das Kontingent für 1 Nutzerkonto berechnet.",
@@ -2088,6 +2094,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.perUser": "Tokens pro vollem Platz und Monat",
   "aiAdmin.range": "Ganze Tokens, von 1 bis 1.000.000.000.000.",
   "aiAdmin.company": "Fester Gesamtwert für das Unternehmen (optional)",
+  "aiAdmin.companyName": "Fester Gesamtwert für das Unternehmen",
   "aiAdmin.overrideHint":
     "Leer lassen, um die Berechnung pro Nutzerkonto zu verwenden. Der Wert pro Nutzerkonto bleibt erhalten.",
   "aiAdmin.routingStale":
@@ -2098,6 +2105,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.reload": "Werte neu laden",
   "aiAdmin.failed": "Änderung nicht übernommen",
   "aiAdmin.preview": "Auswirkungen vorab ansehen",
+  "aiAdmin.fixToPreview": "Korrigiere die markierten Felder für die Vorschau.",
   "aiAdmin.previewHint":
     "Vorschau auf Basis der aktuellen Bedingungen. Beim Speichern werden Einstellungen und Nutzung erneut geprüft. Die Vorschau reserviert keine Kapazität und ruft kein Modell auf.",
   "aiAdmin.features": "KI nach Tätigkeit",
@@ -2507,6 +2515,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.company_name_promotion": "Aktualisierung des Firmennamens",
   "agentJob.contact_share": "Anfrage zum Teilen eines Kontakts",
   "agentJob.task_due_date": "Frage zum Fälligkeitsdatum",
+  "agentJob.employer_change": "Frage zum Arbeitgeberwechsel",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website-Analyse",
@@ -3769,6 +3778,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.filterLifecycleAll": "Jede Phase",
   "company.filterRelTypeAll": "Jeder Typ",
   "company.filterSizeBandAll": "Jede Mitarbeiterzahl",
+  "company.filterDormancyAll": "Jede Aktivität",
+  "company.dormancy": "Aktivität",
   "consent.confirmRecipient": "An {address} senden",
   "consent.guardFailed": "Die Kontakterlaubnis konnte nicht geladen werden.",
   "consent.permissionScope":
@@ -4875,6 +4886,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
+  "approval.kind.employer_change": "Neuen Arbeitgeber prüfen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
@@ -4942,6 +4954,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.contact_name": "Kontakt im CRM",
   "approval.field.connection_position": "Position auf LinkedIn",
   "approval.field.contact_title": "Jobtitel im CRM",
+  "approval.field.observed_on": "E-Mail vom",
+  "approval.field.signature": "Signaturzeile",
+  "approval.field.to_company": "Neuer Arbeitgeber",
+  "approval.field.from_company": "Arbeitgeber jetzt",
+  "approval.field.from_address": "Gesendet von",
+  "approval.field.sender_check": "Absenderprüfung",
+  "approval.senderCheck.authenticated":
+    "Bestanden: Die Absendedomain hat diese Adresse bestätigt",
   "approval.linkedin.useAsTitle": "Als Jobtitel übernehmen",
   "approval.linkedin.useAsEmployer": "{company} als Arbeitgeber übernehmen",
   "approval.linkedin.employerNow": "Arbeitet jetzt bei {company}",
@@ -4977,6 +4997,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.suggest.kind.stalled_deal": "Stockender Deal",
   "co.suggest.kind.no_next_step": "Kein nächster Schritt",
   "co.suggest.kind.lifecycle_conflict": "Widerspruch im Lebenszyklus",
+  "co.suggest.kind.gone_dormant": "Ruhig geworden",
   "co.suggest.kind.commitment_unmet": "Zusage nicht eingehalten",
   "co.suggest.kind.question_unanswered": "Frage unbeantwortet",
   "co.suggest.kind.risk_raised": "Risiko angesprochen",
@@ -9653,7 +9674,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureReviewUseLatest": "Gespeicherte Version verwenden",
   "settings.signatureReviewKeepDraft": "Meinen Entwurf behalten",
   "settings.signatureReviewLoading": "Gespeicherte Signatur wird geladen…",
-  "settings.signatureReviewSaved": "Signaturprüfung gespeichert",
   "settings.signatureReviewMember": "dem Mitglied",
   "settings.signatureChoicePlain":
     "Deine eigene Signatur steht unter jeder E-Mail, die du sendest. Ohne sie endet die E-Mail mit einem Gruß und deinem Namen.",
@@ -9674,7 +9694,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureSub":
     "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",
   "settings.signatureLabel": "Grußformel",
-  "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
+  "settings.signaturePlaceholder": "Dein Name\nUnternehmen · Telefon",
   "settings.signatureHint":
     "Nur Text. Ohne Grußformel enden E-Mails mit einem Gruß und deinem Namen. Die KI fügt nie eine Grußformel hinzu.",
   "settings.signatureSaving": "Wird gespeichert…",
@@ -9693,13 +9713,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "delivery.none": "Nicht per E-Mail",
   "delivery.hourLabel": "Uhrzeit für Zusammenfassungen",
   "delivery.scheduleHelp":
-    "Eine persönliche Uhrzeit nutzt deine Arbeitstage und Zeitzone mit einem Versandfenster von drei Stunden. Der bisherige Plan bleibt bis zu deiner Änderung.",
+    "Wann Zusammenfassungen wie der Morgenbericht gesendet werden: innerhalb von drei Stunden nach dieser Uhrzeit, an deinen Arbeitstagen und in deiner Zeitzone. Ein früher festgelegter Plan bleibt, bis du hier eine Uhrzeit wählst.",
   "delivery.legacyTime": "Bisheriger Morgenplan (Berichtszeitzone):",
   "delivery.workingStart": "Beginn meiner Arbeitszeit",
   "delivery.weekdayLabel": "Tag des Wochenrückblicks",
   "delivery.weekdayHelp":
-    "Ein freier Tag wird auf den nächsten Arbeitstag verschoben. Die Berichtswoche bleibt fest; spätere Arbeitstage erlauben eine Nachholung.",
+    "Der Tag, an dem der Wochenrückblick gesendet wird. Arbeitest du an dem Tag nicht, kommt er an deinem nächsten Arbeitstag.",
   "delivery.quietLabel": "Ruhige Morgen",
+  "delivery.quietHelp":
+    "An einem Morgen, an dem nichts zu erledigen ist, kommt keine E-Mail, außer du wählst eine Statusübersicht.",
   "delivery.onlyUseful": "Nur mit nützlichem Inhalt",
   "delivery.quietAlso": "Auch eine Statusübersicht an ruhigen Morgen",
   "delivery.combineLabel": "Routine-E-Mails zusammenfassen",
@@ -9708,6 +9730,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "delivery.separate": "Separate Routine-E-Mails",
   "delivery.combined": "Verfügbare Inhalte zusammenfassen",
   "delivery.scopeLabel": "Umfang der Zusammenfassungen",
+  "delivery.scopeHelp":
+    "Wessen Arbeit die Zusammenfassungen zeigen: deine eigene, die eines Teams, das du prüfst, oder beides.",
   "delivery.scope.personal": "Meine Arbeit",
   "delivery.scope.team": "Gewähltes Team",
   "delivery.scope.combined": "Meine Arbeit und gewähltes Team",
@@ -10192,6 +10216,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentClients.enable": "Aktivieren",
   "agentClients.disable": "Deaktivieren",
   "agentClients.disabled": "Deaktiviert",
+  "agentClients.active": "Aktiv",
   "agentClients.neverUsed": "Nie",
   "agentClients.usersFolded_one": "Nutzende: {count}",
   "agentClients.usersFolded_other": "Nutzende: {count}",
@@ -10236,6 +10261,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verwende https oder http auf localhost oder 127.0.0.1, ohne Fragment.",
   "agentClients.register.redirectCount":
     "Füge 1 bis 10 Weiterleitungs-URIs hinzu.",
+  "agentClients.register.fixRedirect":
+    "Korrigiere oder entferne die markierte Weiterleitungs-URI.",
   "agentClients.result.title": "Client registriert",
   "agentClients.result.secretOnceTitle": "Kopiere das Secret jetzt",
   "agentClients.result.secretOnceBody":
@@ -12130,13 +12157,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "retention.create": "Regel erstellen",
   "retention.scope": "Gilt für",
   "retention.window": "Frist in Tagen",
-  "retention.windowInvalid": "Gib eine ganze Zahl von Tagen ein, mindestens 1.",
   "retention.action": "Aktion",
   "retention.actionHint":
     "Archivieren behält den Datensatz. Anonymisieren und Löschen vernichten Daten und werden im Nur-Behalten-Modus zurückgehalten.",
   "retention.lawfulBasis": "Rechtsgrundlage",
   "retention.lawfulBasisHint":
     "Optional. Die Rechtsgrundlage nach Art. 6, auf die sich diese Frist stützt, für Personen, die die Regel prüfen.",
+  "retention.basis.storage_limitation":
+    "Speicherbegrenzung, Art. 5 Abs. 1 lit. e DSGVO",
   "retention.enabled": "Aktiv",
   "retention.save": "Regel speichern",
   "retention.delete": "Regel löschen",
@@ -13799,6 +13827,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.emailPlaceholder": "name@example.com",
   "auth.password": "Passwort",
   "auth.passwordPlaceholder": "Passwort",
+  "auth.emailMissing": "Gib deine E-Mail-Adresse ein.",
+  "auth.emailMalformed":
+    "Gib eine vollständige E-Mail-Adresse ein, etwa name@example.com.",
+  "auth.passwordMissing": "Gib dein Passwort ein.",
   "auth.passwordHint": "12 bis 256 Zeichen",
   "auth.showPassword": "Passwort anzeigen",
   "auth.hidePassword": "Passwort ausblenden",
@@ -13814,15 +13846,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.failed": "Anmeldung fehlgeschlagen",
   "auth.errCredentials":
     "Anmeldung fehlgeschlagen. Prüfe E-Mail-Adresse und Passwort und versuche es erneut.",
-  "auth.errRateLimited": "Zu viele Anmeldeversuche. Versuche es später erneut.",
+  "auth.errRateLimited":
+    "Zu viele Anmeldeversuche. Warte eine Minute und versuche es dann erneut.",
   "auth.errUnreachable":
     "Margince war nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
   "auth.retry": "Erneut versuchen",
   "auth.noticeSignedOut": "Du wurdest abgemeldet.",
   "auth.noticeSessionExpired":
     "Sitzung abgelaufen. Melde dich erneut an, um fortzufahren.",
+  "auth.noticeResetIncomplete":
+    "Dieser Link zum Festlegen des Passworts ist unvollständig oder wurde schon geöffnet. Frage nach einem neuen Link.",
   "auth.noticeOidcFailed":
-    "Die Anmeldung mit Google ist fehlgeschlagen. Wenn du eingeladen wurdest, öffne den Link in der Einladungs-E-Mail, um die Einrichtung deines Nutzerkontos abzuschließen.",
+    "Die Anmeldung über den Anbieter wurde nicht abgeschlossen. Wenn du eingeladen wurdest, öffne den Link in der Einladungs-E-Mail, um die Einrichtung deines Nutzerkontos abzuschließen.",
   "auth.connectionTitle": "Margince war nicht erreichbar",
   "auth.connectionBody":
     "Prüfe die Verbindung und versuche es erneut. Wenn das Problem bestehen bleibt, wird der Server möglicherweise gerade neu gestartet.",
@@ -13862,6 +13897,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "password.submit": "Neues Passwort speichern",
   "password.doneTitle": "Passwort geändert",
   "password.changeFailedTitle": "Passwort wurde nicht geändert",
+  "password.currentWrong":
+    "Das aktuelle Passwort stimmt nicht. Prüfe es und gib es erneut ein.",
+  "password.locked":
+    "Das Konto ist nach zu vielen falschen Passwörtern gesperrt. Warte 15 Minuten und versuche es dann erneut.",
+  "password.unchanged":
+    "Das neue Passwort ist dasselbe wie das aktuelle. Wähle ein anderes Passwort.",
+  "password.email":
+    "Das neue Passwort ist deine E-Mail-Adresse. Wähle ein anderes Passwort.",
+  "password.length": "Verwende ein neues Passwort mit 12 bis 256 Zeichen.",
   "password.errorGeneric":
     "Es wurde keine Ursache gemeldet. Bitte versuche es erneut.",
   "mfa.title": "Zweistufige Anmeldung",
@@ -13964,6 +14008,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.errorNetwork":
     "Margince war nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
   "auth.forgotLink": "Passwort vergessen?",
+  "auth.forgotAskAdmin":
+    "Passwort vergessen? Frage einen Admin nach einem Link zum Festlegen des Passworts.",
   "auth.forgotTitle": "Passwort zurücksetzen",
   // "gibt", nicht "existiert" (Amtsdeutsch), und das Feld will eine Adresse, keine
   // E-Mail — die E-Mail ist die Nachricht. Was unterwegs ist, ist ebenfalls die
@@ -13975,7 +14021,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.forgotSentBody":
     "Wenn es zu dieser Adresse ein Nutzerkonto gibt, wurde ein Link zum Zurücksetzen gesendet. Der Link läuft nach 1 Stunde ab.",
   "auth.resetTitle": "Neues Passwort wählen",
-  "auth.resetSub": "Der Link ist gültig. Gib ein neues Passwort ein.",
+  "auth.resetSub": "Gib ein neues Passwort ein.",
   "auth.newPassword": "Neues Passwort",
   "auth.setNewPassword": "Neues Passwort festlegen",
   // "bereits verwendet", nicht "verbraucht": ein Link wird verwendet, nicht
@@ -16445,6 +16491,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companyMarkUnsupported":
     "Nimm eine PNG-, JPEG-, GIF-, WebP-, ICO- oder SVG-Datei.",
   "settings.companyMarkTooLarge": "Nimm eine kleinere Datei.",
+  "settings.companyMarkTooManyPixels":
+    "Nimm ein Bild mit höchstens 8 Megapixeln.",
   "settings.companyMarkSvgNotDrawable":
     "Diese SVG-Datei enthält Teile, die sich hier nicht darstellen lassen, oder sie zeigt nichts. Exportiere das Logo in deinem Grafikprogramm als PNG-Datei.",
   "settings.companyMarkSvgText":
@@ -17030,7 +17078,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signInMethods.title": "Anmeldemethoden",
   "signInMethods.saveFailed": "Änderung nicht gespeichert",
   "signInMethods.sub":
-    "Admins können einen Anbieter deaktivieren, aber keinen hinzufügen. Ein Anbieter erscheint auf der Anmeldeseite, sobald seine App unten eingerichtet ist.",
+    "Admins können einen Anbieter deaktivieren, aber keinen hinzufügen. Ein Anbieter erscheint auf der Anmeldeseite, sobald seine App unter {apps} eingerichtet ist.",
   "signInMethods.password": "E-Mail und Passwort",
   "signInMethods.passwordAlways":
     "Immer verfügbar. Alle Nutzenden können sich so anmelden, daher lassen sich die anderen Methoden gefahrlos deaktivieren.",
@@ -17207,6 +17255,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signInMethods.offScreen": "Nicht auf der Anmeldeseite",
   "signInMethods.offScreenReason.noApp":
     "Die {vendor}-App ist nicht eingerichtet.",
+  "signInMethods.setUpApp": "{vendor}-App einrichten",
   "signInMethods.offScreenReason.noDirectory":
     "Die Microsoft-App ist nicht auf das Verzeichnis deines Unternehmens beschränkt.",
   "signInMethods.offScreenReason.unusable":
@@ -17550,6 +17599,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bild nicht hochgeladen. Nimm eine PNG-, JPEG- oder WebP-Datei.",
   "account.pictureTooLarge":
     "Bild nicht hochgeladen. Nimm eine Datei bis 5 MB.",
+  "account.pictureTooManyPixels":
+    "Bild nicht hochgeladen. Nimm ein Bild mit höchstens 8 Megapixeln.",
   "account.pictureNoStorage":
     "Diese Installation hat keinen Dateispeicher für Bilder. Bitte wende dich an die Systemadministration.",
   "account.pictureUploadFailed":
@@ -18656,7 +18707,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ausgehende Abonnements, die für ausgewählte Ereignisse signierte HTTP-POSTs erhalten.",
   "webhooks.new": "Neues Abonnement",
   "webhooks.notConfigured":
-    "Webhooks sind in dieser Installation erst aktiv, wenn ein Signaturschlüssel konfiguriert ist.",
+    "Webhooks brauchen einen Signaturschlüssel (webhook_key), den das Team setzt, das deinen Margince-Server betreibt. Bis dahin wird nichts gesendet.",
   "webhooks.state.active": "Aktiv",
   "webhooks.state.paused": "Pausiert",
   "webhooks.updated": "Aktualisiert am {date}",
@@ -23587,18 +23638,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.verdict.closePassed":
     "Das erwartete Abschlussdatum ({date}) ist verstrichen.",
   "deal.verdict.notStarted": "Nicht begonnen",
-  "co.verdict.noContact": "Noch kein Kontakt",
-  "co.verdict.addedOn":
-    "Das Unternehmen wurde am {date} erstellt. Bisher ist kein Austausch erfasst.",
   "co.verdict.active": "Aktiv",
   "co.verdict.lastExchange":
-    "Der letzte Austausch mit diesem Unternehmen war am {date}.",
-  "co.verdict.goingQuiet": "Wird ruhig",
-  "co.verdict.quietSince":
-    "Seit {date} gab es mit niemandem hier einen Austausch.",
+    "Die letzte Aktivität mit diesem Unternehmen war am {date}.",
+  "co.verdict.cooling": "Kühlt ab",
   "co.verdict.dormant": "Ruhend",
-  "co.verdict.dormantSince":
-    "Es gibt keinen offenen Deal und seit {date} keinen Austausch.",
+  "co.verdict.stale": "Eingeschlafen",
+  "co.verdict.silentFor":
+    "Mit diesem Unternehmen ist seit {days} Tagen nichts passiert, seit dem {date}. Ein Unternehmen kühlt ab Tag {cooling} ab, ruht ab Tag {dormant} und gilt ab Tag {stale} als eingeschlafen.",
+  "co.verdict.noActivity":
+    "Keine Aktivität erfasst, seit das Unternehmen am {date} angelegt wurde.",
   "project.verdict.startsOn": "Das Projekt beginnt am {date}.",
   "project.verdict.overrunning": "Überzogen",
   "project.verdict.endPassed": "Das geplante Ende ({date}) ist verstrichen.",

@@ -30,7 +30,7 @@ type Counterparty struct {
 // PayloadOwnedKinds is the census of kinds whose persisted payload names their
 // responsible member. Consumers derive their staging/read parity checks here.
 func PayloadOwnedKinds() []string {
-	return []string{KindCounterparty, KindCommitmentTask, KindContactShare, KindOwnershipTransfer, KindTaskDueDate, KindLegalReviewRequest}
+	return []string{KindCounterparty, KindCommitmentTask, KindContactShare, KindOwnershipTransfer, KindTaskDueDate, KindLegalReviewRequest, KindEmployerChange}
 }
 
 // PayloadOwned distinguishes payload ownership from on_behalf_of ownership.

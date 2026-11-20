@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
+import { useExitAsking } from "../../components/unsaved";
 import {
   Avatar,
   Badge,
@@ -46,7 +47,6 @@ import {
   setThemeChoice,
   THEME_CHOICES,
   THEME_LABEL_KEYS,
-  type ThemeChoice,
   useThemeChoice,
 } from "../../lib/theme";
 import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
@@ -82,7 +82,7 @@ export function AccountSettings() {
 function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
   const query = useMe();
-  const names = useAccountNames(toast);
+  const names = useAccountNames();
   return (
     <Panel title={t("account.profileCard")}>
       <PanelBody>
@@ -132,6 +132,7 @@ function SignInPanel() {
   const t = useT();
   const me = useMe();
   const logout = useLogout();
+  const askFirst = useExitAsking();
   const email = me.data?.user.email;
   return (
     <Panel title={t("account.signInCard")}>
@@ -147,7 +148,7 @@ function SignInPanel() {
             <Button
               variant="ghost"
               disabled={logout.isPending}
-              onClick={() => logout.mutate()}
+              onClick={() => askFirst(() => logout.mutate())}
             >
               {t("auth.signOut")}
             </Button>
@@ -353,22 +354,12 @@ function TimeZoneSettingControl({
 /**
  * The appearance choice, here as well as in the account menu.
  *
- * Both read `useThemeChoice` and write `setThemeChoice`. This row holds its pick
- * as a draft and paints it only on Save, so the menu never shows an unsaved theme.
+ * Both read `useThemeChoice` and write `setThemeChoice` on the click, so the two
+ * never show different themes and this row stays out of the page's save bar.
  */
 function AppearanceSettingRow() {
   const t = useT();
   const choice = useThemeChoice();
-  const [draft, setDraft] = useState<ThemeChoice | null>(null);
-  const shown = draft ?? choice;
-  useSaveDraft({
-    dirty: shown !== choice,
-    save: async () => {
-      setThemeChoice(shown);
-      setDraft(null);
-    },
-    discard: () => setDraft(null),
-  });
   const labels = {
     light: t(THEME_LABEL_KEYS.light),
     dark: t(THEME_LABEL_KEYS.dark),
@@ -382,9 +373,9 @@ function AppearanceSettingRow() {
         <SegmentedControl
           label={t("settings.appearance")}
           options={THEME_CHOICES}
-          value={shown}
+          value={choice}
           labels={labels}
-          onChange={setDraft}
+          onChange={setThemeChoice}
         />
       }
     />

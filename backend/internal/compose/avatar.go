@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/picturerefusal"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -42,6 +43,10 @@ var AvatarMediaTypes = map[string]string{imagenorm.ContentType: "png", "image/jp
 // AvatarFileMaxBytes is the largest picture file an upload may carry, the same as a mark's.
 // The client offers no larger file; the same gate holds its copy.
 const AvatarFileMaxBytes = imagenorm.MaxMarkBytes
+
+// AvatarMaxPixels is the most pixels a picture may have. The client shrinks a larger one
+// before it sends it, and the same gate holds its copy.
+const AvatarMaxPixels = imagenorm.MaxSourcePixels
 
 // avatarMultipartFraming is what a browser's form adds around the file: boundary lines and
 // part headers. Any filename a browser sends keeps it far under this.
@@ -93,7 +98,10 @@ func normalizeAvatar(source []byte) ([]byte, error) {
 	}
 	img, err := imagenorm.Decode(source)
 	if errors.Is(err, imagenorm.ErrDecodeBusy) {
-		return nil, errPicturesBusy
+		return nil, picturerefusal.Busy
+	}
+	if errors.Is(err, imagenorm.ErrTooManyPixels) {
+		return nil, picturerefusal.TooManyPixels
 	}
 	if err != nil {
 		return nil, errAvatarFormat

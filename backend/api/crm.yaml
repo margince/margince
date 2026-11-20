@@ -3634,6 +3634,13 @@ paths:
           in: query
           schema: { $ref: '#/components/schemas/PartnerStageMeaning' }
           description: Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise).
+        - name: dormancy
+          in: query
+          schema: { $ref: '#/components/schemas/DormancyRung' }
+          description: |
+            Companies on this rung of the dormancy ladder today, read from the stored
+            `last_activity_at` by the same rule the company page's `state_strip.dormancy` uses.
+            `stale` includes companies with no activity at all.
         - name: source_system
           in: query
           schema: { type: string, maxLength: 128 }
@@ -19775,7 +19782,9 @@ paths:
         `svg_text_not_outlined`, because the rasterizer draws shapes and no glyphs, so
         the words would be lost. An SVG the rasterizer cannot draw faithfully (for example
         embedded images, filters, masks or a blank result) is refused as 422 with code
-        `svg_not_drawable`.
+        `svg_not_drawable`. A raster picture past 8,388,608 pixels is refused as 422 with code
+        `too_many_pixels`: scale it down and send it again. An SVG is drawn at a fixed size,
+        so its pixel count is not checked.
 
         The upload is a user's write, or their agent's, and takes precedence: while it stands, a website read
         resolving a different mark leaves it alone. `DELETE` gives the field back — the
@@ -19868,7 +19877,9 @@ paths:
         this origin's own bytes, and a file that is not one of those types is refused as
         415. An SVG that draws its words as text is refused as 422 with code
         `svg_text_not_outlined`, and one with parts it cannot draw as 422 with code
-        `svg_not_drawable`.
+        `svg_not_drawable`. A raster picture past 8,388,608 pixels is refused as 422 with code
+        `too_many_pixels`: scale it down and send it again. An SVG is drawn at a fixed size,
+        so its pixel count is not checked.
 
         `DELETE` takes the icon off. The two slots are independent: a company with only a
         wide mark keeps drawing that mark in the collapsed rail, which is what every
@@ -20092,7 +20103,9 @@ paths:
         Multipart upload, decoded and re-encoded exactly as the company logo is: PNG, JPEG,
         GIF, WebP, ICO and SVG are accepted, and anything else is refused as 415. An SVG that
         draws its words as text is refused as 422 `svg_text_not_outlined`, and one with parts
-        the server cannot draw as 422 `svg_not_drawable`.
+        the server cannot draw as 422 `svg_not_drawable`. A raster picture past 8,388,608
+        pixels is refused as 422 with code `too_many_pixels`: scale it down and send it
+        again. An SVG is drawn at a fixed size, so its pixel count is not checked.
 
         The default entity wears the company logo and is refused as 409
         `legal_entity_field_on_company_form`: upload it on the company form instead.
@@ -36802,8 +36815,9 @@ paths:
         request is refused as 413. PNG, JPEG and WebP are accepted; anything else, SVG and
         GIF included, is refused as 415. The image is cropped to a centred square and
         re-encoded as this server's own PNG of at most 512px, so what `avatar_url` serves
-        is never the uploaded bytes. 503 with `Retry-After` when the server is reading too
-        many pictures at once; the same file may be sent again.
+        is never the uploaded bytes. A picture past 8,388,608 pixels is refused as 422 with
+        code `too_many_pixels`: scale it down and send it again. 503 with `Retry-After` when
+        the server is reading too many pictures at once; the same file may be sent again.
 
         Which picture a seat shows: an uploaded one, else the picture of the Google
         account the member signs in with, else no picture and the client draws initials.
@@ -51177,6 +51191,39 @@ components:
             conversations, still owed and not yet a task. Null when the caller cannot read
             contacts and activities.
 
+    DormancyRung:
+      type: string
+      enum: [active, cooling, dormant, stale]
+      x-extensible-enum: true
+      description: |
+        How cold an account has gone, counted in calendar days of the installation zone since its
+        stored `last_activity_at`. `active` before the first day of the ladder, `cooling` from it,
+        `dormant` from the second and `stale` from the third. The days are the installation's
+        `contacts.dormancy_days` setting, 30, 60 and 90 by default. An account with no activity at
+        all is `stale`.
+    DormancyReading:
+      type: object
+      description: Where one account stands on the dormancy ladder, with the facts that put it there.
+      required: [rung, silent_days, no_activity, ladder_days]
+      properties:
+        rung: { $ref: '#/components/schemas/DormancyRung' }
+        last_activity_at:
+          type: [string, 'null']
+          format: date-time
+          description: The account's stored last activity the rung is counted from. Null when it has none.
+        silent_days:
+          type: integer
+          minimum: 0
+          description: Calendar days from `last_activity_at` to today in the installation zone. 0 when there is no activity.
+        no_activity:
+          type: boolean
+          description: True when the account has no activity recorded at all, which is why it reads as `stale`.
+        ladder_days:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: { type: integer }
+          description: The silent days on which `cooling`, `dormant` and `stale` begin, each from 1 to 3650 and in rising order, so a reader can see the rule.
     Company360StateStrip:
       type: object
       description: |
@@ -51197,6 +51244,9 @@ components:
             relationship_types:
               type: array
               items: { type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other], x-extensible-enum: true }
+        dormancy:
+          allOf: [{ $ref: '#/components/schemas/DormancyReading' }]
+          description: How cold the account has gone, read from its stored `last_activity_at`.
         engagement:
           type: [object, 'null']
           description: Null when the caller has no activity grant — not assessed, as distinct from never contacted.
@@ -51210,7 +51260,8 @@ components:
                 PO-F-4, evaluated in the order the spec fixes so the states stay mutually
                 exclusive. `waiting_on_them` shares its threshold and its inputs with the
                 `no_reply` suggestion by construction, so the strip and the nudge below it cannot
-                disagree about whether an account is waiting.
+                disagree about whether an account is waiting. `dormant` is the dormancy ladder's
+                `dormant` or `stale` rung, so the strip and `dormancy` cannot disagree either.
             last_inbound_at: { type: [string, 'null'], format: date-time }
             last_outbound_at: { type: [string, 'null'], format: date-time }
             last_inbound_precision:
@@ -51705,11 +51756,11 @@ components:
         kind:
           type: string
           enum:
-            [no_reply, stalled_deal, no_next_step, lifecycle_conflict,
+            [no_reply, stalled_deal, no_next_step, lifecycle_conflict, gone_dormant,
              commitment_unmet, question_unanswered, risk_raised, need_raised]
           x-extensible-enum: true
           description: |
-            The four RULE kinds, computed from the account's records with no model:
+            The five RULE kinds, computed from the account's records with no model:
 
             `no_reply` — an outbound message on a thread nobody answered.
             `stalled_deal` — an open deal idle past the 60-day stall window.
@@ -51718,6 +51769,11 @@ components:
             filed under: a `contract_ended` signal stands while the record still reads as a live
             customer or an open opportunity. The page states the conflict rather than resolving
             it, because which of the two is wrong is a judgment only the reader can make.
+            `gone_dormant` — the account is on the `dormant` or `stale` rung of the dormancy ladder
+            and has an owner. Its `add_task` action prepares a follow-up task for that owner. One
+            silent stretch raises it once: its fingerprint is the stored `last_activity_at`, so a
+            dismissal holds until new activity starts a new stretch. An installation switches it
+            off with `contacts.dormancy_follow_up_enabled`.
 
             The four READ kinds, which only the account scan raises — each from words the
             model read in the account's own exchanges, quoted on the citation so the reader
@@ -75538,8 +75594,8 @@ components:
         partner_fit_score: { type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.' }
         partner_fit_score_computed: { type: [integer, 'null'], minimum: 0, maximum: 100, readOnly: true, description: 'Retained machine-computed partner-fit value while a Commercial Judgement override is in force.' }
         partner_fit_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.' }
-        relationship_health: { type: [string, 'null'], description: 'Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.' }
-        last_contact_at: { type: [string, 'null'], format: date-time }
+        relationship_health: { type: [string, 'null'], deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
+        last_contact_at: { type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
         next_step: { type: [string, 'null'], deprecated: true, description: 'Deprecated as stored text: a value sent here is written as a task on the partner''s company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.' }
         next_step_due_at: { type: [string, 'null'], format: date, deprecated: true, description: 'Deprecated as stored text: the day the next step''s task is due. Sent without `next_step` it is refused.' }
         served_segments: { type: [array, 'null'], items: { type: string } }

@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { BesidePage } from "../../components/unsaved";
 import { lazy } from "../../i18n/lazy";
 import {
   type ComposeDock,
@@ -101,17 +102,19 @@ export function ComposeDockProvider({
     <ComposeDockContext.Provider value={dock}>
       {children}
       {docked && (
-        <Suspense fallback={null}>
-          <ComposeWindow
-            key={docked.id}
-            {...docked.props}
-            open
-            onClose={() => {
-              dock.hide(docked.id);
-              docked.props.onClose();
-            }}
-          />
-        </Suspense>
+        <BesidePage>
+          <Suspense fallback={null}>
+            <ComposeWindow
+              key={docked.id}
+              {...docked.props}
+              open
+              onClose={() => {
+                dock.hide(docked.id);
+                docked.props.onClose();
+              }}
+            />
+          </Suspense>
+        </BesidePage>
       )}
     </ComposeDockContext.Provider>
   );

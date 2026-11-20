@@ -15,6 +15,10 @@ var suggestionWords = struct {
 	OriginStalledDeal   langcopy.Phrase
 	OriginOpenDeal      langcopy.Phrase
 	OriginContractEnded langcopy.Phrase
+	OriginLastActivity  langcopy.Phrase
+	DormantReason       langcopy.Phrase
+	DormantAccount      langcopy.Phrase
+	DormantNamedAccount langcopy.Phrase
 	NoReplyReason       langcopy.Phrase
 	NoReplyTitle        langcopy.Phrase
 	StalledReason       langcopy.Phrase
@@ -38,6 +42,10 @@ var suggestionWords = struct {
 	OriginStalledDeal:   langcopy.Phrase{En: "Open deal, last worked", De: "Offener Deal, zuletzt bearbeitet", Vi: "Giao dịch đang mở, lần xử lý gần nhất"},
 	OriginOpenDeal:      langcopy.Phrase{En: "Open deal", De: "Offener Deal", Vi: "Giao dịch đang mở"},
 	OriginContractEnded: langcopy.Phrase{En: "Read from their correspondence", De: "Aus ihrer Korrespondenz", Vi: "Trích từ thư trao đổi của họ"},
+	OriginLastActivity:  langcopy.Phrase{En: "Last activity with this account", De: "Letzte Aktivität mit diesem Unternehmen", Vi: "Hoạt động gần nhất với công ty này"},
+	DormantReason:       langcopy.Phrase{En: "Nothing has happened with this account for %d days.", De: "Mit diesem Unternehmen ist seit %d Tagen nichts passiert.", Vi: "Không có hoạt động nào với công ty này trong %d ngày."},
+	DormantAccount:      langcopy.Phrase{En: "Get back in touch with this account", De: "Wieder Kontakt mit diesem Unternehmen aufnehmen", Vi: "Liên hệ lại với công ty này"},
+	DormantNamedAccount: langcopy.Phrase{En: "Get back in touch with %s", De: "Wieder Kontakt mit %s aufnehmen", Vi: "Liên hệ lại với %s"},
 	NoReplyReason:       langcopy.Phrase{En: "You reached out %d days ago and nobody has come back.", De: "Ihr letzter Kontakt liegt %d Tage zurück, ohne Antwort.", Vi: "Bạn đã liên hệ cách đây %d ngày nhưng chưa nhận được phản hồi."},
 	NoReplyTitle:        langcopy.Phrase{En: "Follow up: no reply in %d days", De: "Nachfassen: seit %d Tagen keine Antwort", Vi: "Theo dõi: chưa có phản hồi sau %d ngày"},
 	StalledReason:       langcopy.Phrase{En: "%q has had no activity long enough to count as stalled.", De: "Bei %q gab es so lange keine Aktivität, dass der Deal als festgefahren gilt.", Vi: "%q không có hoạt động trong thời gian đủ lâu để được coi là đình trệ."},
