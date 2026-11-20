@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4543 |
+| Columns | 4545 |
 | Foreign keys | 634 |
 | Owning areas | 40 |
 
@@ -146,7 +146,7 @@ erDiagram
 | [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
-| [`activity_link`](activities.md#activity_link) | activities | 9 | 0 |
+| [`activity_link`](activities.md#activity_link) | activities | 11 | 0 |
 | [`activity_link_suggestion`](activities.md#activity_link_suggestion) | activities | 14 | 0 |
 | [`activity_mail_reference`](activities.md#activity_mail_reference) | activities | 3 | 0 |
 | [`activity_meeting_attendee_repair`](compose.md#activity_meeting_attendee_repair) | compose | 4 | 0 |

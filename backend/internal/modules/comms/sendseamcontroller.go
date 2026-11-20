@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"html"
 	"log/slog"
-	"net/url"
 	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -143,8 +143,7 @@ func (d *Dispatcher) substituteLink(ctx context.Context, del Delivery) (controll
 	if err != nil {
 		return controllerBodies{}, fmt.Errorf("comms: reading the sealed action: %w", err)
 	}
-	parsed, err := url.Parse(link)
-	if err != nil || parsed.Host == "" || parsed.User != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+	if !values.FollowableWebAddress(link) {
 		return controllerBodies{}, ErrTemplateShape
 	}
 	if placeholderCount(bodies.text) != 1 || (bodies.html != "" && placeholderCount(bodies.html) != 1) {

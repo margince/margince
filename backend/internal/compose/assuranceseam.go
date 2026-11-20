@@ -265,14 +265,15 @@ func scanAssuranceSubject(
 // Our own mail, a task, a field edit and a machine's mail never count. Nor do a
 // message not every member may read, or a refusal. An unjudged message counts,
 // because every message from before the verdict existed is unjudged.
-func customerProgressSQL(alias, asOf string) string {
-	return "(" + visibleToAllSQL(alias) + " AND " + customerProgressAnyAudienceSQL(alias, asOf) + ")"
+func customerProgressSQL(alias, deal, asOf string) string {
+	return "(" + visibleToAllSQL(alias) + " AND " + customerProgressAnyAudienceSQL(alias, relstrength.DealEvidenceSQL(alias, deal), asOf) + ")"
 }
 
 // customerProgressAnyAudienceSQL is customerProgressSQL over every message,
-// those only their participants may read included. Only its date may be used.
-func customerProgressAnyAudienceSQL(alias, asOf string) string {
-	return "(" + relstrength.DealEvidenceSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias, asOf) +
+// those only their participants may read included, under the evidence clause
+// given. Only its date may be used.
+func customerProgressAnyAudienceSQL(alias, evidence, asOf string) string {
+	return "(" + evidence + " AND " + relstrength.DirectionClockSQL(alias, asOf) +
 		" AND ((" + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
 		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
@@ -281,20 +282,20 @@ func customerProgressAnyAudienceSQL(alias, asOf string) string {
 }
 
 // dealMeetingAheadSQL is a meeting still to come that may defer or carry the
-// deal. A personal meeting is neither.
-func dealMeetingAheadSQL(alias, asOf string) string {
-	return "(" + relstrength.MeetingAheadSQL(alias, asOf) + " AND " + relstrength.DealEvidenceSQL(alias) + ")"
+// deal, under the evidence clause given. A personal meeting is neither.
+func dealMeetingAheadSQL(alias, evidence, asOf string) string {
+	return "(" + relstrength.MeetingAheadSQL(alias, asOf) + " AND " + evidence + ")"
 }
 
 // customerRefusalSQL admits a message a contact on the deal wrote that was
 // judged a refusal.
-func customerRefusalSQL(alias, asOf string) string {
-	return "(" + visibleToAllSQL(alias) + " AND " + customerRefusalAnyAudienceSQL(alias, asOf) + ")"
+func customerRefusalSQL(alias, deal, asOf string) string {
+	return "(" + visibleToAllSQL(alias) + " AND " + customerRefusalAnyAudienceSQL(alias, deal, asOf) + ")"
 }
 
 // customerRefusalAnyAudienceSQL is customerRefusalSQL over every message.
-func customerRefusalAnyAudienceSQL(alias, asOf string) string {
-	return "(" + relstrength.DealEvidenceSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias, asOf) + " AND " + customerWroteSQL(alias) + " AND " +
+func customerRefusalAnyAudienceSQL(alias, deal, asOf string) string {
+	return "(" + relstrength.DealEvidenceSQL(alias, deal) + " AND " + relstrength.DirectionClockSQL(alias, asOf) + " AND " + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict = '" + activities.ReplyVerdictNegative + "' AND " + occurredday.BegunSQL(alias, asOf) + ")"
 }
 
@@ -318,7 +319,7 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 		 ORDER BY r.created_at DESC, r.id DESC
 		 LIMIT 1)`,
 		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
-		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", asOf),
+		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", "pl.deal_id", asOf),
 		occurredday.BegunSQL("pa", "r.created_at"))
 }
 
@@ -329,8 +330,8 @@ func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, a
 	humanTask := activities.CurrentTaskClauseToLineOnly("a", now, identities, arg) +
 		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
 	return fmt.Sprintf(assuranceSubjectsSQL, humanTask,
-		customerProgressSQL("a", "$2"), dealMeetingAheadSQL("a", "$2"),
-		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
+		customerProgressSQL("a", "al.deal_id", "$2"), dealMeetingAheadSQL("a", relstrength.DealEvidenceSQL("a", "al.deal_id"), "$2"),
+		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "al.deal_id", "$2"), visibleToAllSQL("a"),
 		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
 		// A date an import moved is the source system's history, not a push.
 		storekit.AuditNotFromAnImport("au"), dealMailboxesSQL("d"))

@@ -17,6 +17,7 @@ import { SetupSteps } from "../../components/setup-steps";
 import { LocaleProvider } from "../../i18n";
 import { settingsReach } from "../../lib/settingscatalog";
 import { useSetupChecklist } from "../../lib/setup-checklist";
+import { STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { meFixture } from "../../testing/mefixture";
 import { candidateVersion } from "../../testing/voice-candidate";
 import { VoiceDnaCard } from "./voice-dna";
@@ -121,7 +122,8 @@ function activate(state: Server): Server {
 
 function answer(request: Request): Response {
   const path = new URL(request.url).pathname.replace(/^\/v1/, "");
-  if (path === "/me") return json(meFixture({ allow: VOICE_EDITOR }));
+  if (path === "/me")
+    return json(meFixture({ allow: VOICE_EDITOR, personalChoicesMade: true }));
   if (path === "/connectors") {
     return json({
       data: [
@@ -225,6 +227,14 @@ async function setupPanel() {
 }
 
 beforeEach(() => {
+  // The three personal steps are answered, so completion turns on the voice.
+  writeStored(
+    {
+      family: STORAGE_KEYS.setupPermissionsSeen,
+      member: meFixture({}).user.id,
+    },
+    "1",
+  );
   noProfile = false;
   applyStatus = 200;
   globalThis.location.hash = "#/settings/voice";
@@ -235,6 +245,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  localStorage.clear();
   cleanup();
   vi.unstubAllGlobals();
 });

@@ -114,9 +114,20 @@ func TestEveryDraftingSurfaceCarriesTheSharedRules(t *testing.T) {
 				t.Errorf("the drafting surface in %s does not carry the shared rules block verbatim in its "+
 					"prompt %d of %d", where, at+1, len(systems))
 			}
-			if !strings.Contains(system, draftrules.Rewrite) {
-				t.Errorf("the drafting surface in %s does not carry the rewrite rule verbatim in its "+
+			wantRewrite, wantPurpose := draftrules.Rewrite, true
+			if where == "replydraftmodel.go" {
+				wantRewrite, wantPurpose = draftrules.ReplyRewrite, false
+			}
+			if !strings.Contains(system, wantRewrite) {
+				t.Errorf("the drafting surface in %s does not carry its rewrite rule verbatim in its "+
 					"prompt %d of %d, although every drafting route now takes rewrite_of", where, at+1, len(systems))
+			}
+			if strings.Contains(system, draftrules.Purpose) != wantPurpose {
+				t.Errorf("the drafting surface in %s: carrying the purpose rule must be %v (a reply answers its "+
+					"selected message, every new-email surface lets the purpose win)", where, wantPurpose)
+			}
+			if !wantPurpose && strings.Contains(system, draftrules.Rewrite) {
+				t.Errorf("the reply surface in %s carries the new-message rewrite rule", where)
 			}
 		}
 	}

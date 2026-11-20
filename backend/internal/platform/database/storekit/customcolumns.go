@@ -33,6 +33,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -189,7 +190,7 @@ func extractValue(typ string, raw any) (any, bool) {
 		return v, ok
 	case fieldcatalog.TypeMultiselect:
 		return stringSet(raw)
-	case fieldcatalog.TypeText, fieldcatalog.TypePicklist, fieldcatalog.TypeRecord:
+	case fieldcatalog.TypeText, fieldcatalog.TypePicklist, fieldcatalog.TypeRecord, fieldcatalog.TypeURL:
 		switch v := raw.(type) {
 		case []byte:
 			return string(v), true
@@ -281,6 +282,12 @@ func SQLValue(c fieldcatalog.Column, v any) (any, bool) {
 	case fieldcatalog.TypeRecord:
 		s, ok := v.(string)
 		if _, err := ids.Parse(s); !ok || err != nil {
+			return nil, false
+		}
+		return s, true
+	case fieldcatalog.TypeURL:
+		s, ok := v.(string)
+		if !ok || !values.IsWebAddress(s) {
 			return nil, false
 		}
 		return s, true

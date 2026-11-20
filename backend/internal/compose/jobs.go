@@ -446,15 +446,15 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	return reg, periodic
 }
 
-// placedSchedules are the schedules this file places. Each carries its own gate:
-// the cadence, the configuration it needs, and what an absent dependency costs.
-// So every one is named here, whether or not this boot places it.
+// placedSchedules names every schedule this file places, whether or not this boot
+// places it. Each carries its own gate: cadence, configuration, absent-dependency cost.
 func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 	return slices.Concat(
 		periodicFor(cfg, AssuranceSweepArgs{}),
 		periodicFor(cfg, CloseDateSweepArgs{}),
 		periodicFor(cfg, MeetingProfileRetractSweepArgs{}),
 		periodicFor(cfg, TranscriptAudienceSweepArgs{}),
+		periodicFor(cfg, PromiseKeptSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
 		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
 		periodicFor(cfg, InitiativeEnrolmentSweepArgs{}),

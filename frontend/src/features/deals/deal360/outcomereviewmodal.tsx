@@ -132,6 +132,7 @@ export function OutcomeReviewModal({
       answers,
       choice_answers: choiceAnswers,
       template_version: draftTemplate.version,
+      template_key: draftTemplate.key,
       body: body.trim() ? body : null,
     });
     // Only close the submission that actually landed. A save over a slow link

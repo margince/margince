@@ -160,7 +160,7 @@ func (s *Store) CreateLossReason(ctx context.Context, in CreateLossReasonInput) 
 	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
-		key = deriveAcquisitionKey(label)
+		key = values.CatalogKey(label)
 	}
 	if !lossReasonKeyShape.MatchString(key) {
 		return crmcontracts.LossReason{}, &values.ParseError{

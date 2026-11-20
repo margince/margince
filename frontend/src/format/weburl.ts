@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { TEXT_LIMITS } from "../lib/textlimits_gen";
+
 // The one place that decides whether a string may become a link.
 //
 // Every href a record carries is untrusted input: a crawler wrote it, a
-// connector wrote it, or a contact pasted it into a field whose type set has no
-// `url` member. `javascript:` and `data:` in an href are script execution on
-// click, and a value that is not an absolute URL at all — a bare
-// `example.com`, a relative path — resolves against OUR origin, which is never
-// where the record points. So only the two schemes a web address can honestly
-// be are allowed through, and everything else is text.
+// connector wrote it, or a contact pasted it into a text field. `javascript:`
+// and `data:` in an href run script on click. A value that is not an absolute
+// URL, such as a bare `example.com` or a relative path, resolves against OUR
+// origin. That is never where the record points. So only the two schemes of a
+// web address are allowed through, and everything else is text.
 //
 // It answers with the parsed URL rather than a boolean so a caller that needs
 // the normalized destination has it, and one that only needs the verdict can
@@ -28,6 +29,24 @@ export function webUrl(value: string): URL | null {
   return parsed.protocol === "https:" || parsed.protocol === "http:"
     ? parsed
     : null;
+}
+
+// Whether a typed value may be STORED in a url field. It must be an absolute
+// http or https address with a host, no user name or password, and no padding.
+// It mirrors values.IsWebAddress, which the server refuses on. So a value the
+// form takes is one the save keeps, and the length is the server's bound too.
+const WEB_ADDRESS_START = /^https?:\/\/[^/?#@\s]/i;
+
+export function isWebAddress(value: string): boolean {
+  if (
+    value !== value.trim() ||
+    value.length > TEXT_LIMITS.note ||
+    !WEB_ADDRESS_START.test(value)
+  ) {
+    return false;
+  }
+  const parsed = webUrl(value);
+  return parsed !== null && parsed.username === "" && parsed.password === "";
 }
 
 // Prepending https to a bare host ("example.com/x") is a guess, made only for a

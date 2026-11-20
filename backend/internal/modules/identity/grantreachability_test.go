@@ -71,7 +71,8 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 // or project, which recordColumn holds to those two.
 // 101: completed-change omissions follow the same scoped entity catalog as their reader.
 // The real Home/history regression also checks source refusals with no read grants.
-const dynamicObjectCeiling = 101
+// 102: removing a custom-field choice asks update on the object the field is attached to.
+const dynamicObjectCeiling = 102
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as

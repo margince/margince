@@ -4,6 +4,7 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
   "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
   "systemJob.meeting_profile":
     "Removing company values whose meeting lost its readers",
@@ -167,7 +168,7 @@ export const en = {
     "The access export includes the recorded breakdown.",
   "privacy.proofUnknown": "Not recorded",
   "analytics.q.conversionFrame":
-    "Base currency: {currency}. Rates as of {date}.",
+    "Base currency: {currency}. Exchange rates as of {date}.",
 
   "homeRepair.taskPermission":
     "Activity archive permission is required to archive reviewed tasks.",
@@ -2968,6 +2969,37 @@ export const en = {
   "common.phone.empty": "Enter a phone number.",
   "common.fieldTooLongMax": "{field}: at most {max} characters.",
   "common.valueTooLongMax": "This value is at most {max} characters.",
+  "common.fieldRequiredNamed": "{field} is required.",
+  "common.fieldNotInteger": "Enter a whole number for {field}.",
+  "common.valueNotInteger": "Enter a whole number.",
+  "common.fieldNotNumber": "Enter a number for {field}.",
+  "common.valueNotNumber": "Enter a number.",
+  "common.fieldNotEmail": "Enter an email address for {field}.",
+  "common.valueNotEmail": "Enter an email address.",
+  "common.fieldNotDate": "Enter a valid date for {field}.",
+  "common.valueNotDate": "Enter a valid date.",
+  "common.fieldNotDateTime": "Enter a valid date and time for {field}.",
+  "common.valueNotDateTime": "Enter a valid date and time.",
+  "common.fieldNotInSet": "Choose one of the offered values for {field}.",
+  "common.valueNotInSet": "Choose one of the offered values.",
+  "common.fieldInvalidNamed": "Check {field} and try again.",
+  "common.fieldBetween": "{field} must be from {min} to {max}.",
+  "common.valueBetween": "Enter a value from {min} to {max}.",
+  "common.fieldAtLeast": "{field} must be at least {min}.",
+  "common.valueAtLeast": "Enter a value of at least {min}.",
+  "common.fieldAtMost": "{field} must be at most {max}.",
+  "common.valueAtMost": "Enter a value of at most {max}.",
+  "common.fieldOutOfRange": "{field} is outside the allowed range.",
+  "common.valueOutOfRange": "This value is outside the allowed range.",
+  "common.fieldRepeated":
+    "{field} lists the same value twice. Remove the repeat.",
+  "common.valueRepeated": "The same value is listed twice. Remove the repeat.",
+  "common.fieldOneLine": "Enter {field} on one line.",
+  "common.valueOneLine": "Enter this value on one line.",
+  "common.fieldDateInFuture": "{field} cannot be in the future.",
+  "common.dateInFuture": "This date cannot be in the future.",
+  "common.fieldDecimalPlaces": "Decimal places allowed in {field}: {max}.",
+  "common.valueDecimalPlaces": "Decimal places allowed: {max}.",
   "common.valueTooLong": "This value is too long.",
   "common.undo": "Undo",
   "common.close": "Close",
@@ -2995,7 +3027,7 @@ export const en = {
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deals",
   "board.weightedLabel": "weighted",
-  "board.ratesOn": "Rates {date}",
+  "board.ratesOn": "Exchange rates {date}",
   "board.unpriced_one": "{count} not priced",
   "board.unpriced_other": "{count} not priced",
   "board.totalsTip":
@@ -3004,7 +3036,7 @@ export const en = {
     "{count} deal has no price and is left out of both totals.",
   "board.unpricedTip_other":
     "{count} deals have no price and are left out of both totals.",
-  "board.convertedTip": "Converted at rates as of {date}.",
+  "board.convertedTip": "Converted at exchange rates as of {date}.",
   "board.matchesIn_one": "{count} result in {columns}",
   "board.matchesIn_other": "{count} results in {columns}",
   "board.showMatches": "Go to column",
@@ -3848,7 +3880,7 @@ export const en = {
   // suggestion means. "Whose move" is the question the 0-100 score was
   // mistaken for.
   "co.strip.title": "Company status",
-  "co.strip.convertedAsOf": "{count} converted, rates {date}",
+  "co.strip.convertedAsOf": "{count} converted, exchange rates {date}",
   "co.strip.noOpenDeals": "None",
   "co.strip.pipeline": "Open deals",
   "co.description.label": "Description",
@@ -4606,6 +4638,10 @@ export const en = {
   "commitment.takenOverUnnamed": "Taken on {date}",
   "commitment.looksKept": "Looks kept: {name} accepted the {date} meeting.",
   "commitment.markKept": "Mark kept",
+  "commitment.autoKept":
+    "Margince marked this kept: {name} accepted the {date} meeting.",
+  "commitment.autoKeptPlain": "Margince marked this kept.",
+  "commitment.undo": "Undo",
   "commitment.quote": "“{quote}”",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Compiled from CRM records",
@@ -5680,6 +5716,7 @@ export const en = {
   "tags.emptyBody":
     "Add lasting context such as an event, a relationship or a cohort.",
   "tags.pickerLabel": "Search tags",
+  "tags.nameTaken": "A tag with this name already exists.",
   "tags.alreadyAdded": "Already added",
   "tags.offerCompanyTitle": "Also tag {company} with {tag}?",
   "tags.offerCompanyAccept": "Tag {company}",
@@ -6865,6 +6902,9 @@ export const en = {
   "offer.termsText": "Terms text",
   "offer.lines": "Line items",
   "offer.addLine": "Add line",
+  "offer.positionTaken": "Another line already has this position.",
+  "offer.lapsed":
+    "The Valid until date of this offer has passed. Change it under Edit header on a draft, or regenerate a sent offer.",
   "offer.position": "Position",
   "offer.description": "Description",
   "offer.unit": "Unit",
@@ -10992,6 +11032,7 @@ export const en = {
   "jobs.kind.import_commit": "Import commit",
   "jobs.kind.import_undo": "Import undo",
   "jobs.kind.import_validate": "Import test run",
+  "jobs.kind.promise_kept_sweep": "Commitments kept by meetings",
   "jobs.kind.transcript_audience_sweep": "Meeting notes readers",
   "jobs.kind.meeting_profile_retract_sweep": "Company fields from meetings",
   "jobs.kind.initiative_enrolment_sweep": "Initiative membership dates",
@@ -11331,6 +11372,8 @@ export const en = {
   "privacy.purposesRegistry": "Registered purposes",
   "privacy.purposesReadOnly":
     "Read-only. Adding a purpose needs a permission your role does not have.",
+  "privacy.purposeKeyTaken": "This key is already used by {label}.",
+  "privacy.purposeKeyTakenUnnamed": "Another purpose already uses this key.",
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeDoi": "Requires double opt-in",
@@ -11908,6 +11951,9 @@ export const en = {
   "retention.scopeExtension": "Records kept by extensions",
   "pipeline.new": "New pipeline",
   "pipeline.createRefused": "Your role cannot create pipelines. Ask an admin.",
+  "pipeline.defaultTaken":
+    "Another pipeline is the default. Create this one as Not default, then use Make default on it.",
+  "pipeline.nameTaken": "A pipeline with this name already exists.",
   "pipeline.name": "Name",
   "pipeline.default": "Default",
   "pipeline.notDefault": "Not default",
@@ -13876,6 +13922,7 @@ export const en = {
     "Ask your question under the relevant document; it goes directly to {steward}.",
   "buyer.closedOn": "Closed on {date}",
   "room.docs.title": "Documents and threads",
+  "room.docs.alreadyPresent": "This file is already in the room.",
   "room.docs.empty": "No documents in the room yet.",
   "room.docs.fileLabel": "File from this deal",
   "room.docs.fileHint":
@@ -14255,6 +14302,8 @@ export const en = {
   "coverage.risk.stakeholder_left": "Stakeholder has left",
   "coverage.risk.going_cold": "Going cold",
 
+  "cf.labelTaken":
+    "This record type already has a custom field with this label.",
   "cf.title": "Custom fields",
   "cf.formSection": "Custom fields",
   "cf.subtitle":
@@ -14308,6 +14357,7 @@ export const en = {
     "Derived automatically and fixed once live. The cf_ prefix prevents collisions with core fields.",
   "cf.typeLabel": "Type",
   "cf.currencyCode": "Currency code",
+  "cf.currencyNotCode": "Enter a 3-letter currency code, like EUR, CHF or USD.",
   "cf.currencyHint":
     "Three-letter ISO 4217 code, for example EUR or USD. Amounts are stored to the cent.",
   "cf.options": "Options",
@@ -14315,6 +14365,20 @@ export const en = {
   "cf.removeOption": "Remove option",
   "cf.optionPlaceholder": "Option label",
   "cf.lastOptionBlocked": "A picklist needs at least one option",
+  "cf.type.url": "Web address",
+  "cf.url.invalid": "Enter a web address that starts with http:// or https://.",
+  "cf.choices.edit": "Edit choices",
+  "cf.choices.title": "Choices of “{label}”",
+  "cf.choices.checking": "Counting the records that hold each choice",
+  "cf.choices.held_one": "{count} record",
+  "cf.choices.held_other": "{count} records",
+  "cf.choices.clears_one":
+    "Saving clears the removed choices from {count} record.",
+  "cf.choices.clears_other":
+    "Saving clears the removed choices from {count} records.",
+  "cf.choices.saved_one": "Choices of “{label}” saved. {count} record changed.",
+  "cf.choices.saved_other":
+    "Choices of “{label}” saved. {count} records changed.",
   "cf.gate.title": "Add this field?",
   "cf.gate.body":
     "On confirm, it becomes a live column on every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
@@ -15098,6 +15162,14 @@ export const en = {
   "settings.rates.modelEmpty": "No model rates yet.",
   "settings.rates.modelModalTitle": "Set model price",
   "settings.rates.notSaved": "Rate not saved",
+  "settings.rates.fromIsBase":
+    "This is the base currency, and its rate is always 1. Choose another currency.",
+  "settings.rates.fromNotCurrency":
+    "Enter a 3-letter currency code, like EUR, CHF or USD.",
+  "settings.rates.rateNotPositive":
+    "Enter a rate greater than zero, with at most 10 digits before the decimal point and 10 after it.",
+  "settings.rates.pastDate":
+    "A past date works only before this currency’s first rate. Choose today or a later date.",
   "taxRates.title": "Tax rates",
   "taxRates.withheld": "Only an Admin or Ops can see the tax rates.",
   "taxRates.intro":
@@ -15853,7 +15925,6 @@ export const en = {
   "settings.companySave": "Save company context",
   "settings.companySaved": "Saved",
   "settings.companySaveFailed": "Company context not saved",
-  "settings.companyNameTooLong": "Shorten the company name.",
   "settings.companyRefreshFailed": "Website read did not finish",
   "settings.companyApplyFailed": "Changes not applied",
   "settings.companyRefreshWarnings": "Warnings from this read",
@@ -15890,6 +15961,7 @@ export const en = {
   "product.readOnly": "Read-only. Your role cannot change products.",
   "product.new": "New product",
   "product.edit": "Edit product",
+  "product.skuTaken": "Another product already has this SKU.",
   "product.taxCategory": "Tax category",
   "product.taxCategoryUnset": "Not classified",
   "product.taxCategoryFilter": "Tax category",
@@ -16820,6 +16892,30 @@ export const en = {
   "setup.action.calendar": "Connect calendar",
   "setup.action.voice": "Add samples",
   "setup.action.booking": "Turn on",
+  "setup.step.timezone": "Choose where you work",
+  "setup.caption.timezone":
+    "Sets your time zone. Times, bookings and mail follow it.",
+  "setup.action.timezone": "Choose place",
+  "setup.step.timezoneDone": "Times follow {zone}.",
+  "setup.step.timezoneDoneUnnamed": "Your time zone is chosen.",
+  "setup.step.language": "Choose your language",
+  "setup.caption.language": "Margince shows its screens in it.",
+  "setup.action.language": "Choose language",
+  "setup.step.languageDone": "Your language is saved.",
+  "setup.step.permissions": "See what Margince may do",
+  "setup.caption.permissions": "What it reads, what it writes and how to undo.",
+  "setup.action.permissions": "Review",
+  "setup.step.permissionsDone": "You have read what Margince may do.",
+  "account.keepChoice": "Keep {value}",
+  "setup.permissions.title": "What Margince reads and writes",
+  "setup.permissions.reads":
+    "Margince reads the mail and calendar you connect, files you upload and public company websites. You can disconnect mail and calendar in Settings, under Connections.",
+  "setup.permissions.writes":
+    "It files what it reads on contacts, companies and deals, adds tasks and notes, and drafts replies. A reply you write goes out when you press Send, or when a message you scheduled is due. Invitations and password resets are sent by Margince itself.",
+  "setup.permissions.undo":
+    "What it changes shows under Done for you in the Worklist, and most changes can be undone there.",
+  "setup.permissions.confirm": "Got it",
+  "setup.permissions.later": "Later",
   "settings.home.setup.title": "Your setup",
   "connectors.tile.notSetUp": "Not set up",
   "connectors.tile.askAdmin": "An administrator turns {vendor} on in {page}.",
@@ -16936,6 +17032,15 @@ export const en = {
   "reviewTemplates.removeNumbered": "Remove question {n}",
   "reviewTemplates.unsaved": "Unsaved changes",
   "reviewTemplates.saveQuestions": "Save questions",
+  "reviewTemplates.add": "Add template",
+  "reviewTemplates.intro":
+    "A closed deal is asked the active template for its outcome. Adding a template, or turning one on, retires the one asked before. With no active template, that outcome asks no review. Reviews already written keep their questions.",
+  "reviewTemplates.activeFor": "Ask {label} when a deal closes",
+  "reviewTemplates.newTitle": "New review template",
+  "reviewTemplates.name": "Name",
+  "reviewTemplates.askedFor": "Asked for",
+  "reviewTemplates.askedFor.won": "Won deals",
+  "reviewTemplates.askedFor.lost": "Lost deals",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "oauthApp.saveFailed": "App not saved",
   "firstRun.continue": "Continue",
@@ -19663,6 +19768,8 @@ export const en = {
   "lists.page": "List",
   "lists.loading": "Loading list",
   "lists.kind.live": "Live List",
+  "lists.alreadyOnShortlist": "Already on this Shortlist.",
+  "lists.alreadyOnOption": "{name} (already on it)",
   "lists.kind.shortlist": "Shortlist",
   "lists.type.contact": "Contacts",
   "lists.type.company": "Companies",
@@ -22401,13 +22508,15 @@ export const en = {
   "aiServing.previewFailed":
     "The server could not check this value: {reason} Save stays off until it can.",
   "dealDecline.action": "Not about this deal",
-  "dealDecline.title": "Take this email off the deal?",
-  "dealDecline.body":
-    "The email comes off this deal, and Margince does not file it here again. A project link it got from this deal comes off too.",
-  "dealDecline.confirm": "Take off deal",
-  "dealDecline.done": "Email taken off the deal",
+  "dealDecline.done":
+    "Marked as not about this deal. It no longer keeps the deal active.",
   "dealDecline.doneProjectKept":
-    "Email taken off the deal. Its project link stays.",
+    "Marked as not about this deal. Its project link stays.",
+  "dealRelevance.about": "About this deal",
+  "dealRelevance.restored":
+    "Marked as about this deal. It counts for the deal again.",
+  "dealRelevance.unrelated": "Not about this deal",
+  "dealRelevance.uncertain": "Maybe not about this deal",
   "projectFiling.action": "Undo filing",
   "projectFiling.title": "Undo project filing?",
   "projectFiling.loading": "Checking what keeps this activity…",

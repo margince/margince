@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance/rules.go backend/internal/compose/assurancebundle.go backend/internal/compose/viabilitytasks/viabilitytasks.go backend/internal/compose/dealcloselost.go backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go backend/internal/compose/dealstatus/ourreply.go frontend/src/features/deals/deal360/dealverdict.ts -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance/rules.go backend/internal/compose/assurancebundle.go backend/internal/compose/viabilitytasks/viabilitytasks.go backend/internal/compose/dealcloselost.go backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go backend/internal/compose/dealstatus/ourreply.go frontend/src/features/deals/deal360/dealverdict.ts backend/internal/modules/activities/dealrelevance.go frontend/src/features/records/dealdecline.tsx -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -11,6 +11,24 @@ not keep the deal open. A meeting marked private in your calendar still counts.
 
 Margince asks nobody to review such a deal. It closes the deal itself, as
 below, and you can undo that.
+
+## When an activity is not about the deal
+
+A mail or a meeting can be on a deal and still not be about it. Think of a
+visit to a friend who works at the customer. On the deal's **History**, open
+**More actions** on that row and choose **Not about this deal**.
+
+The row stays on the deal and shows the mark **Not about this deal**. It no
+longer counts for the deal's last activity date or for a quiet or stalled deal.
+A coming meeting marked so does not hold the deal open, and it is not customer
+progress. To make it count again, choose **Undo** in the message that follows,
+or **About this deal** on the row.
+
+Margince may not be sure that an older mail it filed by itself is about the
+deal. It then marks the row **Maybe not about this deal**. That row does not
+count either, until you choose **About this deal**. On its own, it never closes
+a deal. Margince never changes a mark you set, and a new import keeps
+it. You decide each row by itself, even for a meeting that repeats.
 
 ## When the close date or the next step does not hold
 

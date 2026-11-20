@@ -21,9 +21,13 @@ var (
 	timeType                = reflect.TypeFor[time.Time]()
 )
 
-// acceptedInstantRange is the bound as the caller reads it, in the same words
-// as the dates above.
-const acceptedInstantRange = "a date-time from 0001-01-02 to 9999-12-30"
+// The bound as the caller reads it, in the same words as the dates above. A
+// screen that checks a day before sending mirrors the first and last day.
+const (
+	AcceptedInstantMin   = "0001-01-02"
+	AcceptedInstantMax   = "9999-12-30"
+	acceptedInstantRange = "a date-time from " + AcceptedInstantMin + " to " + AcceptedInstantMax
+)
 
 // RejectOutOfRangeTimes names the first decoded date-time a request may not
 // store. Every decoder calls it on its target, so the bound holds for each
@@ -39,7 +43,10 @@ func RejectOutOfRangeTimes(decoded any) *FieldShapeError {
 	if !walk.outOfRange(reflect.ValueOf(decoded), false) {
 		return nil
 	}
-	return &FieldShapeError{Field: walk.path(), Want: acceptedInstantRange, Got: "a date-time outside that range"}
+	return &FieldShapeError{
+		Field: walk.path(), Want: acceptedInstantRange, Got: "a date-time outside that range",
+		Params: map[string]string{paramMin: AcceptedInstantMin, paramMax: AcceptedInstantMax},
+	}
 }
 
 // timeWalk keeps the path to the value under inspection as a stack of

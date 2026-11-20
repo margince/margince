@@ -31,7 +31,7 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function stub(): Sent[] {
+function stub(deadline: (url: URL) => Response = () => json(COMPUTED)): Sent[] {
   const sent: Sent[] = [];
   vi.stubGlobal(
     "fetch",
@@ -59,7 +59,7 @@ function stub(): Sent[] {
             }),
           );
         case "GET /data-subject-requests/deadline":
-          return json(COMPUTED);
+          return deadline(url);
         case "POST /data-subject-requests":
           return json(
             {
@@ -167,6 +167,56 @@ describe("the deadline field", () => {
         received_at: "2026-07-01T04:00:00.000Z",
       }),
     );
+  });
+});
+
+describe("the received day", () => {
+  it("takes no day after today, and asks no deadline for one", async () => {
+    const sent = stub();
+    const user = userEvent.setup();
+    await openCorrectionForm(user);
+    const received = screen.getByRole("textbox", { name: /received on/i });
+    await user.type(received, "01/01/2099");
+    await user.tab();
+
+    expect(await screen.findByText(/^Latest date:/)).toBeInTheDocument();
+    expect(received).toHaveAttribute("aria-invalid", "true");
+    expect(sent.some((s) => s.url.includes("received_at=2099"))).toBe(false);
+  });
+
+  it("puts the server's refusal of the day on its field, by its label", async () => {
+    const refusal = "A request cannot have arrived in the future.";
+    stub((url) =>
+      url.searchParams.has("received_at")
+        ? json(
+            {
+              title: "Unprocessable Entity",
+              status: 422,
+              code: "validation_error",
+              detail: "consent: received_at: a request cannot have arrived",
+              details: {
+                errors: [
+                  {
+                    field: "received_at",
+                    code: "invalid",
+                    message: "a request cannot have arrived in the future",
+                  },
+                ],
+              },
+            },
+            422,
+          )
+        : json(COMPUTED),
+    );
+    const user = userEvent.setup();
+    await openCorrectionForm(user);
+    const received = screen.getByRole("textbox", { name: /received on/i });
+    await user.type(received, "01/07/2026");
+    await user.tab();
+
+    expect(await screen.findAllByText(refusal)).toHaveLength(1);
+    expect(received).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(/received_at/)).toBeNull();
   });
 });
 

@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -106,17 +105,6 @@ type UpdateAcquisitionSourceInput struct {
 	IfVersion *int64
 }
 
-// nonSlugRun matches every run of characters a key may not contain, so a
-// label becomes a key by collapsing them to single underscores.
-var nonSlugRun = regexp.MustCompile(`[^a-z0-9]+`)
-
-// deriveAcquisitionKey slugs a label into a key. Mirrors the lead
-// vocabulary's rule rather than inventing a second spelling of "slug".
-func deriveAcquisitionKey(label string) string {
-	key := nonSlugRun.ReplaceAllString(strings.ToLower(strings.TrimSpace(label)), "_")
-	return strings.Trim(key, "_")
-}
-
 // ListAcquisitionSources answers the whole catalog, retired entries included:
 // a deal carrying a retired key still has to render its label, and a filter
 // still has to find those deals.
@@ -198,7 +186,7 @@ func (s *Store) CreateAcquisitionSource(
 	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
-		key = deriveAcquisitionKey(label)
+		key = values.CatalogKey(label)
 	}
 	if key == "" || key != strings.ToLower(key) {
 		return crmcontracts.AcquisitionSource{}, &values.ParseError{
