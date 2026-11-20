@@ -14,11 +14,13 @@ var roleWords = map[string]langcopy.Phrase{
 	User:                {En: "user", De: "Nutzer", Vi: "người dùng"},
 }
 
-// Known reports whether role is in the vocabulary. The stored role is free
-// text, so a reader must not print or pass on one that is not.
-func Known(role string) bool {
-	_, ok := roleWords[role]
-	return ok
+// Recorded is the stored role when it is in the vocabulary, or "". The stored
+// role is free text, so a reader must not print or pass on one that is not.
+func Recorded(role string) string {
+	if _, ok := roleWords[role]; !ok {
+		return ""
+	}
+	return role
 }
 
 // Label is a role in the reader's language, or "" for a role outside the

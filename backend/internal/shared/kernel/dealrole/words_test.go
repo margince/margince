@@ -23,11 +23,11 @@ func TestEveryRecordedRoleHasWordsInEveryLanguage(t *testing.T) {
 		}
 	}
 	for _, typed := range []string{"contact", "future_role", "Champion", " champion"} {
-		if Known(typed) || Label(typed, "de") != "" {
+		if Recorded(typed) != "" || Label(typed, "de") != "" {
 			t.Errorf("free-text role %q got a label", typed)
 		}
 	}
-	if !Known(Champion) || Label(Champion, "de") != "Fürsprecher" {
+	if Recorded(Champion) != Champion || Label(Champion, "de") != "Fürsprecher" {
 		t.Fatal("built-in role lost its German label")
 	}
 	if Label(EconomicBuyer, "unknown") != "economic buyer" {

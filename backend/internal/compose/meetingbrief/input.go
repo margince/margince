@@ -272,7 +272,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 			ContactID: attendee.ContactID.String(),
 			FullName:  attendee.FullName,
 			Title:     attendee.Title,
-			DealRole:  recordedRole(attendee.DealRole),
+			DealRole:  dealrole.Recorded(attendee.DealRole),
 			LastTouch: attendee.LastTouch.occurred(),
 			FirstTime: attendee.firstTime(),
 		})
@@ -282,15 +282,6 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 	}
 	in.Commitments = foldSameClaims(in.Commitments)
 	return in
-}
-
-// recordedRole keeps a stored deal role only when it is a built-in one. The
-// role is free text, and the prompt must not see "contact" as a role to echo.
-func recordedRole(role string) string {
-	if !dealrole.Known(role) {
-		return ""
-	}
-	return role
 }
 
 // foldClaims turns one attendee's claims into the brief's shape, dropping the
