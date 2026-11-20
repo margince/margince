@@ -39,20 +39,12 @@ package compose
 //     correspondence would mark every introduction ever made as answered, using
 //     mail sent before anyone was introduced.
 //
-// WHAT THIS DELIBERATELY DOES NOT CLAIM. A connector delivers what a mail
-// server handed it, and an unauthenticated From header is a header its sender
-// typed. So `replied` means "a message arrived that this workspace's own
-// capture attributes to the contact, after the introduction" — which is what
-// the status is for, and why the evidence id travels on both the row and the
-// event: the claim stays checkable against the message it rests on. Making it
-// stronger is a question for capture, which owns sender authentication on
-// behalf of every consumer, rather than one this consumer answers alone.
+// `replied` means a message that capture attributes to the contact arrived
+// after the introduction. The evidence id travels on the row and the event, so
+// the claim stays checkable. Sender authentication belongs to capture.
 //
-// Idempotency is the ask's own status: the UPDATE matches only from `introduced`
-// or `name_dropped`, so a redelivered event and the second message in a thread
-// both find nothing to do. events.Dedupe sits in front of that as a cache, never
-// as the guarantee — it marks AFTER the effect, so a crash in that window
-// replays.
+// Idempotency is the ask's own status: the UPDATE matches only `introduced` or
+// `name_dropped`. events.Dedupe in front is a cache, not the guarantee.
 
 import (
 	"context"
