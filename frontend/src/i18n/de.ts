@@ -8609,6 +8609,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.log.action": "Ergebnis erfassen",
   "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
+  "tasks.log.noRecord": "Ohne Datensatz erfassen",
+  "tasks.log.pickRecord": "Datensatz wählen",
+  "tasks.log.back": "Zurück",
   "tasks.log.leftOpen":
     "Die Aktivität wurde erfasst. Die Aufgabe bleibt offen, bis alle Dateien angehängt sind. Versuche es erneut.",
   "tasks.log.completeFailed":
@@ -21056,6 +21059,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.band.build_pipeline": "Akquise",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
+  "worklist.band.more": "Weiteres in deiner Liste",
   "worklist.disposition.verb.snooze": "Zurückstellen",
   "worklist.disposition.snoozeForDays_one": "{value} Tag zurückstellen",
   "worklist.disposition.snoozeForDays_other": "{value} Tage zurückstellen",

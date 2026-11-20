@@ -37,7 +37,11 @@ function draw(links: components["schemas"]["Activity"]["links"]) {
   });
   return (
     <StoryProviders>
-      <TaskOutcomeForm task={{ ...task, links }} onLogged={() => {}} />
+      <TaskOutcomeForm
+        task={{ ...task, links }}
+        onLogged={() => {}}
+        onBack={() => {}}
+      />
     </StoryProviders>
   );
 }

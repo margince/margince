@@ -73,6 +73,8 @@ export type TimelineEntry = {
     | "signal";
   title: string;
   isDone?: boolean;
+  // A task's holder and due day, drawn by the caller, which can name a member.
+  terms?: ReactNode;
   atIso: string;
   // `day` when only the date is known, so the row draws no time.
   atPrecision: OccurredPrecision;

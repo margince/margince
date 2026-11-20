@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
-import { type ReactNode, type RefObject, useRef } from "react";
+import type { ReactNode, RefObject } from "react";
 import { type ActivityMoment, activityAgo } from "../format/activitywhen";
 import {
   formatAge,
@@ -23,7 +23,7 @@ import { Popover } from "./popover";
 import { ProbabilityRing } from "./probabilityring";
 import { FieldGuard } from "./rbac";
 import { Chip } from "./readings";
-import { useTooltip } from "./tooltip";
+import { useTooltip, useTruncationTooltipAround } from "./tooltip";
 
 // One deal, as a card on the pipeline board (pipelineboard.tsx draws the board).
 // The card's vocabulary — `BoardDeal` — stays with the board, because a column
@@ -370,7 +370,12 @@ export function DealCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const dealLink = useRef<HTMLAnchorElement>(null);
+  const {
+    ref: dealLink,
+    // No `aria-describedby`: the link's own name is already the whole name.
+    trigger: { onPointerEnter, onPointerLeave, onFocus, onBlur: hideName },
+    tip: nameTip,
+  } = useTruncationTooltipAround<HTMLAnchorElement>(deal.name);
   // No `stalled` class: the warning Badge in the foot says it in words, and an
   // edge stripe saying the same thing is one statement drawn twice — the reader
   // who cannot see colour reads the badge, and the reader who can read both.
@@ -417,9 +422,30 @@ export function DealCard({
         // would also catch the company link's bubbled click, and the drop
         // guard would then refuse a navigation the reader did ask for.
         onClick={(event) => onOpen?.(deal, event)}
+        // A press anywhere on the card focuses this link through its
+        // stretched `::after`; only keyboard focus asks for the name's tip.
+        onFocus={(event) => {
+          if (event.currentTarget.matches(":focus-visible")) onFocus(event);
+        }}
+        onBlur={hideName}
       >
-        {deal.name}
+        {/* The hover rides the name's own box: on the link it would ride the
+            stretched `::after`, and the whole card would raise the tip. */}
+        <span
+          className="deal-name-text"
+          onPointerEnter={onPointerEnter}
+          onPointerLeave={() => {
+            onPointerLeave();
+            // Focus a press gave the link does not hold a hover's tip up.
+            if (dealLink.current?.matches(":focus:not(:focus-visible)")) {
+              hideName();
+            }
+          }}
+        >
+          {deal.name}
+        </span>
       </AppLink>
+      {nameTip}
       <span className="deal-figure">
         {/* Compact, because a card is compared at a glance: the column head
             sums the stage exactly and the deal states its own figure whole. */}
