@@ -213,7 +213,9 @@ Every other background job waits in the queue itself. A worker that gets the def
 `ProviderDownError`, back from the router hands it to River, and the wrapper every worker is
 registered through (`sessionBudgetWorker`, `compose/sessionbudget.go`) turns it into a snooze until
 `NextAttemptAt` or `RetryAfter`. River counts no attempt for a snooze, so the job keeps its tries
-and runs when the budget or the provider is back. A transcript reading or a document reading goes
+and runs when the next budget window opens or the provider is probed again. `ai_budget_resume`
+does not wake such a job when an admin raises the allowance; it wakes only the three carriers
+below. A transcript reading or a document reading goes
 back to `queued` while its job sleeps. A scheduled agent run is not a queue job: it ends with its
 own reason, that the monthly AI allowance is used up or the provider is unavailable, and the next
 scheduled occurrence starts clean.
