@@ -71,3 +71,16 @@ func TestTheReliabilityCellPrintsTheWilsonInterval(t *testing.T) {
 		}
 	}
 }
+
+// The page renders the bounds as numbers, so an edge must be the exact 0 or 1
+// and not a residue that differs by machine.
+func TestTheWilsonEdgesAreExact(t *testing.T) {
+	for _, runs := range []int{1, 3, 7, 30} {
+		if lower, _ := wilsonBounds(0, runs); lower != 0 {
+			t.Errorf("0 of %d has lower bound %g, want exactly 0", runs, lower)
+		}
+		if _, upper := wilsonBounds(runs, runs); upper != 1 {
+			t.Errorf("%d of %d has upper bound %g, want exactly 1", runs, runs, upper)
+		}
+	}
+}
