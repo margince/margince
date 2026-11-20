@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -291,6 +293,10 @@ func (c *invitationCalendar) ResolveAttendees(_ context.Context, _ ids.UserID, a
 		out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeHostNamed})
 	}
 	return out, nil
+}
+
+func (c *invitationCalendar) HostMayWrite(context.Context, pgx.Tx, ids.UserID, string, ids.UUID) (bool, error) {
+	return true, nil
 }
 
 func (c *invitationCalendar) InviteeAddress(_ context.Context, _ ids.UserID, kind string, id ids.UUID, _ []string) (string, ids.UUID, error) {
