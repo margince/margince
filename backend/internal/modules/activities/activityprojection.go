@@ -135,7 +135,7 @@ var activityProjection = []activityColumn{
 	{storekit.TaskDueSQL("a"), func(s *activityScan) any { return &s.a.DueAt }},
 	{"a.due_has_time", func(s *activityScan) any { return &s.dueHasTime }},
 	{storekit.TaskTypeSQL("a"), func(s *activityScan) any { return &s.taskType }},
-	{storekit.ReplyChannelSQL("a"), func(s *activityScan) any { return &s.replyChannel }},
+	{storekit.ReplyChannelSQL("a", ""), func(s *activityScan) any { return &s.replyChannel }},
 	{storekit.IntentInstantSQL("a", "remind"), func(s *activityScan) any { return &s.a.RemindAt }},
 	{storekit.IntentWireSQL("a", "due"), func(s *activityScan) any { return &s.a.DueIntent }},
 	{storekit.IntentWireSQL("a", "remind"), func(s *activityScan) any { return &s.a.RemindIntent }},
@@ -257,9 +257,21 @@ func renderActivityColumns(ctx context.Context, contentArm string, arg func(any)
 	if err != nil {
 		return "", err
 	}
+	replyChannel := storekit.ReplyChannelSQL("a", "")
+	// A count reads no column, so gate the source kind only in a payload read.
+	sourceAudience := ""
+	if gatePayload {
+		if sourceAudience, err = auth.ActivityAudienceArm(ctx, "s", arg); err != nil {
+			return "", err
+		}
+	}
 	out := make([]string, len(activityProjection))
 	for i, c := range activityProjection {
 		out[i] = c.sql
+		if c.sql == replyChannel {
+			out[i] = storekit.ReplyChannelSQL("a", sourceAudience)
+			continue
+		}
 		if !gatePayload {
 			continue
 		}
