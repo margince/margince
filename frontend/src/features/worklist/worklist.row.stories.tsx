@@ -308,8 +308,8 @@ export const ATaskAgreedInAnotherZone: Story = {
   },
 };
 
-// The same row on a phone, a layout of its own: the rank and its kind lead the
-// line, the work takes the next, and the verbs the one after at target height.
+// The same row on a phone, which has a layout of its own. The rank and its kind
+// lead the line, then the work, then the verbs at target height.
 export const ATaskOnAPhone: Story = {
   ...ATaskNobodyOwnsBeingPutDown,
   globals: { viewport: { value: "phone" } },

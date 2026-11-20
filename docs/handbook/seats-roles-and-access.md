@@ -230,7 +230,7 @@ In German, the owner is **Verantwortlich** and the responsibility roles are **Zu
 ## Seeing and sharing records
 
 ### Why can't I see a record?
-When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. A private or missing contact, company, lead, deal, project or offer shows one page. Its sentence names the kind: "This deal is not there, or it is not shared with you." The top bar names the page **Not found**, and a link leads back to the list.
+When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. A private or missing contact, company, lead, deal, project or offer shows one page. Its sentence names the kind: "This deal is not there, or it is not shared with you." A link leads back to the list, and the top bar says **Not found** when it has no name for the record.
 
 Mail without you says "This message is not shared with you". A meeting without you shows "Content for participants only" in place of its subject. A contact, company or deal link can still show a short [public preview](sharing-record-links.md), which gives no access to the full record. **Share** on such a record says "This record does not exist, or it is not shared with you."
 
