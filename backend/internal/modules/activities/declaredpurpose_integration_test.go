@@ -60,7 +60,7 @@ func (e *sendEnv) assertDeclared(t *testing.T, id ids.UUID, want declaredPurpose
 	}
 }
 
-// Mutation: drop the declared field from outboundMessage.activity and every
+// Mutation: drop declaring from outboundMessage.activity and every
 // case reads an empty declaration.
 func TestEachMailSendRecordsThePurposeItDeclaredAndItsClass(t *testing.T) {
 	cases := []struct {
@@ -69,19 +69,27 @@ func TestEachMailSendRecordsThePurposeItDeclaredAndItsClass(t *testing.T) {
 		in     func() SendEmailInput
 		wanted declaredPurpose
 	}{
-		{"a reply re-labelled as correspondence", true, func() SendEmailInput { return soloSendInput("business_correspondence") },
-			declaredPurpose{"business_correspondence", "business_correspondence"}},
-		{"an account-started transactional send", false, func() SendEmailInput { return soloSendInput("Transactional ") },
-			declaredPurpose{"transactional", "transactional"}},
+		{
+			"a reply re-labelled as correspondence", true, func() SendEmailInput { return soloSendInput("business_correspondence") },
+			declaredPurpose{"business_correspondence", "business_correspondence"},
+		},
+		{
+			"an account-started transactional send", false, func() SendEmailInput { return soloSendInput("Transactional ") },
+			declaredPurpose{"transactional", "transactional"},
+		},
 		{"a send naming only its marketing purpose", false, func() SendEmailInput {
 			in := soloSendInput("")
 			in.MarketingPurpose = "newsletter"
 			return in
 		}, declaredPurpose{"newsletter", "marketing"}},
-		{"a key no purpose defines", true, func() SendEmailInput { return soloSendInput("made_up") },
-			declaredPurpose{"made_up", ""}},
-		{"a send naming no purpose", true, func() SendEmailInput { return soloSendInput("") },
-			declaredPurpose{}},
+		{
+			"a key no purpose defines", true, func() SendEmailInput { return soloSendInput("made_up") },
+			declaredPurpose{"made_up", ""},
+		},
+		{
+			"a send naming no purpose", true, func() SendEmailInput { return soloSendInput("") },
+			declaredPurpose{},
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -138,7 +146,7 @@ func TestAHeldAndAScheduledSendRecordThePurposeTheyWereFrozenWith(t *testing.T) 
 	})
 }
 
-// Mutation: drop the declared field from outboundChannelMessage.activity.
+// Mutation: drop declaring from outboundChannelMessage.activity.
 func TestAChannelReplyRecordsThePurposeItDeclared(t *testing.T) {
 	e := setupSend(t)
 	e.seedPurposes(t)

@@ -32,6 +32,12 @@ func declaredPurposeOf(consentPurpose, marketingPurpose string) declaredPurpose 
 	return declaredPurpose{key: commsauthz.NormalizedPurposeKey(named.LegacyPurposeKey)}
 }
 
+// declaring stamps a send's row with the purpose its request named.
+func declaring(in LogActivityInput, consentPurpose, marketingPurpose string) LogActivityInput {
+	in.declared = declaredPurposeOf(consentPurpose, marketingPurpose)
+	return in
+}
+
 // resolveDeclaredClass reads the class of the declared key in the send's own
 // transaction. A key no purpose defines keeps an empty class; the engine
 // refuses such a send, and a send that commits under observe still names it.

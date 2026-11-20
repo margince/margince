@@ -168,12 +168,9 @@ var erasureColumnBaseline = map[string][]string{
 		// asked its recipient side for something. Neither is anything the
 		// subject wrote nor anything written about them — it is a reading OF the
 		// text, and the text itself is cleared on its own terms.
-		"owed_verdict",
+		"owed_verdict", "consent_class", "consent_purpose", // and the purpose key a sender named, with its class
 		// instant or day: how to read occurred_at, which the redaction keeps.
 		"occurred_precision",
-		// A consent purpose key the sender named and its class: workspace
-		// configuration, never anything the subject wrote or was told.
-		"consent_class", "consent_purpose",
 		// One of the eight iCalendar method words RFC 5546 defines, enforced by
 		// a CHECK. Nothing the subject wrote beyond which scheduling act it was.
 		"calendar_method",
