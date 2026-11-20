@@ -247,7 +247,7 @@ Also called: contact already exists, email already taken, hidden contact.
 
 ### How do I share a record with a colleague?
 1. Open the record and choose **Share** in its header.
-2. Under **Grant access**, pick the colleague or team. A contact's or company's owner is not on the list, because the record is already theirs: they can see it, and edit it when their role allows changes. An owner with the **Read-only** role can only read it. A new team share starts at **Write** with **No expiry (until revoked)**. A share with a colleague starts at **Read** for 7 days.
+2. Under **Grant access**, pick the colleague or team. A contact's or company's owner is not on the list, because the record is already theirs. They can edit it when their role allows changes. An owner with the **Read-only** role can only read it. A new team share starts at **Write** with **No expiry (until revoked)**. A share with a colleague starts at **Read** for 7 days.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**.
