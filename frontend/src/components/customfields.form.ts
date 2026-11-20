@@ -23,7 +23,7 @@ import {
 import { browserZone } from "../format/timezone";
 import { webUrl } from "../format/weburl";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import type { CfObject } from "../lib/customfields.logic";
+import { type CfObject, customFieldLabel } from "../lib/customfields.logic";
 import { customFieldsQuery } from "../lib/customfields.query";
 import { translatedLabel } from "../lib/labeltranslation";
 import {
@@ -316,11 +316,6 @@ export function customFieldDisplay(
 /** A stored option as the reader sees it. The record keeps the stored value. */
 function optionLabel(field: CustomField, option: string, locale: string) {
   return translatedLabel(option, field.option_translations?.[option], locale);
-}
-
-/** A field's label as the reader sees it. */
-export function customFieldLabel(field: CustomField, locale: string): string {
-  return translatedLabel(field.label, field.label_translations, locale);
 }
 
 // customFieldDisplay in this reader's locale and Yes/No words, for either record

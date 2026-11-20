@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The reads a filter builder needs (LVS-EXT-8/9): the vocabulary, named from
-// the custom-field catalog, and the preview.
+// The reads a filter builder needs: the vocabulary, named from the custom-field
+// catalog, and the preview.
 //
 // Kept apart from the screen for one reason: the screen decides what a human
 // SEES, and these decide what the server was ASKED. The interesting rules here
@@ -15,11 +15,10 @@ import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { CF_OBJECTS } from "./customfields.logic";
+import { catalogOfRecord, customFieldLabel } from "./customfields.logic";
 import { customFieldsQuery } from "./customfields.query";
 import { previousOfScope, useHealthScope } from "./healthscope";
 import { historyFieldLabelKey } from "./historyfieldlabels";
-import { translatedLabel } from "./labeltranslation";
 import { unwrap } from "./problem";
 import {
   type EncodedPredicate,
@@ -72,10 +71,7 @@ export function vocabularyQueryKey(resource: FilterResource) {
 export function useFilterVocabulary(resource: FilterResource, enabled = true) {
   const { locale } = useLocale();
   const catalog = useQuery(
-    customFieldsQuery(
-      CF_OBJECTS.find((object) => object === resource),
-      enabled,
-    ),
+    customFieldsQuery(catalogOfRecord(resource), enabled),
   ).data?.data;
   const labelled = useCallback(
     (vocabulary: FilterVocabulary) =>
@@ -96,7 +92,7 @@ export function useFilterVocabulary(resource: FilterResource, enabled = true) {
   });
 }
 
-/** Each custom field labelled as `customFieldLabel` reads it. One the catalog lacks stays bare. */
+/** Each custom field labelled from its catalog entry. One the catalog lacks stays bare. */
 function withCatalogLabels(
   vocabulary: FilterVocabulary,
   catalog: readonly CustomField[] | undefined,
@@ -113,11 +109,7 @@ function withCatalogLabels(
       return entry
         ? {
             ...field,
-            label: translatedLabel(
-              entry.label,
-              entry.label_translations,
-              locale,
-            ),
+            label: customFieldLabel(entry, locale),
           }
         : field;
     }),
@@ -259,6 +251,21 @@ export function fieldLabel(
     historyFieldLabelKey(field.name) ??
     FILTER_ONLY_FIELD_LABELS.get(field.name);
   return key ? t(key) : field.name.replaceAll("_", " ");
+}
+
+/**
+ * A custom column named by its catalog, which still holds a retired field the
+ * vocabulary no longer offers. One the catalog lacks reads as its column.
+ */
+export function useCustomColumnLabel(recordKey: string, enabled = true) {
+  const { locale } = useLocale();
+  const catalog = useQuery(
+    customFieldsQuery(catalogOfRecord(recordKey), enabled),
+  ).data?.data;
+  return (column: string) => {
+    const field = catalog?.find((entry) => entry.column_name === column);
+    return field ? customFieldLabel(field, locale) : customColumnLabel(column);
+  };
 }
 
 /** A custom column's `cf_` name read as words, as `fieldLabel` reads it. */

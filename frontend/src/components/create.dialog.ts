@@ -3,7 +3,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { CF_OBJECTS, type CfObject } from "../lib/customfields.logic";
+import type { CfObject } from "../lib/customfields.logic";
 import { customFieldsQuery } from "../lib/customfields.query";
 import type { Screen } from "../lib/router";
 
@@ -21,11 +21,6 @@ const CATALOG_OF_SCREEN: Partial<Record<Screen, CfObject>> = {
 
 export function catalogOfScreen(screen: Screen): CfObject | undefined {
   return CATALOG_OF_SCREEN[screen];
-}
-
-// An edit's record key is the catalog's own object name where it has one.
-export function catalogOfRecord(recordKey: string): CfObject | undefined {
-  return CF_OBJECTS.find((object) => object === recordKey);
 }
 
 // Not while `catalog`'s first read, retries included, is in flight: the form

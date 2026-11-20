@@ -6,10 +6,7 @@
 // there, and what changed. The members are the record list's own rows, narrowed by
 // list_id, so the page is never one request per member (listmembers.tsx).
 
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
-import { catalogOfRecord } from "../../components/create.dialog";
-import { customFieldLabel } from "../../components/customfields.form";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -19,9 +16,11 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { customFieldsQuery } from "../../lib/customfields.query";
 import { ENTITY } from "../../lib/entity";
-import { customColumnLabel, useFilterVocabulary } from "../../lib/filterdata";
+import {
+  useCustomColumnLabel,
+  useFilterVocabulary,
+} from "../../lib/filterdata";
 import {
   type List,
   useArchiveList,
@@ -334,14 +333,8 @@ function noticeOf(list: List): ListNotice | null {
 function RetiredFieldNotice({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const plural = usePlural();
-  const { locale } = useLocale();
-  const catalog = useQuery(customFieldsQuery(catalogOfRecord(list.entity_type)))
-    .data?.data;
+  const labelOf = useCustomColumnLabel(list.entity_type);
   const fields = list.retired_fields ?? [];
-  const labelOf = (column: string) => {
-    const field = catalog?.find((entry) => entry.column_name === column);
-    return field ? customFieldLabel(field, locale) : customColumnLabel(column);
-  };
   return (
     <Callout
       tone="warning"

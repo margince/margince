@@ -23,7 +23,7 @@ import {
   formatNumber,
 } from "../../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { ENTITY, type EntityKind, isEntityKind } from "../../lib/entity";
 import {
@@ -253,7 +253,7 @@ function headerFor(
 }
 
 type Reading = Readonly<{
-  t: ReturnType<typeof useT>;
+  t: Translator;
   locale: Locale;
   zone: string;
 }>;
