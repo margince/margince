@@ -72,7 +72,7 @@ func citedLaw(refusal RefusedRecipient) [][]commsauthz.Provision {
 	return out
 }
 
-// lawsShown is every citation beside one refusal or finding. A snapshot from
+// lawsShown lists all citations beside one refusal or finding. A snapshot from
 // before the list was stored showed only its first citation.
 func lawsShown(first commsauthz.Provision, all []commsauthz.Provision) []commsauthz.Provision {
 	if len(all) == 0 {

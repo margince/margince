@@ -456,19 +456,19 @@ it down.
 `consent/ruleselectors.go` holds two selectors. Each recipient of a message is put to them on their own.
 
 - **Marketing rules follow the recipient's jurisdiction**: the advertising cap and label, how to
-  object, the opt-out receipt and the marketing exception. A country a human stated for the message
+  object, the opt-out receipt and the marketing exception. A jurisdiction a human stated for the message
   wins; else the contact's `address_country`, then their primary employer's, or a lead's company's.
 - **Data protection follows the sending legal entity's jurisdiction**: the controller, its legal
-  name and address, and the privacy contact in the foot. `storekit.LegalEntityOf` reads the sender's
-  membership; none, or an archived entity, gives `installation.country`. Staging stores the entity.
+  name and address, and the privacy contact in the foot. `storekit.LegalEntityOf` reads the sending
+  user's membership; none, or an archived entity, gives `installation.country`. Staging stores the entity.
   A recipient pack that sets `data-protection-follows-recipient` takes disclosures and deadlines.
-- **The lawful basis follows both, the stricter winning**, and its warning cites both laws (see
+- **The legal basis follows both, the stricter winning**, and its warning cites both laws (see
   [messaging-policy-packs.md](messaging-policy-packs.md#which-country-judges-a-recipient)).
 
 A recipient whose record states no jurisdiction, or one no pack covers, has no recipient pack
-duties; the sending entity's pack alone judges the lawful basis. Marketing still needs consent, as
+duties. The sending entity's pack alone judges the legal basis. Marketing still needs consent, as
 the verdict asks for it everywhere, and the send path always adds the unsubscribe link. The email
-domain, the sender's jurisdiction and the least strict pack never stand in for the recipient's.
+domain, the jurisdiction of the user who sends and the least strict pack never stand in for the recipient's.
 
 Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`, and a compiled
 pack's `ruleset_digest`) and the `data_protection_country` of the user who sends. Preview and staging refuse an advertising subject without a recipient's label (`subject_label_missing`).
