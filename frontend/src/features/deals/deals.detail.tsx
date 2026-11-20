@@ -49,6 +49,7 @@ import { DealActions } from "./deal360/dealactions";
 import { DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab, DealLatestInbound } from "./deal360/dealhistorytab";
 import { DealLegalTab } from "./deal360/deallegaltab";
+import { ArchivedDealBand } from "./deal360/dealrestore";
 import { DealRoomTab } from "./deal360/dealroomtab";
 import { useDealTabCounts } from "./deal360/dealtabcounts";
 import { currentReplyTarget } from "./deal360/dealwaiting";
@@ -119,19 +120,25 @@ function DealTabs({
 }
 
 // One sentence for why this deal takes no changes, whichever reason applies,
-// said once across the header so every refused control can point at it.
+// said once across the header so every refused control can point at it. An
+// archived deal's band also offers the way back.
 // Absent while the deal is live and the reader's: `undefined`, not an element
 // that renders null, because RecordView reserves space for anything it is
 // handed. A line always reserved would read as a record with nothing said.
 function dealBand({
+  deal,
   reason,
   reasonId,
 }: Readonly<{
+  deal: Deal;
   reason: string | undefined;
   reasonId: string;
 }>): ReactNode | undefined {
   if (reason === undefined) {
     return undefined;
+  }
+  if (deal.archived_at) {
+    return <ArchivedDealBand deal={deal} reason={reason} reasonId={reasonId} />;
   }
   return <p id={reasonId}>{reason}</p>;
 }
@@ -337,6 +344,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               // The sentence naming why this deal takes no changes, while
               // it does not.
               band={dealBand({
+                deal,
                 reason: readOnlyReason,
                 reasonId: readOnlyReasonId,
               })}

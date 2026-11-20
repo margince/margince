@@ -178,6 +178,7 @@ const MAGIC_UNDO_REASONS: Readonly<Record<string, MessageKey | undefined>> = {
 // the reader's work; that they may not write it is no news on every row.
 const READER_REFUSALS: ReadonlySet<string> = new Set([
   "not_writable_by_caller",
+  "restore_archiver_required",
 ]);
 
 /** Why this line cannot be taken back, in words, or null for a reason this build has none for or does not say. */

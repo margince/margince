@@ -1459,6 +1459,7 @@
   "history.undo.recordArchived": "The record is archived and takes no changes, so this change cannot be undone.",
   "history.undo.nullUnwritable": "Undoing this change would clear a field that cannot be empty, so it cannot be undone.",
   "history.undo.notWritableByCaller": "You do not have permission to write these fields.",
+  "history.undo.restoreArchiverRequired": "Only the colleague who archived this record, or a manager, can restore it.",
   "history.undo.edgeRelinkUnsupported": "A removed link cannot be restored by undo. Add the link again on this record.",
   "history.undo.laterCompanyChange": "The company or its facts changed after this lookup, so undoing it would overwrite that later change.",
   "history.undo.noRestoreSnapshot": "This lookup was recorded before the earlier facts were kept, so it cannot be undone.",
