@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { IdentityLine } from "../../design-system/identityline";
-import { Panel, PanelBody } from "../../design-system/panel";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
-import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useViewerZone } from "../../lib/viewerzone";
-import { RecordHistoryTab } from "../records/history";
+import { ArchivedRecordHistory } from "../records/history";
 import { RecordAccess } from "../records/recordaccess";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import { ContactActions } from "./contactactions";
@@ -36,7 +33,6 @@ export function ArchivedContactPage({
   refusedReasonId: string;
 }>) {
   const t = useT();
-  const queryClient = useQueryClient();
   const readerZone = useViewerZone();
   return (
     <div className="wrap">
@@ -65,19 +61,11 @@ export function ArchivedContactPage({
         zone={readerZone}
         band={band}
       >
-        <Panel title={t("record.fullHistory")}>
-          <PanelBody>
-            <RecordHistoryTab
-              kind="contact"
-              id={contact.id}
-              restore={{
-                version: contact.version,
-                onRestored: () =>
-                  invalidateRecord(queryClient, "contact", contact.id),
-              }}
-            />
-          </PanelBody>
-        </Panel>
+        <ArchivedRecordHistory
+          kind="contact"
+          id={contact.id}
+          version={contact.version}
+        />
       </RecordView>
     </div>
   );

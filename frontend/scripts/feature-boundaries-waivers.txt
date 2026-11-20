@@ -304,12 +304,6 @@ reach features/records/entityref.test.tsx features/deals/dealbulk.tsx
 reach features/records/independentedit.ui.test.tsx features/companies/companies.tsx
 reach features/records/independentedit.ui.test.tsx features/contacts/contactdetails.tsx
 reach features/records/independentedit.ui.test.tsx features/deals/deals.tsx
-reach features/records/liverecord.test.tsx app/queryclient.ts
-reach features/records/liverecord.test.tsx features/companies/company360.tsx
-reach features/records/liverecord.test.tsx features/contacts/contact360.ts
-reach features/records/liverecord.test.tsx features/deals/dealstatus.tsx
-reach features/records/liverecord.test.tsx features/deals/outcomereview.queries.ts
-reach features/records/liverecord.test.tsx features/projects/project360.tsx
 reach features/records/movebutton.tsx features/brief/meetingbrief/index.ts
 reach features/records/movebutton.tsx features/mail/compose.tsx
 reach features/records/movebutton.tsx features/mail/openemaildrawer.tsx

@@ -394,7 +394,5 @@ Project permissions by role:
 | Admin / Ops | yes | yes | yes | yes |
 | Read-only | no | yes | no | no |
 
-Archiving a project is final from the app: "Archiving removes this project from
-the active list and frees its key. This cannot be undone here." It does not
-archive the deals or activities under it: the project goes, the history
-stays.
+Archiving a project is final from the app: "Archiving removes this project from the active list and frees its key. This cannot be undone here." It does not archive the deals or activities under it: the project goes, the history stays.
+Turn on **Show archived** on the list to open it again. Its page shows its history and says "This project is archived and takes no changes."

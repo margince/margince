@@ -100,6 +100,14 @@ export const LeadsScreen = lazy(
   ),
 );
 
+// The records feature's history panel an archived project's page shows. The
+// shell hands it over, since one feature never imports another.
+export const ArchivedRecordHistory = lazy(() =>
+  import("./features/records/history").then((m) => ({
+    default: m.ArchivedRecordHistory,
+  })),
+);
+
 export const ProjectScreen = lazy(
   routed(() =>
     import("./features/projects/project360").then((m) => ({

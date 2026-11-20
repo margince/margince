@@ -3,13 +3,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createQueryClient } from "../../app/queryclient";
-import { useDeal } from "../../lib/dealread";
-import { useCompany360 } from "../companies/company360";
-import { useContact360 } from "../contacts/contact360";
-import { useDealStatusCard } from "../deals/dealstatus";
-import { useOutcomeReviews } from "../deals/outcomereview.queries";
-import { useProject360 } from "../projects/project360";
+import { createQueryClient } from "../app/queryclient";
+import { useCompany360 } from "../features/companies/company360";
+import { useContact360 } from "../features/contacts/contact360";
+import { useDealStatusCard } from "../features/deals/dealstatus";
+import { useOutcomeReviews } from "../features/deals/outcomereview.queries";
+import { useProject360 } from "../features/projects/project360.reads";
+import { useDeal } from "../lib/dealread";
 
 // A RECORD RE-READS ITSELF WHILE SOMEBODY IS LOOKING AT IT (FE-PARAM-5).
 //
