@@ -41,6 +41,7 @@ type Readiness = ConnectorsResult["providers"][number]["reason"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 type SchedulingProfile = components["schemas"]["SchedulingProfile"];
 type PassportSummary = components["schemas"]["PassportSummary"];
+type Me = components["schemas"]["MeResponse"];
 
 export type SetupStepId =
   | "model"
@@ -389,6 +390,19 @@ function useModelRead(acts: ReadonlySet<SettingsPageId>) {
   };
 }
 
+function personalFacts(
+  user: Me["user"] | undefined,
+  permissionsSeen: boolean,
+): PersonalFacts | null {
+  if (!user) return null;
+  return {
+    timezoneChosen: user.timezone_chosen === true,
+    zone: user.timezone ?? null,
+    languageChosen: user.locale !== undefined,
+    permissionsSeen,
+  };
+}
+
 export function useSetupChecklist(
   reach: SettingsReach,
   withPersonal = true,
@@ -433,15 +447,9 @@ export function useSetupChecklist(
     passports: aiConnects ? (passports.data?.data ?? null) : null,
     now: passports.dataUpdatedAt,
     modelReady: model.ready,
-    personal:
-      withPersonal && me.data
-        ? {
-            timezoneChosen: me.data.user.timezone_chosen === true,
-            zone: me.data.user.timezone ?? null,
-            languageChosen: me.data.user.locale !== undefined,
-            permissionsSeen: permissions.seen,
-          }
-        : null,
+    personal: withPersonal
+      ? personalFacts(me.data?.user, permissions.seen)
+      : null,
   });
   const done = steps.filter((step) => step.state === "done").length;
   return {

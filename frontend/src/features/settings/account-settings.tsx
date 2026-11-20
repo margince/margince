@@ -226,8 +226,8 @@ function LanguageSettingRow() {
   });
   const refusalId = useId();
   const shown = draft ?? locale;
-  // Absent means the account never chose, so the language on screen is only a
-  // guess that needs a one-click keep: choosing it again makes no draft.
+  // Absent means the account never chose, so the language on screen is a guess.
+  // Choosing it again makes no draft, so it gets a one-click keep.
   const unchosen = useMe().data?.user.locale === undefined;
   useSaveDraft({
     dirty: shown !== locale,
