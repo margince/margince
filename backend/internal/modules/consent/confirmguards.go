@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // linkRequest is what the guards need to judge one mint.
@@ -207,6 +208,15 @@ func linkSubjectOf(contactID ids.ContactID, leadID ids.LeadID) subject {
 		return subject{entityType: entityLead, column: subjectColumnLead, id: leadID.UUID}
 	}
 	return subject{entityType: entityContact, column: subjectColumnContact, id: contactID.UUID}
+}
+
+// requireUpdate asks for update on the subject's own object, each named as a
+// constant so the grant scan can see which seeded roles reach this door.
+func (s subject) requireUpdate(ctx context.Context) error {
+	if s.entityType == entityLead {
+		return auth.Require(ctx, entityLead, principal.ActionUpdate)
+	}
+	return auth.Require(ctx, entityContact, principal.ActionUpdate)
 }
 
 // linkAddressTx is the one address a link for this subject goes to: a contact's

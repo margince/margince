@@ -352,7 +352,7 @@ const (
 )
 
 func (s *Store) issueLink(ctx context.Context, who subject, kind string, purposeID ids.PurposeID, expectedAddress string, lane mailLanePolicy, operatorAsks bool, language string) (IssuedConfirm, error) {
-	if err := auth.Require(ctx, who.entityType, principal.ActionUpdate); err != nil {
+	if err := who.requireUpdate(ctx); err != nil {
 		return IssuedConfirm{}, err
 	}
 	if err := requireMailLanguage(language); err != nil {
