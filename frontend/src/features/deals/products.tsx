@@ -155,6 +155,8 @@ export function ProductsAdmin() {
   const leading = useLeadingCurrencies();
   const { locale } = useLocale();
   const fields = productFields(t, leading, locale);
+  // A product's one unique value is its SKU.
+  const skuTaken = { field: "sku", sentence: t("product.skuTaken") };
   const [translating, setTranslating] = useState<Product | null>(null);
 
   const createProduct = async (values: Record<string, string>) => {
@@ -257,6 +259,7 @@ export function ProductsAdmin() {
               record={editableProduct(p, locale)}
               update={updateProduct(p)}
               fields={fields}
+              conflict={skuTaken}
             />
           )}
           {canUpdate && (
@@ -306,6 +309,7 @@ export function ProductsAdmin() {
             stay
             create={createProduct}
             fields={fields}
+            conflict={skuTaken}
           />
         ) : undefined
       }

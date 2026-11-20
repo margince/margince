@@ -2105,7 +2105,7 @@ paths:
         Renaming the installation's own company (`is_anchor`) renames the installation in the same
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-        past 200 characters (`too_long`); other companies' names have no length cap.
+        past 120 characters (`too_long`), the limit of every company name typed by hand.
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
 
@@ -13121,6 +13121,7 @@ paths:
             - deals-by-stage
             - forecast
             - leads-by-status
+            - loss-events
             - meeting-conversion
             - open-deals-per-company
             - pipeline-current
@@ -29559,6 +29560,24 @@ components:
           type: array
           description: The deal's contract, legal and offer documents, newest first.
           items: {$ref: '#/components/schemas/LegalReviewPacketDocument'}
+        contracts:
+          type: array
+          description: |-
+            The agreements filed against the deal, newest term first. Absent on a
+            pack asked for before agreements were packed. An agreement this reader
+            may not open, and every agreement for a reader without `deal.read`, is not listed.
+          items: {$ref: '#/components/schemas/LegalReviewPacketContract'}
+        touches:
+          type: array
+          description: |-
+            The deal's latest calls, meetings, messages and notes, newest first. One
+            this reader may not read, such as mail outside their audience, is not
+            listed. Absent on an older pack.
+          items: {$ref: '#/components/schemas/LegalReviewPacketTouch'}
+        tasks:
+          type: array
+          description: The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+          items: {$ref: '#/components/schemas/LegalReviewPacketTask'}
     LegalReviewPacketDeal:
       type: object
       required: [id, name]
@@ -29618,6 +29637,43 @@ components:
       properties:
         stage_name: {type: string}
         entered_at: {type: string, format: date-time}
+    LegalReviewPacketContract:
+      type: object
+      description: |-
+        One agreement as it stood at the request. Its title is read now for this
+        reader. The dates and notice terms are the ones frozen with the pack.
+      required: [id, title, status]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        contract_number: {type: [string, 'null']}
+        status: {type: string, enum: [draft, active, expired, cancelled, superseded]}
+        starts_on: {type: [string, 'null'], format: date}
+        ends_on: {type: [string, 'null'], format: date}
+        renewal_on: {type: [string, 'null'], format: date}
+        cancellation_notice_on: {type: [string, 'null'], format: date}
+        notice_period_days: {type: [integer, 'null']}
+        auto_renew: {type: [boolean, 'null']}
+    LegalReviewPacketTouch:
+      type: object
+      description: One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+      required: [activity_id, kind, occurred_at, occurred_precision]
+      properties:
+        activity_id: {type: string, format: uuid}
+        kind: {type: string, enum: [call, email, meeting, message, note]}
+        occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+        subject: {type: [string, 'null']}
+    LegalReviewPacketTask:
+      type: object
+      description: One task that was open at the request. Its subject is read now.
+      required: [activity_id]
+      properties:
+        activity_id: {type: string, format: uuid}
+        subject: {type: [string, 'null']}
+        due_at: {type: [string, 'null'], format: date-time}
     LegalReviewPacketDocument:
       type: object
       description: |-
@@ -36003,6 +36059,15 @@ components:
           description: >-
             The contact's display name. Null when the caller may not read that contact — the seat still counts toward coverage, because how many contacts carry a deal is not a fact this reader is being told they cannot know; only who they are. `our_side` has carried a display name from the start, and a buyer-side seat that carries only an id is the same list rendered half-anonymous.
         role: {type: string}
+        reach:
+          type: string
+          enum: [reached, not_reached, unknown]
+          description: |-
+            Whether a current colleague has exchanged mail with or met this seat, as the caller
+            can prove it. `not_reached` only when no activity links the seat to a colleague at
+            all. Anything withheld from the caller, or an exchange only with a colleague who has
+            left, is `unknown`. Absent for a seat the caller cannot read, and without the
+            `activity` grant.
         engaged:
           type: boolean
           description: 'A two-way exchange in the window — both directions, not just our sends.'
@@ -36014,6 +36079,20 @@ components:
         last_inbound_precision:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           description: How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
+    DealCoverageLine:
+      type: object
+      description: One colleague's exchange with one buyer seat, as the newest event in each direction.
+      required: [user_id, contact_id, colleague_name]
+      properties:
+        user_id: {type: string, format: uuid}
+        contact_id: {type: string, format: uuid}
+        colleague_name: {type: string}
+        last_inbound_at: {type: [string, 'null'], format: date-time, description: When the contact last wrote to this colleague.}
+        last_inbound_precision: {allOf: [{$ref: '#/components/schemas/OccurredPrecision'}], description: "How to read `last_inbound_at`."}
+        last_outbound_at: {type: [string, 'null'], format: date-time, description: "When this colleague last wrote to the contact, or was copied on our mail to them."}
+        last_outbound_precision: {allOf: [{$ref: '#/components/schemas/OccurredPrecision'}], description: "How to read `last_outbound_at`."}
+        last_met_at: {type: [string, 'null'], format: date-time, description: The newest meeting or call of the pair that neither declined.}
+        last_met_precision: {allOf: [{$ref: '#/components/schemas/OccurredPrecision'}], description: "How to read `last_met_at`."}
     DealCoverageRisk:
       type: object
       description: |-
@@ -37087,6 +37166,14 @@ components:
             score is their warmest single relationship. `single_threaded_ours` reads the same
             entries, so its colleague is always one of them.
           items: {$ref: '#/components/schemas/ContactNetworkColleague'}
+        lines:
+          type: array
+          description: |-
+            One entry per current colleague and readable seat who have exchanged mail or met,
+            from the activities the caller may open, at the time of the read. A seat the caller
+            cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+            the edge sections are withheld: absence says nothing about who has talked.
+          items: {$ref: '#/components/schemas/DealCoverageLine'}
         risks: {type: array, items: {$ref: '#/components/schemas/DealCoverageRisk'}}
         sections_omitted:
           type: array
@@ -44852,6 +44939,8 @@ components:
         - bookings_mix
         - qualified_opportunities_created
         - initiative_pipeline
+        - account_progression
+        - source_quality
     ReportingBlockKind:
       type: string
       description: |-
@@ -44871,6 +44960,8 @@ components:
         - breakdown
         - stage_cohort
         - lead_cohort
+        - account_cohort
+        - source_quality
     ReportingStatus:
       type: string
       description: |-
@@ -45295,6 +45386,8 @@ components:
         - breakdown
         - stage_cohort
         - lead_cohort
+        - account_cohort
+        - source_quality
         - question
         - assessment
     ReportingCardQuestion:
@@ -50843,7 +50936,7 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: {type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too, so it carries the installation name''s rule: `422 required` when blank, `422 too_long` past 200 characters.'}
+        display_name: {type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.'}
         legal_name: {type: [string, 'null'], description: The registered legal entity.}
         registered_address: {type: [string, 'null'], description: The registered address as one formatted line.}
         register_vat: {type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.'}

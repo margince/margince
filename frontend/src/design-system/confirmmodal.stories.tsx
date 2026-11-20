@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, screen, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { Field, Textarea, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { ConfirmModal } from "./confirmmodal";
+import { useFieldFaults } from "./savepage";
 
 const meta: Meta = {
   title: "Components/Overlays and layering/Confirm modal",
@@ -124,4 +125,53 @@ export const WithFieldsInDrawer: Story = {
 /** The way back named for what it keeps, where Cancel would not say it. */
 export const NamedCancel: Story = {
   render: () => <ConfirmDemo cancelLabel="Keep the draft" />,
+};
+
+// A confirm pressed with a field empty: the sentence sits on the field and
+// focus lands there, found through `bodyRef`.
+function RefusedFieldDemo() {
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const [competitor, setCompetitor] = useState("");
+  return (
+    <ConfirmModal
+      open
+      onClose={() => undefined}
+      title="Mark this deal lost?"
+      confirmLabel="Mark lost"
+      confirmVariant="danger"
+      bodyRef={faultsRoot}
+      onConfirm={() => {
+        faults.show(
+          competitor.trim() === ""
+            ? new Map([["competitor", "Competitor is required."]])
+            : new Map(),
+        );
+      }}
+    >
+      <Field label="Competitor" error={faults.of("competitor")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={competitor}
+            onChange={(event) => {
+              setCompetitor(event.target.value);
+              faults.edited("competitor");
+            }}
+          />
+        )}
+      </Field>
+    </ConfirmModal>
+  );
+}
+
+export const WithRefusedField: Story = {
+  render: () => <RefusedFieldDemo />,
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(dialog.getByRole("button", { name: "Mark lost" }));
+    const sentence = await dialog.findByText("Competitor is required.");
+    // The dialog fades in, and a line read during that fade is not yet visible.
+    await waitFor(() => expect(sentence).toBeVisible());
+    await expect(dialog.getByLabelText("Competitor")).toHaveFocus();
+  },
 };

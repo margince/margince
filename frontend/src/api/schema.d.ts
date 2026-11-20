@@ -2306,7 +2306,7 @@ export interface paths {
          * @description Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          *     A `parent_company_id` that names a company the caller cannot read answers 422 naming
          *     `parent_company_id`, the same for a missing record and for one hidden by row scope.
          */
@@ -11994,7 +11994,7 @@ export interface paths {
             header?: never;
             path: {
                 /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
-                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
+                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "loss-events" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
             };
             cookie?: never;
         };
@@ -26214,7 +26214,7 @@ export interface paths {
          *     Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          */
         patch: operations["updateCompanyProfileField"];
         trace?: never;
@@ -31525,6 +31525,20 @@ export interface components {
             history: components["schemas"]["LegalReviewPacketStage"][];
             /** @description The deal's contract, legal and offer documents, newest first. */
             documents: components["schemas"]["LegalReviewPacketDocument"][];
+            /**
+             * @description The agreements filed against the deal, newest term first. Absent on a
+             *     pack asked for before agreements were packed. An agreement this reader
+             *     may not open, and every agreement for a reader without `deal.read`, is not listed.
+             */
+            contracts?: components["schemas"]["LegalReviewPacketContract"][];
+            /**
+             * @description The deal's latest calls, meetings, messages and notes, newest first. One
+             *     this reader may not read, such as mail outside their audience, is not
+             *     listed. Absent on an older pack.
+             */
+            touches?: components["schemas"]["LegalReviewPacketTouch"][];
+            /** @description The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack. */
+            tasks?: components["schemas"]["LegalReviewPacketTask"][];
         };
         LegalReviewPacketDeal: {
             /** Format: uuid */
@@ -31596,6 +31610,48 @@ export interface components {
             stage_name: string;
             /** Format: date-time */
             entered_at: string;
+        };
+        /**
+         * @description One agreement as it stood at the request. Its title is read now for this
+         *     reader. The dates and notice terms are the ones frozen with the pack.
+         */
+        LegalReviewPacketContract: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            contract_number?: string | null;
+            /** @enum {string} */
+            status: "draft" | "active" | "expired" | "cancelled" | "superseded";
+            /** Format: date */
+            starts_on?: string | null;
+            /** Format: date */
+            ends_on?: string | null;
+            /** Format: date */
+            renewal_on?: string | null;
+            /** Format: date */
+            cancellation_notice_on?: string | null;
+            notice_period_days?: number | null;
+            auto_renew?: boolean | null;
+        };
+        /** @description One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content. */
+        LegalReviewPacketTouch: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @enum {string} */
+            kind: "call" | "email" | "meeting" | "message" | "note";
+            /** Format: date-time */
+            occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
+            subject?: string | null;
+        };
+        /** @description One task that was open at the request. Its subject is read now. */
+        LegalReviewPacketTask: {
+            /** Format: uuid */
+            activity_id: string;
+            subject?: string | null;
+            /** Format: date-time */
+            due_at?: string | null;
         };
         /**
          * @description One document as it stood at the request, read now for this reader. A
@@ -33694,6 +33750,14 @@ export interface components {
              *     code names other values carries them in `params`, an object of text values by
              *     name, so a screen can word the code in the reader's language; `message` stays
              *     the English sentence.
+             *
+             *     A value its field cannot hold names the field's path (`address.city` for a key of a
+             *     nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+             *     `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+             *     `invalid_type` for any other shape. A body that is not one JSON object, and a value
+             *     inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+             *     carries its bounds as `params.min` and `params.max`, as the schema spells them;
+             *     a date-time range states them as ISO dates.
              *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -38333,6 +38397,15 @@ export interface components {
             /** @description The contact's display name. Null when the caller may not read that contact — the seat still counts toward coverage, because how many contacts carry a deal is not a fact this reader is being told they cannot know; only who they are. `our_side` has carried a display name from the start, and a buyer-side seat that carries only an id is the same list rendered half-anonymous. */
             contact_name?: string | null;
             role: string;
+            /**
+             * @description Whether a current colleague has exchanged mail with or met this seat, as the caller
+             *     can prove it. `not_reached` only when no activity links the seat to a colleague at
+             *     all. Anything withheld from the caller, or an exchange only with a colleague who has
+             *     left, is `unknown`. Absent for a seat the caller cannot read, and without the
+             *     `activity` grant.
+             * @enum {string}
+             */
+            reach?: "reached" | "not_reached" | "unknown";
             /** @description A two-way exchange in the window — both directions, not just our sends. */
             engaged: boolean;
             /**
@@ -38342,6 +38415,35 @@ export interface components {
             last_inbound_at?: string | null;
             /** @description How to read `last_inbound_at`, from the activity it names. Absent when that is absent. */
             last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+        };
+        /** @description One colleague's exchange with one buyer seat, as the newest event in each direction. */
+        DealCoverageLine: {
+            /** Format: uuid */
+            user_id: string;
+            /** Format: uuid */
+            contact_id: string;
+            colleague_name: string;
+            /**
+             * Format: date-time
+             * @description When the contact last wrote to this colleague.
+             */
+            last_inbound_at?: string | null;
+            /** @description How to read `last_inbound_at`. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+            /**
+             * Format: date-time
+             * @description When this colleague last wrote to the contact, or was copied on our mail to them.
+             */
+            last_outbound_at?: string | null;
+            /** @description How to read `last_outbound_at`. */
+            last_outbound_precision?: components["schemas"]["OccurredPrecision"];
+            /**
+             * Format: date-time
+             * @description The newest meeting or call of the pair that neither declined.
+             */
+            last_met_at?: string | null;
+            /** @description How to read `last_met_at`. */
+            last_met_precision?: components["schemas"]["OccurredPrecision"];
         };
         /**
          * @description One finding, with the records behind it. `kind` names the rule so a surface can
@@ -39250,6 +39352,13 @@ export interface components {
              *     entries, so its colleague is always one of them.
              */
             our_side: components["schemas"]["ContactNetworkColleague"][];
+            /**
+             * @description One entry per current colleague and readable seat who have exchanged mail or met,
+             *     from the activities the caller may open, at the time of the read. A seat the caller
+             *     cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+             *     the edge sections are withheld: absence says nothing about who has talked.
+             */
+            lines?: components["schemas"]["DealCoverageLine"][];
             risks: components["schemas"]["DealCoverageRisk"][];
             /**
              * @description The sections withheld for lack of the `relationship` grant — so a client can say
@@ -48073,7 +48182,7 @@ export interface components {
         /** @description The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift. */
         SavedViewTarget: string;
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline" | "account_progression" | "source_quality";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -48085,9 +48194,13 @@ export interface components {
          *     `lead_cohort` follows the leads that arrived in the interval the same
          *     way: one point, its `outcomes` saying whether each lead was accepted,
          *     qualified, disqualified or is still open.
+         *     `account_cohort` follows the distinct accounts of those leads: one point,
+         *     its `outcomes` saying the furthest outcome any of an account's leads
+         *     reached. `source_quality` is one point per lead origin: how many leads
+         *     arrived from it and how many of them were linked to an opportunity.
          * @enum {string}
          */
-        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort";
+        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "account_cohort" | "source_quality";
         /**
          * @description `failed` means the database could not calculate this figure on this
          *     read. The other figures in the same evaluation are unaffected, and a
@@ -48435,7 +48548,7 @@ export interface components {
          *     `assessment`, the report's figures written up in a few sentences.
          * @enum {string}
          */
-        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "question" | "assessment";
+        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "account_cohort" | "source_quality" | "question" | "assessment";
         /**
          * @description A custom analytics question a card asks. Present exactly when the card's `kind` is
          *     `question`. Every reader of the report receives it, so it carries no filters (a filter
@@ -53352,7 +53465,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
-            /** @description The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters. */
+            /** @description The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;
@@ -84197,7 +84310,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
-                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
+                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "loss-events" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
             };
             cookie?: never;
         };

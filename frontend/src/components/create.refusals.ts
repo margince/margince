@@ -1,26 +1,6 @@
 import type { MessageKey } from "../i18n/en";
-import {
-  type FieldProblem,
-  faultSentenceFor,
-  problemFieldErrorsOf,
-} from "../lib/problem";
-import type { CreateField } from "./create.fields";
-
-// The server's field codes that have catalog copy here. Any other code reads
-// the shared wording of a field fault.
-const FIELD_CODE_COPY = new Map<string, MessageKey>([
-  ["amount_negative", "create.amountNegative"],
-  ["reference_not_found", "create.referenceNotFound"],
-]);
-
-// The sentence a form shows beside the field one refusal names.
-export function fieldRefusalSentence(
-  problem: FieldProblem,
-  t: (key: MessageKey) => string,
-): string {
-  const copy = FIELD_CODE_COPY.get(problem.code);
-  return copy ? t(copy) : faultSentenceFor(problem, t);
-}
+import { type FieldLabel, refusalSentences } from "../lib/problem";
+import { type CreateField, fieldLabel } from "./create.fields";
 
 export type FieldRefusals = Readonly<{
   // The sentence for each form field the server refused, keyed by field key.
@@ -28,31 +8,72 @@ export type FieldRefusals = Readonly<{
   // Every refusal found a field to stand beside, so the foot of the form has
   // nothing left to say.
   allPlaced: boolean;
+  // What the foot says: null once every refusal stands beside a field.
+  rest: string | null;
 }>;
 
+// A form's one unique field, by field key, and what a 409 that names it says
+// there: refusalSentences' own conflict, so the two cannot drift apart.
+export type CreateConflict = NonNullable<
+  NonNullable<Parameters<typeof refusalSentences>[3]>["conflict"]
+>;
+
+// Every key a field's values reach the server under. A row list's rows send
+// theirs under each row field's own key.
+function wireKeys(field: CreateField): string[] {
+  return [
+    field.wireField ?? field.key,
+    field.offers?.pickedKey,
+    ...(field.rowFields ?? []).map((row) => row.key),
+  ].filter((key): key is string => key !== undefined);
+}
+
 // A 422 names the wire field. A form field whose key differs (an amount typed
-// in major units, sent as amount_minor) declares it as wireField.
+// in major units, sent as amount_minor) declares it as wireField. An offered
+// box sends its pick under `pickedKey`.
 export function fieldRefusals(
   error: unknown,
   fields: readonly CreateField[],
   t: (key: MessageKey) => string,
+  conflict?: CreateConflict,
+  // The values the refused submit carried, for a limit that reads them.
+  sent: Readonly<Record<string, string>> = {},
 ): FieldRefusals {
-  const refused = problemFieldErrorsOf(error);
+  const labels: Record<string, FieldLabel> = {};
+  const fieldKeys = new Map<string, string>();
+  for (const field of fields) {
+    for (const wire of wireKeys(field)) {
+      if (fieldKeys.has(wire)) continue;
+      const label = fieldLabel(field, t);
+      const { limit } = field;
+      labels[wire] = limit
+        ? { label, limit: (bound) => limit(bound, sent) }
+        : label;
+      fieldKeys.set(wire, field.key);
+    }
+  }
+  const refused = refusalSentences(
+    error,
+    t,
+    labels,
+    conflict && { conflict: onWire(conflict, fields) },
+  );
   const byField = new Map<string, string>();
-  for (const problem of refused) {
-    // An offered box sends its pick under `pickedKey`, and a row list's rows
-    // send their values under the row field's key: those refusals are its own.
-    const field = fields.find(
-      (candidate) =>
-        (candidate.wireField ?? candidate.key) === problem.field ||
-        candidate.offers?.pickedKey === problem.field ||
-        candidate.rowFields?.some((row) => row.key === problem.field),
-    );
-    if (!field) continue;
-    byField.set(field.key, fieldRefusalSentence(problem, t));
+  for (const [wire, sentence] of refused.byField) {
+    byField.set(fieldKeys.get(wire) ?? wire, sentence);
   }
   return {
     byField,
-    allPlaced: refused.length > 0 && byField.size === refused.length,
+    allPlaced: byField.size > 0 && refused.rest === null,
+    rest: refused.rest,
   };
+}
+
+// A conflict names its field by key; the refusal names the wire field.
+function onWire(
+  conflict: CreateConflict,
+  fields: readonly CreateField[],
+): CreateConflict {
+  const unique = fields.find((field) => field.key === conflict.field);
+  return { ...conflict, field: unique?.wireField ?? conflict.field };
 }

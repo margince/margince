@@ -43,3 +43,8 @@ export const Defaults: Story = {
 export const Filled: Story = {
   args: { initial: { discount_pct: "10", tax_rate: "19" } },
 };
+
+// Each rate outside its bounds says so on its field, in percent.
+export const OutOfBounds: Story = {
+  args: { initial: { discount_pct: "150", tax_rate: "-5" } },
+};

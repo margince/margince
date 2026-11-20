@@ -1,6 +1,9 @@
 import { type ReactNode, useEffect, useRef } from "react";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
+import { isISODate } from "../format/datepattern";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { type FieldLabel, fieldCheckSentence } from "../lib/problem";
 import type { NameOffers } from "./create.offered";
 
 export type CreateFieldOption = { value: string; label: string };
@@ -94,6 +97,9 @@ export type CreateField = {
   // The API field a refusal names when it differs from `key`: an amount typed
   // in major units is sent as amount_minor.
   wireField?: string;
+  // A bound a refusal states in the wire's unit, shown in the unit the reader
+  // typed: moneyLimit or percentLimit. `sent` is the form as it was sent.
+  limit?: (wire: string, sent: Readonly<Record<string, string>>) => string;
   // Hidden fields are neither required nor submitted.
   showWhen?: (values: Record<string, string>) => boolean;
   // Recompute dependent choices; clear values no longer valid after a change.
@@ -185,6 +191,25 @@ export function keepUnsubmitted(
     }
   }
   return next;
+}
+
+// The days a date field can store; the server refuses a day outside them.
+export const EARLIEST_DAY = "0001-01-02";
+export const LATEST_DAY = "9999-12-30";
+
+/** Why a day cannot be stored, in the words of the server's own refusal. */
+export function dayOutOfRange(
+  day: string,
+  locale: Locale,
+  label: FieldLabel,
+): string | undefined {
+  if (!isISODate(day) || (day >= EARLIEST_DAY && day <= LATEST_DAY)) {
+    return undefined;
+  }
+  return fieldCheckSentence("out_of_range", locale, label, {
+    min: EARLIEST_DAY,
+    max: LATEST_DAY,
+  });
 }
 
 /** The kind of box an inline editor draws for a field. */
