@@ -119,6 +119,17 @@ export function roleShown(
   return vocabulary ? vocabulary.label(rel.role, t) : rel.role;
 }
 
+/**
+ * The role an edit form opens with. A typed role has no label but is the
+ * editor's own text, so it opens as stored, with spaces for underscores.
+ */
+export function roleEditable(
+  rel: Pick<Relationship, "kind" | "role">,
+  t: (key: MessageKey) => string,
+): string {
+  return roleShown(rel, t) || (rel.role ?? "").replace(/_/g, " ");
+}
+
 /** The role a form sends for `typed`; `offered` holds the role it opened with. */
 export function roleSent(
   kind: Relationship["kind"],

@@ -12,6 +12,9 @@ import (
 
 func TestEveryRecordedRoleHasWordsInEveryLanguage(t *testing.T) {
 	langcopytest.Census(t, roleWords)
+	if len(roleWords) != len(Shown)+1 {
+		t.Errorf("roleWords has %d roles, Shown and the legacy role have %d", len(roleWords), len(Shown)+1)
+	}
 	for _, role := range append(append([]string{}, Shown...), LegacyDecisionMaker) {
 		if _, ok := roleWords[role]; !ok {
 			t.Errorf("role %s has no wording", role)

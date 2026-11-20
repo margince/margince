@@ -5488,6 +5488,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.roleLabel.blocker": "Người cản trở",
   "co.roleLabel.influencer": "Người có ảnh hưởng",
   "co.roleLabel.user": "Người dùng cuối",
+  "co.roleLabel.decision_maker": "Người ra quyết định",
   "co.evidence.extractedUnconfirmed": "AI trích xuất · chưa xác nhận",
   "co.evidence.previous": "Thông tin trước",
   "co.evidence.next": "Thông tin sau",

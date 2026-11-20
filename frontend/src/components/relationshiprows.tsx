@@ -39,6 +39,7 @@ import {
   type Relationship,
   type RelationshipScope,
   relationshipEditFields,
+  roleEditable,
   roleSent,
   roleShown,
   scopeCopy,
@@ -231,7 +232,7 @@ export function RelationshipRows({
           record={{
             id: rel.id,
             version: rel.version,
-            role: roleShown(rel, t),
+            role: roleEditable(rel, t),
             stored_role: rel.role ?? "",
             started_at: rel.started_at ?? "",
             ended_at: rel.ended_at ?? "",
