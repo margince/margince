@@ -110,3 +110,24 @@ func gunzipResponse(t *testing.T, encoded []byte) []byte {
 	}
 	return decoded
 }
+
+func TestTheDefaultCacheControlYieldsToAStatedOne(t *testing.T) {
+	for _, tc := range []struct{ name, outer, handler, want string }{
+		{"nothing stated", "", "", apiDefaultCache},
+		{"the handler states its own", "", "private, no-cache", "private, no-cache"},
+		{"an outer layer stated one", "no-store", "", "no-store"},
+	} {
+		rec := httptest.NewRecorder()
+		if tc.outer != "" {
+			rec.Header().Set("Cache-Control", tc.outer)
+		}
+		privateUnlessStated(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			if tc.handler != "" {
+				w.Header().Set("Cache-Control", tc.handler)
+			}
+		})).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/me", nil))
+		if got := rec.Header().Get("Cache-Control"); got != tc.want {
+			t.Errorf("%s: Cache-Control = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
