@@ -547,6 +547,7 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 	owner := OwnerConn(t)
 	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
 
+	shareContactForWriting(t, e, ours)
 	// An earlier meeting our attendee sat in, whose author then limited it to
 	// its participants. Rep1 is not one, so the row stays DISCOVERABLE to them
 	// and its content does not — which is the exact gap between the two
@@ -586,6 +587,16 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 				t.Errorf("the brief disclosed a subject this caller may not read: %q", sentence.Text)
 			}
 		}
+	}
+}
+
+// shareContactForWriting is Rep1 sharing their contact with Rep3 at `write`,
+// the share Rep3 needs to file a meeting onto it.
+func shareContactForWriting(t *testing.T, e *Env, contact ids.UUID) {
+	t.Helper()
+	if _, err := identity.NewService(e.Pool).CreateRecordGrant(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms),
+		identity.CreateGrantInput{RecordType: "contact", RecordID: contact, SubjectType: "user", SubjectID: e.Rep3, Access: "write"}); err != nil {
+		t.Fatalf("share the contact: %v", err)
 	}
 }
 
