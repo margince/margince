@@ -4,6 +4,7 @@
 package search
 
 import (
+	"context"
 	"net/http"
 	"slices"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Handlers is the module's transport slice; compose embeds it so the
@@ -77,6 +79,7 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	}
 	in.PerType = params.PerType
 	in.WithEmployees = params.WithEmployees != nil && *params.WithEmployees
+	in.Typeahead = typeaheadFor(r.Context(), params.Typeahead)
 	in.NearMatches = true
 
 	page, err := h.store.Search(r.Context(), in)
@@ -175,4 +178,11 @@ func wireNearMatches(matches []NearMatch) *[]crmcontracts.SearchNearMatch {
 		out = append(out, near)
 	}
 	return &out
+}
+
+// typeaheadFor honours the typeahead flag for a human's search box alone. An
+// agent or connector that sends it still gets every message it matches.
+func typeaheadFor(ctx context.Context, asked *bool) bool {
+	actor, ok := principal.Actor(ctx)
+	return asked != nil && *asked && ok && actor.Type == principal.PrincipalHuman
 }

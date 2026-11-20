@@ -4,11 +4,13 @@
 package search
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Which part of a query is matched whole, and which is offered as a prefix.
@@ -122,7 +124,7 @@ func TestSearchBindsNoParameterItsSQLDoesNotUse(t *testing.T) {
 		t.Fatal("no branch was admitted, so this proves nothing about the SQL")
 	}
 
-	sql := strings.Join(branches, " ")
+	sql := unionSQL(branches)
 	for i := range bound {
 		placeholder := fmt.Sprintf("$%d", i+1)
 		if !strings.Contains(sql, placeholder) {
@@ -165,7 +167,7 @@ func TestTheBranchSQLCarriesBothHalvesOfTheQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
-	sql := strings.Join(branches, " ")
+	sql := unionSQL(branches)
 
 	if !strings.Contains(sql, "websearch_to_tsquery") {
 		t.Fatal("the finished words are no longer matched whole")
@@ -203,7 +205,7 @@ func TestAQueryWithNoFragmentGetsNoPrefixArm(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
-	sql := strings.Join(branches, " ")
+	sql := unionSQL(branches)
 
 	if strings.Contains(sql, "':*'") {
 		t.Fatal("a prefix arm was built for a query with no fragment; it renders '':* and raises a tsquery syntax error")
@@ -260,7 +262,7 @@ func TestMailMatchesTheFragmentWholeAndRecordsByPrefix(t *testing.T) {
 		if err != nil {
 			t.Fatalf("building the %s branch SQL: %v", entity, err)
 		}
-		return strings.Join(branches, " "), tailPos
+		return unionSQL(branches), tailPos
 	}
 
 	mail, tailPos := branchSQL("activity")
@@ -327,7 +329,7 @@ func TestMailRanksABoundedSampleAndRecordsRankEveryMatch(t *testing.T) {
 		if err != nil {
 			t.Fatalf("building the %s branch SQL: %v", entity, err)
 		}
-		sql := strings.Join(branches, " ")
+		sql := unionSQL(branches)
 		sampled := false
 		for pos, v := range bound {
 			if n, ok := v.(int); ok && n == activityRankSample && strings.Contains(sql, fmt.Sprintf("LIMIT $%d)", pos+1)) {
@@ -353,6 +355,62 @@ func TestIdentifierBinderAndLeadBranch(t *testing.T) {
 	for _, b := range searchBranches {
 		if b.entity == "lead" && b.identifier != storekit.LeadEmails {
 			t.Errorf("the lead branch does not search the lead address")
+		}
+	}
+}
+
+func TestFragmentTooShortForMailCountsLettersNotBytes(t *testing.T) {
+	for query, want := range map[string]bool{
+		"co":          true,
+		"con":         true,
+		"cont":        false,
+		"acme con":    true,
+		"con acme":    false,
+		"übe":         true,
+		"über":        false,
+		"übe":        true,
+		"über":       false,
+		"viê":         true,
+		"việt":        false,
+		"con ":        false,
+		`"con"`:       false,
+		"con or acme": false,
+		"-con":        false,
+		"acme\tco":    true,
+	} {
+		if got := fragmentTooShortForMail(query); got != want {
+			t.Errorf("fragmentTooShortForMail(%q) = %v, want %v", query, got, want)
+		}
+	}
+}
+
+func TestTypeaheadIsHonouredForAHumanAlone(t *testing.T) {
+	yes := true
+	for name, c := range map[string]struct {
+		ctx  context.Context
+		want bool
+	}{
+		"human":     {principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman}), true},
+		"agent":     {principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent}), false},
+		"connector": {principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalConnector}), false},
+		"nobody":    {context.Background(), false},
+	} {
+		if got := typeaheadFor(c.ctx, &yes); got != c.want {
+			t.Errorf("%s: typeaheadFor = %v, want %v", name, got, c.want)
+		}
+	}
+	if typeaheadFor(principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman}), nil) {
+		t.Error("an absent flag was read as set")
+	}
+}
+
+func TestNamesOnlyMail(t *testing.T) {
+	for _, c := range []struct {
+		types []string
+		want  bool
+	}{{nil, false}, {[]string{"activity"}, true}, {[]string{"activity", "contact"}, false}, {[]string{"contact"}, false}} {
+		if got := namesOnlyMail(c.types); got != c.want {
+			t.Errorf("namesOnlyMail(%v) = %v, want %v", c.types, got, c.want)
 		}
 	}
 }

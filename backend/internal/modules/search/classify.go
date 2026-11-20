@@ -79,7 +79,7 @@ func judge(ctx context.Context, tx pgx.Tx, branch searchBranch, query string, wi
 	if err != nil || !admitted {
 		return map[ids.UUID]verdict{}, err
 	}
-	matched := branch.ownMatch("t", matchExpression(branch.entity, headPos, tailPos, hasFragment), bindIdentifier(query, arg))
+	matched := branch.ownMatch("t", matchExpression(branch.entity, headPos, tailPos, hasFragment), bindIdentifier(query, arg), everyIdentifier)
 	sql := fmt.Sprintf(
 		`SELECT t.id, coalesce(%[1]s, false), coalesce(length(t.search_tsv) > 0, false) OR coalesce(%[1]s, false)
 		 FROM %[2]s t
