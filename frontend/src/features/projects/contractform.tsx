@@ -17,11 +17,14 @@ import { fileListKeys } from "../../lib/attachmentkeys";
 import { uploadAttachment } from "../../lib/attachmentupload";
 // The installation read every form shares: one query, one key, so the currency
 // this form writes is the same fact the settings screen shows.
-import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { SignedFileField } from "./contractform.signedfile";
 import { contractTermsBody } from "./contracttermsbody";
-import { ContractTermsFields, useTermsFaults } from "./contracttermsfields";
+import {
+  ContractTermsFields,
+  useContractCurrency,
+  useTermsFaults,
+} from "./contracttermsfields";
 import { createContract, patchContract } from "./contractwrites";
 
 // Recording an agreement.
@@ -111,11 +114,7 @@ export function ContractForm({
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<ContractDraft>(draftOf(contract));
   const [file, setFile] = useState<File | undefined>();
-  // The installation's own declared currency — the only one this form can
-  // supply, since it offers the reader no currency control. Undefined while the
-  // read is in flight and if it never answers, and undefined stays undefined:
-  // guessing a unit is the failure this whole pairing exists to prevent.
-  const baseCurrency = useInstallationSettings().data?.base_currency;
+
   const cf = useObjectCustomFields("contract", contract ? "record" : "create");
   // What the custom fields held when this form opened, raw. The patch is a
   // DIFF against it rather than a snapshot of the whole slice: no cf_ column
@@ -128,13 +127,13 @@ export function ContractForm({
   // to "1", and a genuine edit to 1 then compared EQUAL and vanished.
   const [openedCustom, setOpenedCustom] = useState<Record<string, unknown>>({});
 
-  // The scale the amount field reads and writes in. A recorded agreement keeps
-  // its OWN currency (draftOf preserves it); a new one takes the installation's
-  // declared code once that read lands. The empty-string fallback is not a
-  // guessed currency — it reaches only minorUnitDigits, whose unusable-code
-  // answer is ISO's own default of two, which is what this field assumed
-  // unconditionally before.
-  const contractCurrency = draft.currency || baseCurrency || "";
+  // A recorded agreement keeps its own currency (draftOf preserves it); a new
+  // one takes the installation's, which this form offers no control for.
+  const {
+    base: baseCurrency,
+    currency: contractCurrency,
+    unread: currencyUnread,
+  } = useContractCurrency(draft.currency);
 
   // Re-seed when the modal opens on a DIFFERENT agreement. Without this the
   // form keeps the previous row's values, and a reader correcting the second
@@ -276,6 +275,7 @@ export function ContractForm({
             draft={draft}
             setDraft={terms.setDraft}
             currency={contractCurrency}
+            currencyUnread={currencyUnread}
             errors={terms.errors}
           />
           <CustomFieldControls

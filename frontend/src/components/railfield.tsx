@@ -153,7 +153,6 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
         multiline={field.type === "textarea"}
         type={inlineTextKind(field)}
         maxLength={field.maxLength}
-        step={field.step ?? (field.type === "number" ? "any" : undefined)}
         {...write}
       />
       {beside}

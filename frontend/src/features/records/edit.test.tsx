@@ -548,7 +548,7 @@ describe("what an edit is a reading of", () => {
     await userEvent.click(screen.getByTestId("edit-record"));
     await userEvent.click(screen.getByRole("button", { name: "catalog" }));
     await waitFor(() =>
-      expect(screen.getByLabelText("Budget")).toHaveValue(100),
+      expect(screen.getByLabelText("Budget")).toHaveValue("100"),
     );
 
     await userEvent.click(

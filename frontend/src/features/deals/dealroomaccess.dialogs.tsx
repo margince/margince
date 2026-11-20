@@ -9,7 +9,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useFieldFaults } from "../../design-system/savepage";
 import { formatDateAbbrev } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { looksLikeEmail } from "../../lib/emailshape";
+import { emailFault } from "../../lib/emailshape";
 import {
   fieldCheckSentence,
   problemMessageOf,
@@ -76,17 +76,16 @@ function inviteeChecks(
 ): Partial<Record<keyof Invitee, string>> {
   const required = (label: string) =>
     fieldCheckSentence("required", locale, label);
+  const malformed = emailFault(invitee.email, locale, labels.email);
   return {
     ...(invitee.full_name === ""
       ? { full_name: required(labels.full_name) }
       : null),
     ...(invitee.email === ""
       ? { email: required(labels.email) }
-      : looksLikeEmail(invitee.email)
-        ? null
-        : {
-            email: fieldCheckSentence("email_malformed", locale, labels.email),
-          }),
+      : malformed
+        ? { email: malformed }
+        : null),
   };
 }
 

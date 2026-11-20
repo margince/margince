@@ -322,7 +322,7 @@ describe("FieldEditDialog", () => {
     await user.type(box, "31/02/2026");
     await user.click(screen.getByRole("button", { name: en["record.save"] }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Enter a date as DD/MM/YYYY.",
+      "There is no 31/02/2026 in the calendar.",
     );
     expect(box).toHaveValue("31/02/2026");
     expect(screen.getByRole("dialog", { name: "Industry" })).toBeVisible();

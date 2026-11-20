@@ -19,11 +19,6 @@ export type SubField = {
   multiselectEncoding?: "json";
   placeholder?: string;
   maxLength?: number;
-  // Granularity for a number input. Omitted means the browser's default of 1,
-  // which rejects any fractional entry.
-  step?: string;
-  // See CreateField.min.
-  min?: string;
 };
 
 export type CreateField = {
@@ -45,6 +40,7 @@ export type CreateField = {
   type?:
     | "text"
     | "email"
+    // A whole number. Typed as text, with a keyboard of digits only.
     | "number"
     // A number typed as text (an amount, a rate), read by parseTypedDecimal.
     // Never type="number", whose decimal sign is the browser's.
@@ -89,11 +85,6 @@ export type CreateField = {
   // Maps the record's raw value to the input string at prefill (minor units →
   // major); absent, the raw value is stringified.
   toInput?: (raw: unknown) => string;
-  // See SubField.step: a money field must declare its cents.
-  step?: string;
-  // Lowest value a number input accepts. A money amount that cannot be below
-  // zero declares it, so the browser refuses a minus before the server does.
-  min?: string;
   // The API field a refusal names when it differs from `key`: an amount typed
   // in major units is sent as amount_minor.
   wireField?: string;
