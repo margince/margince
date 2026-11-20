@@ -1,5 +1,5 @@
-/* RecordView: two cards in a row. The details card is a
-   fixed 340px and stays in view as the page scrolls; the sheet takes the
+/* RecordView: two columns in a row, drawn as cards on a phone. The details
+   column is a fixed 340px and stays in view as the page scrolls; the sheet takes the
    rest and may shrink to nothing, so the row never scrolls
    sideways. Under 900px of row the details card takes the full width above
    the sheet and scrolls with the page. */
@@ -27,13 +27,58 @@
   overflow: hidden;
 }
 
+/* Above a phone the record lies open on the content card: every pane keeps its
+   ground and states, and draws no edge or shadow of its own. */
+@media (width > 700px) {
+  .record-split
+    :is(
+      .page-pane,
+      .panel,
+      .card,
+      .lt,
+      .stat-strip,
+      .stat-card,
+      .recorddetails-group,
+      .recorddetails-note,
+      .record-card,
+      .company-card,
+      .reachcard
+    ) {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  /* With no edges and no inset, air alone parts the two columns. */
+  .record-split-row {
+    column-gap: var(--space-8);
+  }
+  /* Content stands on the columns' edges, so each keeps room for a focus ring. */
+  .record-split-details {
+    box-sizing: content-box;
+    margin-inline: calc(-1 * var(--space-1));
+    padding-inline: var(--space-1);
+  }
+  .record-split-sheet {
+    overflow: clip;
+    overflow-clip-margin: var(--space-1);
+  }
+  /* The strip's rule reaches as far as the sections under it bleed (panel.css). */
+  .record-split-sheet > .record-split-tabs {
+    margin-inline: calc(-1 * var(--space-1));
+    padding-inline: var(--space-1);
+  }
+  /* This pane paints its edge as a gradient through its clear border. */
+  .record-split .standing-sheet > .standing-sheet-pane {
+    background-clip: padding-box;
+  }
+}
+
 /* The head: mark and name, one fact per line, the pills, the verbs, with a
-   rule under it from edge to edge of the card. */
+   rule under it from edge to edge of the column. */
 .record-split-head {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--padPane);
+  padding: var(--padPane) 0;
   border-block-end: 1px solid var(--borderSubtle);
 }
 .record-split-identity {
@@ -249,7 +294,7 @@
 }
 
 .record-split-tabs {
-  padding: var(--space-3) var(--space-6) 0;
+  padding: var(--space-3) 0 0;
   border-block-end: 1px solid var(--borderSubtle);
 }
 /* The strip is as wide as the sheet it sits in. The page's breakout (a strip
@@ -307,12 +352,6 @@
   .record-split-details {
     flex-basis: 316px;
   }
-  .record-split-head {
-    padding-inline: var(--space-4);
-  }
-  .record-split-tabs {
-    padding-inline: var(--space-5);
-  }
   .record-split-tabs .recordtabs-strip {
     gap: var(--space-3);
   }
@@ -334,7 +373,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gapCards);
-  padding: var(--space-6) var(--space-6) var(--space-8);
+  padding: var(--space-6) 0 var(--space-8);
   min-inline-size: 0;
 }
 .record-split-feed > .record-band {
@@ -371,9 +410,10 @@
     justify-self: start;
   }
 }
-/* The first tab stands over the feed's first card, so the two insets move
-   together. */
+/* Only a phone's cards keep their edge, so only there does content stand in
+   from it; the first tab and the feed's first card move together. */
 @media (max-width: 700px) {
+  .record-split-head,
   .record-split-tabs {
     padding-inline: var(--padPane);
   }

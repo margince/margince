@@ -318,9 +318,8 @@ test.describe("company record — visual weight", () => {
   test("a card reads as a card against the page behind it", async ({
     page,
   }) => {
-    // The mockups set white cards on a light grey page. The border is what
-    // makes a card an object; against a near-white background at 1px of very
-    // low contrast it stops being visible at all.
+    // A pane on a record page draws no edge above a phone, so its ground alone
+    // tells it from the page behind it.
     const card = page.locator(".co-overview-stack .panel").first();
     const pageBg = await page.evaluate(
       () => getComputedStyle(document.body).backgroundColor,

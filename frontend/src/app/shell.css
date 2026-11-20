@@ -161,7 +161,6 @@
   }
   .app:not(.railless) .scroll {
     background: var(--pageCard);
-    border: 1px solid var(--groundEdge);
     border-radius: var(--r-lg);
   }
   .app:not(.railless) .topbar {
