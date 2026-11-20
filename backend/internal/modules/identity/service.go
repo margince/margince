@@ -385,15 +385,16 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			id.MustEnrolMFA = mustEnrol
 		}
 		// Written last, to keep concurrent requests off the session row lock while
-		// the reads run. Skipped inside stampInterval of the last write, so the
-		// idle window ends up to a minute early.
+		// the reads run. The UPDATE repeats the age test, so a burst that read
+		// stampDue together still writes once; the idle window ends up to a minute early.
 		if !stampDue {
 			return nil
 		}
 		_, err = tx.Exec(ctx,
 			`UPDATE session SET last_seen_at = now(),
 			   idle_expires_at = least(now() + $2::interval, expires_at)
-			 WHERE id = $1`, sessionID, idleTTL.String())
+			 WHERE id = $1 AND (last_seen_at IS NULL OR last_seen_at < now() - $3::interval)`,
+			sessionID, idleTTL.String(), stampInterval.String())
 		return err
 	})
 	if err != nil {
