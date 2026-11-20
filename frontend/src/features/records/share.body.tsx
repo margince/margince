@@ -17,12 +17,10 @@ import {
   RosterPicker,
   type RosterSubject,
   reassertKind,
-  SubjectKindIcon,
   subjectKey,
   useShareRoster,
 } from "../../components/share.parts";
 import {
-  Badge,
   Button,
   Field,
   SearchField,
@@ -30,21 +28,18 @@ import {
   Textarea,
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
+import { useToast } from "../../design-system/toast";
 import { holdsEveryWord, searchWords } from "../../format/collate";
-import {
-  formatDate,
-  formatNumber,
-  identifierNumber,
-} from "../../format/format";
+import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useViewerId } from "../../lib/session";
-import { useViewerZone } from "../../lib/viewerzone";
 import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
+import { ShareAccessRow, useShareNames } from "./share.accessrow";
 import { ShareConfirmation } from "./share.confirmation";
 import {
   ApprovalRequiredError,
@@ -72,7 +67,6 @@ export function ShareScreenBody({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useViewerZone();
   const viewerId = useViewerId();
   const queryClient = useQueryClient();
   // The picker survives both dialogs when their original triggers disappear.
@@ -87,6 +81,12 @@ export function ShareScreenBody({
   });
 
   const { roster, usersQuery, teamsQuery, rosterPartial } = useShareRoster();
+  const toast = useToast();
+  const { recordName, subjectName } = useShareNames(
+    recordType,
+    recordId,
+    roster,
+  );
 
   const heldBySubject = useMemo(() => {
     const bySubject = new Map<string, RecordGrant>();
@@ -183,6 +183,15 @@ export function ShareScreenBody({
           ? { name: draft.subject.name, access: draft.access }
           : null,
       );
+      if (!contactsOnly && draft.change !== "unchanged") {
+        toast.show(
+          t("share.granted", {
+            name: draft.subject.name,
+            access: accessLabel(draft.access, t),
+            record: recordName,
+          }),
+        );
+      }
       setAskingConfirmation(false);
       resetForm();
     },
@@ -425,46 +434,19 @@ export function ShareScreenBody({
               {(rows) => (
                 <div data-testid="share-acl-list">
                   {rows.map((g) => (
-                    <PanelRow key={g.id} className="share-acl-row">
-                      <div className="share-acl-who">
-                        <span className="share-acl-name">
-                          <SubjectKindIcon kind={g.subject_type} t={t} />
-                          <EntityRef kind={g.subject_type} id={g.subject_id} />
-                        </span>
-                        <div className="share-acl-meta">
-                          <Badge
-                            tone={g.access === "write" ? "accent" : undefined}
-                          >
-                            {accessLabel(g.access, t)}
-                          </Badge>
-                          <span className="t-caption">
-                            {t("share.grantedBy")}{" "}
-                            <EntityRef kind="user" id={g.granted_by} />
-                          </span>
-                          {g.reason && (
-                            <span className="t-caption">{g.reason}</span>
-                          )}
-                          {g.expires_at && (
-                            <Badge tone="warning">
-                              {formatDate(g.expires_at, locale, zone)}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      {/* The one share a reader who may not share can take
-                          away is one made to themselves (grants.go mayRevoke). */}
-                      {(mayRetract ||
-                        (g.subject_type === "user" &&
-                          g.subject_id === viewerId)) && (
-                        <Button
-                          variant="danger"
-                          onClick={() => setRevokingId(g.id)}
-                          data-testid="revoke-grant"
-                        >
-                          {t("share.revoke")}
-                        </Button>
-                      )}
-                    </PanelRow>
+                    <ShareAccessRow
+                      key={g.id}
+                      grant={g}
+                      subjectName={subjectName(g)}
+                      recordName={recordName}
+                      // The one share a reader who may not share can take
+                      // away is one made to themselves (grants.go mayRevoke).
+                      mayRevoke={
+                        mayRetract ||
+                        (g.subject_type === "user" && g.subject_id === viewerId)
+                      }
+                      onRevoke={() => setRevokingId(g.id)}
+                    />
                   ))}
                 </div>
               )}
@@ -474,6 +456,8 @@ export function ShareScreenBody({
           <RevokeGrantDialog
             grant={grantsQuery.data?.find((g) => g.id === revokingId) ?? null}
             grantsKey={grantsKey}
+            subjectName={subjectName}
+            recordName={recordName}
             onClose={() => setRevokingId(null)}
             returnFocusTo={returnFocusToSubject}
           />

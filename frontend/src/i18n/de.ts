@@ -3246,14 +3246,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.moreActionsFor": "Weitere Aktionen für {subject}",
   "record.fullHistory": "Vollständiger Verlauf",
 
-  "share.bulkConfirmTitle": "Diese Kontakte freigeben?",
+  "share.bulkConfirmTitle": "Diese Kontakte teilen?",
   "share.bulkConfirmBody":
-    "Die bisherigen Freigaben für {name} werden durch {access} und die gewählte Laufzeit ersetzt. Dadurch kann der Zugriff eingeschränkt werden oder enden.",
-  "share.companyContacts": "Kontakte freigeben",
+    "Was bisher mit {name} geteilt war, wird durch {access} und die gewählte Laufzeit ersetzt. Dadurch kann der Zugriff eingeschränkt werden oder enden.",
+  "share.companyContacts": "Kontakte teilen",
   "share.companyContactsNote":
-    "Gib aktuelle Kontakte frei, die du lesen und freigeben darfst. Andere lesbare Kontakte werden übersprungen. Verborgene Kontakte werden nicht gezählt.",
-  "share.companyContactsResult":
-    "{shared} freigegeben · {skipped} übersprungen",
+    "Teile aktuelle Kontakte, die du lesen und teilen darfst. Andere lesbare Kontakte werden übersprungen. Verborgene Kontakte werden nicht gezählt.",
+  "share.companyContactsResult": "{shared} geteilt · {skipped} übersprungen",
   "share.title": "Diesen Datensatz teilen",
   "share.ceiling.pre": "Das Teilen ändert die Sichtbarkeit für ",
   "share.ceiling.recordEmphasis": "genau diesen einen Datensatz",
@@ -3304,8 +3303,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.whoHasAccess": "Geteilt mit",
   "share.grantedBy": "gewährt von",
   "share.revoke": "Widerrufen",
+  "share.revokeFor": "Zugriff auf {record} für {name} widerrufen",
   "share.revokeConfirm":
-    "Zugriff widerrufen? Der Zugriff endet mit der nächsten Anfrage und kann anschließend nicht mehr rückgängig gemacht werden.",
+    "{access} auf {record} für {name} widerrufen? Der Zugriff endet mit der nächsten Anfrage und kann anschließend nicht mehr rückgängig gemacht werden.",
+  "share.granted": "{name} hat jetzt {access} auf {record}.",
+  "share.thisRecord": "diesen Datensatz",
+  "share.unnamedSubject": "dieses Mitglied oder Team",
   "share.approvalRequired":
     "Dieser geteilte Zugriff wird erst nach einer Freigabe wirksam. Der Zugriff gilt noch nicht.",
   "share.teamMembers_one": "Team · {count} Mitglied",

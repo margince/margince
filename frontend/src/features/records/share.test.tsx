@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
@@ -38,7 +39,12 @@ function render(ui: ReactNode) {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {ui}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -76,6 +82,9 @@ const existingGrant = {
   created_at: "2026-06-22T14:08:00Z",
   version: 1,
 };
+
+// Mor Adler's row in the picker, not the Revoke button that also names her.
+const PICK_MOR = /^(?!Revoke).*Mor Adler/;
 
 // The same subject, holding write instead of read — the only starting point
 // from which a reduction is possible.
@@ -142,6 +151,11 @@ function installBaseFetch(
       if (path === "/v1/me") return jsonResponse(meFixture(SHARER));
       if (RECORD_READ.test(path)) {
         return jsonResponse({ id: path.split("/").pop(), writable: true });
+      }
+      if (path === "/v1/records/references") {
+        return jsonResponse({
+          data: [{ id: "d-1", name: "Acme renewal", archived: false }],
+        });
       }
       if (request.url.includes("/users")) return jsonResponse(usersPage);
       if (request.url.includes("/teams")) return jsonResponse(teamsPage);
@@ -369,7 +383,7 @@ describe("ShareScreen", () => {
     installBaseFetch();
     render(<ShareScreen recordType="deal" recordId="d-1" />);
 
-    const row = await screen.findByRole("button", { name: /Mor Adler/ });
+    const row = await screen.findByRole("button", { name: PICK_MOR });
     // Selectable: the only way to change a level used to be revoke-and-share.
     // Refused in either spelling counts: `disabled` is what the row used to
     // carry, `aria-disabled` is how Button refuses a press without dropping
@@ -387,7 +401,7 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="deal" recordId="d-1" />);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     await user.click(screen.getByRole("button", { name: "Write" }));
     await user.click(screen.getByTestId("share-grant-submit"));
 
@@ -404,7 +418,7 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="deal" recordId="d-1" />);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     // Picking opens the form on what they hold (write); Read is the reduction.
     await user.click(screen.getByRole("button", { name: "Read" }));
     await user.click(screen.getByTestId("share-grant-submit"));
@@ -433,7 +447,7 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="deal" recordId="d-1" />);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     await user.click(screen.getByRole("button", { name: "Read" }));
     await user.click(screen.getByTestId("share-grant-submit"));
 
@@ -458,7 +472,7 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="deal" recordId="d-1" />);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     await user.click(screen.getByRole("button", { name: "Read" }));
     await user.click(screen.getByTestId("share-grant-submit"));
 
@@ -478,7 +492,7 @@ describe("ShareScreen", () => {
     // Picked and submitted untouched: same level, same (absent) expiry, same
     // reason. The list below looks identical afterwards, so silence here would
     // read as a change that landed.
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     await user.click(screen.getByTestId("share-grant-submit"));
 
     await waitFor(() => expect(posts).toHaveLength(1));
@@ -535,6 +549,44 @@ describe("ShareScreen", () => {
     );
     return dialog;
   }
+
+  // Every row has a Revoke, so the button and its question name whose access
+  // to which record a press ends.
+  it("names the member and the record on Revoke and in its question", async () => {
+    installBaseFetch();
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Revoke access to Acme renewal for Mor Adler",
+      }),
+    );
+
+    expect((await screen.findByRole("dialog")).textContent).toContain(
+      "Revoke Read access to Acme renewal for Mor Adler?",
+    );
+  });
+
+  it("confirms a grant by naming who can now see the record", async () => {
+    const posts: Record<string, unknown>[] = [];
+    installBaseFetch({ "/record-grants": grantEndpoint(posts, existingGrant) });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+    await screen.findByRole("button", {
+      name: "Revoke access to Acme renewal for Mor Adler",
+    });
+
+    await user.click(await screen.findByRole("button", { name: /Priya Shah/ }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+
+    expect(
+      await screen.findByText(
+        "Priya Shah now has Read access to Acme renewal.",
+      ),
+    ).toBeTruthy();
+    expect(posts).toHaveLength(1);
+  });
 
   it("revoke on a row, confirmed, fires DELETE /record-grants/{id} behind the version it showed", async () => {
     let deletedIfMatch: string | null = null;

@@ -3206,8 +3206,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "share.whoHasAccess": "Đã chia sẻ với",
   "share.grantedBy": "người cấp",
   "share.revoke": "Thu hồi",
+  "share.revokeFor": "Thu hồi quyền truy cập {record} của {name}",
   "share.revokeConfirm":
-    "Thu hồi quyền truy cập này? Quyền sẽ bị hủy ở yêu cầu tiếp theo và không thể hoàn tác.",
+    "Thu hồi quyền {access} với {record} của {name}? Quyền sẽ bị hủy ở yêu cầu tiếp theo và không thể hoàn tác.",
+  "share.granted": "{name} giờ có quyền {access} với {record}.",
+  "share.thisRecord": "hồ sơ này",
+  "share.unnamedSubject": "thành viên hoặc nhóm này",
   "share.approvalRequired":
     "Lần chia sẻ này chỉ có hiệu lực sau khi được duyệt. Hiện chưa được áp dụng.",
   "share.teamMembers_one": "Nhóm · {count} thành viên",

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
+import { accessLabel } from "../../components/share.parts";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useT } from "../../i18n";
 import { isEntityKind } from "../../lib/entity";
@@ -47,11 +48,15 @@ export function shareRefusalMessage(
 export function RevokeGrantDialog({
   grant,
   grantsKey,
+  subjectName,
+  recordName,
   onClose,
   returnFocusTo,
 }: {
   grant: RecordGrant | null;
   grantsKey: readonly unknown[];
+  subjectName: (grant: RecordGrant) => string;
+  recordName: string;
   onClose: () => void;
   returnFocusTo: () => HTMLElement | null;
 }) {
@@ -103,7 +108,15 @@ export function RevokeGrantDialog({
       pending={revoke.isPending}
       error={revoke.isError ? shareRefusalMessage(revoke.error, t) : null}
     >
-      <p>{t("share.revokeConfirm")}</p>
+      {grant && (
+        <p>
+          {t("share.revokeConfirm", {
+            name: subjectName(grant),
+            access: accessLabel(grant.access, t),
+            record: recordName,
+          })}
+        </p>
+      )}
     </ConfirmModal>
   );
 }
