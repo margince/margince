@@ -106,7 +106,9 @@ async function ruleName(name: string) {
 
 // The page's one save bar, drawn only while some card holds a draft.
 function saveBar() {
-  return screen.queryByRole("region", { name: /^(Unsaved changes|Save to make these yours\.)$/ });
+  return screen.queryByRole("region", {
+    name: /^(Unsaved changes|Save to make these yours\.)$/,
+  });
 }
 
 function barSave() {

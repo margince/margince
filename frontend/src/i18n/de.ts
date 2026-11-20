@@ -13062,10 +13062,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.imapSecretHint":
     "Verwende ein App-spezifisches Passwort. Das Passwort wird im Schlüsseltresor gespeichert und nach Zeitplan zum Lesen der E-Mails genutzt, bis du das Postfach trennst. Beim Trennen wird das Passwort gelöscht.",
   "connectors.imapSubmitCta": "Verbinden",
-  "connectors.imapNeeded": "Pflichtfelder",
-  "connectors.imapStillNeeded": "Erforderlich: {fields}",
-  "connectors.imapRange": "Von {min} bis {max}",
-  "connectors.imapOutOfRange": "Außerhalb des Bereichs: {fields}",
+  "connectors.imapHostName":
+    "Gib nur den Servernamen ein, zum Beispiel imap.example.com.",
+  "connectors.imapSecretEmptied":
+    "Nach dem Fehlversuch geleert. Gib es erneut ein.",
   "connectors.imapLoginRejected":
     "Das Postfach hat diese Zugangsdaten abgelehnt. Prüfe Server, E-Mail-Adresse und App-Passwort.",
   "connectors.imapUnreachable":
@@ -17400,6 +17400,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Termine erscheinen bei Kontakten und Deals, und dein Buchungslink bietet nur deine freien Zeiten an.",
   "connectFlow.calendarImap": "Über IMAP nicht verfügbar.",
   "connectFlow.pickService": "Wähle E-Mail, Kalender oder beides.",
+  "connectFlow.pickMail": "Wähle E-Mail.",
   "connectFlow.importLabel": "Ältere E-Mails importieren",
   "connectFlow.importNone": "Keine",
   "connectFlow.importAfter":

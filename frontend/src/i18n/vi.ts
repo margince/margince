@@ -12720,10 +12720,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.imapSecretHint":
     "Dùng mật khẩu riêng cho ứng dụng. Mật khẩu được lưu trong kho khóa và dùng để đọc thư theo lịch cho đến khi ngắt kết nối; ngắt kết nối sẽ xóa mật khẩu.",
   "connectors.imapSubmitCta": "Kết nối",
-  "connectors.imapNeeded": "Trường bắt buộc",
-  "connectors.imapStillNeeded": "Bắt buộc: {fields}",
-  "connectors.imapRange": "Từ {min} đến {max}",
-  "connectors.imapOutOfRange": "Ngoài phạm vi: {fields}",
+  "connectors.imapHostName": "Chỉ nhập tên máy chủ, ví dụ imap.example.com.",
+  "connectors.imapSecretEmptied": "Đã xóa sau lần thử lỗi. Hãy nhập lại.",
   "connectors.imapLoginRejected":
     "Hộp thư từ chối thông tin đăng nhập này. Kiểm tra máy chủ, email và mật khẩu ứng dụng.",
   "connectors.imapUnreachable":
@@ -16935,6 +16933,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cuộc họp xuất hiện trên liên hệ và giao dịch, và liên kết đặt lịch của bạn chỉ đưa ra những giờ bạn rảnh.",
   "connectFlow.calendarImap": "Không khả dụng qua IMAP.",
   "connectFlow.pickService": "Chọn Thư, Lịch hoặc cả hai.",
+  "connectFlow.pickMail": "Chọn Thư.",
   "connectFlow.importLabel": "Nhập email cũ",
   "connectFlow.importNone": "Không nhập",
   "connectFlow.importAfter":

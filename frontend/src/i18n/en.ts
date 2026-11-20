@@ -12991,10 +12991,10 @@ export const en = {
   "connectors.imapSecretHint":
     "Use an app-specific password. It is stored in the key vault and used to read mail on a schedule until you disconnect, which deletes it.",
   "connectors.imapSubmitCta": "Connect",
-  "connectors.imapNeeded": "Required fields",
-  "connectors.imapStillNeeded": "Required: {fields}",
-  "connectors.imapRange": "From {min} to {max}",
-  "connectors.imapOutOfRange": "Out of range: {fields}",
+  "connectors.imapHostName":
+    "Enter the server name only, such as imap.example.com.",
+  "connectors.imapSecretEmptied":
+    "Emptied after the failed attempt. Enter it again.",
   "connectors.imapLoginRejected":
     "The mailbox rejected these credentials. Check host, email and app password.",
   "connectors.imapUnreachable":
@@ -17247,6 +17247,7 @@ export const en = {
     "Meetings appear on contacts and deals, and your booking link offers only your free times.",
   "connectFlow.calendarImap": "Not available over IMAP.",
   "connectFlow.pickService": "Tick Mail, Calendar or both.",
+  "connectFlow.pickMail": "Tick Mail.",
   "connectFlow.importLabel": "Import past email",
   "connectFlow.importNone": "None",
   "connectFlow.importAfter":

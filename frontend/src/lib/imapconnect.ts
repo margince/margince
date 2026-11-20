@@ -21,6 +21,20 @@ export const PORT_RANGE: Range = { min: 1, max: 65535 };
 // default for `port`.
 export const IMAP_PORT_DEFAULT = 993;
 
+// The wire code a port or count is refused with, or null for one that fits.
+export function rangeFault(
+  value: number,
+  range: Range,
+): "not_integer" | "out_of_range" | null {
+  if (!Number.isInteger(value)) return "not_integer";
+  return inRange(value, range) ? null : "out_of_range";
+}
+
+// A pasted web address: the server field takes a host name only.
+export function isWebAddress(host: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(host.trim()) || host.includes("/");
+}
+
 export function inRange(value: number, { min, max }: Range): boolean {
   return Number.isInteger(value) && value >= min && value <= max;
 }
