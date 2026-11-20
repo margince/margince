@@ -42,14 +42,12 @@ func TestAWriteEndsTheCachedHomeOfEachReaderItWasMadeForOnce(t *testing.T) {
 
 func requestOn(route string) *http.Request {
 	method, pattern, _ := strings.Cut(route, " ")
-	rctx := chi.NewRouteContext()
+	rctx, r := chi.NewRouteContext(), httptest.NewRequest(method, pattern, nil)
 	rctx.RoutePatterns = []string{pattern}
-	r := httptest.NewRequest(method, pattern, nil)
 	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
 }
 
-// The routes come from agentPolicies, so a read route added later is covered.
-func TestARouteThatOnlyReadsNeverMarksHomeBehind(t *testing.T) {
+func TestARouteThatOnlyReadsNeverMarksHomeBehind(t *testing.T) { // census over agentPolicies: a new read route is covered
 	checked := 0
 	for route, pol := range agentPolicies {
 		method, _, _ := strings.Cut(route, " ")
@@ -61,11 +59,8 @@ func TestARouteThatOnlyReadsNeverMarksHomeBehind(t *testing.T) {
 			t.Errorf("%s only reads, and marks Home behind a write", route)
 		}
 	}
-	if !mayChangeHome(requestOn("PATCH /v1/contacts/{id}")) {
-		t.Error("a contact update does not mark Home behind")
-	}
-	if checked == 0 {
-		t.Fatal("no POST, PUT, PATCH or DELETE route has the read scope; the census found nothing to check")
+	if !mayChangeHome(requestOn("PATCH /v1/contacts/{id}")) || checked == 0 {
+		t.Fatalf("a contact update must mark Home behind, and the census found %d read routes to check", checked)
 	}
 }
 

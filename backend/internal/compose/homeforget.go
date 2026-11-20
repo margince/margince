@@ -25,10 +25,7 @@ func forgetHomeOnWrite(cache *homecache.Cache, log *slog.Logger) crmcontracts.Mi
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			writers := writersOf(r)
-			if !mayChangeHome(r) {
-				writers = nil
-			}
-			if cache == nil || len(writers) == 0 {
+			if cache == nil || len(writers) == 0 || !mayChangeHome(r) {
 				next.ServeHTTP(w, r)
 				return
 			}
