@@ -412,6 +412,27 @@ describe("ShareScreen", () => {
     expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull();
   });
 
+  it("offers no colleague after the owner lookup failed, until its Retry answers", async () => {
+    let reads = 0;
+    installBaseFetch({
+      "/contacts/c-1/access": () => {
+        reads += 1;
+        return reads === 1
+          ? jsonResponse({ code: "internal", status: 500 }, 500)
+          : ownedAccess("u-1");
+      },
+    });
+    render(<ShareScreen recordType="contact" recordId="c-1" />);
+    const user = userEvent.setup();
+
+    const retry = await screen.findByRole("button", { name: "Retry" });
+    await screen.findByRole("button", { name: /Deal Desk/ });
+    expect(screen.queryByRole("button", { name: /Mor Adler/ })).toBeNull();
+    await user.click(retry);
+    await screen.findByRole("button", { name: /Mor Adler/ });
+    expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull();
+  });
+
   // POST /record-grants is idempotent on
   // (record_type, record_id, subject_type, subject_id) and a re-assert
   // RESTATES the grant, so an already-granted subject is offered rather than

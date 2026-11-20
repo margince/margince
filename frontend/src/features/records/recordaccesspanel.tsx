@@ -67,9 +67,8 @@ function recordAccessQuery(kind: AccessKind, id: string) {
 
 /**
  * The record's owner, as the access answer names it: undefined until that
- * answer is in, null where it names none or is not asked. A failed read is
- * null too, so the share screen offers everyone rather than no one. It
- * observes the read the panel makes, so the share screen asks for it once.
+ * answer is in, failed reads included, and null where it names none or is not
+ * asked. It observes the read the panel makes, whose Retry also answers this.
  */
 export function useRecordOwnerId(
   kind: string,
@@ -82,7 +81,7 @@ export function useRecordOwnerId(
     ...recordAccessQuery(accessKind ?? "contact", id),
     enabled: asked,
   });
-  if (!asked || query.isError) return null;
+  if (!asked) return null;
   const answer = query.data?.pages[0];
   return answer ? (answer.owner_id ?? null) : undefined;
 }
