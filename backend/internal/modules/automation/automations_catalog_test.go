@@ -111,3 +111,24 @@ func TestValidateRenewalReminderParamsRejectsUnknownKey(t *testing.T) {
 		t.Errorf("ParamError.Field = %q, want %q", paramErr.Field, "params.not_a_real_key")
 	}
 }
+
+func TestARuleWhoseEveryRunWaitsForAPersonReadsConfirmationRequired(t *testing.T) {
+	want := map[string]string{
+		postMeetingRecapName:      tierConfirmationRequired,
+		assignLeadOwnerName:       tierAutoExecute,
+		stageChangeCreateTaskName: tierAutoExecute,
+		stageChangeNotifyName:     tierAutoExecute,
+	}
+	for key, tier := range want {
+		entry, ok := CatalogEntryByKey(key)
+		if !ok {
+			t.Fatalf("catalog has no %s", key)
+		}
+		if entry.Tier() != tier {
+			t.Errorf("%s tier = %q, want %q", key, entry.Tier(), tier)
+		}
+	}
+	if RuleTier(string(ActionTypeRequestApproval)) != tierConfirmationRequired {
+		t.Error("request_approval must read confirmation_required")
+	}
+}

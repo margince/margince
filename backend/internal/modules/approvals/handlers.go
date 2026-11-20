@@ -363,6 +363,7 @@ func wire(ctx context.Context, a row, now time.Time) crmcontracts.Approval {
 		sentence := lapsedRedemptionSentence
 		out.EffectFailedAt, out.EffectFailure = &lapsedAt, &sentence
 	}
+	out.EffectFailureCode = effectFailureCode(out.EffectFailure)
 	if awaitsAgent(a, now) {
 		out.AwaitingAgent = new(true)
 	}

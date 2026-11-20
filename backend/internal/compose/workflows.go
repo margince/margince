@@ -107,6 +107,7 @@ func newAutomationHandlers(pool *pgxpool.Pool) automation.Handlers {
 		WithStageLookup(NewProviderFor(db)).
 		WithInquiryRouting(newInquiryRouting(db)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
+		WithRecordNames(newAttentionNames(db)).
 		WithRetryEngine(NewWorkflowEngine(db))
 }
 

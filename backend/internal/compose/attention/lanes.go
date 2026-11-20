@@ -251,6 +251,7 @@ type FailedEffect struct {
 	// Sentence is the server's own line about what did not run, written for
 	// the reader when the failure was recorded.
 	Sentence string
+	Code     *string // the sentence as Approval.effect_failure_code, when it has one
 	FailedAt time.Time
 	// The record the decision was about; empty TargetType when it named none,
 	// and the card offers `open` only when it did.

@@ -173,3 +173,35 @@ func TestHandingAnEnabledInquiryRuleToARepWhoCannotCreateTasksIsRefused(t *testi
 		t.Fatalf("hand on to a rep with the rep role: %d, want 200", status)
 	}
 }
+
+func TestArchivingAFormSwitchesOffItsHandlingPlanAndKeepsIt(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	var saved crmcontracts.WebsiteInquiryHandling
+	if status := e.Call(t, "PUT", "/v1/web-forms/"+form.ID+"/handling", inquirySettingsBody(t, e, form),
+		map[string]string{"If-Match": strconv.FormatInt(form.Version, 10)}, &saved); status != http.StatusOK {
+		t.Fatalf("save inquiry handling: %d", status)
+	}
+	if status := e.Call(t, "DELETE", "/v1/web-forms/"+form.ID, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("archive form: %d", status)
+	}
+	var plan crmcontracts.Automation
+	if status := e.Call(t, "GET", "/v1/automations/"+saved.Automation.Id.String(), nil, nil, &plan); status != http.StatusOK || plan.Status == "enabled" {
+		t.Fatalf("archived form's plan: %d %+v", status, plan)
+	}
+	var audited int
+	if err := e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM audit_log WHERE entity_type='automation' AND entity_id=$1 AND action='update' AND after->>'enabled'='false'`, saved.Automation.Id).Scan(&audited); err != nil {
+		t.Fatal(err)
+	}
+	if audited != 1 {
+		t.Fatalf("plan switch-off audit rows = %d, want 1", audited)
+	}
+}
+
+func TestArchivingAFormWithoutAHandlingPlanSucceeds(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{"name": "Plain", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	if status := e.Call(t, "DELETE", "/v1/web-forms/"+form.ID, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("archive form: %d", status)
+	}
+}

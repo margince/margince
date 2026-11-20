@@ -266,7 +266,7 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 			INSERT INTO automation (key, name, origin, trigger, action, params, owner_id, enabled, tier, setter_passport_id)
 			VALUES ($1, $2, 'catalog', $3, $4, $5, $6, false, $7, $8)
 			RETURNING %s`, automationColumns),
-			in.Key, in.Name, triggerJSON, actionJSON, paramsJSON, storekit.UUIDOrNil(actor.UserID), entry.Tier, storekit.UUIDOrNil(setter)))
+			in.Key, in.Name, triggerJSON, actionJSON, paramsJSON, storekit.UUIDOrNil(actor.UserID), entry.Tier(), storekit.UUIDOrNil(setter)))
 		if err != nil {
 			return err
 		}
@@ -427,7 +427,7 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 			VALUES (@key, @name, 'catalog', @trigger, @action, @params, @enabled, @tier)`,
 			pgx.NamedArgs{
 				keyCatalogKey: entry.Key, keyName: entry.Name, "trigger": triggerJSON,
-				"action": actionJSON, keyParams: paramsJSON, "tier": entry.Tier,
+				"action": actionJSON, keyParams: paramsJSON, "tier": entry.Tier(),
 				auditEnabled: ready && entry.Action != string(ActionTypeDraftEmail),
 			}); err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)

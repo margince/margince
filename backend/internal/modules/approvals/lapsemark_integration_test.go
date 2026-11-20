@@ -276,6 +276,9 @@ func TestALapseBeforeTheSweepIsInTheFailureLaneLikeASweptOne(t *testing.T) {
 	if *listed[0].Approval.EffectFailure != lapsedRedemptionSentence {
 		t.Errorf("sentence = %q, want the lapse sentence", *listed[0].Approval.EffectFailure)
 	}
+	if code := listed[0].Approval.EffectFailureCode; code == nil || *code != "approval_lapsed" {
+		t.Errorf("code before the sweep = %v, want approval_lapsed", code)
+	}
 
 	if marked, err := e.svc.MarkLapsedRedemptions(e.sweeping()); err != nil || marked != 1 {
 		t.Fatalf("sweep = (%d, %v), want the one row marked", marked, err)
@@ -286,6 +289,9 @@ func TestALapseBeforeTheSweepIsInTheFailureLaneLikeASweptOne(t *testing.T) {
 	after, err := e.svc.OwnFailedDecisions(e.asDecider(), 8)
 	if err != nil || len(after) != 1 || !after[0].Approval.EffectFailedAt.Equal(before) {
 		t.Fatalf("lane after the sweep = (%v, %v), want the same single failure", after, err)
+	}
+	if code := after[0].Approval.EffectFailureCode; code == nil || *code != "approval_lapsed" {
+		t.Errorf("code after the sweep = %v, want approval_lapsed", code)
 	}
 }
 

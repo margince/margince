@@ -54778,6 +54778,12 @@ export interface components {
             /** @description The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is. */
             effect_failure?: string | null;
             /**
+             * @description `effect_failure` as a code a client words in the reader's language: approval_lapsed,
+             *     effect_not_run, effect_unconfirmed, follow_up_failed or window_not_widened. Absent when
+             *     the sentence has no code; the client then shows `effect_failure`.
+             */
+            effect_failure_code?: string;
+            /**
              * @description `false` on a pending mail proposal whose sender, the account the release runs as, has no
              *     connected mailbox that can transmit, so approving could only be refused. Absent
              *     otherwise.
@@ -57184,7 +57190,7 @@ export interface components {
              */
             outcome: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
             /**
-             * @description The tier that fired for this run.
+             * @description The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for a person.
              * @enum {string}
              */
             tier: "auto_execute" | "confirmation_required";
@@ -57205,6 +57211,26 @@ export interface components {
             reason_code?: string | null;
             /** @description Link into the audit_log row for this run. */
             audit_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The event that fired the run, for technical details. A clock rule's run names its scan.
+             */
+            event_id?: string;
+            /** @description What fires the rule, in the catalog's trigger vocabulary, e.g. deal.stage_changed or clock:renewal_scan. */
+            trigger_event_type?: string;
+            /** @description For a run a stage move fired, the stage the deal moved to. Absent once the event is no longer on record, and when the reader may not see the run's target. */
+            trigger_stage_name?: string;
+            /** @description The action kinds the run applied, or for a run queued for approval the kinds it queued, in order. A create another rule had already made is left out. Empty when the run did nothing. */
+            action_kinds?: string[];
+            /** @description The record the run acted on. Its label is absent when the reader may not see the record. */
+            target?: components["schemas"]["MagicEntityRef"];
+            created?: components["schemas"]["AutomationRunCreatedRecord"];
+        };
+        /** @description A record a fired run created, as the run's trace names it: a task by its subject. Its label is absent when the reader may not see the record the run acted on. */
+        AutomationRunCreatedRecord: {
+            /** @description The record type, e.g. activity for a task. */
+            type: string;
+            label?: string;
         };
         /** @description How a claim finished. */
         SettleClaimRequest: {
@@ -60692,6 +60718,11 @@ export interface components {
              *     engine's English sentence.
              */
             run_reason_code?: string;
+            /**
+             * @description On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+             *     language. `detail` keeps the English sentence.
+             */
+            effect_failure_code?: string;
             domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
@@ -62392,6 +62423,11 @@ export interface components {
              *     engine's English sentence.
              */
             run_reason_code?: string;
+            /**
+             * @description On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+             *     language. `detail` keeps the English sentence.
+             */
+            effect_failure_code?: string;
             domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */

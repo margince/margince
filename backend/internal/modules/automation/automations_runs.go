@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -112,7 +113,9 @@ type AutomationRunRecord struct {
 	Applied      json.RawMessage
 	Detail       *string // the reason decoded from workflow_run.detail (jsonb, rundetail.go): why for failed/blocked/skipped; nil for a clean applied run
 	TriggerEvent ids.UUID
-	Tier         string // the parent automation's tier — the tier that fired
+	TriggerType  string  // the rule's trigger: an event type, or a clock scan
+	ToStageName  *string // a stage move's destination, while its event is on record
+	Tier         string  // the parent automation's RuleTier
 	CreatedAt    time.Time
 }
 
@@ -150,9 +153,9 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 
 	var page AutomationRunPage
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var key, tier string
-		err := tx.QueryRow(ctx,
-			`SELECT key, tier FROM automation WHERE id = $1 AND archived_at IS NULL`, id).Scan(&key, &tier)
+		var key, action, trigger string
+		err := tx.QueryRow(ctx, `SELECT key, coalesce(action->>'kind', ''), coalesce(trigger->>'event_type', '')
+			FROM automation WHERE id = $1 AND archived_at IS NULL`, id).Scan(&key, &action, &trigger)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -175,7 +178,9 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 			where += storekit.SQLf(" AND (created_at, id) < ($%d, $%d)", len(args)-1, len(args))
 		}
 		rows, err := tx.Query(ctx, storekit.SQLf(`
-			SELECT id, status, planned, applied, detail, trigger_event, created_at
+			SELECT id, status, planned, applied, detail, trigger_event, created_at,
+			  (SELECT o.envelope->'payload'->>'to_stage_name' FROM event_outbox o
+			    WHERE `+kevents.OutboxEventIDSQL("o")+` = workflow_run.trigger_event::text LIMIT 1)
 			FROM workflow_run WHERE %s
 			ORDER BY created_at DESC, id DESC LIMIT %d`, where, n+1), args...)
 		if err != nil {
@@ -183,10 +188,10 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 		}
 		defer rows.Close()
 		for rows.Next() {
-			rec := AutomationRunRecord{Tier: tier}
+			rec := AutomationRunRecord{Tier: RuleTier(action), TriggerType: trigger}
 			var rawDetail []byte
 			if err := rows.Scan(&rec.ID, &rec.Status, &rec.Planned, &rec.Applied,
-				&rawDetail, &rec.TriggerEvent, &rec.CreatedAt); err != nil {
+				&rawDetail, &rec.TriggerEvent, &rec.CreatedAt, &rec.ToStageName); err != nil {
 				return err
 			}
 			// A backfilled row and a freshly-written one decode through the
