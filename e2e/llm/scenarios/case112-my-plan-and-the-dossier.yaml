@@ -2,6 +2,7 @@
 # Reading them starts no plan and refreshes no dossier: a refresh would spend the
 # enrich scope, and the user asked only to be told.
 name: case112_my_plan_and_the_dossier
+title: My week's plan and the company dossier
 criteria: [1]
 writes: false
 

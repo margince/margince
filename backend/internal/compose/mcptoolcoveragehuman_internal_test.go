@@ -3,7 +3,13 @@
 
 package compose
 
-import "testing"
+import (
+	"fmt"
+	"regexp"
+	"strings"
+	"testing"
+	"unicode/utf8"
+)
 
 func TestARouteIsNamedForHowTheAssistantWasReached(t *testing.T) {
 	for _, tc := range []struct{ folder, driver, want string }{
@@ -72,9 +78,10 @@ func TestAModelRunTwoWaysNamesBothRoutes(t *testing.T) {
 	}
 }
 
-// Every job on the page is named by its scenario's first line; one that breaks
-// the convention would render a row with no name and fail nothing.
-func TestEveryScenarioNamesItsJob(t *testing.T) {
+// Every job on the page is named by its scenario's `title:` line, in words a
+// user would say. A missing title renders a row with no name; a code word in
+// one is a builder's note a client cannot read.
+func TestEveryScenarioNamesItsJobInPlainWords(t *testing.T) {
 	cases, err := readE2ELLMCases(e2eLLMScenarioDir, e2eLLMRecordDir)
 	if err != nil {
 		t.Fatal(err)
@@ -83,8 +90,41 @@ func TestEveryScenarioNamesItsJob(t *testing.T) {
 		t.Fatal("read no scenarios; this census would pass having read nothing")
 	}
 	for _, c := range cases {
-		if c.Title == "" {
-			t.Errorf("%s: its first line is not `# CASE <n> — <the job in a contact's words>.`", c.File)
+		if problem := jobTitleProblem(c.Title); problem != "" {
+			t.Errorf("%s: its `title:` %s", c.File, problem)
 		}
 	}
+}
+
+func TestAJobTitleWithACodeWordOrNoneFails(t *testing.T) {
+	for _, title := range []string{
+		"", "Mark notices read with change_attention", "Use `read_details` here",
+		"Near neighbour of case104", strings.Repeat("a long title ", 5),
+	} {
+		if jobTitleProblem(title) == "" {
+			t.Errorf("%q passed as a plain job title", title)
+		}
+	}
+	if problem := jobTitleProblem("Tidy up the deal room"); problem != "" {
+		t.Errorf("a plain title failed: %s", problem)
+	}
+}
+
+// jobTitleMaxRunes keeps a job's name to one short cell of the page's table.
+const jobTitleMaxRunes = 48
+
+// jobTitleCodeWord is what marks a builder's word: a tool name, inline code,
+// or a scenario number.
+var jobTitleCodeWord = regexp.MustCompile("[_`]|(?i)\\bcase ?\\d+")
+
+func jobTitleProblem(title string) string {
+	switch {
+	case title == "":
+		return "is missing; name the job as a user would ask for it"
+	case utf8.RuneCountInString(title) > jobTitleMaxRunes:
+		return fmt.Sprintf("is longer than %d characters; say the job, not how it is checked", jobTitleMaxRunes)
+	case jobTitleCodeWord.MatchString(title):
+		return fmt.Sprintf("%q holds a code word; say it in a user's words", title)
+	}
+	return ""
 }

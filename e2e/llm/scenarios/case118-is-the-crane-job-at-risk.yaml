@@ -11,6 +11,7 @@
 # the health; read_view can reach the readings too. Either path is
 # right, so no tool is pinned.
 name: case118_is_the_crane_job_at_risk
+title: How is the crane project doing?
 criteria: [1]
 
 # Read-only by its prompt. Set because the server offers every tool and a run

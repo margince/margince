@@ -12,6 +12,7 @@
 #
 # THE END STATE is the request carried out: the rule paused, still the admin's.
 name: case106_turn_that_rule_off
+title: Turn that rule off
 criteria: [1]
 
 writes: true

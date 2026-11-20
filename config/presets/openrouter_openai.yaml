@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=../margince.schema.json
+# Model setup: OpenAI GPT-6, through OpenRouter
 # config/presets/openrouter_openai.yaml — every lane on OpenAI's GPT-6 family,
 # reached through the OpenRouter broker.
 #

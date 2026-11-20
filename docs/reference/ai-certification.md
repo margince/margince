@@ -1,10 +1,12 @@
-# AI certification
+# Margince AI: test results
 
 <!-- Generated from the invocation-site census, the scenario corpus and the committed records; do not edit by hand. -->
 
-Which AI features you can rely on under each preset: the ready-made choice of
-AI models you pick when you set Margince up. Every grade here was measured by
-running the product's real prompts against the model.
+Which AI you can use, both ways, is on one page: [Which AI can I use with Margince?](which-ai-you-can-use.md). The results for an assistant a user connects are in [Your AI assistant: test results](mcp-tool-coverage.md).
+
+Which features of Margince AI you can rely on under each model setup: which AI
+model does which kind of work. Every grade here was measured by running the
+product's real prompts against the model.
 
 <details>
 <summary>How this page is made</summary>
@@ -29,36 +31,38 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 ## Which model family should I use?
 
 *"I want to run Margince on Gemini. Can I trust it?"* This is the answer for each
-family of AI models, across everything Margince does with AI. To start from a ready-made
-setup instead, go to [Can I use this preset?](#can-i-use-this-preset).
+family of AI models, across everything Margince AI does. A *place* is one spot in the
+product where a feature calls a model; one feature can call from several places. To start
+from a ready-made setup instead, go to [Can I use this model setup?](#can-i-use-this-model-setup).
 
 | Family | Models we tested | Can I trust it? | In plain words |
 |---|---|---|---|
-| Gemini | `gemini-3.1-flash-lite`, `gemini-3.8-flash` | 🟡 Mostly | Ready for 44 of the 59 features we tested; 14 more work if someone looks over the result; 1 not reliable yet. |
-| GPT | `gpt-6-luna`, `gpt-6-sol`, `gpt-oss-120b` | 🟡 Mostly | Ready for 37 of the 54 features we tested; 11 more work if someone looks over the result; 6 not reliable yet. |
-| Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-medium-3-5` | 🟡 Mostly | Ready for 23 of the 50 features we tested; 17 more work if someone looks over the result; 10 not reliable yet. |
-| Gemma | `gemma-4-26b-a4b-it` | ⚪ Not enough tested yet | Tested on only 6 of the 61 features. Ask before relying on it. |
+| Gemini | `gemini-3.1-flash-lite`, `gemini-3.8-flash` | 🟡 Mostly | Ready in 44 of the 59 places we tested; 14 more work if someone looks over the result; 1 not reliable yet. |
+| GPT | `gpt-6-luna`, `gpt-6-sol`, `gpt-oss-120b` | 🟡 Mostly | Ready in 37 of the 54 places we tested; 11 more work if someone looks over the result; 6 not reliable yet. |
+| Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-medium-3-5` | 🟡 Mostly | Ready in 23 of the 50 places we tested; 17 more work if someone looks over the result; 10 not reliable yet. |
+| Gemma | `gemma-4-26b-a4b-it` | ⚪ Not enough tested yet | Tested in only 6 of the 61 places. Ask before relying on it. |
 
-A family rated **Yes** is ready for every feature we tested. One rated **Mostly** has at least 80 in every 100 tested features ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** when we tested it on under half of the features. A family is judged on its best model for each feature, and only on the models a preset uses, each on the features that preset sends to it.
+A family rated **Yes** is ready in every place we tested. One rated **Mostly** has at least 80 in every 100 tested places ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** when we tested it in under half of the places. A family is judged on its best model for each place, and only on the models a model setup uses, each in the places that setup sends to it.
 
-## Can I use this preset?
+## Can I use this model setup?
 
-A [preset](../../config/presets/README.md) picks which AI model runs each feature, so the same
-feature can be ready under one preset and not under another.
+A model setup picks which AI model runs each feature, so the same feature can be
+ready under one setup and not under another. Each one is a ready-made
+[preset file](../../config/presets/README.md) an operator copies into the configuration.
 
 88 of the 167 grades below were measured on an older version of the product and
 are waiting to be re-checked; each is marked below.
 
-| Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
+| Model setup | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
-| [`gemini_cloud`](#gemini_cloud) | global cloud | 26 | 9 | 1 | 1 | 26 of 37 features ready (7 re-checks pending) |
-| [`gemini_vertex_eu`](#gemini_vertex_eu) | EU-hosted cloud | 26 | 9 | 1 | 1 | 26 of 37 features ready (7 re-checks pending) |
-| [`openrouter_openai`](#openrouter_openai) | global cloud | 21 | 3 | 4 | 9 | 21 of 37 features ready (24 re-checks pending) |
-| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 13 | 12 | 8 | 4 | 13 of 37 features ready (20 re-checks pending) |
-| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 1 | 1 | 4 | 31 | 1 of 37 features ready (re-check pending) |
-| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 12 | 2 | 14 | 9 | 12 of 37 features ready (24 re-checks pending) |
-| [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 0 | 0 | 0 | 37 | 0 of 37 features ready |
-| [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 0 | 0 | 0 | 37 | 0 of 37 features ready |
+| [Google Gemini](#google-gemini) | global cloud | 26 | 9 | 1 | 1 | 26 of 37 features ready (7 re-checks pending) |
+| [Google Gemini in the EU, through Vertex AI](#google-gemini-in-the-eu-through-vertex-ai) | EU-hosted cloud | 26 | 9 | 1 | 1 | 26 of 37 features ready (7 re-checks pending) |
+| [OpenAI GPT-6, through OpenRouter](#openai-gpt-6-through-openrouter) | global cloud | 21 | 3 | 4 | 9 | 21 of 37 features ready (24 re-checks pending) |
+| [Open models from OpenAI and Mistral, through OpenRouter](#open-models-from-openai-and-mistral-through-openrouter) | global cloud | 13 | 12 | 8 | 4 | 13 of 37 features ready (20 re-checks pending) |
+| [Gemma 4 you could run yourself, through OpenRouter](#gemma-4-you-could-run-yourself-through-openrouter) | global cloud | 1 | 1 | 4 | 31 | 1 of 37 features ready (re-check pending) |
+| [Mistral models in the EU, through OpenRouter](#mistral-models-in-the-eu-through-openrouter) | EU-hosted cloud | 12 | 2 | 14 | 9 | 12 of 37 features ready (24 re-checks pending) |
+| [Gemma 4 on your own server, through Ollama](#gemma-4-on-your-own-server-through-ollama) | your own servers | 0 | 0 | 0 | 37 | 0 of 37 features ready |
+| [Qwen3 on your own server, through vLLM](#qwen3-on-your-own-server-through-vllm) | your own servers | 0 | 0 | 0 | 37 | 0 of 37 features ready |
 
 **What the grades mean**
 
@@ -67,7 +71,7 @@ are waiting to be re-checked; each is marked below.
 | ✅ Ready | Right in at least 90 of every 100 tries, no test case clearly broken, and good answers. | Turn it on and rely on it. |
 | ⚠️ Usable with care | Right in at least two thirds of tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |
 | ❌ Not reliable yet | Wrong too often, or answers below the quality bar. | Leave it off, or check every answer by hand. |
-| ❔ Not measured | This preset has a model for the feature, but nobody has tested it yet. | Ask for a test before relying on it. |
+| ❔ Not measured | This model setup has a model for the feature, but nobody has tested it yet. | Ask for a test before relying on it. |
 
 The small line under a grade names the model that answers the feature and its tier,
 then the model a failed call falls back to and that model's own grade on the feature.
@@ -79,7 +83,7 @@ rescue a feature graded below. *no separate fallback* means both tiers bind the 
 measured. The grade is the last one we have, and it is shown until the next test replaces it.
 [How the scoring works](#how-the-scoring-works) explains how a grade is reached.
 
-### `gemini_cloud`
+### Google Gemini
 
 Your data goes to: global cloud. 26 of 37 features ready (7 re-checks pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
 
@@ -124,7 +128,7 @@ Your data goes to: global cloud. 26 of 37 features ready (7 re-checks pending). 
 | What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (9 of 9) |
 
 <details>
-<summary>Which models this preset uses</summary>
+<summary>Which models this setup uses</summary>
 
 | Tier | Provider | Model |
 |---|---|---|
@@ -178,7 +182,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 </details>
 
-### `gemini_vertex_eu`
+### Google Gemini in the EU, through Vertex AI
 
 Your data goes to: EU-hosted cloud. 26 of 37 features ready (7 re-checks pending). Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
 
@@ -223,7 +227,7 @@ Your data goes to: EU-hosted cloud. 26 of 37 features ready (7 re-checks pending
 | What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (9 of 9) |
 
 <details>
-<summary>Which models this preset uses</summary>
+<summary>Which models this setup uses</summary>
 
 | Tier | Provider | Model |
 |---|---|---|
@@ -277,7 +281,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 </details>
 
-### `openrouter_openai`
+### OpenAI GPT-6, through OpenRouter
 
 Your data goes to: global cloud. 21 of 37 features ready (24 re-checks pending). Preset file: [`openrouter_openai.yaml`](../../config/presets/openrouter_openai.yaml).
 
@@ -322,7 +326,7 @@ Your data goes to: global cloud. 21 of 37 features ready (24 re-checks pending).
 | What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (9 of 9) · re-check pending |
 
 <details>
-<summary>Which models this preset uses</summary>
+<summary>Which models this setup uses</summary>
 
 | Tier | Provider | Model |
 |---|---|---|
@@ -376,7 +380,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 </details>
 
-### `openrouter_cloud`
+### Open models from OpenAI and Mistral, through OpenRouter
 
 Your data goes to: global cloud. 13 of 37 features ready (20 re-checks pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
 
@@ -421,7 +425,7 @@ Your data goes to: global cloud. 13 of 37 features ready (20 re-checks pending).
 | What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready · re-check pending</sub> | Right every time (9 of 9) · re-check pending |
 
 <details>
-<summary>Which models this preset uses</summary>
+<summary>Which models this setup uses</summary>
 
 | Tier | Provider | Model |
 |---|---|---|
@@ -475,7 +479,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 </details>
 
-### `consumer_class_brokered`
+### Gemma 4 you could run yourself, through OpenRouter
 
 Your data goes to: global cloud. 1 of 37 features ready (re-check pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
 
@@ -520,7 +524,7 @@ Your data goes to: global cloud. 1 of 37 features ready (re-check pending). Pres
 | What last week taught <sub>`weekly_learnings`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
 
 <details>
-<summary>Which models this preset uses</summary>
+<summary>Which models this setup uses</summary>
 
 | Tier | Provider | Model |
 |---|---|---|
@@ -574,7 +578,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 </details>
 
-### `openrouter_cloud_eu`
+### Mistral models in the EU, through OpenRouter
 
 Your data goes to: EU-hosted cloud. 12 of 37 features ready (24 re-checks pending). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
 
@@ -619,7 +623,7 @@ Your data goes to: EU-hosted cloud. 12 of 37 features ready (24 re-checks pendin
 | What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready · re-check pending</sub> | Right in 4 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
 
 <details>
-<summary>Which models this preset uses</summary>
+<summary>Which models this setup uses</summary>
 
 | Tier | Provider | Model |
 |---|---|---|
@@ -673,7 +677,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 </details>
 
-### `gemma4_local_ollama`
+### Gemma 4 on your own server, through Ollama
 
 Your data goes to: your own servers. 0 of 37 features ready. Preset file: [`gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
 
@@ -718,7 +722,7 @@ Your data goes to: your own servers. 0 of 37 features ready. Preset file: [`gemm
 | What last week taught <sub>`weekly_learnings`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
 
 <details>
-<summary>Which models this preset uses</summary>
+<summary>Which models this setup uses</summary>
 
 | Tier | Provider | Model |
 |---|---|---|
@@ -772,7 +776,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 </details>
 
-### `qwen3_local_vllm`
+### Qwen3 on your own server, through vLLM
 
 Your data goes to: your own servers. 0 of 37 features ready. Preset file: [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml).
 
@@ -817,7 +821,7 @@ Your data goes to: your own servers. 0 of 37 features ready. Preset file: [`qwen
 | What last week taught <sub>`weekly_learnings`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Not measured yet |
 
 <details>
-<summary>Which models this preset uses</summary>
+<summary>Which models this setup uses</summary>
 
 | Tier | Provider | Model |
 |---|---|---|
@@ -973,25 +977,25 @@ Everything the grades above are computed from, folded so the page stays short.
 <details>
 <summary>See the detail behind each family</summary>
 
-A family counts a model only on the features some preset sends it, as the answering
+A family counts a model only in the places some preset sends it, as the answering
 model or its fallback. A record no preset reaches is left out here and still listed
 under [Certification by provider and model](#certification-by-provider-and-model) and its site.
 
 ### Gemini
 
-🟡 Mostly: Ready for 44 of the 59 features we tested; 14 more work if someone looks over the result; 1 not reliable yet.
+🟡 Mostly: Ready in 44 of the 59 places we tested; 14 more work if someone looks over the result; 1 not reliable yet.
 
 13 of these results were measured on an older version of the product and are re-check pending.
 
-| Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
+| Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
 | `gemini-3.1-flash-lite` | `cloud_frontier` | 53 | 31 | 19 | 3 | 0.99 |
 | `gemini-3.8-flash` | `cloud_frontier` | 50 | 35 | 14 | 1 | 1.00 |
 
 <details>
-<summary>Best model for each feature</summary>
+<summary>Best model for each place</summary>
 
-| Feature | Best model in the family | Grade | Right in |
+| Place | Best model in the family | Grade | Right in |
 |---|---|---|---|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
@@ -1057,20 +1061,20 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### GPT
 
-🟡 Mostly: Ready for 37 of the 54 features we tested; 11 more work if someone looks over the result; 6 not reliable yet.
+🟡 Mostly: Ready in 37 of the 54 places we tested; 11 more work if someone looks over the result; 6 not reliable yet.
 
 39 of these results were measured on an older version of the product and are re-check pending.
 
-| Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
+| Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
 | `openai/gpt-6-luna` | `cloud_frontier` | 41 | 25 | 12 | 4 | 0.96 |
 | `openai/gpt-6-sol` | `cloud_frontier` | 38 | 25 | 11 | 2 | 0.97 |
 | `openai/gpt-oss-120b` | `cloud_frontier` | 51 | 21 | 21 | 9 | 0.93 |
 
 <details>
-<summary>Best model for each feature</summary>
+<summary>Best model for each place</summary>
 
-| Feature | Best model in the family | Grade | Right in |
+| Place | Best model in the family | Grade | Right in |
 |---|---|---|---|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ✅ Ready · re-check pending | 12 of 12 tries |
 | [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
@@ -1131,11 +1135,11 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Mistral
 
-🟡 Mostly: Ready for 23 of the 50 features we tested; 17 more work if someone looks over the result; 10 not reliable yet.
+🟡 Mostly: Ready in 23 of the 50 places we tested; 17 more work if someone looks over the result; 10 not reliable yet.
 
 43 of these results were measured on an older version of the product and are re-check pending.
 
-| Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
+| Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
 | `mistralai/ministral-14b-2512` | `eu_hosted` | 39 | 11 | 10 | 18 | 0.80 |
 | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 4 | 0 | 2 | 0.90 |
@@ -1143,9 +1147,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | `mistralai/mistral-medium-3-5` | `eu_hosted` | 38 | 17 | 14 | 7 | 0.94 |
 
 <details>
-<summary>Best model for each feature</summary>
+<summary>Best model for each place</summary>
 
-| Feature | Best model in the family | Grade | Right in |
+| Place | Best model in the family | Grade | Right in |
 |---|---|---|---|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | ✅ Ready · re-check pending | 12 of 12 tries |
 | [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | ✅ Ready · re-check pending | 9 of 9 tries |
@@ -1202,18 +1206,18 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Gemma
 
-⚪ Not enough tested yet: Tested on only 6 of the 61 features. Ask before relying on it.
+⚪ Not enough tested yet: Tested in only 6 of the 61 places. Ask before relying on it.
 
 6 of these results were measured on an older version of the product and are re-check pending.
 
-| Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
+| Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
 | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 1 | 1 | 4 | 0.88 |
 
 <details>
-<summary>Best model for each feature</summary>
+<summary>Best model for each place</summary>
 
-| Feature | Best model in the family | Grade | Right in |
+| Place | Best model in the family | Grade | Right in |
 |---|---|---|---|
 | [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | ⚠️ Usable with care · re-check pending | 21 of 27 tries |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | ✅ Ready · re-check pending | 42 of 42 tries |

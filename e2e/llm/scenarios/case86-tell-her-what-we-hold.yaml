@@ -1,5 +1,6 @@
 # CASE 86 — The privacy notice mails a contact, so it is a send. The action says to ask first, and this user has not said to send it.
 name: case86_tell_her_what_we_hold
+title: Tell her what we hold on her
 criteria: [1]
 writes: true
 passport: wide
