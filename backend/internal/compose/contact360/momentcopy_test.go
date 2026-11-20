@@ -4,12 +4,14 @@
 package contact360
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	contracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -109,17 +111,17 @@ func momentFacts(moment contracts.ContactMoment) contracts.ContactMoment {
 }
 
 func TestUnknownContactRoleDoesNotBecomeARecordedRoleInTranslation(t *testing.T) {
-	for _, language := range []string{"de", "vi"} {
+	for _, language := range []string{"en", "de", "vi"} {
 		said := momentCopyFor(language)
-		for _, role := range []*string{nil, new(""), new("  "), new("contact"), new("Key contact"), new("economic_buyer")} {
+		label := dealrole.Label(dealrole.EconomicBuyer, language)
+		for _, role := range []*string{nil, new(""), new("  "), new("contact"), new("Key contact"), new("economic_buyer"), new(" Economic_Buyer")} {
 			got := said.recordedSeat(role)
-			recorded := "erfasste Rolle"
-			if language == "vi" {
-				recorded = "được ghi nhận"
+			known := role != nil && dealrole.Recorded(*role) != ""
+			if known && got != fmt.Sprintf(said.Say(momentWords.RecordedRole), label) {
+				t.Errorf("%s lost the translated role: %q", language, got)
 			}
-			wantRecorded := role != nil && *role == "economic_buyer"
-			if strings.Contains(got, recorded) != wantRecorded {
-				t.Fatalf("%s inferred or lost role: %s", language, got)
+			if !known && got != said.Say(momentWords.Stakeholder) {
+				t.Errorf("%s named a typed role: %q", language, got)
 			}
 		}
 	}

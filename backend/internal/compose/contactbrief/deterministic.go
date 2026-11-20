@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 )
 
 // The citable record types. A brief may only point at things the reader can
@@ -124,18 +125,18 @@ func changeLine(change ChangeIn, say spoken) string {
 		return fmt.Sprintf(say.Say(floor.BandMoved),
 			readableBand(change.From, say), readableBand(change.To, say))
 	default:
-		return fmt.Sprintf(say.Say(floor.RelationshipMoved), readableRole(change.Kind))
+		return fmt.Sprintf(say.Say(floor.RelationshipMoved), readableKey(change.Kind))
 	}
 }
 
 // readableBand names a strength band, falling back to the stored key for a band
-// this build does not know — the same rule readableRole follows, for the same
+// this build does not know — the same rule readableKey follows, for the same
 // reason: inventing a label for a value nobody defined would be a claim.
 func readableBand(band string, say spoken) string {
 	if band == "" {
 		return say.Say(floor.UnrecordedBand)
 	}
-	return readableRole(band)
+	return readableKey(band)
 }
 
 // identityLine says who this contact is in the current commercial context —
@@ -154,7 +155,8 @@ func identityLine(in Input, say spoken) string {
 }
 
 // dealLine states the commercial stake, with the seat this contact holds on it.
-// The role is stored relationship data — it is never inferred from a title.
+// The role is stored relationship data, never inferred from a title, and only a
+// built-in one is named.
 func dealLine(in Input, say spoken) string {
 	deal := in.OpenDeal
 	parts := []string{deal.Name}
@@ -165,17 +167,16 @@ func dealLine(in Input, say spoken) string {
 		parts = append(parts, deal.Stage)
 	}
 	line := strings.Join(parts, " · ")
-	if in.BuyingRole != "" {
-		return fmt.Sprintf(say.Say(floor.RecordedRoleOnDeal), readableRole(in.BuyingRole), line)
+	if role := dealrole.Label(in.BuyingRole, string(say.Lang())); role != "" {
+		return fmt.Sprintf(say.Say(floor.RecordedRoleOnDeal), role, line)
 	}
 	return fmt.Sprintf(say.Say(floor.OnDealNoRole), line)
 }
 
-// readableRole turns the stored role key into words. The keys are a naming
-// convention rather than an enum, so an unrecognized one is rendered as it was
-// stored — inventing a label for a role nobody defined would be a claim.
-func readableRole(role string) string {
-	return strings.ReplaceAll(role, "_", " ")
+// readableKey turns a stored change or activity kind into words. An unknown
+// kind keeps its stored spelling, since inventing a label would be a claim.
+func readableKey(key string) string {
+	return strings.ReplaceAll(key, "_", " ")
 }
 
 // caresAboutLine names what this contact has explicitly said matters, citing the
@@ -279,7 +280,7 @@ func aboutClause(last ActIn, say spoken) string {
 	if last.Subject != "" {
 		return fmt.Sprintf(say.Say(floor.AboutSubject), last.Subject)
 	}
-	return fmt.Sprintf(say.Say(floor.AboutKind), readableRole(last.Kind))
+	return fmt.Sprintf(say.Say(floor.AboutKind), readableKey(last.Kind))
 }
 
 // previewWords bounds the quoted line. A preview is one line by construction,

@@ -195,3 +195,19 @@ func TestTheSweepNamesEveryFindingInOneRead(t *testing.T) {
 		t.Errorf("names are attached in the wrong order: %+v", flagged[1].Risks[0].Contacts)
 	}
 }
+
+// The coverage tool hands a model only built-in seat roles, by their key. A
+// typed role would read to the model as a buying role it then repeats.
+func TestTheCoverageToolCarriesOnlyBuiltInSeatRoles(t *testing.T) {
+	stored := []string{"contact", "Champion", "economic_buyer"}
+	coverage := network.DealCoverage{DealID: ids.NewV7()}
+	for _, role := range stored {
+		coverage.Stakeholders = append(coverage.Stakeholders, deals.DealStakeholder{ContactID: ids.NewV7(), Role: role})
+	}
+	answer := toAgentCoverage(coverage, nil, nil)
+	for i, want := range []string{"", "champion", "economic_buyer"} {
+		if got := answer.Stakeholders[i].Role; got != want {
+			t.Errorf("seat stored as %q answers role %q, want %q", stored[i], got, want)
+		}
+	}
+}

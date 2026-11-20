@@ -3,7 +3,11 @@
 
 package dealrole
 
-import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+)
 
 var roleWords = map[string]langcopy.Phrase{
 	Champion:            {En: "champion", De: "Fürsprecher", Vi: "người ủng hộ"},
@@ -14,19 +18,20 @@ var roleWords = map[string]langcopy.Phrase{
 	User:                {En: "user", De: "Nutzer", Vi: "người dùng"},
 }
 
-// Recorded is the stored role when it is in the vocabulary, or "". The stored
-// role is free text, so a reader must not print or pass on one that is not.
+// Recorded is the stored role as its vocabulary key, or "" when it is not one.
+// The stored role is free text, so case and outer spaces are not part of it.
 func Recorded(role string) string {
-	if _, ok := roleWords[role]; !ok {
+	key := strings.ToLower(strings.TrimSpace(role))
+	if _, ok := roleWords[key]; !ok {
 		return ""
 	}
-	return role
+	return key
 }
 
 // Label is a role in the reader's language, or "" for a role outside the
 // vocabulary: a typed value such as "contact" has no meaning to translate.
 func Label(role, language string) string {
-	phrase, ok := roleWords[role]
+	phrase, ok := roleWords[Recorded(role)]
 	if !ok {
 		return ""
 	}

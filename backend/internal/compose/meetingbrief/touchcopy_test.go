@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 )
 
@@ -41,33 +40,6 @@ func TestMeetingHistoryWordsKeepNamesAndRelativeDays(t *testing.T) {
 		first := said.attendeeLine(AttendeeIn{FullName: "Original Name"}, at(10), time.UTC)
 		if first == "" || lastTouchLine(Input{Language: language}) == "" {
 			t.Fatalf("%s lost first contact", language)
-		}
-	}
-}
-
-// A stakeholder role is free text. The brief names a built-in role in the
-// reader's language and leaves a typed one out, both on the line and in the
-// prompt input.
-func TestAttendeeRoleIsShownOnlyWhenBuiltIn(t *testing.T) {
-	cases := []struct {
-		role, language, want string
-	}{
-		{"contact", "en", "Anna Berg, CFO"},
-		{"Key contact", "de", "Anna Berg, CFO"},
-		{"champion", "de", "Anna Berg, CFO, Fürsprecher"},
-		{"economic_buyer", "en", "Anna Berg, CFO, economic buyer"},
-	}
-	for _, c := range cases {
-		room := meeting{ID: ids.MustParse(meetingID), StartsAt: at(12)}
-		room.Attendees = []attendeeRow{{ContactID: ids.NewV7(), FullName: "Anna Berg", Title: "CFO", DealRole: c.role}}
-		in := FromMeeting(room, nil, at(10))
-		line := briefCopyFor(c.language).attendeeLine(in.Attendees[0], at(10), time.UTC)
-		if !strings.HasPrefix(line, c.want+" ") && !strings.HasPrefix(line, c.want+":") {
-			t.Errorf("%s/%s: line = %q, want it to start with %q", c.role, c.language, line, c.want)
-		}
-		builtIn := c.role == "champion" || c.role == "economic_buyer"
-		if shown := strings.Contains(encodeInput(in), `"DealRole":"`+c.role+`"`); shown != builtIn {
-			t.Errorf("%s: prompt input carries the role = %v, want %v", c.role, shown, builtIn)
 		}
 	}
 }

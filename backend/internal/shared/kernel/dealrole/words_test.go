@@ -22,9 +22,14 @@ func TestEveryRecordedRoleHasWordsInEveryLanguage(t *testing.T) {
 			}
 		}
 	}
-	for _, typed := range []string{"contact", "future_role", "Champion", " champion"} {
+	for _, typed := range []string{"contact", "future_role", "Key contact", "economic buyer"} {
 		if Recorded(typed) != "" || Label(typed, "de") != "" {
 			t.Errorf("free-text role %q got a label", typed)
+		}
+	}
+	for _, spelled := range []string{"Champion", " champion ", "CHAMPION"} {
+		if Recorded(spelled) != Champion || Label(spelled, "de") != "Fürsprecher" {
+			t.Errorf("stored %q is not read as the champion", spelled)
 		}
 	}
 	if Recorded(Champion) != Champion || Label(Champion, "de") != "Fürsprecher" {

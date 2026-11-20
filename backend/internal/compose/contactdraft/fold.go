@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -155,7 +156,7 @@ func foldCommercial(in *Input, view crmcontracts.Contact360) {
 		return
 	}
 	if view.Commercial.Role != nil {
-		in.Recipient.BuyingRole = *view.Commercial.Role
+		in.Recipient.BuyingRole = dealrole.Recorded(*view.Commercial.Role)
 	}
 	deal := view.Commercial.Deal
 	if deal == nil {
