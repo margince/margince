@@ -71,13 +71,21 @@ func loadInputs(root string) (inputs, error) {
 	}
 	in := inputs{tools: map[string]json.RawMessage{}, routers: map[string]string{}, instructions: info.Instructions}
 	for _, entry := range info.Tools.Tools {
-		var named struct {
-			Name string `json:"name"`
-		}
-		if err := json.Unmarshal(entry, &named); err != nil {
+		// Re-encoded, so the digest reads the entry and not how the file was
+		// laid out: the generator's indentation is not tool copy.
+		var parsed map[string]any
+		if err := json.Unmarshal(entry, &parsed); err != nil {
 			return inputs{}, fmt.Errorf("%s: a tool entry: %w", mcpInfoFile, err)
 		}
-		in.tools[named.Name] = entry
+		canonical, err := json.Marshal(parsed)
+		if err != nil {
+			return inputs{}, fmt.Errorf("%s: a tool entry: %w", mcpInfoFile, err)
+		}
+		name, named := parsed["name"].(string)
+		if !named {
+			return inputs{}, fmt.Errorf("%s: a tool entry has no name", mcpInfoFile)
+		}
+		in.tools[name] = canonical
 	}
 	if len(in.tools) == 0 {
 		return inputs{}, fmt.Errorf("%s lists no tools", mcpInfoFile)

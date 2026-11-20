@@ -60,6 +60,7 @@ figures_from_results: true
 # Open to open runs without sign-off, so the deal ends on the stage it was
 # told, read by name: a stage id is minted per seed.
 must_end_with:
+  - deal "Rheinufer Netzmodernisierung" pipeline=Sales
   - deal "Rheinufer Netzmodernisierung" stage=Negotiation
 
 runs: 3

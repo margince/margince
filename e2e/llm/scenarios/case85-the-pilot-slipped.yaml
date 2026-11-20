@@ -31,5 +31,8 @@ may_call:
 must_mention:
   - "Goslar"
 
+must_end_with:
+  - project "Leitstand Goslar" health=at_risk
+
 runs: 3
 pass_at: 2

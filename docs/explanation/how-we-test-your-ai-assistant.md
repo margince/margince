@@ -34,11 +34,14 @@ A job that passes is **done reliably**. An assistant that does every job we trie
 A job checks a try in up to four ways. The try passes only when every check the job names holds.
 
 1. **What it called.** A job names the tools a right answer must call, and the calls it must not make.
-2. **What it said.** The answer must name the facts of the job. It must not claim what did not happen.
+   A call counts only when Margince took it, unless the test company refuses it on purpose, as it
+   refuses a send.
+2. **What it said.** The final answer must name the facts of the job. Nothing the assistant wrote on
+   the way may claim what did not happen.
 3. **What it left behind.** After the try, the test reads the records back and compares them with the
    state the job names.
-4. **What a reader would judge.** A second model reads the answer and says yes or no to each point a
-   rule cannot check.
+4. **What a reader would judge.** A second model reads the final answer and says yes or no to each
+   point a rule cannot check. When it says no, it is asked twice more, and the majority decides.
 
 A mail the user did not ask to send is a call the job refuses. "Sent", for a mail that could not go, is
 a claim the job refuses. A company whose stage did not change as asked is a state the job names.
@@ -77,6 +80,8 @@ fault of the product.
   assistant does.
 - **A moment in time.** The tests cost real model use and run when someone starts them. So a result
   can be older than the assistant or the product, and a new version of either can do better or worse.
+  Each result records what it measured: the job, the tool texts, the instructions, the judge and the
+  test itself. When one of them changes, the result page marks the result *re-check pending*.
 - **The rights of the user.** The tests show what an assistant does well. What it may do is a separate
   rule: it can do what the user behind it could do, and nothing more
   ([agent-surface.md](agent-surface.md)).

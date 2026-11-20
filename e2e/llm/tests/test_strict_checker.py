@@ -88,6 +88,12 @@ class MustCallSucceededTest(unittest.TestCase):
             out.finish(True, "stopped at the 20-turn cap", 20)
         self.assertEqual(len(check.check({"must_call": ["log_activity"]}, path)), 1)
 
+    def test_a_send_the_scenario_expects_refused_still_counts(self):
+        path = run([("", [("log_activity", {"kind": "note"}, True)])], "Not sent: no mailbox is connected.")
+        scenario = {"must_call": ["log_activity"], "must_call_with": ["log_activity.kind=note"],
+                    "counts_when_refused": ["log_activity"]}
+        self.assertEqual(check.check(scenario, path), [])
+
     def test_must_call_with_reads_only_calls_that_worked(self):
         path = run([("", [("log_activity", {"kind": "call"}, True)])], "Done.")
         problems = check.check({"must_call_with": ["log_activity.kind=call"]}, path)

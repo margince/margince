@@ -176,7 +176,9 @@ could not see, would read as a product failure.
 
 The checks that ask for something read the final answer and the calls that succeeded:
 `must_mention`, the judge, `must_call`, `must_call_with` and `must_call_matching`. A sentence the
-model wrote on the way, or a call the server refused, does not count. The checks that forbid read
+model wrote on the way, or a call the server refused, does not count. A send the lane's stack
+refuses by design is the exception: `counts_when_refused:` lists the tools whose refused call still
+counts, because there the call is the outcome. The checks that forbid read
 every word and every attempt: `must_not_mention` and `must_not_call_with`. `check.py --lint` runs
 before the stack boots. It refuses an unknown key, a line it cannot place, a pattern that does not
 compile and a value of the wrong shape.
@@ -230,16 +232,41 @@ with `must_end_with` against a seeded stack, with no model. Nothing has changed
 the seed yet, so each scenario exits 0 or 4. An exit of 3 is a bug in the
 reader, and the script then exits 1.
 
-An activity has no list of its own, so an entry names it by its whole subject
-on a project:
+An entry names an activity by its whole subject on a project, a company or a
+contact:
 
 ```yaml
 must_end_with:
   - activity "Vertragsunterzeichnung Leitstand Goslar" on project "Leitstand Goslar" documents=1
+  - activity "Re: Lieferverzug Kolbenpumpe KP-300" on company "Rhön Hydraulik AG" records=2
 ```
 
-The reader finds the project by name and the activity on its timeline in
-`read_project` with `view: overview`. A timeline that read cuts short is a harness stop.
+The reader finds the parent by name. On a project it finds the activity on the timeline in
+`read_project` with `view: overview`. A timeline that read cuts short is a harness stop. On a
+company or a contact it reads every page of `find_records` with `engine: list`, filtered to
+that record. `records=N` counts the activities with that subject there, so `records=0` says a
+mail left the wrong record.
+
+More names read a panel, and not a stored field:
+
+| Entry | Holds when |
+|---|---|
+| `deal "Name" pipeline=Sales` | the deal is in the pipeline of that name |
+| `deal "Name" decision=*cfo*` | one open sales decision on the deal matches the glob |
+| `company "Name" signal=*fund*` | a signal on the company has a summary that matches the glob |
+| `project "Name" health=at_risk` | the project's judged health is that state; `(none)` when nobody judged it |
+| `contact "Name" consent=marketing_email:granted` | that consent purpose has that state |
+| `contact "Name" stop=subject_request` | the contact has a stop of that kind |
+| `contact "Name" data_subject_request=access` | one open request of that kind names the contact, by id or by one of its addresses |
+| `list "Name" member=Jens Falk` | the record of that name is on the list; `nonmember=` is the reverse |
+| `fx_rate "USD" rate=0.92` | the newest rate from that currency is that number |
+
+A `me` entry reads more of the seat than `whoami` gives. `working_days=1,2,3,4` and
+`working_hours=09:00-17:00` read the seat's own hours. `unread_notices=N` counts its unread
+notices. `capture_excluded=<domain>` holds when the seat's capture excludes that domain.
+`voice=<glob>` matches the seat's own Voice DNA preferences. `forecast_call=<minor> <currency>`
+reads the seat's newest forecast call for this quarter. A glob matches whatever the case of the
+letters.
 
 Two names in that place read the record's files, and not a field:
 

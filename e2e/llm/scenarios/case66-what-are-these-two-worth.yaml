@@ -37,6 +37,7 @@ must_mention:
   - "68[.,' ’]?500"
   - "56[.,' ’]?000"
   - "12[.,' ’]?500"
+  # Criterion 2: a link to a deal's page, a mechanical fact a regex holds.
   - "/#/deals/[0-9a-f]{8}-[0-9a-f]{4}-"
 
 must_not_mention:
@@ -45,7 +46,6 @@ must_not_mention:
 
 judge:
   - "Criterion 1. The answer gives the two deals' combined value as 68,500 EUR (any thousands separator) and each deal's own value, 56,000 EUR for Körber Sensorik Rollout and 12,500 EUR for Rheinufer Netzmodernisierung. Answer no if it gives a different total or a different value for either deal, quotes a figure in minor units as if it were money, or gives no total."
-  - "Criterion 2. The answer gives a link whose path is a deal's page in the app and says it is the Körber Sensorik Rollout deal. Answer no if it gives no link, gives a link that is not a deal page, or names a different deal."
 
 runs: 3
 pass_at: 2

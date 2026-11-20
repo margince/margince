@@ -1,7 +1,0 @@
-{
-  "verdict": "no",
-  "reason": "The answer gives no link at all, explicitly saying it cannot provide one, so the criterion fails.",
-  "model": "claude-haiku-5-5",
-  "criterion": "Criterion 1. The answer gives a link whose path is a deal's page in the app and says it is the Körber Sensorik Rollout deal. Answer no if it gives no link, gives a link that is not a deal page, or names a different deal.",
-  "answer": "I can tell you the Körber Sensorik Rollout deal exists, but I can't give you a link to it."
-}

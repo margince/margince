@@ -133,7 +133,7 @@ _SCHEMA = {
     "setup": "text", "figures_from_results": "text", "runs": "count", "pass_at": "count",
     "criteria": "list", "must_call": "list", "may_call": "list", "must_call_with": "list",
     "must_not_call_with": "list", "must_call_matching": "list", "must_mention": "list",
-    "must_not_mention": "list", "judge": "list", "must_end_with": "list",
+    "must_not_mention": "list", "judge": "list", "must_end_with": "list", "counts_when_refused": "list",
 }
 _REQUIRED = ("name", "prompt", "writes", "runs", "pass_at")
 
@@ -324,7 +324,7 @@ def offered_verbs(offered, routes):
 # One run as the grader reads it. `said` is every word the assistant wrote and
 # `final` is the answer the user was left with; `calls` are every attempt and
 # `worked` the calls whose result was not an error. A call with no result did
-# not finish, so it is not in `worked`.
+# not finish, so it is not in `worked`; `refused` are the others.
 Run = collections.namedtuple("Run", "called said calls final worked refused")
 
 
@@ -375,7 +375,7 @@ def read_run(path):
         if failed.get(call_id) is False:
             worked += both
         else:
-            refused.append(name.rsplit("__", 1)[-1])
+            refused += both
     return Run(called, "\n".join(said), calls, final, worked, refused)
 
 
@@ -873,13 +873,19 @@ def check(scenario, transcript_path):
     and the calls that worked; the forbidding checks read every word and every
     attempt, because a wrong claim or a forbidden call counts wherever it is."""
     run = read_run(transcript_path)
-    called, said, calls = [name for name, _ in run.worked], run.said, run.worked
+    # A send the lane's stack cannot deliver is refused by design, and the
+    # scenario grades what the answer says about it: there the call is the
+    # outcome whether or not the server took it.
+    calls = run.worked + [(name, arguments) for name, arguments in run.refused
+                          if any(tool_matches([name], tool) for tool in scenario.get("counts_when_refused", []))]
+    called, said = [name for name, _ in calls], run.said
     problems = []
 
     for entry in scenario.get("must_call", []):
         wanted = alternatives(entry)
         if not any(tool_matches(called, want) for want in wanted):
-            refused = f"; refused: {', '.join(sorted(set(run.refused)))}" if run.refused else ""
+            names = sorted({name.rsplit("__", 1)[-1] for name, _ in run.refused})
+            refused = f"; refused: {', '.join(names)}" if names else ""
             problems.append(
                 f"never called {' or '.join(wanted)} — the answer was not drawn from Margince "
                 f"(called: {', '.join(sorted(set(called))) or 'nothing'}{refused})"

@@ -27,9 +27,11 @@ refusal: the model must ask before it archives.
    (`tool.argument=value`). `must_not_call_with` fails the run on a call whose
    arguments match `tool~regex`, so `archive_record~.` fails on any archive.
    `may_call` lists the other tools a good run may use, for the reader. The
-   checker does not fail a call outside it.
+   checker does not fail a call outside it. The required calls count only when the server took
+   them; list a tool in `counts_when_refused` when the lane's stack refuses it by design, as it
+   refuses a send.
 3. **Hold what the model says.** `must_mention` and `must_not_mention` are
-   regexes, for names, dates and counts. `figures_from_results: true` fails a
+   regexes, for names, dates and counts. `must_mention` and the judge read the final answer only. `figures_from_results: true` fails a
    money value that no tool result of the run holds. Put a fact that needs a judge in
    `judge:` as one sentence that ends with when to answer no.
 4. **Hold the world it leaves.** `must_end_with` reads the records back after
@@ -41,7 +43,7 @@ refusal: the model must ask before it archives.
 6. **Check it for free**, then the Go gates that read every case:
 
    ```bash
-   make test-e2e-llm-check
+   make test-e2e-llm-check   # it lints every case: a key it does not know fails it
    cd backend && go test ./internal/compose/ -run 'TestEveryWritingScenarioDeclaresThatItWrites|TestTheLaneCanReachEveryToolACaseRequires|TestTheMCPToolCoverageIsPublished'
    ```
 

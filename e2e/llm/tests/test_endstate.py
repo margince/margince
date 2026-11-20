@@ -655,6 +655,126 @@ class ReadersTest(unittest.TestCase):
                 endstate.parse(entry)
 
 
+def panel_world(panels, record=None):
+    """HERZOG's records and a project, plus the panels the special readers read,
+    keyed by (tool, its action, topic, view, kind or mode): a reader asking a
+    panel the world does not have is refused, as the server would refuse it."""
+    def ok(data):
+        return json.dumps({"data": data}), False
+
+    base = crm_world(HERZOG)
+
+    def list_records(arguments):
+        if arguments.get("record_type") == "project":
+            return ok({"records": [{"record_type": "project", "id": "p1", "fields": {"name": "Rollout"}}]})
+        return base["list_records"](arguments)
+
+    def answer(tool):
+        def reply(arguments):
+            key = next((arguments[k] for k in ("action", "topic", "view", "kind", "mode") if k in arguments), "")
+            if (tool, key) not in panels:
+                return f"no {tool} {key}", True
+            found = panels[(tool, key)]
+            return ok(found(arguments) if callable(found) else found)
+        return reply
+
+    replies = {**base, "list_records": list_records}
+    replies.update({tool: answer(tool) for tool, _ in panels})
+    if record is not None:
+        replies["read_record"] = ok(record)
+    return replies
+
+
+SEAT_ID = "u-me"
+WHOAMI = {"email": "admin@demo.test", "acting_user_id": SEAT_ID}
+
+
+class PanelReadersTest(unittest.TestCase):
+    """Each reader that reads a panel rather than a stored field, holding and failing."""
+
+    def read(self, panels, entries, record=None):
+        replies = panel_world(panels, record)
+        replies.setdefault("whoami", (json.dumps({"data": WHOAMI}), False))
+        tools = [{"name": n, "inputSchema": {"type": "object"}} for n in replies]
+        with FakeMcp(tools, replies=replies) as server:
+            session = mcpclient.Session(server.url, "tok")
+            session.open()
+            return endstate.end_state(session, list(entries))[1]
+
+    def test_a_list_member_is_found_by_the_records_name(self):
+        lists = {("read_lists", "find"): {"result": {"data": [{"id": "L1", "name": "Messe", "entity_type": "contact"}]}},
+                 ("read_lists", "members"): {"result": {"data": [{"entity_id": "n1"}], "page": {"has_more": False}}}}
+        self.assertEqual(self.read(lists, ['list "Messe" member=Nora Feld', 'list "Messe" nonmember=Gone Person']), [])
+        self.assertEqual(self.read(lists, ['list "Messe" nonmember=Nora Feld']), ['ended with Nora Feld on list "Messe"'])
+        self.assertEqual(self.read(lists, ['list "Messe" member=Gone Person']), ['ended with no contact named "Gone Person"'])
+
+    def test_the_newest_rate_from_a_currency_is_compared_as_a_number(self):
+        rates = {("read_workspace", "fx_rates"): {"data": [
+            {"from_currency": "USD", "rate": "0.9100000000", "effective_date": "2026-01-01"},
+            {"from_currency": "USD", "rate": "0.9200000000", "effective_date": "2026-11-20"}]}}
+        self.assertEqual(self.read(rates, ['fx_rate "USD" rate=0.92']), [])
+        self.assertEqual(self.read(rates, ['fx_rate "USD" rate=0.93']), ["ended with USD rate=0.9200000000, wanted 0.93"])
+        self.assertEqual(self.read(rates, ['fx_rate "CHF" rate=1']), ["ended with no CHF rate on the sheet"])
+
+    def test_a_projects_health_is_its_judged_state(self):
+        health = {("read_project", "overview"): {"health": {"judged": True, "state": "at_risk"}}}
+        self.assertEqual(self.read(health, ['project "Rollout" health=at_risk']), [])
+        unjudged = {("read_project", "overview"): {"health": {"judged": False}}}
+        self.assertEqual(self.read(unjudged, ['project "Rollout" health=at_risk']),
+                         ['ended with project "Rollout" health=(none), wanted at_risk'])
+
+    def test_consent_and_a_stop_are_read_on_the_contact(self):
+        panels = {("read_details", "contact_consent"): {"state": [{"purpose_key": "marketing_email", "state": "unknown"}]},
+                  ("read_details", "contact_stops"): {"stops": [{"kind": "subject_request"}]}}
+        self.assertEqual(self.read(panels, ['contact "Nora Feld" consent=marketing_email:unknown',
+                                            'contact "Nora Feld" stop=subject_request']), [])
+        self.assertEqual(self.read(panels, ['contact "Nora Feld" consent=marketing_email:granted',
+                                            'contact "Nora Feld" stop=objection']),
+                         ['ended with contact "Nora Feld" consent=marketing_email:unknown, wanted marketing_email:granted',
+                          'ended with no objection stop on contact "Nora Feld" (stops: subject_request)'])
+
+    def test_a_subject_request_names_the_contact_by_id_or_address(self):
+        nora = {"record_type": "contact", "id": "n1", "fields": {"emails": [{"email": "nora@feld.test"}]}}
+        entry = 'contact "Nora Feld" data_subject_request=access'
+        for refs, problems in ((["n1"], []), (["Nora@Feld.test"], []),
+                               ([], ['ended with 0 open access requests for contact "Nora Feld", wanted 1'])):
+            panels = {("read_workspace", "data_subject_requests"): {
+                "data": [{"subject_ref": ref, "kind": "access", "status": "open"} for ref in refs],
+                "page": {"has_more": False}}}
+            self.assertEqual(self.read(panels, [entry], record=nora), problems, refs)
+
+    def test_a_sales_decision_and_a_signal_are_matched_by_glob(self):
+        panels = {("read_reports", "sales_decisions"): lambda a: {"data": [
+                      {"deal_id": a.get("deal_id"), "decision": "Bring in their CFO", "status": "open"}]},
+                  ("read_view", "signals"): {"data": [{"entity_id": "c1", "summary": "Funding round announced"}],
+                                             "page": {"has_more": False}}}
+        self.assertEqual(self.read(panels, ['deal "Rheinufer Netzmodernisierung" decision=*cfo*',
+                                            'company "Herzog Fertigung GmbH" signal=*funding*']), [])
+        self.assertEqual(self.read(panels, ['company "Herzog Fertigung GmbH" signal=*layoff*']),
+                         ['ended with 1 signals on company "Herzog Fertigung GmbH", none reading *layoff*'])
+
+    def test_the_seats_notices_exclusions_voice_and_forecast_call(self):
+        panels = {("read_details", "notices"): {"items": [], "unread_count": 0},
+                  ("read_workspace", "capture_exclusions"): {"data": [{"kind": "domain", "value": "news.test"}]},
+                  ("read_workspace", "voice_profiles"): {"data": [
+                      {"owner_id": SEAT_ID, "personality_md": "Under five sentences.", "archived_at": None}]},
+                  ("read_view", "forecast_calls"): {"calls": [
+                      {"author_id": SEAT_ID, "amount_minor": 45000000, "currency": "EUR", "created_at": "2026-11-20"}]}}
+        held = ['me "admin@demo.test" unread_notices=0', 'me "admin@demo.test" capture_excluded=news.test',
+                'me "admin@demo.test" voice=*sentences*', 'me "admin@demo.test" forecast_call=45000000 EUR']
+        self.assertEqual(self.read(panels, held), [])
+        self.assertEqual(self.read(panels, ['me "admin@demo.test" capture_excluded=other.test',
+                                            'me "admin@demo.test" forecast_call=1 EUR']),
+                         ['ended with no capture exclusion for other.test on the seat "admin@demo.test" (domains: news.test)',
+                          'ended with forecast_call=45000000 EUR on the seat "admin@demo.test", wanted 1 EUR'])
+
+    def test_a_panel_entry_on_the_wrong_type_is_refused(self):
+        for entry in ('company "E" health=at_risk', 'deal "E" consent=x:granted', 'contact "E" consent=granted',
+                      'company "E" unread_notices=0', 'list "L" owner=X', 'fx_rate "USD" rate=cheap'):
+            with self.assertRaises(ValueError, msg=entry):
+                endstate.parse(entry)
+
+
 class ParseTest(unittest.TestCase):
     def test_an_entry_reads_as_type_name_field_and_value(self):
         self.assertEqual(endstate.parse(EMSLAND),

@@ -193,3 +193,13 @@ func TestTheCommittedTreeStampsEveryScenario(t *testing.T) {
 		t.Fatalf("stamped %d of %d scenarios", len(stamps), len(files))
 	}
 }
+
+func TestTheCatalogsLayoutIsNotToolCopy(t *testing.T) {
+	root := tree(t)
+	before := stampsOf(t, root)
+	edit(t, root, mcpInfoFile, `{"name":"read_record","description":"Read one record."}`,
+		"{\n  \"description\": \"Read one record.\",\n  \"name\": \"read_record\"\n}")
+	if got := before["case2_read"].Moved(stampsOf(t, root)["case2_read"]); len(got) != 0 {
+		t.Errorf("re-indenting the catalog moved %v, want nothing", got)
+	}
+}

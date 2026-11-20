@@ -51,6 +51,11 @@ prompt: |
 
   Tell me what actually went out.
 
+# The lane's stack has no mailbox and no Telegram bot, so a right send is refused
+# by design and still counts as the call the job needed.
+counts_when_refused:
+  - send_outbound
+
 must_call:
   - draft_outbound
   - send_outbound

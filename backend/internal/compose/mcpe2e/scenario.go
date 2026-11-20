@@ -35,11 +35,12 @@ type scenario struct {
 // entry into its any-of group, and what ends the tool's name inside one. A
 // must_not_call_with entry is one regex, where `|` already means "or".
 var toolKeys = map[string]struct{ anyOf, nameEnd string }{
-	"must_call":          {"|", ""},
-	"may_call":           {"|", ""},
-	"must_call_with":     {"|", "."},
-	"must_not_call_with": {"", "~"},
-	"must_call_matching": {" || ", "~"},
+	"must_call":           {"|", ""},
+	"may_call":            {"|", ""},
+	"must_call_with":      {"|", "."},
+	"must_not_call_with":  {"", "~"},
+	"must_call_matching":  {" || ", "~"},
+	"counts_when_refused": {"", ""},
 }
 
 func readScenario(path string) (scenario, error) {

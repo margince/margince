@@ -14,14 +14,14 @@ one record field per entry, in the flat form parse_scenario reads:
 
 The record is found by its type and its WHOLE display name, then read back with
 read_record; the field's value, rendered the way must_call_with renders an
-argument, must equal what follows the `=`. An activity has no list of its own,
-so it is named by its whole subject ON a project, and found on that project's
-timeline. Three names are not fields: `document` holds when exactly one file on
+argument, must equal what follows the `=`. An activity is named by its whole
+subject ON a project, company or contact, and found on that record's timeline.
+Three names are not fields: `document` holds when exactly one file on
 the record's Documents tab carries that checksum under a name the glob matches,
 `documents` when the tab holds exactly that many files, and `document_contract`
 when the one file with that checksum is filed against the project's contract of
 that whole title. All three are read with list_documents, so they see the tab a
-human sees. Four more are not stored fields either:
+human sees. More are not stored fields either:
 
     - company "Weserblick Logistik GmbH" records=0      how many records carry the name
     - company "Taunus Gerätebau GmbH" owner=Sofia Meier  the owner's name, not their id
@@ -34,6 +34,26 @@ human sees. Four more are not stored fields either:
     - automation "Stage-change notify" status=enabled   a rule by name, read_view's automations
     - me "admin@demo.test" timezone=Europe/Lisbon   the passport's own seat, as whoami answers it
     - me "admin@demo.test" saved_questions=1+   at least that many questions the seat saved
+    - me "admin@demo.test" working_days=1,2,3,4   and working_hours=09:00-17:00, my_working_hours
+    - me "admin@demo.test" unread_notices=0      the seat's unread notices
+    - me "admin@demo.test" capture_excluded=news.test   a domain rule on the seat's capture
+    - me "admin@demo.test" voice=*sentences*     the seat's Voice DNA preferences, by glob
+    - me "admin@demo.test" forecast_call=45000000 EUR   the seat's newest call this quarter
+    - deal "Rheinufer Netzmodernisierung" pipeline=Sales   the pipeline's name
+    - deal "Rheinufer Netzmodernisierung" decision=*cfo*   one open sales decision, by glob
+    - company "Reply Deutschland Betreuerwechsel" signal=*fund*   a signal on it, by glob
+    - project "Leitstand Goslar" health=at_risk  the judged health state, or (none)
+    - contact "Katrin Sommer" consent=marketing_email:granted   a purpose's state
+    - contact "Mai Nguyen" stop=subject_request  a stop of that kind on the contact
+    - contact "Katrin Sommer" data_subject_request=access   one open request names her
+    - list "Messe Hannover 2026" member=Jens Falk   or nonmember=, a member by its name
+    - fx_rate "USD" rate=0.92                    the newest rate from that currency
+
+An activity is also found on a company or a contact, by every page of the
+activity list filtered to that record, and `records=N` counts the activities
+of that whole subject there:
+
+    - activity "Re: Lieferverzug" on company "Rhön Hydraulik AG" records=2
 
 It runs after the run and before the lane restores the snapshot, through the
 lane's own passport, and only through tools the server LISTS: a router is called
@@ -52,6 +72,7 @@ a reader of the kept records sees what the world said beside what the model did.
 
 import argparse
 import collections
+import decimal
 import fnmatch
 import json
 import os
@@ -107,6 +128,11 @@ _AUTOMATION, _ME = "automation", "me"
 _SAVED_QUESTIONS = "saved_questions"
 _WORKING_DAYS, _WORKING_HOURS = "working_days", "working_hours"
 _PIPELINE = "pipeline"
+_LIST, _NONMEMBER = "list", "nonmember"
+_FX_RATE = "fx_rate"
+# Fields a me entry reads somewhere other than whoami.
+_UNREAD_NOTICES, _CAPTURE_EXCLUDED, _VOICE, _FORECAST_CALL = (
+    "unread_notices", "capture_excluded", "voice", "forecast_call")
 _OWN_DRAFT = "own_draft"
 _DRAFT_ANCHORS = ("company", "contact", "deal", "lead", "project")
 
@@ -159,6 +185,12 @@ def parse(entry):
     elif record_type == _TEAM:
         if parent_type is not None or field != _MEMBER:
             raise ValueError(f"must_end_with entry {entry!r}: a team is read only as member=<colleague's name>")
+    elif record_type == _LIST:
+        if parent_type is not None or field not in (_MEMBER, _NONMEMBER):
+            raise ValueError(f"must_end_with entry {entry!r}: a list is read only as member= or nonmember=<record name>")
+    elif record_type == _FX_RATE:
+        if parent_type is not None or field != "rate" or not _is_decimal(value):
+            raise ValueError(f"must_end_with entry {entry!r}: an fx_rate is read only as rate=<decimal>")
     elif record_type in (_AUTOMATION, _ME):
         if parent_type is not None or field in (_RECORD_COUNT, _OWN_DRAFT, _STAGE, _TAGGED, _UNTAGGED, _CONTRACT) \
                 or field in _DOCUMENT_FIELDS or (record_type == _ME and field == _OWNER):
@@ -185,8 +217,12 @@ def _special_wanted(entry, want):
         raise ValueError(f"must_end_with entry {entry!r}: read_tags reads the words on a {', '.join(_TAGGABLE)}")
     if want.field in (_STAGE, _PIPELINE) and want.record_type != "deal":
         raise ValueError(f"must_end_with entry {entry!r}: only a deal has a {want.field}")
-    if want.field in (_WORKING_DAYS, _WORKING_HOURS) and want.record_type != _ME:
+    if want.field in (_WORKING_DAYS, _WORKING_HOURS, *_ME_READERS) and want.record_type != _ME:
         raise ValueError(f"must_end_with entry {entry!r}: {want.field} is read on me")
+    if want.field in _RECORD_READERS and (want.record_type != _RECORD_READERS[want.field][0] or want.parent_type):
+        raise ValueError(f"must_end_with entry {entry!r}: {want.field} is read on a {_RECORD_READERS[want.field][0]} found by name")
+    if want.field == _CONSENT and ":" not in want.value:
+        raise ValueError(f"must_end_with entry {entry!r}: consent wants <purpose_key>:<state>")
     if want.field == _CONTRACT and (want.record_type != "company" or want.parent_type):
         raise ValueError(f"must_end_with entry {entry!r}: read_details lists the contracts of a company")
     if want.field == _OWNER and want.parent_type is not None:
@@ -565,6 +601,8 @@ def _me_problem(session, want):
         return _saved_questions_problem(session, want)
     if want.field in (_WORKING_DAYS, _WORKING_HOURS):
         actual = _working_hours(session, want.field)
+    elif want.field in _ME_READERS:
+        return _ME_READERS[want.field](session, want, seat)
     else:
         actual = _rendered(seat[want.field]) if seat.get(want.field) not in (None, "") else "(empty)"
     if actual == want.value:
@@ -620,6 +658,204 @@ def _own_draft_problem(session, want, record_id):
     return f"ended with the user's draft on {_where(want)} under {draft.get('subject')!r}, wanted {want.value!r}"
 
 
+def _is_decimal(value):
+    try:
+        decimal.Decimal(value)
+    except decimal.InvalidOperation:
+        return False
+    return True
+
+
+def _pages(session, tool, arguments, rows_key, what):
+    """Every row of a paged read whose page says next_cursor under `page`."""
+    rows, cursor = [], None
+    for _ in range(_MAX_PAGES):
+        page = _data(session, tool, {**arguments, **({"cursor": cursor} if cursor else {})})
+        if isinstance(page.get("result"), dict):
+            page = page["result"]
+        if not isinstance(page.get(rows_key), list):
+            raise Unreadable(f"{what} answered with no {rows_key} list")
+        rows += page[rows_key]
+        cursor = (page.get("page") or {}).get("next_cursor")
+        if not cursor:
+            return rows
+    raise Unreadable(f"{what} was still paging after {_MAX_PAGES} pages")
+
+
+def _verdict(want, actual):
+    if actual == want.value:
+        return ""
+    return f"ended with {_where(want)} {want.field}={actual}, wanted {want.value}"
+
+
+def _list_problem(session, want):
+    """The problem line for a list "Name" member=/nonmember=<record name> entry."""
+    found = _data(session, "read_lists", {"mode": "find", "query": want.name}).get("result")
+    lists = [row for row in (found or {}).get("data") or () if row.get("name") == want.name]
+    if len(lists) != 1:
+        return f'ended with {len(lists)} lists named "{want.name}"'
+    member_type = lists[0].get("entity_type")
+    if member_type not in _NAME_FIELD:
+        raise Unreadable(f'list "{want.name}" holds {member_type!r} records, which this reader cannot find by name')
+    member_id, problem = _named(session, member_type, want.value)
+    if problem and want.field == _MEMBER:
+        return problem
+    members = _pages(session, "read_lists", {"mode": "members", "list_id": lists[0]["id"], "limit": _PAGE_LIMIT},
+                     "data", "read_lists members")
+    # A record that no longer exists under that name is on no list.
+    on = bool(member_id) and any(m.get("entity_id") == member_id for m in members)
+    if on == (want.field == _MEMBER):
+        return ""
+    return f'ended with {want.value} {"not " if not on else ""}on list "{want.name}"'
+
+
+def _fx_rate_problem(session, want):
+    """The problem line for fx_rate "USD" rate=0.92: the newest rate from that currency."""
+    rates = [r for r in _data(session, "read_workspace", {"topic": "fx_rates"}).get("data") or ()
+             if r.get("from_currency") == want.name]
+    if not rates:
+        return f"ended with no {want.name} rate on the sheet"
+    newest = max(rates, key=lambda r: str(r.get("effective_date")))
+    if _is_decimal(str(newest.get("rate"))) and decimal.Decimal(str(newest["rate"])) == decimal.Decimal(want.value):
+        return ""
+    return f"ended with {want.name} rate={newest.get('rate')}, wanted {want.value}"
+
+
+def _health_problem(session, want, record_id):
+    """A project's current health state as its overview shows it; "(none)" unjudged."""
+    health = _data(session, "read_project", {"view": "overview", "project_id": record_id}).get("health")
+    if not isinstance(health, dict):
+        raise Unreadable(f"read_project on {_where(want)} carries no health")
+    return _verdict(want, str(health.get("state")) if health.get("judged") else "(none)")
+
+
+def _consent_problem(session, want, record_id):
+    """consent=<purpose_key>:<state>, read from the contact's consent panel."""
+    purpose = want.value.partition(":")[0]
+    states = _data(session, "read_details", {"action": "contact_consent", "id": record_id}).get("state")
+    if not isinstance(states, list):
+        raise Unreadable(f"read_details contact_consent on {_where(want)} carries no state list")
+    held = [s for s in states if s.get("purpose_key") == purpose]
+    if len(held) != 1:
+        raise Unreadable(f'the workspace holds {len(held)} consent purposes keyed "{purpose}"')
+    return _verdict(want, f"{purpose}:{held[0].get('state')}")
+
+
+def _stop_problem(session, want, record_id):
+    """stop=<kind>: the contact carries a stop of that kind."""
+    stops = _data(session, "read_details", {"action": "contact_stops", "id": record_id}).get("stops")
+    if not isinstance(stops, list):
+        raise Unreadable(f"read_details contact_stops on {_where(want)} carries no stops list")
+    if any(s.get("kind") == want.value for s in stops):
+        return ""
+    kinds = ", ".join(str(s.get("kind")) for s in stops) or "none"
+    return f"ended with no {want.value} stop on {_where(want)} (stops: {kinds})"
+
+
+def _subject_request_problem(session, want, record_id):
+    """data_subject_request=<kind>: exactly one open request of that kind names the
+    contact, by its id or by an address it carries, which is how a request waits
+    until somebody resolves it."""
+    fields = _data(session, "read_record", {"record_type": "contact", "id": record_id}).get("fields") or {}
+    names = {record_id} | {str(e.get("email")).lower() for e in fields.get("emails") or () if isinstance(e, dict)}
+    requests = _pages(session, "read_workspace", {"topic": "data_subject_requests", "limit": _PAGE_LIMIT},
+                      "data", "read_workspace data_subject_requests")
+    open_ones = [r for r in requests if str(r.get("subject_ref")).lower() in names and r.get("kind") == want.value
+                 and r.get("status") in ("open", "in_progress")]
+    if len(open_ones) == 1:
+        return ""
+    return f"ended with {len(open_ones)} open {want.value} requests for {_where(want)}, wanted 1"
+
+
+def _decision_problem(session, want, record_id):
+    """decision=<glob>: exactly one open sales decision on the deal reads as the glob."""
+    decisions = _data(session, "read_reports", {"kind": "sales_decisions", "deal_id": record_id}).get("data")
+    if not isinstance(decisions, list):
+        raise Unreadable("read_reports sales_decisions carries no data list")
+    matching = [d for d in decisions if d.get("deal_id") == record_id and d.get("status") == "open"
+                and fnmatch.fnmatch(str(d.get("decision")).lower(), want.value.lower())]
+    if len(matching) == 1:
+        return ""
+    return f"ended with {len(matching)} open decisions on {_where(want)} reading {want.value}, wanted 1"
+
+
+def _signal_problem(session, want, record_id):
+    """signal=<glob>: a signal on the company whose summary reads as the glob."""
+    signals = _pages(session, "read_view", {"view": "signals", "limit": _PAGE_LIMIT}, "data", "read_view signals")
+    on = [s for s in signals if record_id in (s.get("entity_id"), s.get("resolved_company_id"))]
+    if any(fnmatch.fnmatch(str(s.get("summary")).lower(), want.value.lower()) for s in on):
+        return ""
+    return f"ended with {len(on)} signals on {_where(want)}, none reading {want.value}"
+
+
+def _seat_verdict(want, actual):
+    if actual == want.value:
+        return ""
+    return f'ended with {want.field}={actual} on the seat "{want.name}", wanted {want.value}'
+
+
+def _unread_notices_problem(session, want, _seat):
+    count = _data(session, "read_details", {"action": "notices"}).get("unread_count")
+    if not isinstance(count, int):
+        raise Unreadable("read_details notices carries no unread_count")
+    return _seat_verdict(want, str(count))
+
+
+def _capture_excluded_problem(session, want, _seat):
+    """capture_excluded=<domain>: a domain rule on the seat's own capture."""
+    rules = _data(session, "read_workspace", {"topic": "capture_exclusions"}).get("data")
+    if not isinstance(rules, list):
+        raise Unreadable("read_workspace capture_exclusions carries no data list")
+    domains = [str(r.get("value")).lower() for r in rules if r.get("kind") == "domain"]
+    if want.value.lower() in domains:
+        return ""
+    return f'ended with no capture exclusion for {want.value} on the seat "{want.name}" (domains: {", ".join(domains) or "none"})'
+
+
+def _voice_problem(session, want, seat):
+    """voice=<glob>: the seat's own preferences in its live Voice DNA read as the glob."""
+    profiles = _data(session, "read_workspace", {"topic": "voice_profiles"}).get("data")
+    if not isinstance(profiles, list):
+        raise Unreadable("read_workspace voice_profiles carries no data list")
+    own = [p for p in profiles if p.get("owner_id") == seat.get("acting_user_id") and not p.get("archived_at")]
+    if any(fnmatch.fnmatch(str(p.get("personality_md")).lower(), want.value.lower()) for p in own):
+        return ""
+    return f'ended with {len(own)} voice profiles on the seat "{want.name}", none reading {want.value}'
+
+
+def _forecast_call_problem(session, want, seat):
+    """forecast_call=<minor> <currency>: the seat's newest call for this quarter,
+    whichever scope it was filed under."""
+    calls = []
+    for scope in ({}, {"scope_kind": "owner", "scope_id": seat.get("acting_user_id")}):
+        answered = _data(session, "read_view", {"view": "forecast_calls", **scope}).get("calls")
+        if not isinstance(answered, list):
+            raise Unreadable("read_view forecast_calls carries no calls list")
+        calls += [c for c in answered if c.get("author_id") == seat.get("acting_user_id")]
+    if not calls:
+        return _seat_verdict(want, "(none)")
+    newest = max(calls, key=lambda c: str(c.get("created_at")))
+    return _seat_verdict(want, f"{newest.get('amount_minor')} {newest.get('currency')}")
+
+
+_CONSENT = "consent"
+# A field read off a record found by name, by a read of its own: (type, reader).
+_RECORD_READERS = {
+    "health": ("project", _health_problem),
+    _CONSENT: ("contact", _consent_problem),
+    "stop": ("contact", _stop_problem),
+    "data_subject_request": ("contact", _subject_request_problem),
+    "decision": ("deal", _decision_problem),
+    "signal": ("company", _signal_problem),
+}
+_ME_READERS = {
+    _UNREAD_NOTICES: _unread_notices_problem,
+    _CAPTURE_EXCLUDED: _capture_excluded_problem,
+    _VOICE: _voice_problem,
+    _FORECAST_CALL: _forecast_call_problem,
+}
+
+
 def _bare(name):
     return str(name).rsplit("__", 1)[-1]
 
@@ -658,6 +894,10 @@ def _problem(session, want):
         return _automation_problem(session, want)
     if want.record_type == _ME:
         return _me_problem(session, want)
+    if want.record_type == _LIST:
+        return _list_problem(session, want)
+    if want.record_type == _FX_RATE:
+        return _fx_rate_problem(session, want)
     if want.field == _RECORD_COUNT:
         if want.parent_type is not None:
             on_parent, _, problem = _on_parent(session, want)
@@ -679,6 +919,8 @@ def _problem(session, want):
         return _contract_on_company_problem(session, want, record_id)
     if want.field == _OWN_DRAFT:
         return _own_draft_problem(session, want, record_id)
+    if want.field in _RECORD_READERS:
+        return _RECORD_READERS[want.field][1](session, want, record_id)
     return _field_problem(session, want, record_id)
 
 

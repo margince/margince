@@ -72,6 +72,8 @@ judge:
 # Mara is a lead again, and everyone else on the list, Jens included, is
 # Sofia's.
 must_end_with:
+  - list "Messe Hannover 2026" member=Jens Falk
+  - list "Messe Hannover 2026" nonmember=Mara Voigt
   - lead "Mara Voigt" records=1
   - contact "Mara Voigt" records=0
   - contact "Ralf Thiel" owner=Sofia Meier

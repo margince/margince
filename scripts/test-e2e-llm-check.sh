@@ -1054,9 +1054,8 @@ judges "$c65" case65 asks-before-archiving 0 "!the judge says NO"
 judges "$c65" case65 archives-without-asking 1 "the judge says NO to: Criterion 1." "archive_record"
 
 c66="case66-what-are-these-two-worth.yaml"
-judges "$c66" case66 adds-in-money 0 "!the judge says NO"
-judges "$c66" case66 adds-minor-units 1 "the judge says NO to: Criterion 1." "!the judge says NO to: Criterion 2."
-judges "$c66" case66 gives-no-link 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
+judges "$c66" case66 adds-in-money 1 "never said anything matching //#/deals/" "!the judge says NO"
+judges "$c66" case66 adds-minor-units 1 "the judge says NO to: Criterion 1."
 
 # CASE 117 — nothing the task did not cause. A bare count of the rest is
 # allowed; the queue listed by name fails the regex and the judge, and the same
