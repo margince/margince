@@ -674,6 +674,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `publicreferences_test.go` | H1 | This repository is public. |
 | `purgeexecutor_test.go` | H2 | What a selected purge does to a message is written once. |
 | `refusalmemory_test.go` | H2 | A producer that can be re-triggered remembers what a human refused. |
+| `reliabilityinterval_test.go` | H2 | A certification pass rate has one interval formula and is printed only with it. |
 | `requestbodybound_test.go` | H2 | Every JSON request body is bounded in one place. |
 | `retentionscope_test.go` | H2 | retentionScopeBuilder is the fixture whose reach these gates bound, retentionScopeSink is the one call it may feed, and retentionScopeSinkOwner is the package that call must live in. |
 | `rlsclaims_test.go` | H1 | Source comments may not name row-level security as a control on what a read reaches, because no table carries it. |

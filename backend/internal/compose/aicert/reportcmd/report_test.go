@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -152,7 +153,7 @@ func TestReadinessReportCarriesTheBandTheCountsAndTheBinding(t *testing.T) {
 
 	row := rowFor(t, out, "rate_extract/fx")
 	for _, want := range []string{
-		aicert.VerdictNotSupported, "0.22", "2", "3", "4", "0",
+		aicert.VerdictNotSupported, "0.22 [0.10, 0.43]", "2", "3", "4", "0",
 		"ollama", "llama3.1:8b", "local",
 	} {
 		if !strings.Contains(row, want) {
@@ -168,6 +169,30 @@ func TestReadinessReportCarriesTheBandTheCountsAndTheBinding(t *testing.T) {
 	// green-lights no other, and a release decision reads that off this report.
 	if !strings.Contains(out, "provider") || !strings.Contains(out, "env") {
 		t.Errorf("the report never names what a row's binding means:\n%s", out)
+	}
+}
+
+// A reliability printed alone invites reading two records' difference as a
+// change. The cell carries the Wilson interval the verdict itself reads.
+func TestReadinessReportPrintsReliabilityWithTheVerdictsInterval(t *testing.T) {
+	sites := []aitasks.Site{{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindOneShot}}
+	records := []aicert.Record{{
+		Task: "rate_extract", Provider: "ollama", ServedModel: "llama3.1:8b", EnvClass: "local",
+		PromptVersion: currentStamp, Verdict: aicert.VerdictNotSupported, Runs: 3, Passed: 2,
+		CertifiedScope: aitasks.ScopeFullInvocation,
+		Scenarios: []aicert.ScenarioRecord{{
+			Scenario: "fx_01", Site: "fx", Verdict: aicert.VerdictNotSupported, Runs: 3, Passed: 2, ReportedAccepted: 2, ReportedWrongAnswer: 1,
+		}},
+	}}
+
+	out := renderReadiness(aicert.Census{Sites: sites}, map[string]string{"rate_extract": currentStamp}, nil, records)
+
+	lower, upper := aicert.ReliabilityBounds(2, 3)
+	if fmt.Sprintf("%.2f %.2f", lower, upper) != "0.32 0.89" {
+		t.Fatalf("the Wilson interval on 2 of 3 is [%.4f, %.4f], want [0.32, 0.89] at one-sided 90%%", lower, upper)
+	}
+	if row := rowFor(t, out, "rate_extract/fx"); !strings.Contains(row, "0.67 [0.32, 0.89]") {
+		t.Errorf("the row does not print 2 of 3 as its point and interval 0.67 [0.32, 0.89]: %q", row)
 	}
 }
 

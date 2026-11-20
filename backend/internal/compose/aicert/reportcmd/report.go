@@ -85,7 +85,7 @@ func cells(r aicert.ReadinessRow) []string {
 		r.SiteKey(), r.ClaimedScope(), r.Status(), r.Coverage(), tally.Verdict,
 		rec.Provider, rec.ServedModel, rec.EnvClass,
 		fmt.Sprintf("%d", tally.Runs), fmt.Sprintf("%d", tally.Passed),
-		fmt.Sprintf("%.2f", tally.Reliability()),
+		aicert.ReliabilityCell(tally.Passed, tally.Runs),
 		fmt.Sprintf("%d", tally.ReportedAccepted), fmt.Sprintf("%d", tally.ReportedWrongAnswer),
 		fmt.Sprintf("%d", tally.ReportedInvalid), fmt.Sprintf("%d", tally.ReportedAbstained),
 	}
@@ -136,7 +136,9 @@ func legend(rows []aicert.ReadinessRow, sites []aitasks.Site, unclaimed []aicert
 		"and green-lights no other. A record is written per task and covers every site that task",
 		"ships, so sites sharing a task share its record — but each row's numbers are that SITE's",
 		"own scenarios, never the task's pooled total.",
-		"RUNS/PASSED is how often the site did what its scenarios asked. ACCEPTED, WRONG_ANSWER,",
+		"RUNS/PASSED is how often the site did what its scenarios asked. RELIABILITY is PASSED over RUNS,",
+		"then its Wilson interval: each end is a one-sided 90% bound, the bounds the verdict reads.",
+		"Two rows differ only where their intervals do not overlap. ACCEPTED, WRONG_ANSWER,",
 		"INVALID and ABSTAINED are what the site's validator REPORTED: a run can be accepted and",
 		"still fail, when the scenario asked for an abstention.",
 	}

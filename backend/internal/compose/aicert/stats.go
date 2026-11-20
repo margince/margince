@@ -7,7 +7,10 @@ package aicert
 // confidence level thresholds.go names. Standard textbook forms on purpose: a
 // reader arguing with a grade should be able to redo it by hand.
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 // wilsonBounds is the Wilson score interval for passed of runs at confidenceZ.
 //
@@ -25,6 +28,23 @@ func wilsonBounds(passed, runs int) (lower, upper float64) {
 	radius := confidenceZ * math.Sqrt(p*(1-p)/n+z2/(4*n*n))
 	denom := 1 + z2/n
 	return (centre - radius) / denom, (centre + radius) / denom
+}
+
+// ReliabilityBounds is the Wilson interval the verdict reads on passed of runs,
+// so a printed interval and the band it sits next to cannot disagree.
+func ReliabilityBounds(passed, runs int) (lower, upper float64) {
+	return wilsonBounds(passed, runs)
+}
+
+// ReliabilityCell is how every report prints a reliability: the point with its
+// Wilson interval, as "0.67 [0.32, 0.89]". A point alone invites comparing two
+// records inside their sampling noise. Zero runs prints Unmeasured.
+func ReliabilityCell(passed, runs int) string {
+	if runs == 0 {
+		return Unmeasured
+	}
+	lower, upper := ReliabilityBounds(passed, runs)
+	return fmt.Sprintf("%.2f [%.2f, %.2f]", float64(passed)/float64(runs), lower, upper)
 }
 
 // meanBounds is the t interval on the mean of xs, with its small-n quantile and
