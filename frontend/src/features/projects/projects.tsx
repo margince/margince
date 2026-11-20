@@ -151,6 +151,7 @@ function NewProjectAction({ open }: Readonly<{ open: boolean }>) {
   return (
     <CreateAction
       label={t("project.new")}
+      requires={{ object: "project", action: "create" }}
       invalidate="projects"
       screen="projects"
       listCreate={{ open }}

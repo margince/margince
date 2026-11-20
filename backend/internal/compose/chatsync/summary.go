@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -38,22 +39,42 @@ import (
 // summariser asks the episode site on its lane, reading the extra context
 // from pool.
 type summariser struct {
-	lane ai.Completer
-	pool *pgxpool.Pool
+	lane       ai.Completer
+	pool       *pgxpool.Pool
+	restricted func(context.Context, []string) (map[string]bool, error)
 }
 
 // errNoModel is an installation with no chat_summary lane: nothing is filed.
 var errNoModel = errors.New("chat summary: no model is bound to the chat_summary task")
 
-// summarise asks the episode site about messages of the link's channel. A
-// lane that cannot answer at all reads as errNoModel.
+// errUnmatchableAuthor passes an episode over without filing it. A judged
+// message carried no address to match against a restriction, or every author
+// was restricted, so nothing can be safely summarised. Callers treat it like
+// errNoModel: file nothing, log it as passed over rather than failed.
+var errUnmatchableAuthor = errors.New("chat summary: an episode's authors cannot be cleared for summary")
+
+// restrictedMarker tells the model the episode is partial, with no name and no
+// text. The note it writes does not then read as the whole conversation.
+const restrictedMarker = "Some messages were left out because a participant restricted processing of their data."
+
+// summarise asks the episode site about messages of the link's channel. A lane
+// that cannot answer at all reads as errNoModel. p.restricted answers which
+// author addresses to withhold; a message from one is dropped before the model
+// sees the talk.
 func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record chatRecord, messages []dispact.Message, chosen bool) (chatsummary.Reply, error) {
 	if p.lane == nil {
 		return chatsummary.Reply{}, errNoModel
 	}
+	messages, dropped, err := clearedMessages(ctx, messages, p.restricted)
+	if err != nil {
+		return chatsummary.Reply{}, err
+	}
 	in := chatsummary.Input{Record: record.kind + " " + record.name, Channel: link.ChannelName, Chosen: chosen}
 	if record.stage != "" {
 		in.Facts = append(in.Facts, "Stage: "+record.stage)
+	}
+	if dropped {
+		in.Facts = append(in.Facts, restrictedMarker)
 	}
 	extra, err := readSummaryContext(ctx, p.pool, link, record, messages[0].PostedAt)
 	if err != nil {
@@ -144,6 +165,78 @@ func (p placing) sideOf(email string) chatsummary.Side {
 		return chatsummary.SideUnknown
 	}
 	return chatsummary.SideOutside
+}
+
+// authorEmail is the address a chat message carries for matching a restriction,
+// lowercased, empty when the chat named none. authorOf keeps its own rule for
+// what a reader sees; this is only for the match.
+func authorEmail(m dispact.Message) string {
+	return strings.ToLower(strings.TrimSpace(m.UserEmail))
+}
+
+// authorEmails returns the match addresses the messages carry, lowercased and
+// oldest first, skipping a message the chat named no address for. Such a message
+// stays in rather than passing the whole episode over, so a channel with
+// non-contact authors is still summarised. A restricted contact is matched by
+// its own address.
+func authorEmails(messages []dispact.Message) []string {
+	emails := make([]string, 0, len(messages))
+	for _, m := range messages {
+		if email := authorEmail(m); email != "" {
+			emails = append(emails, email)
+		}
+	}
+	return emails
+}
+
+// keepUnrestricted drops every message whose author is restricted. dropped
+// marks that at least one was left out, so the caller can tell the model the
+// talk it reads is partial.
+func keepUnrestricted(messages []dispact.Message, restricted map[string]bool) (kept []dispact.Message, dropped bool) {
+	kept = make([]dispact.Message, 0, len(messages))
+	for _, m := range messages {
+		if restricted[authorEmail(m)] {
+			dropped = true
+			continue
+		}
+		kept = append(kept, m)
+	}
+	return kept, dropped
+}
+
+// clearedMessages drops every message whose author the summary must withhold,
+// and reports whether any was dropped so the caller can mark the talk partial.
+// It passes the episode over with errUnmatchableAuthor only when every message
+// was dropped, so nothing is left to summarise.
+func clearedMessages(ctx context.Context, messages []dispact.Message,
+	restricted func(context.Context, []string) (map[string]bool, error),
+) (kept []dispact.Message, dropped bool, err error) {
+	blocked, err := restricted(ctx, authorEmails(messages))
+	if err != nil {
+		return nil, false, err
+	}
+	kept, dropped = keepUnrestricted(messages, blocked)
+	if len(kept) == 0 {
+		return nil, false, errUnmatchableAuthor
+	}
+	return kept, dropped, nil
+}
+
+// lookupRestricted answers which of emails the summary must withhold, reading
+// contacts in one workspace transaction off pool. Both summary callers hold a
+// pool and the contacts store, so each builds its checker from this.
+func lookupRestricted(ctx context.Context, pool *pgxpool.Pool, store *contacts.Store, emails []string) (map[string]bool, error) {
+	// The restriction check is a privacy enforcement the chat engine owns, not
+	// the asking member's query. It runs under the engine's system actor on both
+	// the pull and the file-message path, and discloses nothing.
+	ctx = principal.WithActor(ctx, chatLinksPrincipal)
+	var blocked map[string]bool
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		blocked, err = store.RestrictedEmailsTx(ctx, tx, emails)
+		return err
+	})
+	return blocked, err
 }
 
 // talk is what a note says about the messages it summarises. It holds no

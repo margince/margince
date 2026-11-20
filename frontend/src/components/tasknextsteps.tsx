@@ -53,11 +53,9 @@ export function TaskCallAction({
 }
 
 /**
- * The step the task's type asks for. A reply answers the way its message came
- * in: a mail drafts a mail, a call shows the number and Call. Reach out offers
- * both, and a meeting offers Book a meeting.
- * A review opens the record and a decision shows the choice. A task to do has
- * none: Done is it.
+ * The step the task's type asks for. A reply or a reach out goes the way its
+ * conversation went, else offers both; a meeting offers Book a meeting. A
+ * review opens the record and a decision shows the choice. A do task has none.
  * `className` wraps the step in a row of its own, which is left out when
  * there is nothing to act on.
  */
@@ -88,7 +86,7 @@ export function useTaskNextSteps(
   const writeTo = useWriteTo();
   if (!task) return NO_STEP;
   const ways = taskWays(task, contact, pending, offerOpen, writeTo !== null);
-  const shown = shownWays(task);
+  const shown = shownWays(ways);
   const target = task.email_target;
   const mail = !shown.includes("mail") && Boolean(target && !target.refusal);
   const call = !shown.includes("call") && ways.phone !== undefined;
@@ -128,26 +126,41 @@ function taskWays(
 
 type Way = "mail" | "call";
 
-/** The ways a task's own step already offers, which its menu leaves out. */
-function shownWays(task: Activity): readonly Way[] {
+const BOTH_WAYS: readonly Way[] = ["mail", "call"];
+
+/** The ways a task's own step offers, which its menu leaves out. */
+function shownWays(ways: Ways): readonly Way[] {
+  const { task } = ways;
   switch (taskTypeOf(task)) {
     case "reply":
       if (task.reply_channel === "email") return ["mail"];
-      return task.reply_channel === "call" ? ["call"] : ["mail", "call"];
+      return task.reply_channel === "call" ? ["call"] : BOTH_WAYS;
     case "reach_out":
-      return ["mail", "call"];
+      return reachOutWays(ways);
     default:
       return [];
   }
+}
+
+/** A reach out keeps to the way its conversation went while that way still
+ *  works, so a promise made by mail is kept by mail and Call waits in the
+ *  menu. A refused mail or a missing number brings both back. */
+function reachOutWays(ways: Ways): readonly Way[] {
+  const { task, pending, phone } = ways;
+  const target = task.email_target;
+  if (task.reply_channel === "email" && target && !target.refusal) {
+    return ["mail"];
+  }
+  if (task.reply_channel === "call" && (pending || phone)) return ["call"];
+  return BOTH_WAYS;
 }
 
 function typedSteps(ways: Ways): Omit<Steps, "others"> {
   const { task, reachable } = ways;
   switch (taskTypeOf(task)) {
     case "reply":
-      return replySteps(ways);
     case "reach_out":
-      return reachOutSteps(ways);
+      return conversationSteps(ways);
     case "meet":
       return reachable
         ? { steps: <MeetStep contactId={reachable.id} />, fills: true }
@@ -189,17 +202,18 @@ type Ways = Readonly<{
   phone: Contact | undefined;
 }>;
 
-/** A reply goes back the way its message came in. A message Margince cannot
- *  answer in kind, or none, offers both ways. */
-function replySteps(ways: Ways): Omit<Steps, "others"> {
+/** A reply or a reach out goes back the way its conversation went. A message
+ *  Margince cannot answer in kind, or none, offers both ways. */
+function conversationSteps(ways: Ways): Omit<Steps, "others"> {
   const { task, offerOpen, pending, mailFills, phone } = ways;
-  if (task.reply_channel === "email") {
+  const shown = shownWays(ways);
+  if (shown.length > 1) return bothWaysSteps(ways);
+  if (shown[0] === "mail") {
     return {
       steps: <MailSteps task={task} offerOpen={offerOpen} />,
       fills: mailFills,
     };
   }
-  if (task.reply_channel !== "call") return reachOutSteps(ways);
   if (pending) return { steps: <TaskNextStepsPending />, fills: true };
   return phone
     ? { steps: <CallSteps contact={phone} filled />, fills: true }
@@ -207,7 +221,7 @@ function replySteps(ways: Ways): Omit<Steps, "others"> {
 }
 
 /** Email first, filled when it can be drafted; else Call is the filled one. */
-function reachOutSteps(ways: Ways): Omit<Steps, "others"> {
+function bothWaysSteps(ways: Ways): Omit<Steps, "others"> {
   const { task, offerOpen, mailFills, mailWorks, phone } = ways;
   return {
     steps: (

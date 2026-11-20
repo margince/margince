@@ -33,6 +33,7 @@ import {
   distinctFields,
   type FieldGroup,
   groupByField,
+  isRecordField,
   provenanceOfEntry,
 } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
@@ -210,8 +211,12 @@ export function FieldHistoryTimeline({
   // query param (part of the queryKey, so a facet change refetches) — these
   // rows are trusted as-is rather than re-sliced client-side, which also
   // keeps pagination (hasNextPage) honest against what the server counted.
+  // Only the stamps the write path sets are dropped, as the Changes view does.
   const entries = useMemo(
-    () => query.data?.pages.flatMap((page) => page.data) ?? [],
+    () =>
+      (query.data?.pages.flatMap((page) => page.data) ?? []).filter((entry) =>
+        isRecordField(entry.field),
+      ),
     [query.data],
   );
 

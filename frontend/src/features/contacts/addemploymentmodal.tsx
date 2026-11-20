@@ -21,13 +21,14 @@ import {
   searchCompanyCandidates,
 } from "./contactemployers";
 import { datePatch, validDateEntry } from "./employmentpatch";
+import { EmploymentStatusFields } from "./employmentstatusfields";
 import "../../design-system/querystates.css";
 
-// The "add a company" modal: pick the company (RecordPicker, the shared
-// debounced search-and-pick), optionally its role, and whether it is the
-// current primary employer — a Checkbox, not a Switch, because ticking it
-// states an intent this modal's own Save then writes, it is not itself the
-// write (design-system/README.md's Checkbox/Switch distinction).
+// The "add a company" modal. It picks the company with RecordPicker (the shared
+// debounced search-and-pick). It asks for the role and dates, whether the job
+// is still held, and whether it is the primary employer. That last is a
+// Checkbox, not a Switch: ticking it states an intent this modal's Save writes
+// (design-system/README.md's Checkbox/Switch distinction).
 export function AddEmploymentModal({
   open,
   onClose,
@@ -43,9 +44,9 @@ export function AddEmploymentModal({
   onClose: () => void;
   contactId: string;
   create: EmploymentActions["create"];
-  // Companies this contact already has a live employment edge to — the
-  // picker refuses to offer a second edge to the same company, since only
-  // a duplicated current-primary is refused server-side.
+  // Companies this contact already has a live employment edge to. The picker
+  // refuses a second current edge to one: the server refuses only a duplicated
+  // current-primary.
   excludedCompanyIds: ReadonlyArray<string>;
   // Whether this contact already holds a job that has not ended. It is the exact
   // fact the server's own rule turns on, read off the same rows, so the box can
@@ -73,6 +74,11 @@ export function AddEmploymentModal({
   // Optional, and empty stays empty: "I do not know when" is a real answer, and
   // a form that defaulted to today would write a fact nobody has.
   const [start, setStart] = useState("");
+  // A past job is entered as one, in one step, rather than created current and
+  // then corrected.
+  const [status, setStatus] = useState<"current" | "former">("current");
+  const [end, setEnd] = useState("");
+  const employmentZone = useEmploymentZone();
   // Ticked by default for somebody with no current job, because that is what
   // the save will do either way: the server marks a contact's only current
   // employment as their primary one. A box that started unticked and then
@@ -95,22 +101,26 @@ export function AddEmploymentModal({
   const [allConnected, setAllConnected] = useState(false);
 
   // Wraps the shared company search with this contact's own already-connected
-  // list. Kept on `excludedCompanyIds` alone, nothing that changes while the
-  // reader types — RecordPicker treats a new `searchTargets` identity as a
-  // new search space and empties whatever it was already showing.
+  // list. It depends on that list and the status alone, never on what the reader
+  // types. RecordPicker treats a new `searchTargets` as a new search space and
+  // empties what it showed. A past role may sit beside another at the same
+  // company, so Former offers every company.
   const searchTargets = useCallback(
     async (q: string) => {
       const results = await searchCompanyCandidates(q);
-      const offered = results.filter(
-        (candidate) => !excludedCompanyIds.includes(candidate.id),
-      );
+      const offered =
+        status === "current"
+          ? results.filter(
+              (candidate) => !excludedCompanyIds.includes(candidate.id),
+            )
+          : results;
       // Every match this query found is a company already on the list, not
       // an empty search — the two read the same in a bare candidate box, so
       // the modal says which one it is rather than leaving a silent gap.
       setAllConnected(results.length > 0 && offered.length === 0);
       return offered;
     },
-    [excludedCompanyIds],
+    [excludedCompanyIds, status],
   );
 
   function close() {
@@ -119,6 +129,8 @@ export function AddEmploymentModal({
     // A caller may keep the modal mounted, so each field is put back by hand:
     // a start date left standing would date the next employer.
     setStart("");
+    setStatus("current");
+    setEnd("");
     setAllConnected(false);
     create.reset();
     onClose();
@@ -168,10 +180,43 @@ export function AddEmploymentModal({
             />
           )}
         </Field>
-        <Checkbox
-          label={t("contact.rail.isCurrentEmployer")}
-          checked={isCurrent}
+        <EmploymentStatusFields
+          status={status}
+          onStatusChange={(next) => {
+            setStatus(next);
+            // A current role keeps a coming end, its notice; an end already
+            // past would save a held role that is over, so it goes.
+            const ended = datePatch(end);
+            if (
+              next === "current" &&
+              ended.date !== undefined &&
+              !stillHeld(
+                {
+                  employment_status: "current",
+                  ended_at: ended.date,
+                  ended_precision: ended.precision,
+                },
+                employmentZone,
+              )
+            ) {
+              setEnd("");
+            }
+            // A company listed for a current role is not offered for another.
+            if (
+              next === "current" &&
+              excludedCompanyIds.includes(company?.id ?? "")
+            ) {
+              setCompany(null);
+            }
+          }}
+          end={end}
+          onEndChange={setEnd}
           disabled={create.isPending}
+        />
+        <Checkbox
+          label={t("contact.rail.isPrimaryEmployer")}
+          checked={status === "current" && isCurrent}
+          disabled={status !== "current" || create.isPending}
           onChange={(event) => setIsCurrent(event.target.checked)}
         />
         <ErrorLine error={create.error} />
@@ -182,13 +227,14 @@ export function AddEmploymentModal({
         </Button>
         <Button
           variant="primary"
-          disabled={!company || !validDateEntry(start)}
+          disabled={!company || !validDateEntry(start) || !validDateEntry(end)}
           pending={create.isPending}
           onClick={async () => {
             if (!company) {
               return;
             }
-            const started = datePatch(start);
+            const started = datePatch(start),
+              ended = datePatch(end);
             // Awaited rather than a mutate callback: the link can replace the
             // row that holds this dialog, and an unmounted observer drops those.
             const linked = await create
@@ -199,7 +245,10 @@ export function AddEmploymentModal({
                 role: role.trim() || undefined,
                 started_at: started.date,
                 started_precision: started.precision,
-                is_current_primary: isCurrent,
+                employment_status: status,
+                ended_at: ended.date,
+                ended_precision: ended.precision,
+                is_current_primary: status === "current" && isCurrent,
                 // `manual` is the one word for a first-party write by a
                 // contact — through this form or through an assistant. It used
                 // to say "ui", which named the screen rather than the origin,
@@ -247,6 +296,7 @@ export function useAddEmployment(
   // A string key, so the picker keeps its candidates until the set of ids
   // changes; `stable` because the key is only compared with itself.
   const connectedKey = employments
+    .filter((employment) => stillHeld(employment, employmentZone))
     .map((employment) => employment.company_id)
     .sort(stable)
     .join(",");

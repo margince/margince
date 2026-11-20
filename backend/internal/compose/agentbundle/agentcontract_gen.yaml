@@ -40834,7 +40834,7 @@ components:
           enum: [email, call, message, null]
           readOnly: true
           description: >-
-            Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+            Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
         email_target:
           $ref: '#/components/schemas/ActivityEmailTarget'
         source:
