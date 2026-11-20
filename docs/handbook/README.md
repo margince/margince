@@ -192,8 +192,8 @@ Records, deals and mail in Margince, by page:
   seats, and the six roles. Why reading a customer record ignores row scope,
   and who can see one record. Teams, sharing, inviting and removing colleagues,
   and what a refusal looks like.
-- [Companies that have gone quiet](quiet-companies.md): the active, cooling,
-  dormant and stale steps, the filter on **Companies**, and the suggestion to
+- [Companies that have gone quiet](quiet-companies.md): the four steps from
+  **Active** to **Stale**, the filter on **Companies**, and the suggestion to
   get back in touch.
 - [Relationships, introductions and research](relationships-and-research.md):
   who here already knows somebody, and how that is measured. Asking a colleague

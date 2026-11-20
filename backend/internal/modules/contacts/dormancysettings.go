@@ -25,7 +25,7 @@ var DormancyDays = config.DefineStored(config.Spec[[]int]{
 		_, err := dormancy.FromDays(days)
 		return err
 	},
-	Doc: "Silent days after which an account reads as cooling, dormant and stale, in that order.",
+	Doc: "Three day counts, each above the one before: after how many days with no activity a company moves to each later step of the ladder.",
 }, config.Store{
 	RBACObject: installationSettingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the ladder rides company reads the caller is already gated for
@@ -39,7 +39,7 @@ var DormancyFollowUpEnabled = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_CONTACTS_DORMANCY_FOLLOW_UP_ENABLED",
 	Type:    config.Bool,
 	Default: config.Some(true),
-	Doc:     "Suggest a follow-up task to the owner of an account that has gone dormant or stale.",
+	Doc:     "Offer the owner of a quiet or stale company a task to get back in touch.",
 }, config.Store{
 	RBACObject: installationSettingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the company page applies it to a suggestion card it already gates

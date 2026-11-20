@@ -873,7 +873,7 @@
       "additionalProperties": false,
       "properties": {
         "dormancy_days": {
-          "description": "Silent days after which an account reads as cooling, dormant and stale, in that order.",
+          "description": "Three day counts, each above the one before: after how many days with no activity a company moves to each later step of the ladder.",
           "type": [
             "array",
             "null"
@@ -888,7 +888,7 @@
           ]
         },
         "dormancy_follow_up_enabled": {
-          "description": "Suggest a follow-up task to the owner of an account that has gone dormant or stale.",
+          "description": "Offer the owner of a quiet or stale company a task to get back in touch.",
           "type": [
             "boolean",
             "null"

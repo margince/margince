@@ -29,7 +29,7 @@ const (
 	Stale   Rung = "stale"
 )
 
-// Rungs is every rung, warmest first.
+// Rungs answers the ladder from the warmest rung to the coldest.
 func Rungs() []Rung { return []Rung{Active, Cooling, Dormant, Stale} }
 
 // Cold reports whether the account has gone quiet enough to win back: dormant

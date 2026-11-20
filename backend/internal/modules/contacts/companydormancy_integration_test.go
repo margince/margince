@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -28,7 +29,7 @@ func TestTheDormancyFilterAgreesWithTheLadderOnEveryBoundaryDay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	now := time.Date(2026, 11, 20, 15, 0, 0, 0, berlin)
+	now := clocktest.Now(t).In(berlin)
 	e.store.SetClock(func() time.Time { return now })
 	if err := e.store.tx(owner, func(tx pgx.Tx) error {
 		_, err := tx.Exec(owner, `INSERT INTO setting (key, value) VALUES ('installation.timezone', '"Europe/Berlin"')

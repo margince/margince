@@ -50246,7 +50246,7 @@ type DomainQuestionSuggestionBasis string
 
 // DormancyReading Where one account stands on the dormancy ladder, with the facts that put it there.
 type DormancyReading struct {
-	// LadderDays The silent days on which `cooling`, `dormant` and `stale` begin, so a reader can see the rule.
+	// LadderDays The silent days on which `cooling`, `dormant` and `stale` begin, each at least 1 and in rising order, so a reader can see the rule.
 	LadderDays []int `json:"ladder_days"`
 
 	// LastActivityAt The account's stored last activity the rung is counted from. Null when it has none.
