@@ -29,9 +29,9 @@ const (
 		"the server log carries the provider's own message"
 	reasonModelWithheld = "model declined — the AI provider withheld its answer to this run; " +
 		"the server log carries the provider's reason"
-	reasonAllowanceUsedUp = "the monthly AI allowance is used up — no AI provider was called for this run; " +
+	reasonAllowanceUsedUp = "the monthly AI allowance is used up — the run stopped before its next model call; " +
 		"scheduled runs start again once an administrator raises the allowance or the next budget window opens"
-	reasonProviderBlocked = "the AI provider is unavailable — no call was made for this run; " +
+	reasonProviderBlocked = "the AI provider is unavailable — the run stopped before its next model call; " +
 		"the next scheduled occurrence starts clean"
 	reasonStepTooLong = "model answer was longer than one step allows — " +
 		"the next scheduled run starts clean"
