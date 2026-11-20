@@ -8,7 +8,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
 import { homeDayOptions } from "../../lib/worklistday";
+import { taskRow } from "../../testing/brief.fixtures";
 import { MAX_DONE_ROWS, useMarkRowsDone } from "./worklist.donequeries";
 
 afterEach(() => {
@@ -83,9 +85,16 @@ describe("Done on a Home row", () => {
       defaultOptions: { mutations: { retry: false } },
     });
     const key = homeDayOptions().queryKey;
-    const item = (id: string) => ({ id, source: "deal_at_risk" });
+    const item = (id: string) => ({
+      ...taskRow(id, "Deal"),
+      source: "deal_at_risk" as const,
+    });
     client.setQueryData(key, {
-      pages: [{ queue: [item("row-1"), item("row-2")] }],
+      pages: [
+        {
+          queue: [item("row-1"), item("row-2")],
+        } as components["schemas"]["Worklist"],
+      ],
       pageParams: [undefined],
     });
     const answer: { release: () => void } = { release: () => {} };

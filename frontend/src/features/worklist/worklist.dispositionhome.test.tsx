@@ -8,7 +8,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
 import { homeDayOptions } from "../../lib/worklistday";
+import { taskRow } from "../../testing/brief.fixtures";
 import { useSetDisposition } from "./worklist.writes";
 
 afterEach(() => {
@@ -26,10 +28,10 @@ describe("Hide on a Home row", () => {
       pages: [
         {
           queue: [
-            { id: "mail-1", source: "awaiting_reply" },
-            { id: "mail-2", source: "awaiting_reply" },
+            { ...taskRow("mail-1", "Reply"), source: "awaiting_reply" },
+            { ...taskRow("mail-2", "Reply"), source: "awaiting_reply" },
           ],
-        },
+        } as components["schemas"]["Worklist"],
       ],
       pageParams: [undefined],
     });
