@@ -347,6 +347,18 @@ describe("Top bar trail", () => {
     await waitFor(() => expect(stopTexts().at(-1)).toBe("Unnamed lead"));
   });
 
+  // A lead may carry no name, but a lead the answer leaves out is not there.
+  it("says Not found for a lead the answer leaves out, not Unnamed lead", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ data: [] })),
+    );
+    renderTopBar({ screen: "leads", id: LEAD_ID }, { onToggle: ignoreToggle });
+    await waitFor(() =>
+      expect(stopTexts()).toEqual(["Leads", en["shell.unknownPage"]]),
+    );
+  });
+
   it("names the page once on a list route, with nothing to lead back to", () => {
     renderTopBar({ screen: "deals" }, { onToggle: ignoreToggle });
     expect(stopTexts()).toEqual(["Deals"]);

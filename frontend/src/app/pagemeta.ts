@@ -214,9 +214,12 @@ export function useRouteSubject(route: Route): string {
   // the page.
   const recordKind = recordKindOf(route);
   const recordId = recordKind && route.id;
-  const { name, reading } = useEntityName(recordKind ?? "contact", recordId);
+  const { name, reading, absent } = useEntityName(
+    recordKind ?? "contact",
+    recordId,
+  );
   if (recordKind && recordId) {
-    return name ?? subjectWithoutName(recordKind, recordId, reading, t);
+    return name ?? subjectWithoutName(recordKind, recordId, reading, absent, t);
   }
   if (unit) {
     return unitTitle(unit, locale);
@@ -231,6 +234,7 @@ function subjectWithoutName(
   kind: EntityKind,
   id: string,
   reading: NameReading,
+  absent: boolean,
   t: ReturnType<typeof useT>,
 ): string {
   if (reading === "pending") {
@@ -240,6 +244,9 @@ function subjectWithoutName(
   if (reading === "failed") {
     return isUuid(id) ? t("ref.nameLoadFailed") : t("shell.unknownPage");
   }
-  // A lead may legitimately have no name; every other record kind has one.
-  return kind === "lead" ? t("ref.leadUnnamed") : t("shell.unknownPage");
+  // A lead the answer held may legitimately have no name; every other record
+  // kind has one.
+  return kind === "lead" && !absent
+    ? t("ref.leadUnnamed")
+    : t("shell.unknownPage");
 }
