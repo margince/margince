@@ -19609,7 +19609,7 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '409':
           description: >-
-            Refused, with the reason distinguished by the problem `code`: `email_taken` (a member with this email already exists), `no_delivery_channel` (this installation has neither an outbound-email channel nor a public base URL, so neither the mailed link nor an admin-issued one could reach the member — an invite would create an ACTIVE account nobody could ever sign in as), or `company_not_described` (this installation has not yet saved its own company through `PUT /company`; the onboarding gate holds every admin on the company form until it is saved, so no seat of any role is added before then, and a client may read any non-admin seat as proof that the company exists. Asked after the caller's grant, so a caller who may not invite is answered 403 either way).
+            Refused, with the reason distinguished by the problem `code`: `already_invited` (a member with this email exists and is still waiting on an invitation; resend it with `POST /users/{id}/resend-invite`. Answered only to a caller who may read `user_admin`; any other caller is answered `email_taken` or the seat refusal, as for any other taken address), `email_taken` (a member with this email already exists), `no_delivery_channel` (this installation has neither an outbound-email channel nor a public base URL, so neither the mailed link nor an admin-issued one could reach the member — an invite would create an ACTIVE account nobody could ever sign in as), or `company_not_described` (this installation has not yet saved its own company through `PUT /company`; the onboarding gate holds every admin on the company form until it is saved, so no seat of any role is added before then, and a client may read any non-admin seat as proof that the company exists. Asked after the caller's grant, so a caller who may not invite is answered 403 either way).
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -34847,7 +34847,7 @@ components:
     ConversationClaimLooksKept:
       type: object
       description: >-
-        A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+        A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
       required: [meeting_id, guest_name, meeting_at, meeting_precision]
       properties:
         meeting_id: {type: string, format: uuid}
@@ -34856,6 +34856,12 @@ components:
         meeting_precision:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           description: How to read `meeting_at`. `day` means only its date is known.
+    ConversationClaimAutoKept:
+      type: object
+      description: >-
+        Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+      properties:
+        evidence: {$ref: '#/components/schemas/ConversationClaimLooksKept'}
     ConversationClaim:
       type: object
       description: |-
@@ -34893,6 +34899,7 @@ components:
           format: date-time
           description: When a human typed over the machine. Set means the claim is theirs, not the extractor's.
         looks_kept: {$ref: '#/components/schemas/ConversationClaimLooksKept'}
+        auto_kept: {$ref: '#/components/schemas/ConversationClaimAutoKept'}
         task_activity_id:
           type: [string, 'null']
           format: uuid

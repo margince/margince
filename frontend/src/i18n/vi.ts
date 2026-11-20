@@ -15,6 +15,7 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.promise_kept": "Đóng cam kết mà cuộc họp cho thấy đã thực hiện",
   "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
   "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
@@ -2427,6 +2428,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentJob.coldstart": "Tiếp cận đầu tiên",
   "agentJob.company_name_promotion": "Cập nhật tên công ty",
   "agentJob.contact_share": "Yêu cầu chia sẻ liên hệ",
+  "agentJob.task_due_date": "Câu hỏi về hạn",
   "agentJob.deal_scout": "Trinh sát deal",
   "agentJob.dealscout": "Trinh sát deal",
   "agentJob.deepread": "Trình đọc trang web",
@@ -4563,6 +4565,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "commitment.looksKept":
     "Có vẻ đã làm xong: {name} đã chấp nhận cuộc họp ngày {date}.",
   "commitment.markKept": "Đánh dấu đã làm",
+  "commitment.autoKept":
+    "Margince đã đánh dấu việc này là xong: {name} đã chấp nhận cuộc họp ngày {date}.",
+  "commitment.autoKeptPlain": "Margince đã đánh dấu việc này là xong.",
+  "commitment.undo": "Hoàn tác",
   "commitment.quote": "“{quote}”",
   "co.brief.by.model": "Do Margince viết",
   "co.brief.by.deterministic": "Tổng hợp từ hồ sơ CRM",
@@ -4718,6 +4724,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
   "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
+  "approval.kind.task_due_date": "Kiểm tra hạn",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",
@@ -10748,6 +10755,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ghi dữ liệu nhập",
   "jobs.kind.import_undo": "Hoàn tác lượt nhập",
   "jobs.kind.import_validate": "Chạy thử dữ liệu nhập",
+  "jobs.kind.promise_kept_sweep": "Cam kết đã thực hiện qua cuộc họp",
   "jobs.kind.transcript_audience_sweep": "Quyền xem ghi chú cuộc họp",
   "jobs.kind.meeting_profile_retract_sweep": "Trường công ty từ cuộc họp",
   "jobs.kind.initiative_enrolment_sweep": "Ngày tham gia sáng kiến",
@@ -13086,6 +13094,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cần có một người đầu tiên làm việc trong Margince. Thêm ngay, hoặc thêm sau trong Cài đặt, mục Nhân sự.",
   "ob.conv.team.invitedLabel": "Đã mời",
   "ob.conv.team.invitedLine": "Đã mời {name}.",
+  "ob.conv.team.inviteUnconfirmed":
+    "Margince không thể xác nhận lời mời. Lời mời có thể vẫn đã được gửi, vì vậy hãy kiểm tra Cài đặt → Thành viên trước khi mời lại địa chỉ này.",
   "ob.conv.team.skip": "Tạm bỏ qua",
   "ob.conv.team.finish": "Hoàn tất thiết lập",
   "ob.conv.team.done":
@@ -15375,10 +15385,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.newTeamLabel": "Nhóm mới",
   "users.newTeamOpen": "Nhóm mới",
   "users.teamNameLabel": "Tên nhóm",
-  "users.emailTaken":
-    "Đã có thành viên dùng email này. Nếu thành viên đó đã bị vô hiệu hóa, kích hoạt lại thay vì mời lại.",
-  "users.emailReserved":
-    "Địa chỉ này thuộc về một thành viên đã bị xóa vĩnh viễn và vẫn được giữ lại.",
   "users.teamDuplicate": "Đã có nhóm mang tên này. Hãy chọn tên khác.",
   "users.newTeamPlaceholder": "Ví dụ: DACH Sales",
   "users.createTeam": "Tạo nhóm",
@@ -15502,6 +15508,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ làm việc này cho thành viên đã mất cả ứng dụng xác thực lẫn mã khôi phục. Họ sẽ bị đăng xuất ở mọi nơi và sau đó có thể đăng nhập chỉ bằng mật khẩu, cho đến khi thiết lập lại đăng nhập hai bước.",
   "users.mfaRemoved": "Đã gỡ đăng nhập hai bước của {name}",
   "users.link.action": "Lấy liên kết đặt mật khẩu",
+  "users.inviteUnconfirmed":
+    "Margince không thể xác nhận lời mời. Thành viên có thể đã có trong danh sách, vì vậy hãy kiểm tra trước khi mời lại.",
+  "users.alreadyInvited":
+    "Địa chỉ này đã có một lời mời đang chờ. Hãy gửi lại lời mời trong Cài đặt → Thành viên.",
+  "users.emailTaken":
+    "Đã có thành viên dùng địa chỉ này. Nếu họ đã bị vô hiệu hóa, hãy kích hoạt lại từ danh sách.",
+  "users.removedEmail":
+    "Địa chỉ này thuộc về một thành viên đã bị xóa vĩnh viễn và vẫn được giữ lại.",
   "users.resendInvite": "Gửi lại lời mời",
   "users.inviteResent": "Đã gửi lại lời mời cho {name}",
   "users.link.title": "Liên kết đặt mật khẩu cho {name}",
@@ -21634,6 +21648,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",
   "approval.commitment.noDueDay": "Chưa nêu ngày",
   "approval.commitment.strength": "Mức chắc chắn",
+  "approval.commitment.oddDue": "Ngày này có vẻ quá xa: giữ, đổi hoặc xóa",
   "approval.commitment.tentative": "Chưa chắc chắn: họ nói sẽ cố gắng",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
   "approval.commitment.notFulfilled":

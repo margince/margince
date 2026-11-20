@@ -711,6 +711,7 @@ var Declared = map[string][]string{
 	"POST /v1/channel-connections":                                             {},
 	"POST /v1/channel-links/{record_type}/{id}":                                {},
 	"POST /v1/channel-links/{record_type}/{id}/notes":                          {},
+	"POST /v1/claims/{id}/reopen":                                              {},
 	"POST /v1/claims/{id}/settle":                                              {},
 	"POST /v1/claims/{id}/take-over":                                           {},
 	"POST /v1/coldstart":                                                       {},

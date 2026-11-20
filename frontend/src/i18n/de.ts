@@ -6,6 +6,8 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.promise_kept":
+    "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
   "systemJob.transcript_audience":
     "Terminnotizen erhalten die Lesenden des Termins",
   "systemJob.meeting_profile":
@@ -2496,6 +2498,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.coldstart": "Erstansprache",
   "agentJob.company_name_promotion": "Aktualisierung des Firmennamens",
   "agentJob.contact_share": "Anfrage zum Teilen eines Kontakts",
+  "agentJob.task_due_date": "Frage zum Fälligkeitsdatum",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website-Analyse",
@@ -4689,6 +4692,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commitment.looksKept":
     "Sieht erledigt aus: {name} hat den Termin am {date} angenommen.",
   "commitment.markKept": "Als erledigt markieren",
+  "commitment.autoKept":
+    "Margince hat das als erledigt markiert: {name} hat den Termin am {date} angenommen.",
+  "commitment.autoKeptPlain": "Margince hat das als erledigt markiert.",
+  "commitment.undo": "Rückgängig",
   "commitment.quote": "„{quote}“",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
@@ -4843,6 +4850,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
   "approval.kind.contact_share": "Kontakt teilen",
+  "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
@@ -11061,6 +11069,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
+  "jobs.kind.promise_kept_sweep": "Durch Termine erfüllte Zusagen",
   "jobs.kind.transcript_audience_sweep": "Lesende von Terminnotizen",
   "jobs.kind.meeting_profile_retract_sweep": "Unternehmensfelder aus Terminen",
   "jobs.kind.initiative_enrolment_sweep":
@@ -13446,6 +13455,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand muss die erste Person sein, die in Margince arbeitet. Füge diese Person jetzt hinzu oder später in den Einstellungen unter Personen.",
   "ob.conv.team.invitedLabel": "Bisher eingeladen",
   "ob.conv.team.invitedLine": "{name} ist eingeladen.",
+  "ob.conv.team.inviteUnconfirmed":
+    "Margince konnte die Einladung nicht bestätigen. Vielleicht ist sie trotzdem angekommen, also prüfe Einstellungen → Mitglieder, bevor du diese Adresse erneut einlädst.",
   "ob.conv.team.skip": "Vorerst überspringen",
   "ob.conv.team.finish": "Einrichtung abschließen",
   "ob.conv.team.done":
@@ -15809,10 +15820,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.newTeamLabel": "Neues Team",
   "users.newTeamOpen": "Neues Team",
   "users.teamNameLabel": "Teamname",
-  "users.emailTaken":
-    "Ein Mitglied mit dieser E-Mail-Adresse gibt es schon. Wurde es deaktiviert, reaktiviere es stattdessen.",
-  "users.emailReserved":
-    "Diese Adresse gehörte einem endgültig entfernten Mitglied und bleibt reserviert.",
   "users.teamDuplicate":
     "Ein Team mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "users.newTeamPlaceholder": "Zum Beispiel DACH Sales",
@@ -15936,6 +15943,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Tu das nur für ein Mitglied, das seine Authenticator-App und seine Wiederherstellungscodes verloren hat. Es wird überall abgemeldet und kann sich danach allein mit seinem Passwort anmelden, bis es die zweistufige Anmeldung wieder einrichtet.",
   "users.mfaRemoved": "Zweistufige Anmeldung für {name} entfernt",
   "users.link.action": "Passwort-Link erstellen",
+  "users.inviteUnconfirmed":
+    "Margince konnte die Einladung nicht bestätigen. Das Mitglied steht vielleicht schon in der Liste, also prüfe sie, bevor du erneut einlädst.",
+  "users.alreadyInvited":
+    "Für diese Adresse wartet schon eine Einladung. Sende sie unter Einstellungen → Mitglieder erneut.",
+  "users.emailTaken":
+    "Ein Mitglied mit dieser Adresse gibt es schon. Wurde es deaktiviert, reaktiviere es in der Liste.",
+  "users.removedEmail":
+    "Diese Adresse gehört einem dauerhaft entfernten Mitglied und bleibt reserviert.",
   "users.resendInvite": "Einladung erneut senden",
   "users.inviteResent": "Einladung erneut an {name} gesendet",
   "users.link.title": "Passwort-Link für {name}",
@@ -22221,6 +22236,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
   "approval.commitment.noDueDay": "Kein Tag genannt",
   "approval.commitment.strength": "Wie verbindlich",
+  "approval.commitment.oddDue":
+    "Dieses Datum wirkt weit weg: behalten, ändern oder leeren",
   "approval.commitment.tentative": "Mit Vorbehalt: Es hieß, man versuche es",
   "approval.commitment.promiseStatus": "Stand der Zusage",
   "approval.commitment.notFulfilled":

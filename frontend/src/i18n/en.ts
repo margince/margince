@@ -4,6 +4,7 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
   "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
   "systemJob.meeting_profile":
     "Removing company values whose meeting lost its readers",
@@ -2405,6 +2406,7 @@ export const en = {
   "agentJob.coldstart": "First approach",
   "agentJob.company_name_promotion": "Company name update",
   "agentJob.contact_share": "Contact share request",
+  "agentJob.task_due_date": "Due date question",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website reader",
@@ -4636,6 +4638,10 @@ export const en = {
   "commitment.takenOverUnnamed": "Taken on {date}",
   "commitment.looksKept": "Looks kept: {name} accepted the {date} meeting.",
   "commitment.markKept": "Mark kept",
+  "commitment.autoKept":
+    "Margince marked this kept: {name} accepted the {date} meeting.",
+  "commitment.autoKeptPlain": "Margince marked this kept.",
+  "commitment.undo": "Undo",
   "commitment.quote": "“{quote}”",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Compiled from CRM records",
@@ -4791,6 +4797,7 @@ export const en = {
   "approval.kind.capture_counterparty": "Add contact from mail",
   "approval.kind.ownership_transfer": "Hand over a record",
   "approval.kind.contact_share": "Share a contact",
+  "approval.kind.task_due_date": "Check a due date",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",
@@ -11025,6 +11032,7 @@ export const en = {
   "jobs.kind.import_commit": "Import commit",
   "jobs.kind.import_undo": "Import undo",
   "jobs.kind.import_validate": "Import test run",
+  "jobs.kind.promise_kept_sweep": "Commitments kept by meetings",
   "jobs.kind.transcript_audience_sweep": "Meeting notes readers",
   "jobs.kind.meeting_profile_retract_sweep": "Company fields from meetings",
   "jobs.kind.initiative_enrolment_sweep": "Initiative membership dates",
@@ -13385,6 +13393,8 @@ export const en = {
     "Someone must be the first person working in Margince. Add them now, or later in Settings under People.",
   "ob.conv.team.invitedLabel": "Invited so far",
   "ob.conv.team.invitedLine": "{name} is invited.",
+  "ob.conv.team.inviteUnconfirmed":
+    "Margince could not confirm the invitation. It may still have gone through, so check Settings → Members before you invite this address again.",
   "ob.conv.team.skip": "Skip for now",
   "ob.conv.team.finish": "Finish setup",
   "ob.conv.team.done":
@@ -15700,10 +15710,6 @@ export const en = {
   "users.newTeamLabel": "New team",
   "users.newTeamOpen": "New team",
   "users.teamNameLabel": "Team name",
-  "users.emailTaken":
-    "A member with this email already exists. If they were deactivated, reactivate them instead.",
-  "users.emailReserved":
-    "This address belonged to a permanently removed member and stays reserved.",
   "users.teamDuplicate":
     "A team with this name already exists. Choose another name.",
   "users.newTeamPlaceholder": "For example, DACH Sales",
@@ -15825,6 +15831,14 @@ export const en = {
     "Do this only for a member who lost both their authenticator app and their recovery codes. They are signed out everywhere and can then sign in with their password alone, until they set up two-step sign-in again.",
   "users.mfaRemoved": "Two-step sign-in removed for {name}",
   "users.link.action": "Get set-password link",
+  "users.inviteUnconfirmed":
+    "Margince could not confirm the invitation. The member may already be on the list, so check it before you invite again.",
+  "users.alreadyInvited":
+    "This address already has an invitation waiting. Resend it from Settings → Members.",
+  "users.emailTaken":
+    "A member with this address already exists. If they were deactivated, reactivate them from the list.",
+  "users.removedEmail":
+    "This address belongs to a permanently removed member and stays reserved.",
   "users.resendInvite": "Resend invitation",
   "users.inviteResent": "Invitation sent again to {name}",
   "users.link.title": "Set-password link for {name}",
@@ -21926,6 +21940,8 @@ export const en = {
   "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",
   "approval.commitment.noDueDay": "No day stated",
   "approval.commitment.strength": "How firm",
+  "approval.commitment.oddDue":
+    "This date looks far off: keep it, change it or clear it",
   "approval.commitment.tentative": "Tentative: they said they would try",
   "approval.commitment.promiseStatus": "Commitment status",
   "approval.commitment.notFulfilled":

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useClaimSettle } from "../../components/taskactions.rowwrites";
+import {
+  useClaimReopen,
+  useClaimSettle,
+} from "../../components/taskactions.rowwrites";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { activityDay, type OccurredPrecision } from "../../format/activitywhen";
@@ -16,6 +19,9 @@ export type LooksKept = {
   at: string;
   precision: OccurredPrecision;
 };
+
+/** A promise Margince closed itself, with the meeting it closed on when the reader may open it. */
+export type AutoKept = { evidence?: LooksKept };
 
 /**
  * A promise to invite someone that looks kept. The button is the ordinary
@@ -53,6 +59,45 @@ export function LooksKeptLine({
         </Button>
       )}
       <ErrorLine error={settle.error} inline />
+    </span>
+  );
+}
+
+/** Margince closed this promise; undoing it reopens only the claim. */
+export function AutoKeptLine({
+  id,
+  autoKept,
+}: Readonly<{ id: string; autoKept: AutoKept }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const reopen = useClaimReopen([]);
+  const canUndo = useCanWrite("contact", "update");
+  const { evidence } = autoKept;
+  return (
+    <span className="pe-loop-quote t-caption">
+      {evidence
+        ? t("commitment.autoKept", {
+            name: evidence.guest,
+            date: activityDay(
+              evidence.at,
+              evidence.precision,
+              locale,
+              zone,
+              formatDayMonth,
+            ),
+          })
+        : t("commitment.autoKeptPlain")}{" "}
+      {canUndo && (
+        <Button
+          variant="link"
+          pending={reopen.isPending}
+          onClick={() => reopen.mutate({ id })}
+        >
+          {t("commitment.undo")}
+        </Button>
+      )}
+      <ErrorLine error={reopen.error} inline />
     </span>
   );
 }
