@@ -75616,6 +75616,7 @@ components:
         label: { type: string }
         requires_double_opt_in: { type: boolean, default: false, description: 'When true, a grant is only effective after a confirmed DOI event (German email norm).' }
         class:
+          type: string
           allOf: [{ $ref: '#/components/schemas/ConsentPurposeClass' }]
           description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
         frequency: { $ref: '#/components/schemas/ConsentPurposeFrequency' }

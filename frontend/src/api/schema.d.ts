@@ -55246,7 +55246,7 @@ export interface components {
              */
             requires_double_opt_in: boolean;
             /** @description What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration. */
-            class?: components["schemas"]["ConsentPurposeClass"];
+            class?: string & components["schemas"]["ConsentPurposeClass"];
             frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /** Format: date-time */
             created_at: string;
