@@ -123,7 +123,7 @@ Every task has a type, and the type decides its one step. The type shows as a ch
 | Type | The step |
 | --- | --- |
 | **Reply** | Answers the way the message came in: **Draft email** for an email, the number and **Call** for a call. Any other reply offers both, as **Reach out** does. The other way is always there too: under the card's **More actions**, and in the task's details |
-| **Reach out** | **Draft email** to the task's contact, lead or company, then the contact's number with **Copy number** and **Call**. **Call** is the colour button when no email can be drafted |
+| **Reach out** | Keeps to the way the talk it came from went. A promise made in an email offers **Draft email**, and a call offers the number and **Call**; the other way waits under **More actions**. With neither, **Draft email** to the task's contact, lead or company, then the number with **Copy number** and **Call**. **Call** is the colour button when no email can be drafted |
 | **Meet** | **Book a meeting** with the task's contact |
 | **Review** | Opens the record to check, such as **Review lead** |
 | **Decide** | The deals the email may be about, as cards, and **Link email thread to deal** |
