@@ -74,8 +74,7 @@ func implementers(t *testing.T, ports map[string]bool) map[string]string {
 	out := map[string]string{}
 	rt := reflect.TypeFor[extension.Runtime]()
 	impl := reflect.ValueOf(&callRuntime{})
-	for i := range rt.NumMethod() {
-		m := rt.Method(i)
+	for m := range rt.Methods() {
 		if m.Type.NumIn() != 0 || m.Type.NumOut() != 1 || !ports[m.Type.Out(0).Name()] {
 			continue
 		}
