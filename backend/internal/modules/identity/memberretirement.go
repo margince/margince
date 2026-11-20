@@ -153,7 +153,8 @@ func applyRetirementWork(out *crmcontracts.MemberRetirementPreview, work MemberW
 		out.Blockers = append(out.Blockers, "private_tasks")
 	}
 	if work.Owned.Project > work.VisibleOwned.Project || (target != nil &&
-		(work.Owned.RecordAssignment > work.Transferable.RecordAssignment || work.Owned.SdrHandoff > work.Transferable.SdrHandoff)) {
+		(work.Owned.RecordAssignment > work.Transferable.RecordAssignment || work.Owned.SdrHandoff > work.Transferable.SdrHandoff ||
+			work.Owned.MailDraft > work.Transferable.MailDraft)) {
 		out.Blockers = append(out.Blockers, "work_not_transferable")
 	}
 	if merge || member.Status == userStatusDeactivated {

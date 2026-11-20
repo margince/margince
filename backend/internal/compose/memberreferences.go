@@ -134,7 +134,7 @@ var memberReferences = map[string]memberReference{
 	"list.owner_id":                            {disposition: referenceHandover, live: memberLiveRows},
 	"list.steward_id":                          {disposition: referenceHandover, live: memberLiveRows},
 	"list_visit.user_id":                       {disposition: referenceRetain},
-	"mail_draft.author_id":                     {disposition: referenceResolve, live: jsonTrue, remedy: "mail_drafts"},
+	"mail_draft.author_id":                     {disposition: referenceHandover, live: jsonTrue},
 	"meeting_calendar_episode.host_user_id":    {disposition: referenceRetain},
 	"meeting_invitation.host_user_id":          {disposition: referenceResolve, live: `status NOT IN ('canceled','erased') OR NOT cleanup_complete`, remedy: "meeting_invitations"},
 	"meeting_proposal.host_user_id":            {disposition: referenceResolve, live: jsonTrue, remedy: "meeting_proposals"},

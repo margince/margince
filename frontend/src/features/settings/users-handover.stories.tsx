@@ -39,6 +39,7 @@ function renderSummary() {
           list: 0,
           sdr_handoff: 3,
           record_assignment: 2,
+          mail_draft: 1,
         },
       }),
   });
