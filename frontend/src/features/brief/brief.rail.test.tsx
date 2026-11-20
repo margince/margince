@@ -9,6 +9,8 @@ import {
   render,
   stubApi,
 } from "../../testing/brief.testkit";
+import { customerPayments } from "../../testing/customerpayments.fixtures";
+import { meFixture } from "../../testing/mefixture";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { BriefScreen } from "./brief";
 
@@ -82,6 +84,30 @@ describe("BriefScreen — the context rail", () => {
     await screen.findByText(en["brief.first.title"]);
     expect(container.querySelector("#brief-watch")).toBeNull();
   });
+});
+
+// Every card in the rail reads as one sheet: the same small title and no band
+// or rule under it. A card that drew its own band read as part of another page.
+it("draws every rail card with the flat head, the payments card included", async () => {
+  stubApi({
+    "GET /me": () =>
+      jsonResponse(
+        meFixture({
+          allow: { company: ["read"], deal: ["read"], finance: ["read"] },
+        }),
+      ),
+    "GET /finance/customer-payments": () => jsonResponse(customerPayments()),
+  });
+  render(<BriefScreen />);
+  const payments = await screen.findByRole("heading", {
+    name: en["payments.title"],
+  });
+  expect(payments.closest(".brief-rail")).not.toBeNull();
+  const heads = [...document.querySelectorAll(".brief-rail .panel-head")];
+  expect(heads.length).toBeGreaterThan(1);
+  for (const head of heads) {
+    expect(head.className, head.textContent ?? "").toContain("panel-head-flat");
+  }
 });
 
 // ── When a source has nothing to report ──

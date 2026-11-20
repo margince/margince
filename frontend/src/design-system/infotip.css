@@ -24,3 +24,16 @@
   inline-size: 14px;
   block-size: 14px;
 }
+
+/* A thumb gets a 44px target around the glyph from a layer that draws
+   nothing, as `.editable-value-edit` takes it. */
+@media (pointer: coarse) {
+  .info-tip {
+    position: relative;
+  }
+  .info-tip::before {
+    content: "";
+    position: absolute;
+    inset: calc((100% - max(44px, 100%)) / 2);
+  }
+}
