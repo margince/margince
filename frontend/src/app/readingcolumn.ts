@@ -16,10 +16,15 @@ export function useReadingColumn(route: Route): {
   record: boolean;
 } {
   const shown = useDeferredValue(route);
-  // A RECORD id makes one: `#/companies` and `#/deals/new` are both lists.
-  const recordPage = shown.id !== undefined && !opensReservedPage(shown);
   return {
     gridded: shown.screen === SETTINGS_SCREEN,
-    record: recordPage && RECORD_VIEW_SCREENS.has(shown.screen),
+    record: isRecordPage(shown),
   };
+}
+
+/** Whether `route` is a record's own page, as against its list or a form. */
+export function isRecordPage(route: Route): boolean {
+  // A RECORD id makes one: `#/companies` and `#/deals/new` are both lists.
+  const recordPage = route.id !== undefined && !opensReservedPage(route);
+  return recordPage && RECORD_VIEW_SCREENS.has(route.screen);
 }

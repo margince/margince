@@ -167,7 +167,7 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 			where += " AND status = $3"
 		}
 		if cursor != nil && *cursor != "" {
-			c, err := storekit.DecodeCursor(*cursor)
+			c, err := storekit.DecodeCursor("automation_runs", *cursor)
 			if err != nil {
 				return err
 			}
@@ -205,7 +205,7 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+		next, err := storekit.EncodeCursor("automation_runs", last.CreatedAt, last.ID)
 		if err != nil {
 			return AutomationRunPage{}, err
 		}

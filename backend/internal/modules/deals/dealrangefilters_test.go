@@ -21,7 +21,7 @@ import (
 func rangeClauses(ctx context.Context, t *testing.T, f RangeFilters) ([]string, []any, error) {
 	t.Helper()
 	var args []any
-	f.valuation = dealValuation{base: "EUR", day: "2026-10-26", zone: "Europe/Berlin"}
+	f.valuation = dealValuation{base: "EUR", day: "2026-10-26", zone: "Europe/Berlin", at: time.Date(2026, 10, 26, 12, 0, 0, 0, time.UTC)}
 	clauses, err := appendRangeFilters(ctx, nil, f, func(v any) int { args = append(args, v); return len(args) })
 	return clauses, args, err
 }

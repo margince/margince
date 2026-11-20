@@ -6,11 +6,12 @@ import { expect, screen, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
 import { AiDraftBand } from "./composeaiband";
 import { SelectedReply, selectedReplyRoutes } from "./composethread.stories";
+import { ComposeWindow } from "./composewindow";
 
 const meta: Meta = {
   title: "Patterns/Compose mail/AI line",
@@ -58,7 +59,7 @@ function draftedIn(modelled: boolean) {
     });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           activityId="message-0"
           entityType="contact"
           entityId="ada"
@@ -110,6 +111,64 @@ export const DraftLanguageWithoutModel: StoryObj = {
 
 export const DraftLanguageWithoutModelPhone: StoryObj = {
   ...DraftLanguageWithoutModel,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// A first email to a contact that the server's template wrote: no model could.
+function templateDraft() {
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "POST /contacts/ada/draft-email": () =>
+      jsonResponse({
+        subject: "Following up",
+        body: "Hi Ada,\n\nWould a short call in the next week or two be useful?",
+        to: ["ada@example.test"],
+        reasoning: [],
+        generated_by: "deterministic",
+        ai_generated: false,
+        ai_disclosure: null,
+        voice_profile_version: null,
+        draft_ref: null,
+        language: "en",
+      }),
+  });
+  return (
+    <StoryProviders>
+      <ComposeWindow
+        intent="Ask whether they want a demo of the fleet module next Tuesday"
+        entityType="contact"
+        entityId="ada"
+        contactId="ada"
+        recordAddress="ada@example.test"
+        open
+        onClose={() => {}}
+      />
+    </StoryProviders>
+  );
+}
+
+/** A template draft: the line says AI did not write it and the purpose went
+ *  unused, the purpose stays to ask again, and no rewrite is offered. */
+export const TemplateDraft: StoryObj = {
+  render: templateDraft,
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(
+      await dialog.findByRole("button", { name: "Draft email" }),
+    );
+    await dialog.findByText("AI could not write this draft");
+    await expect(dialog.queryByRole("button", { name: "Polish" })).toBeNull();
+  },
+};
+
+export const TemplateDraftDark: StoryObj = {
+  ...TemplateDraft,
+  globals: { theme: "dark" },
+};
+
+export const TemplateDraftPhone: StoryObj = {
+  ...TemplateDraft,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

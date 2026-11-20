@@ -17,6 +17,7 @@ import { Select } from "../design-system/select";
 import { dealStatusLabel } from "../format/dealstatus";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useEmploymentZone } from "../lib/employmentcurrency";
 import { currentEmployerCompanyIds } from "../lib/employmentpages";
 import { isOption } from "../lib/options";
 import { ProblemError, unwrap } from "../lib/problem";
@@ -176,6 +177,7 @@ export function AddRelationshipAction({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const employmentZone = useEmploymentZone();
   const headingId = useId();
   const all = edgeOptions(scope);
   const options = only
@@ -215,7 +217,11 @@ export function AddRelationshipAction({
       if (entity === "deal" && contactId) {
         let employers: string[] | undefined;
         try {
-          employers = await currentEmployerCompanyIds(queryClient, contactId);
+          employers = await currentEmployerCompanyIds(
+            queryClient,
+            contactId,
+            employmentZone,
+          );
         } catch {
           employers = undefined;
         }
@@ -247,6 +253,7 @@ export function AddRelationshipAction({
     },
     [
       contactId,
+      employmentZone,
       entity,
       queryClient,
       nameLoadFailed,
@@ -344,11 +351,12 @@ export function AddRelationshipAction({
               label names the kind being searched rather than a generic
               "other side", reusing the same singular each search result
               screen already carries for its own kind. */}
-          <Field label={t(SEARCH_HIT_KIND_KEY[entity])}>
+          <Field label={t(SEARCH_HIT_KIND_KEY[entity])} required>
             {(control) => (
               <RecordPicker
                 {...control}
                 key={kind}
+                placeholder={t("merge.searchPlaceholder")}
                 searchTargets={searchTargets}
                 searchOnFocus={entity === "deal"}
                 selected={target}

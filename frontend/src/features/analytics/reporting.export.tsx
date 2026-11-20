@@ -3,7 +3,7 @@ import { api } from "../../api/client";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
-import { downloadBytes } from "../../lib/download";
+import { downloadBytes, filenameFromDisposition } from "../../lib/download";
 import { isVersionSkewOf, throwProblem } from "../../lib/problem";
 import { type ReportingEvaluation, reportingQuery } from "./reporting.model";
 import { reloadReportingFigures } from "./reporting.queries";
@@ -40,16 +40,20 @@ export function ReportingExportButton({
           parseAs: "text",
         });
         if (result.error) throwProblem(result.error);
-        return result.data;
+        return { csv: result.data, filename: csvName(result.response) };
       }
       const figures = await evaluationCsv(evaluation);
       if (!charts) return figures;
-      return joinChartRows(figures, await evaluationCsv(charts), charts);
+      const chartRead = await evaluationCsv(charts);
+      return {
+        csv: joinChartRows(figures.csv, chartRead.csv, charts),
+        filename: figures.filename,
+      };
     },
-    onSuccess: (csv) =>
+    onSuccess: ({ csv, filename }) =>
       downloadBytes(
         new Blob([csv], { type: "text/csv" }),
-        "reporting.csv",
+        filename,
         "text/csv",
       ),
   });
@@ -84,7 +88,17 @@ export function ReportingExportButton({
   );
 }
 
-async function evaluationCsv(evaluation: ReportingEvaluation): Promise<string> {
+// The server names the file for its scope, period and day.
+function csvName(response: Response): string {
+  return filenameFromDisposition(
+    response.headers.get("Content-Disposition"),
+    "reporting.csv",
+  );
+}
+
+async function evaluationCsv(
+  evaluation: ReportingEvaluation,
+): Promise<{ csv: string; filename: string }> {
   const result = await api.GET("/analytics/evaluate.csv", {
     params: {
       query: {
@@ -97,7 +111,7 @@ async function evaluationCsv(evaluation: ReportingEvaluation): Promise<string> {
     parseAs: "text",
   });
   if (result.error) throwProblem(result.error);
-  return result.data;
+  return { csv: result.data, filename: csvName(result.response) };
 }
 
 // The figures' CSV, then the chart rows of the chart read: the rows whose

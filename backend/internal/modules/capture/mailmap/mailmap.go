@@ -99,6 +99,7 @@ type Message struct {
 	partDrops []PartDrop
 	// bodyCompleteness is how much of the message's text this parser decoded.
 	bodyCompleteness capture.BodyCompleteness
+	forwarded        *connector.ForwardedOriginal // the original it forwards, never its author
 	// openRecipients holds the To and Cc addresses, the owner's own included, and
 	// linkHosts where the body's links lead: the evidence capture.MailEnvelope carries.
 	openRecipients   []string
@@ -164,9 +165,8 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// ADR-0082 §3 and not something this parser can recover.
 	bccList, _ := addressList(header, "Bcc")
 	deliveredTo := TopDeliveredTo(header)
-	senderAuth := TopSenderAuthentication(header)
-	from := firstAddress(fromList)
-	to := firstAddress(toList)
+	senderAuth := groupRelayed(TopSenderAuthentication(header), viaGroup)
+	from, to := firstAddress(fromList), firstAddress(toList)
 
 	walked := extractText(root)
 	body, parts, drops, calendar := walked.text, walked.parts, walked.drops, walked.calendar
@@ -236,6 +236,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		parts:            parts,
 		partDrops:        drops,
 		bodyCompleteness: walked.completeness,
+		forwarded:        walked.forwarded,
 	}, nil
 }
 
@@ -446,6 +447,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		Addresses:            m.addresses,
 		Parts:                m.recordParts(),
 		PartDrops:            m.recordDrops(),
+		Forwarded:            m.forwarded,
 	}
 }
 
@@ -473,22 +475,6 @@ func domainOf(addr string) string {
 		return addr[idx+1:]
 	}
 	return ""
-}
-
-func firstAddress(list []*mail.Address) string {
-	if len(list) == 0 {
-		return ""
-	}
-	return list[0].Address
-}
-
-func firstNonOwner(list []*mail.Address, ownerLower string) string {
-	for _, a := range list {
-		if strings.ToLower(a.Address) != ownerLower {
-			return a.Address
-		}
-	}
-	return firstAddress(list)
 }
 
 func orDash(s string) string {

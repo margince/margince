@@ -42,8 +42,10 @@ var decideApprovalCopy = toolCopy{
 	Purpose: "Answer one staged action for the colleague asking you: approve it, which lets it happen, " +
 		"or reject it, which discards it.",
 	Limits: "The verdict is theirs — take an explicit approve or reject rather than deciding what " +
-		"they would have wanted. Approving is what makes the change real, including sending a " +
-		"message that was only drafted; a rejection cannot be taken back. You may approve your own " +
+		"they would have wanted. Approving runs a change the system staged now, including sending " +
+		"a message that was only drafted. Approving a call an agent staged only lets that agent " +
+		"repeat it: the item then reads awaiting_agent and nothing has changed until it does. A " +
+		"rejection cannot be taken back. You may approve your own " +
 		"proposal only when it is a change that would have gone straight through but for a human's " +
 		"earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest " +
 		"is theirs to release in the CRM. An item already answered, or lapsed, is reported as such " +
@@ -71,8 +73,10 @@ var decideApprovalsCopy = toolCopy{
 		"happen, or reject, which discards it. Name staged_action_id for one action, or bundle_id " +
 		"for every still-waiting proposal one act staged together.",
 	Limits: "The verdict is theirs — take an explicit approve or reject rather than deciding what " +
-		"they would have wanted. Approving is what makes the change real, including sending a " +
-		"message that was only drafted; a rejection cannot be taken back. You may approve your own " +
+		"they would have wanted. Approving runs a change the system staged now, including sending " +
+		"a message that was only drafted. Approving a call an agent staged only lets that agent " +
+		"repeat it: the item then reads awaiting_agent and nothing has changed until it does. A " +
+		"rejection cannot be taken back. You may approve your own " +
 		"proposal only when it is a change that would have gone straight through but for a human's " +
 		"earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest " +
 		"is theirs to release in the CRM. An item already answered, or lapsed, is reported as such " +

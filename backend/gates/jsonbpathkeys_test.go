@@ -108,7 +108,7 @@ func TestASQLPathNamesAKeyItsStructWrites(t *testing.T) {
 		// tree over statements it no longer reads.
 		if paths == 0 {
 			t.Errorf("no SQL path reads %s — the tree spells its keys out in "+
-				"activities/scheduling_*.go and compose/dealscoutsql.go, so this gate has "+
+				"activities/scheduling_*.go and compose/dealscout/sql.go, so this gate has "+
 				"stopped finding them", stored.name)
 		}
 		if stored.rebuilds != nil && rebuilds == 0 {

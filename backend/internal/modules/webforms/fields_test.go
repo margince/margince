@@ -5,6 +5,7 @@ package webforms
 
 import (
 	"bytes"
+	"errors"
 	"mime/multipart"
 	"strings"
 	"testing"
@@ -207,6 +208,22 @@ func TestAnEmailMustLookLikeOne(t *testing.T) {
 	} {
 		if got := plausibleEmail(email); got != want {
 			t.Errorf("plausibleEmail(%q) = %v, want %v", email, got, want)
+		}
+	}
+}
+
+func TestTextThatIsNotValidUTF8IsRefusedInEveryBodyKind(t *testing.T) {
+	for name, c := range map[string]struct {
+		contentType string
+		body        string
+	}{
+		"urlencoded":     {"application/x-www-form-urlencoded", "a=%FF"},
+		"json bytes":     {"application/json", "{\"a\":\"\xff\"}"},
+		"json surrogate": {"application/json", `{"a":"\udc00"}`},
+		"multipart":      {"multipart/form-data; boundary=b", "--b\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\n\xff\r\n--b--\r\n"},
+	} {
+		if _, err := parseFields(c.contentType, []byte(c.body)); !errors.Is(err, errMalformedText) {
+			t.Errorf("%s: err = %v, want errMalformedText", name, err)
 		}
 	}
 }

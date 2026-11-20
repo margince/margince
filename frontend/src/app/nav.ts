@@ -12,7 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
-import { type CoreFeature, screenEnabled } from "../lib/corefeatures";
+import { screenEnabled, type Withheld } from "../lib/corefeatures";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
 import { EXTENSION_SCREEN } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
@@ -348,7 +348,7 @@ export function navLabelKey(
 
 function primaryLevel(
   route: Route,
-  disabled: readonly CoreFeature[],
+  disabled: readonly Withheld[],
   readsTeam: boolean,
 ): NavTrailLevel {
   return {
@@ -415,7 +415,7 @@ function activeRowFor(route: Route): string {
 export function railTrail(
   route: Route,
   section?: NavSection,
-  disabled: readonly CoreFeature[] = [],
+  disabled: readonly Withheld[] = [],
   readsTeam = false,
 ): readonly NavTrailLevel[] {
   return navTrail(
@@ -426,7 +426,7 @@ export function railTrail(
   );
 }
 
-export function firstAvailableRoute(disabled: readonly CoreFeature[]): Route {
+export function firstAvailableRoute(disabled: readonly Withheld[]): Route {
   return {
     screen:
       NAV.find((item) => screenEnabled(item.screen, disabled))?.screen ??
@@ -437,7 +437,7 @@ export function firstAvailableRoute(disabled: readonly CoreFeature[]): Route {
 export function walkUpTarget(
   parent: NavTrailLevel | undefined,
   origin: Route,
-  disabled: readonly CoreFeature[],
+  disabled: readonly Withheld[],
 ): Route {
   if (!parent || parent.path.length === 0 || !parent.activeId) {
     return screenEnabled(origin.screen, disabled)

@@ -5,11 +5,16 @@ import type { components } from "../../api/schema";
 import { watchStartedAiRun } from "../../app/ai-activity";
 import { ActionRow } from "../../design-system/actionrow";
 import { Button } from "../../design-system/atoms";
+import {
+  ConnectAiFirst,
+  isAiNotConnected,
+  useConnectAiGate,
+} from "../../design-system/connectai";
 import type { ConfidenceLevel } from "../../design-system/trust";
 import { StagingCard } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
-import { minorUnitDigits, toMajorUnits } from "../../format/minorunits";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { typedAmountText, typedMinorUnits } from "../../format/minorunits";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { GroundedField, OmittedList } from "./documentextraction.fields";
@@ -95,30 +100,29 @@ export const CONFIDENCE: Record<ExtractedField["confidence"], ConfidenceLevel> =
 // The currency is always there to convert with: a reading omits an amount it
 // could not pair with one, precisely so no figure is ever scaled by a guess.
 // majorUnits renders a stored minor-unit amount as the figure a human types.
-// Plain digits rather than a formatted amount: this is what goes INTO an input,
+// Plain digits with the reader's decimal sign: this is what goes into an input,
 // and a grouped "148,500.00" would come back out as something to re-parse.
-export function majorUnits(minor: string, currency: string): string {
+export function majorUnits(
+  minor: string,
+  currency: string,
+  locale: Locale,
+): string {
   const value = Number(minor);
   if (!Number.isFinite(value)) {
     return minor;
   }
-  return toMajorUnits(value, currency).toFixed(minorUnitDigits(currency));
+  return typedAmountText(value, currency, locale);
 }
 
-// minorUnits is its inverse, and it REFUSES rather than rounds: a figure with
-// more decimals than the currency has is a misread, and silently dropping a
-// digit is how an amount becomes wrong by an order of magnitude.
-export function minorUnits(major: string, currency: string): string | null {
-  const trimmed = major.trim().replace(/[\s,]/g, "");
-  if (!/^-?\d+(\.\d+)?$/.test(trimmed)) {
-    return null;
-  }
-  const digits = minorUnitDigits(currency);
-  const [whole, fraction = ""] = trimmed.split(".");
-  if (fraction.length > digits) {
-    return null;
-  }
-  return `${whole}${fraction.padEnd(digits, "0")}`;
+// minorUnits is its inverse, read by the one amount reader. It REFUSES rather
+// than rounds: a figure finer than the currency is a misread.
+export function minorUnits(
+  major: string,
+  currency: string,
+  locale: Locale,
+): string | null {
+  const typed = typedMinorUnits(major, currency, locale);
+  return "minor" in typed ? String(typed.minor) : null;
 }
 
 function isLive(extraction: Extraction | undefined): boolean {
@@ -208,7 +212,12 @@ export function DocumentExtractionPanel({
             // else started while this one was on screen must not decide what is written.
             extraction_id: extraction.id,
             field_keys: fields.map((f) => f.field),
-            edits: editedOnly(fields, edits, groundedCurrency(extraction)),
+            edits: editedOnly(
+              fields,
+              edits,
+              groundedCurrency(extraction),
+              locale,
+            ),
           },
         }),
       );
@@ -241,7 +250,7 @@ export function DocumentExtractionPanel({
       <ReadOffer
         onRead={() => read.mutate()}
         pending={read.isPending}
-        failed={read.isError}
+        error={read.error}
       />
     );
   }
@@ -254,6 +263,7 @@ export function DocumentExtractionPanel({
       onAccept={(fields) => accept.mutate(fields)}
       onDismiss={() => setDismissed(true)}
       onReadAgain={() => read.mutate()}
+      readError={read.error}
       accepting={accept.isPending}
       acceptFailed={accept.isError}
     />
@@ -267,6 +277,7 @@ function editedOnly(
   fields: readonly ExtractedField[],
   edits: Readonly<Record<string, string>>,
   currency: string,
+  locale: Locale,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const field of fields) {
@@ -280,7 +291,7 @@ function editedOnly(
     // by name, rather than being silently rounded into something plausible.
     const value =
       field.field === AMOUNT_FIELD && currency !== ""
-        ? (minorUnits(draft, currency) ?? draft)
+        ? (minorUnits(draft, currency, locale) ?? draft)
         : draft;
     if (value !== field.value) {
       out[field.field] = value;
@@ -292,9 +303,10 @@ function editedOnly(
 function ReadOffer({
   onRead,
   pending,
-  failed,
-}: Readonly<{ onRead: () => void; pending: boolean; failed: boolean }>) {
+  error,
+}: Readonly<{ onRead: () => void; pending: boolean; error: unknown }>) {
   const t = useT();
+  const aiGate = useConnectAiGate("extraction-ai");
   return (
     <div className="staging-card">
       <p>{t("extraction.neverRead")}</p>
@@ -302,11 +314,44 @@ function ReadOffer({
         onClick={onRead}
         pending={pending}
         busyLabel={t("extraction.starting")}
+        reasonId={aiGate.reasonId}
       >
         {t("extraction.readIt")}
       </Button>
-      {failed && <p>{t("extraction.startFailed")}</p>}
+      {aiGate.notice}
+      {error !== null && error !== undefined && (
+        <p>
+          {isAiNotConnected(error) ? (
+            <ConnectAiFirst />
+          ) : (
+            t("extraction.startFailed")
+          )}
+        </p>
+      )}
     </div>
+  );
+}
+
+// The press that reads a file again. It is refused with the link to AI settings
+// while no model is connected, and says the same after a refused press.
+function ReadAgain({
+  onReadAgain,
+  error,
+}: Readonly<{ onReadAgain: () => void; error: unknown }>) {
+  const t = useT();
+  const aiGate = useConnectAiGate("extraction-again-ai");
+  return (
+    <>
+      <Button onClick={onReadAgain} reasonId={aiGate.reasonId}>
+        {t("extraction.readAgain")}
+      </Button>
+      {aiGate.notice}
+      {aiGate.notice === null && isAiNotConnected(error) && (
+        <p>
+          <ConnectAiFirst />
+        </p>
+      )}
+    </>
   );
 }
 
@@ -318,6 +363,7 @@ function ExtractionBody({
   onAccept,
   onDismiss,
   onReadAgain,
+  readError,
   accepting,
   acceptFailed,
 }: Readonly<{
@@ -328,6 +374,7 @@ function ExtractionBody({
   onAccept: (fields: readonly ExtractedField[]) => void;
   onDismiss: () => void;
   onReadAgain: () => void;
+  readError: unknown;
   accepting: boolean;
   acceptFailed: boolean;
 }>) {
@@ -344,7 +391,7 @@ function ExtractionBody({
       return (
         <div className="staging-card">
           <p>{t("extraction.stalled")}</p>
-          <Button onClick={onReadAgain}>{t("extraction.readAgain")}</Button>
+          <ReadAgain onReadAgain={onReadAgain} error={readError} />
         </div>
       );
     }
@@ -360,7 +407,7 @@ function ExtractionBody({
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
-        <Button onClick={onReadAgain}>{t("extraction.readAgain")}</Button>
+        <ReadAgain onReadAgain={onReadAgain} error={readError} />
       </div>
     );
   }

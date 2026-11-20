@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
@@ -111,7 +112,12 @@ describe("a money field in the changes list", () => {
       { currency: "EUR", locale: "en", zone: "UTC" },
       "field updated",
     );
-    render(<LocaleProvider initial="en">{row.detail}</LocaleProvider>);
+    // The diff names the ids it holds through cached reads, so it needs a client.
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">{row.detail}</LocaleProvider>
+      </QueryClientProvider>,
+    );
     expect(screen.queryByText("150000")).toBeNull();
     expect(screen.queryByText("225000")).toBeNull();
     expect(screen.getByText(/1,500\.00/)).toBeTruthy();

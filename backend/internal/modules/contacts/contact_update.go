@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -45,6 +46,9 @@ type UpdateContactInput struct {
 	// RelationshipMark marks the contact; clearing it goes through Clear. The
 	// setter is read from the signed-in principal, never from the caller.
 	RelationshipMark *relationshipmark.Mark
+	// GreetingRegister is how a message to the contact opens; clearing it goes
+	// through Clear.
+	GreetingRegister *greetingregister.Register
 	Social           map[string]any
 	// LinkedInURL is the top-level spelling of Social's linkedin key; a
 	// cleared linkedin_url in Clear removes the link.
@@ -257,13 +261,13 @@ func movesANamePart(in UpdateContactInput) bool {
 		slices.Contains(in.Clear, columnFirstName) || slices.Contains(in.Clear, columnLastName)
 }
 
-// contactEditPatch reads the edit as written, refuses a typed name past the label
-// limit, and builds the column patch.
+// contactEditPatch reads the edit as written and builds the column patch. It
+// refuses a typed or imported name, or the full name its parts join to, past ContactNameLimit.
 func contactEditPatch(
 	ctx context.Context, current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column,
 ) (UpdateContactInput, *storekit.Patch, error) {
 	in = updateAsWritten(current, in, active)
-	if typedWrite(ctx) {
+	if typedWrite(ctx) || storekit.ImportRunOf(ctx) != nil {
 		if err := checkChangedContactNames(current, in); err != nil {
 			return in, nil, err
 		}
@@ -340,6 +344,9 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput, mark
 		return nil, err
 	}
 	if err := patchRelationshipMark(p, current, in, markSetter); err != nil {
+		return nil, err
+	}
+	if err := patchGreetingRegister(p, current, in); err != nil {
 		return nil, err
 	}
 	if err := setAddress(p, current.Address, in.Address, in.Trail); err != nil {

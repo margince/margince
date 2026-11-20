@@ -123,7 +123,7 @@ func TestEvidenceChangedWhileTheReopenWaitsReopensNothing(t *testing.T) {
 	}
 	reopen := make(chan outcome, 1)
 	go func() {
-		done, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler)).OpenWorkspace(e.system())
+		done, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler), func() time.Time { return e.now }).OpenWorkspace(e.system())
 		reopen <- outcome{done, err}
 	}()
 	e.waitForALockWaiter(t)

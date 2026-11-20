@@ -267,7 +267,7 @@ describe("the runtime chip", () => {
 });
 
 it.each(LOCALES)(
-  "names a runtime task in %s without exposing its wire key",
+  "names a runtime task, tier and provider in %s without exposing their wire keys",
   async (locale) => {
     const user = userEvent.setup();
     render(
@@ -286,8 +286,8 @@ it.each(LOCALES)(
           models: [
             {
               task: "site_triage",
-              tier: "premium",
-              provider: "demo",
+              tier: "cheap_cloud",
+              provider: "gemini_vertex",
               configured_model: "demo-model",
               served_model: "demo-model",
               call_attempts: 1,
@@ -310,9 +310,11 @@ it.each(LOCALES)(
     );
     expect(
       screen.getByText(
-        `${translate(locale, "aiTask.name.site_triage")} · premium · demo`,
+        `${translate(locale, "aiTask.name.site_triage")} · ${translate(locale, "aiTier.cheap_cloud")} · ${translate(locale, "aiProviders.name.geminiVertex")}`,
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/site_triage/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/site_triage|cheap_cloud|gemini_vertex/),
+    ).not.toBeInTheDocument();
   },
 );

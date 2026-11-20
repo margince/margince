@@ -72,6 +72,7 @@ export function entityTimelineKeys(
       DEAL_COVERAGE_KEY,
       ["company-coverage"],
       ...EVERY_COMPANY_TIMELINE,
+      ...EVERY_PROJECT_TIMELINE,
     );
   }
   return keys;
@@ -128,6 +129,12 @@ export const dealOutcomeReviewsKey = (dealId: string): QueryKey => [
   "outcome-reviews",
 ];
 
+// The deal's stage moves, which the ladder and Days in stage count from.
+export const dealStageHistoryKey = (dealId: string): QueryKey => [
+  "deal-stage-history",
+  dealId,
+];
+
 // Which cached reads a write to the DEAL RECORD itself invalidates — a stage
 // advance, an amount, a close date. Spelled once here so a new writer picks up
 // the derived reads by using the helper rather than by remembering them.
@@ -137,6 +144,12 @@ export function dealRecordKeys(dealId: string): QueryKey[] {
     dealOutcomeReviewsKey(dealId),
     ...derivedRecordKeys("deal", dealId),
   ];
+}
+
+// The reads a write that can move the deal's stage invalidates: the record's,
+// and its stage moves. An edit that moves no stage leaves those unread.
+export function dealStageMoveKeys(dealId: string): QueryKey[] {
+  return [...dealRecordKeys(dealId), dealStageHistoryKey(dealId)];
 }
 
 // The reads written FROM a record, by the key its own page reads it under.
@@ -195,6 +208,14 @@ export function loggedActivityKeys(
 const EVERY_COMPANY_TIMELINE: QueryKey[] = [
   ["activities", "company"],
   ["company360"],
+];
+
+// An activity filed on a deal is filed on the deal's project too, and the
+// writer knows the deal, not the project. The 360 key leads with the project
+// id, so only the ["project"] prefix reaches it.
+const EVERY_PROJECT_TIMELINE: QueryKey[] = [
+  ["activities", "project"],
+  ["project"],
 ];
 
 export const TASK_QUEUE_KEY: QueryKey = ["tasks"];

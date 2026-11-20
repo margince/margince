@@ -105,8 +105,8 @@ Also called: new partner tier, new partner kind.
 ## Partners on a deal
 
 ### How do I record that a partner brought a deal?
-To give a partner credit for a deal in Margince, set **Referring partner** to the partner and choose the **Partner attribution**. Both are on the deal's form and in its **Details** panel.
-1. On **New deal**, or in an open deal's **Details**, pick the partner under **Referring partner**. The deal page shows it as **Partner**.
+To give a partner credit for a deal in Margince, set **Referring partner** to the partner and choose the **Partner attribution**. Both are on the deal's form and under **More actions** → **Edit details** on the deal.
+1. On **New deal**, or under **More actions** → **Edit details** on a deal, pick the partner under **Referring partner**. The deal page shows it as **Partner**.
 2. Under **Partner attribution**, choose **Sourced the deal (earns commission)** or **Influenced an existing deal (no commission)**.
 If you leave it empty, it reads **Not set (counted as sourced)**. With no partner company yet, the field says to set one up from a company's **More actions**. Once set, the partner shows under the deal's name.
 Also called: partner-sourced deal, referral, partner influenced.
@@ -131,7 +131,7 @@ Also called: pay a partner, partner payout, referral fee.
 
 ### The Commission panel
 
-The **Commission** panel on a partner's page holds a line for each deal. Each line shows the **Deal**, the **Date** it was written, what was **Earned**, the **Rate**, the **Deal value** it was taken from, and a **Status**. Above it sits **Outstanding**: lines that are accrued or approved. Nothing earned yet reads "No commission yet".
+The **Commission** panel on a partner's page holds a line for each deal. Each line shows the **Deal**, what was **Earned**, the **Rate**, the **Deal value** it was taken from, and a **Status**. The date the line was written sits under the deal. Above it sits **Outstanding**: lines that are accrued or approved. Nothing earned yet reads "No commission yet".
 
 | Status | What it means |
 |---|---|

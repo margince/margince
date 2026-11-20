@@ -24,6 +24,7 @@ import {
   type LeafValue,
 } from "../../lib/segmentpredicate";
 import { MoneyControl } from "./filtervalue.money";
+import { NumberValue } from "./filtervalue.number";
 import { RadiusValue } from "./filtervalue.radius";
 import {
   ChosenRecords,
@@ -120,6 +121,7 @@ export function ValueControl({
       <TokenInput
         values={Array.isArray(value) ? value.map(String) : []}
         onChange={(next) => onChange(next)}
+        removeLabel={(item) => t("tokenInput.remove", { value: item })}
         aria-label={label ?? t("filters.values")}
         placeholder={t("filters.addValue")}
       />
@@ -350,7 +352,9 @@ function ScalarValue({
       />
     );
   }
-  const numeric = type === "number" || type === "currency";
+  if (type === "number" || type === "currency") {
+    return <NumberValue value={value} onChange={onChange} label={label} />;
+  }
   return (
     <input
       className="input"
@@ -359,32 +363,10 @@ function ScalarValue({
           ? String(value)
           : ""
       }
-      onChange={(event) =>
-        onChange(
-          numeric ? numberOrText(event.target.value) : event.target.value,
-        )
-      }
+      onChange={(event) => onChange(event.target.value)}
       aria-label={label}
-      inputMode={numeric ? "decimal" : undefined}
     />
   );
-}
-
-/**
- * A numeric field's operand as a number when it is one, and as the raw text
- * otherwise.
- *
- * Half-typed input is the reason: "-" and "1." are neither valid numbers nor
- * mistakes, and coercing them to 0 or NaN would either move the count or refuse a
- * clause somebody is still typing. Leaving the text alone lets `isComplete` hold
- * the preview until the value is a number the engine will accept.
- */
-function numberOrText(raw: string): LeafValue {
-  if (raw === "") {
-    return "";
-  }
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : raw;
 }
 
 /** The two ways a date operand is written: a calendar day, or a count back. */

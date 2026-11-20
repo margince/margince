@@ -23,11 +23,7 @@ import { Select } from "../../design-system/select";
 import { isRealCalendarDay } from "../../format/calendarday";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import {
-  EDITABLE_FIELDS,
-  type EditableField,
-  humanizeKind,
-} from "./approvalkind";
+import { type EditableField, humanizeKind } from "./approvalkind";
 import "./approvalrow.css";
 import "../../design-system/querystates.css";
 
@@ -36,40 +32,6 @@ import "../../design-system/querystates.css";
 // apart from the row because neither is about deciding — one reads the whole
 // proposal, the other rewrites the part of it this installation lets a contact
 // change — and the row is already the longest thing on the surface.
-
-/**
- * What the inline editor offers for one proposal.
- *
- * The default is every string field as a text box, which is the right shape
- * for a payload whose values are prose. A kind that declares an EDITABLE_FIELDS
- * policy gets exactly the fields it named, in the shape it named them —
- * identifiers and enums are not prose, and offering them as free text asks a
- * reader to type their way into a refusal.
- */
-export function editableStrings(
-  kind: string,
-  change: Record<string, unknown>,
-): EditableField[] {
-  if (kind === "commitment_task" && typeof change.existing_task_id === "string")
-    return [];
-  // Own-property only: `kind` is a wire string, and a value named `constructor`
-  // would otherwise find a function on Object's prototype, pass the truthy
-  // check, and crash the queue on .filter instead of falling back to the
-  // generic editor.
-  const declared = Object.hasOwn(EDITABLE_FIELDS, kind)
-    ? EDITABLE_FIELDS[kind]
-    : undefined;
-  if (declared) {
-    // A declared field the payload does not carry is skipped rather than
-    // rendered empty: an editor offering a field that is not in the change
-    // would ADD it on approve, and the server reads an added path as a
-    // retargeted edit.
-    return declared.filter((entry) => typeof change[entry.field] === "string");
-  }
-  return Object.entries(change)
-    .filter((entry): entry is [string, string] => typeof entry[1] === "string")
-    .map(([field]) => ({ field, as: "text" }) as const);
-}
 
 /** Outcomes that keep the row mounted. Already-decided is not one: its refetch
  *  unmounts the row, so `useDecisionSink` says it at screen level. */
@@ -98,6 +60,10 @@ export function DecideOutcome({
       )}
     </>
   );
+}
+
+function isBlank(value: string | undefined): boolean {
+  return (value ?? "").trim() === "";
 }
 
 /**
@@ -138,6 +104,7 @@ export function editableSeed(entry: EditableField, staged: unknown): string {
  */
 export function StagedEditor({
   disabled,
+  required = [],
   acceptLabel,
   fields,
   draft,
@@ -150,6 +117,8 @@ export function StagedEditor({
   /** The records the proposed work is about; their named colleagues lead the doer picker. */
   records?: readonly AssignedRecord[];
   disabled?: boolean;
+  /** Fields that may not be sent blank. */
+  required?: readonly string[];
   acceptLabel?: string;
   fields: readonly EditableField[];
   draft: Record<string, string>;
@@ -159,6 +128,7 @@ export function StagedEditor({
   onCancel: () => void;
 }>) {
   const t = useT();
+  const blank = required.some((field) => isBlank(draft[field]));
   return (
     <div className="form-stack approval-editor" data-date-scope>
       {fields.map((entry) =>
@@ -174,6 +144,12 @@ export function StagedEditor({
           <Field
             key={entry.field}
             label={entry.label ? t(entry.label) : entry.field}
+            required={required.includes(entry.field)}
+            error={
+              required.includes(entry.field) && isBlank(draft[entry.field])
+                ? t("decision.fieldRequired")
+                : undefined
+            }
           >
             {(control) => (
               <EditorControl
@@ -194,7 +170,7 @@ export function StagedEditor({
           <Button
             variant="primary"
             pending={pending}
-            disabled={disabled}
+            disabled={disabled || blank}
             onClick={(event) => {
               if (!refuseUnreadableField(event.currentTarget)) {
                 onApprove();

@@ -1,6 +1,13 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { TextInput } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { MoneyInput } from "../../design-system/moneyinput";
+import {
+  typedNumberFault,
+  typedNumberOrNaN,
+  writtenDecimal,
+} from "../../format/decimalinput";
+import { useLocale, useT } from "../../i18n";
 import type { OfferLineItem, UpdateOfferLineItemRequest } from "./offers";
 import { storedUnitOf, UnitPicker, unitChoiceOf } from "./productunit";
 
@@ -54,43 +61,65 @@ export function UnitCell({
 
 // The shared numeric-line-field editor: position, quantity, discount and tax
 // rate are all a local text buffer that commits a parsed number on blur.
-// Blurring an emptied field restores the last saved value. Number("") is 0,
-// not NaN, so without this guard, clearing a field to retype it would zero it
-// the moment focus left the input.
+// Blurring an emptied field restores the last saved value, so clearing a field
+// to retype it never zeroes it. A refused text stays, with the reason below.
 export function NumericCell({
   value: savedValue,
-  step,
   width,
   testId,
   onSave,
+  check,
 }: Readonly<{
   value: number;
-  step: string;
   width: number;
   testId: string;
   onSave: (num: number) => void;
+  // The field's own refusal of a typed text, bounds included. Absent, any
+  // number passes.
+  check?: (text: string) => string | undefined;
 }>) {
-  const [value, setValue] = useState(String(savedValue));
+  const t = useT();
+  const { locale } = useLocale();
+  const [value, setValue] = useState(() =>
+    writtenDecimal(String(savedValue), locale),
+  );
+  const [fault, setFault] = useState<string | undefined>();
+  const errorId = useId();
   return (
-    <input
-      type="number"
-      step={step}
-      className="input"
-      style={{ width }}
-      data-testid={testId}
-      value={value}
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={() => {
-        if (value.trim() === "") {
-          setValue(String(savedValue));
-          return;
-        }
-        const num = Number(value);
-        if (!Number.isNaN(num) && num !== savedValue) {
-          onSave(num);
-        }
-      }}
-    />
+    <>
+      <input
+        type="text"
+        inputMode="decimal"
+        className="input"
+        style={{ width }}
+        data-testid={testId}
+        value={value}
+        aria-invalid={fault ? true : undefined}
+        aria-describedby={fault ? errorId : undefined}
+        onChange={(event) => {
+          setValue(event.target.value);
+          setFault(undefined);
+        }}
+        onBlur={() => {
+          if (value.trim() === "") {
+            setValue(writtenDecimal(String(savedValue), locale));
+            return;
+          }
+          const refusal = check
+            ? check(value)
+            : typedNumberFault(value, locale, t);
+          if (refusal) {
+            setFault(refusal);
+            return;
+          }
+          const num = typedNumberOrNaN(value, locale);
+          if (num !== savedValue) {
+            onSave(num);
+          }
+        }}
+      />
+      {fault && <ErrorLine id={errorId}>{fault}</ErrorLine>}
+    </>
   );
 }
 

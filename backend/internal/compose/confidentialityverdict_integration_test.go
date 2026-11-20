@@ -161,7 +161,7 @@ func seedThreadQuestion(t *testing.T, e *integration.Env, threadKey string, acti
 			INSERT INTO capture_connection
 			       (user_id, provider, status, credential_ref, mail_posture)
 			VALUES ($1, 'gmail', 'connected', 'vault:test', 'classified')
-			ON CONFLICT (user_id, provider)
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL
 			DO UPDATE SET mail_posture = 'classified', archived_at = NULL`, e.Rep1)
 		return err
 	}); err != nil {

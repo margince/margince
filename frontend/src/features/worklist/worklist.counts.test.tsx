@@ -8,9 +8,11 @@ import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 import {
   completenessText,
+  loadedFigure,
   pillCount,
   pillFigure,
 } from "./worklist.completeness";
+import { viewHeadline } from "./worklist.views";
 
 // What the page says about the work it is NOT showing.
 //
@@ -540,6 +542,45 @@ describe("the figure a tab or pill draws", () => {
     });
     expect(pillFigure(page, "decisions")).toEqual({ count: 340, floor: false });
     expect(pillFigure(page, "all")).toEqual({ count: 353, floor: true });
+  });
+
+  it("never draws a floor below the items of its cut already loaded", () => {
+    // The first page counted 12 waiting customers; scrolling loaded 40 of them.
+    const page = day(
+      [
+        {
+          category: "customer_waiting",
+          considered: 12,
+          shown: 12,
+          more_available: true,
+        },
+        { category: "tasks", considered: 3, shown: 3, more_available: false },
+      ],
+      0,
+    );
+    const waiting = Array.from({ length: 40 }, (_, i) => ({
+      ...day([], 1).queue[0],
+      id: `waiting-${i}`,
+      source: "customer_waiting" as const,
+      category: "customer_waiting" as const,
+    }));
+    const loaded = [...waiting, ...day([], 3).queue];
+    expect(loadedFigure(page, "customer_waiting", loaded)).toEqual({
+      count: 40,
+      floor: true,
+    });
+    expect(loadedFigure(page, "all", loaded, "today")).toEqual({
+      count: 43,
+      floor: true,
+    });
+    expect(viewHeadline(page, "today", "en", loaded)).toBe(
+      "43+ outstanding actions",
+    );
+    // An exact count stays as the server stated it.
+    expect(loadedFigure(page, "tasks", loaded)).toEqual({
+      count: 3,
+      floor: false,
+    });
   });
 
   it("keeps the first page's total exact when a tail source fails", () => {

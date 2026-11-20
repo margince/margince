@@ -102,6 +102,8 @@ A plain `v1.0.0` ships. A tag with an added part, such as `v1.0.0-rc.1`, goes ou
 So a build for tests does not become the default file to get on the release page. To tag a candidate
 deploys nothing, because a tag moves no branch.
 
+### When a run fails
+
 A run that fails before the build job leaves nothing new: a plain tag's draft is still only yours. Once the build job has run, the images
 are on `ghcr.io` under the tag, even when a later job fails. The next run pushes over them. The lane runs one run at a time, and does
 not cancel a run, so no run is cut off while it writes the release. Still, check the releases page before
@@ -112,6 +114,19 @@ tree, delete the tag, and tag again:
 git push --delete origin v1.0.0 && git tag -d v1.0.0
 git tag -a v1.0.0 -m "..." && git push origin v1.0.0
 ```
+
+A tag can move only while Go has not recorded it. The tag is also a version of the Go module
+`github.com/margince/margince`. When a client first asks the Go module proxy for that version, the proxy
+records the commit of the tag. The Go checksum database records its files. Neither changes again.
+
+After that, a moved tag makes a release with other source than the Go version of the same name. The proxy serves the old
+commit, and a download from git fails Go's checksum check.
+
+So both release lanes ask the proxy first, with
+[`scripts/release-tag-go-proxy.sh`](../../scripts/release-tag-go-proxy.sh) (`make test-release-tag-go-proxy`).
+The question reads only what the proxy already holds, so the check does not record the version itself. If Go
+recorded the version at another commit, the run refuses. Leave the moved tag alone in that case, and tag the next
+version, such as `v1.0.1`, with `VERSION` and `LICENSE` set to it.
 
 It is safe to run a failed run again after the release was created. The publish step replaces the notes
 on the release. Run **all** jobs again. To run only the failed jobs again leaves the job
@@ -156,6 +171,8 @@ same source as the GitHub release. `--ref main` only picks the copy of the workf
 
 Before the lane drafts, it refuses a tag that is not on `main`, as the GitHub release does. The check is
 [`scripts/release-tag-on-main.sh`](../../scripts/release-tag-on-main.sh) (`make test-release-tag-on-main`).
+It also refuses a tag that Go recorded at another commit, as the GitHub release does
+([When a run fails](#when-a-run-fails)).
 Then [`scripts/release-dist-version.sh`](../../scripts/release-dist-version.sh) reads the version from the tag
 (`make test-release-dist-version`). The tag is `v` and three numbers,
 with no ending. A number may be `0`, but no number has a leading zero, such as `01`.

@@ -93,7 +93,7 @@ func (ReportVocabularyResource) Resources(context.Context) []mcp.Resource {
 // matching every other read on this surface.
 func (r ReportVocabularyResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != ReportVocabularyURI {
-		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
+		return mcp.ResourceContents{}, fmt.Errorf("no resource is published at %q: %w", uri, apperrors.ErrNotFound)
 	}
 	// Through the same seam the tool reads, so the two doors serve one byte
 	// sequence rather than two renderings that agree today.

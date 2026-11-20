@@ -689,7 +689,8 @@ test("keyboard shortcuts: G then C goes to Contacts, G then D to Deals", async (
   await openForKeys(page, "home");
   await page.keyboard.press("g");
   await page.keyboard.press("c");
-  await expect(page).toHaveURL(/#\/contacts$/);
+  // The list may already have spelled its opening sort into the address.
+  await expect(page).toHaveURL(/#\/contacts(\?[^/]*)?$/);
 
   await openForKeys(page, "home");
   await page.keyboard.press("g");
@@ -1292,6 +1293,9 @@ test("AC-pipeline-12: a busy stage's column loads its next page on its own", asy
   await expect(loadMore).toHaveCount(0);
 });
 
+// The note a won close leaves. A shown probability follows it after a "·".
+const closedWonNote = new RegExp(`^${de["deals.closedWon"]}`);
+
 async function centreBetween(first: Locator, second: Locator) {
   const midpoint = async (part: Locator) => {
     const box = await part.boundingBox();
@@ -1345,14 +1349,14 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   // with its contract is never asked.
   await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
   // Still nothing has run: the drop is not applied while the dialog is open.
-  await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
+  await expect(page.getByText(closedWonNote)).toHaveCount(0);
 
   await page
     .getByRole("combobox", { name: "Wie wurde der Deal gewonnen?" })
     .click();
   await page.getByRole("option", { name: "Per Bestellung" }).click();
   await page.getByRole("button", { name: "Bestätigen" }).click();
-  await expect(page.getByText("Nach Won verschoben")).toBeVisible();
+  await expect(page.getByText(closedWonNote)).toBeVisible();
 });
 
 /** A board card's "…" trigger, reached from the card's own link with Tab. */
@@ -1405,7 +1409,7 @@ test("AC-deal-7: a card's menu asks the terminal confirm for Mark won, and Cance
     .click();
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
   await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
-  await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
+  await expect(page.getByText(closedWonNote)).toHaveCount(0);
 
   await page.getByRole("button", { name: "Abbrechen" }).click();
   await expect(page.getByText("In die Phase Won verschieben?")).toHaveCount(0);
@@ -1797,7 +1801,7 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   await page.getByLabel("Deal-Name").fill("Neuer Deal");
   // By role: getByLabel("Wert") matches any label containing the word.
-  await page.getByRole("spinbutton", { name: "Wert" }).fill("480");
+  await page.getByRole("textbox", { name: "Wert" }).fill("480");
   await page.getByRole("button", { name: "Erstellen" }).click();
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });
@@ -1917,6 +1921,60 @@ test.describe("§3.8: 390px mobile", () => {
     await expectShellRendered(page);
     await expect(page.getByRole("heading", { name: "Produkte" })).toBeVisible();
     expect(await pageOverflow(page)).toEqual([]);
+  });
+
+  test("AC-company-relationships: a company's relationship table folds at 390 and keeps each date whole", async ({
+    page,
+  }) => {
+    await page.route(/\/v1\/relationships(\?.*)?$/, (route) =>
+      route.fulfill({
+        json: listPage([
+          {
+            id: "r-anna",
+            kind: "employment",
+            company_id: brandt.id,
+            contact_id: "p-anna",
+            role: "Leiterin Einkauf und strategische Beschaffung",
+            started_at: "2021-03-01",
+            ended_at: "2024-11-30",
+            is_current_primary: false,
+            employment_status: "former",
+            version: 1,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-06-01T00:00:00Z",
+          },
+        ]),
+      }),
+    );
+    await page.goto(`/#/companies/${brandt.id}/profile`);
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    const dates = page.locator(".relationshiprows-date");
+    await expect(dates).toHaveCount(2);
+    await settleAnimations(page);
+    expect(await pageOverflow(page)).toEqual([]);
+    const pastScrollBox = await page.evaluate(() =>
+      Array.from(document.querySelectorAll(".table-scroll")).flatMap((box) =>
+        Array.from(box.querySelectorAll("td, th"))
+          .filter(
+            (cell) =>
+              cell.getBoundingClientRect().right >
+              box.getBoundingClientRect().right + 1,
+          )
+          .map((cell) => (cell.textContent ?? "").trim()),
+      ),
+    );
+    expect(pastScrollBox).toEqual([]);
+    const lineBoxes = await dates.evaluateAll((nodes) =>
+      nodes.map(
+        (node) =>
+          new Set(
+            Array.from(node.getClientRects(), (rect) => Math.round(rect.top)),
+          ).size,
+      ),
+    );
+    expect(lineBoxes).toEqual([1, 1]);
+    await expectNoAaViolations(page, "company profile, relationships (390px)");
   });
 
   test("the More menu opens above the bar and meets AA at 390px", async ({
@@ -3681,8 +3739,12 @@ const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
 
 // The analytics forecast for a reader who may share it, with the drawer open
 // from its trigger by the KEYBOARD, so every caller starts from the same place.
+// The rail offers Analytics only to a reader who may read the forecast.
 async function openSharedLinks(page: Page) {
-  await servePrincipal(page, meFixture({ allow: { forecast: ["create"] } }));
+  await servePrincipal(
+    page,
+    meFixture({ allow: { forecast: ["read", "create"] } }),
+  );
   await page.route(/\/v1\/forecast\/shares$/, (route) =>
     route.fulfill({ json: { data: SHARED_LINK_ROWS } }),
   );

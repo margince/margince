@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
@@ -106,5 +107,23 @@ func TestTheRequestSendsTheShapeItsParserReads(t *testing.T) {
 	fractional := strings.Replace(evenReply, "[100,", "[100.5,", 1)
 	if err := schema.ValidateJSON(req.ResponseSchema, fractional); err == nil {
 		t.Error("the schema admits a fractional month the parser refuses")
+	}
+}
+
+func TestHistoryCountsRevenueBelowOneMajorUnit(t *testing.T) {
+	for currency, minor := range map[string]int64{"EUR": 50, "KWD": 500} {
+		closed := salesprogress.ClosedYear{Year: 2026, Currency: currency}
+		closed.Months[0] = &minor
+		year := yearIn(closed)
+		if *year.Months[0] != 0 {
+			t.Fatalf("%s: the model should read whole units, got %d", currency, *year.Months[0])
+		}
+		in := Input{Closed: []YearIn{year}, EarnedMinor: earnedMinor(closed)}
+		if !in.HasHistory() {
+			t.Errorf("%s: %d minor units closed in a finished month and read as no history", currency, minor)
+		}
+	}
+	if (Input{Closed: []YearIn{{Year: 2026, Months: major(0)}}}).HasHistory() {
+		t.Error("a year with no revenue is history")
 	}
 }

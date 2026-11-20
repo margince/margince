@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { editableSeed, editableStrings } from "./approvaleditor";
+import { editableSeed } from "./approvaleditor";
+import { editableStrings } from "./approvalkind";
 
 // What the inline editor OFFERS. A kind that declares its editable fields is
 // saying what a contact may change; everything else in the payload is what the
@@ -64,6 +65,16 @@ describe("a kind that declares nothing", () => {
     expect(fields.every((f) => f.as === "text")).toBe(true);
   });
 
+  it("never offers a record id, whatever the field is called", () => {
+    const fields = editableStrings("some_agent_tool_call", {
+      note: "hello",
+      requester_id: "01a03781-912c-774e-a74e-7cdceca98829",
+      anchor: "01a03781-912c-774e-a74e-7cdceca98830",
+    });
+
+    expect(fields.map((f) => f.field)).toEqual(["note"]);
+  });
+
   // `kind` is a wire string. A value naming an Object prototype member would
   // otherwise find a function, pass the truthy check, and crash the queue.
   it("does not mistake a prototype member for a declaration", () => {
@@ -71,6 +82,16 @@ describe("a kind that declares nothing", () => {
 
     expect(fields.map((f) => f.field)).toEqual(["note"]);
   });
+});
+
+it("offers nothing to edit on a contact share request", () => {
+  expect(
+    editableStrings("contact_share", {
+      contact_id: "01a03781-912c-774e-a74e-7cdceca98829",
+      owner_id: "01a03781-912c-774e-a74e-7cdceca98830",
+      requester_id: "01a03781-912c-774e-a74e-7cdceca98831",
+    }),
+  ).toEqual([]);
 });
 
 describe("what the editor starts with", () => {

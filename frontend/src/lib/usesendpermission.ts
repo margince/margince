@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { addressKey } from "./addresskey";
 import { throwProblem } from "./problem";
 
 // Asking the engine whether a message would be allowed, before anybody presses
@@ -55,12 +56,19 @@ export function useSendPermission(args: {
    * "unproven" about a message the send allows.
    */
   evidence?: components["schemas"]["CommunicationEvidence"];
+  /** The countries the sender stated, which the send's rules follow too. */
+  recipientCountries?: readonly components["schemas"]["RecipientCountry"][];
   /**
-   * The text written so far, checked against the advertising content rules of
-   * the recipients' packs. Settled by the caller, so typing does not ask once
-   * per key.
+   * The message written so far, read for an offer as the send reads it and
+   * checked against the advertising content rules of the recipients' packs.
+   * Settled by the caller, so typing does not ask once per key.
    */
-  draft?: Readonly<{ subject: string; body: string }>;
+  draft?: Readonly<{
+    subject?: string;
+    body?: string;
+    htmlBody?: string;
+    attachmentIds?: readonly string[];
+  }>;
   /** Off while the rep is still choosing a recipient — nothing to ask about yet. */
   enabled?: boolean;
 }): {
@@ -94,6 +102,7 @@ export function useSendPermission(args: {
     args.marketingPurpose ?? "",
     args.consentPurpose ?? "",
     args.evidence ?? {},
+    args.recipientCountries ?? [],
     args.draft ?? {},
   ];
   const query = useQuery({
@@ -110,8 +119,15 @@ export function useSendPermission(args: {
         marketing_purpose: args.marketingPurpose,
         consent_purpose: args.consentPurpose,
         evidence: args.evidence,
+        recipient_countries: args.recipientCountries?.length
+          ? [...args.recipientCountries]
+          : undefined,
         subject: args.draft?.subject,
         body: args.draft?.body,
+        html_body: args.draft?.htmlBody || undefined,
+        attachment_ids: args.draft?.attachmentIds?.length
+          ? [...args.draft.attachmentIds]
+          : undefined,
       };
       const answered = args.anchorActivityId
         ? await api.POST("/activities/{id}/send-email:preview", {
@@ -185,13 +201,13 @@ function answersEveryone(
     ) {
       return false;
     }
-    const normal = normalAddress(address);
+    const normal = addressKey(address);
     if (answered.has(normal)) return false;
     answered.add(normal);
   }
   return (
     answered.size === asked.length &&
-    asked.every((address) => answered.has(normalAddress(address)))
+    asked.every((address) => answered.has(addressKey(address)))
   );
 }
 
@@ -201,16 +217,10 @@ function distinctAddresses(addresses: readonly string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const address of addresses) {
-    const normal = normalAddress(address);
+    const normal = addressKey(address);
     if (normal === "" || seen.has(normal)) continue;
     seen.add(normal);
     out.push(address);
   }
   return out;
-}
-
-// The server stores an address trimmed and lowercased, so it may answer for
-// one in that form.
-function normalAddress(address: string): string {
-  return address.trim().toLowerCase();
 }

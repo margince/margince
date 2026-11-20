@@ -3,13 +3,21 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { DealRoomAccess } from "./dealroomaccess";
+import { InviteDialog } from "./dealroomaccess.dialogs";
 import {
   MAIL_POLL_MS,
   MAIL_WATCH_MS,
@@ -120,6 +128,17 @@ describe("where a seat stands", () => {
   });
 });
 
+describe("a buyer's ask for a new link", () => {
+  it("stops asking the seller once the buyer is back in", async () => {
+    drawWithDownloads(0, {
+      link_requested_at: "2026-08-25T08:00:00Z",
+      last_seen_at: "2026-08-25T09:00:00Z",
+    });
+    expect(await screen.findByText("Signed in")).toBeTruthy();
+    expect(screen.queryByText(/Asked for a new link/)).toBeNull();
+  });
+});
+
 describe("what became of the invitation mail", () => {
   it("tells the seller a failed mail is theirs to send", async () => {
     drawWithDownloads(0, { has_signed_in: false, delivery_state: "failed" });
@@ -179,5 +198,88 @@ describe("a seat's address", () => {
       entityId: "deal-1",
       address: "dana.buyer@brandt-automotive.example",
     });
+  });
+});
+
+function drawInvite(
+  answer: () => Response,
+  locale: "en" | "de" | "vi" = "en",
+): { posted: unknown[] } {
+  const posted: unknown[] = [];
+  installFetchStub({
+    "POST /deal-rooms/room-1/participants": (body) => {
+      posted.push(body);
+      return answer();
+    },
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial={locale}>
+        <InviteDialog room={ROOM} open onClose={() => {}} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return { posted };
+}
+
+describe("the invite form", () => {
+  it("refuses an address that is not one on the Email field, before sending", async () => {
+    const user = userEvent.setup();
+    const { posted } = drawInvite(() => jsonResponse({}));
+    await user.type(screen.getByLabelText(/^Name/), "Dana Buyer");
+    const email = screen.getByLabelText(/^Email/);
+    await user.type(email, "not-an-email");
+    await user.click(screen.getByRole("button", { name: "Invite" }));
+
+    expect(
+      await screen.findByText("Enter an email address for Email."),
+    ).toBeTruthy();
+    expect(email.getAttribute("aria-invalid")).toBe("true");
+    await waitFor(() => expect(document.activeElement).toBe(email));
+    expect(posted).toEqual([]);
+
+    await user.type(email, "@example.com");
+    expect(screen.queryByText("Enter an email address for Email.")).toBeNull();
+  });
+
+  it("says which empty field Invite needs", async () => {
+    const user = userEvent.setup();
+    drawInvite(() => jsonResponse({}));
+    await user.click(screen.getByRole("button", { name: "Invite" }));
+    expect(await screen.findByText("Name is required.")).toBeTruthy();
+    expect(screen.getByText("Email is required.")).toBeTruthy();
+  });
+
+  it("puts the server's refusal on the field it names, by its label", async () => {
+    const user = userEvent.setup();
+    drawInvite(() =>
+      jsonResponse(
+        {
+          code: "validation_error",
+          detail: "`email` must be an email address",
+          details: {
+            errors: [
+              {
+                field: "email",
+                code: "email_malformed",
+                message: "`email` must be an email address",
+              },
+            ],
+          },
+        },
+        422,
+      ),
+    );
+    await user.type(screen.getByLabelText(/^Name/), "Dana Buyer");
+    await user.type(screen.getByLabelText(/^Email/), "dana@example");
+    await user.click(screen.getByRole("button", { name: "Invite" }));
+
+    expect(
+      await screen.findByText("Enter an email address for Email."),
+    ).toBeTruthy();
+    expect(screen.queryByText(/`email`/)).toBeNull();
   });
 });

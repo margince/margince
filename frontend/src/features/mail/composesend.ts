@@ -4,74 +4,43 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
+import { type IntentKeys, intentKeys } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
 import { useLawfulBasisGate } from "../../components/lawfulbasiswarning";
 import { useSettledValue } from "../../design-system/debouncedsearch";
+import { focusFirstRefused } from "../../design-system/savepage";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import { fileListKeys } from "../../lib/attachmentkeys";
-import {
-  asksWhy,
-  type CommunicationContext,
-  contextFor,
-} from "../../lib/compose-context";
+import { asksWhy, contextFor } from "../../lib/compose-context";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
+import { countriesOnMessage } from "./composecountries";
 import type { ComposeFields } from "./composefields";
-import { composedLinks, type Link, type SendGrounding } from "./composelinks";
-import { type Refusal, refusalOf } from "./composerefusal";
+import { composedLinks, type SendGrounding } from "./composelinks";
+import { refusalOf } from "./composerefusal";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
-import { scheduleFields } from "./composeschedule";
-import { sendHoldOf } from "./composesendhold";
+import { inlineSendHold, type SendHold, sendHoldOf } from "./composesendhold";
+import {
+  refusalIsCurrent,
+  refusalStillShown,
+  type SendRequest,
+  sendRequest,
+} from "./composesendrequest";
 import { dealOf, reasonEvidence, useReasonForAnchor } from "./reasonanchor";
 import { SCHEDULED_SCREEN } from "./scheduledqueue";
 import { sendReviewOf } from "./sendreview";
 
 type Activity = components["schemas"]["Activity"];
-type Preview = components["schemas"]["SendAuthorizationPreview"];
-
-type SendRequest = {
-  activityId?: string;
-  isChannelReply: boolean;
-  mail: {
-    subject: string;
-    body: string;
-    // The markup beside the plain part, omitted when nothing was formatted.
-    html_body?: string;
-    to: string[];
-    cc?: string[];
-    bcc?: string[];
-    // Files already on the record, by id. The send snapshots each one.
-    attachment_ids?: string[];
-    draft_ref?: string;
-    mail_draft_id?: string;
-    // Left out on a reply: the engine resolves it from the anchor, and a
-    // contradicting claim is recorded as unsupported.
-    communication_context?: CommunicationContext;
-    evidence?: components["schemas"]["CommunicationEvidence"];
-    scheduled_at?: string;
-    scheduled_tz?: string;
-    scheduled_intent?: components["schemas"]["IntentTime"];
-  };
-  channelBody: {
-    body: string;
-    communication_context?: CommunicationContext;
-    attachment_ids?: string[];
-  };
-  links: Link[];
-  // The engine's answer on screen when Send was pressed. A refusal is about
-  // that message and that answer, and only while both still hold.
-  answerAtSend: Preview | undefined;
-};
 
 // The one place the send's origin is chosen. An anchor sends a reply; no
 // anchor sends the account-started message with its links. A channel reply
 // is anchored by nature.
-async function sendFrom(args: SendRequest) {
+async function sendFrom(args: SendRequest, keyed: IntentKeys) {
   if (args.isChannelReply) {
     if (!args.activityId) {
       // The mail arm would post a channel message as an email, so a channel
@@ -85,13 +54,22 @@ async function sendFrom(args: SendRequest) {
       body: args.channelBody,
     });
   }
-  if (args.activityId) {
-    return api.POST("/activities/{id}/send-email", {
-      params: { path: { id: args.activityId } },
-      body: args.mail,
-    });
+  const anchor = args.activityId;
+  if (anchor) {
+    return keyed([anchor, args.mail], (key) =>
+      api.POST("/activities/{id}/send-email", {
+        params: { path: { id: anchor }, header: { "Idempotency-Key": key } },
+        body: args.mail,
+      }),
+    );
   }
-  return api.POST("/emails", { body: { ...args.mail, links: args.links } });
+  const body = { ...args.mail, links: args.links };
+  return keyed(body, (key) =>
+    api.POST("/emails", {
+      params: { header: { "Idempotency-Key": key } },
+      body,
+    }),
+  );
 }
 
 // What the send is waiting for, in reading order. A pressed Send names each
@@ -132,92 +110,17 @@ export function missingToSend(
   return missing;
 }
 
-// The request for the message as it stands, built from one render's values.
-function sendRequest(
-  fields: ComposeFields,
-  where: Readonly<{
-    answering: string | undefined;
-    isChannelReply: boolean;
-    files: readonly ChosenFile[];
-    heldDraftId: string | undefined;
-    context: CommunicationContext | undefined;
-    evidence?: components["schemas"]["CommunicationEvidence"];
-    links: Link[];
-    answerAtSend: Preview | undefined;
-  }>,
-): SendRequest {
-  const { to, cc, bcc, subject, body, html } = fields;
-  const attachmentIds = where.files.length
-    ? where.files.map((file) => file.id)
-    : undefined;
-  return {
-    activityId: where.answering,
-    isChannelReply: where.isChannelReply,
-    mail: {
-      subject,
-      body,
-      to,
-      // Keep the editor's markup; omit only an empty alternative.
-      html_body: html.trim() === "" ? undefined : html,
-      cc: cc.length ? cc : undefined,
-      bcc: bcc.length ? bcc : undefined,
-      attachment_ids: attachmentIds,
-      draft_ref: fields.draftRef ?? undefined,
-      mail_draft_id: where.heldDraftId,
-      communication_context: where.context,
-      evidence: where.evidence,
-      ...scheduleFields(fields.sendAt, fields.sendSchedule),
-    },
-    channelBody: {
-      body,
-      communication_context: where.context,
-      attachment_ids: attachmentIds,
-    },
-    links: where.links,
-    answerAtSend: where.answerAtSend,
-  };
-}
-
-/**
- * Whether a refused Send still describes the message on screen. It stops when
- * anything the request carries changes: a recipient, the words, a file, a
- * record, the reason. It also stops when the check answers anew.
- */
-export function refusalIsCurrent(
-  sent: SendRequest | undefined,
-  now: SendRequest,
-  preview: Preview | undefined,
-  directing = false,
-): boolean {
-  return (
-    sent !== undefined &&
-    (directing || sent.answerAtSend === preview) &&
-    messageOf(sent) === messageOf(now)
-  );
-}
-
-// An older server's footer refusal holds only the message it refused, so a
-// changed message or a new check can be sent again.
-function refusalStillShown(
-  refusal: Refusal,
-  sent: SendRequest | undefined,
-  now: SendRequest,
-  preview: Preview | undefined,
-): Refusal {
-  return refusal === "legacyFooter" && !refusalIsCurrent(sent, now, preview)
-    ? null
-    : refusal;
-}
-
-// The message a request sends, without the bookkeeping that names drafts. A
-// draft id can arrive after the press and does not change the message.
-function messageOf(request: SendRequest): string {
-  // JSON leaves an undefined field out, which is how these are dropped.
-  return JSON.stringify({
-    ...request,
-    answerAtSend: undefined,
-    mail: { ...request.mail, draft_ref: undefined, mail_draft_id: undefined },
-  });
+// The hold on Send. An older server's footer refusal holds it in both flows;
+// otherwise the inline flow asks nothing before the press.
+function holdOf(
+  inline: boolean,
+  legacyFooter: boolean,
+  permission: Parameters<typeof sendHoldOf>[0],
+  review: Parameters<typeof sendHoldOf>[1],
+): SendHold {
+  if (inline) return inlineSendHold(legacyFooter);
+  if (legacyFooter) return { blocks: true, withReason: false };
+  return sendHoldOf(permission, review);
 }
 
 // Both responses accept delivery; only 201 names a scheduled release.
@@ -243,6 +146,7 @@ export function useComposeSend({
   projectId,
   needsDeal,
   savedDraft,
+  inline = false,
   onSent,
   onClose,
 }: Readonly<{
@@ -262,6 +166,11 @@ export function useComposeSend({
   projectId: string;
   needsDeal: boolean;
   savedDraft: ReturnType<typeof useSavedDraft>;
+  /**
+   * The send is the check. Nothing is asked while the rep writes, and no
+   * reason for contact or deal is required. A refusal comes back as a review.
+   */
+  inline?: boolean;
   onSent?: () => void;
   onClose: () => void;
 }>) {
@@ -287,13 +196,17 @@ export function useComposeSend({
     onSent?.();
     onClose();
   };
+  const sendKeys = useRef(intentKeys());
   const send = useMutation({
     mutationKey: ["email", entityId],
     // The grounding is the variable, so a stale closure cannot file the mail
     // under a project the picker no longer shows.
     mutationFn: async (request: SendRequest): Promise<SendOutcome> => {
       setSendUnavailable(false);
-      const { data, error, response } = await sendFrom(request);
+      const { data, error, response } = await sendFrom(
+        request,
+        sendKeys.current,
+      );
       if (response.status === 501) return { sent: false as const };
       // Only a real 2xx is a send. openapi-fetch reports a falsy `error` for a
       // bodiless gateway 5xx, which must not close the modal as sent.
@@ -349,8 +262,8 @@ export function useComposeSend({
     subject: fields.subject,
     body: fields.body,
     context: fields.context,
-    asksContext: asksWhy(anchorActivity),
-    needsDeal,
+    asksContext: !inline && asksWhy(anchorActivity),
+    needsDeal: !inline && needsDeal,
   });
   const links = composedLinks(
     { entityType, entityId, dealId },
@@ -363,24 +276,38 @@ export function useComposeSend({
   // because consent is owed to everyone who receives the message.
   const settledSubject = useSettledValue(fields.subject);
   const settledBody = useSettledValue(fields.body);
+  const settledHTML = useSettledValue(fields.html);
   const answer = useSendPermission({
     recipients: [...fields.to, ...fields.cc, ...fields.bcc],
     anchorActivityId: answering,
     links,
     context: claimedContext,
     evidence,
-    draft: { subject: settledSubject, body: settledBody },
-    enabled: open && !isChannelReply,
+    recipientCountries: countriesOnMessage(fields.countries.stated, [
+      ...fields.to,
+      ...fields.cc,
+      ...fields.bcc,
+    ]),
+    draft: {
+      subject: settledSubject,
+      body: settledBody,
+      htmlBody: settledHTML,
+      attachmentIds: files.map((file) => file.id),
+    },
+    enabled: open && !isChannelReply && !inline,
   });
   // Send waits for the sender to confirm a recipient with no lawful basis on record.
-  const lawfulBasis = useLawfulBasisGate(answer.preview);
+  const lawfulBasis = useLawfulBasisGate(
+    answer.preview,
+    fields.countries.stated,
+  );
   // A consent refusal joins the engine's answer as one status, and only while
   // it is about this message. A stale one would sit red beside a newer check.
   const request = sendRequest(fields, {
     answering,
     isChannelReply,
     files,
-    heldDraftId: savedDraft.held?.id,
+    heldDraftId: savedDraft.onScreenId,
     context: claimedContext,
     evidence,
     links,
@@ -405,10 +332,12 @@ export function useComposeSend({
     request,
     answer.preview,
   );
-  const hold: ReturnType<typeof sendHoldOf> =
-    shownRefusal === "legacyFooter"
-      ? { blocks: true, withReason: false }
-      : sendHoldOf(permission, refusedNow ? sendReview : null);
+  const hold = holdOf(
+    inline,
+    shownRefusal === "legacyFooter",
+    permission,
+    refusedNow ? sendReview : null,
+  );
   const [attempted, setAttempted] = useState(false);
   useEffect(() => {
     if (!open) {
@@ -418,14 +347,8 @@ export function useComposeSend({
   const flagged: ReadonlySet<MissingField> = attempted
     ? new Set(missing)
     : new Set<MissingField>();
-  // The first unanswered field, read off the DOM at the press. The controls
-  // share no ref shape, and `aria-invalid` is the mark they share.
   const fieldsRef = useRef<HTMLDivElement | null>(null);
-  const focusFirstMissing = () => {
-    fieldsRef.current
-      ?.querySelector<HTMLElement>('[aria-invalid="true"]')
-      ?.focus();
-  };
+  const focusFirstMissing = () => focusFirstRefused(fieldsRef.current);
   const confirm = () => {
     // Marking and focusing is harmless when only a carriage block is present.
     if (missing.length > 0 || carriageBlocked || sourceBlocked) {
@@ -434,6 +357,11 @@ export function useComposeSend({
       return;
     }
     if (hold.blocks) {
+      return;
+    }
+    // The press is the whole question: a refusal comes back as a review.
+    if (inline) {
+      send.mutate(request);
       return;
     }
     // The refusal is already about this message, so the press asks for the
@@ -469,6 +397,7 @@ export function useComposeSend({
     shownRefusal === "legacyFooter";
   return {
     send,
+    request,
     blocked,
     refusal: shownRefusal,
     sendReview,

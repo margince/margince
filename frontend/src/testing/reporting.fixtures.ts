@@ -37,6 +37,8 @@ export const reportingMetricNames: Record<
   bookings_mix: "Commercial mix",
   qualified_opportunities_created: "Qualified opportunities",
   initiative_pipeline: "Initiative pipeline by origin",
+  account_progression: "How far companies got",
+  source_quality: "Lead source quality",
 };
 
 export const reportingStoryScope = {
@@ -95,6 +97,7 @@ export const reportingStoryEvaluation: ReportingEvaluation = {
       value: 21600000,
       target: 30000000,
       target_actual: 21600000,
+      target_delta: -8400000,
       attainment: 72,
       coverage,
       evidence: { metric: "bookings_won", context_id: "interval" },

@@ -4,16 +4,23 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { Card } from "../design-system/atoms";
 import type { Route } from "../lib/router";
+import type { GrantSpec } from "../testing/mefixture";
+import {
+  setupReminderGrants,
+  setupReminderRoutes,
+} from "../testing/setupreminder.fixtures";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
   WithInstallationBrand,
 } from "../testing/story-utils";
-import type { NavCounts } from "./nav";
+import { type NavCounts, recordKindOf } from "./nav";
 import { CommandPalette, useBuiltinCommands } from "./palette";
 import { PageTitle, WorkspaceRail } from "./shell";
 import { TopBar } from "./topbar";
@@ -36,6 +43,14 @@ type Story = StoryObj<typeof TopBar>;
 const COUNTS = { inbox: 12, tasks: 4 };
 const NOTHING_WAITING = { inbox: 0, tasks: 0 };
 
+const WIDE_VIEWPORT = {
+  viewport: {
+    options: {
+      wide: { name: "Wide", styles: { width: "1440px", height: "900px" } },
+    },
+  },
+};
+
 // 960px is inside the bar's `max-width: 1100px` rule.
 const NARROW_VIEWPORT = {
   viewport: {
@@ -48,21 +63,23 @@ const NARROW_VIEWPORT = {
   },
 };
 
-function stubSession() {
-  installFetchStub({ "GET /me": meRoute({}) });
+function stubSession(routes: RouteMap = {}, allow: GrantSpec = {}) {
+  installFetchStub({ "GET /me": meRoute(allow), ...routes });
 }
 
 // The record's name is seeded, so the page under the bar shows it.
 function SeedCache({
   record,
+  kind = "contact",
   children,
-}: Readonly<{ record?: { id: string; name: string }; children: ReactNode }>) {
+}: Readonly<{
+  record?: { id: string; name: string };
+  kind?: string;
+  children: ReactNode;
+}>) {
   const client = useQueryClient();
-  if (
-    record &&
-    client.getQueryData(["contact", "ref", record.id]) === undefined
-  ) {
-    client.setQueryData(["contact", "ref", record.id], record.name);
+  if (record && client.getQueryData([kind, "ref", record.id]) === undefined) {
+    client.setQueryData([kind, "ref", record.id], record.name);
   }
   return (
     <WithInstallationBrand brand={{ display_name: "Gradion GmbH" }}>
@@ -119,16 +136,21 @@ function BarStory({
   counts,
   startCollapsed,
   record,
+  routes,
+  allow,
 }: Readonly<{
   route: Route;
   counts?: NavCounts;
   startCollapsed?: boolean;
   record?: { id: string; name: string };
+  /** Reads beyond the session, for a frame that draws the end controls' extras. */
+  routes?: RouteMap;
+  allow?: GrantSpec;
 }>) {
-  stubSession();
+  stubSession(routes, allow);
   return (
     <StoryProviders>
-      <SeedCache record={record}>
+      <SeedCache record={record} kind={recordKindOf(route)}>
         <BarFrame
           route={route}
           counts={counts}
@@ -168,6 +190,59 @@ export const RecordRoute: Story = {
       record={{ id: "p-anna", name: "Anna Weber" }}
     />
   ),
+};
+
+/**
+ * A deal page with the setup reminder and the scheduled-messages clock up.
+ *
+ * The deal's long name stays in the page heading, so the bar holds the Back
+ * control, the search and the end controls. Those keep their own width: the
+ * reminder's words stay whole and no glyph draws over another.
+ */
+export const RecordBesideTheReminder: Story = {
+  name: "a record page beside the setup reminder",
+  parameters: WIDE_VIEWPORT,
+  globals: { viewport: { value: "wide" } },
+  tags: ["uat-wide"],
+  render: () => (
+    <BarStory
+      route={{ screen: "deals", id: "d-long" }}
+      record={{
+        id: "d-long",
+        name:
+          "Framework agreement for the cold-chain fleet renewal across the " +
+          "Hamburg, Rotterdam and Antwerp depots, phase two",
+      }}
+      routes={{
+        ...setupReminderRoutes(),
+        "GET /scheduled-sends": () => jsonResponse([]),
+      }}
+      allow={setupReminderGrants()}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      const end = canvasElement.querySelector(".topbar-trail");
+      const words = end?.querySelector(".setup-reminder-word");
+      const search = canvasElement.querySelector(".topbar-searchslot");
+      const lead = canvasElement.querySelector(".topbar-lead");
+      if (!end?.querySelector(".outbox") || !words || !search || !lead) {
+        throw new Error("the bar has no reminder, clock, search or lead yet");
+      }
+      expect(words.scrollWidth).toBeLessThanOrEqual(words.clientWidth);
+      const boxes = [...end.children].map((c) => c.getBoundingClientRect());
+      for (const [i, box] of boxes.entries()) {
+        expect(box.left).toBeGreaterThanOrEqual((boxes[i - 1]?.right ?? 0) - 1);
+      }
+      expect(search.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+        lead.getBoundingClientRect().right,
+      );
+      const bar = canvasElement.querySelector(".topbar");
+      expect(boxes.at(-1)?.right ?? 0).toBeLessThanOrEqual(
+        bar?.getBoundingClientRect().right ?? 0,
+      );
+    });
+  },
 };
 
 /** Under 1100px the search drops to its glyph, never off the bar. */

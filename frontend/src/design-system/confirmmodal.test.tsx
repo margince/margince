@@ -71,6 +71,22 @@ describe("ConfirmModal", () => {
     expect(document.querySelector(".dot-confirm")).toBeTruthy();
   });
 
+  it("names the dialog by its title alone, not by the dot before it", () => {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Move to Lost?"
+        tier="confirm"
+        confirmLabel="Confirm"
+        onConfirm={vi.fn()}
+      >
+        <p>Moving this deal to a terminal stage.</p>
+      </ConfirmModal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Move to Lost?" })).toBeTruthy();
+  });
+
   it("draws the tier it is given, an automatic one included", () => {
     rtlRender(
       <ConfirmModal
@@ -435,5 +451,27 @@ describe("the box a confirm sits in", () => {
       </ConfirmModal>,
     );
     expect(screen.getByRole("dialog", { name: "Full" })).toBeInTheDocument();
+  });
+
+  it("hands its body, the element around the fields, to bodyRef", () => {
+    let body: HTMLDivElement | null = null;
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Add to Shortlist"
+        confirmLabel="Add"
+        onConfirm={vi.fn()}
+        bodyRef={(element) => {
+          body = element;
+        }}
+      >
+        <input aria-label="Note" />
+      </ConfirmModal>,
+    );
+    const note = screen.getByRole("textbox", { name: "Note" });
+    expect(body).not.toBeNull();
+    expect(body).toBe(note.parentElement);
+    expect(note.closest(".form-stack")).toBe(body);
   });
 });

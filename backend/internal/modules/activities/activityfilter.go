@@ -295,7 +295,7 @@ func timelineKeyset(in ListActivitiesInput, sorted *storekit.ListSort, arg func(
 	if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
 		return "", errRequestReviewWithCursor
 	}
-	return sorted.KeysetClause(*in.Cursor, arg)
+	return sorted.KeysetClause("activities", *in.Cursor, arg)
 }
 
 // activityRowClauses narrows on columns of the activity row itself: the
@@ -309,6 +309,10 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	var where []string
 	if in.InteractionsAsOf != nil {
 		where = append(where, relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d", arg(*in.InteractionsAsOf))))
+	}
+	if in.DirectionClockAsOf != nil && in.ClockDirection != "" {
+		where = append(where, relstrength.DirectionClockSQL("a", fmt.Sprintf("$%d", arg(*in.DirectionClockAsOf))),
+			sprintf("a.direction = $%d", arg(in.ClockDirection)))
 	}
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))

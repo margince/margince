@@ -8,11 +8,13 @@ package contacts
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -69,6 +71,31 @@ func TestChangingANamePartUpdatesOnlyAPlainJoinedDisplayName(t *testing.T) {
 				t.Fatalf("full_name %q, want %q", got.FullName, tc.wantFullName)
 			}
 		})
+	}
+}
+
+// An imported part that joins to the stored part past the import bound is
+// refused on full_name, and the stored name stays.
+func TestAnImportedPartJoiningPastTheBoundIsRefused(t *testing.T) {
+	e := setupDedupe(t)
+	part := ContactNameLimit * 2 / 3
+	last := strings.Repeat("b", part)
+	created, err := e.store.CreateContact(e.as(), CreateContactInput{
+		FullName: "Ada " + last, FirstName: new("Ada"), LastName: &last, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := ids.From[ids.ContactKind](ids.UUID(created.Id))
+	imported := storekit.WithImportRun(e.as(), ids.NewV7())
+	_, err = e.store.UpdateContact(imported, id, UpdateContactInput{FirstName: new(strings.Repeat("a", part))})
+	refusal, ok := errors.AsType[*ContactNameTooLongError](err)
+	if !ok || refusal.Field != contactNameColumn || refusal.Runes != 2*part+1 {
+		t.Fatalf("err = %v, want full_name refused at %d characters", err, 2*part+1)
+	}
+	got, err := e.store.GetContact(e.as(), id, storekit.LiveOnly)
+	if err != nil || got.FullName != created.FullName {
+		t.Fatalf("full_name %q, %v; want %q kept", got.FullName, err, created.FullName)
 	}
 }
 

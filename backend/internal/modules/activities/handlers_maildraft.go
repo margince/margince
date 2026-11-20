@@ -61,6 +61,10 @@ func mailDraftContentFrom(req crmcontracts.MailDraftInput) (MailDraftContent, er
 	if err != nil {
 		return MailDraftContent{}, err
 	}
+	countries, err := countryOverridesFrom(req.RecipientCountries)
+	if err != nil {
+		return MailDraftContent{}, err
+	}
 	return MailDraftContent{
 		To:            valueOr(req.To),
 		Cc:            valueOr(req.Cc),
@@ -72,6 +76,9 @@ func mailDraftContentFrom(req crmcontracts.MailDraftInput) (MailDraftContent, er
 		Context:       commsauthz.Category(valueOr(req.CommunicationContext)),
 		Schedule:      schedule,
 		EditorState:   valueOr(req.EditorState),
+		// The reason is the author's own words, kept as typed.
+		OverrideExplanation: valueOr(req.OverrideExplanation),
+		RecipientCountries:  countries,
 	}, nil
 }
 
@@ -146,6 +153,11 @@ func withDraftSending(out *crmcontracts.MailDraft, d MailDraft) {
 		claimed := crmcontracts.CommunicationContext(d.Content.Context)
 		out.CommunicationContext = &claimed
 	}
+	if d.Content.OverrideExplanation != "" {
+		explanation := d.Content.OverrideExplanation
+		out.OverrideExplanation = &explanation
+	}
+	out.RecipientCountries = countriesOnWire(d.Content.RecipientCountries)
 	if d.Content.Schedule != nil {
 		at, tz := d.Content.Schedule.At, d.Content.Schedule.TZ
 		out.ScheduledAt, out.ScheduledTz = &at, &tz
@@ -163,8 +175,9 @@ func valueOr[T any](field *T) T {
 	return *field
 }
 
-// mailDraftIDOf is the draft a send names, zero when it names none.
-func mailDraftIDOf(id *openapi_types.UUID) ids.UUID {
+// optionalID is the record an optional request field names, zero when it
+// names none.
+func optionalID(id *openapi_types.UUID) ids.UUID {
 	if id == nil {
 		return ids.UUID{}
 	}

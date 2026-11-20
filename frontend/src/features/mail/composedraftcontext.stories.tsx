@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import type { PickableProject } from "../../design-system/projectpicker";
 import {
   installFetchStub,
   jsonResponse,
@@ -86,14 +87,16 @@ const REASONS: readonly components["schemas"]["AccountDraftReason"][] = [
  * The picker owns no state, so the story lends it some. A reader in the
  * catalog can choose a project, a deal or nothing and watch the face settle.
  */
-function Related() {
-  const [projectId, setProjectId] = useState("pr-1");
+function Related({
+  projects = PROJECTS,
+}: Readonly<{ projects?: readonly PickableProject[] }>) {
+  const [projectId, setProjectId] = useState(projects[0]?.project_id ?? "");
   const [dealId, setDealId] = useState("");
   return (
     <StoryProviders>
       <RelatedFiling
         companyId={COMPANY_ID}
-        projects={PROJECTS}
+        projects={projects}
         projectId={projectId}
         onProjectChange={setProjectId}
         dealId={dealId}
@@ -106,12 +109,12 @@ function Related() {
 // Installs the stub from the story's own `render()`, which runs before any
 // mount effect, so the 360 query's first call always sees it — the ordering
 // the compose suites rely on too.
-function relatedOver(view: unknown) {
+function relatedOver(view: unknown, projects?: readonly PickableProject[]) {
   return () => {
     installFetchStub({
       [`GET /companies/${COMPANY_ID}/360`]: () => jsonResponse(view),
     });
-    return <Related />;
+    return <Related projects={projects} />;
   };
 }
 
@@ -162,6 +165,11 @@ type Story = StoryObj;
 /** What the message is about: one of the account's projects, deals, or nothing. */
 export const RelatedTo: Story = {
   render: relatedOver(COMPANY_VIEW),
+};
+
+/** An account with no project and no open deal: nothing to choose, so no picker. */
+export const RelatedToNothing: Story = {
+  render: relatedOver({ ...COMPANY_VIEW, deals: { data: [] } }, []),
 };
 
 /** Nobody from the account in To yet, so the draft waits for one. */

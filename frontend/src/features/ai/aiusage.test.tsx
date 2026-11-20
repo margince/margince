@@ -295,7 +295,7 @@ it("distinguishes an empty window from a refused read", async () => {
   mount(
     {
       title: "Forbidden",
-      detail: "automation.update: permission denied",
+      detail: "your role does not grant update on automation",
       status: 403,
       code: "permission_denied",
     },
@@ -304,9 +304,11 @@ it("distinguishes an empty window from a refused read", async () => {
   await waitFor(() =>
     expect(screen.getByText(en["common.permissionDenied"])).toBeTruthy(),
   );
-  // The RBAC object and verb the gate wrapped its refusal with never reach the
-  // reader: that is the authority model's shape, not an explanation.
-  expect(screen.queryByText(/automation.update/)).toBeNull();
+  // The server's sentence about the grant never reaches the reader: that is
+  // the authority model's shape, not an explanation.
+  expect(
+    screen.queryByText(/your role does not grant update on automation/),
+  ).toBeNull();
 });
 
 it("names each arrow and switches the one table between tasks and days", async () => {
@@ -628,7 +630,9 @@ it("orders fallback reasons largest first and draws a rate of nothing as plain t
   const quiet = screen.getByText("Message classification").closest("tr");
   if (!quiet) throw new Error("the quiet task has no row");
   expect(within(quiet).getByText("0%")).toBeTruthy();
-  expect(within(quiet).queryByRole("button")).toBeNull();
+  expect(
+    within(quiet).queryByRole("button", { name: /Fallbacks by reason/ }),
+  ).toBeNull();
 });
 
 // Rows written while a decision model was bound outlive the binding; once it is
@@ -645,7 +649,7 @@ it("hides the decision model's rates when no decision model is bound", async () 
 
 // The decision table names its tasks the way the spend table does, so the
 // same name opens the same sentence about what the task does.
-it("opens a decision task's summary from its name", async () => {
+it("opens a decision task's summary and key from its name", async () => {
   const user = userEvent.setup();
   mount(
     {
@@ -680,4 +684,6 @@ it("opens a decision task's summary from its name", async () => {
   expect(
     await screen.findByText("Decides what an email domain's website is."),
   ).toBeTruthy();
+  expect(screen.getByText("site_triage").tagName).toBe("CODE");
+  expect(within(table).queryByText("site_triage")).toBeNull();
 });

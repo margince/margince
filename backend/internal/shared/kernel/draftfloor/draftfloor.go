@@ -224,6 +224,25 @@ func GroupGreeting(lang textlang.Lang) string {
 	return groupGreetings[langOrDefault(lang)]
 }
 
+// formalGreetings open a message to one contact by their full name where
+// "Herr" or "Frau" would go, because no gender is ever known.
+var formalGreetings = map[textlang.Lang]string{
+	textlang.English:    "Dear %s,",
+	textlang.German:     "Guten Tag %s,",
+	textlang.Vietnamese: "Kính gửi %s,",
+}
+
+// OpeningLine is the one greeting every no-model draft opens with. A formal
+// opening names the surname beside the first name; with no surname there is
+// nothing to be formal with, and the familiar opening stands.
+func OpeningLine(lang textlang.Lang, band convstate.Band, formal bool, firstName, lastName string) string {
+	firstName, lastName = NameLine(firstName), NameLine(lastName)
+	if !formal || lastName == "" {
+		return Greeting(lang, band, firstName)
+	}
+	return fill(formalGreetings[langOrDefault(lang)], NameLine(firstName+" "+lastName))
+}
+
 // Greeting renders the opening line, by name when one is known.
 func Greeting(lang textlang.Lang, band convstate.Band, firstName string) string {
 	phrases := For(lang, band)

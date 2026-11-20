@@ -342,11 +342,8 @@
   white-space: nowrap;
   min-width: 0;
 }
-/* The words give way, never the count. The strip squeezes this chip before the
-   bell and the account chip, and German asks about a third more room for the
-   same sentence, so something has to yield at 1440px that does not at 1280.
-   The count is the whole point of the chip; the words repeat what the panel
-   says when it opens. */
+/* Where the strip has to squeeze this chip, the words give way and never the
+   count: the words repeat what the panel says when it opens. */
 .setup-reminder-word {
   min-width: 0;
   overflow: hidden;

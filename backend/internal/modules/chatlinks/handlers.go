@@ -193,6 +193,7 @@ var refusals = []struct {
 }{
 	{ErrBotNotConnected, http.StatusConflict, "channel_bot_not_connected", "No bot connected. Connect one in Settings."},
 	{ErrChannelNotFound, http.StatusNotFound, "channel_not_found", "Channel not found. Check the link."},
+	{ErrChannelNameRefused, http.StatusUnprocessableEntity, "channel_name_refused", "The chat refused this channel name. Rename the record, or link an existing channel."},
 	{ErrChannelNotPrivate, http.StatusUnprocessableEntity, "channel_not_private", "This channel is public. Pick a private channel."},
 	{ErrBotNotMember, http.StatusUnprocessableEntity, "channel_bot_not_member", "The bot is not in this channel. Add it, then try again."},
 	{ErrChannelAlreadyLinked, http.StatusConflict, "channel_already_linked", "This channel already belongs to another record."},
@@ -200,7 +201,7 @@ var refusals = []struct {
 	{ErrLinkNotFound, http.StatusNotFound, "channel_link_not_found", "This record has no channel."},
 	{ErrMessageNotFound, http.StatusNotFound, "channel_message_not_found", "That message is not in this record's channel. Check the link."},
 	{ErrThreadTooLong, http.StatusUnprocessableEntity, "channel_thread_too_long", "This thread is too long to file as one note. File single messages instead."},
-	{ErrNoSummaryModel, http.StatusConflict, "ai_not_configured", "Summarising chat talk needs an AI model. An administrator can bind one under Settings → AI."},
+	{ErrNoSummaryModel, http.StatusConflict, httperr.CodeAINotConfigured, "Summarising chat talk needs an AI model. An administrator can bind one under Settings → AI."},
 	{ErrSummaryFailed, http.StatusBadGateway, "channel_summary_failed", "The summary could not be written. Nothing was filed. Try again."},
 	{ErrChatUnreachable, http.StatusBadGateway, "channel_provider_unreachable", "The chat could not be reached. Nothing was changed. Try again."},
 }

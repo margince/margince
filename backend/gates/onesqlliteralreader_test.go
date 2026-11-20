@@ -57,6 +57,7 @@ const sqlLiteralReaderFloor = 20
 // Each is checked, and AssertAllMatched reports one that has gone stale.
 var rawReaderWaivers = gatekit.Waive(map[string]string{
 	"gates/elapsedonespelling_test.go:literal.Value": "Reads only INT or FLOAT literals to recognize a numeric day divisor; it refuses string literals and never reads SQL.",
+	"gates/fixedfuturedates_test.go:literal.Value":   "reads an integer literal for a year, month or day, which has no escapes to decode",
 	"gates/inboundsigningrecipe_test.go:lit.Value":   "compares a Go format against one read out of .tsx TEXT, where the separator really is a backslash and an n — decoded, this side would be a newline and the two would read as disagreeing",
 })
 

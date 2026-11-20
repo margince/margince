@@ -11,6 +11,7 @@ import { Button, Field, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DateInput, type ISODate } from "../design-system/dateinput";
 import { Select } from "../design-system/select";
+import { dueDayBounds } from "../format/calendarday";
 import { useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useViewerZone } from "../lib/viewerzone";
@@ -21,9 +22,12 @@ type BulkTask = components["schemas"]["BulkTask"];
 
 export function TaskVerb({
   disabled,
+  reasonId,
   onReady,
 }: Readonly<{
   disabled: boolean;
+  /** The bar's sentence saying why filing a task is refused, when it is. */
+  reasonId?: string;
   /** The task, once the reader has said what it is. */
   onReady: (task: BulkTask) => void;
 }>) {
@@ -43,7 +47,7 @@ export function TaskVerb({
   };
   return (
     <>
-      <Button disabled={disabled} onClick={start}>
+      <Button disabled={disabled} reasonId={reasonId} onClick={start}>
         {t("bulk.createTask")}
       </Button>
       <ConfirmModal
@@ -77,6 +81,7 @@ export function TaskVerb({
             <DateInput
               {...control}
               value={due}
+              {...dueDayBounds(readerZone)}
               onChange={(event) => setDue(event.target.value)}
             />
           )}

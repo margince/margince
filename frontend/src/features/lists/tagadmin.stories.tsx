@@ -70,6 +70,11 @@ function Card({
     "POST /tags/t-2/merge": () => jsonResponse({ moved: 9, collapsed: 2 }),
     "DELETE /tags/t-2": () => new Response(null, { status: 204 }),
     "POST /tags/t-2/restore": () => new Response(null, { status: 204 }),
+    "POST /tags": () =>
+      jsonResponse(
+        { status: 409, code: "conflict", detail: 'tag "Churn Risk": conflict' },
+        409,
+      ),
     "GET /tags": () =>
       jsonResponse({
         data: words,
@@ -223,5 +228,21 @@ export const EditingTag: Story = {
   play: async ({ canvasElement }) => {
     const body = await pressRowVerb(canvasElement, "Edit");
     await body.findByRole("dialog", { name: "Edit tag" });
+  },
+};
+
+/** Adding a word another tag already has: the name field says so, once. */
+export const AddingTakenName: Story = {
+  render: () => <Card />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("button", { name: "Add tag" }));
+    const dialog = within(await body.findByRole("dialog"));
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: "Name" }),
+      "Churn Risk",
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Add" }));
+    await dialog.findByText("A tag with this name already exists.");
   },
 };

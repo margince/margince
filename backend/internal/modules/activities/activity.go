@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -62,13 +63,16 @@ type LogActivityInput struct {
 	MeetingIntent *crmcontracts.IntentTime
 	// Queued mail keeps its original entity when the sender changes company.
 	correspondenceEntity ids.UUID
-	SystemText           *systemtext.Message
-	identityProver       AddressProver
-	DealFiling           *crmcontracts.ActivityDealFiling
-	dealFilingResolver   DealFilingResolver
-	Recommendation       *crmcontracts.RecommendationReceipt
-	FollowUpTask         *LogActivityInput
-	recordedAt           *time.Time
+	// statedCountries are the recipient countries the sender stated for this
+	// message, which the audit row names beside the send.
+	statedCountries    []commsauthz.CountryOverride
+	SystemText         *systemtext.Message
+	identityProver     AddressProver
+	DealFiling         *crmcontracts.ActivityDealFiling
+	dealFilingResolver DealFilingResolver
+	Recommendation     *crmcontracts.RecommendationReceipt
+	FollowUpTask       *LogActivityInput
+	recordedAt         *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
 	// audienceOf gives the new activity the audience, members and parties of
@@ -76,6 +80,8 @@ type LogActivityInput struct {
 	audienceOf *ids.ActivityID
 	// recordsMeeting is the meeting a transcript records (records_meeting_id).
 	recordsMeeting *ids.ActivityID
+	// inheritedProject is the deal's project the activity is filed under too.
+	inheritedProject ids.UUID
 	// Automatic notes can also record a meeting that already has its outcome.
 	keepRecordedOutcome     bool
 	recordedMeetingWritable bool

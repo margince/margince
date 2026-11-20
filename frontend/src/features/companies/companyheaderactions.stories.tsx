@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, waitFor, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import type { GrantSpec } from "../../testing/mefixture";
@@ -89,6 +89,16 @@ export const LogRefused: Story = {
       ),
     );
     await expect(email).toBeDisabled();
+    const host = email.closest(".icon-action");
+    await expect(host).not.toBeNull();
+    if (host) {
+      await userEvent.hover(host);
+    }
+    await waitFor(() =>
+      expect(screen.getByRole("tooltip")).toHaveTextContent(
+        "Email. You do not have permission to log activities on this record.",
+      ),
+    );
   },
 };
 

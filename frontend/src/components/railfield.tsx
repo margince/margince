@@ -8,18 +8,13 @@ import { InlineText } from "../design-system/inlinetext";
 import type { RecordRename } from "../design-system/recordview";
 import { useLocale, useT } from "../i18n";
 import type { EntityKind } from "../lib/entity";
-import {
-  ProblemError,
-  problemExistingId,
-  problemMessageOf,
-} from "../lib/problem";
 import type { Route } from "../lib/router";
-import type { CreateField } from "./create";
-import { EditRecordModal } from "./edit";
+import { type CreateField, inlineTextKind } from "./create";
 import { prefillFromRecord } from "./edit.prefill";
 import type { FieldRecord, RecordFieldSave } from "./recordfieldtypes";
 import { dateDisplay, selectOptions } from "./recordfieldvalues";
 import { checkFieldValue, useRecordFieldWrite } from "./recordfieldwrite";
+import { useFieldsDialog } from "./sectionedit";
 import { useUnsavedGuard } from "./unsaved";
 
 /**
@@ -50,8 +45,6 @@ type Props = Readonly<{
   text?: string;
   // The value is a link: it keeps its action, and the pill around it edits.
   link?: boolean;
-  // The value is a card that fills its row.
-  block?: boolean;
   beside?: ReactNode;
 }>;
 
@@ -158,13 +151,7 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
         display={text || dateDisplay(field, stored, locale)}
         placeholder={t("field.unset")}
         multiline={field.type === "textarea"}
-        type={
-          field.type === "number" ||
-          field.type === "date" ||
-          field.type === "email"
-            ? field.type
-            : "text"
-        }
+        type={inlineTextKind(field)}
         maxLength={field.maxLength}
         step={field.step ?? (field.type === "number" ? "any" : undefined)}
         {...write}
@@ -217,51 +204,24 @@ function RailForm({
   label,
   reading,
   link,
-  block,
   beside,
 }: Props & Readonly<{ fields: readonly CreateField[] }>) {
   const t = useT();
-  const [open, setOpen] = useState(false);
-  const { mutation, pending } = useRecordFieldWrite(edit.kind, edit.record);
+  const dialog = useFieldsDialog(edit, label, fields);
   return (
     <>
       <EditableValue
         editLabel={t("inlineChoice.change", { field: label })}
         placeholder={t("field.unset")}
         link={link}
-        block={block}
         // A save elsewhere on the record pauses this row, never its own open form.
-        editable={open || !pending}
-        onEdit={() => {
-          mutation.reset();
-          setOpen(true);
-        }}
+        editable={dialog.open || !dialog.pending}
+        onEdit={dialog.start}
       >
         {reading}
       </EditableValue>
       {beside}
-      <EditRecordModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={label}
-        fields={[...fields]}
-        record={edit.record}
-        pending={mutation.isPending}
-        error={mutation.error ? problemMessageOf(mutation.error, t) : null}
-        existing={
-          mutation.error instanceof ProblemError
-            ? problemExistingId(mutation.error.problem)
-            : null
-        }
-        resolveExisting={edit.resolveExisting}
-        onValuesChange={edit.onValuesChange}
-        onSubmit={(values, rows, opened) =>
-          mutation.mutate(
-            { values, rows: rows ?? {}, baseline: opened, save: edit.save },
-            { onSuccess: () => setOpen(false) },
-          )
-        }
-      />
+      {dialog.element}
     </>
   );
 }

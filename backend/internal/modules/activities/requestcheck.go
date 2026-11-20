@@ -83,12 +83,16 @@ func nameOurNewestReplies(ctx context.Context, tx pgx.Tx, tasks []ids.UUID, asOf
 	if err != nil {
 		return err
 	}
+	private, err := privateMailRequests(ctx, tx)
+	if err != nil {
+		return err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT task.id, answer.id, answer.occurred_at, answer.occurred_precision
 		  FROM activity task
 		  JOIN activity a ON a.id = task.source_activity_id
 		  JOIN activity answer ON answer.id = (%s)
-		 WHERE task.id = ANY($2)`, ourNewestReply(sentReadable)), args...)
+		 WHERE task.id = ANY($2)`, ourNewestReply(sentReadable, private)), args...)
 	if err != nil {
 		return fmt.Errorf("activities: reading the reply a reminder names: %w", err)
 	}
@@ -111,9 +115,9 @@ func nameOurNewestReplies(ctx context.Context, tx pgx.Tx, tasks []ids.UUID, asOf
 
 // ourNewestReply is the newest answer that is our attested mail and that the
 // reader may read. A call, a meeting or the customer's own mail is no reply.
-func ourNewestReply(readable string) string {
+func ourNewestReply(readable string, private bool) string {
 	return newestAnswer("sent.id", `JOIN activity sent ON sent.id = newest.id AND sent.kind = 'email'
-        AND `+correspondence.OurOutboundSQL("sent")+` AND (`+readable+`)`)
+        AND `+correspondence.OurOutboundSQL("sent")+` AND (`+readable+`)`, private)
 }
 
 func contentOrTrue(ctx context.Context, alias string, arg func(any) int) (string, error) {

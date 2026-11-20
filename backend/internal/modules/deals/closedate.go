@@ -14,6 +14,8 @@ package deals
 import (
 	"math"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/closerisk"
 )
 
 // §11 tunables (spec parameter-registry names).
@@ -235,7 +237,10 @@ func StagesToGo(remainingOpenStages int) int {
 //
 // Strict <: a deal legitimately closing today is not late.
 func CloseIsOverdue(expectedClose time.Time, now time.Time, workspaceTZ *time.Location) bool {
-	return dateOnly(expectedClose).Before(dateAt(now, workspaceTZ))
+	if workspaceTZ == nil {
+		workspaceTZ = time.UTC
+	}
+	return closerisk.Overdue(expectedClose, now, workspaceTZ)
 }
 
 // dateAt reduces an instant to its calendar date in the given zone,

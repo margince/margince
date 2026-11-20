@@ -30,6 +30,10 @@ var refusalFacts = map[string]string{
 		"confirm",
 	commsauthz.ReasonFrequencyCapReached: "this jurisdiction's limit on how often we may write has been " +
 		"reached; it passes with time rather than with evidence",
+	commsauthz.ReasonSubjectLabelMissing: "the law of this recipient's country fixes a label at the start of " +
+		"an advertising subject, and this subject does not begin with it; add the label to the subject",
+	commsauthz.ReasonSubjectLabelsConflict: "the recipients' countries fix different labels at the start of an " +
+		"advertising subject, and a subject begins with one; send one message per label",
 	commsauthz.ReasonNoSubject: "this address does not resolve to one contact, so there is nobody to " +
 		"record the evidence against",
 	commsauthz.ReasonUnknownPurpose: "this message names a purpose this installation does not define, " +
@@ -40,7 +44,7 @@ var refusalFacts = map[string]string{
 		"record reads it as another; send it with the kind that fits",
 	commsauthz.ReasonNoEvidence: "nothing on record supports this message yet",
 	commsauthz.ReasonLawfulBasisUnconfirmed: "this contact's country has no legitimate-interest basis and " +
-		"no consent to this use is on record; the sender did not confirm the warning, so a colleague decides",
+		"no consent to this use is on record, and the sender did not confirm the warning",
 	commsauthz.ReasonDealNotRequested: "nothing on record shows this contact asked for the negotiation " +
 		"on this deal; a deal we created is not their request",
 	commsauthz.ReasonOptedOutAfterRequest: "this contact opted out of marketing after asking for this " +

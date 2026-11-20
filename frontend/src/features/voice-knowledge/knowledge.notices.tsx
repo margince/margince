@@ -3,7 +3,9 @@
 
 import { Callout } from "../../design-system/callout";
 import { formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 
 // What the document-sets card says about ITSELF: a set being re-read, a file it
 // could not read, and the files a drop left behind. None of them is content —
@@ -69,3 +71,21 @@ export function UploadRefusals({
     </Callout>
   );
 }
+
+// A write to what ships with Margince is refused in catalog copy, by code. The
+// list read can predate the shipped flag the press meets.
+export function shippedRefusal(
+  error: unknown,
+  t: Translator,
+  copy: ReadonlyMap<string, MessageKey>,
+): string {
+  const key = copy.get(problemCodeOf(error) ?? "");
+  return key ? t(key) : problemMessageOf(error, t);
+}
+
+export const DELETE_SHIPPED = new Map<string, MessageKey>([
+  ["document_shipped", "knowledge.deleteShipped"],
+]);
+export const UPLOAD_SHIPPED = new Map<string, MessageKey>([
+  ["corpus_shipped", "knowledge.uploadShipped"],
+]);

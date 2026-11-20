@@ -3,7 +3,7 @@
 /** @vitest-environment happy-dom */
 
 import { cleanup, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
@@ -11,9 +11,9 @@ import {
   allowedPreview,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import { jsonResponse, pickWhy, render, stubRoutes } from "./compose.testkit";
 import { alternativeReasonOf } from "./composereason";
+import { ComposeWindow } from "./composewindow";
 
 // A refused reason answered with the one the record already carries.
 //
@@ -51,7 +51,7 @@ function openComposer(alternatives: string[]) {
       ),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -62,12 +62,12 @@ function openComposer(alternatives: string[]) {
   return () => sent;
 }
 
-async function writeAndClaimTheDeal() {
-  await userEvent.type(screen.getByLabelText("To"), ANNA);
-  await userEvent.tab();
-  await userEvent.type(screen.getByLabelText("Subject"), "Your question");
+async function writeAndClaimTheDeal(user: UserEvent) {
+  await user.type(screen.getByLabelText("To"), ANNA);
+  await user.tab();
+  await user.type(screen.getByLabelText("Subject"), "Your question");
   writeMessage("Body", "Here is the answer.");
-  await pickWhy("Active deal");
+  await pickWhy(user, "Active deal");
 }
 
 afterEach(() => {
@@ -78,10 +78,11 @@ afterEach(() => {
 
 describe("switching to the reason the record carries", () => {
   it("switches the reason and asks again, without sending", async () => {
+    const user = userEvent.setup();
     const sent = openComposer(["requested_followup"]);
-    await writeAndClaimTheDeal();
+    await writeAndClaimTheDeal(user);
 
-    await userEvent.click(await screen.findByRole("button", { name: SWITCH }));
+    await user.click(await screen.findByRole("button", { name: SWITCH }));
 
     await waitFor(() =>
       expect(
@@ -98,8 +99,9 @@ describe("switching to the reason the record carries", () => {
   });
 
   it("offers no switch when the record carries no other reason", async () => {
+    const user = userEvent.setup();
     openComposer([]);
-    await writeAndClaimTheDeal();
+    await writeAndClaimTheDeal(user);
 
     expect(
       await screen.findByText("Choose the deal for this follow-up."),

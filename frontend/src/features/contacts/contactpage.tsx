@@ -5,6 +5,7 @@ import {
   type ActivityGate,
   useActivityGate,
 } from "../../components/activitygate";
+import { MergedIntoSentence } from "../../components/historymergedref";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -16,7 +17,6 @@ import {
   type RecordViewProps,
 } from "../../design-system/recordview";
 import { useT } from "../../i18n";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import {
   archivedContactRow,
   contactPageState,
@@ -24,10 +24,10 @@ import {
   openingIdentity,
 } from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
-import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
+import type { ContactTab } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
-import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { BriefQueue } from "../brief/brief.queue";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { useWaitingDraftBand } from "../mail/composewaitingdraft";
@@ -45,10 +45,10 @@ import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
-import { useDisabledCoreFeatures } from "../../lib/corefeatures";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
-  navigateKeepingReturn,
+  openContactTab,
   WorklistReturnLink,
 } from "../worklist/worklist.return";
 import {
@@ -100,11 +100,17 @@ function refusalsOf(
   );
 }
 
+// An archived contact that was merged says where it went, after its reason.
+function mergedInto(row: Contact | undefined): ReactNode {
+  if (!row?.archived_at || !row.merged_into_id) return undefined;
+  return <MergedIntoSentence kind="contact" id={row.merged_into_id} />;
+}
+
 export function ContactPageV2({
   id,
   tab: addressedTab,
 }: Readonly<{ id: string; tab: ContactTab }>) {
-  const tab = contactTabForFeatures(addressedTab, useDisabledCoreFeatures());
+  const tab = contactTabForFeatures(addressedTab, useHiddenCoreFeatures());
 
   // Which message the drawer is showing. One drawer over the record, owned by
   // the page: the timeline and the rail both open into it, so a citation in
@@ -172,10 +178,7 @@ export function ContactPageV2({
   const readOnlyReasonId = useId();
   // A 360 cached from before the archive would not say the row is archived.
   const shownRow = record.data?.archived_at ? record.data : view.data?.contact;
-  const readOnlyReason = useRecordWriteRefusal("contact", shownRow, {
-    archived: t("contact.rail.archivedReadOnly"),
-    notYours: t("contact.notYoursToChange"),
-  });
+  const readOnlyReason = useKindWriteRefusal("contact", shownRow);
   const refusedReasonId = readOnlyReason ? readOnlyReasonId : undefined;
   // A live contact states its read-only sentence in the left card's
   // footnote; the archived page has no such card, so its band states it.
@@ -185,6 +188,7 @@ export function ContactPageV2({
     onOpen: () => openComposer(""),
     readOnlyReason: record.data?.archived_at ? readOnlyReason : undefined,
     readOnlyReasonId,
+    readOnlyMore: mergedInto(record.data),
   });
 
   const archived = archivedContactRow(record);
@@ -245,10 +249,7 @@ export function ContactPageV2({
     />
   );
 
-  const openTab = (next: ContactTab) => {
-    navigateKeepingReturn(contactTabRoute(id, next));
-    scrollPageToTop();
-  };
+  const openTab = (next: ContactTab) => openContactTab(id, next);
 
   return (
     <div className="wrap">

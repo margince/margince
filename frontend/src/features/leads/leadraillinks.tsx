@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
-import { ListPopover } from "../../design-system/listpopover";
+import {
+  ListPopover,
+  type ListPopoverOption,
+} from "../../design-system/listpopover";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
@@ -127,38 +130,48 @@ function LeadProjectBody({ lead }: Readonly<{ lead: Lead }>) {
   return isEmpty ? <p>{t("lead.rail.project.empty")}</p> : null;
 }
 
-// Shares the Details project row's writer, so both send one If-Match.
+// One writer with the details' Project flow, so both send one If-Match.
 // Picking is the act: the list closes once stored and stays open on a refusal.
+function useProjectPick(lead: Lead, writer: LeadWriter) {
+  const t = useT();
+  const title = lead.project_id
+    ? t("lead.rail.project.change")
+    : t("lead.rail.project.attach");
+  // THIS write's own outcome, not any write on the lead: the mutation is
+  // shared with the details and the ladder.
+  const thisWrite =
+    writer.patch.variables?.body !== undefined &&
+    "project_id" in writer.patch.variables.body;
+  const failed = writer.patch.isError && thisWrite;
+  return {
+    title,
+    searchLabel: t("projectLinks.searchLabel"),
+    search: searchProjectReferences,
+    selected: lead.project_id ?? undefined,
+    onPick: (option: ListPopoverOption, done: () => void) => {
+      if (option.id === lead.project_id) {
+        done();
+        return;
+      }
+      writer.save({ project_id: option.id }, { onSuccess: done });
+    },
+    pending: writer.patch.isPending,
+    error: failed ? problemMessageOf(writer.patch.error, t) : undefined,
+  };
+}
+
 export function LeadProjectAttachButton({
   lead,
   writer,
   reasonId,
 }: Readonly<{ lead: Lead; writer: LeadWriter; reasonId?: string }>) {
-  const t = useT();
   const [open, setOpen] = useState(false);
-  const label = lead.project_id
-    ? t("lead.rail.project.change")
-    : t("lead.rail.project.attach");
-  // THIS write's own outcome, not any write on the lead: the mutation is
-  // shared with the Details card and the ladder, so `isSuccess`/`isError`
-  // alone would react to a save this picker never made (LeadScoreCard states
-  // the same rule for its own override save).
-  const thisWrite =
-    writer.patch.variables?.body !== undefined &&
-    "project_id" in writer.patch.variables.body;
-  const saved = writer.patch.isSuccess && thisWrite;
-  const failed = writer.patch.isError && thisWrite;
-  useEffect(() => {
-    if (saved) {
-      setOpen(false);
-    }
-  }, [saved]);
+  const pick = useProjectPick(lead, writer);
   return (
     <div className="card-actions">
       <ListPopover
-        label={label}
-        title={label}
-        searchLabel={t("projectLinks.searchLabel")}
+        {...pick}
+        label={pick.title}
         reasonId={reasonId}
         open={open}
         onOpenChange={(next) => {
@@ -166,19 +179,35 @@ export function LeadProjectAttachButton({
             setOpen(next);
           }
         }}
-        search={searchProjectReferences}
-        selected={lead.project_id ?? undefined}
-        onPick={(option, done) => {
-          if (option.id === lead.project_id) {
-            done();
-            return;
-          }
-          writer.save({ project_id: option.id });
-        }}
-        pending={writer.patch.isPending}
-        error={failed ? problemMessageOf(writer.patch.error, t) : undefined}
       />
     </div>
+  );
+}
+
+/** The same project search, opened by the details' Edit. */
+export function LeadProjectPicker({
+  lead,
+  writer,
+  open,
+  onClose,
+}: Readonly<{
+  lead: Lead;
+  writer: LeadWriter;
+  open: boolean;
+  onClose: () => void;
+}>) {
+  const pick = useProjectPick(lead, writer);
+  return (
+    <ListPopover
+      {...pick}
+      opener="caller"
+      open={open}
+      onClose={() => {
+        if (!writer.patch.isPending) {
+          onClose();
+        }
+      }}
+    />
   );
 }
 

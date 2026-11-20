@@ -44,6 +44,8 @@ export type StagedDecision = Readonly<{
 export type DecisionDeckChips = Readonly<{
   acceptLabel?: string;
   canAccept?: boolean;
+  /** False when the proposal is answered yes or no, with nothing to edit. */
+  canEdit?: boolean;
   detail?: ReactNode;
   meta?: ReactNode;
   aside?: ReactNode;

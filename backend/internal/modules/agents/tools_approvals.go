@@ -67,8 +67,15 @@ type StagedApproval struct {
 	CreatedAt time.Time `json:"created_at"`
 	// ExpiresAt is when the proposal lapses. A lapsed item is not decidable and
 	// reads as expired here before any sweep has run.
-	ExpiresAt      *time.Time       `json:"expires_at,omitempty"`
-	DecidedAt      *time.Time       `json:"decided_at,omitempty"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	DecidedAt *time.Time `json:"decided_at,omitempty"`
+	// AwaitingAgent is true on an approved proposal the staging agent has not
+	// yet run. Approving only lets that agent repeat its call, so nothing has
+	// changed until it does.
+	AwaitingAgent bool `json:"awaiting_agent,omitempty"`
+	// EffectFailure is the sentence for an approved decision whose work did not
+	// run. Absent when the work ran or has not been tried.
+	EffectFailure  string           `json:"effect_failure,omitempty"`
 	DecidedBy      *ids.UUID        `json:"decided_by,omitempty"`
 	DiffHash       string           `json:"diff_hash,omitempty"`
 	Evidence       []StagedEvidence `json:"evidence,omitempty"`

@@ -52,7 +52,7 @@ function invalidateProject(
   queryClient: ReturnType<typeof useQueryClient>,
   projectId: string,
 ) {
-  queryClient.invalidateQueries({ queryKey: project360Key(projectId) });
+  return queryClient.invalidateQueries({ queryKey: project360Key(projectId) });
 }
 
 async function searchContacts(query: string): Promise<RecordPickerCandidate[]> {
@@ -97,8 +97,8 @@ export function AddProjectStakeholder({
         }),
       );
     },
-    onSuccess: () => {
-      invalidateProject(queryClient, projectId);
+    onSuccess: async () => {
+      await invalidateProject(queryClient, projectId);
       close();
     },
   });
@@ -204,8 +204,8 @@ export function RemoveProjectStakeholder({
         }),
       );
     },
-    onSuccess: () => {
-      invalidateProject(queryClient, projectId);
+    onSuccess: async () => {
+      await invalidateProject(queryClient, projectId);
       setOpen(false);
     },
   });

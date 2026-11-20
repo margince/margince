@@ -55,7 +55,7 @@ func TestNoticeReconciliationRetractsDecidedExpiredAndSupersededProposals(t *tes
 func stageRevisedNoticeCorrection(t *testing.T, a approvalNotifyEnv) {
 	t.Helper()
 	proposal, err := json.Marshal(deals.CloseDateCorrection{
-		DealID: ids.From[ids.DealKind](a.deal), ExpectedCloseDate: "2027-01-01", Basis: "The buyer confirmed a later date",
+		DealID: ids.From[ids.DealKind](a.deal), ExpectedCloseDate: closeDateAhead(t), Basis: "The buyer confirmed a later date",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -79,7 +79,7 @@ func TestNoticeReconciliationDoesNotRestoreErasedProposalEvidence(t *testing.T) 
 	subject, activity, _ := transcriptSubject(t, a.e)
 	_, staged := a.stage(a.proposerCtx(ids.Nil), t, approvals.StageInput{
 		Kind: deals.CloseDateCorrectionKind, TargetType: "deal", TargetID: a.deal,
-		ProposedChange: json.RawMessage(`{"deal_id":"` + a.deal.String() + `","expected_close_date":"2027-01-01","basis":"The buyer confirmed a later date"}`),
+		ProposedChange: json.RawMessage(`{"deal_id":"` + a.deal.String() + `","expected_close_date":"` + closeDateAhead(t) + `","basis":"The buyer confirmed a later date"}`),
 		DiffHash:       "private-quote", Summary: quotedTranscriptLine,
 		Evidence: []approvals.Evidence{{Snippet: quotedTranscriptLine, SourceType: transcriptTargetType, SourceID: activity}},
 	})

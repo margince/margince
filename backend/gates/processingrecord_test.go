@@ -40,7 +40,7 @@ import (
 // language not listed here is not exempt — it is unwritten, and adding one adds
 // it here.
 var processingRecords = []string{
-	"../extensions/de/documents/de/verarbeitungsverzeichnis-und-dsfa.md",
+	"../extensions/eu/documents/de/de/verarbeitungsverzeichnis-und-dsfa.md",
 }
 
 // citedGoFile matches a backtick-quoted Go path in the record's prose, which is

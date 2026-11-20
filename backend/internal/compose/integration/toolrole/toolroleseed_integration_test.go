@@ -146,7 +146,7 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *record
 		return post("/v1/activities", integration.AnyMap{"kind": "task", "subject": "Role sweep"})
 	}
 	create["attachment"] = func() string {
-		status, raw := apptest.UploadAs(t, e, nil, "company", create["company"](), []byte("PDF"))
+		status, raw := apptest.UploadAs(t, e, nil, "company", create["company"](), []byte("%PDF-1.4"))
 		if status != http.StatusCreated {
 			t.Fatalf("seeding an attachment → %d %s", status, raw)
 		}

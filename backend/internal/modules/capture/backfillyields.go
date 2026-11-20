@@ -38,10 +38,10 @@ type BackfillYields struct {
 // connectionForUser under the calling human's own user_id in the same
 // transaction. The scope is inherited from the resolve, not applied by the
 // database — core 0217 retired the policies that used to apply one.
-func (r *Registry) BackfillYields(ctx context.Context, provider string, userID ids.UserID) (BackfillYields, error) {
+func (r *Registry) BackfillYields(ctx context.Context, mailbox Mailbox, userID ids.UserID) (BackfillYields, error) {
 	var y BackfillYields
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		connID, err := r.connectionForUser(ctx, tx, provider, userID)
+		connID, err := r.connectionForUser(ctx, tx, mailbox, userID)
 		if err != nil {
 			return err
 		}

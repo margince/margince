@@ -224,6 +224,11 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 		return "This installation does not offer what this call needs, so nothing was changed and no argument " +
 			"would change that. (" + explained + ") Do not retry; tell the user it is not available here."
 	}
+	if fault.Code == httperr.CodeAINotConfigured {
+		// Nothing about the call is wrong: the installation has no AI model.
+		return "No AI model is connected to this installation, so nothing was changed and no argument would " +
+			"change that. (" + explained + ") Do not retry; tell the user to connect an AI model under Settings, AI."
+	}
 	if fault.Transient() {
 		return "This tool is temporarily unavailable — nothing was changed. (" + explained + ") " +
 			"The same call can succeed later; wait before retrying, and tell the user if they are waiting on it."
@@ -434,9 +439,14 @@ func stagedReleasePath(staged *workflow.StagedApprovalError) string {
 // AN EMPTY REFERENCE APPENDS NOTHING. Most faults carry none, and a trailing
 // "review:" with nothing after it is worse than silence.
 func faultReferenceSuffix(fault httperr.Fault) string {
-	if len(fault.Details) == 0 {
-		return ""
+	suffix := reviewSuffix(fault)
+	if grant, ok := fault.Details["missing_grant"].(string); ok && grant != "" {
+		suffix += " (missing grant " + echoSafe(grant, maxBadArgsDetail) + "; an admin changes your roles to allow it)"
 	}
+	return suffix
+}
+
+func reviewSuffix(fault httperr.Fault) string {
 	reference, ok := fault.Details["review_id"].(string)
 	if !ok || reference == "" {
 		return ""

@@ -167,13 +167,12 @@ func TestPublishedVocabularyDerivesFromTheSeamSource(t *testing.T) {
 	}
 }
 
-// TestDeManifestMatchesItsDerivation binds the committed artifact to the
-// committed declaration: de is a jurisdiction-only pack (passive policy,
-// requesting no risk tier), so its manifest is identity with an empty
-// risk-tiers list.
-func TestDeManifestMatchesItsDerivation(t *testing.T) {
-	assertCommittedManifest(t, filepath.Join(repoRoot, "extensions", "de"), "de",
-		`"name": "de"`, `"version": "1.0.0"`, `"risk_tiers": []`)
+// TestEuManifestMatchesItsDerivation binds the committed artifact to the
+// committed declaration. eu holds jurisdiction packs only and requests no risk
+// tier, so its manifest is its identity with an empty risk-tiers list.
+func TestEuManifestMatchesItsDerivation(t *testing.T) {
+	assertCommittedManifest(t, filepath.Join(repoRoot, "extensions", "eu"), "eu",
+		`"name": "eu"`, `"version": "1.0.0"`, `"risk_tiers": []`)
 }
 
 // TestEveryFixtureManifestMatchesItsDerivation enrols the fixture tree the way

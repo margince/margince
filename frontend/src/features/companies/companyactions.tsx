@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { CreateAction, type CreateField } from "../../components/create";
-import { currencyField } from "../../components/currencyfield";
+import { amountField, currencyField } from "../../components/currencyfield";
 import { useDealCreateFields } from "../../components/dealcreatefields";
 import { useOwnerPicker } from "../../components/recordowners";
 import { useLocale, useT } from "../../i18n";
@@ -15,6 +15,7 @@ import {
   pipelinesOptions,
 } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useProjectCreateForm } from "../projects/projects.create";
 
 /**
@@ -57,15 +58,21 @@ export function NewDealAction({
   }
 
   const fields: CreateField[] = [
-    { key: "name", label: "create.dealName", required: true },
     {
-      key: "amount",
-      label: "create.amount",
-      type: "number",
-      step: "0.01",
-      min: "0",
-      wireField: "amount_minor",
+      key: "name",
+      label: "create.dealName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
     },
+    amountField(
+      { key: "amount", label: "create.amount", wireField: "amount_minor" },
+      {
+        currency: (values) => values.currency || leading[0],
+        locale,
+        t,
+        nonNegative: true,
+      },
+    ),
     currencyField(leading, locale),
     {
       key: "stage_id",
@@ -90,6 +97,7 @@ export function NewDealAction({
           { ...values, company_id: companyId, project_id: projectId ?? "" },
           pipeline.id,
           leading[0],
+          locale,
         ),
       }),
       t,
@@ -99,6 +107,7 @@ export function NewDealAction({
   return (
     <CreateAction
       label={t("co.deal.new", { name: companyName })}
+      requires={{ object: "deal", action: "create" }}
       // The page that offered the verb is the page that has to show the deal.
       invalidate={projectId ? "project" : "company360"}
       screen="deals"
@@ -146,6 +155,7 @@ function NewProjectDialog({
   return (
     <CreateAction
       label={t("co.project.new", { name: companyName })}
+      requires={{ object: "project", action: "create" }}
       // The record that offered the verb is the record that has to show the
       // project.
       invalidate="company360"

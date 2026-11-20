@@ -184,7 +184,7 @@ func consumeInstructionTx(
 		// supposed to prevent. Refusing is the safe direction: a send that
 		// cannot record its own authority must not go.
 		return fmt.Errorf(
-			"consent: the decision was no longer live when the message was staged: %w",
+			"the decision was no longer live when the message was staged: %w",
 			apperrors.ErrConflict)
 	}
 	// THE REVIEW IS FINISHED, because the message it was about has gone.
@@ -276,12 +276,8 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 
 // HeldMessageForReview answers which held message a review is about.
 //
-// NOT SCOPED TO THE INITIATOR, unlike ReviewForInitiator beside it, and the
-// difference is the whole point of a reviewer path: directing a send is
-// precisely the act of somebody OTHER than the sender deciding. Scoping this to
-// the seat that pressed Send would make every review directable only by the
-// human who was already refused — which is the one human the design does not
-// rely on.
+// Not scoped to the initiator, unlike ReviewForInitiator beside it. A colleague
+// who may read the review is refused by name later (directableReview.admits).
 //
 // WHAT IT DISCLOSES IS AN ID AND NOTHING ELSE. No address, no subject, no
 // reason: a caller learns that this review holds a message, which is what they

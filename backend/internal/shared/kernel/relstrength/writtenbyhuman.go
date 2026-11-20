@@ -73,13 +73,29 @@ func OriginIsEngagementSQL(alias string) string {
 	return alias + ".origin NOT IN (" + sqlList(systemOrigins) + ")"
 }
 
-// WrittenByHumanSQL admits an activity row a human wrote. A call, meeting or
-// chat message passes unless the product wrote it. An email also needs no
-// calendar method, a sender that is not a sending system, and no
-// List-Unsubscribe header (BulkMailSQL).
+// SendingSystemSQL is Automatic naming AutomaticSendingSystem, over the stored
+// columns of activity alias.
+func SendingSystemSQL(alias string) string {
+	return "(" + OriginIsEngagementSQL(alias) + " AND " + alias + ".kind = '" + kindEmail + "' AND " +
+		"coalesce(" + alias + ".calendar_method, '') = '' AND " + alias + ".sender_is_machine)"
+}
+
+// WrittenByHumanSQL admits an activity row a human wrote to the other side. A
+// call, meeting or chat message passes unless the product wrote it. An email
+// also needs no calendar method and a sender that is not a sending system. It
+// carries no List-Unsubscribe header (BulkMailSQL) and is no forward to self
+// (ForwardToSelfSQL).
 func WrittenByHumanSQL(alias string) string {
-	return "(" + OriginIsEngagementSQL(alias) + " AND NOT " + BulkMailSQL(alias) + " AND (" + alias + ".kind <> '" + kindEmail +
-		"' OR (NOT " + alias + ".sender_is_machine AND " + alias + ".calendar_method IS NULL)))"
+	return "(" + OriginIsEngagementSQL(alias) + " AND NOT " + BulkMailSQL(alias) + " AND NOT " + ForwardToSelfSQL(alias) +
+		" AND (" + alias + ".kind <> '" + kindEmail + "' OR (NOT " + alias + ".sender_is_machine AND " + alias + ".calendar_method IS NULL)))"
+}
+
+// ForwardToSelfSQL admits mail a seat forwarded to their own address. It is
+// filed under the customer it carries, but nobody wrote to or heard from them.
+// So no reply, waiting or engagement reader may count it. Evidence.Automatic
+// does not name it: a human did write it.
+func ForwardToSelfSQL(alias string) string {
+	return alias + ".forwarded_to_self"
 }
 
 // BulkMailSQL admits an email that carried a List-Unsubscribe header

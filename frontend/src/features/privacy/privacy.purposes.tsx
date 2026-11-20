@@ -21,11 +21,16 @@ import { Heading } from "../../design-system/heading";
 import { CellStrip } from "../../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
-import { unwrap } from "../../lib/problem";
+import {
+  fieldCheckSentence,
+  refusalSentences,
+  unwrap,
+} from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import "./privacy.css";
 
@@ -58,12 +63,22 @@ function isFrequency(value: string): value is Frequency {
   return Object.hasOwn(FREQUENCY_LABEL, value);
 }
 
+// The key as the server stores and compares it: trimmed, in lower case.
+function purposeKey(typed: string): string {
+  return typed.trim().toLowerCase();
+}
+
 // Four inputs committed together. A stale create error must not outlive the
 // edit that could fix it, so every change clears it first.
-function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
+function PurposeCreateForm({
+  purposes,
+  onDone,
+}: Readonly<{ purposes: readonly ConsentPurpose[]; onDone: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<PurposeDraft>(EMPTY_DRAFT);
+  const [faults, faultsRoot] = useFieldFaults();
   const formId = useId();
 
   const create = useMutation({
@@ -88,24 +103,59 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
 
   function edit(next: Partial<PurposeDraft>) {
     setDraft((was) => ({ ...was, ...next }));
+    for (const field of Object.keys(next)) faults.edited(field);
     if (create.isError) {
       create.reset();
     }
   }
 
-  const ready = draft.key.trim() !== "" && draft.label.trim() !== "";
+  const labels = {
+    key: t("privacy.purposeKey"),
+    label: t("privacy.purposeLabel"),
+    frequency: t("privacy.purposeFrequency"),
+  };
+  const holder = purposes.find(
+    (purpose) => purpose.key === purposeKey(draft.key),
+  );
+  const conflict = {
+    field: "key",
+    sentence: holder
+      ? t("privacy.purposeKeyTaken", { label: holder.label })
+      : t("privacy.purposeKeyTakenUnnamed"),
+  };
+  const refused = (error: unknown) =>
+    refusalSentences(error, t, labels, { conflict });
+
+  function checked(): ReadonlyMap<string, string> {
+    const checks = new Map<string, string>();
+    if (draft.key.trim() === "") {
+      checks.set("key", fieldCheckSentence("required", locale, labels.key));
+    } else if (holder) {
+      checks.set("key", conflict.sentence);
+    }
+    if (draft.label.trim() === "") {
+      checks.set("label", fieldCheckSentence("required", locale, labels.label));
+    }
+    return checks;
+  }
+
+  const rest = refused(create.error).rest;
   return (
     <>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          if (ready && !create.isPending) create.mutate(draft);
+          if (create.isPending || faults.show(checked())) return;
+          create.mutate(draft, {
+            onError: (error) => faults.show(refused(error).byField),
+          });
         }}
       >
         <p>{t("privacy.purposeAppendOnly")}</p>
-        <Field label={t("privacy.purposeKey")}>
+        <Field label={labels.key} error={faults.of("key")}>
           {(control) => (
             <TextInput
               {...control}
@@ -114,7 +164,7 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
             />
           )}
         </Field>
-        <Field label={t("privacy.purposeLabel")}>
+        <Field label={labels.label} error={faults.of("label")}>
           {(control) => (
             <TextInput
               {...control}
@@ -123,7 +173,7 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
             />
           )}
         </Field>
-        <Field label={t("privacy.purposeFrequency")}>
+        <Field label={labels.frequency} error={faults.of("frequency")}>
           {(control) => (
             <Select
               {...control}
@@ -145,14 +195,14 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
           checked={draft.requiresDoi}
           onChange={(event) => edit({ requiresDoi: event.target.checked })}
         />
-        <ErrorLine error={create.error} />
+        {rest && <ErrorLine>{rest}</ErrorLine>}
       </form>
       <div className="actions">
         <Button
           type="submit"
           form={formId}
           variant="primary"
-          disabled={!ready || create.isPending}
+          disabled={create.isPending}
         >
           {t("privacy.purposeCreate")}
         </Button>
@@ -215,7 +265,10 @@ export function ConsentPurposesCard() {
         <Heading size="large" id={addTitleId} className="t-h2 modal-title">
           {t("privacy.addPurpose")}
         </Heading>
-        <PurposeCreateForm onDone={() => setAdding(false)} />
+        <PurposeCreateForm
+          purposes={purposes}
+          onDone={() => setAdding(false)}
+        />
       </Modal>
     </Panel>
   );

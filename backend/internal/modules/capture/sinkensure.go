@@ -216,7 +216,8 @@ func (s *Sink) decideCorrespondent(ctx context.Context, tx pgx.Tx, rec connector
 		return counterpartyDecision{}, err
 	}
 	corresponded := dealt.positive()
-	decision.create, decision.replied = dealt.create, dealt.replied
+	// A forward to self is the seat filing the original's sender by hand.
+	decision.create, decision.replied = dealt.create || forwardedOriginalOf(rec) != nil, dealt.replied
 	roleMailbox := refusesToNameAContact(cp.Email, dealt.exchanged)
 	if roleMailbox {
 		decision.create = false
@@ -289,7 +290,7 @@ func (s *Sink) decideCorrespondent(ctx context.Context, tx pgx.Tx, rec connector
 func (s *Sink) alreadyDecided(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, email string, activityID ids.UUID,
 ) (known, settled bool, reason string, err error) {
-	prior, err := s.priorDispositionTx(ctx, tx, email)
+	prior, err := priorDispositionTx(ctx, tx, email)
 	if err != nil {
 		return false, false, "", err
 	}
@@ -341,7 +342,7 @@ const priorKnownNonContact = "known_noncontact"
 // known correspondence — auto-creating every later bulk mail from it and
 // switching off the noise sweep for it for good. It still identifies the
 // contact; it just does not speak here.
-func (s *Sink) priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) (string, error) {
+func priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) (string, error) {
 	normalized := normalizeEmail(email)
 	if normalized == "" {
 		return "", nil
@@ -352,6 +353,14 @@ func (s *Sink) priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) 
 		return "", fmt.Errorf("capture: reading the prior disposition: %w", err)
 	}
 	return status, nil
+}
+
+// senderSuppressedTx is the suppression verdict as the ledger keeps it. Every
+// writer that files a mail after its capture asks it, so a suppressed mail
+// stays filed under nobody it names (sinkmaillinks.go).
+func senderSuppressedTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	prior, err := priorDispositionTx(ctx, tx, email)
+	return prior == PendingStatusSuppressed, err
 }
 
 // capturePrincipal resolves the acting connector and the human it acts for.

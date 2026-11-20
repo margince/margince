@@ -414,7 +414,7 @@ type Server struct {
 	// and /metrics still reports the single honest total exactly once.
 	// Both binaries set it unconditionally; nil is the tests-only path.
 	aiMetrics func(io.Writer)
-	aiState   string // the /readyz AI line (aistate.go); never a readiness gate
+	aiState   func() string // the /readyz AI line (aistate.go); never a readiness gate
 
 	// licensePosture answers this installation's entitlement at scrape time,
 	// set by WithLicensePosture. A function rather than a value because the

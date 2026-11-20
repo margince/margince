@@ -661,12 +661,13 @@
   margin-block-start: var(--space-6);
 }
 
-/* The details card's sections, at a tighter step than the stack above: a
-   detail is a glance and a feed card is something you read. */
+/* The details card's panes, closer than a feed's stack: a detail is a glance.
+   The narrow inset leaves the panes most of the card's width. */
 .record-aside {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  padding: var(--space-3);
 }
 
 /* The dials above the chronology: the cuts, then the narrowing. Its own
@@ -941,6 +942,13 @@
   display: grid;
   grid-template-columns: 140px 1fr;
   gap: 8px 16px;
+}
+/* A value that is a list of its own, such as a partner's open tasks, needs
+ * the panel's width on a phone, so below the fold it goes under its term. */
+@media (max-width: 720px) {
+  .detail-grid > .detail-grid-wide {
+    grid-column: 1 / -1;
+  }
 }
 
 /* A timeline list whose rows carry no date gutter or rail of their own —

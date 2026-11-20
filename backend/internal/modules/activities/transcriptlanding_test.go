@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // The three conditions that decide whether a landed activity is read.
@@ -113,5 +114,12 @@ func TestEveryActivityEntryPointOffersTheReading(t *testing.T) {
 			t.Errorf("%s does not route through logActivityAndReadTranscript, "+
 				"so a transcript arriving through it is never read", door)
 		}
+	}
+}
+
+// A transcript landing with no AI connected is stored and simply not read.
+func TestATranscriptLandingWithNoModelIsStillStored(t *testing.T) {
+	if err := skipARefusedReading(httperr.ErrNotConfigured); err != nil {
+		t.Fatalf("no model failed the write with %v; it must only skip the reading", err)
 	}
 }

@@ -67,7 +67,7 @@ func TestEveryAttachmentMutationStatesItselfOnTheBus(t *testing.T) {
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Bus Attach", &e.Rep1)
 
-	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(), "redundancy letter Weber.pdf", []byte("PDF-BYTES"))
+	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(), "redundancy letter Weber.pdf", []byte("%PDF-1.4 BYTES"))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()
@@ -105,8 +105,8 @@ func TestEveryAttachmentMutationStatesItselfOnTheBus(t *testing.T) {
 		t.Errorf("the payload names parent %v/%v, want contact/%s",
 			payload["parent_type"], payload["parent_id"], contact)
 	}
-	if payload["byte_size"] != float64(len("PDF-BYTES")) {
-		t.Errorf("the payload states byte_size %v, want %d", payload["byte_size"], len("PDF-BYTES"))
+	if payload["byte_size"] != float64(len("%PDF-1.4 BYTES")) {
+		t.Errorf("the payload states byte_size %v, want %d", payload["byte_size"], len("%PDF-1.4 BYTES"))
 	}
 
 	// the point of the payload's shape. A filename is text somebody typed and

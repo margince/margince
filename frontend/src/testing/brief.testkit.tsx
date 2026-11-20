@@ -9,7 +9,7 @@ import type { Receipt } from "../lib/handled";
 import { receiptAuditId } from "../lib/receiptstate";
 import { readingsDay } from "./brief.fixtures";
 import { noCustomerPayments } from "./customerpayments.fixtures";
-import { meFixture } from "./mefixture";
+import { meFixture, READS_RECORDS } from "./mefixture";
 
 // Brief's suites share one harness, because they share one screen.
 //
@@ -81,7 +81,7 @@ const DEFAULTS: Routes = {
   "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
   "GET /finance/customer-payments": () => jsonResponse(noCustomerPayments),
   "GET /link-suggestions": () => jsonResponse({ data: [] }),
-  "GET /me": () => jsonResponse(meFixture()),
+  "GET /me": () => jsonResponse(meFixture({ allow: READS_RECORDS })),
   "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
   // The Brief's strip, sentence and Do next section are all drawn from this ONE
   // answer, so an unrouted read has to reply with the real shape. The generic
@@ -109,10 +109,10 @@ const DEFAULTS: Routes = {
       bundles: [],
       truncated: false,
     }),
-  // The receipt at the foot of the page. Every lane, `totals` and both caveat
-  // lists are required by the contract, so the generic empty page would fail
-  // the panel in a way no server could produce — the same reason /worklist is
-  // answered above. A QUIET receipt: nothing ran, and nothing was withheld.
+  // The receipt of recent changes. Every lane, `totals`, `not_shown` and
+  // `sources_unavailable` are required by the contract, so the generic empty
+  // page would fail the panel in a way no server could produce. A QUIET
+  // receipt: nothing ran, and nothing was withheld.
   "GET /magic": () =>
     jsonResponse({
       as_of: "2026-09-13T08:00:00Z",

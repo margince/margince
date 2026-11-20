@@ -35,11 +35,16 @@
   column-gap: var(--space-2);
   /* The anatomy's row: --controlGap above and below a --fontBody line is the
      32px every option row in the product stands at. */
-  padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the option row's own optics, shared with Select's list */
+  padding: var(--controlGap) var(--suggestInlineInset);
   border-radius: var(--r-sm);
   font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   cursor: pointer;
+}
+/* On the rows rather than the popup: `ListPopover` draws the same rows. */
+.suggest-option,
+.suggest-group-label {
+  --suggestInlineInset: 9px; /* ds:ignore the option row's own optics, shared with Select's list */
 }
 .suggest-option-value {
   overflow: hidden;
@@ -69,4 +74,12 @@
   cursor: not-allowed;
   background: none;
   color: var(--textSecondary);
+}
+.suggest-group-label {
+  padding: var(--space-2) var(--suggestInlineInset) var(--space-1);
+  color: var(--textSecondary);
+}
+.suggest-group {
+  display: flex;
+  flex-direction: column;
 }

@@ -10,10 +10,27 @@ import {
   render,
   screen,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { dropKeptPlace, keepPlaceOnNextMove } from "../lib/scrollmemory";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
+
+// The mark the strip leaves for the page's scroll memory, watched as calls.
+vi.mock("../lib/scrollmemory", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/scrollmemory")>();
+  return {
+    ...actual,
+    keepPlaceOnNextMove: vi.fn(actual.keepPlaceOnNextMove),
+    dropKeptPlace: vi.fn(actual.dropKeptPlace),
+  };
+});
+
+beforeEach(() => {
+  vi.mocked(keepPlaceOnNextMove).mockClear();
+  vi.mocked(dropKeptPlace).mockClear();
+});
 
 afterEach(() => {
   cleanup();
@@ -129,6 +146,39 @@ describe("RecordTabs keeps pressable tabs when there is a choice", () => {
         .getByRole("button", { name: "Contacts" })
         .getAttribute("aria-pressed"),
     ).toBe("false");
+  });
+});
+
+describe("RecordTabs names what a count counts", () => {
+  function counted(countLabels?: Partial<Record<Body, string>>) {
+    render(
+      <LocaleProvider initial="en">
+        <RecordTabs
+          options={["overview", "contacts"]}
+          value="overview"
+          onChange={() => undefined}
+          labels={LABELS}
+          counts={{ contacts: 2 }}
+          countLabels={countLabels}
+        />
+      </LocaleProvider>,
+    );
+  }
+
+  it("speaks the label in place of the bare figure", () => {
+    counted({ contacts: "2 columns not imported" });
+    expect(
+      screen.getByRole("button", {
+        name: /^Contacts\s*, 2 columns not imported$/,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("speaks the figure alone when no label says what it counts", () => {
+    counted();
+    expect(
+      screen.getByRole("button", { name: /^Contacts\s*, 2$/ }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -294,5 +344,227 @@ describe("RecordTabs folds to one stable row", () => {
     expect(shown()).toEqual(["b"]);
     act(() => resized());
     expect(shown()).toEqual(["b"]);
+  });
+});
+
+// A page pane under the 50px top bar (`--topbarH`), standing at `offset`. Its
+// strip sits `stripTop` px below the pane's top edge; its offset clamps.
+function inPane(
+  stripTop: number,
+  { keepPlace = true, offset = 1000, routed = false } = {},
+) {
+  let bottom = 10_000;
+  let top = offset;
+  let arrival: number | null = null;
+  let stripAt = stripTop + offset;
+  let grownAbove = 0;
+  const writes: number[] = [];
+  let pane: HTMLElement | null = null;
+  function Live() {
+    const [value, setValue] = useState<Body>("overview");
+    return (
+      <div className="scroll" style={{ marginTop: "-50px" }}>
+        <RecordTabs
+          options={["overview", "contacts"]}
+          value={value}
+          onChange={(next) => {
+            setValue(next);
+            if (routed) window.location.hash = `#/companies/o-1/${next}`;
+            stripAt += grownAbove;
+            if (arrival !== null) {
+              bottom = arrival;
+              top = Math.min(top, bottom);
+            }
+          }}
+          keepPlace={keepPlace}
+          labels={LABELS}
+        />
+        <button type="button" onClick={() => setValue("overview")}>
+          Back
+        </button>
+      </div>
+    );
+  }
+  const view = render(
+    <LocaleProvider initial="en">
+      <Live />
+    </LocaleProvider>,
+  );
+  pane = view.container.querySelector<HTMLElement>(".scroll");
+  const row = view.container.querySelector<HTMLElement>(".recordtabs-row");
+  if (!pane || !row) {
+    throw new Error("the strip was not drawn inside its pane");
+  }
+  Object.defineProperty(pane, "scrollTop", {
+    configurable: true,
+    get: () => top,
+    set: (next: number) => {
+      writes.push(next);
+      top = Math.max(0, Math.min(next, bottom));
+    },
+  });
+  // A smooth scroll lands later, so a glide cannot pass for a jump.
+  const scrollTo = vi.fn((options?: ScrollToOptions | number) => {
+    const asked = typeof options === "object" ? (options.top ?? 0) : 0;
+    setTimeout(() => {
+      top = asked;
+    }, 50);
+  });
+  pane.scrollTo = scrollTo;
+  vi.spyOn(pane, "clientHeight", "get").mockReturnValue(844);
+  vi.spyOn(pane, "scrollHeight", "get").mockImplementation(() => bottom + 844);
+  vi.spyOn(pane, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, 0, 390, 844),
+  );
+  vi.spyOn(row, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(0, stripAt - top, 390, 44),
+  );
+  const scrolled = pane;
+  return {
+    pane: scrolled,
+    writes,
+    scrollTo,
+    unmount: view.unmount,
+    stripTop: () => row.getBoundingClientRect().top,
+    // The next tab draws more above the strip: a line under the record's name.
+    growAbove: (height: number) => {
+      grownAbove = height;
+    },
+    // The next body arrives short, and the browser pulls the offset up to it.
+    arriveShort: (height: number) => {
+      arrival = height;
+    },
+    // The body grows: its range widens and a node lands in the pane.
+    grow: async () => {
+      bottom = 10_000;
+      await act(async () => {
+        scrolled.append(document.createElement("div"));
+      });
+    },
+  };
+}
+
+const press = (name: string) =>
+  fireEvent.click(screen.getByRole("button", { name }));
+
+describe("RecordTabs keeps a record reader's place across a press", () => {
+  it("holds the offset through a new body that arrives short and grows", async () => {
+    const at = inPane(120);
+    at.arriveShort(200);
+    press("Contacts");
+    expect(at.writes).toEqual([1000]);
+    expect(at.pane.scrollTop).toBe(200);
+
+    await at.grow();
+    expect(at.pane.scrollTop).toBe(1000);
+  });
+
+  it("keeps the strip where it stood when the next tab draws more above it", () => {
+    const at = inPane(120);
+    at.growAbove(66);
+    press("Contacts");
+    expect(at.pane.scrollTop).toBe(1066);
+    expect(at.stripTop()).toBe(120);
+  });
+
+  it("lets go once the offset has landed", async () => {
+    const at = inPane(120);
+    at.arriveShort(200);
+    press("Contacts");
+    await at.grow();
+    // Dragged by its scrollbar, which no gesture listener sees on every engine.
+    at.pane.scrollTop = 50;
+
+    await at.grow();
+    expect(at.pane.scrollTop).toBe(50);
+    expect(at.writes).toEqual([1000, 1000, 50]);
+  });
+
+  it.each(["wheel", "pointerdown"] as const)(
+    "lets go once the reader takes hold with a %s",
+    async (gesture) => {
+      const at = inPane(120);
+      at.arriveShort(200);
+      press("Contacts");
+      fireEvent(at.pane, new Event(gesture));
+
+      await at.grow();
+      expect(at.pane.scrollTop).toBe(200);
+    },
+  );
+
+  it("lets go when the tab changes under it, as Back does", async () => {
+    const at = inPane(120);
+    at.arriveShort(200);
+    press("Contacts");
+    press("Back");
+
+    await at.grow();
+    expect(at.writes).toEqual([1000]);
+  });
+
+  it("lets go when the strip goes", async () => {
+    const at = inPane(120);
+    at.arriveShort(200);
+    press("Contacts");
+    at.unmount();
+
+    await at.grow();
+    expect(at.writes).toEqual([1000]);
+  });
+
+  it("jumps up just far enough to show a strip left above the screen", () => {
+    const at = inPane(-300);
+    press("Contacts");
+    // 300px above the pane's edge and 50 more under the bar.
+    expect(at.pane.scrollTop).toBe(650);
+    expect(at.scrollTo).not.toHaveBeenCalled();
+  });
+
+  it("leaves the pane to the page on a strip that does not keep the place", async () => {
+    const at = inPane(-300, { keepPlace: false });
+    at.arriveShort(200);
+    press("Contacts");
+
+    await at.grow();
+    expect(at.writes).toEqual([]);
+  });
+
+  it("does not move for a press on the tab already open", () => {
+    const at = inPane(-300);
+    press("Overview");
+    expect(at.writes).toEqual([]);
+  });
+});
+
+describe("RecordTabs marks a press for the page's scroll memory", () => {
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("marks a press on another tab that moves the address", () => {
+    inPane(120, { routed: true });
+    press("Contacts");
+    expect(keepPlaceOnNextMove).toHaveBeenCalledOnce();
+    expect(dropKeptPlace).not.toHaveBeenCalled();
+  });
+
+  it("takes the mark back when the tab lives in state and no address moved", () => {
+    inPane(120);
+    press("Contacts");
+    expect(keepPlaceOnNextMove).toHaveBeenCalledOnce();
+    expect(dropKeptPlace).toHaveBeenCalledOnce();
+  });
+
+  it("marks nothing for a press on the tab already open", () => {
+    inPane(120, { routed: true });
+    press("Overview");
+    expect(keepPlaceOnNextMove).not.toHaveBeenCalled();
+  });
+
+  it("marks nothing on a strip that does not keep the place", () => {
+    inPane(120, { keepPlace: false, routed: true });
+    press("Contacts");
+    expect(keepPlaceOnNextMove).not.toHaveBeenCalled();
   });
 });

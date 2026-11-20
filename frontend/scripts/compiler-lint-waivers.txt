@@ -16,7 +16,7 @@
 1 react-hooks/refs src/components/create.fields.ts
 1 react-hooks/refs src/components/listquery.tsx
 1 react-hooks/set-state-in-effect src/components/unsaved.tsx
-2 react-hooks/set-state-in-effect src/lib/scrollmemory.ts
+1 react-hooks/set-state-in-effect src/lib/scrollmemory.ts
 1 react-hooks/set-state-in-effect src/lib/viewport.ts
 1 react-hooks/set-state-in-effect src/design-system/airuntimechip.tsx
 1 react-hooks/set-state-in-effect src/design-system/anchoredpopup.ts
@@ -37,7 +37,7 @@
 3 react-hooks/refs src/design-system/rowtags.tsx
 1 react-hooks/set-state-in-effect src/design-system/scrollregion.ts
 2 react-hooks/refs src/design-system/selectlistbox.ts
-12 react-hooks/refs src/design-system/suggestlist.tsx
+11 react-hooks/refs src/design-system/suggestlist.tsx
 1 react-hooks/set-state-in-effect src/design-system/toast.tsx
 1 react-hooks/set-state-in-effect src/design-system/tokenspecimen.ts
 1 react-hooks/set-state-in-effect src/design-system/tooltip.tsx
@@ -55,14 +55,13 @@
 1 react-hooks/set-state-in-effect src/features/companies/company-context.tsx
 3 react-hooks/refs src/features/companies/companyheaderactions.tsx
 1 react-hooks/set-state-in-effect src/features/companies/companyvatmark.tsx
-6 react-hooks/refs src/features/mail/compose.tsx
 1 react-hooks/set-state-in-effect src/features/mail/composefiling.ts
 4 react-hooks/refs src/features/mail/composerecipientoffer.ts
 1 react-hooks/set-state-in-effect src/features/mail/composesaveddraft.tsx
-1 react-hooks/set-state-in-effect src/features/mail/composeschedule.tsx
 1 react-hooks/set-state-in-effect src/features/mail/composesend.ts
 5 react-hooks/refs src/features/mail/composetarget.ts
 1 react-hooks/set-state-in-effect src/features/mail/composetarget.ts
+6 react-hooks/refs src/features/mail/composewindow.tsx
 1 react-hooks/set-state-in-effect src/features/automations/connected-agents.tsx
 1 react-hooks/set-state-in-effect src/features/contacts/contactdrawers.tsx
 2 react-hooks/refs src/features/contacts/contactpage.drawers.tsx
@@ -78,7 +77,6 @@
 1 react-hooks/refs src/features/lists/filterview.tsx
 1 react-hooks/set-state-in-effect src/features/records/historyfields.tsx
 1 react-hooks/refs src/features/voice-knowledge/knowledge.documents.tsx
-1 react-hooks/set-state-in-effect src/features/leads/leadraillinks.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leads.actions.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leads.score.tsx
 1 react-hooks/refs src/features/leads/leadvocab.reasons.tsx

@@ -202,7 +202,7 @@ type ReadyCheck struct {
 // this NEVER gates: the embed store still serves N+1 reads correctly
 // under a stale binding, so a drifted or unreadable marker is
 // informational, not a reason to stop routing traffic here.
-func Readyz(aiState string, embedState func(context.Context) string, checks ...ReadyCheck) http.HandlerFunc {
+func Readyz(aiState func() string, embedState func(context.Context) string, checks ...ReadyCheck) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 		defer cancel()
@@ -228,8 +228,8 @@ func Readyz(aiState string, embedState func(context.Context) string, checks ...R
 		// it reports. The worker wires neither, and an empty "ai: " line is
 		// noise an operator has to learn to ignore — worse than silence,
 		// because it reads as a role whose AI state could not be determined.
-		if aiState != "" {
-			body.printf("ai: %s\n", aiState)
+		if aiState != nil {
+			body.printf("ai: %s\n", aiState())
 		}
 		// Nothing is READ for a probe whose reader is gone, the same rule the
 		// exposition takes: embedState resolves a marker, and resolving one

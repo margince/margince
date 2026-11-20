@@ -369,7 +369,8 @@ export function useVisibleSettingsTabs(
 }
 
 // A tab can ask whether the company-context card draws. That is a query, not a
-// fact of the build, so only the tab hooks carry it.
+// fact of the build, so only the tab hooks carry it. Every tab hook reads this
+// one: a tab judged on two contexts can be visible and read-only at once.
 function useTabContext(): CatalogContext {
   return {
     ...catalogContext(),
@@ -406,7 +407,7 @@ export function useOpensSettingsTab(): (
   tab: string,
 ) => boolean {
   const snapshot = useMe().data;
-  const companyContextShown = useCompanyContextShown();
+  const { companyContextShown } = useTabContext();
   // Stable per snapshot, so the palette's memo does not rebuild every render.
   return useCallback(
     (page: SettingsPageId, tab: string) => {
@@ -433,8 +434,8 @@ export function usePageReadOnly(
 ): boolean {
   const reach = useSettingsReach();
   const snapshot = useMe().data;
+  const context = useTabContext();
   return (
-    page !== undefined &&
-    tabReadsOnly(reach, page, tab, snapshot, catalogContext())
+    page !== undefined && tabReadsOnly(reach, page, tab, snapshot, context)
   );
 }

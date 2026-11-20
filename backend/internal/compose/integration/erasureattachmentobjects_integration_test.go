@@ -32,7 +32,7 @@ func (failingCopyScrub) ScrubDeliveryCopiesTx(context.Context, pgx.Tx, string, [
 func uploadSubjectFile(t *testing.T, e *Env, blob blobstore.Store, contact ids.UUID) (ids.UUID, string) {
 	t.Helper()
 	att, err := e.Activities.WithBlobstore(blob).UploadAttachment(e.Admin(), activities.AttachmentInput{
-		EntityType: "contact", EntityID: contact, Filename: "passport.pdf", Content: bytes.NewReader([]byte("subject bytes")),
+		EntityType: "contact", EntityID: contact, Filename: "passport.pdf", Content: bytes.NewReader([]byte("%PDF-1.4 subject")),
 	})
 	if err != nil {
 		t.Fatalf("UploadAttachment: %v", err)
@@ -49,7 +49,7 @@ func TestAFailedErasureKeepsTheAttachmentObjectItsRowNames(t *testing.T) {
 	contact := e.SeedContact(t, "Failed erasure", &e.Rep1)
 	file, key := uploadSubjectFile(t, e, blob, contact)
 
-	eraser := compose.ComposedEraser(e.Pool, blob, nil).
+	eraser := compose.ComposedEraser(e.Pool, blob).
 		WithRawCapturePurger(failingCopyScrub{compose.RawCapturePurgerFor(e.DB())})
 	if err := eraser.EraseContact(e.Admin(), contact, "subject request"); err == nil {
 		t.Fatal("the failure after the attachment step was hidden")

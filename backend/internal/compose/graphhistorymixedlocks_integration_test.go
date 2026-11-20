@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -86,7 +87,7 @@ func TestAMixedGraphBatchLocksItsHistoricalTargetsBeforeItsFirstFold(t *testing.
 	if err := <-result; err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.registry.CancelBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1)); err != nil {
+	if _, err := b.registry.CancelBackfill(b.human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep1)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {

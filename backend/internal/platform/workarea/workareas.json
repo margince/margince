@@ -64,6 +64,7 @@
     "acknowledgeCompanyView": "business",
     "acknowledgeContactView": "business",
     "activateHomeRepair": "operator",
+    "addAttachmentLink": "business",
     "addConsumerMailDomain": "workspace_settings",
     "addDealLine": "business",
     "addDealRoomDocument": "business",
@@ -365,6 +366,7 @@
     "getFollowUpSettings": "workspace_settings",
     "getForecast": "business",
     "getForecastAssurance": "business",
+    "getForecastFocus": "business",
     "getForecastMovement": "business",
     "getForecastStageChances": "business",
     "getHandledForYou": "business",
@@ -646,6 +648,7 @@
     "mergeMembers": "admin_settings",
     "mergeTags": "business",
     "messageAnchorCompanySiteRead": "workspace_settings",
+    "moveDealPipeline": "business",
     "nameSeats": "workspace_settings",
     "offerOwnershipTransfer": "business",
     "openDealRoomThread": "business",
@@ -934,6 +937,7 @@
     "acknowledgeCompanyView": "companies",
     "acknowledgeContactView": "contacts",
     "activateHomeRepair": "system_health",
+    "addAttachmentLink": "documents",
     "addConsumerMailDomain": "capture_rules",
     "addDealLine": "deals",
     "addDealRoomDocument": "deal_rooms",
@@ -1317,6 +1321,7 @@
     "getForecast": "forecast",
     "getForecastAssurance": "forecast",
     "getForecastAssuranceEnforcement": "forecast",
+    "getForecastFocus": "forecast",
     "getForecastMovement": "forecast",
     "getForecastStageChances": "forecast",
     "getHandledForYou": "worklist",
@@ -1661,6 +1666,7 @@
     "mergeTags": "tags",
     "messageAnchorCompanySiteRead": "company_profile",
     "messageOnboardingCompany": "company_profile",
+    "moveDealPipeline": "deals",
     "nameSeats": "members",
     "offerOwnershipTransfer": "sharing",
     "oidcSignInCallback": "sign_in",
@@ -1681,6 +1687,7 @@
     "previewAiBudget": "ai_models",
     "previewAiRouting": "ai_models",
     "previewAiTaskOverrides": "ai_models",
+    "previewAttachmentLink": "documents",
     "previewAutomation": "automations",
     "previewBookingReturn": "booking_pages",
     "previewBulkChange": "bulk",
@@ -1816,6 +1823,7 @@
     "resolveDealRoomThread": "deal_rooms",
     "resolveEntities": "search",
     "resolveInputCheck": "forecast",
+    "resolveRecipientCountries": "activities",
     "resolveSignal": "signals",
     "restoreCaptureOwnerIdentity": "capture_rules",
     "restoreCompanySuggestion": "companies",
@@ -1829,6 +1837,7 @@
     "restoreRelationshipNudge": "contacts",
     "restoreReportingReportRevision": "reports",
     "restoreRole": "members",
+    "restoreRoleGrants": "members",
     "restoreTag": "tags",
     "restoreTagApplication": "tags",
     "resumeDealRoom": "deal_rooms",
@@ -1931,6 +1940,7 @@
     "transferProjectOwnership": "projects",
     "undoActivityProjectFiling": "activities",
     "undoBulkChange": "bulk",
+    "undoDealPipelineMove": "deals",
     "undoDedupeDisposition": "duplicates",
     "undoImportRun": "imports",
     "undoMarginceChanges": "deals",
@@ -1947,6 +1957,7 @@
     "updateAgentClient": "agent_clients",
     "updateApprovalPreference": "agent_limits",
     "updateAttachmentMetadata": "documents",
+    "updateAutoApplyInstallation": "agent_limits",
     "updateAutomation": "automations",
     "updateAutonomy": "agent_limits",
     "updateCaptureSettings": "capture_rules",
@@ -2203,6 +2214,9 @@
       "deals"
     ],
     "attach_document": [
+      "documents"
+    ],
+    "attach_link": [
       "documents"
     ],
     "backfill_employment_import": [
@@ -2772,6 +2786,9 @@
     "get_finance_source": [
       "finance_source"
     ],
+    "get_forecast_focus": [
+      "forecast"
+    ],
     "get_forecast_stage_chances": [
       "forecast"
     ],
@@ -3287,6 +3304,9 @@
     ],
     "message_anchor_company_site_read": [
       "company_profile"
+    ],
+    "move_deal_pipeline": [
+      "deals"
     ],
     "offer_ownership_transfer": [
       "sharing"
@@ -4323,6 +4343,9 @@
     "attach_document": [
       "business"
     ],
+    "attach_link": [
+      "business"
+    ],
     "backfill_employment_import": [
       "business"
     ],
@@ -4882,6 +4905,9 @@
     "get_finance_source": [
       "capture"
     ],
+    "get_forecast_focus": [
+      "business"
+    ],
     "get_forecast_stage_chances": [
       "business"
     ],
@@ -5386,6 +5412,9 @@
     ],
     "message_anchor_company_site_read": [
       "workspace_settings"
+    ],
+    "move_deal_pipeline": [
+      "business"
     ],
     "offer_ownership_transfer": [
       "business"

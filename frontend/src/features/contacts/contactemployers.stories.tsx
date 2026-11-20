@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -69,6 +71,22 @@ const meta: Meta<typeof Employers> = {
           relationship: ["read", "update", "create", "delete"],
           company: ["read"],
         }),
+        "GET /contacts/sample/employment-import": () =>
+          jsonResponse({
+            contact_id: "sample",
+            items: [
+              {
+                key: "bought",
+                company_name: "Bought History Company",
+                role: "Advisor",
+                provider: "surfe",
+                employment_status: "former",
+                state: "needs_match",
+                started: "2015-01",
+                ended: "2019-12",
+              },
+            ],
+          }),
       });
       return (
         <StoryProviders>
@@ -85,4 +103,44 @@ type Story = StoryObj<typeof meta>;
 export const GroupedRoles: Story = {};
 export const ReadOnly: Story = {
   args: { view: { ...view, contact: { ...view.contact, writable: false } } },
+};
+
+// Bought episodes still waiting for a company match are work history, so the
+// panel lists them and does not also call itself empty.
+export const OnlyImportedEpisodes: Story = {
+  args: {
+    view: {
+      ...view,
+      employments: { data: [], page: { has_more: false } },
+      provider_profiles: [
+        {
+          provider: "surfe",
+          state: "completed",
+          categories_not_requested: [],
+          emails: [],
+          mobile_phones: [],
+          departments: [],
+          seniorities: [],
+          job_history: [
+            { company_name: "Bought History Company", job_title: "Advisor" },
+          ],
+        },
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const panel = within(canvasElement);
+    await expect(
+      await panel.findByText("Bought History Company"),
+    ).toBeVisible();
+    await expect(panel.queryByText("No work history recorded yet.")).toBeNull();
+    await expect(
+      await panel.findByRole("button", { name: "Add company" }),
+    ).toBeVisible();
+  },
+};
+
+export const OnlyImportedEpisodesPhone: Story = {
+  ...OnlyImportedEpisodes,
+  tags: ["uat-phone"],
 };

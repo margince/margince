@@ -152,7 +152,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	}
 	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
 	topic, body := stringValue(activity.Subject), stringValue(activity.Body)
-	threaded := activity.Kind == crmcontracts.ActivityKindEmail && theirTurn(activity)
+	threaded := activity.Kind == crmcontracts.ActivityKindEmail && draftcore.FromThem(activity)
 	state := d.conversationState(ctx, activity)
 	envelope := d.envelope.Resolve(ctx, written, state)
 	recipient, surname := addressee.GreetingNames()
@@ -166,6 +166,8 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Band:      state.Band,
 		Threaded:  threaded,
 		Recipient: recipient,
+		LastName:  surname,
+		Formal:    envelope.Formal(),
 	})
 	data := replyActivityData{
 		// Already bounded: NewEnvelope caps the two identity fields, which are
@@ -249,7 +251,11 @@ func (d replyDrafter) recipientFor(ctx context.Context, anchor ids.ActivityID) a
 	if d.store == nil {
 		return activities.ReplyRecipient{}
 	}
-	recipient, err := d.store.ReplyRecipientFor(ctx, anchor)
+	covers, ok := d.ownCovers(ctx)
+	if !ok {
+		return activities.ReplyRecipient{}
+	}
+	recipient, err := d.store.ReplyRecipientFor(ctx, anchor, covers)
 	if err != nil {
 		d.logger().WarnContext(ctx, "reply recipient unavailable; drafting without a greeting name", "err", err)
 		return activities.ReplyRecipient{}
@@ -275,7 +281,7 @@ func (d replyDrafter) conversationState(ctx context.Context, activity crmcontrac
 	if occurredday.IsDay(activity.OccurredPrecision) {
 		occurred = occurredday.Begins(occurred, zone)
 	}
-	if theirTurn(activity) {
+	if draftcore.FromThem(activity) {
 		return convstate.Classify(d.envelope.Now(), occurred, time.Time{}, zone)
 	}
 	return convstate.Classify(d.envelope.Now(), time.Time{}, occurred, zone)
@@ -303,6 +309,21 @@ func activityLanguage(activity crmcontracts.Activity) string {
 	return string(*activity.Language)
 }
 
+// ownCovers is the predicate naming addresses that are ours by domain, nil when
+// no reader is wired. It is false when the domains cannot be read, and the
+// caller then drafts without an addressee.
+func (d replyDrafter) ownCovers(ctx context.Context) (func(address string) bool, bool) {
+	if d.colleagues == nil {
+		return nil, true
+	}
+	own, err := d.colleagues.Covers(ctx)
+	if err != nil {
+		d.logger().WarnContext(ctx, "colleague domains unavailable; drafting without an addressee", "err", err)
+		return nil, false
+	}
+	return own, true
+}
+
 // deliveredTo is the address and contact a reply to this activity is delivered
 // to, by the send path's own rule. It is zero when none can be named. The
 // contact's mail decides the language; the greeting answers another question.
@@ -310,29 +331,15 @@ func (d replyDrafter) deliveredTo(ctx context.Context, anchor ids.ActivityID) ac
 	if d.store == nil {
 		return activities.ReplyAddressee{}
 	}
-	var covers func(address string) bool
-	if d.colleagues != nil {
-		own, err := d.colleagues.Covers(ctx)
-		if err != nil {
-			d.logger().WarnContext(ctx, "colleague domains unavailable; reading the reply language without an addressee", "err", err)
-			return activities.ReplyAddressee{}
-		}
-		covers = own
+	covers, ok := d.ownCovers(ctx)
+	if !ok {
+		return activities.ReplyAddressee{}
 	}
 	to, err := d.store.ReplyAddresseeFor(ctx, anchor, covers)
 	if _, none := errors.AsType[*activities.NoReplyAddressError](err); err != nil && !none {
 		d.logger().WarnContext(ctx, "reply addressee unavailable; ranking inbound mail alike", "err", err)
 	}
 	return to
-}
-
-// theirTurn says the other side spoke last on this row.
-//
-// Who wrote it, not which way it travelled. A colleague's mail can arrive
-// inbound, and read as theirs it told the draft they had spoken last.
-func theirTurn(activity crmcontracts.Activity) bool {
-	ours, known := activities.WroteItOurSide(activity)
-	return known && !ours
 }
 
 func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (activity crmcontracts.Activity, written draftfloor.Written, err error) {
@@ -346,7 +353,10 @@ func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steer
 		return activity, written, err
 	}
 	return activity, draftfloor.Written{
-		Chosen:       steering.Language,
+		Chosen: steering.Language,
+		// The contact the mail is delivered to, so a CC or an internal sender
+		// never lends the draft its register.
+		Greeting:     delivery.GreetingRegister,
 		Addressee:    thread.addresseeEvidence(delivery.ContactID),
 		Stored:       activityLanguage(activity),
 		Body:         textlang.MessageOpening(stringValue(activity.Body), draftcore.LanguageEvidenceRunes),

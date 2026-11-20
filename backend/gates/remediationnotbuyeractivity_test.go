@@ -44,12 +44,21 @@ var recencyFloor = []string{
 	"last_activity_of_project",
 	"last_activity_of_activity",
 	"last_activity_of_company_activity",
+	"last_activity_of_deal_activity",
 }
+
+// dealClockFunctions also count mail limited to its participants, because such
+// a message still shows its deal was worked. They carry their own audience
+// clause by design, and the census asserts that one instead. They also carry
+// relstrength.DealEvidenceSQL, so a personal meeting moves no deal clock.
+var dealClockFunctions = []string{"last_activity_of_deal", "last_activity_of_deal_activity"}
 
 // recencyFunctionRe finds a recency function's definition or its drop, by the
 // prefix every one carries. A dropped function is not live, so it leaves the
 // census. Case and line breaks are free in SQL, so neither may hide one.
 var recencyFunctionRe = regexp.MustCompile(`(?i)(CREATE\s+(?:OR\s+REPLACE\s+)?|DROP\s+)FUNCTION\s+(?:IF\s+EXISTS\s+)?(last_activity_of_\w+)`)
+
+const dealClockAudienceClause = "a.audience IN ('workspace', 'participants')"
 
 const remediationOrigin = "system_remediation"
 
@@ -96,6 +105,18 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 		// see, and a careless replace here would re-open that. Asserting it
 		// arm-for-arm means this gate fails rather than the privacy test
 		// failing somewhere else.
+		if slices.Contains(dealClockFunctions, name) {
+			if audience := strings.Count(body, dealClockAudienceClause); audience < arms {
+				t.Errorf("%s: %d activity arm(s) but only %d %q filter(s) — a deal clock counts "+
+					"participants-only mail but never a selected audience's", name, arms, audience, dealClockAudienceClause)
+			}
+			if evidence := strings.Count(body, relstrength.DealEvidenceSQL("a")); evidence < arms {
+				t.Errorf("%s: %d activity arm(s) but only %d relstrength.DealEvidenceSQL clause(s), so a "+
+					"personal meeting keeps the deal warm. Replace the function in a new migration with %q in every arm",
+					name, arms, evidence, relstrength.DealEvidenceSQL("a"))
+			}
+			continue
+		}
 		if audience := strings.Count(body, workspaceAudienceClause); audience < arms {
 			t.Errorf("%s: %d activity arm(s) but only %d audience filter(s) — a "+
 				"replacement copied from a stale definition dropped one",
@@ -106,6 +127,13 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 
 // currentRecencyBodies returns each function's newest definition, keyed by name.
 func currentRecencyBodies(t *testing.T) map[string]string {
+	t.Helper()
+	return currentFunctionBodies(t, recencyFunctionRe)
+}
+
+// currentFunctionBodies is the live body of every function re names, read from
+// the migrations in apply order.
+func currentFunctionBodies(t *testing.T, re *regexp.Regexp) map[string]string {
 	t.Helper()
 	dir := filepath.Join("migrations", "core")
 	entries, err := gatekit.ReadDir(dir)
@@ -130,7 +158,7 @@ func currentRecencyBodies(t *testing.T) map[string]string {
 		}
 		// In statement order, so a file that drops one function and creates
 		// another leaves the census as the database does.
-		for _, m := range recencyFunctionRe.FindAllStringSubmatchIndex(string(raw), -1) {
+		for _, m := range re.FindAllStringSubmatchIndex(string(raw), -1) {
 			name := strings.ToLower(string(raw[m[4]:m[5]]))
 			if strings.EqualFold(string(raw[m[2]:m[2]+4]), "DROP") {
 				delete(bodies, name)

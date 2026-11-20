@@ -84,6 +84,12 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithConsumerMail(capture.MatcherTx)
 }
 
+// newBookerContacts is the contact path a public booking resolves its booker
+// through; rewireConfirmationLane rebuilds the booking edge with the same one.
+func newBookerContacts(pool *pgxpool.Pool) hostauthority.BookerContacts {
+	return hostauthority.BookerContacts{Store: newContactsStore(InstallationDB(pool)), Seats: identity.NewService(pool)}
+}
+
 // newActivitiesHandlers builds the timeline transport over the sibling
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
@@ -108,7 +114,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
-		WithPublicBooking(hostauthority.BookerContacts{Store: newContactsStore(InstallationDB(pool)), Seats: identity.NewService(pool)}, bookingConsentAdapter{
+		WithPublicBooking(newBookerContacts(pool), bookingConsentAdapter{
 			store: consent.NewStore(InstallationDB(pool)),
 		}).
 		// The RFC 8058 unsubscribe linker (B-E11.32): consent mints the
@@ -177,7 +183,7 @@ func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 
 // dealWorthTodaySQL is what the filter builder's deal amount compares: the
 // forecast's base value, priced at today's rate for an open deal.
-var dealWorthTodaySQL = deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "t")
+var dealWorthTodaySQL = deals.BaseValueSQL("now()", installationBaseCurrencySQL, "t")
 
 // installationBaseCurrencySQL reads the reporting currency inside the filter's
 // own statement, which the segment engine compiles without a Go-side bind.
@@ -251,7 +257,7 @@ func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.H
 		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
 	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
-		WithReaderRows(ForecastReaderContributions)
+		WithReaderRows(ForecastReaderContributions).WithGoalReadable(newReportingService(pool, now).GoalReadable)
 }
 
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
@@ -272,7 +278,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	)
-	s.salesProgressReading = salesprogress.Reading{DB: InstallationDB(pool), Reports: reportingService, Deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.salesProgressReading = salesprogress.Reading{DB: InstallationDB(pool), Reports: reportingService, Deals: deals.NewStore(InstallationDB(pool), DealsInstallation()), Forecast: progressForecast(newForecastStoreFor(pool))}
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	).withTargets(reportingService)
@@ -315,9 +321,10 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// name, reporting zone, base currency — the last of which locks once a
 	// deal has converted against it (ADR-0085 §7).
 	s.installationSettingsHandlers = installationSettingsHandlers{
-		store:          NewInstallationSettingsFor(pool),
-		pool:           pool,
-		maxUploadBytes: s.uploadLimits.Attachment,
+		store:                     NewInstallationSettingsFor(pool),
+		pool:                      pool,
+		maxUploadBytes:            s.uploadLimits.Attachment,
+		maxKnowledgeDocumentBytes: s.uploadLimits.KnowledgeDocument,
 	}
 	// The workspace's own consumer-mail list (CAP-PARAM-5): the surviving
 	// domain control, and the only way an operator corrects a shipped
@@ -405,7 +412,7 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
 		WithEntityNames(consentEntityName).
-		WithEraser(ComposedEraser(pool, nil, nil)).
+		WithEraser(ComposedEraser(pool, nil)).
 		// Wired with or without a mail lane. A receipt owed where no lane can
 		// send it is one the privacy operators must hear about.
 		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}).

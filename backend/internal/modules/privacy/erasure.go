@@ -149,7 +149,7 @@ func (e *Eraser) runContactErasure(ctx context.Context, contactID ids.UUID, reas
 		if err := eraseDealRoomSeats(ctx, tx, emails, reason); err != nil {
 			return err
 		}
-		if err := tombstoneLeadsAndSignals(ctx, tx, subject, leadsWiped, reason); err != nil {
+		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causeContactErasure); err != nil {
 			return err
 		}
 		activitiesRedacted, activitiesHeld, err := e.redactSubjectActivities(ctx, tx, subject, keys, floor, reason)
@@ -160,7 +160,7 @@ func (e *Eraser) runContactErasure(ctx context.Context, contactID ids.UUID, reas
 		// hold the subject's address and the body before any activity exists, so
 		// nothing above this line can reach them — and a scheduled one would
 		// otherwise fire the morning after this erasure certified the data destroyed.
-		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails, e.payloads); err != nil {
+		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails); err != nil {
 			return err
 		}
 		// And the ones nobody has DECIDED yet, one step earlier in the same life
@@ -329,6 +329,7 @@ func anonymizeSubjectRows(
 		       OR address_line1 IS NOT NULL OR address_line2 IS NOT NULL OR address_city IS NOT NULL
 		       OR address_region IS NOT NULL OR address_postal_code IS NOT NULL
 		       OR address_country IS NOT NULL OR source_author_name IS NOT NULL
+		       OR greeting_register IS NOT NULL
 		       OR anonymized_address_hashes IS NOT NULL OR archived_at IS NULL%s
 		  FROM contact WHERE id = $1`, anyColumnHeld(contactCustom)), contactID, erasedName).Scan(&holds); err != nil {
 		return nil, err
@@ -339,7 +340,8 @@ func anonymizeSubjectRows(
 		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
-		  source_author_name = NULL, anonymized_address_hashes = NULL, anonymized_address_key_id = NULL,
+		  source_author_name = NULL, greeting_register = NULL,
+		  anonymized_address_hashes = NULL, anonymized_address_key_id = NULL,
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), contactID, erasedName); err != nil {
 			return nil, err

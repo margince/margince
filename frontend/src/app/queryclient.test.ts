@@ -7,13 +7,19 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
 import { companyReferenceQuery } from "../components/entityref.queries";
+import { NO_SUCH_RUN } from "../features/import/importrun";
 import {
   ConnectivityError,
   reportReached,
   reportUnreached,
   watchConnectivity,
 } from "../lib/connectivity";
-import { EmptySuccessError, ProblemError, throwProblem } from "../lib/problem";
+import {
+  EmptySuccessError,
+  ProblemError,
+  SHOWN_REFUSALS,
+  throwProblem,
+} from "../lib/problem";
 import {
   createQueryClient,
   liveInterval,
@@ -276,6 +282,24 @@ describe("the query client defaults", () => {
 
     expect(reported).toHaveBeenCalledTimes(1);
     expect(reported.mock.calls[0]?.[1]).toBeInstanceOf(Error);
+  });
+
+  // The run page's not found state is the case in the product.
+  it("leaves out a refusal the read's surface shows as its own state", async () => {
+    const reported = vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = createQueryClient();
+    const refuse = (status: number) =>
+      client.fetchQuery({
+        queryKey: ["shown-refusal", status],
+        queryFn: () => throwProblem({ status, detail: "not found" }),
+        meta: { [SHOWN_REFUSALS]: NO_SUCH_RUN },
+      });
+
+    await expect(refuse(404)).rejects.toThrow(ProblemError);
+    await expect(refuse(422)).rejects.toThrow(ProblemError);
+    expect(reported).not.toHaveBeenCalled();
+    await expect(refuse(403)).rejects.toThrow(ProblemError);
+    expect(reported).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -21,6 +21,7 @@ type TraceEntry = components["schemas"]["CaptureTraceEntry"];
 // to the key itself, so a reason outside the set renders nothing.
 const REASONS = [
   "internal_only",
+  "own_addresses_only",
   "deferral_capped",
   "noise_prior",
   "decided_prior",

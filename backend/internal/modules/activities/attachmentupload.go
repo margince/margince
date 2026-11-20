@@ -20,12 +20,11 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/filesniff"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -86,7 +85,7 @@ func (s *Store) mayUpload(ctx context.Context, in AttachmentInput) error {
 	if s.blob == nil {
 		return ErrBlobstoreUnconfigured
 	}
-	if err := auth.Require(ctx, in.EntityType, principal.ActionUpdate); err != nil {
+	if err := requireAttachmentWrite(ctx, in.EntityType); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
@@ -207,14 +206,21 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 // remembering: an uploaded file and a captured one land in the same column
 // and are shown by the same list.
 //
-// The type is resolved from the typed name, because sanitizing truncates a
-// long one and can cut its extension off.
+// The type is resolved from the typed name and then held against the bytes.
 func acceptUploadedFile(in AttachmentInput) (AttachmentInput, error) {
 	typed := in.Filename
 	in.Filename = extension.SafeFilename(in.Filename, 0)
 	mediaType, err := resolveAttachmentType(in.ContentType, typed, in.Filename)
 	if err != nil {
 		return in, err
+	}
+	// Only the bytes catch a program renamed to .pdf.
+	contradicted, err := filesniff.Contradicts(mediaType, filesniff.DeclaredCharset(in.ContentType), in.Content)
+	if err != nil {
+		return in, err
+	}
+	if contradicted {
+		return in, &UnsupportedFileTypeError{Filename: in.Filename}
 	}
 	in.ContentType = mediaType
 	return in, nil

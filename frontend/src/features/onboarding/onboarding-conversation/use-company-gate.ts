@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import type { components } from "../../../api/schema";
 import type { useT } from "../../../i18n";
 import type { Locale } from "../../../i18n/locale";
+import { useCanWrite } from "../../../lib/capability";
 import {
   useSetupDecline,
   useSetupDeclines,
@@ -52,6 +53,7 @@ export function useCompanyGate({
   t,
 }: CompanyGateArgs) {
   const setup = useInstallationSetup();
+  const canBind = useCanWrite("ai_routing", "update");
   const declined = useSetupDeclines();
   const { withdraw } = useSetupDecline();
 
@@ -79,7 +81,8 @@ export function useCompanyGate({
     // before the website question. `outstandingStep` answers only with a step
     // the setup screen has a panel for.
     setupOutstanding:
-      beforeReview && outstandingStep(setup.data, declined) !== undefined,
+      beforeReview &&
+      outstandingStep(setup.data, declined, canBind) !== undefined,
     // The reader skipped the model: no website can be read, so the gate
     // offers the manual interview and a way back to the key.
     modelSkipped: modelSkipped(setup.data, declined),

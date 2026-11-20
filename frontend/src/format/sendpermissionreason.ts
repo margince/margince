@@ -4,6 +4,8 @@ export type RefusalSurface = Readonly<{
   recordable?: boolean;
   /** The message's own reason for contact can be picked. */
   picksReason?: boolean;
+  /** The message was sent with no reason for contact of its own. */
+  unclaimed?: boolean;
 }>;
 
 /**
@@ -68,6 +70,10 @@ export function sendPermissionReasonKey(
       return "sendPermission.reason.askedUsToStop" as const;
     case "hard_bounce":
       return "sendPermission.reason.bounced" as const;
+    case "subject_label_missing":
+      return "sendPermission.reason.subjectLabelMissing" as const;
+    case "subject_labels_conflict":
+      return "sendPermission.reason.subjectLabelsConflict" as const;
     case "frequency_cap_reached":
       return "sendPermission.reason.tooMany" as const;
     case "opted_out_after_request":
@@ -111,4 +117,20 @@ export function sendPermissionReasonKey(
     default:
       return "sendPermission.reason.other" as const;
   }
+}
+
+// With no reason given, the purpose the engine could not place is the missing
+// reason itself, not one the message named. Every other refusal reads as
+// sendPermissionReasonKey words it.
+export function refusalSentenceKey(
+  reason: string | undefined,
+  surface: RefusalSurface = {},
+  category?: string,
+) {
+  if (reason === "unknown_purpose" && surface.unclaimed) {
+    return surface.picksReason
+      ? ("sendPermission.reason.noReason" as const)
+      : ("sendPermission.reason.noReasonFact" as const);
+  }
+  return sendPermissionReasonKey(reason, surface, category);
 }

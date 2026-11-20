@@ -191,7 +191,7 @@ it("drops a grouped line only when every change it stands for is shown elsewhere
   renderMagic("en", undefined, { visibleReceiptIds: ["a", "b"] });
   // The covered group would repeat two rows Done for you already shows; the
   // half-covered one still holds a change shown nowhere else, so two remain.
-  expect(await screen.findByText("All 2 changes, one by one")).toBeTruthy();
+  expect(await screen.findByText("2 changes, one by one")).toBeTruthy();
 });
 
 it("retains a bounded lane's floor after hiding a duplicate receipt", async () => {
@@ -206,7 +206,7 @@ it("retains a bounded lane's floor after hiding a duplicate receipt", async () =
   stub(receipt({ done: rows }));
   renderMagic("en", undefined, { visibleReceiptIds: ["0"] });
   expect(await screen.findByText("99+ changes, one by one")).toBeTruthy();
-  expect(screen.queryByText(/All 99/)).toBeNull();
+  expect(screen.queryByText("99 changes, one by one")).toBeNull();
 });
 
 it("keeps a hidden receipt's floor while other changes remain", async () => {
@@ -289,6 +289,6 @@ it("retains legacy and grouped changes without guessing a shared receipt identit
   renderMagic("en", undefined, {
     visibleReceiptIds: ["same-looking-id", "known"],
   });
-  await screen.findByText("All 3 changes, one by one");
+  await screen.findByText("3 changes, one by one");
   expect(screen.getAllByText("A deal moved to its next stage")).toHaveLength(2);
 });

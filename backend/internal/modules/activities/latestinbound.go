@@ -66,7 +66,13 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 		if out.Data, err = markLatestInboundTasks(ctx, tx, unansweredInbound(waiting, forms, answers), now); err != nil {
 			return err
 		}
-		out.LastExchange, err = s.lastExchange(ctx, tx, entityType, entityID, now, columns)
+		if out.LastExchange, err = s.lastExchange(ctx, tx, entityType, entityID, now, columns); err != nil {
+			return err
+		}
+		if out.LastInbound, err = s.lastWrote(ctx, tx, entityType, entityID, crmcontracts.ActivityDirectionInbound, now, columns); err != nil {
+			return err
+		}
+		out.LastOutbound, err = s.lastWrote(ctx, tx, entityType, entityID, crmcontracts.ActivityDirectionOutbound, now, columns)
 		return err
 	})
 	return out, err
@@ -108,10 +114,10 @@ func momentOf(row crmcontracts.Activity) occurredday.Moment {
 // answersThemSQL keeps a row under alias a that answers them at now. That is
 // anything we sent, or a call or meeting that kept us in touch
 // (relstrength.HadContactSQL), so a meeting still to come answers nobody yet.
-// A note answers nobody.
+// A note answers nobody, and neither does a forward to self.
 func answersThemSQL(now string) string {
-	return `((a.kind IN ('email', 'message') AND a.direction = 'outbound') OR (a.kind IN ('call', 'meeting') AND ` +
-		relstrength.HadContactSQL("a", now) + `))`
+	return `((a.kind IN ('email', 'message') AND a.direction = 'outbound' AND NOT ` + relstrength.ForwardToSelfSQL("a") +
+		`) OR (a.kind IN ('call', 'meeting') AND ` + relstrength.HadContactSQL("a", now) + `))`
 }
 
 // markLatestInboundTasks drops an item a task already stands for, which

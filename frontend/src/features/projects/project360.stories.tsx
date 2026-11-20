@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { COMPANY, project, project360 } from "../../testing/projects.fixtures";
 import {
   emptyPage,
@@ -198,4 +199,25 @@ export const PageClosed: Story = {
       },
     }),
   ),
+};
+
+// The menu's Edit project opens the project's fields in the same dialog the
+// details sections save through.
+export const EditProject: Story = {
+  render: page(project360()),
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    const canvas = within(canvasElement);
+    await user.click(
+      await canvas.findByRole("button", { name: "More actions" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Edit project" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Edit project" });
+    await waitFor(() => expect(dialog).toBeVisible());
+    await expect(
+      within(dialog).getByRole("textbox", { name: /^Project name/ }),
+    ).toHaveValue("CRM rollout");
+  },
 };

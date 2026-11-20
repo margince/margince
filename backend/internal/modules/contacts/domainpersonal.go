@@ -17,11 +17,11 @@ package contacts
 import (
 	"context"
 	"strings"
-	"unicode"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // DomainContact is one human the workspace already records on a domain: their
@@ -56,7 +56,7 @@ const domainPersonalSimilarity = 0.94
 // With nobody known it answers no: there is then no name to compare, and
 // refusing a company on no evidence at all would be a guess.
 func DomainLooksPersonal(label string, contacts []DomainContact) bool {
-	label = normalizeName(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
+	label = namematch.Fold(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
 	if label == "" || len(contacts) == 0 {
 		return false
 	}
@@ -78,7 +78,7 @@ func contactExplainsLabel(label string, p DomainContact) bool {
 		if candidate == "" {
 			continue
 		}
-		if candidate == label || jaroWinkler(candidate, label) >= domainPersonalSimilarity {
+		if candidate == label || namematch.JaroWinkler(candidate, label) >= domainPersonalSimilarity {
 			return true
 		}
 	}
@@ -107,7 +107,7 @@ func contactLabelCandidates(p DomainContact) []string {
 	// from a middle name ("annakatharinaweber") is still that contact's own.
 	out := []string{last, strings.Join(parts, ""), last + strings.Join(parts[:len(parts)-1], ""), first + last}
 	for _, raw := range p.EmailLocals {
-		local := normalizeName(strings.Join(strings.FieldsFunc(raw, isNameSeparator), ""))
+		local := namematch.Fold(strings.Join(strings.FieldsFunc(raw, isNameSeparator), ""))
 		if local == "" {
 			continue
 		}
@@ -124,7 +124,7 @@ func contactLabelCandidates(p DomainContact) []string {
 // this the company reads as the surname, and a domain named after the COMPANY
 // would then look like it was named after the contact.
 func nameWithoutAffiliation(name string) string {
-	normalized := normalizeName(name)
+	normalized := namematch.Fold(name)
 	for _, sep := range []string{" - ", " – ", " — ", " | ", " • ", " · ", " @ ", "(", ",", "/"} {
 		if head, _, found := strings.Cut(normalized, sep); found {
 			normalized = strings.TrimSpace(head)
@@ -142,31 +142,12 @@ func isNameSeparator(r rune) bool { return r == '-' || r == '_' || r == '.' || r
 // That is an employer on a personal page, or a founder's brand, and a machine
 // cannot tell which.
 func siteNameIsOffTheSendersDomain(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput) (bool, error) {
-	label := freemail.RegistrableLabel(in.Domain)
-	if in.decidedByAUser() || in.DossierName == "" || statedNameSpellsLabel(in.DossierName, label) {
+	if in.decidedByAUser() || in.DossierName == "" || in.siteSpeaksForDomain() {
 		return false, nil
 	}
 	contacts, err := OnDomain(ctx, tx, in.Domain)
 	if err != nil {
 		return false, err
 	}
-	return DomainLooksPersonal(label, contacts), nil
-}
-
-// statedNameSpellsLabel reports whether a company name accounts for a domain
-// label: "Kestner Consulting" spells kestnerconsulting, and "Marsh Advisory"
-// spells rowanmarsh through its word "marsh".
-func statedNameSpellsLabel(stated, label string) bool {
-	label = normalizeName(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
-	words := strings.FieldsFunc(normalizeName(stated), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
-	if label == "" || strings.Contains(strings.Join(words, ""), label) {
-		return true
-	}
-	for _, word := range words {
-		// Four runes keeps a legal suffix ("AG", "Ltd") from matching by itself.
-		if (len([]rune(word)) >= 4 && strings.Contains(label, word)) || jaroWinkler(word, label) >= domainPersonalSimilarity {
-			return true
-		}
-	}
-	return false
+	return DomainLooksPersonal(freemail.RegistrableLabel(in.Domain), contacts), nil
 }

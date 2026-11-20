@@ -176,3 +176,66 @@ export function memberLabel(contactCase: ContactCase, id: string): string {
     ? `${member.name} (${member.email})`
     : member.name;
 }
+
+type Member = ContactCase["members"][number];
+export type CasePreference = components["schemas"]["ContactCasePreference"];
+export type PreferField = keyof CasePreference;
+
+const PREFER_VALUES: Readonly<
+  Record<PreferField, (member: Member) => string | null | undefined>
+> = {
+  name: (member) => member.name,
+  email: (member) => member.email,
+  employment: (member) => member.company_name,
+  title: (member) => member.title,
+};
+
+export type PreferChoice = Readonly<{
+  field: PreferField;
+  options: readonly { member: string; value: string }[];
+}>;
+
+/**
+ * The fields the ticked members disagree on, with one option per value. Each
+ * option names the first ticked member holding it, the kept record first, and
+ * the server copies that member's value. The other values stay as second ones.
+ */
+export function preferChoices(
+  contactCase: ContactCase,
+  selected: readonly string[],
+  survivor: string,
+): readonly PreferChoice[] {
+  const ticked = contactCase.members
+    .filter((one) => selected.includes(one.id))
+    .sort((a, b) => Number(b.id === survivor) - Number(a.id === survivor));
+  return (Object.keys(PREFER_VALUES) as PreferField[]).flatMap((field) => {
+    const options: { member: string; value: string }[] = [];
+    for (const one of ticked) {
+      const value = PREFER_VALUES[field](one);
+      if (value && !options.some((option) => option.value === value)) {
+        options.push({ member: one.id, value });
+      }
+    }
+    return options.length > 1 ? [{ field, options }] : [];
+  });
+}
+
+/**
+ * The preference the merge sends: only fields still in disagreement, and only
+ * members still ticked. A field left out keeps the kept record's value.
+ */
+export function preferFor(
+  contactCase: ContactCase,
+  selected: readonly string[],
+  survivor: string,
+  prefer: CasePreference,
+): CasePreference | undefined {
+  const out: CasePreference = {};
+  for (const choice of preferChoices(contactCase, selected, survivor)) {
+    const member = prefer[choice.field];
+    if (member && choice.options.some((option) => option.member === member)) {
+      out[choice.field] = member;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}

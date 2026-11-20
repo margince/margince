@@ -188,7 +188,9 @@ func (r *Registry) claimFor(ctx context.Context, spec mcp.ToolSpec, res reserved
 	default:
 		// A state this switch does not know cannot be resolved into "safe to
 		// run", so it is refused rather than guessed at.
-		return false, "", nil, 0, fmt.Errorf("crmagents: unknown idempotency claim state %d: %w", claim.State, apperrors.ErrConflict)
+		return false, "", nil, 0, fmt.Errorf(
+			"an earlier call with this idempotency_key is in a state this server cannot read, so it is not run "+
+				"again; check the record before retrying under a NEW key: %w", apperrors.ErrConflict)
 	}
 }
 

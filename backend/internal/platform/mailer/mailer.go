@@ -10,13 +10,7 @@ package mailer
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
-	"fmt"
-	"io"
-	"log/slog"
-	"net"
-	"net/smtp"
 	"strings"
 	"time"
 
@@ -144,46 +138,14 @@ func (s SMTP) send(ctx context.Context, to, subject, textBody, htmlBody, message
 	if err != nil {
 		return err
 	}
-	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
-	client, w, err := s.openMessage(ctx, addr, to)
-	if err != nil {
-		return &NotTakenError{Err: err}
-	}
-	defer closeQuietly(client)
-	if _, err := w.Write(msg); err != nil {
-		return &NotTakenError{Err: fmt.Errorf("mailer: relay %s dropped mid-message: %w", addr, err)}
-	}
-	if err := w.Close(); err != nil {
-		return fmt.Errorf("mailer: relay %s did not accept the message: %w", addr, err)
-	}
-	if err := client.Quit(); err != nil {
-		slog.WarnContext(ctx, "the relay accepted the message and then failed the QUIT; the message is sent",
-			"relay", addr, "cause", err)
-	}
-	return nil
+	return s.submission().Submit(ctx, s.FromAddress, []string{to}, msg)
 }
 
-// openMessage runs the exchange up to the message body. On an error the
-// relay holds nothing of this message.
-func (s SMTP) openMessage(ctx context.Context, addr, to string) (*smtp.Client, io.WriteCloser, error) {
-	client, err := s.connect(ctx, addr)
-	if err != nil {
-		return nil, nil, err
-	}
-	if err := client.Mail(s.FromAddress); err != nil {
-		closeQuietly(client)
-		return nil, nil, fmt.Errorf("mailer: relay %s refused the sender: %w", addr, err)
-	}
-	if err := client.Rcpt(to); err != nil {
-		closeQuietly(client)
-		return nil, nil, fmt.Errorf("mailer: relay %s refused the recipient: %w", addr, err)
-	}
-	w, err := client.Data()
-	if err != nil {
-		closeQuietly(client)
-		return nil, nil, fmt.Errorf("mailer: relay %s refused the message: %w", addr, err)
-	}
-	return client, w, nil
+// submission is the operator relay as one SMTP exchange. Its credentials are
+// optional: an authenticated submission port, or a local relay that takes
+// mail without a login.
+func (s SMTP) submission() Submission {
+	return Submission{Host: s.Host, Port: s.Port, Username: s.Username, Password: s.Password, HelloName: s.helloName()}
 }
 
 // helloName is what this installation announces to the relay.
@@ -202,84 +164,6 @@ func (s SMTP) helloName() string {
 		}
 	}
 	return outbound.MailProduct
-}
-
-// connect dials the relay, bounds the WHOLE exchange with one deadline
-// (a stalling relay must not pin a goroutine and socket per reset
-// request), secures the channel, and authenticates.
-func (s SMTP) connect(ctx context.Context, addr string) (*smtp.Client, error) {
-	dialer := &net.Dialer{Timeout: 15 * time.Second}
-	conn, err := dialer.DialContext(ctx, "tcp", addr)
-	if err != nil {
-		return nil, fmt.Errorf("mailer: relay %s unreachable: %w", addr, err)
-	}
-	if err := conn.SetDeadline(exchangeDeadline(ctx)); err != nil {
-		closeQuietly(conn)
-		return nil, fmt.Errorf("mailer: relay %s deadline setup failed: %w", addr, err)
-	}
-	client, err := smtp.NewClient(conn, s.Host) // NOSONAR(go:S5332) -- the exchange is upgraded to TLS right below; a relay without STARTTLS is refused unless it is loopback
-	if err != nil {
-		closeQuietly(conn)
-		return nil, fmt.Errorf("mailer: relay %s greeting failed: %w", addr, err)
-	}
-	// Announced BEFORE STARTTLS and before AUTH, which is the only place SMTP
-	// takes it: the library re-issues the same name after the upgrade.
-	//
-	// Without this call net/smtp says `localhost`, and every installation says
-	// it identically. That is worse than anonymous — it is a claim, and a false
-	// one, since the mail did not come from the relay's own machine. A relay
-	// operator reads the EHLO name to attribute what they are carrying, and
-	// they cannot attribute a name that is the same for everyone.
-	if err := client.Hello(s.helloName()); err != nil {
-		closeQuietly(client)
-		return nil, fmt.Errorf("mailer: relay %s refused the greeting: %w", addr, err)
-	}
-	if ok, _ := client.Extension("STARTTLS"); ok {
-		if err := client.StartTLS(&tls.Config{ServerName: s.Host, MinVersion: tls.VersionTLS12}); err != nil {
-			closeQuietly(client)
-			return nil, fmt.Errorf("mailer: relay %s STARTTLS failed: %w", addr, err)
-		}
-	} else if !isLoopback(s.Host) {
-		closeQuietly(client)
-		return nil, fmt.Errorf("mailer: relay %s offers no STARTTLS — refusing to send a credential-bearing mail in cleartext", addr)
-	}
-	if s.Username != "" {
-		if err := client.Auth(smtp.PlainAuth("", s.Username, s.Password, s.Host)); err != nil {
-			closeQuietly(client)
-			return nil, fmt.Errorf("mailer: relay %s refused the credentials: %w", addr, err)
-		}
-	}
-	return client, nil
-}
-
-// exchangeDeadline is when the relay exchange must end: 30 seconds from now,
-// or the caller's own deadline when that comes first. A caller that stops
-// waiting for the relay also stops the exchange. So the relay cannot take the
-// message after the caller reported it as not taken.
-func exchangeDeadline(ctx context.Context) time.Time {
-	deadline := time.Now().Add(30 * time.Second)
-	if callerDeadline, ok := ctx.Deadline(); ok && callerDeadline.Before(deadline) {
-		return callerDeadline
-	}
-	return deadline
-}
-
-// isLoopback reports whether the relay lives on this machine — the one
-// posture where a missing STARTTLS is acceptable (the bytes never touch
-// a network).
-func isLoopback(host string) bool {
-	if host == "localhost" {
-		return true
-	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
-}
-
-// closeQuietly releases a transport on an error path where the send's
-// own error is the one that matters.
-func closeQuietly(c io.Closer) {
-	//craft:ignore swallowed-errors error-path transport cleanup — the send's own error is already on its way to the caller
-	_ = c.Close()
 }
 
 // AlternativeSender preserves the already-authorized HTML and text alternatives.

@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -105,7 +106,7 @@ func TestGmailWatchRegistersRenewsAndLeavesCursor(t *testing.T) {
 	}
 
 	// A disconnected connection is never selected (the scan mirrors the poll).
-	if err := registry.Disconnect(grantCtx, "gmail"); err != nil {
+	if err := registry.Disconnect(grantCtx, capturemod.ProviderMailbox("gmail")); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
 	d, err := registry.DueWatches(context.Background(), "gmail", 365*24*time.Hour)

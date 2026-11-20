@@ -212,6 +212,52 @@ func TestAReplacedBindingReachesARunningRouterWithoutARestart(t *testing.T) {
 	}
 }
 
+// A role that booted with no binding adopts the first one saved, and lets go of
+// it when the stored binding is removed. Both go through the watcher's own
+// database read, not a direct Rebind.
+func TestARoleBootedUnboundFollowsTheStoredBindingInAndOut(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := e.adminRoutingCtx()
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
+
+	path, err := compose.NewModelPath(ctx, ai.RoutingConfig{}, e.Pool, false, discard())
+	if err != nil {
+		t.Fatalf("NewModelPath: %v", err)
+	}
+	if path.Bound() {
+		t.Fatal("a path built from no binding reports bound")
+	}
+	watcher := compose.NewRoutingWatcher(e.Pool, &path, config.Static(nil), discard())
+	if watcher == nil {
+		t.Fatal("a role booted without a binding got no watcher")
+	}
+
+	saved, err := store.Replace(ctx, parsedRouting(t, "saved"))
+	if err != nil {
+		t.Fatalf("storing a binding: %v", err)
+	}
+	watcher.Recheck(ctx)
+	if !path.Bound() || path.RoutingVersion() != saved.RoutingVersion() {
+		t.Fatalf("the role still serves %q after %q was saved", path.RoutingVersion(), saved.RoutingVersion())
+	}
+
+	ollama, err := ai.ParseRouting([]byte("profile: eu_hosted\ntiers:\n  premium: {provider: ollama, model: m}\nembeddings: {provider: fake}\n"))
+	if err != nil {
+		t.Fatalf("ParseRouting: %v", err)
+	}
+	if _, err := store.Replace(ctx, ollama); err != nil {
+		t.Fatalf("storing a provider binding: %v", err)
+	}
+	watcher.Recheck(ctx)
+	if _, err := store.Replace(ctx, ai.RoutingConfig{}); err != nil {
+		t.Fatalf("removing the binding: %v", err)
+	}
+	watcher.Recheck(ctx)
+	if path.Bound() {
+		t.Error("the role kept serving after the stored binding was removed")
+	}
+}
+
 // A binding the store refuses never becomes what anything serves. The bar is
 // the one the routing file was always held to, applied on the way in rather
 // than discovered at the first model call.

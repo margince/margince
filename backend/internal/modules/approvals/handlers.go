@@ -16,6 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
@@ -26,6 +27,10 @@ import (
 // Handlers is the module's transport surface: the /approvals inbox ops.
 type Handlers struct {
 	svc *Service
+	// settings holds the installation switch; nil answers 501 on its route.
+	settings *config.Config
+	// locks reports the settings a boot source sets on the switch's response.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 }
 
 func NewHandlers(svc *Service) Handlers { return Handlers{svc: svc} }
@@ -351,7 +356,38 @@ func wire(ctx context.Context, a row, now time.Time) crmcontracts.Approval {
 	out.Evidence = wireEvidence(a.Evidence)
 	out.EffectFailedAt = a.EffectFailedAt
 	out.EffectFailure = a.EffectFailure
+	if unredeemedPastWindow(a, now) {
+		// The sweep will record this same outcome. Until it does, the row must
+		// not read as done.
+		lapsedAt := a.DecidedAt.Add(redemptionTTL)
+		sentence := lapsedRedemptionSentence
+		out.EffectFailedAt, out.EffectFailure = &lapsedAt, &sentence
+	}
+	if awaitsAgent(a, now) {
+		out.AwaitingAgent = new(true)
+	}
 	return out
+}
+
+// unredeemedAgentStaging is an approved agent staging that has neither run nor
+// failed on record. The agent either still can come back or the window closed
+// without it, and lapsedUnmarkedSQL asks the same question of the table.
+func unredeemedAgentStaging(a row) bool {
+	return a.Status == approvalStatusApproved && agentRedeems(a) &&
+		a.ConsumedAt == nil && a.EffectRanAt == nil && a.EffectFailedAt == nil
+}
+
+// unredeemedPastWindow is such a staging whose window closed and which no
+// sweep has marked yet. Every reader gives it the failure the sweep will write.
+func unredeemedPastWindow(a row, now time.Time) bool {
+	return unredeemedAgentStaging(a) && redemptionLapsed(a, now)
+}
+
+// awaitsAgent is an approved proposal the staging agent has not redeemed. The
+// decision released no effect of its own, so nothing changes until the agent
+// comes back inside the redemption window.
+func awaitsAgent(a row, now time.Time) bool {
+	return unredeemedAgentStaging(a) && !redemptionLapsed(a, now)
 }
 
 // wireEvidence maps the persisted evidence array onto the contract shape.

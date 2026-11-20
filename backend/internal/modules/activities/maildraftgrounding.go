@@ -45,7 +45,7 @@ func discardUngrounded(ctx context.Context, tx pgx.Tx, draft MailDraft) (bool, e
 // written from: the object grant and the live row. GetMailDraft has already
 // required the activity grant, so an activity needs only its content gate.
 func ensureGroundReadable(ctx context.Context, tx pgx.Tx, ground MailDraftAnchor) error {
-	if ground.Type != crmcontracts.MailDraftAnchorTypeActivity {
+	if !ground.onMessage() {
 		if err := auth.EnsureReadable(ctx, tx, string(ground.Type), ground.ID); err != nil {
 			return err
 		}

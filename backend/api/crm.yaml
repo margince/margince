@@ -2297,9 +2297,9 @@ paths:
         "Based on" line and the "Why this draft?" chips, and a body that explained itself
         would be a body the rep has to edit before sending.
 
-        When no model lane is configured, or the workspace's AI budget is exhausted, the draft
-        degrades to a deterministic one rather than failing — `generated_by` says which wrote
-        it.
+        When no model lane is configured, the workspace's AI budget is exhausted, the model call
+        fails, or the draft checks refuse the model's answer, the draft degrades to a
+        deterministic one rather than failing — `generated_by` says which wrote it.
 
         Human-only: drafting spends the workspace's model budget on prose for a contact to send
         under their own name.
@@ -3718,7 +3718,7 @@ paths:
         Renaming the installation's own company (`is_anchor`) renames the installation in the same
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-        past 200 characters (`too_long`); other companies' names have no length cap.
+        past 120 characters (`too_long`), the limit of every company name typed by hand.
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
@@ -3952,6 +3952,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyLogo
+      x-open-query: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_company_logo, router: read_details, action: company_logo, tier: auto_execute, scope: read, served_by: route }
       summary: Stream a company's logo image.
@@ -3986,6 +3987,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyLogoIcon
+      x-open-query: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_company_logo_icon, router: read_details, action: company_logo_icon, tier: auto_execute, scope: read, served_by: route }
       summary: Stream a company's square logo icon.
@@ -4676,6 +4678,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'A scan would have to be queued and no AI model is connected (`code: ai_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /companies/{id}/growth-fit:
     parameters:
@@ -5003,9 +5010,9 @@ paths:
         the "Based on" line and the "Why this draft?" chips, and a body that explained
         itself would be a body the rep has to edit before sending.
 
-        When no model lane is configured, or the workspace's AI budget is exhausted, the
-        draft degrades to a deterministic one rather than failing — `generated_by` says
-        which wrote it.
+        When no model lane is configured, the workspace's AI budget is exhausted, the model
+        call fails, or the draft checks refuse the model's answer, the draft degrades to a
+        deterministic one rather than failing — `generated_by` says which wrote it.
 
         Human-only: drafting spends the workspace's model budget on prose for a contact to
         send under their own name.
@@ -5255,6 +5262,11 @@ paths:
               schema: { $ref: '#/components/schemas/SiteReadStarted' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
           description: No URL to read (no override, company has no domain).
           content:
@@ -6961,6 +6973,79 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /deals/{id}/move-pipeline:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: moveDealPipeline
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Move an open deal to another pipeline, onto its first open stage.
+      description: |
+        Puts the deal on the first open stage of a live pipeline other than its own. A caller
+        cannot choose the stage. It is a stage advance in every other way: it writes one
+        `deal_stage_history` row and one `advance_stage` audit row, emits `deal.stage_changed`,
+        sets the probability from the new stage, and the legal review gate and the object and row
+        permissions of an advance hold. The stage the deal leaves keeps its exit criteria; only a
+        required legal review blocks a move, and the first open stage has no gated stage before
+        it. The history row keeps no stage positions, because the positions of two pipelines do
+        not compare. The pipeline row is locked shared, so a retirement or a reorder waits for
+        the move.
+
+        A stale `If-Match` answers 409. A won or lost deal answers 422 `deal_closed`, the
+        pipeline the deal is in answers 422 `same_pipeline`, a retired pipeline answers 422
+        `pipeline_retired`, and a pipeline with no open stage answers 422
+        `pipeline_has_no_open_stage`.
+      x-mcp-tool: { verb: move_deal_pipeline, router: change_state, action: move_deal_pipeline, tier: auto_execute, scope: write, served_by: route }
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MoveDealPipelineRequest' }
+      responses:
+        '200':
+          description: The deal on its new stage, and the probability the move set.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealAdvanced' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deals/{id}/move-pipeline/undo:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: undoDealPipelineMove
+      security: [ { cookieAuth: [] } ]   # human session only — taking back a move is the mover's own act
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Put a deal back on the pipeline and stage its last move left.
+      description: |
+        Undoes the deal's latest stage move when it was a move to another pipeline. The source
+        pipeline and stage come from that move's `deal_stage_history` row, and the undo writes its
+        own row with `reversal_of` naming it. Anything that moved the deal since, an earlier undo
+        included, answers 422 `move_not_undoable`. A source pipeline retired since answers 422
+        `pipeline_retired`. A stale `If-Match` answers 409.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: The deal back on its earlier stage.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealAdvanced' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deals/{id}/close-day:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -8365,7 +8450,9 @@ paths:
         At most one default pipeline per workspace (409 if a second default). The opening
         `stages` keep the ladder's shape: a won or lost stage above an open one is refused
         `422` with the code `closing_stage_before_open`, and two stages naming one position
-        with `duplicate`.
+        with `duplicate`. A ladder without a won or without a lost stage gets the missing one
+        appended behind its last stage, named `Won` or `Lost`, so no pipeline is born unable to
+        close a deal.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -8648,7 +8735,9 @@ paths:
         `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
         instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
         behind the open ones, published as the same `pipeline.updated` position delta. A change
-        to either moves the pipeline's `version`.
+        to either moves the pipeline's `version`. Changing the `semantic` of a pipeline's only
+        live won (or lost) stage is refused `422` with the code `last_closing_stage` on
+        `semantic`: a pipeline keeps a way to win and a way to lose a deal.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -9462,6 +9551,11 @@ paths:
         `last_exchange` is the newest call, meeting, email or message on the record of any
         age, with whose move it leaves. It says where the record stands when nothing is
         next, such as waiting on them since the last mail sent.
+
+        `last_inbound` and `last_outbound` are the newest message the other side wrote and the
+        newest one we wrote, of any age, read over every row the caller may list and counted as
+        the account's last-touch clocks count them: it has happened, it kept us in touch, and
+        it is not automatic mail. Each is absent when there is none.
       parameters:
         - name: entity_type
           in: query
@@ -10486,6 +10580,11 @@ paths:
               schema: { $ref: '#/components/schemas/TranscriptReadStarted' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
           description: This activity carries no transcript, or its transcript is blank or too long for one reading.
           content:
@@ -10703,6 +10802,40 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /recipient-countries:
+    post:
+      tags: [Activities]
+      operationId: resolveRecipientCountries
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: covered   # read_record shows a contact's address and its employer's; only the user writing a send states a country
+      summary: The country the record states for each address, and where it was read.
+      description: |
+        The country a message's marketing rules would follow for each address, read from the
+        record exactly as the send reads it: the contact's own address, then the address of
+        their current primary employer, then the company a lead is filed under. A country the
+        sender states on the message is not part of this answer; the client holds it.
+
+        An address no single record answers for, or whose record states no usable country,
+        answers `country: null` and `source: null`. That is not a refusal: such a recipient is
+        judged under the baseline.
+
+        It authorizes nothing and records nothing. Needs the grant to write a message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecipientCountriesRequest' }
+      responses:
+        '200':
+          description: One answer per address asked, in the order asked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecipientCountries' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /lawful-basis-confirmations:
     post:
       tags: [Communication]
@@ -10816,16 +10949,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '409':
-          description: |
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SendRefused' }
         '422': { $ref: '#/components/responses/SendValidationError' }
 
   /emails:
@@ -10900,16 +11024,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '409':
-          description: |
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SendRefused' }
         '422': { $ref: '#/components/responses/SendValidationError' }
 
   /scheduled-sends:
@@ -11179,16 +11294,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409':
-          description: |
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SendRefused' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /public/record-previews/{record_type}/{id}:
@@ -11992,11 +12098,11 @@ paths:
                     enum: [not_requested, pending_confirmation, not_asked]
                     x-extensible-enum: true
                     description: |
-                      `not_requested` — the form carried no tick. `pending_confirmation` — the question
-                      was queued for delivery and the grant waits on the subject answering it; queued
-                      is not delivered. `not_asked` — the question could not be put, or this
-                      installation has no lane to put it on; the booking stands and no subscription
-                      mail follows.
+                      `not_requested` — the form carried no tick. `pending_confirmation` — the tick was
+                      accepted. If this address can receive our mail, a confirmation link is on its way,
+                      and nothing is subscribed until it is opened. The answer is the same whatever the
+                      address's state, so it reveals nothing about it. `not_asked` — this installation
+                      has no mail lane, so no subscription mail follows. The booking stands in every case.
         '409': { description: 'Slot no longer available (`code: slot_taken`).', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
         '422': { $ref: '#/components/responses/ValidationError' }
         '502': { $ref: '#/components/responses/CalendarUnavailable' }
@@ -12223,8 +12329,14 @@ paths:
       summary: Exchange a one-time Deal Room credential for a room session (anonymous).
       description: |
         Consumes the credential — a second exchange of the same string is refused —
-        and issues a session token the buyer presents as a Bearer on every other
-        `/public/rooms` operation. The session is bound to ONE participant in ONE
+        and issues a session token the buyer presents on every other
+        `/public/rooms` operation. The same answer sets it as the
+        `__Host-crm_room_session` cookie: HttpOnly, Secure, SameSite=Strict,
+        Path=/ and expiring with the session, so a browser keeps access after its
+        tab closes. Only `/public/rooms` reads that cookie. The body must be
+        `application/json`. A write another site starts is refused with 403 on
+        every `/public/rooms` operation: `Sec-Fetch-Site: cross-site`, or an
+        `Origin` that is not this installation's. The session is bound to ONE participant in ONE
         room and is resolved fresh on every request, so revocation binds on the next
         call. A paused room still exchanges: the session is established and the
         room bootstrap then says access is paused.
@@ -12236,6 +12348,10 @@ paths:
       responses:
         '200':
           description: The session token, returned once.
+          headers:
+            Set-Cookie:
+              description: The `__Host-crm_room_session` cookie carrying the same session token.
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DealRoomSessionIssued' }
@@ -12433,9 +12549,9 @@ paths:
       x-agent-access: human-only
       summary: End the room session.
       description: |
-        Revokes this session only. The participant keeps their standing; a fresh
-        link admits them again. Works in every room state, because ending a session
-        is an access act, not a content one.
+        Revokes this session only and clears the `__Host-crm_room_session` cookie. The
+        participant keeps their standing; a fresh link admits them again. Works in
+        every room state, because ending a session is an access act, not a content one.
       responses:
         '204': { description: 'Signed out.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -13104,6 +13220,8 @@ paths:
         An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
         A lead for somebody who is already a contact is refused with 409 `contact_holds_email`:
         open a deal on the contact instead.
+        A body with none of `full_name`, `email`, `phone`, `linkedin_url` or `company_name`
+        answers 422 `lead_identity_required`.
       x-mcp-tool: { verb: create_record, record_type: lead, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -13211,7 +13329,8 @@ paths:
       description: |
         The workspace's follow-up window: a message a seat sent to a customer that is still
         the last word after this many days comes back on the sender's worklist as a
-        follow-up. Read by every role; changed by admin/ops. Governed by the
+        follow-up. It also carries whether the AI checks private mail for requests owed an
+        answer. Read by every role; changed by admin/ops. Governed by the
         `installation_settings` RBAC object.
       responses:
         '200':
@@ -13226,7 +13345,7 @@ paths:
       operationId: updateFollowUpSettings
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: update_follow_up_settings, router: change_settings, action: update_follow_up_settings, tier: auto_execute, scope: write, served_by: route }
-      summary: Change the follow-up window (admin/ops).
+      summary: Change the follow-up window or the private-mail request check (admin/ops).
       requestBody:
         required: true
         content:
@@ -13793,9 +13912,9 @@ paths:
         A lead with no email address on record is `422`: a draft addressed to nobody is not a
         message, and the composer can say so before spending a model call.
 
-        When no model lane is configured, or the workspace's AI budget is exhausted, the draft
-        degrades to a deterministic one rather than failing — `generated_by` says which wrote
-        it.
+        When no model lane is configured, the workspace's AI budget is exhausted, the model call
+        fails, or the draft checks refuse the model's answer, the draft degrades to a
+        deterministic one rather than failing — `generated_by` says which wrote it.
 
         Human-only: drafting spends the workspace's model budget on prose for a contact to send
         under their own name.
@@ -15772,6 +15891,8 @@ paths:
       tags:
       - Reports
       operationId: createReportingReport
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       summary: Create reporting report
       responses:
         '201':
@@ -17413,7 +17534,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed.'
+          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), the chat refused the channel name even in the form derived from the record (`code: channel_name_refused`), or the request is malformed.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -18548,6 +18669,7 @@ paths:
             - deals-by-stage
             - forecast
             - leads-by-status
+            - loss-events
             - meeting-conversion
             - open-deals-per-company
             - pipeline-current
@@ -18621,6 +18743,7 @@ paths:
     get:
       tags: [Reports]
       operationId: explainReport
+      x-open-query: true
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: '"Explain This Number" — resolve a derivation handle to its definition + source rows.'
       description: |
@@ -19946,6 +20069,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getLegalEntityLogo
+      x-open-query: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_legal_entity_logo, router: read_details, action: legal_entity_logo, tier: auto_execute, scope: read, served_by: route }
       summary: Stream a legal entity's logo image.
@@ -20882,7 +21006,11 @@ paths:
         binds only your own mail. Not retroactive — mail already captured under the old reading
         stays, and a contact already minted from an alias stays until it is merged or removed.
         Idempotent on the folded value.
-      x-mcp-tool: { verb: add_owner_identity, router: change_capture, action: add_owner_identity, tier: auto_execute, scope: write, served_by: route }
+
+        A consumer-mail domain is refused with 422 `consumer_mail_domain` as a whole domain. A company's
+        domain or a contact's address answers 409 `domain_needs_confirmation` (`details.role`,
+        `details.company_name`); the same request with `confirm: true` stores it.
+      x-mcp-tool: { verb: add_owner_identity, router: change_capture, action: add_owner_identity, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       requestBody:
         required: true
@@ -20896,6 +21024,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CaptureOwnerIdentity' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/owner-identities/{id}:
@@ -21133,6 +21262,7 @@ paths:
   /connectors/{provider}/disconnect:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Connectors]
       operationId: disconnectConnector
@@ -21151,6 +21281,7 @@ paths:
         '204': { description: Disconnected (or already disconnected). }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /shared-mailboxes:
     get:
@@ -21321,6 +21452,7 @@ paths:
   /connectors/{provider}/signature-enrichment:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorSignatureEnrichment
@@ -21349,6 +21481,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /connectors/{provider}/containers:
     parameters:
@@ -21360,7 +21493,10 @@ paths:
         - name: connection_id
           in: query
           required: false
-          description: Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox.
+          description: >-
+            The caller's own mailbox of this provider, the `id` of a `CaptureConnection`; omit it
+            while they hold one. An administrator may also name a connection enrolled for internal
+            operational mail.
           schema: { type: string, format: uuid }
 
       summary: The folders or labels this mailbox has, to pick one to keep out of capture.
@@ -21410,6 +21546,7 @@ paths:
   /connectors/{provider}/silence/dismiss:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Connectors]
       operationId: dismissConnectorSilence
@@ -21441,6 +21578,7 @@ paths:
   /connectors/{provider}/mail-posture:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorMailPosture
@@ -21481,6 +21619,7 @@ paths:
   /connectors/{provider}/history-baseline:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorHistoryBaseline
@@ -21523,6 +21662,7 @@ paths:
   /connectors/{provider}/context-tag:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorContextTag
@@ -21565,6 +21705,7 @@ paths:
   /connectors/{provider}/backfill/preview:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Capture]
       operationId: previewConnectorBackfill
@@ -21595,6 +21736,7 @@ paths:
         '403': { $ref: '#/components/responses/RoleCannotCapture' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '502':
           description: 'Provider unreachable — the estimate needs the provider (`code: provider_unreachable`).'
           content:
@@ -21604,6 +21746,7 @@ paths:
   /connectors/{provider}/backfill:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Capture]
       operationId: startConnectorBackfill
@@ -21630,6 +21773,7 @@ paths:
         '403': { $ref: '#/components/responses/RoleCannotCapture' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     get:
       tags: [Capture]
       operationId: getConnectorBackfillStatus
@@ -21650,6 +21794,7 @@ paths:
               schema: { $ref: '#/components/schemas/BackfillStatus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Capture]
       operationId: cancelConnectorBackfill
@@ -21668,6 +21813,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /attention:
     get:
@@ -22196,9 +22342,10 @@ paths:
         on a deal at risk.
 
         Each row must be one the caller's Worklist draws now, under a scope they hold, with
-        every lane's own grant and row scope. Any other row answers 404, the same as one
-        that does not exist, and nothing in the batch is written. A source whose rows never
-        offer Done answers 422. A row named twice is written once.
+        every lane's own grant and row scope, or one the caller already marked done. A row
+        already done answers 204 and is not written again. Any other row answers 404, the
+        same as one that does not exist, and nothing in the batch is written. A source whose
+        rows never offer Done answers 422. A row named twice is written once.
       requestBody:
         required: true
         content:
@@ -23597,6 +23744,11 @@ paths:
         because that is what the matcher keys on. Idempotent on the domain: re-adding returns the
         existing entry and changing an entry's kind updates it, since a domain cannot be both
         added and carved out. Audit-only write (no event stream, EVT-NOEVT-3).
+
+        An `extra` entry is refused with 422 for the workspace's own domain (`own_domain`) and for a
+        domain the shipped list already holds (`already_on_shipped_list`). For the domain of a company
+        on file it answers 409 `domain_needs_confirmation` with `details.company_name`; the same
+        request with `confirm: true` stores it.
       requestBody:
         required: true
         content:
@@ -23613,6 +23765,7 @@ paths:
               schema: { $ref: '#/components/schemas/ConsumerMailDomain' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/consumer-mail-domains/{id}:
@@ -25238,6 +25391,35 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /autonomy/installation:
+    put:
+      tags: [Approvals]
+      operationId: updateAutoApplyInstallation
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Switch automatic application on or off for the whole installation.
+      description: |
+        Admin only (`approvals.auto_apply_enabled`). Off, no proposal applies itself
+        for anybody, whatever a reader's own setting says. On, nothing changes for a
+        reader: their own mode per kind still decides, so turning it back on never
+        switches on a kind somebody turned off. The switch is read back as
+        `auto_apply_enabled` on `GET /autonomy`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AutoApplyInstallation' }
+      responses:
+        '200':
+          description: The switch as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutoApplyInstallation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
+
   /me/approval-preferences:
     get:
       tags: [Approvals]
@@ -26182,9 +26364,11 @@ paths:
         instruction rather than under the engine's permission. A subject asking later why they
         received it is shown the refusal AND the decision, never a grant nobody made.
 
-        A SUBJECT'S OWN STOP IS NEVER PASSED. A review that holds an objection, a withdrawal, a
-        restriction or a request to stop is refused with 403, admin included, even beside a refusal
-        a decision could pass.
+        WHAT A DECISION CAN PASS is each refusal's declared remedy. A holder of the exception grant
+        may send one message past a policy refusal and past the subject's own objection, withdrawal,
+        restriction or request to stop; the stop stays on record and binds the next message. A hard
+        bounce and a recipient the engine cannot name declare no remedy: a review holding one is
+        refused with 403, admin included, because the address needs a real repair.
 
         THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
         took it on. An agent or a connector is refused: it may read the review and send its user
@@ -26197,7 +26381,11 @@ paths:
         is the one thing a dispute about that override needs not to be possible.
 
         SPENT ONCE. The decision authorizes this message to this envelope and is consumed when it
-        goes. The next message to the same contact needs its own.
+        goes. The next message to the same contact needs its own. A retry under the same
+        `Idempotency-Key` answers the recorded 201, so a client whose first answer was lost learns
+        the message went.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -29456,11 +29644,7 @@ paths:
         `no-cache`, so a stale URL never pins the new bytes. `If-None-Match` with the
         `ETag` answers 304.
       parameters:
-        - name: v
-          in: query
-          required: false
-          description: The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
-          schema: { type: string, maxLength: 64 }
+        - $ref: '#/components/parameters/AssetRevision'
       responses:
         '200':
           description: The picture's bytes.
@@ -30103,6 +30287,59 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /roles/{key}/restore-grants:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema: { type: string, minLength: 1, maxLength: 64 }
+        description: The role key of a role the product ships.
+    post:
+      tags: [Identity]
+      operationId: restoreRoleGrants
+      security: [ { cookieAuth: [] } ]   # human session only — see listRoles
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          schema: { type: string }
+          description: The `version` of the role you read. A restore replaces every grant, so the write never goes out without it.
+      summary: Put a shipped role's grants back to the ones the product ships. Human-only.
+      description: |
+        Replaces the whole `objects` map of a system role (`is_system: true`) with the grants a
+        new installation seeds for it, extension defaults included. Grants on objects the
+        installation cannot name are dropped with the rest. Name, row scope and field masks are
+        left as they are. A custom role has nothing shipped to return to (409 `custom_role`).
+
+        Gated on `role_admin.update`. A restore that turns any verb on is admin only (403
+        `widening_requires_admin`), like any other widening. `If-Match` is required: a missing
+        or malformed one is refused 422 and a stale one 409 `version_skew`.
+
+        The audit row names the role and the before and after grant of each object that moved.
+        No public event is emitted, for the reason `setRoleObjectGrant` gives. Live sessions are
+        not revoked.
+      responses:
+        '200':
+          description: The role with its shipped grants.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`unknown_role` — no live role has this key.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: '`version_skew`, or `custom_role` — only a role the product ships has shipped grants.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /roles/{key}/objects/{object}:
     parameters:
       - name: key
@@ -30148,6 +30385,10 @@ paths:
         because refusing stored data costs a member their session; on this WRITE path the
         opposite is true — refusing input an admin just typed costs them a correction, and
         storing a typo would create a grant nobody can ever satisfy and no screen can explain.
+
+        A grant with Create, Update or Delete on and Read off is refused 422 `write_needs_read`,
+        unless the object offers no Read (`verbs` on `listRoles`). Every write shows the record it
+        wrote, so a write without Read could act on rows its holder is never shown.
 
         Gated on `role_admin.update`. Turning a verb OFF is open to every holder of the grant.
         Turning one ON is admin only (403 `widening_requires_admin`), which is also how a newly
@@ -33473,6 +33714,41 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/focus:
+    get:
+      tags: [Reports]
+      operationId: getForecastFocus
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The deals each team should work to meet its goal this quarter.
+      description: |
+        Read from the latest daily freeze of each team in the current quarter. The freeze ranks a
+        team's open priced deals when the team has a published goal for every month of the quarter.
+
+        Behind the goal, the list ranks deals by weighted amount, raised for each close-date risk.
+        On target, it lists only deals with a close-date risk, most risks first. A close-date risk
+        is a close date that passed, a provisional date, a date that kept moving, or a close within
+        a week with no next step. At most 20 deals, and the rank stays as frozen.
+
+        Each team needs the right to assert about its forecast, so a seat outside a team gets 404
+        for it. A deal the caller may not read is left out. A masked amount is left out of its row.
+        With individual performance off, a list shows only the reader's own deals and names no
+        owner. A team too small for that is refused when named and left out otherwise.
+      parameters:
+        - name: team
+          in: query
+          schema: { type: string, format: uuid }
+          description: One team. Omitted, every team whose list the caller may read.
+      x-mcp-tool: { verb: get_forecast_focus, router: read_reports, action: forecast_focus, tier: auto_execute, scope: read, served_by: route }
+      responses:
+        '200':
+          description: One list per team.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ForecastFocus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/calls:
     get:
       tags: [Reports]
@@ -33550,6 +33826,8 @@ paths:
     post:
       tags: [Reports]
       operationId: recordForecastCall
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Record what somebody believes will close.
       description: |
@@ -35019,7 +35297,8 @@ paths:
         (a hidden or cross-tenant entity answers 404, never leaks existence).
         The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
         Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
-        answers 422 `unsupported_file_type`.
+        answers 422 `unsupported_file_type`. So does a file whose content does not match its
+        name or declared type, such as a program renamed to `.pdf`.
 
         An agent may file one no larger than the `attach_document` tool takes: what one MCP
         request carries inline, or the operator's attachment limit when that is smaller. A
@@ -35050,6 +35329,77 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /attachments/links:
+    post:
+      tags: [Attachments]
+      operationId: addAttachmentLink
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: attach_link, router: change_activities, action: attach_link, tier: auto_execute, scope: write, served_by: route }
+      summary: Add a web link to a record's documents.
+      description: |
+        A document that lives somewhere else, such as a Google Doc or a web page, listed with the
+        record's files. The row keeps the address and holds no bytes: `url` is set,
+        `bytes_withheld` is true, and the download route answers 404 for it. The server does not
+        fetch the address here; `title` is what the caller read or typed.
+
+        The parent rules are the upload's: Update on the parent's type, and a parent the caller can
+        see (a hidden or cross-tenant one answers 404). `category` is what the document is; the two
+        provenance values and `link`, which marks a link a mail carried, are refused (422
+        `category_not_assertable`). The same address listed live on the same record answers 422
+        `link_already_listed`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddAttachmentLinkRequest' }
+      responses:
+        '201':
+          description: The listed link.
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attachment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /attachments/links/preview:
+    post:
+      tags: [Attachments]
+      operationId: previewAttachmentLink
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security   # an agent-named URL the server fetches
+      summary: Read the title a web page gives itself, before the link is added.
+      description: |
+        Fetches the address once through the public-web reader: SSRF-guarded, robots.txt honored,
+        no cookies sent. Answers the page's Open Graph title, else its `<title>`, and its Open
+        Graph site name. Writes nothing.
+
+        A page that cannot be read still answers 200 with `read: false` and no title, because the
+        link can be added all the same. Google Docs, Sheets, Slides, Forms and Drive addresses are
+        not fetched: they answer a sign-in page, never the document's title.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string, maxLength: 2048 }
+      responses:
+        '200':
+          description: What the page says about itself.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttachmentLinkPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/network:
@@ -36831,6 +37181,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The process role wired no model path or no job runner — declared absent, never a silent no-op.
@@ -37023,7 +37378,22 @@ paths:
 
         The file's rows are counted first. A file with more rows than one test
         run reads is refused 422 `too_many_rows`, and no run and no stored file
-        are left behind.
+        are left behind. Its `max` is the limit and `params.rows` the file's count.
+
+        A file that cannot be read is refused 422 on `file`, with `params` naming
+        why. `not_utf8` names nothing. `unreadable` names the `line` when the
+        reader knows it, with `reason` `field_count` or `quote`.
+        `header_unusable` has `reason` `no_header`, `blank_name` (with
+        `position`) or `repeated_name` (with `name`). `bundle_refused` has
+        `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
+        (with `max_mb`), `too_many_files` (with `files` and `max_files`),
+        `password_protected`, `file_damaged` or `file_missing` (with `file`),
+        `two_files_one_type` (with `file`, `other_file` and `object`),
+        `type_not_importable` (with `object`), `spreadsheet` (an Excel
+        workbook, which holds no CSV) or `no_importable_file` (with
+        `file_names`, the names the import reads). A ZIP with no file the
+        import reads opens no run. A refusal of one file of a ZIP also names
+        it in `file`.
 
         A cell an export quoted against formula evaluation (a quote before `=`,
         `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -37037,7 +37407,7 @@ paths:
               type: object
               required: [file]
               properties:
-                file:   { type: string, format: binary, description: 'The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part''s type. A ZIP is known by its content, not its name.' }
+                file:   { type: string, format: binary, description: 'The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is ignored for a ZIP, whose file names say each part''s type. A CSV sent without `object` is typed by its header, and the profile''s `object_chosen_by` says how. A ZIP is known by its content, not its name.' }
                 object: { $ref: '#/components/schemas/ImportObject' }
       responses:
         '200':
@@ -37113,6 +37483,13 @@ paths:
         and moves the run to `awaiting_approval` carrying the report
         `getImportRunReport` reads, or back to `pending` with the reason in
         `error` when the test stopped on the file or ran past its time.
+
+        A mapping the object cannot satisfy is refused 422 with `params`:
+        `duplicate_target` on `mapping` names the `target` and the two columns
+        (`column`, `other_column`); `unmappable` on `source_key` names the
+        `object` and its key `target`, and `ref_target` when a column mapped to
+        `ref` would also identify each row. `invalid` on `source_name` carries
+        `max`. A file refusal reads as it does on `uploadImportSource`.
 
         An upload has one run. This call writes the mapping onto the draft the
         upload opened and tests it, so a second call on one `source_ref`
@@ -37912,7 +38289,7 @@ paths:
         Renaming the installation's own company (`is_anchor`) renames the installation in the same
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-        past 200 characters (`too_long`); other companies' names have no length cap.
+        past 120 characters (`too_long`), the limit of every company name typed by hand.
       x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -38201,9 +38578,13 @@ paths:
       summary: Add a document to this corpus.
       description: >-
         Accepts only files whose bytes are their own text — text/plain, text/markdown,
-        text/csv, application/json. Anything else is refused naming what is accepted;
-        there is no parser in this product, and a PDF arriving as an empty corpus is
-        worse than a PDF refused. Ingest is asynchronous: the document lands `queued`
+        text/csv, application/json. A `.txt`, `.md`, `.csv` or `.json` ending names the
+        type whatever type the client sent with it. Anything else is refused 415, naming
+        the kind of file in words and what to save it as; there is no parser in this
+        product, and a PDF arriving as an empty corpus is worse than a PDF refused. A file
+        whose content is not text, such as a program renamed to `.md`, is refused the
+        same way. An empty file is refused 422 `empty_file` on `file`, and nothing is
+        stored. Ingest is asynchronous: the document lands `queued`
         and its progress is read back from this path's GET. The set that ships with
         Margince takes no uploads: only Margince files pages in it.
       requestBody:
@@ -38808,7 +39189,9 @@ components:
       type: http
       scheme: bearer
       description: |
-        A Deal Room BUYER session (the `/public/rooms` surface only). Exchanged once
+        A Deal Room BUYER session (the `/public/rooms` surface only), presented as a
+        Bearer or, from a browser, as the `__Host-crm_room_session` cookie the exchange sets.
+        A present Bearer wins over the cookie. Exchanged once
         from an invitation credential; the server stores only its SHA-256 and
         resolves it on every request, so revocation and room pause bind on the next
         call. It carries no CRM authority whatsoever: every platform/auth gate
@@ -38900,6 +39283,16 @@ components:
       description: >-
         The provider of an OAuth app a composed extension unit declares. Never `google` or
         `microsoft`: the boot refuses a unit that claims a core vendor's name.
+    CaptureConnectionId:
+      name: connection_id
+      in: query
+      required: false
+      schema: { type: string, format: uuid }
+      description: |
+        Which of the caller's mailboxes of this provider the call is about: the `id` of a
+        `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+        the caller holds one mailbox of the provider; with several, a call without it answers 422
+        and names this parameter.
     CaptureProvider:
       name: provider
       in: path
@@ -38924,6 +39317,12 @@ components:
       required: true
       schema: { type: string, format: uuid }
       description: Opaque resource id (UUID; ordering semantics are not exposed).
+    AssetRevision:
+      name: v
+      in: query
+      required: false
+      description: The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
+      schema: { type: string, maxLength: 64 }
     BundleId:
       name: bundle_id
       in: path
@@ -39067,6 +39466,9 @@ components:
         resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
         request under the key failed after it had started, so check whether it took effect before
         retrying under a new key.
+        A request the server stopped for time answers `503 code: request_timed_out` with
+        `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+        If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
         **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
         answer lost": without it the blind retry answers `409 version_skew`, because the first
         attempt already bumped the version.
@@ -39226,6 +39628,18 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    SendRefused:
+      description: |
+        Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+        When the refusal opened a review, `details` carries `review_id`, the
+        `available_actions` this caller may take, and `refusals`: each refused address
+        the caller named, with the engine's `reason_code`, resolved `category` and the
+        `requested_category` the caller claimed. `details.review` is the review exactly as
+        `GET /communication-reviews/{id}` serves it to this caller, so a client needs no second
+        request; it is absent when the caller may not read the review.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/SendRefusal' }
     ControllerMailRefused:
       description: |
         The installation cannot send its own mail (`conflict`), or the consent engine refuses this
@@ -40668,6 +41082,14 @@ components:
             a file too large is refused before it is sent instead of after. The ceiling bounds
             the whole request, part framing included, which is why a client should leave a
             little room rather than compare a file against it exactly.
+        max_knowledge_document_bytes:
+          type: integer
+          format: int64
+          description: |
+            The largest document `uploadCorpusDocument` accepts, in bytes. Set by whoever operates
+            the installation, on the same terms as `max_upload_bytes`, and lower than it by
+            default because a corpus document becomes passages every ask scans. Absent from a
+            server older than this field; a client then leaves the refusal to the server.
         oauth_access_token_ttl_minutes:
           type: integer
           minimum: 5
@@ -41028,8 +41450,9 @@ components:
             A class this installation chose, never a provider's text and never content. The ones
             that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a
             ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a
-            prior decision means no record will appear), `internal_only`, `no_granting_human`,
-            `invisible_incumbent`, `derivation_failed`.
+            prior decision means no record will appear), `internal_only`, `own_addresses_only`
+            (every party was the mailbox owner's own address and no forwarded customer mail was
+            found), `no_granting_human`, `invisible_incumbent`, `derivation_failed`.
         activity_id:
           type: [string, 'null']
           format: uuid
@@ -42818,7 +43241,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site, unknown]
           x-extensible-enum: true
           description: |
             Why, as a code the client words in the reader's language.
@@ -42829,7 +43252,7 @@ components:
               as a company.
             - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
               company this business works with. `sender_kind` says which, when it is known.
-            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
               domain's open question, as `source` describes each one.
             - `unknown`: the row records a reason this server has no word for. `reason` still
               carries its stored sentence.
@@ -42848,7 +43271,7 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain]
+          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site]
           x-extensible-enum: true
           description: |
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
@@ -42858,7 +43281,9 @@ components:
             old to mint one from today's site; `near_duplicate` means more than one company
             here already carries the name it resolved to, and which of them this domain belongs
             to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-            as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+            as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+            `foreign_site` means the site names a different business than the domain, which may
+            have changed hands.
         decided_at: { type: string, format: date-time, description: 'When the decision was recorded. For an `undecided` domain, when the row last moved.' }
         company_id:
           type: string
@@ -42938,6 +43363,9 @@ components:
       properties:
         domain: { type: string, description: 'A mail domain; normalized to its registrable form before it is stored.' }
         kind: { type: string, enum: [extra, never] }
+        confirm:
+          type: boolean
+          description: 'Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.'
     ConsumerMailDomainListResponse:
       type: object
       required: [data]
@@ -43020,6 +43448,12 @@ components:
             `POST /connectors/{provider}/backfill` and its estimate refuse with `422
             connector_unsupported`, so a client offers no import rather than one that fails.
         account_label: { type: [string, 'null'], description: 'Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one.' }
+        default_sender:
+          type: boolean
+          description: |
+            True on the mailbox the member marked for new mail
+            (`PUT /connectors/{provider}/mail-posture` with `default_sender`). Without a mark, new
+            mail goes out from the first connected mailbox that can send.
         status: { type: string, enum: [connected, disconnected, error, reauth_required], x-extensible-enum: true, description: 'Connection state; `reauth_required` when the stored token expired/was revoked upstream.' }
         sync_cursor: { type: [string, 'null'], description: 'Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only.' }
         watch_expires_at: { type: [string, 'null'], format: date-time, description: 'Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.' }
@@ -43158,9 +43592,17 @@ components:
     SetMailPostureRequest:
       type: object
       additionalProperties: false
-      required: [posture]
-      description: What one mailbox asks of the mail it brings in.
+      description: |
+        What one mailbox asks of the mail it brings in, and whether new mail goes out from it.
+        Send `posture`, `default_sender`, or both; a body with neither is refused with 422.
       properties:
+        default_sender:
+          type: boolean
+          description: |
+            `true` makes this mailbox the one the caller's new mail goes out from, and unmarks the
+            one that was. A reply still goes out from the mailbox the conversation arrived in.
+            `false` is ignored: a member always has a default, the first connected when none is
+            marked.
         posture:
           type: string
           enum: [shared, classified, held]
@@ -43632,6 +44074,12 @@ components:
         request_has_reminder:
           type: boolean
           description: An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld.
+        our_reply:
+          allOf: [{ $ref: '#/components/schemas/RequestReply' }]
+          description: |
+            Present on an open request with an unfinished reminder when our reply on its thread
+            is newer than it and is still the newest message there. The request stays open: a
+            reply settles nothing by itself. Absent when the source is withheld.
         activity_id: { type: string, format: uuid }
         subject:
           type: [string, 'null']
@@ -43946,8 +44394,17 @@ components:
           type: boolean
           readOnly: true
           description: >-
-            True when the message is private to its owner and the file was recorded by
-            name, size and type only. There are no bytes to fetch.
+            True when the file was recorded by name, size and type only. There are no bytes
+            to fetch; `withheld_reason` says why.
+        withheld_reason:
+          type: string
+          readOnly: true
+          enum: [private, not_addressed]
+          x-extensible-enum: true
+          description: >-
+            Present when `bytes_withheld` is true. `private`: the message is private to its
+            owner. `not_addressed`: no colleague here sent the message or was in its To line,
+            so the bytes wait for a copy that was addressed to one.
 
     EmailAccess:
       type: object
@@ -44268,6 +44725,10 @@ components:
           description: >-
             The folded address or domain, or a provider-qualified container (`gmail:Label_12`,
             `graph:<folderId>`, `imap:INBOX/Family`) kept as the provider spells it.
+        connection_id:
+          type: [string, 'null']
+          format: uuid
+          description: The mailbox a container rule matches in. Null for every other rule.
         created_at: { type: string, format: date-time }
         created_by_name:
           type: [string, 'null']
@@ -44309,6 +44770,14 @@ components:
         scope: { $ref: '#/components/schemas/CaptureExclusionScope' }
         kind: { $ref: '#/components/schemas/CaptureExclusionKind' }
         value: { type: string, maxLength: 320, description: 'An email address, or a bare domain.' }
+        connection_id:
+          type: string
+          format: uuid
+          description: |
+            For a `container` rule, the caller's mailbox the folder was picked from, the `id` of a
+            `CaptureConnection`. A label or folder id means another folder in another mailbox, so
+            the rule matches only there. Omit it while the caller holds one mailbox of the
+            provider; with several it is required. Ignored for other kinds.
     CaptureOwnerIdentityKind:
       type: string
       enum: [address, domain]
@@ -44417,6 +44886,9 @@ components:
       properties:
         kind: { $ref: '#/components/schemas/CaptureOwnerIdentityKind' }
         value: { type: string, maxLength: 320, description: 'An email address, or a bare domain.' }
+        confirm:
+          type: boolean
+          description: 'Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.'
     WorkspaceEmailDomainListResponse:
       type: object
       required: [data]
@@ -44538,6 +45010,14 @@ components:
             ON by default, admin-switchable) rather than a per-connect acknowledgment; this field
             remains only so a client that still sends it keeps working.
         redirect_uri: { type: string, format: uri, description: 'App page to return to after OAuth consent (OAuth providers).' }
+        connection_id:
+          type: string
+          format: uuid
+          description: |
+            The caller's mailbox this consent repairs (Reconnect). The consent must name the same
+            account: a different one is refused, because it is another mailbox. Absent adds the
+            account the consent names as another mailbox, or repairs the one that account already
+            has. Ignored by credential providers.
         return_to:
           type: string
           enum: [onboarding, settings, meetings]
@@ -44591,6 +45071,24 @@ components:
           maximum: 200
           default: 50
           description: 'Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.'
+        smtp: { $ref: '#/components/schemas/ImapSmtpSettings' }
+    ImapSmtpSettings:
+      type: object
+      description: >-
+        Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP
+        username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login
+        before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot
+        reach `502` `smtp_unreachable`, and a username that is not an email address `422`
+        `smtp_address_invalid`. Absent keeps the connection read-only. A shared mailbox only
+        captures, and refuses it with `422` `shared_mailbox_cannot_send`.
+      properties:
+        host: { type: string, description: 'The SMTP server. Absent or empty uses the IMAP host.' }
+        port: { type: integer, minimum: 1, maximum: 65535, description: 'Absent uses 465 for `tls` and 587 for `starttls`.' }
+        security:
+          type: string
+          enum: [tls, starttls]
+          default: tls
+          description: '`tls` opens TLS at once (port 465). `starttls` upgrades a plain connection (port 587) and refuses a server that cannot.'
     SharedMailbox:
       type: object
       description: A mailbox no one owns. One team reads what it captures.
@@ -44609,6 +45107,12 @@ components:
         connected_by: { type: [string, 'null'], format: uuid, description: The admin who last connected it. }
         connected_at: { type: string, format: date-time }
         backup_owner_id: { type: [string, 'null'], format: uuid, description: 'The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.' }
+        unread_period:
+          allOf: [{ $ref: '#/components/schemas/CaptureUnreadPeriod' }]
+          description: >-
+            A period no sync read: a first sync failed for longer than its held point, or the
+            mailbox held more mail than one round can read. Importing the mailbox's history over
+            it clears it. Absent when there is none.
     SharedMailboxList:
       type: object
       required: [items]
@@ -45015,6 +45519,24 @@ components:
           type: array
           description: The deal's contract, legal and offer documents, newest first.
           items: { $ref: '#/components/schemas/LegalReviewPacketDocument' }
+        contracts:
+          type: array
+          description: |
+            The agreements filed against the deal, newest term first. Absent on a
+            pack asked for before agreements were packed. An agreement this reader
+            may not open, and every agreement for a reader without `deal.read`, is not listed.
+          items: { $ref: '#/components/schemas/LegalReviewPacketContract' }
+        touches:
+          type: array
+          description: |
+            The deal's latest calls, meetings, messages and notes, newest first. One
+            this reader may not read, such as mail outside their audience, is not
+            listed. Absent on an older pack.
+          items: { $ref: '#/components/schemas/LegalReviewPacketTouch' }
+        tasks:
+          type: array
+          description: The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+          items: { $ref: '#/components/schemas/LegalReviewPacketTask' }
 
     LegalReviewPacketDeal:
       type: object
@@ -45078,6 +45600,46 @@ components:
       properties:
         stage_name: { type: string }
         entered_at: { type: string, format: date-time }
+
+    LegalReviewPacketContract:
+      type: object
+      description: |
+        One agreement as it stood at the request. Its title is read now for this
+        reader. The dates and notice terms are the ones frozen with the pack.
+      required: [id, title, status]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        contract_number: { type: [string, 'null'] }
+        status: { type: string, enum: [draft, active, expired, cancelled, superseded], x-extensible-enum: true }
+        starts_on: { type: [string, 'null'], format: date }
+        ends_on: { type: [string, 'null'], format: date }
+        renewal_on: { type: [string, 'null'], format: date }
+        cancellation_notice_on: { type: [string, 'null'], format: date }
+        notice_period_days: { type: [integer, 'null'] }
+        auto_renew: { type: [boolean, 'null'] }
+
+    LegalReviewPacketTouch:
+      type: object
+      description: One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+      required: [activity_id, kind, occurred_at, occurred_precision]
+      properties:
+        activity_id: { type: string, format: uuid }
+        kind: { type: string, enum: [call, email, meeting, message, note], x-extensible-enum: true }
+        occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+        subject: { type: [string, 'null'] }
+
+    LegalReviewPacketTask:
+      type: object
+      description: One task that was open at the request. Its subject is read now.
+      required: [activity_id]
+      properties:
+        activity_id: { type: string, format: uuid }
+        subject: { type: [string, 'null'] }
+        due_at: { type: [string, 'null'], format: date-time }
 
     LegalReviewPacketDocument:
       type: object
@@ -45397,6 +45959,19 @@ components:
           items: { type: string, format: uuid }
         survivor_id: { type: string, format: uuid, description: 'The record that remains. Its values win where two members disagree.' }
         owner_id: { type: string, format: uuid, description: 'Who owns the remaining contact: the live owner of one of the selected members.' }
+        prefer: { $ref: '#/components/schemas/ContactCasePreference' }
+    ContactCasePreference:
+      type: object
+      additionalProperties: false
+      description: |
+        Where the selected members disagree, the member whose value the remaining contact takes.
+        Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+        No value is lost: every address, number and employment of every member stays on the remaining contact.
+      properties:
+        name: { type: string, format: uuid, description: 'The member whose first and last name the remaining contact takes.' }
+        title: { type: string, format: uuid, description: 'The member whose title the remaining contact takes.' }
+        email: { type: string, format: uuid, description: "The member whose primary email address becomes the remaining contact's primary one." }
+        employment: { type: string, format: uuid, description: "The member whose current employer becomes the remaining contact's current one." }
     ContactCaseOutcome:
       type: object
       description: What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant.
@@ -46338,6 +46913,19 @@ components:
         source_ref:    { type: string, description: 'Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct.' }
         row_count:     { type: integer, minimum: 0, description: 'Rows the upload holds: the file''s for a single CSV, the sum of `parts[].row_count` for a ZIP.' }
         object:        { $ref: '#/components/schemas/ImportObject' }   # absent for a ZIP, whose files carry their own in `parts`
+        object_chosen_by:
+          type: string
+          enum: [columns, none]
+          x-extensible-enum: true
+          description: |
+            How `object` was chosen for a CSV uploaded without one. The header is
+            matched as `suggested_mapping` matches it, once for each type, and
+            only a column that exactly one type's suggestion maps counts.
+            `columns`: one type's suggestion maps more such columns than any
+            other's. `none`: no type maps strictly the most, so `object` is
+            `lead` and a screen asks the reader to choose. Absent when the upload
+            named its type, and for a ZIP. The run's `profile` keeps it until a
+            draft save names `object`, which is the reader's own choice.
         file_name:     { type: string, description: 'The uploaded file''s name, for display. The client echoes it to `createImportRun`.' }
         suggested_source_name:
           type: string
@@ -46443,7 +47031,7 @@ components:
 
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       x-extensible-enum: true
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
@@ -46607,9 +47195,12 @@ components:
           type: integer
           minimum: 0
           description: |
-            Links the file asks for. A dry run reports this and nothing else,
-            because resolving an endpoint is a read the dry run has not done —
-            it says how many rows named an employer, not how many will find one.
+            Links the file asks for on the rows the run lands. A link whose own
+            row is skipped is not counted, because that row is reported as a
+            skip; `unresolved` still lists it. A dry run reports this and nothing
+            else, because resolving an endpoint is a read the dry run has not
+            done — it says how many landing rows named an employer, not how many
+            will find one.
         applied:
           type: integer
           minimum: 0
@@ -46685,6 +47276,14 @@ components:
       properties:
         file:    { type: string, description: 'The file name a ZIP entry needs for this object to be detected.' }
         object:  { $ref: '#/components/schemas/ImportObject' }
+        key_columns:
+          type: array
+          description: |
+            The columns that tell this file's rows apart. A file needs at
+            least one of them mapped, or the test run does not start, unless
+            the request names its own `source_key` column. Absent from a
+            server older than this field.
+          items: { type: string }
         columns:
           type: array
           items: { $ref: '#/components/schemas/ImportFormatColumn' }
@@ -47220,13 +47819,34 @@ components:
           additionalProperties: true
           description: |
             Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-            `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-            entry also carries `max`, the limit in characters.
+            `errors` array of `{ field, code, message }` on 422 validation. An entry that
+            refuses at a limit also carries `max`: the limit in characters for `too_long`,
+            in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+            code names other values carries them in `params`, an object of text values by
+            name, so a screen can word the code in the reader's language; `message` stays
+            the English sentence.
+
+            A value its field cannot hold names the field's path (`address.city` for a key of a
+            nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+            `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+            `invalid_type` for any other shape. A body that is not one JSON object, and a value
+            inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+            carries its bounds as `params.min` and `params.max`, as the schema spells them;
+            a date-time range states them as ISO dates.
 
             A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
             `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
             `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
             The `Retry-After` header says how many seconds until the call can succeed.
+
+            A 403 that the caller's roles answer carries `missing_grant`: what those roles
+            lack, in the notation the tool table uses for a tool's requirement, with
+            alternatives joined by `,`. An object action (`deal.update`, `deal.create|update`)
+            is a grant an admin adds to a role. `admin` asks for the admin role, and
+            `scope:team` for a role whose row scope reaches team records or more. Each is
+            lifted by an admin changing the caller's roles. A refusal that no role change
+            lifts, such as a Deal Room participant's or a record kind the installation
+            switched off, carries none.
 
     # ---- pagination envelope ----
     PageInfo:
@@ -47328,7 +47948,7 @@ components:
         contact_id: { type: string, format: uuid }
         email: { type: string, format: email, description: Stored lowercased. }
         email_type: { type: string, enum: [work, personal, other], x-extensible-enum: true, default: work }
-        is_primary: { type: boolean, default: false, description: At most one primary per type (DB-enforced). }
+        is_primary: { type: boolean, default: false, description: 'At most one primary address per contact, whatever its type (DB-enforced). primary_email follows it. A second primary in one request is refused with 409 multiple_primary.' }
         position: { type: integer, default: 0, description: Explicit ordering. }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
@@ -47344,7 +47964,7 @@ components:
         contact_id: { type: string, format: uuid }
         phone: { type: string, description: E.164 normalized. }
         phone_type: { type: string, enum: [work, mobile, home, other], x-extensible-enum: true, default: work }
-        is_primary: { type: boolean, default: false }
+        is_primary: { type: boolean, default: false, description: 'At most one primary number per contact, whatever its type (DB-enforced).' }
         position: { type: integer, default: 0 }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
@@ -48024,6 +48644,15 @@ components:
             one was named at creation. Absent on a contact a member typed, and
             absent to a reader who may not open that record, so the contact
             still reads rather than being refused.
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          x-extensible-enum: true
+          description: >-
+            How a message to this contact opens: `formal` takes the surname, `familiar` the first
+            name. A rep sets it once and every draft to the contact uses it ahead of what the
+            thread suggests. Null means nobody set it, and a draft reads the register from the
+            correspondence.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -48294,7 +48923,7 @@ components:
       type: object
       required: [full_name, source]
       properties:
-        full_name: { type: string, maxLength: 120 }
+        full_name: { x-single-line: true, type: string, maxLength: 120 }
         created_from_activity_id:
           type: [string, 'null']
           format: uuid
@@ -48303,9 +48932,9 @@ components:
             agent that creates a contact from a record names it here, so a
             reader can check where the name and title came from. The caller
             must be able to read it (404 `not_found` otherwise, never 403).
-        first_name: { type: [string, 'null'], maxLength: 120 }
-        last_name: { type: [string, 'null'], maxLength: 120 }
-        title: { type: [string, 'null'], maxLength: 120 }
+        first_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
+        last_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
+        title: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
         owner_id: { type: [string, 'null'], format: uuid }
         linkedin_url:
           type: [string, 'null']
@@ -48538,15 +49167,18 @@ components:
             stays in `superseded_value`, and a field a human corrected stands.
             `needs_review` — a resemblance, written nowhere; open the candidate and decide.
             `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-            `skipped` — the card states no name, carries a sending system's address, or matches a
-            contact the caller may not write; `reason` says which.
+            `skipped` — the card states no name or one over 120 characters, carries a sending
+            system's address, holds a value that is not readable text or cannot be stored, or
+            matches a contact the caller may not write; `reason` says which.
         contact_id:
           type: [string, 'null']
           format: uuid
           description: The contact created or updated, or — for `needs_review` — the candidate the card resembles.
         reason:
           type: [string, 'null']
-          description: Why a card was skipped, or a warning about an imported contact without a channel.
+          description: |
+            Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+            card's title was cut to the length the field holds.
         lead_id:
           type: [string, 'null']
           format: uuid
@@ -48625,7 +49257,7 @@ components:
           format: email
           description: 'An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.'
         email_type: { type: string, enum: [work, personal, other], default: work }
-        is_primary: { type: boolean, default: false }
+        is_primary: { type: boolean, default: false, description: 'The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.' }
         position: { type: integer, default: 0 }
 
     ContactPhoneInput:
@@ -48637,13 +49269,19 @@ components:
       properties:
         phone: { type: string }
         phone_type: { type: string, enum: [work, mobile, home, other], default: work }
-        is_primary: { type: boolean, default: false }
+        is_primary: { type: boolean, default: false, description: 'The one primary number of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`.' }
         position: { type: integer, default: 0 }
 
     UpdateContactRequest:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          description: >-
+            Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null)
+            so drafts read the register from the correspondence again.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -48651,10 +49289,10 @@ components:
             Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records
             who set it, so a mark set by hand is never lifted by the automatic check that
             lifts the mark the sender check set.
-        full_name: { type: string, maxLength: 120 }
-        first_name: { type: [string, 'null'], maxLength: 120 }
-        last_name: { type: [string, 'null'], maxLength: 120 }
-        title: { type: [string, 'null'], maxLength: 120 }
+        full_name: { x-single-line: true, type: string, maxLength: 120 }
+        first_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
+        last_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
+        title: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
         owner_id: { type: [string, 'null'], format: uuid }
         visibility:
           type: string
@@ -49057,12 +49695,12 @@ components:
       type: object
       required: [display_name, source]
       properties:
-        display_name: { type: string, maxLength: 120 }
+        display_name: { x-single-line: true, type: string, maxLength: 120 }
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
-        legal_name: { type: [string, 'null'], maxLength: 500 }
+        legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 500 }
         phone: { type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
         email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 20000, description: A description of what the company does. }
@@ -49089,8 +49727,8 @@ components:
           type: [string, 'null']
           description: Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
-        display_name: { type: string, maxLength: 120 }
-        legal_name: { type: [string, 'null'], maxLength: 500 }
+        display_name: { x-single-line: true, type: string, maxLength: 120 }
+        legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 500 }
         phone: { type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
         email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 20000, description: 'A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.' }
@@ -49699,9 +50337,10 @@ components:
       x-extensible-enum: true
       description: |
         Which writer produced a piece of generated prose. `model` — the configured model
-        lane. `deterministic` — the structured fallback, used when no lane is configured
-        or the workspace's AI budget is exhausted. Never silently interchangeable: a
-        reader deciding how much to trust a sentence needs to know which wrote it.
+        lane. `deterministic` — the structured fallback, used when no lane is configured,
+        the workspace's AI budget is exhausted, the model call fails, or the checks the
+        surface runs refuse the model's answer. Never silently interchangeable: a reader
+        deciding how much to trust a sentence needs to know which wrote it.
 
     CompanyQuestion:
       type: string
@@ -50504,6 +51143,11 @@ components:
             from the company links only the recipients this is true for. A read-only share
             grants no attach right. The server rechecks every write.
         title: { type: [string, 'null'] }
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          x-extensible-enum: true
+          description: The register a rep set for opening a message to this contact; null when none is set.
         provider_title:
           type: [string, 'null']
           description: >-
@@ -51845,6 +52489,20 @@ components:
       enum: [commitment_ours, commitment_theirs, open_question, decision, priority, objection, success_criterion, decision_process]
       x-extensible-enum: true
 
+    ConversationClaimLooksKept:
+      type: object
+      description: >-
+        A read-only hint that this open promise to invite someone looks kept: a guest of
+        that name at the same company accepted a later meeting this reader may open.
+        Nothing is settled. The reader decides, through the settle verb.
+      required: [meeting_id, guest_name, meeting_at, meeting_precision]
+      properties:
+        meeting_id: { type: string, format: uuid }
+        guest_name: { type: string }
+        meeting_at: { type: string, format: date-time }
+        meeting_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `meeting_at`. `day` means only its date is known.
     ConversationClaim:
       type: object
       description: |
@@ -51889,6 +52547,7 @@ components:
           type: [string, 'null']
           format: date-time
           description: When a human typed over the machine. Set means the claim is theirs, not the extractor's.
+        looks_kept: { $ref: '#/components/schemas/ConversationClaimLooksKept' }
         task_activity_id:
           type: [string, 'null']
           format: uuid
@@ -53553,6 +54212,16 @@ components:
             `our_side` has carried a display name from the start, and a buyer-side seat
             that carries only an id is the same list rendered half-anonymous.
         role:      { type: string }
+        reach:
+          type: string
+          enum: [reached, not_reached, unknown]
+          x-extensible-enum: true
+          description: |
+            Whether a current colleague has exchanged mail with or met this seat, as the caller
+            can prove it. `not_reached` only when no activity links the seat to a colleague at
+            all. Anything withheld from the caller, or an exchange only with a colleague who has
+            left, is `unknown`. Absent for a seat the caller cannot read, and without the
+            `activity` grant.
         engaged:
           type: boolean
           description: 'A two-way exchange in the window — both directions, not just our sends.'
@@ -53566,6 +54235,21 @@ components:
         last_inbound_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
+
+    DealCoverageLine:
+      type: object
+      description: One colleague's exchange with one buyer seat, as the newest event in each direction.
+      required: [user_id, contact_id, colleague_name]
+      properties:
+        user_id:    { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        colleague_name: { type: string }
+        last_inbound_at:  { type: [string, 'null'], format: date-time, description: When the contact last wrote to this colleague. }
+        last_inbound_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_inbound_at`." }
+        last_outbound_at: { type: [string, 'null'], format: date-time, description: "When this colleague last wrote to the contact, or was copied on our mail to them." }
+        last_outbound_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_outbound_at`." }
+        last_met_at:      { type: [string, 'null'], format: date-time, description: The newest meeting or call of the pair that neither declined. }
+        last_met_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_met_at`." }
 
     DealCoverageRisk:
       type: object
@@ -53643,9 +54327,16 @@ components:
           format: uuid
           description: |
             A confirmed current inbound request on this deal, admitted by the
-            request owner's responsibility, settlement and currency rules.
-            Absent for historical or unconfirmed review. Its absence makes no
+            request owner's responsibility, settlement and currency rules, that
+            is still owed our reply. Absent for historical or unconfirmed
+            review, and while `our_reply` is present. Its absence makes no
             claim about whether an unrecorded reply exists.
+        our_reply:
+          allOf: [{ $ref: '#/components/schemas/RequestReply' }]
+          description: |
+            The current request on this deal that we replied to, while our reply is the newest
+            message on its thread. The card then says we replied instead of saying the buyer
+            waits, and offers to mark the reminder done.
         generated_at: { type: string, format: date-time }
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
       additionalProperties: false
@@ -53770,6 +54461,29 @@ components:
           format: date-time
           description: Oldest successful sync across every relevant mailbox; absent if any has never succeeded.
         evaluated_at: { type: string, format: date-time }
+
+    RequestReply:
+      type: object
+      description: |
+        We replied after a request, and our reply is still the newest message on its thread.
+        One rule decides it, so the deal card, its risk line and its next move agree on whose
+        move it is. The request itself stays open until its reminder is done or a settlement
+        verdict records it settled.
+      required: [request_activity_id, replied_at, replied_precision, by_reader]
+      properties:
+        request_activity_id: { type: string, format: uuid, description: The request we replied to. }
+        by_reader: { type: boolean, description: The reader sent the reply. False when a colleague did. }
+        replied_at: { type: string, format: date-time, description: When our newest reply on the thread happened. }
+        replied_precision: { $ref: '#/components/schemas/OccurredPrecision' }
+        still_asked:
+          type: string
+          description: What the settlement pass found still asked, quoted from the request. Absent when no still_owed verdict quoted one.
+        reminder_id:
+          type: string
+          format: uuid
+          description: The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+        reminder_version: { $ref: '#/components/schemas/RowVersion' }
+      additionalProperties: false
 
     WorkEvidenceBasis:
       type: object
@@ -54655,6 +55369,14 @@ components:
             score is their warmest single relationship. `single_threaded_ours` reads the same
             entries, so its colleague is always one of them.
           items: { $ref: '#/components/schemas/ContactNetworkColleague' }
+        lines:
+          type: array
+          description: |
+            One entry per current colleague and readable seat who have exchanged mail or met,
+            from the activities the caller may open, at the time of the read. A seat the caller
+            cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+            the edge sections are withheld: absence says nothing about who has talked.
+          items: { $ref: '#/components/schemas/DealCoverageLine' }
         risks:        { type: array, items: { $ref: '#/components/schemas/DealCoverageRisk' } }
         sections_omitted:
           type: array
@@ -56293,6 +57015,17 @@ components:
             only because another was: masking either money figure withholds both and the currency
             with them, and a withheld partner takes its attribution along. Sorting or filtering the
             list by any of them is refused (422).
+        ai_written_fields:
+          type: array
+          readOnly: true
+          items: { type: string }
+          description: >-
+            The fields of this deal that a model wrote and nobody has edited since, such as
+            `description` or `amount_minor`. `currency` is named when the amount's words named no
+            currency and the base currency was assumed. A client marks each as written by
+            Margince. Any edit of a field removes it from the list. A field withheld from the
+            reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other
+            read leaves it absent. Absent or empty means none.
         fx_rate_to_base: { type: [string, 'null'], description: 'Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate.' }
         fx_rate_date: { type: [string, 'null'], format: date }
         pipeline_id: { type: [string, 'null'], format: uuid, description: 'The deal''s pipeline. A zero/placeholder UUID here is forbidden (dangling FK).' }
@@ -56441,8 +57174,9 @@ components:
         expected_close_date: { type: [string, 'null'], format: date, description: 'An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.' }
         close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.' }
         wait_until: { type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag." }
+        wait_ends_at: { type: [string, 'null'], format: date-time, readOnly: true, description: "The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date." }
         closed_at: { type: [string, 'null'], format: date-time }
-        last_activity_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.' }
+        last_activity_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.' }
         stalled: { type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.' }
         last_email:
           allOf: [{ $ref: '#/components/schemas/DealLastEmail' }]
@@ -56517,7 +57251,7 @@ components:
       type: object
       required: [name, pipeline_id, stage_id, source]
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         amount_minor: { type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.' }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
@@ -56581,7 +57315,7 @@ components:
     UpdateDealRequest:
       type: object
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         amount_minor: { type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.' }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
@@ -56677,6 +57411,11 @@ components:
           type: string
           format: date
           description: The calendar day the deal closed, in the installation's zone. Not after today.
+    MoveDealPipelineRequest:
+      type: object
+      required: [pipeline_id]
+      properties:
+        pipeline_id: { type: string, format: uuid, description: The live pipeline to move the deal to. It must differ from the deal's own. }
     AdvanceDealRequest:
       type: object
       required: [to_stage_id]
@@ -57468,7 +58207,7 @@ components:
       type: object
       required: [name, company_id, source]
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         company_id: { type: string, format: uuid }
         owner_id: { type: [string, 'null'], format: uuid }
         description: { type: [string, 'null'] }
@@ -57535,7 +58274,7 @@ components:
         file mail under a project, so changing it would stop mail already sent with it
         from filing.
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         owner_id: { type: [string, 'null'], format: uuid }
         description: { type: [string, 'null'] }
         started_at: { type: [string, 'null'], format: date }
@@ -60115,10 +60854,10 @@ components:
             moment a human actually knows the answer — the meeting is over — was the one
             moment the API could not be told.
 
-            An omitted field is unchanged, like every other field on this patch. Sending
-            an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-            `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-            wrong outcome is fixed by sending the right one.
+            An omitted field is unchanged, like every other field on this patch. An explicit
+            `null` removes the status, so the meeting is unanswered again; that is how a
+            recorded outcome is taken back. A meeting held by a live calendar invitation
+            refuses it like any status other than `held` or `no_show`.
       additionalProperties: true
       description: >-
         A sparse patch. The workspace's active activity custom fields travel as extra
@@ -60136,6 +60875,8 @@ components:
           maxItems: 10
           items: { $ref: '#/components/schemas/LatestInbound' }
         last_exchange: { $ref: '#/components/schemas/LastExchange' }
+        last_inbound: { $ref: '#/components/schemas/Activity' }
+        last_outbound: { $ref: '#/components/schemas/Activity' }
 
     LastExchange:
       type: object
@@ -60243,7 +60984,9 @@ components:
 
             `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
             Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
-            and the category cannot be set or changed through a metadata patch.
+            and the category cannot be set or changed through a metadata patch. A link a user
+            added (`POST /attachments/links`) holds an address the same way under the category
+            they chose, never `link`; its `source` is `link`.
 
             `email_attachment` and `message_attachment` record PROVENANCE rather than
             content: capture derives them from the transport the file arrived on, so a
@@ -60295,14 +61038,14 @@ components:
           description: >-
             True for a file a private message carried that was recorded by name, size and
             type only: no bytes were kept, so there is nothing to download (404) or read.
-            Also true for a `link` row, which is a pointer and has no bytes.
+            Also true for any row with a `url`, which is a pointer and has no bytes.
         url:
           type: [string, 'null']
           readOnly: true
           description: >-
-            The address of a `link` row, and null for every other category. It is an http or https
-            address on a known document host. The reader renders it as an outbound link to open in
-            a new tab, never as a download.
+            The address of a document that lives elsewhere: a `link` row a mail carried, or a link
+            a user added. Null for a stored file. It is an http or https address. The reader
+            renders it as an outbound link to open in a new tab, never as a download.
         origin:
           $ref: '#/components/schemas/AttachmentOrigin'
         source: { type: string }
@@ -60331,6 +61074,39 @@ components:
           description: >-
             Who the mail is from, named as the caller may see them: a contact's name only when the
             caller may see that contact. Absent when capture recorded no sender.
+
+    AddAttachmentLinkRequest:
+      type: object
+      required: [entity_type, entity_id, url]
+      properties:
+        entity_type: { type: string, enum: [contact, company, deal, activity, lead, project] }
+        entity_id: { type: string, format: uuid }
+        url:
+          type: string
+          maxLength: 2048
+          description: An http or https address, without user info.
+        title:
+          type: [string, 'null']
+          maxLength: 120
+          description: What a reader looks for. Absent or blank lists the link under its host.
+        category:
+          type: string
+          enum: [contract, offer, legal, other]
+          description: What the document is. Absent leaves it uncategorised, as an upload is.
+        contract_id:
+          type: string
+          format: uuid
+          description: The agreement this document is about, as on the upload.
+
+    AttachmentLinkPreview:
+      type: object
+      required: [url, host, read]
+      properties:
+        url: { type: string, description: 'The address as it will be stored.' }
+        host: { type: string, description: 'The lowercased host the address names.' }
+        read: { type: boolean, description: 'False when the page was not fetched or did not answer.' }
+        title: { type: string, description: "The page's Open Graph title, else its <title>. Absent when it gave none." }
+        site_name: { type: string, description: "The page's Open Graph site name. Absent when it gave none." }
 
     AttachmentListResponse:
       type: object
@@ -60850,6 +61626,60 @@ components:
         evidence_ref:
           $ref: '#/components/schemas/CompanyBriefEvidence'
 
+    RecipientCountriesRequest:
+      type: object
+      additionalProperties: false
+      required: [addresses]
+      properties:
+        addresses:
+          type: array
+          minItems: 1
+          maxItems: 300
+          items: { type: string, maxLength: 320 }
+          description: The addresses on the message, as they are on `to`, `cc` or `bcc`.
+    RecipientCountries:
+      type: object
+      required: [recipients]
+      properties:
+        recipients:
+          type: array
+          items: { $ref: '#/components/schemas/RecipientCountryReading' }
+    RecipientCountryReading:
+      type: object
+      required: [address, country, source]
+      properties:
+        address:
+          type: string
+          description: The address as it was asked.
+        country:
+          type: [string, 'null']
+          description: The ISO 3166-1 alpha-2 code in lower case, or null when the record states none.
+        source:
+          type: [string, 'null']
+          enum: [contact_address, employer_address, lead_company_address, null]
+          x-extensible-enum: true
+          description: |
+            The record the country was read from: the contact's own address, the address of
+            their current primary employer, or the company a lead is filed under. Null with a
+            null `country`.
+    RecipientCountry:
+      type: object
+      additionalProperties: false
+      required: [address, country]
+      description: |
+        A country a sender states for one recipient of one message. It is never written to the
+        contact.
+      properties:
+        address:
+          type: string
+          maxLength: 320
+          description: The recipient's address, as it is on `to`, `cc` or `bcc`.
+        country:
+          type: [string, 'null']
+          pattern: '^[A-Za-z]{2}$'
+          description: |
+            An ISO 3166-1 alpha-2 code, or null for a country the sender cleared. A cleared
+            recipient is judged under the baseline even when the record states a country.
     CommunicationEvidence:
       type: object
       description: |
@@ -60907,6 +61737,15 @@ components:
       type: object
       required: [subject, body, to]
       properties:
+        from_connection_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The sender's own mailbox the message goes out from, the `id` of one of their
+            `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
+            conversation arrived in, and a new message from the sender's default mailbox. A mailbox
+            that is not the sender's, or cannot send, is refused with 422
+            `mailbox_not_send_capable`.
         subject: { type: string, description: The subject line. Blank or only white space is refused with 422 `required`. }
         body: { type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. }
         html_body:
@@ -61015,6 +61854,19 @@ components:
         evidence:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
           description: Records the caller names in support of this send. Checked, never trusted.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: { $ref: '#/components/schemas/RecipientCountry' }
+          description: |
+            The country the sender states for a recipient of this message, which the marketing rules
+            then follow in place of the one the record states. An entry with `country: null` clears it,
+            and that recipient is judged under the baseline. A recipient with no entry keeps the country
+            the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+            is written to the contact. Only the user writing the message may state one: an agent's or an
+            integration's request carrying this field is refused with 422 `invalid`. Each address may
+            appear once, compared without case or surrounding space; a second entry is refused with 422
+            `invalid`.
         consent_purpose:
           type: string
           description: |
@@ -61185,6 +62037,13 @@ components:
             The records the sender named in support of the message, frozen with it. Absent
             when none were named. Evidence is what makes a claimed category supported, so a
             preview asked without it would answer "unproven" about a message the fire allows.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: { $ref: '#/components/schemas/RecipientCountry' }
+          description: |
+            The countries the sender stated for recipients, frozen with the message. Absent when none
+            was stated.
         activity_id:
           type: [string, 'null']
           format: uuid
@@ -61219,17 +62078,24 @@ components:
             It is a POINTER, never permission: reading the review is gated on its own terms
             (initiator, assignee, or the `communication_exception` grant), so a caller holding
             this id still gets 404 if the review is not theirs to see.
+        review_actions:
+          type: array
+          items: { type: string }
+          description: |
+            What this caller may do about the review in `review_id`, in the words a refusal's
+            `available_actions` uses. Absent or empty when they may only read it.
+            `direct_send` sends the held message now on a recorded reason.
         version: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
     MailDraftAnchorType:
       type: string
-      enum: [activity, contact, company, deal, lead, project]
+      enum: [activity, forward, contact, company, deal, lead, project]
       x-extensible-enum: true
       description: |
-        What the composer opened against: `activity` for a reply to that message, or the
-        record a new conversation starts from.
+        What the composer opened against: `activity` for a reply to that message, `forward`
+        for that message sent on to someone new, or the record a new conversation starts from.
     MailDraftGround:
       description: >-
         One record the draft was written from. A saved agent draft keeps these
@@ -61317,6 +62183,22 @@ components:
         scheduled_tz:
           type: [string, 'null']
           description: The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
+        override_explanation:
+          type: string
+          maxLength: 1000
+          description: |
+            The reason the rep typed for sending this message past a refusal, kept so a reopened
+            composer still holds it. It grants nothing: the send still needs its own decision. Omit
+            it for none.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: { $ref: '#/components/schemas/RecipientCountry' }
+          description: |
+            The countries the rep stated for recipients of this message, kept so a reopened composer
+            still holds them. `country: null` is a country the rep cleared, which is not the same as no
+            entry. An entry whose address is not on `to`, `cc` or `bcc` is not kept. Each address may
+            appear once; a second entry is refused with 422 `invalid`.
 
     MailDraft:
       type: object
@@ -61377,6 +62259,17 @@ components:
         scheduled_tz:
           type: string
           description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
+        override_explanation:
+          type: string
+          maxLength: 1000
+          description: The reason the author typed for sending past a refusal. Absent when none was.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: { $ref: '#/components/schemas/RecipientCountry' }
+          description: |
+            The countries the author stated for recipients, with `country: null` for one they cleared.
+            Absent when none was stated.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
@@ -61417,7 +62310,8 @@ components:
       required: [to]
       description: |
         What a composer is about to write, in the shape the engine judges. A `subject` and
-        `body` never reach a consent decision. When given, they are checked against the
+        `body` are read as the send reads them: words that make an offer (a discount, a quote,
+        a price) are judged as marketing even inside a reply. They are also checked against the
         advertising content rules of each recipient's jurisdiction pack and answered as
         `content_findings`.
       properties:
@@ -61450,14 +62344,33 @@ components:
         evidence:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
           description: Records the caller names in support of this message. Checked, never trusted.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: { $ref: '#/components/schemas/RecipientCountry' }
+          description: |
+            The countries the sender states for this message's recipients, read as the send reads them:
+            `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+            Each address may appear once; a second entry is refused with 422 `invalid`.
         subject:
           type: string
           maxLength: 998
-          description: The draft's subject, checked only for `content_findings`.
+          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
         body:
           type: string
           maxLength: 200000
-          description: The draft's plain text, checked only for `content_findings`.
+          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+        html_body:
+          type: string
+          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uuid }
+          description: |
+            The files the message will carry, by the ids `/attachments` gave them. Their names are
+            read for an offer as the send reads them. A file the send would refuse is refused here.
 
     PreviewAccountSendRequest:
       type: object
@@ -61493,14 +62406,33 @@ components:
             Omit it and the answer is about the record alone.
         evidence:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: { $ref: '#/components/schemas/RecipientCountry' }
+          description: |
+            The countries the sender states for this message's recipients, read as the send reads them:
+            `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+            Each address may appear once; a second entry is refused with 422 `invalid`.
         subject:
           type: string
           maxLength: 998
-          description: The draft's subject, checked only for `content_findings`.
+          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
         body:
           type: string
           maxLength: 200000
-          description: The draft's plain text, checked only for `content_findings`.
+          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+        html_body:
+          type: string
+          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uuid }
+          description: |
+            The files the message will carry, by the ids `/attachments` gave them. Their names are
+            read for an offer as the send reads them. A file the send would refuse is refused here.
 
     LawfulBasisConfirmationRequest:
       type: object
@@ -61514,7 +62446,37 @@ components:
           description: |
             The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
             them. A pinned lead is named as the lead, never as a contact sharing its address.
-          items: { $ref: '#/components/schemas/CommunicationEvidenceSubject' }
+          items: { $ref: '#/components/schemas/LawfulBasisConfirmationSubject' }
+
+    LawfulBasisConfirmationSubject:
+      type: object
+      additionalProperties: false
+      description: |
+        One record to confirm, with the country the sender stated for it on the message, when
+        they stated one. The confirmation is recorded under the country the preview applied, and
+        staging spends it only for a send judged under that same country.
+      required: [entity_type, entity_id]
+      properties:
+        entity_type:
+          type: string
+          enum: [contact, lead]
+        entity_id: { type: string, format: uuid }
+        stated_country:
+          allOf: [{ $ref: '#/components/schemas/StatedCountry' }]
+          description: |
+            The country the sender stated for this recipient in `recipient_countries`. Omit it when
+            they stated none; the record's country then applies. Only the user writing the message
+            may send it.
+
+    StatedCountry:
+      type: object
+      additionalProperties: false
+      required: [country]
+      properties:
+        country:
+          type: [string, 'null']
+          pattern: '^[A-Za-z]{2}$'
+          description: An ISO 3166-1 alpha-2 code, or null for a country the sender cleared.
 
     LawfulBasisConfirmation:
       type: object
@@ -61583,6 +62545,22 @@ components:
         country:
           type: string
           description: The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`.
+        provision:
+          $ref: '#/components/schemas/CitedProvision'
+
+    CitedProvision:
+      type: object
+      description: |
+        The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+        for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+        Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+        review is overdue or not yet done, or the law has not taken effect or has expired. On a
+        review it is the citation shown when the refusal was assessed, never today's.
+      required: [instrument, provision, source_url]
+      properties:
+        instrument: { type: string, description: 'The law or decree, as a regulator cites it. Not translated.' }
+        provision: { type: string, description: 'The part of the instrument, such as "§ 7(2)".' }
+        source_url: { type: string, format: uri, description: 'The official published text, over https.' }
 
     CommunicationEvidenceSubject:
       type: object
@@ -61602,12 +62580,17 @@ components:
         kind: { type: string, description: 'Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.' }
         language: { type: string, description: 'Required language, or empty when no language is missing.' }
         missing_means: { type: array, items: { type: string }, description: 'Missing contact methods, such as email, phone or web.' }
+        provision:
+          $ref: '#/components/schemas/CitedProvision'
 
     SendAuthorizationPreviewRecipient:
       type: object
       required: [address, verdict, reason_code]
       description: One recipient's answer. It describes the MESSAGE, never the contact's file.
       properties:
+        provision:
+          allOf: [{ $ref: '#/components/schemas/CitedProvision' }]
+          description: The law the recipient's pack cites for `reason_code`, absent when none may be shown.
         footer_findings:
           type: array
           items: { $ref: '#/components/schemas/FooterFinding' }
@@ -61729,6 +62712,12 @@ components:
         One account-started send. It is SendEmailRequest plus the `links` an anchor would
         otherwise have supplied — the records this new conversation belongs to.
       properties:
+        from_connection_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The sender's own mailbox the message goes out from, as on `SendEmailRequest`.
+            Omitted, it goes out from the sender's default mailbox.
         subject: { type: string, description: The subject line. Blank or only white space is refused with 422 `required`. }
         body: { type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. }
         html_body:
@@ -61837,6 +62826,19 @@ components:
         evidence:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
           description: Records the caller names in support of this send. Checked, never trusted.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: { $ref: '#/components/schemas/RecipientCountry' }
+          description: |
+            The country the sender states for a recipient of this message, which the marketing rules
+            then follow in place of the one the record states. An entry with `country: null` clears it,
+            and that recipient is judged under the baseline. A recipient with no entry keeps the country
+            the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+            is written to the contact. Only the user writing the message may state one: an agent's or an
+            integration's request carrying this field is refused with 422 `invalid`. Each address may
+            appear once, compared without case or surrounding space; a second entry is refused with 422
+            `invalid`.
         consent_purpose:
           type: string
           description: |
@@ -62081,6 +63083,14 @@ components:
         promoted_at: { type: [string, 'null'], format: date-time }
         routed_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'When routing assigned an owner. Starts the §18 first-response clock; null means the clock starts at created_at.' }
         first_response_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.' }
+        first_response_marked_by:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The user whose status move off `new` wrote `first_response_at`, with no activity behind it.
+            Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back
+            to `new` before any activity is logged clears both.
         sla_deadline_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'Derived, not stored: COALESCE(routed_at, created_at) + first_response_target_minutes (formulas §18.1). Null on a terminal lead, which owes no first response.' }
         sla_state:
           type: [string, 'null']
@@ -62165,12 +63175,12 @@ components:
     CreateLeadRequest:
       type: object
       properties:
-        full_name: { type: [string, 'null'] }
+        full_name: { x-single-line: true, type: [string, 'null'] }
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.' }
-        title: { type: [string, 'null'] }
-        company_name: { type: [string, 'null'] }
+        title: { x-single-line: true, type: [string, 'null'] }
+        company_name: { x-single-line: true, type: [string, 'null'] }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server maps to one, as it maps a company''s industry. Text that names no code is `422` `not_a_known_value`.' }
         candidate_company_key: { type: [string, 'null'] }
         project_id: { type: [string, 'null'], format: uuid }
@@ -62210,11 +63220,11 @@ components:
         "disqualified ⇒ archived" is enforced on that one path); `promoted` is reachable only via
         POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
       properties:
-        full_name: { type: [string, 'null'] }
+        full_name: { x-single-line: true, type: [string, 'null'] }
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
-        title: { type: [string, 'null'] }
-        company_name: { type: [string, 'null'] }
+        title: { x-single-line: true, type: [string, 'null'] }
+        company_name: { x-single-line: true, type: [string, 'null'] }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server maps to one, as it maps a company''s industry. Text that names no code is `422` `not_a_known_value`. Null clears it.' }
         candidate_company_key: { type: [string, 'null'], description: 'Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.' }
         project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.' }
@@ -62917,7 +63927,7 @@ components:
       type: object
       required: [label]
       properties:
-        label: { type: string, minLength: 1 }
+        label: { x-single-line: true, type: string, minLength: 1 }
         key: { type: string, description: 'Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.' }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
@@ -62925,7 +63935,7 @@ components:
     UpdateLeadOriginRequest:
       type: object
       properties:
-        label: { type: string, minLength: 1 }
+        label: { x-single-line: true, type: string, minLength: 1 }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean }
@@ -62967,7 +63977,7 @@ components:
       type: object
       required: [label]
       properties:
-        label: { type: string, minLength: 1 }
+        label: { x-single-line: true, type: string, minLength: 1 }
         key: { type: string, description: 'Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.' }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
@@ -62975,7 +63985,7 @@ components:
     UpdateLeadSourceRequest:
       type: object
       properties:
-        label: { type: string, minLength: 1 }
+        label: { x-single-line: true, type: string, minLength: 1 }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean }
@@ -63025,6 +64035,27 @@ components:
           minimum: 1
           maximum: 30
           description: Days a sent message may stay unanswered before its sender is reminded to follow up.
+        private_mail_requests:
+          type: boolean
+          x-human-only: true
+          description: |
+            Whether the AI reads private mail for requests (`activities.private_mail_requests`,
+            on by default): a request its reader owes an answer to, and a request for a
+            quotation. Only mail private by a mailbox setting is read; mail held as
+            confidential, by a counterparty or members-only hold, or by hand never is. It
+            says what a model reads, not what is shared. A GET always carries it; a PATCH
+            that leaves it out leaves the setting unchanged. Only a human may change it,
+            because it decides which mail reaches a model.
+        share_private_quote_requests:
+          type: boolean
+          x-human-only: true
+          description: |
+            Whether a request for a quotation found in private mail is shared with the whole
+            workspace (`activities.share_private_quote_requests`, on by default). When on, what
+            the customer asked for becomes visible on the deal it opens. It needs
+            `private_mail_requests` on as well. Only mail private by a mailbox setting is
+            shared; mail held for any other reason never is. A GET always carries it; a PATCH
+            that leaves it out leaves it unchanged. Only a human may change it.
 
     LeadSettings:
       type: object
@@ -64360,7 +65391,7 @@ components:
         # Bounded because the server bounds it: leading and inner whitespace is
         # collapsed before the length is measured, so a name that fits once
         # normalized is accepted even when it was typed longer.
-        name: { type: string, maxLength: 64 }
+        name: { x-single-line: true, type: string, maxLength: 64 }
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
 
@@ -64491,7 +65522,7 @@ components:
 
         The name cannot be cleared. A tag without one cannot be applied or read.
       properties:
-        name: { type: string, maxLength: 64 }
+        name: { x-single-line: true, type: string, maxLength: 64 }
         color: { type: string, enum: [teal, amber, rose, slate, sky, violet, lime, orange, none] }
         description: { type: string }
         suggestible:
@@ -64617,6 +65648,8 @@ components:
       - bookings_mix
       - qualified_opportunities_created
       - initiative_pipeline
+      - account_progression
+      - source_quality
       x-extensible-enum: true
     ReportingBlockKind:
       type: string
@@ -64631,6 +65664,10 @@ components:
         `lead_cohort` follows the leads that arrived in the interval the same
         way: one point, its `outcomes` saying whether each lead was accepted,
         qualified, disqualified or is still open.
+        `account_cohort` follows the distinct accounts of those leads: one point,
+        its `outcomes` saying the furthest outcome any of an account's leads
+        reached. `source_quality` is one point per lead origin: how many leads
+        arrived from it and how many of them were linked to an opportunity.
       enum:
       - bookings_trend
       - stage_distribution
@@ -64644,6 +65681,8 @@ components:
       - breakdown
       - stage_cohort
       - lead_cohort
+      - account_cohort
+      - source_quality
       x-extensible-enum: true
     ReportingStatus:
       type: string
@@ -65076,6 +66115,8 @@ components:
       - breakdown
       - stage_cohort
       - lead_cohort
+      - account_cohort
+      - source_quality
       - question
       - assessment
       x-extensible-enum: true
@@ -65479,6 +66520,13 @@ components:
             goal, or the sum of the monthly sales goals of the scope's sellers
             over the target interval. A sum has no `target_revision`.
         attainment: *id003
+        target_delta:
+          type: number
+          format: double
+          description: |
+            `target_actual` minus `target`, in the metric's unit: negative is still to reach,
+            positive is above the target. Present with both. A client shows it and `attainment`
+            as they are, and never works either out from the other figures.
         coverage:
           $ref: '#/components/schemas/ReportingCoverage'
         evidence:
@@ -65536,7 +66584,8 @@ components:
             pipeline and quarter, or the reader may not read targets; a missing
             target is never zero. `fx_missing` means a deal amount has no
             exchange rate to the base currency, so the totals are incomplete
-            and no gap or coverage is given. `partial_visibility` means the
+            and no gap or coverage is given. When only an open deal lacks the rate,
+            `target` and `won` are still given. `partial_visibility` means the
             reader cannot see every deal of the population asked for, or a
             deal's amount, so its figures cannot stand against the scope's
             whole target.
@@ -65630,7 +66679,10 @@ components:
           type: integer
           format: int64
           minimum: 0
-          description: Deals the forecast considered, priced or not.
+          description: |
+            Open deals due in the period, priced or not. The four counts (`eligible_count`,
+            `priced_count`, `confirmed_date_count`, `fx_missing_count`) describe only those
+            open deals; they do not say whether `won_minor` is complete.
         priced_count:
           type: integer
           format: int64
@@ -65988,6 +67040,39 @@ components:
       properties:
         status: { type: string, enum: [ok, partial, withheld, not_started], x-extensible-enum: true }
         amount_minor: { type: integer, format: int64 }
+    SalesProgressScenarios:
+      type: object
+      additionalProperties: false
+      required: [as_of, worst, expected, best, landing, eligible_count, priced_count, fx_missing_count, scope_limited]
+      description: |
+        Where a month may finish against its goal, read from the forecast of the same month and
+        scope that GET /forecast reads. Given only for a month that has not ended, against a goal
+        that is `set`. A year has none, because the forecast has no year period.
+
+        - `worst` is the money already won, as if nothing more closes.
+        - `expected` is the forecast landing under the installation's forward measure, the same
+          setting the Overview lands with. `landing` names the measure and what it rests on.
+        - `best` is the money won plus every open deal expected in the month, at face value.
+
+        Each case carries `delta_minor`, its amount minus the goal, signed as the reading's own
+        `delta_minor`: negative is short of the goal.
+      properties:
+        as_of: { type: string, format: date-time, description: 'When the deals were read.' }
+        worst: { $ref: '#/components/schemas/SalesProgressScenario' }
+        expected: { $ref: '#/components/schemas/SalesProgressScenario' }
+        best: { $ref: '#/components/schemas/SalesProgressScenario' }
+        landing: { $ref: '#/components/schemas/ForecastLanding' }
+        eligible_count: { type: integer, minimum: 0, description: 'Deals the forecast read for the month.' }
+        priced_count: { type: integer, minimum: 0, description: 'Of those, the deals with an amount.' }
+        fx_missing_count: { type: integer, minimum: 0, description: 'Priced deals no exchange rate reached; their money is in no case.' }
+        scope_limited: { type: boolean, description: 'True when the reader cannot see every deal of the scope, so each case is smaller than the scope''s own.' }
+    SalesProgressScenario:
+      type: object
+      additionalProperties: false
+      required: [amount_minor, delta_minor]
+      properties:
+        amount_minor: { type: integer, format: int64 }
+        delta_minor: { type: integer, format: int64, description: 'The amount minus the goal.' }
     SalesProgressCategories:
       type: object
       additionalProperties: false
@@ -66115,6 +67200,7 @@ components:
         evaluation:
           allOf: [{ $ref: '#/components/schemas/ReportingEvaluation' }]
           description: The Analytics reading behind closed and planned revenue, the receipt `/analytics/evidence` takes.
+        scenarios: { $ref: '#/components/schemas/SalesProgressScenarios' }
         capabilities:
           type: object
           additionalProperties: false
@@ -66642,14 +67728,14 @@ components:
       required: [resource, name, query]
       properties:
         resource: { $ref: '#/components/schemas/SavedViewTarget' }
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         query: { type: object, additionalProperties: true }
 
     UpdateSavedViewRequest:
       type: object
       description: A partial update; omitted fields keep their stored value.
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         query: { type: object, additionalProperties: true }
 
     SavedViewListResponse:
@@ -67105,8 +68191,9 @@ components:
           enum: [workspace]
           x-extensible-enum: true
           description: >-
-            Customer identity (contact, company, lead, deal) is readable by every seat that
-            holds the object grant; row scope governs projects and writes.
+            Customer identity and the work done for it (contact, company, lead, deal,
+            project) is readable by every seat that holds the object grant; row scope
+            governs writes.
         objects:
           type: object
           additionalProperties:
@@ -67331,6 +68418,12 @@ components:
         reader_rendering_available:
           type: boolean
           description: Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
+        inline_send_review:
+          type: boolean
+          description: |
+            The `activities.inline_send_review` setting: whether the email composer is decided at
+            Send, with a refusal shown inline from the embedded review. Absent or false keeps the
+            check while writing and the confirmation dialog.
         analytics_startup: { $ref: '#/components/schemas/AnalyticsStartup' }
         user: { $ref: '#/components/schemas/User' }
         workspace_name:
@@ -67554,7 +68647,7 @@ components:
             the sum rounded once — the two differ by up to one minor unit per deal.
         eligible_count:
           type: integer
-          description: Deals considered, priced or not.
+          description: Open deals due in the period, priced or not. Like the other counts, it says nothing about the won total.
         priced_count:
           type: integer
           description: >-
@@ -67572,6 +68665,13 @@ components:
           description: The zone the period's days were cut in, as an IANA name.
         base_currency: { type: string }
         current_call: { $ref: '#/components/schemas/ForecastCall' }
+        call_withheld:
+          type: boolean
+          description: >-
+            True when this answer leaves out a standing call that may exist: the reader may
+            not see calls about this population, the reading covers several populations
+            (`managed_teams`), or a frozen share cannot tell. A client then says nothing
+            about a manager forecast. Absent with no current_call means nobody has made one.
         scope_limited:
           type: boolean
           description: >-
@@ -67744,6 +68844,72 @@ components:
         close_passed: { type: boolean }
         closes_in_days: { type: integer, minimum: 0, maximum: 7 }
       additionalProperties: false
+    ForecastFocus:
+      type: object
+      required: [period_start, period_end, teams, withheld]
+      properties:
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        withheld:
+          type: boolean
+          description: >-
+            True when a team's list is left out because the installation shows no individual
+            performance and the team is too small to show without naming a colleague.
+        teams:
+          type: array
+          description: One entry per team with a daily freeze this quarter, ordered by team id.
+          items: { $ref: '#/components/schemas/ForecastFocusTeam' }
+    ForecastFocusTeam:
+      type: object
+      required: [team_id, snapshot_id, taken_at, base_currency, status, deals, masked_count]
+      properties:
+        masked_count:
+          type: integer
+          minimum: 0
+          description: >-
+            Ranked deals left out because their amount is masked from the caller. The rest are
+            numbered from 1 again, since a masked deal's place in the order would tell its size.
+        team_id: { type: string, format: uuid }
+        snapshot_id: { type: string, format: uuid }
+        taken_at: { type: string, format: date-time }
+        base_currency: { type: string }
+        status:
+          type: string
+          enum: [behind, on_target, no_goal]
+          x-extensible-enum: true
+          description: >-
+            `behind`: the expected landing was under the team goal. `on_target`: it met the goal.
+            `no_goal`: a month of the quarter had no published goal for a member, so nothing was
+            ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+        deals:
+          type: array
+          items: { $ref: '#/components/schemas/ForecastFocusDeal' }
+    ForecastFocusDeal:
+      type: object
+      required: [rank, deal_id, deal_name, reason]
+      properties:
+        rank: { type: integer, minimum: 1, maximum: 20 }
+        deal_id: { type: string, format: uuid }
+        deal_name: { type: string }
+        owner_id: { type: string, format: uuid }
+        weighted_minor:
+          type: integer
+          format: int64
+          description: The deal's weighted amount in the base currency, as frozen. Absent when the amount is masked from the caller.
+        effective_close_date: { type: string, format: date }
+        reason: { $ref: '#/components/schemas/ForecastFocusReason' }
+    ForecastFocusReason:
+      type: object
+      description: The stored facts behind a rank. The score is never stored.
+      required: [close_provisional, signals]
+      properties:
+        closes_in_days:
+          type: integer
+          description: Days from the caller's day to the expected close date, negative once that date passed.
+        close_provisional: { type: boolean }
+        signals:
+          type: array
+          items: { $ref: '#/components/schemas/ForecastRiskSignal' }
     ForecastStageChances:
       type: object
       required: [self_correcting, evidence_cutoff, prior_strength, stages]
@@ -67840,12 +69006,14 @@ components:
             amount_minor already is the records' projection.
         caveat:
           type: string
-          enum: [call_absent, call_below_actual]
+          enum: [call_absent, call_withheld, call_below_actual]
           x-extensible-enum: true
-          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallBelowActual]
+          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallWithheld, LandingCaveatCallBelowActual]
           description: >-
             Why this answer is not the plain one, absent when it is. `call_absent` is a
-            manager-call installation with no current call. `call_below_actual` is an
+            manager-call installation with no current call. `call_withheld` is a
+            manager-call installation whose call this answer does not show, so it lands on
+            Likely without saying whether a call exists. `call_below_actual` is an
             authored call less than the money already won — reported and never corrected,
             because the call is somebody's stated belief and the server does not overrule
             it.
@@ -67864,14 +69032,15 @@ components:
       properties:
         absent:
           type: string
-          enum: [insufficient_basis, insufficient_history]
+          enum: [insufficient_basis, call_withheld, insufficient_history]
           x-extensible-enum: true
-          x-enum-varnames: [SufficiencyAbsenceInsufficientBasis, SufficiencyAbsenceInsufficientHistory]
+          x-enum-varnames: [SufficiencyAbsenceInsufficientBasis, SufficiencyAbsenceCallWithheld, SufficiencyAbsenceInsufficientHistory]
           description: >-
             Why there is no answer, when there is none. Every other field is then absent
             and the surface says this rather than drawing a figure. `insufficient_basis` is
-            neither a manager call nor four completed comparable periods;
-            `insufficient_history` is too few closed deals for a conversion rate to be a
+            neither a manager call nor four completed comparable periods; `call_withheld` is
+            fewer than four completed periods and a call this reader may not see, without
+            saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a
             rate rather than an anecdote.
         basis:
           type: string
@@ -68836,6 +70005,46 @@ components:
       additionalProperties:
         type: object
         additionalProperties: { type: string }
+    SendRefusal:
+      description: >-
+        A problem body whose `details` describe a refused send and the review it opened.
+
+        The envelope is `Problem`'s, restated rather than composed with `allOf` so the
+        breaking-change check can read it; a gate holds the two property sets equal.
+      type: object
+      required: [status, code]
+      properties:
+        type: { type: string, format: uri, default: about:blank }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        details: { $ref: '#/components/schemas/SendRefusalDetails' }
+    SendRefusalDetails:
+      type: object
+      additionalProperties: true
+      description: Present when the refusal opened a review.
+      properties:
+        review_id: { type: string, format: uuid }
+        available_actions:
+          type: array
+          description: What this caller may do about the refusal, such as `direct_send`.
+          items: { type: string }
+        refusals:
+          type: array
+          description: Each refused address the caller named.
+          items: { $ref: '#/components/schemas/SendRefusalRecipient' }
+        review: { $ref: '#/components/schemas/CommunicationReview' }
+    SendRefusalRecipient:
+      type: object
+      required: [address, reason_code, can_be_overruled]
+      properties:
+        address: { type: string }
+        reason_code: { type: string }
+        can_be_overruled: { type: boolean, description: Whether a recorded reason may send this one message anyway. }
+        category: { type: string, description: The category the engine resolved. }
+        requested_category: { type: string, description: The category the sender claimed. }
     AnalyticsRefusal:
       description: >-
         A problem body whose `details` spell out an analytics refusal, present whenever the
@@ -69562,7 +70771,7 @@ components:
     RoleDirectory:
       type: object
       additionalProperties: false
-      required: [roles]
+      required: [roles, verbs]
       description: >-
         Every role this workspace defines. Not paginated and deliberately not: the set is
         bounded by what an operator created (six seeded, plus a handful at most), the editor
@@ -69571,6 +70780,16 @@ components:
         roles:
           type: array
           items: { $ref: '#/components/schemas/Role' }
+        verbs:
+          type: object
+          description: >-
+            The verbs a role may hold on each object this installation can grant, core objects
+            and enabled extension objects alike, Read first. An object that offers no Read has
+            none in its list. An object absent here is one the installation cannot name, and a
+            client draws it with all four.
+          additionalProperties:
+            type: array
+            items: { type: string, enum: [create, read, update, delete], x-extensible-enum: true }
 
     AssignableRoleDirectory:
       type: object
@@ -69887,9 +71106,9 @@ components:
       additionalProperties: false
       required: [from, to]
       description: >-
-        The span between where a held first-sync anchor pointed and where the sync had to
-        start instead. Both ends or neither: a start with no end is a period nobody can ask
-        for again.
+        The span between where a first sync was to read from and where it had to start
+        instead. Both ends or neither: a start with no end is a period nobody can ask for
+        again.
       properties:
         from: { type: string, format: date-time, description: The first moment nobody read. }
         to: { type: string, format: date-time, description: The moment reading resumed. }
@@ -69928,8 +71147,9 @@ components:
           allOf: [{ $ref: '#/components/schemas/CaptureUnreadPeriod' }]
           nullable: true
           description: >-
-            A period no sync read, when a first sync failed for longer than the point it had
-            held. Absent when there is none, which is the ordinary case.
+            A period no sync read: a first sync failed for longer than the point it had held, or
+            the mailbox held more mail than one round can read. A finished history import over it
+            clears it. Absent when there is none, which is the ordinary case.
 
             It is reported because the alternative is a mailbox that looks synced and is
             missing a week. The backfill reaches this period, so the owner can ask for it
@@ -70330,7 +71550,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete], x-extensible-enum: true}
         sources:
           type: array
-          maxItems: 9
+          maxItems: 10
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -70345,7 +71565,13 @@ components:
       properties:
         id: {type: string}
         availability: {type: string, enum: [available, unknown, stale, failed, withheld, not_configured, not_monitored], x-extensible-enum: true}
-        condition: {type: string, enum: [clear, processing, retrying, waiting_human, technical, unverified, recovered, unknown], x-extensible-enum: true}
+        condition:
+          type: string
+          enum: [clear, processing, retrying, waiting_human, technical, unverified, recovered, unknown, information]
+          x-extensible-enum: true
+          description: >-
+            `information` is a fact an operator may want, never a fault: it needs no action, raises no
+            finding and leaves the assessment and completeness as they are.
         code: {type: string, description: "Safe presentation code, never raw failure text."}
         permission: {type: string}
         scope: {type: string, enum: [workspace, installation, shared], x-extensible-enum: true}
@@ -70358,6 +71584,26 @@ components:
         unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads], x-extensible-enum: true}
         window_start: {type: string, format: date-time}
         window_end: {type: string, format: date-time}
+        unplaced_changes:
+          type: array
+          maxItems: 50
+          description: >-
+            The `unplaced` source's breakdown of the machine changes in its window that the
+            `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds
+            the sum of these entries when more kinds occurred than are listed.
+          items: {$ref: '#/components/schemas/HealthUnplacedChange'}
+    HealthUnplacedChange:
+      type: object
+      additionalProperties: false
+      required: [entity_type, action, count]
+      properties:
+        entity_type: {type: string}
+        action:
+          type: string
+          description: >-
+            The audit action, or for a list membership or a tagging the link it filed:
+            `added`, `removed` or `applied`.
+        count: {type: integer, minimum: 1}
     HealthFinding:
       type: object
       additionalProperties: false
@@ -72144,8 +73390,8 @@ components:
       type: object
       required: [display_name, legal_name, country]
       properties:
-        display_name: { type: string, maxLength: 120 }
-        legal_name: { type: string, maxLength: 500 }
+        display_name: { x-single-line: true, type: string, maxLength: 120 }
+        legal_name: { x-single-line: true, type: string, maxLength: 500 }
         country: { type: string, description: 'Lower-case ISO 3166-1 alpha-2, for example `de`.' }
         address: { $ref: '#/components/schemas/LegalEntityAddress' }
         vat_id: { type: string, maxLength: 200 }
@@ -72162,8 +73408,8 @@ components:
       type: object
       description: A field left out keeps its value; a field sent as an empty string is cleared.
       properties:
-        display_name: { type: string, maxLength: 120 }
-        legal_name: { type: string, maxLength: 500 }
+        display_name: { x-single-line: true, type: string, maxLength: 120 }
+        legal_name: { x-single-line: true, type: string, maxLength: 500 }
         country: { type: string }
         address: { $ref: '#/components/schemas/LegalEntityAddress' }
         vat_id: { type: string, maxLength: 200 }
@@ -72297,7 +73543,7 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too, so it carries the installation name''s rule: `422 required` when blank, `422 too_long` past 200 characters.' }
+        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
         legal_name: { type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
@@ -73632,6 +74878,19 @@ components:
           type: [string, 'null']
           description: |
             The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is.
+        mailbox_send_capable:
+          type: boolean
+          description: |
+            `false` on a pending mail proposal whose sender, the account the release runs as, has no
+            connected mailbox that can transmit, so approving could only be refused. Absent
+            otherwise.
+        awaiting_agent:
+          type: boolean
+          description: |
+            True on an approved proposal that an agent staged and has not yet redeemed. The decision
+            only lets the agent repeat its call within the redemption window; nothing has changed on
+            any record until it does. Absent on every other row, including one whose effect ran
+            during the decision.
         created_at: { type: string, format: date-time }
 
     ApproveRequest:
@@ -73705,9 +74964,22 @@ components:
       description: |
         What the reader has decided about answering their own queue: one row per kind
         that is eligible to apply automatically, whether or not they have ever met it.
-      required: [data]
+      required: [data, auto_apply_enabled]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         data: { type: array, items: { $ref: '#/components/schemas/KindAutonomy' } }
+        auto_apply_enabled:
+          type: boolean
+          description: |
+            The installation's switch over every row. False means nothing applies
+            itself for anybody; the modes in `data` stay as the reader set them.
+
+    AutoApplyInstallation:
+      type: object
+      required: [enabled]
+      properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
+        enabled: { type: boolean }
 
     KindAutonomy:
       type: object
@@ -74432,6 +75704,10 @@ components:
         state: { type: string, enum: [unknown, granted, withdrawn], x-extensible-enum: true }
         lawful_basis: { type: [string, 'null'] }
         double_opt_in_confirmed_at: { type: [string, 'null'], format: date-time }
+        confirmation_pending_until:
+          type: [string, 'null']
+          format: date-time
+          description: When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
         updated_at: { type: [string, 'null'], format: date-time }
 
     ConsentEvent:
@@ -74847,10 +76123,27 @@ components:
         subject_kind: { type: string, enum: [contact, lead], x-extensible-enum: true }
         subject_id: { type: string, format: uuid }
         reason_code: { type: string }
+        provision:
+          allOf: [{ $ref: '#/components/schemas/CitedProvision' }]
+          description: The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
         category: { type: string }
         sending_entity_id: { type: string, format: uuid }
         sending_entity_name: { type: string }
         requested_category: { type: string }
+        country:
+          type: string
+          description: |
+            The ISO 3166-1 alpha-2 code, in lower case, of the recipient's country whose sales-mail
+            rules judged this refusal. Absent when none applied: no country on record, or one the
+            sender cleared.
+        country_source:
+          type: string
+          enum: [contact_address, employer_address, lead_company_address, sender_override, sender_cleared]
+          x-extensible-enum: true
+          description: |
+            Where `country` came from: the contact's address, their employer's, the lead's company,
+            or the sender, who stated it (`sender_override`) or cleared it (`sender_cleared`) for this
+            message. Absent when no record or sender gave a country.
 
     CommunicationReview:
       type: object
@@ -74902,6 +76195,14 @@ components:
             acknowledgement will name. Served rather than composed by the client: an instruction's
             claim is that a named human read particular words, and a client free to write its own
             would have the record assert an acknowledgement of text nobody published.
+        warnings:
+          type: array
+          items: { $ref: '#/components/schemas/OverrideWarning' }
+          description: |
+            Every warning this review is served with to this reader; a decision may name any of their
+            versions and no other. `warning` is always among them. The sender of a held message is
+            also served the composer's short warning (`inline-v1`), which a decision from any other
+            reader is refused for naming.
 
     OverrideWarning:
       type: object
@@ -75003,8 +76304,7 @@ components:
           description: |
             The refusal reason codes the director was shown, from the review's `refusals`. When the
             review's refusals changed since then, the decision is refused with `instruction_stale`
-            and the director opens the review again. A refusal the subject made themselves (an
-            objection, a withdrawal, a restriction or a request to stop) is never passed.
+            and the director opens the review again.
 
     ConfirmSubmission:
       type: object
@@ -76768,10 +78068,10 @@ components:
       type: object
       required: [name, unit_price_minor, currency, source]
       properties:
-        name: { type: string }
-        sku: { type: [string, 'null'] }
+        name: { x-single-line: true, type: string }
+        sku: { x-single-line: true, type: [string, 'null'] }
         description: { type: [string, 'null'], maxLength: 20000 }
-        unit: { type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`." }
+        unit: { x-single-line: true, type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`." }
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
@@ -76787,10 +78087,10 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged. A price change never re-prices existing offer lines (they hold snapshots).
       properties:
-        name: { type: string }
-        sku: { type: [string, 'null'] }
+        name: { x-single-line: true, type: string }
+        sku: { x-single-line: true, type: [string, 'null'] }
         description: { type: [string, 'null'], maxLength: 20000 }
-        unit: { type: string }
+        unit: { x-single-line: true, type: string }
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
@@ -77379,7 +78679,7 @@ components:
       properties:
         session_token:
           type: string
-          description: "Present as `Authorization: Bearer`. Returned once; only its hash is stored."
+          description: "Present as `Authorization: Bearer`, or let the browser send the `__Host-crm_room_session` cookie. Returned once; only its hash is stored."
         expires_at:
           type: string
           format: date-time
@@ -77475,7 +78775,7 @@ components:
       type: object
       required: [name, layout]
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         locale: { type: [string, 'null'], default: de-DE }
         is_default: { type: [boolean, 'null'], description: Defaults to false. }
         layout: { type: object, additionalProperties: true }
@@ -77485,7 +78785,7 @@ components:
       description: Full replace via PUT (unlike updateProduct's merge-PATCH) — every writable field must be supplied; omitting one resets it, it is not left unchanged.
       required: [name, locale, is_default, layout]
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         locale: { type: string }
         is_default: { type: boolean }
         layout: { type: object, additionalProperties: true }
@@ -80242,7 +81542,7 @@ components:
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         due_group:
           type: string
-          enum: [overdue, today, tomorrow, this_week, later]
+          enum: [overdue, today, tomorrow, this_week, later, none]
           x-extensible-enum: true
           description: >-
             Which run of the page this dated row belongs to, so a client can head
@@ -80251,7 +81551,8 @@ components:
             Resolved server-side for the reason every other boundary here is: the day's
             end depends on the installation's zone, and a browser computing it from its
             own clock would group a task differently from the counts above it. Present
-            only on rows carrying `due_at`.
+            on rows carrying `due_at`, and `none` on an undated task of the backlog,
+            which sits at the end of the upcoming work.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
@@ -80750,8 +82051,9 @@ components:
     WorklistPlanCoverage:
       type: object
       description: |
-        Whose weekly plans this read looked at, present only when `scope` is `team` and the
-        due commitments were read across the team roster. Absent under every other scope.
+        Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+        Both read the due commitments across the reader's team roster, the reader included.
+        Absent under every other scope.
 
         It exists because "nothing due" and "not looked at" differ. A teammate whose plan
         could not be read contributes no rows, and without this a lead would read their
@@ -81662,7 +82964,7 @@ components:
         by two rules therefore appears in NEITHER figure: relaxing either one alone still
         leaves the other hiding it. Summing these to estimate the hidden total
         under-reports it.
-      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, colleagues, informs_us, truncated, clear]
+      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, colleagues, informs_us, private_unchecked, truncated, clear]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every figure below was read at.' }
         shown:
@@ -81749,6 +83051,15 @@ components:
             that reason: one model call's opinion about a customer's mail ends the
             obligation, so a wrong verdict has to show up somewhere a lead can see it. A
             request a human accepted is never hidden by it, whatever the verdict.
+        private_unchecked:
+          type: integer
+          minimum: 0
+          description: |
+            Threads `shown` counts whose mail no model will check for a request: mail held
+            on purpose (marked confidential, a counterparty or members-only hold, or by
+            hand), or any private mail while `activities.private_mail_requests` is off. Not
+            hidden, so `clear` ignores it. The queue ranks such mail as a request only when
+            the reader wrote on its conversation first.
         truncated:
           type: boolean
           description: |
@@ -82128,9 +83439,9 @@ components:
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         due_group:
           type: string
-          enum: [overdue, today, tomorrow, this_week, later]
+          enum: [overdue, today, tomorrow, this_week, later, none]
           x-extensible-enum: true
-          x-enum-varnames: [WorklistDueGroupOverdue, WorklistDueGroupToday, WorklistDueGroupTomorrow, WorklistDueGroupThisWeek, WorklistDueGroupLater]
+          x-enum-varnames: [WorklistDueGroupOverdue, WorklistDueGroupToday, WorklistDueGroupTomorrow, WorklistDueGroupThisWeek, WorklistDueGroupLater, WorklistDueGroupNone]
           description: >-
             Which run of the page this dated row belongs to, so a client can head
             "Due tomorrow" without deciding the boundary itself.
@@ -82138,7 +83449,8 @@ components:
             Resolved server-side for the reason every other boundary here is: the day's
             end depends on the installation's zone, and a browser computing it from its
             own clock would group a task differently from the counts above it. Present
-            only on rows carrying `due_at`.
+            on rows carrying `due_at`, and `none` on an undated task of the backlog,
+            which sits at the end of the upcoming work.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |

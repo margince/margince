@@ -55,6 +55,9 @@ type installationSettingsHandlers struct {
 	// installation — and because every role may read it: whoever can upload a
 	// file can be told how large a file is worth sending.
 	maxUploadBytes int64
+	// maxKnowledgeDocumentBytes is the corpus document ceiling, published on
+	// the same terms so the document set page refuses a file as it is dropped.
+	maxKnowledgeDocumentBytes int64
 }
 
 func (h installationSettingsHandlers) GetInstallationSettings(w http.ResponseWriter, r *http.Request) {
@@ -268,6 +271,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		ForecastSelfCorrecting:     s.ForecastSelfCorrecting,
 		ForecastLikelyThreshold:    s.ForecastLikelyThreshold,
 		MaxUploadBytes:             h.maxUploadBytes,
+		MaxKnowledgeDocumentBytes:  &h.maxKnowledgeDocumentBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
 		AgentAllowances:            toAgentAllowances(s.AgentAllowances, s.AgentRoleAllowances, h.clock()),

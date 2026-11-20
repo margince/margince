@@ -519,7 +519,7 @@ func (stubs) ListReportingReports(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "ListReportingReports")
 }
 
-func (stubs) CreateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) CreateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateReportingReportParams) {
 	httperr.NotImplemented(w, r, "CreateReportingReport")
 }
 
@@ -747,6 +747,14 @@ func (stubs) UploadAttachment(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UploadAttachment")
 }
 
+func (stubs) AddAttachmentLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AddAttachmentLink")
+}
+
+func (stubs) PreviewAttachmentLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAttachmentLink")
+}
+
 func (stubs) DeleteAttachment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeleteAttachment")
 }
@@ -869,6 +877,10 @@ func (stubs) GetAutonomy(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) UpdateAutonomy(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UpdateAutonomy")
+}
+
+func (stubs) UpdateAutoApplyInstallation(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateAutoApplyInstallation")
 }
 
 func (stubs) GetAvailability(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAvailabilityParams) {
@@ -1171,7 +1183,7 @@ func (stubs) CorrectCommunicationWording(w nethttp.ResponseWriter, r *nethttp.Re
 	httperr.NotImplemented(w, r, "CorrectCommunicationWording")
 }
 
-func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.DirectCommunicationSendParams) {
 	httperr.NotImplemented(w, r, "DirectCommunicationSend")
 }
 
@@ -1487,19 +1499,19 @@ func (stubs) ListConnectors(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListConnectors")
 }
 
-func (stubs) CancelConnectorBackfill(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) CancelConnectorBackfill(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.CancelConnectorBackfillParams) {
 	httperr.NotImplemented(w, r, "CancelConnectorBackfill")
 }
 
-func (stubs) GetConnectorBackfillStatus(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) GetConnectorBackfillStatus(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.GetConnectorBackfillStatusParams) {
 	httperr.NotImplemented(w, r, "GetConnectorBackfillStatus")
 }
 
-func (stubs) StartConnectorBackfill(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) StartConnectorBackfill(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.StartConnectorBackfillParams) {
 	httperr.NotImplemented(w, r, "StartConnectorBackfill")
 }
 
-func (stubs) PreviewConnectorBackfill(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) PreviewConnectorBackfill(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.PreviewConnectorBackfillParams) {
 	httperr.NotImplemented(w, r, "PreviewConnectorBackfill")
 }
 
@@ -1515,27 +1527,27 @@ func (stubs) ListConnectorContainers(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "ListConnectorContainers")
 }
 
-func (stubs) SetConnectorContextTag(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) SetConnectorContextTag(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.SetConnectorContextTagParams) {
 	httperr.NotImplemented(w, r, "SetConnectorContextTag")
 }
 
-func (stubs) DisconnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) DisconnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.DisconnectConnectorParams) {
 	httperr.NotImplemented(w, r, "DisconnectConnector")
 }
 
-func (stubs) SetConnectorHistoryBaseline(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) SetConnectorHistoryBaseline(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.SetConnectorHistoryBaselineParams) {
 	httperr.NotImplemented(w, r, "SetConnectorHistoryBaseline")
 }
 
-func (stubs) SetConnectorMailPosture(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) SetConnectorMailPosture(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.SetConnectorMailPostureParams) {
 	httperr.NotImplemented(w, r, "SetConnectorMailPosture")
 }
 
-func (stubs) SetConnectorSignatureEnrichment(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) SetConnectorSignatureEnrichment(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.SetConnectorSignatureEnrichmentParams) {
 	httperr.NotImplemented(w, r, "SetConnectorSignatureEnrichment")
 }
 
-func (stubs) DismissConnectorSilence(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) DismissConnectorSilence(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.DismissConnectorSilenceParams) {
 	httperr.NotImplemented(w, r, "DismissConnectorSilence")
 }
 
@@ -2067,6 +2079,14 @@ func (stubs) ListDealMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "ListDealMarginceChanges")
 }
 
+func (stubs) MoveDealPipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MoveDealPipelineParams) {
+	httperr.NotImplemented(w, r, "MoveDealPipeline")
+}
+
+func (stubs) UndoDealPipelineMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UndoDealPipelineMoveParams) {
+	httperr.NotImplemented(w, r, "UndoDealPipelineMove")
+}
+
 func (stubs) RestoreDealMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RestoreDealMoveParams) {
 	httperr.NotImplemented(w, r, "RestoreDealMove")
 }
@@ -2363,8 +2383,12 @@ func (stubs) ListForecastCalls(w nethttp.ResponseWriter, r *nethttp.Request, par
 	httperr.NotImplemented(w, r, "ListForecastCalls")
 }
 
-func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.RecordForecastCallParams) {
 	httperr.NotImplemented(w, r, "RecordForecastCall")
+}
+
+func (stubs) GetForecastFocus(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastFocusParams) {
+	httperr.NotImplemented(w, r, "GetForecastFocus")
 }
 
 func (stubs) GetForecastMovement(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastMovementParams) {
@@ -3579,6 +3603,10 @@ func (stubs) DescribeReadViews(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DescribeReadViews")
 }
 
+func (stubs) ResolveRecipientCountries(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ResolveRecipientCountries")
+}
+
 func (stubs) DescribeRecordFields(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DescribeRecordFields")
 }
@@ -3793,6 +3821,10 @@ func (stubs) SetRoleObjectGrant(w nethttp.ResponseWriter, r *nethttp.Request, ke
 
 func (stubs) RestoreRole(w nethttp.ResponseWriter, r *nethttp.Request, key string) {
 	httperr.NotImplemented(w, r, "RestoreRole")
+}
+
+func (stubs) RestoreRoleGrants(w nethttp.ResponseWriter, r *nethttp.Request, key string, params crmcontracts.RestoreRoleGrantsParams) {
+	httperr.NotImplemented(w, r, "RestoreRoleGrants")
 }
 
 func (stubs) DescribeRouterActions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.DescribeRouterActionsParams) {

@@ -44,7 +44,7 @@ func (s *Store) RecordDirectedExecutionTx(ctx context.Context, tx pgx.Tx, delive
 		return fmt.Errorf("comms: recording the authority this delivery goes out under: %w", err)
 	}
 	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("comms: the delivery this decision authorizes does not exist: %w",
+		return fmt.Errorf("the delivery this decision authorizes does not exist: %w",
 			apperrors.ErrNotFound)
 	}
 	return nil

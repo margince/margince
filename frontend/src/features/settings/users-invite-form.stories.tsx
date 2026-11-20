@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { userEvent, within } from "storybook/test";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import {
   installFetchStub,
@@ -98,4 +99,19 @@ export const WithLegalEntity: Story = {
       <InviteUserForm onInvited={() => undefined} />
     </Served>
   ),
+};
+
+/** Invite pressed on an empty form: each field says what it needs. */
+export const Refused: Story = {
+  render: () => (
+    <Served>
+      <InviteUserForm onInvited={() => undefined} />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /invite/i }),
+    );
+  },
 };

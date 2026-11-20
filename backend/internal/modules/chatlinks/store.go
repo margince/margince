@@ -54,11 +54,13 @@ type Link struct {
 	CreatedAt         time.Time
 }
 
-// FlushEnqueuer schedules the post that carries a link's pending items, in the
-// transaction that recorded them. compose implements it over River, with the
-// job unique per link so ten events make one post.
-type FlushEnqueuer interface {
+// Scheduler queues a link's jobs in the transaction that asked for them.
+// compose implements it over River. The flush posts a link's pending items and
+// is unique per link, so ten events make one post. The pull reads a bot's
+// channels and is unique per bot.
+type Scheduler interface {
 	EnqueueFlushTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) error
+	EnqueuePullTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error
 }
 
 // Viewer is a live member, by the address the chat knows them by.
@@ -76,14 +78,14 @@ type Viewers func(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) ([]V
 type Store struct {
 	db      *database.DB
 	chats   Chats
-	flush   FlushEnqueuer
+	jobs    Scheduler
 	viewers Viewers
 }
 
-// NewStore wires the store over the chat it acts in, the flush scheduler, and
+// NewStore wires the store over the chat it acts in, the job scheduler, and
 // who a new channel may be opened to.
-func NewStore(db *database.DB, chats Chats, flush FlushEnqueuer, viewers Viewers) *Store {
-	return &Store{db: db, chats: chats, flush: flush, viewers: viewers}
+func NewStore(db *database.DB, chats Chats, jobs Scheduler, viewers Viewers) *Store {
+	return &Store{db: db, chats: chats, jobs: jobs, viewers: viewers}
 }
 
 const linkColumns = `id, connection_id, provider, channel_slug, channel_name, deal_id, project_id, verbosity,

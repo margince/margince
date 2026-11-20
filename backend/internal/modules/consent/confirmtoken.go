@@ -63,8 +63,9 @@ type IssuedConfirm struct {
 	// all, which is what TestThePlaintextConfirmTokenReachesNoSinkButTheMail
 	// (backend/gates/doitokenexposure_test.go) holds — and that gate is what
 	// catches a log line, which a json tag cannot.
-	Token     string `json:"-"`
-	ExpiresAt time.Time
+	Token                      string `json:"-"`
+	ExpiresAt                  time.Time
+	AlreadyPending, NoMailLane bool // a live earlier request; no lane to mail on
 	// DeliveredTo is where the link was posted. Returned rather than taken, so
 	// the mailbox the consent claim rests on is the subject's own.
 	DeliveredTo string
@@ -374,6 +375,8 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 		ExpiresAt:             minted.expiresAt,
 		DeliveredTo:           minted.deliveredTo,
 		Staged:                minted.staged,
+		AlreadyPending:        minted.alreadyPending,
+		NoMailLane:            minted.noLane,
 		NoticeCasesDischarged: minted.noticeCasesDischarged,
 	}, nil
 }

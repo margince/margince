@@ -30,9 +30,8 @@ type episode struct {
 func (e episode) firstSeq() int64 { return e.messages[0].Seq }
 func (e episode) lastSeq() int64  { return e.messages[len(e.messages)-1].Seq }
 
-// key is the episode's source_id on the note it files. It names the channel
-// and the episode's first message, so linking the channel again files nothing
-// twice.
+// key names the channel and the episode's first message. The note's source_id
+// adds the record (fileNote), so linking the channel again files nothing twice.
 func (e episode) key(slug string) string {
 	return slug + ":" + strconv.FormatInt(e.firstSeq(), 10)
 }
@@ -43,10 +42,18 @@ func (e episode) url(address, slug string) string {
 	return chatlinks.ChannelURL(address, slug)
 }
 
-// judged reports whether a message is talk a note may summarise: a bot's own
-// posts and the chat's notices about members are not.
+// notices are the labels the chat puts on its own lines about the channel and
+// its members. Any other label, such as a file share, is a message someone wrote.
+var notices = map[string]bool{
+	"system": true, "member_join": true, "member_added": true, "member_removed": true, "member_left": true,
+	"channel_join": true, "channel_leave": true, "channel_name": true, "channel_topic": true,
+	"channel_purpose": true, "channel_archive": true, "channel_unarchive": true, "call_invite": true,
+}
+
+// judged reports whether a message is talk a note may summarise: not a bot's
+// own post and not one of the chat's notices.
 func judged(m dispact.Message) bool {
-	return !m.IsBot && m.Subtype != "system" && m.Subtype != "member_join"
+	return !m.IsBot && !notices[m.Subtype]
 }
 
 // groupEpisodes cuts messages, oldest first, into episodes. An episode is

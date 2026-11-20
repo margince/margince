@@ -173,9 +173,15 @@ function json(body: unknown): Response {
 // modal's whole contract with the server is the shape of one request.
 const sent: Array<{ method: string; path: string; body: unknown }> = [];
 
+const PROVIDER_DOWN = "The provider did not answer.";
+
 function mount(
   view: Contact360,
   guard?: components["schemas"]["ContactConsentGuard"],
+  imported:
+    | components["schemas"]["EmploymentImportItem"][]
+    | "unanswered"
+    | "failed" = [],
 ) {
   sent.length = 0;
   vi.stubGlobal(
@@ -219,6 +225,18 @@ function mount(
           })),
           page,
         });
+      }
+      if (url.pathname.endsWith("/employment-import")) {
+        if (imported === "unanswered") {
+          return new Promise<Response>(() => undefined);
+        }
+        if (imported === "failed") {
+          return Response.json(
+            { title: "Bad gateway", status: 502, detail: PROVIDER_DOWN },
+            { status: 502 },
+          );
+        }
+        return json({ contact_id: view.contact.id, items: imported });
       }
       // The employer picker searches companies; without a candidate the
       // modal's Save stays disabled and there is no request to inspect.
@@ -745,6 +763,77 @@ describe("a contact with no primary employer", () => {
   });
 });
 
+describe("bought work history that waits for a company match", () => {
+  const bought: Contact360 = {
+    ...emptyButGranted,
+    provider_profiles: [
+      {
+        provider: "surfe",
+        state: "completed",
+        categories_not_requested: [],
+        emails: [],
+        mobile_phones: [],
+        departments: [],
+        seniorities: [],
+        job_history: [
+          { company_name: "Kessler Logistik AG", job_title: "CFO" },
+        ],
+      },
+    ],
+  };
+  const episode: components["schemas"]["EmploymentImportItem"] = {
+    key: "episode",
+    provider: "surfe",
+    company_name: "Kessler Logistik AG",
+    role: "CFO",
+    employment_status: "former",
+    state: "needs_match",
+  };
+
+  it("lists the episodes instead of calling the work history empty", async () => {
+    mount(bought, undefined, [episode]);
+    expect(await screen.findByText("Kessler Logistik AG")).toBeTruthy();
+    expect(screen.queryByText(en["contact.rail.noEmployment"])).toBeNull();
+    expect(
+      screen.getByRole("button", { name: en["contact.rail.addEmployment"] }),
+    ).toBeTruthy();
+  });
+
+  it("says it is loading the bought episodes, once, while they are unread", async () => {
+    mount(bought, undefined, "unanswered");
+    const panel = within(section(en["contact.rail.employmentTitle"]));
+    const busy = await panel.findByRole("status");
+    expect(busy.getAttribute("aria-busy")).toBe("true");
+    expect(panel.getAllByText(en["employment.importLoading"])).toHaveLength(1);
+    expect(panel.queryByText(en["contact.rail.noEmployment"])).toBeNull();
+  });
+
+  it("says the read failed, once, instead of calling the work history empty", async () => {
+    mount(bought, undefined, "failed");
+    const panel = within(section(en["contact.rail.employmentTitle"]));
+    expect(await panel.findByText(en["state.failed"])).toBeTruthy();
+    expect(panel.getByRole("button", { name: en["state.retry"] })).toBeTruthy();
+    expect(panel.queryByText(PROVIDER_DOWN)).toBeNull();
+    expect(panel.queryByText(en["contact.rail.noEmployment"])).toBeNull();
+  });
+
+  it("says the section is withheld, with no retry, over a failed read it no longer may make", async () => {
+    const { rerender } = mount(bought, undefined, "failed");
+    const panel = () => within(section(en["contact.rail.employmentTitle"]));
+    expect(await panel().findByText(en["state.failed"])).toBeTruthy();
+    rerender({
+      ...bought,
+      employments: undefined,
+      sections_omitted: ["employments"],
+    });
+    expect(await panel().findByText(WITHHELD_SENTENCE)).toBeTruthy();
+    expect(panel().queryByText(en["state.failed"])).toBeNull();
+    expect(
+      panel().queryByRole("button", { name: en["state.retry"] }),
+    ).toBeNull();
+  });
+});
+
 // THE TRANSPORT ROW ANSWERS FOR ITSELF OR NOT AT ALL.
 //
 // Only the correspondence class speaks for a transport: it is the purpose a
@@ -808,6 +897,26 @@ describe("the consent rail's transport row", () => {
     ).toBeNull();
     // The marketing grant is the Research tab's consent panel's to name.
     expect(screen.queryByText("Newsletter")).toBeNull();
+  });
+
+  const editConsent = `Edit ${en["contact.aside.consent"]}`;
+
+  it("opens Manage consent from the section's Edit", async () => {
+    mount(reachable, marketingOnly);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await user.click(await screen.findByRole("button", { name: editConsent }));
+    expect(
+      await screen.findByRole("dialog", { name: en["consent.manage"] }),
+    ).toBeTruthy();
+  });
+
+  it("offers no consent Edit to a reader who may not change the contact", async () => {
+    mount(
+      { ...reachable, contact: { ...reachable.contact, writable: false } },
+      marketingOnly,
+    );
+    await screen.findByText("Business mail");
+    expect(screen.queryByRole("button", { name: editConsent })).toBeNull();
   });
 });
 

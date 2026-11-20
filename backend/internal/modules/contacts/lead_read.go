@@ -99,7 +99,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("lead") + `,
 	version, created_at, updated_at, archived_at,
-	routed_at, first_response_at,
+	routed_at, first_response_at, first_response_marked_by,
 	` + leadSourceLabelSQL + `, ` + leadWebFormNameSQL + `,
 	origin, origin_detail, ` + leadOriginLabelSQL + `,
 	disqualify_reason_id, disqualify_note,
@@ -238,7 +238,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	var lastActivityPrecision *string
 	var hasInbound bool
 	var authorName, authorSeatName *string
-	var authorID *ids.UUID
+	var authorID, markedBy *ids.UUID
 	var companyFacts []byte
 
 	dests := []any{
@@ -247,7 +247,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 		&promotedContact, &l.PromotedAt, &mergedInto, &fromContact, &l.Source, &l.CapturedBy,
 		&authorID, &authorName, &authorSeatName,
 		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
-		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
+		&l.RoutedAt, &l.FirstResponseAt, &markedBy, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &qualifiedDeal, &evidence,
 		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
 		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &companyID,
@@ -263,6 +263,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 
 	l.Id = openapi_types.UUID(id)
 	l.OwnerId = uuidPtr(ownerID)
+	l.FirstResponseMarkedBy = uuidPtr(markedBy)
 	l.ProjectId = uuidPtr(projectID)
 	l.ProductId = uuidPtr(productID)
 	l.PromotedContactId = uuidPtr(promotedContact)

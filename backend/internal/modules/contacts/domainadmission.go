@@ -157,7 +157,7 @@ func recordHumanDomainAdmissionTx(
 		if stored.Admission == admission {
 			return stored, nil
 		}
-		return BlockedDomain{}, fmt.Errorf("contacts: a user already decided about %s, so the user changes it: %w", domain, apperrors.ErrConflict)
+		return BlockedDomain{}, fmt.Errorf("a user already decided about %s, so the user changes it: %w", domain, apperrors.ErrConflict)
 	}
 	if admission == DomainAdmitted {
 		// Unblocking has to RE-ASK, not merely clear a flag. The domain was
@@ -258,7 +258,7 @@ func reopenWithheldDispositionTx(
 		 WHERE domain = @domain
 		   AND status = @pending
 		   AND admission IS DISTINCT FROM @suppressed
-           AND (@force OR (pending_reason IS DISTINCT FROM 'forwarded_identity' AND pending_reason IS DISTINCT FROM 'reserved_domain' AND pending_reason IS DISTINCT FROM 'vendor_verdict' AND (owner_id IS NULL OR (@evidence::timestamptz IS NOT NULL AND (last_evidence_at IS NULL OR @evidence > last_evidence_at)))))
+           AND (@force OR (pending_reason IS DISTINCT FROM 'forwarded_identity' AND pending_reason IS DISTINCT FROM 'reserved_domain' AND pending_reason IS DISTINCT FROM 'vendor_verdict' AND pending_reason IS DISTINCT FROM 'foreign_site' AND (owner_id IS NULL OR (@evidence::timestamptz IS NOT NULL AND (last_evidence_at IS NULL OR @evidence > last_evidence_at)))))
 		   AND (pending_reason = 'unevidenced' OR pending_reason = 'stale_evidence'
 		        OR next_attempt_at IS NULL OR owner_id IS NULL)`,
 		pgx.NamedArgs{auditKeyDomain: domain, "owner": domainQuestionOwner(ownerID), DomainPending: DomainPending, DomainSuppressed: DomainSuppressed, "force": force, domainEvidenceKey: evidenceAt}); err != nil {

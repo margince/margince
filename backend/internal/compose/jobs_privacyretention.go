@@ -72,7 +72,7 @@ func addPrivacyRetentionJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunner
 	// resolver would find. What the service owes its seams, and why one of
 	// them is not optional, is in retentionseam.go.
 	retention := func(db *database.DB) *privacy.RetentionService {
-		return NewRetentionServiceFor(db, cfg.Blobstore, log).WithPayloadVault(privacyPayloads(cfg.ControllerVault))
+		return NewRetentionServiceFor(db, cfg.Blobstore, log)
 	}
 	addDeclaredWorker[PrivacyRetentionArgs](reg, &privacyRetentionWorker{
 		pool: pool, retention: retention, identity: identity.NewService(pool),

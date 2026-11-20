@@ -7,6 +7,7 @@ package companyscan
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -92,5 +94,33 @@ func settleTheQueuedRead(t *testing.T, e *integration.Env, svc *Service, company
 	}
 	if err := svc.Run(ctx, stored.ID, company); err != nil {
 		t.Fatalf("running the queued read: %v", err)
+	}
+}
+
+// With no model connected, a page open gets what is stored and nothing is
+// queued. Only an explicit force carries the refusal.
+func TestAnOpenWithNoModelConnectedIsQuietAndAForcedOneIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Kranich Fördertechnik GmbH", &e.AdminUser))
+	now := clocktest.Now(t)
+	clock := func() time.Time { return now }
+	view := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()), clock)
+	unbound := func(context.Context, pgx.Tx, Queued) error { return httperr.ErrNotConfigured }
+	svc := NewService(e.Pool, view, view, nil, unbound, nil, clock, nil)
+
+	if _, err := svc.Ensure(ctx, company, false); err != nil {
+		t.Fatalf("an automatic open with no model = %v, want a quiet answer", err)
+	}
+	var found bool
+	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		_, found, err = load(ctx, tx, ids.From[ids.UserKind](e.AdminUser), company)
+		return err
+	}); err != nil || found {
+		t.Fatalf("after the refused open: scan row found = %v, err = %v; want none", found, err)
+	}
+	if _, err := svc.Ensure(ctx, company, true); !errors.Is(err, httperr.ErrNotConfigured) {
+		t.Fatalf("a forced open with no model = %v, want ai_not_configured", err)
 	}
 }

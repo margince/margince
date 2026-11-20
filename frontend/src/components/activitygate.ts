@@ -5,6 +5,7 @@ import { useId } from "react";
 import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { useMe } from "../lib/session";
+import type { WritingMomentVerb } from "../lib/writeverbs";
 
 /**
  * Whether this reader may write activities (log, task, book), asked once for
@@ -47,9 +48,13 @@ export function useActivityGate(
 /**
  * Whether a lone verb that writes an activity is offered; one refused is not
  * drawn. `contact` is the contact the write files under, where it names one.
+ *
+ * `_verb` is read only by the compiler: it must be a kind the server counts as
+ * writing. The type import keeps the mirror table out of the Home chunk.
  */
-export function useActivityWritable(contact?: {
-  readonly attachable?: boolean;
-}): boolean {
+export function useWritingVerbOffered(
+  _verb: WritingMomentVerb,
+  contact?: { readonly attachable?: boolean },
+): boolean {
   return useActivityGate(contact).refusalKey === undefined;
 }

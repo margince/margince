@@ -96,7 +96,7 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 			where += ` AND d.domain = ` + arg(domain)
 		}
 		if cursor != "" {
-			after, err := storekit.DecodeCursor(cursor)
+			after, err := storekit.DecodeCursor("domain_questions", cursor)
 			if err != nil {
 				return err
 			}
@@ -128,7 +128,7 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 	if page.HasMore {
 		out = out[:limit]
 		last := out[len(out)-1]
-		page.NextCursor, err = storekit.EncodeCursor(last.AskedAt, last.ID)
+		page.NextCursor, err = storekit.EncodeCursor("domain_questions", last.AskedAt, last.ID)
 	}
 	return out, page, err
 }

@@ -25,8 +25,8 @@ package gates
 //     product's legitimate use of the clock, far more correct sites than
 //     wrong ones. A file only the integration tag builds is test code, such as
 //     a fixture helper package, and is counted like a _test.go file.
-//   - An absolute date (time.Date(2026, ...)), which the lane sees and no count
-//     of time.Now reaches.
+//   - An absolute date (time.Date(2026, ...)). fixedfuturedates_test.go holds
+//     the future ones in integration tests.
 //   - SQL that says now(). That is the database's clock, and only the machine
 //     applier moves it.
 

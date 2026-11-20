@@ -37,6 +37,10 @@ type Page struct {
 	OGImage string
 	// Icons are the icons the page's <link rel> declared, in document order.
 	Icons []IconRef
+	// Title is what the page calls itself: its og:title, else its <title>,
+	// on one line. SiteName is its og:site_name. Either is "" when undeclared.
+	Title    string
+	SiteName string
 	// Logos are the pictures the page calls its LOGO, absolute and in the order
 	// the page offers them: what its JSON-LD names as one, then the <img>
 	// elements it labels as one. This is the lockup — the wordmark an expanded
@@ -74,6 +78,9 @@ type Page struct {
 	// wants it — which for a client-rendered site is the only prose the server
 	// ever sends.
 	HeadText []string
+	// SiteNameOrTitle is og:site_name, else the <title> tag: the name a site
+	// check compares when the page states no other. "" when it gives neither.
+	SiteNameOrTitle string
 	// ExternalScripts counts the <script src=…> tags the page loads, and
 	// ModuleScripts how many of those are ES modules.
 	//
@@ -171,9 +178,12 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 		Bytes:           len(got.body),
 		OGImage:         head.ogImage,
 		Icons:           head.icons,
+		Title:           head.naming.title(),
+		SiteName:        head.naming.siteName,
 		Logos:           declaredLogos(body, base),
 		Refresh:         head.refresh,
 		HeadText:        append(head.text, linkedDataClaims(body)...),
+		SiteNameOrTitle: head.naming.siteNameOrTitle(),
 		ExternalScripts: external,
 		ModuleScripts:   modules,
 		Fingerprint:     fingerprintOf(got.header, body, base),
@@ -188,6 +198,7 @@ type headAssets struct {
 	icons   []IconRef
 	refresh string
 	text    []string
+	naming  pageNaming
 }
 
 // extractHeadAssets harvests what a page's <head> declares about itself: its
@@ -211,6 +222,10 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 		if endsHead(tokenType, string(name)) {
 			return head
 		}
+		if tokenType == html.StartTagToken && string(name) == "title" {
+			head.naming.readTitle(tokenizer)
+			continue
+		}
 		if !hasAttr {
 			continue
 		}
@@ -233,6 +248,7 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 			if found, ok := headTextFrom(attrs, seenText); ok {
 				head.text = append(head.text, found)
 			}
+			head.naming.readMeta(attrs)
 		case "link":
 			if icon, ok := iconFrom(tokenizer, base); ok && !seen[icon.URL] {
 				seen[icon.URL] = true

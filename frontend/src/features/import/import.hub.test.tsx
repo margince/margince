@@ -235,7 +235,7 @@ describe("the data import hub", () => {
     });
     expect(
       within(dialog).getByText(
-        "Undo runs in reverse order: Prospects, Contacts, Companies.",
+        "Undo runs in reverse order: Leads, Contacts, Companies.",
       ),
     ).toBeVisible();
     expect(sent.some((s) => s.path === "POST /imports/r2/undo")).toBe(false);

@@ -14,6 +14,7 @@ const (
 	ruleMeetingFollowUp moveRule = "meeting_follow_up"
 	ruleOpenTask        moveRule = "open_task"
 	ruleRequestReminder moveRule = "request_reminder"
+	ruleRequestReplied  moveRule = "request_replied"
 	ruleAcceptRequest   moveRule = "accept_request"
 	ruleFarMeeting      moveRule = "future_meeting"
 	ruleFirstOutreach   moveRule = "first_outreach"
@@ -31,6 +32,7 @@ var moveRules = map[moveRule]moveRuleDefinition{
 	ruleMeetingFollowUp: {ActionDraftEmail, sameCurrentBasis},
 	ruleOpenTask:        {ActionOpenTask, sameCurrentBasis},
 	ruleRequestReminder: {ActionDraftEmail, sameCurrentBasis},
+	ruleRequestReplied:  {ActionOpenTask, sameCurrentBasis},
 	ruleAcceptRequest:   {ActionCreateTask, sameCurrentBasis},
 	ruleFarMeeting:      {ActionOpenMeetingBrief, sameCurrentBasis},
 	ruleFirstOutreach:   {ActionDraftEmail, sameCurrentBasis},

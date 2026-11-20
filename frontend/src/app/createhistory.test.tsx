@@ -19,6 +19,7 @@ import { forgetListAddresses } from "../lib/listreturn";
 import { routeIdentity } from "../lib/routeidentity";
 import { useRoute } from "../lib/router";
 import { useShortcutDispatcher } from "../lib/shortcuts";
+import { seedWriter } from "../testing/mefixture";
 import { CREATE_ID } from "./nav";
 import { usePaletteShortcuts } from "./palettehotkey";
 
@@ -36,6 +37,7 @@ function ContactsList() {
   const fields: CreateField[] = [{ key: "name", labelText: "Name" }];
   return (
     <CreateAction
+      requires={{ object: "contact", action: "create" }}
       key={routeIdentity(route)}
       label="New contact"
       fields={fields}
@@ -49,7 +51,7 @@ function ContactsList() {
 
 function mount() {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={seedWriter(new QueryClient())}>
       <LocaleProvider initial="en">
         <ContactsList />
       </LocaleProvider>

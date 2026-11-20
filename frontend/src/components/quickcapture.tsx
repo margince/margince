@@ -102,7 +102,8 @@ function leadIdsOf(extra: Record<string, unknown> | undefined) {
 
 export function QuickCaptureAction({
   company,
-}: Readonly<{ company?: HomeCompany }>) {
+  refusalId,
+}: Readonly<{ company?: HomeCompany; refusalId?: string }>) {
   const t = useT();
   // The form stays open and gives no other feedback, so without this six
   // saved contacts look the same as six that failed silently.
@@ -111,6 +112,8 @@ export function QuickCaptureAction({
   return (
     <CreateAction
       label={t("create.quickCapture")}
+      requires={{ object: "contact", action: "create" }}
+      refusalId={refusalId}
       invalidate={company?.listKey ?? "contacts"}
       screen="contacts"
       testId="quick-capture"

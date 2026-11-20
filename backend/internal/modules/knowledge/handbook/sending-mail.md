@@ -41,7 +41,7 @@ Rest the mouse on **Preview** to see a message's text, and press **Read full ema
 To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER]`, at the start of the **Subject**, so the client's answer is filed under the project too.
 The switch **Add project key to subject (helps filing)** under the subject is on. Turn it off to send this email without the key; the next email starts with it on. Choosing **No project** also takes the key out; deleting it from the text does not.
 
-The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the project list is hidden. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
+The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the project list is hidden. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. When the company has no live project and no open deal, the list is hidden. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
 
 ### What do the composer's error messages mean?
 The composer in Margince does not send until four things are filled in, and names each one under its field.
@@ -80,11 +80,11 @@ text is only for you to read; it is not sent.
 Anything that stops the send shows in a warning bar above **Send**, with what
 you can do about it there.
 
-To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
-what it means: other recipients cannot see these addresses, or that anyone else
-has a copy. A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
+To is on the form. **Cc and Bcc** is a link until you press it. Under **Bcc** the composer says: "Other recipients do not see these addresses." A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
 
-Type a name or an address in **To**, **Cc** or **Bcc** to pick a recipient. When you write to a contact, the list offers that contact first. The contacts around them come next: colleagues at the company they work at now, and the contacts on the same deals. From a company, deal or project, the company's contacts are offered. Your own colleagues in Margince come last. You only see contacts you can open in Margince.
+Click in **To**, **Cc** or **Bcc** to see up to eight contacts of the record. When you write to a contact, the list offers that contact first. The contacts around them come next: colleagues at the company they work at now, and the contacts on the same deals. From a company, deal or project, the company's contacts are offered. Type a name or an address to find more. Once you type two letters, your own colleagues in Margince show under **Colleagues**.
+
+Your own address is never offered, and you only see contacts you can open in Margince. The list closes once a recipient is added. An address is on a message only once. Type or paste one already on it, even in capital letters, and the composer keeps your text and names its field: "Already in To." When **To** is empty as the composer opens, you start in **To**; else you start in the message.
 
 A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.
@@ -196,7 +196,7 @@ When Margince will not send an email to a contact, the warning bar above **Send*
 - **No recorded reason to contact this recipient**: Margince first uses a request or meeting it already holds. Where a fact is missing, press **Record what happened**. Say what was agreed and when. This records the exchange for that recipient and sending company, and for a deal when one is picked. It does not send the email, record marketing consent or make a standing exception. Margince checks again; any stop that remains still blocks the message.
 - **Send with a recorded exception**: if you hold the exception right, you can send one message past a refusal. Reps hold it by default. An address that does not take mail, or one on several records or none, needs a fix first. This queues only this message. Press **Send with a reason…**, or this button in the bar after a refused send. Pick why the message may go, say why in your own words and confirm that you take responsibility; your name and reason stay on record.
 
-  The exception covers this one message, and grants no consent for later mail. The next message is refused again. Only you record an exception, in the composer; an agent cannot. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
+  The exception covers this one message, and grants no consent for later mail. The next message is refused again. Only you record an exception for your own message, in the composer. An agent cannot, and neither can a colleague or an admin: the message goes from your mailbox, with your name and signature. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
 
   If that approved send fails, open its review and choose **Correct spelling or punctuation**. You must own the message, have approved it yourself and still hold permission to edit and approve mail. Confirm that its meaning and facts stay the same, then choose **Save correction**. The original approval stays on record; the message stays held until you retry. A change in meaning, recipients, sender, purpose or attachments needs a new message and approval. A later stop needs a new decision.
 - **Sending needs your reason** also covers a recipient who objected, took back consent, limited the use of their data or asked you to stop. Read the warning before you decide. Your reason covers this one email and does not change their choice. A new stop needs a new decision. **Message cannot be sent**: the address does not take mail, or is on several records or none. Correct the address or remove that recipient.
@@ -364,7 +364,7 @@ If the details come from the contact, the review ends. Data from someone else ma
 ### Why does Margince say "this installation cannot send mail"?
 "Not sent: this installation cannot send mail" means your installation has no server set up to send its own mail. So the privacy notice or confirmation link was not sent, and the duty stays open.
 
-This mail never goes through your connected Gmail or Outlook. It carries a private link to the contact's own record, which must not sit in your sent mail. Ask your administrator to set up the installation's own mail. Until then, tell the contact another way and press **End the duty…**.
+This mail never goes through your connected mailbox. It carries a private link to the contact's own record, which must not sit in your sent mail. Ask your administrator to set up the installation's own mail. Until then, tell the contact another way and press **End the duty…**.
 Also called: privacy notice not sent, cannot send notice.
 
 ### Which mailbox does Margince send from?

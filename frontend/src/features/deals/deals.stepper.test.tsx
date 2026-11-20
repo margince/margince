@@ -42,6 +42,30 @@ const STAGES = [
   { id: "s3", pipeline_id: "p1", name: "Won", position: 3, semantic: "won" },
 ];
 
+const RETIRED = {
+  id: "p2",
+  name: "Partner sales",
+  is_default: false,
+  position: 1,
+  archived_at: "2026-07-01T00:00:00Z",
+  stages: [
+    {
+      id: "r1",
+      pipeline_id: "p2",
+      name: "Intro",
+      position: 1,
+      semantic: "open",
+    },
+    {
+      id: "r2",
+      pipeline_id: "p2",
+      name: "Pilot",
+      position: 2,
+      semantic: "open",
+    },
+  ],
+};
+
 function deal(over: Partial<Deal> = {}): Deal {
   return {
     id: "d1",
@@ -64,7 +88,7 @@ function mount(current: Deal) {
   installFetchStub({
     "GET /me": meRoute({ deal: ["read", "update"] }, { seat: "full" }),
     "GET /deals/d1": () => jsonResponse(current),
-    "GET /pipelines": () =>
+    "GET /pipelines": (_body, url) =>
       jsonResponse({
         data: [
           {
@@ -74,6 +98,9 @@ function mount(current: Deal) {
             position: 0,
             stages: STAGES,
           },
+          ...(url.searchParams.get("include_archived") === "true"
+            ? [RETIRED]
+            : []),
         ],
         page: { next_cursor: null },
       }),
@@ -155,4 +182,17 @@ it("offers the move, unexplained, on a live deal the viewer may change", async (
   expect(step.hasAttribute("disabled")).toBe(false);
   expect(step.getAttribute("aria-describedby")).toBeNull();
   expect(screen.queryByText(/This deal is closed/)).toBeNull();
+});
+
+// A retired pipeline keeps its deals. The page draws that pipeline's own
+// stages, so the deal's stage is named, and offers no move to any of them.
+it("draws a deal on a retired pipeline with its own stages and no move", async () => {
+  mount(deal({ pipeline_id: "p2", stage_id: "r1" }));
+
+  const pilot = await screen.findByRole("button", { name: "Pilot" });
+  expect(pilot.hasAttribute("disabled")).toBe(true);
+  expect(reasonOf(pilot)).toBe(
+    "This deal’s pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
+  );
+  expect(screen.queryByText("Proposal")).toBeNull();
 });

@@ -92,7 +92,11 @@ export function DecisionSummary({
       header: t("aiusage.col.task"),
       grow: true,
       render: (r) => (
-        <TaskName name={taskName(r.task)} summary={taskSummary(r.task)} />
+        <TaskName
+          name={taskName(r.task)}
+          task={r.task}
+          summary={taskSummary(r.task)}
+        />
       ),
     },
     {

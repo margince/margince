@@ -147,17 +147,21 @@ export function kindLabelFor(
   return labelFor(KIND_LABELS, rel.kind);
 }
 
-export function dateRange(
+export const RANGE_DASH = "–";
+
+// The two ends of an edge's dates; an empty string is an end it does not name.
+export function dateRangeParts(
   rel: Relationship,
   t: (key: MessageKey) => string,
   locale: Locale,
   zone: string,
-): string {
+  employmentZone: string,
+): Readonly<{ start: string; end: string }> {
   // An employment is current only as the contact page judges it. A job with an
   // unknown status is neither current nor former there, so it names no end.
   const unknown =
     rel.kind === "employment" && rel.employment_status === "unknown";
-  const held = rel.kind !== "employment" || stillHeld(rel);
+  const held = rel.kind !== "employment" || stillHeld(rel, employmentZone);
   // A table column, so the numeric, sortable date form.
   const day = (value: string) => formatDate(value, locale, zone);
   const start = rel.started_at
@@ -168,10 +172,18 @@ export function dateRange(
     : unknown
       ? ""
       : t(held ? "rel.current" : "rel.former");
-  if (!end) {
-    return start;
-  }
-  return start ? `${start} – ${end}` : end;
+  return { start, end };
+}
+
+export function dateRange(
+  rel: Relationship,
+  t: (key: MessageKey) => string,
+  locale: Locale,
+  zone: string,
+  employmentZone: string,
+): string {
+  const { start, end } = dateRangeParts(rel, t, locale, zone, employmentZone);
+  return [start, end].filter(Boolean).join(` ${RANGE_DASH} `);
 }
 
 // A creatable edge from this scope: the kind, which entity fills the picked

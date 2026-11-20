@@ -132,14 +132,11 @@ export function ChartBody({
       return (
         <>
           <BulletChart {...shared} targetLabel={t("reporting.target")} />
-          {chart.points.map((point) => (
-            <TargetProgress
-              key={point.key}
-              value={point.value}
-              target={point.target}
-              format={format}
-            />
-          ))}
+          <TargetProgress
+            chart={chart}
+            evaluation={evaluation}
+            format={format}
+          />
         </>
       );
     case "stage_distribution":
@@ -165,6 +162,8 @@ export function ChartBody({
       );
     case "stage_cohort":
     case "lead_cohort":
+    case "account_cohort":
+    case "source_quality":
       return (
         <CohortTable
           chart={chart}

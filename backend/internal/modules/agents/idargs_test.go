@@ -340,7 +340,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	})
 	RegisterProject360Tool(r, func(context.Context, ids.UUID) (crmcontracts.Project360, error) {
 		return crmcontracts.Project360{}, errSeamReached
-	})
+	}, func(crmcontracts.Activity) string { return "" })
 	RegisterNetworkTools(r,
 		func(context.Context, ids.UUID) (WhoKnowsReading, error) { return WhoKnowsReading{}, errSeamReached },
 		func(context.Context, ids.UUID) (DealCoverageAnswer, error) {

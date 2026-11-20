@@ -2,9 +2,9 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useT } from "../../i18n";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import type { Lead, UpdateLeadRequest } from "./leads";
 
 /** The lead as the reader saw it when the writing control opened. */
@@ -36,10 +36,7 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   // refuses every control here by one fact, derived once. A per-control test
   // misses the control that had to remember on its own. The sentence travels
   // with the answer, so each refused control can say which fact it was.
-  const readOnlyReason = useRecordWriteRefusal("lead", lead, {
-    archived: t("lead.terminalReadOnly"),
-    notYours: t("lead.notYoursToChange"),
-  });
+  const readOnlyReason = useKindWriteRefusal("lead", lead);
   const readOnly = Boolean(readOnlyReason);
   const send = async ({ body, version, archived }: LeadWrite) => {
     // The last word on a terminal lead, in one place rather than per control.
@@ -83,7 +80,10 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     version: requireVersion(from.version),
     archived: Boolean(from.archived_at),
   });
-  const save = (body: UpdateLeadRequest) => patch.mutate(write(body, lead));
+  const save = (
+    body: UpdateLeadRequest,
+    options?: Readonly<{ onSuccess?: () => void }>,
+  ) => patch.mutate(write(body, lead), options);
   // Taking an unowned lead is a claim, not a patch: the write arm refuses an
   // ownerless row.
   const assign = (

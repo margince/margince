@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -48,7 +49,7 @@ func CheckUTF8(body []byte) error {
 	if utf8.Valid(body) {
 		return nil
 	}
-	return fmt.Errorf("%w: the file is not saved as UTF-8; save it as CSV UTF-8 and upload it again", ErrNotUTF8)
+	return refuseFileAs(ErrNotUTF8, "The file is not saved as UTF-8. Save it as CSV UTF-8 and upload it again.", nil)
 }
 
 // Column is one column of an uploaded file, described well enough to map it
@@ -81,7 +82,7 @@ func CountRecords(r io.Reader) (int, error) {
 			return max(rows, 0), nil
 		}
 		if err != nil {
-			return 0, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+			return 0, unreadable(err)
 		}
 		rows++
 	}
@@ -98,10 +99,10 @@ func ProfileCSV(r io.Reader, rowLimit int) (Profile, error) {
 
 	header, err := cr.Read()
 	if errors.Is(err, io.EOF) {
-		return Profile{}, fmt.Errorf("%w: the file has no header row", ErrHeaderInvalid)
+		return Profile{}, headerMissing()
 	}
 	if err != nil {
-		return Profile{}, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+		return Profile{}, unreadable(err)
 	}
 	if err := validateHeader(header); err != nil {
 		return Profile{}, err
@@ -131,7 +132,7 @@ func profileRows(cr recordReader, columns, rowLimit int) (filled []int, samples 
 			return filled, samples, rows, nil
 		}
 		if err != nil {
-			return nil, nil, 0, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+			return nil, nil, 0, unreadable(err)
 		}
 		rows++
 		for i, value := range record {
@@ -159,16 +160,20 @@ func fillRate(filled, rows int) float64 {
 
 func validateHeader(header []string) error {
 	if len(header) == 0 {
-		return fmt.Errorf("%w: the file has no header row", ErrHeaderInvalid)
+		return headerMissing()
 	}
 	seen := make(map[string]bool, len(header))
 	for i, name := range header {
 		trimmed := strings.TrimSpace(name)
 		if trimmed == "" {
-			return fmt.Errorf("%w: column %d has no name", ErrHeaderInvalid, i+1)
+			return refuseFile(FileBlankName,
+				fmt.Sprintf("Column %d of the header row has no name. Name every column and upload the file again.", i+1),
+				map[RefusalParam]string{ParamPosition: strconv.Itoa(i + 1)})
 		}
 		if seen[trimmed] {
-			return fmt.Errorf("%w: the name %q appears twice", ErrHeaderInvalid, trimmed)
+			return refuseFile(FileRepeatedName,
+				fmt.Sprintf("The header row names “%s” twice. Give each column its own name and upload the file again.", trimmed),
+				map[RefusalParam]string{ParamName: trimmed})
 		}
 		seen[trimmed] = true
 	}
@@ -186,21 +191,21 @@ func validateHeader(header []string) error {
 func SuggestMapping(p Profile, targets []string) map[string]string {
 	byNormal := make(map[string]string, len(targets))
 	for _, target := range targets {
-		byNormal[normalizeFieldName(target)] = target
+		byNormal[NormalizeFieldName(target)] = target
 	}
 
 	// A source name reaching a target more than once is ambiguous, and picking
 	// either would silently drop the loser's column. Count first, decide after.
 	hits := make(map[string]int, len(p.Columns))
 	for _, c := range p.Columns {
-		if _, ok := byNormal[normalizeFieldName(c.Header)]; ok {
-			hits[normalizeFieldName(c.Header)]++
+		if _, ok := byNormal[NormalizeFieldName(c.Header)]; ok {
+			hits[NormalizeFieldName(c.Header)]++
 		}
 	}
 
 	out := make(map[string]string)
 	for _, c := range p.Columns {
-		normal := normalizeFieldName(c.Header)
+		normal := NormalizeFieldName(c.Header)
 		target, ok := byNormal[normal]
 		if !ok || hits[normal] > 1 {
 			continue
@@ -210,11 +215,11 @@ func SuggestMapping(p Profile, targets []string) map[string]string {
 	return out
 }
 
-// normalizeFieldName reduces a name to the letters and digits in it, folded to
+// NormalizeFieldName reduces a name to the letters and digits in it, folded to
 // lower case, so "E-mail Address", "email_address" and "  Email address  " are
 // one name. Punctuation and spacing are how humans and systems spell the same
 // field differently; anything beyond that is a guess about meaning.
-func normalizeFieldName(s string) string {
+func NormalizeFieldName(s string) string {
 	var b strings.Builder
 	for _, r := range s {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {

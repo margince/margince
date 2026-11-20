@@ -195,7 +195,7 @@ func (e *Eraser) ListArchivedActivities(ctx context.Context, f ArchiveFilter) (A
 	if len(page.Records) > size {
 		page.Records = page.Records[:size]
 		last := page.Records[len(page.Records)-1]
-		next, err := storekit.EncodeCursor(last.OccurredAt, last.ActivityID)
+		next, err := storekit.EncodeCursor("archive_review", last.OccurredAt, last.ActivityID)
 		if err != nil {
 			return ArchivePage{}, err
 		}
@@ -233,7 +233,7 @@ func archiveListWhere(f ArchiveFilter, arg func(any) int) (string, error) {
 			fmt.Sprint(arg(*f.CompanyID)) + ")"
 	}
 	if f.Cursor != nil && *f.Cursor != "" {
-		c, err := storekit.DecodeCursor(*f.Cursor)
+		c, err := storekit.DecodeCursor("archive_review", *f.Cursor)
 		if err != nil {
 			return "", err
 		}

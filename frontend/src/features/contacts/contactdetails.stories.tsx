@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { RecordDetails } from "../../design-system/recorddetails";
 import { catalogs, isLocale, type Locale } from "../../i18n";
 import {
   callMessengersRoute,
@@ -9,7 +10,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ContactDetails } from "./contactdetails";
+import { ContactDetails, useContactAboutSections } from "./contactdetails";
 
 function storyLocale(parameters: Record<string, unknown>): Locale | undefined {
   const asked = parameters.locale;
@@ -445,4 +446,52 @@ export const TwoNumbersPhoneGerman: Story = {
 export const TwoNumbersPhoneVietnamese: Story = {
   ...TwoNumbersPhone,
   parameters: { layout: "fullscreen", locale: "vi" },
+};
+
+function LeftColumn({
+  contact,
+}: Readonly<{ contact: components["schemas"]["Contact"] }>) {
+  const about = useContactAboutSections({
+    as_of: "2026-09-01T00:00:00Z",
+    sections_omitted: [],
+    contact,
+    employments: { data: [], page: { has_more: false } },
+  });
+  return (
+    <div style={{ maxWidth: 320 }}>
+      <RecordDetails sections={about.sections} />
+      {about.element}
+    </div>
+  );
+}
+
+// The left column's address is a section of its own, changed in its own dialog.
+export const AddressSection: Story = {
+  args: {
+    contact: {
+      ...fixture,
+      address: { street: "Invalidenstraße 1", city: "Berlin", country: "DE" },
+    },
+  },
+  render: (args) => <LeftColumn contact={args.contact} />,
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    await user.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Edit Address",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Address" });
+    await waitFor(() => expect(dialog).toBeVisible());
+    await expect(
+      within(dialog).getByRole("textbox", { name: "City" }),
+    ).toHaveValue("Berlin");
+    await expect(
+      within(dialog).queryByRole("textbox", { name: "Title" }),
+    ).toBeNull();
+  },
+};
+export const AddressSectionDark: Story = {
+  ...AddressSection,
+  globals: { theme: "dark" },
 };

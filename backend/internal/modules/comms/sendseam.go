@@ -64,12 +64,9 @@ type sendSeam struct {
 	// detectsPriorSend reports whether a RETRY of this seam could discover that
 	// an earlier attempt already put the message on the wire.
 	//
-	// Mail can: the RFC822 identity the message was staged under is searchable
-	// at the provider, so a mail delivery rides the retry ladder as it always
-	// has. Telegram's sendMessage has neither an idempotency key nor a
-	// prior-send lookup, so no later attempt could ever tell — and such a seam
-	// instead records that a transmission is in flight BEFORE the call, and
-	// refuses to retry an outcome it never learned.
+	// Gmail and Graph can: the staged RFC822 identity is searchable there. IMAP
+	// and Telegram cannot, so their seam marks a transmission in flight before
+	// the call, and refuses to retry an outcome it never learned.
 	detectsPriorSend bool
 }
 
@@ -112,7 +109,7 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 			})
 		}}, nil
 	}
-	sender, auth, granted, err := d.resolver.Resolve(ctx, del.UserID, del.Provider)
+	sender, auth, granted, err := d.resolver.Resolve(ctx, del.UserID, del.Provider, del.ConnectionID)
 	if err != nil {
 		return sendSeam{}, err
 	}
@@ -122,7 +119,7 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 	}
 	return sendSeam{
 		granted:          granted,
-		detectsPriorSend: true,
+		detectsPriorSend: connector.DetectsPriorSend(sender),
 		carriage:         connector.CarriageOf(sender),
 		transmit: func(ctx context.Context, files []connector.OutboundFile, handoff connector.SendHandoff) (connector.SendReceipt, error) {
 			// Every staged field travels: a retry must rebuild an identical

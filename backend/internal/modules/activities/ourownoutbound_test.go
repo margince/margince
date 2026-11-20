@@ -29,9 +29,9 @@ import (
 // composing it would still be on it.
 func theseAskTheQuestion() map[string]string {
 	return map[string]string{
-		"repliedRequestsSQL": repliedRequestsSQL,
-		"newestAnswerSince":  newestAnswerSince,
-		"priorOutboundJoin":  priorOutboundJoin,
+		"repliedRequestsSQL": repliedRequestsSQL(true),
+		"newestAnswerSince":  newestAnswerSince(true),
+		"priorOutboundJoin":  priorOutboundJoin(true),
 	}
 }
 
