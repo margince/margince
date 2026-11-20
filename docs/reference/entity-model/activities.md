@@ -906,6 +906,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `activity_review_template_live_key`: `unique, btree (key) WHERE (archived_at IS NULL)`
+- `activity_review_template_one_active_per_outcome`: `unique, btree (outcome) WHERE (active AND (archived_at IS NULL))`
 - `activity_review_template_pkey`: `unique, btree (id)`
 
 **Triggers**

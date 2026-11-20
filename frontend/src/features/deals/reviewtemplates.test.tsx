@@ -66,11 +66,18 @@ const TEMPLATES = [
   }),
 ];
 
-function served(allow: GrantSpec) {
+function served(allow: GrantSpec, onPatch = vi.fn()) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input instanceof Request ? input.url : input);
+      const method =
+        input instanceof Request ? input.method : (init?.method ?? "GET");
+      if (method === "PATCH") {
+        const body = input instanceof Request ? await input.json() : init?.body;
+        onPatch(url, body);
+        return jsonResponse(TEMPLATES[0]);
+      }
       if (url.endsWith("/v1/me")) {
         return jsonResponse(meFixture({ roles: ["admin"], allow }));
       }
@@ -158,5 +165,45 @@ describe("outcome review questions", () => {
 
     await screen.findByRole("list", { name: "Win review" });
     expect(screen.queryByRole("button", { name: "Edit questions" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add template" })).toBeNull();
+    expect(
+      screen
+        .getByRole("switch", { name: "Ask Win review when a deal closes" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
+  it("retires a template with its switch, sending the version it read", async () => {
+    const onPatch = vi.fn();
+    served(EDITOR, onPatch);
+    const user = userEvent.setup();
+    render(<ReviewTemplatesCard />);
+
+    await user.click(
+      await screen.findByRole("switch", {
+        name: "Ask Loss review when a deal closes",
+      }),
+    );
+    await vi.waitFor(() => expect(onPatch).toHaveBeenCalled());
+    expect(onPatch).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "/activity-review-templates/22222222-2222-4222-8222-222222222222",
+      ),
+      { version: 1, active: false },
+    );
+  });
+
+  it("opens a blank template from Add template for a seat that may create one", async () => {
+    served({ custom_field: ["read", "create", "update"] });
+    const user = userEvent.setup();
+    render(<ReviewTemplatesCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Add template" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByRole("heading", { name: "New review template" }),
+    ).toBeTruthy();
   });
 });

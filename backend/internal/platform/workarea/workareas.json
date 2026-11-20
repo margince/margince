@@ -142,6 +142,7 @@
     "correctDealCloseDay": "business",
     "correctProjectHealthAssessment": "business",
     "createAcquisitionSource": "admin_settings",
+    "createActivityReviewTemplate": "admin_settings",
     "createAutomation": "admin_settings",
     "createCaptureCounterpartyHold": "capture",
     "createCaptureExclusion": "workspace_settings",
@@ -1044,6 +1045,7 @@
     "correctProjectHealthAssessment": "projects",
     "countPendingApprovals": "agent_limits",
     "createAcquisitionSource": "sales_lists",
+    "createActivityReviewTemplate": "sales_rules",
     "createAutomation": "automations",
     "createCaptureCounterpartyHold": "capture_triage",
     "createCaptureExclusion": "capture_rules",
@@ -2318,6 +2320,9 @@
     ],
     "create_acquisition_source": [
       "sales_lists"
+    ],
+    "create_activity_review_template": [
+      "sales_rules"
     ],
     "create_automation": [
       "automations"
@@ -4445,6 +4450,9 @@
       "business"
     ],
     "create_acquisition_source": [
+      "admin_settings"
+    ],
+    "create_activity_review_template": [
       "admin_settings"
     ],
     "create_automation": [

@@ -303,6 +303,7 @@
         "create_loss_reason": "create_loss_reason",
         "create_partner_stage": "create_partner_stage",
         "create_pipeline": "create_pipeline",
+        "create_review_template": "create_activity_review_template",
         "create_saved_view": "create_saved_view",
         "create_stage": "create_stage",
         "decide_legacy_loss_reason": "decide_legacy_loss_reason",

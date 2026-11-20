@@ -92,6 +92,9 @@ type aiCertBinding struct {
 	Runs         int              `json:"runs"`
 	Passed       int              `json:"passed"`
 	Reliability  *float64         `json:"reliability"`
+	// ReliabilityInterval travels with every Reliability so a reader of the
+	// JSON compares intervals, not points. Null when there were no runs.
+	ReliabilityInterval *aicert.ReliabilityInterval `json:"reliability_interval"`
 	// SlowestP95MS is the highest p95 of any record folded here, never a mean of
 	// them: percentiles do not average, and a mean of p95s is a figure nothing
 	// measured.
@@ -127,10 +130,13 @@ type aiCertSite struct {
 }
 
 type aiCertPick struct {
-	Binding     aiCertBindingRef `json:"binding"`
-	Band        string           `json:"band"`
-	Reliability *float64         `json:"reliability"`
-	State       string           `json:"state"`
+	Binding             aiCertBindingRef            `json:"binding"`
+	Band                string                      `json:"band"`
+	Runs                int                         `json:"runs"`
+	Passed              int                         `json:"passed"`
+	Reliability         *float64                    `json:"reliability"`
+	ReliabilityInterval *aicert.ReliabilityInterval `json:"reliability_interval"`
+	State               string                      `json:"state"`
 }
 
 type aiCertScenario struct {
@@ -152,15 +158,16 @@ type aiCertRecord struct {
 	Band    string           `json:"band"`
 	// ScenariosMeasured is null for a record written before per-scenario stamps,
 	// which can only be judged whole. Zero would claim it measured nothing.
-	ScenariosMeasured *int           `json:"scenarios_measured"`
-	ScenariosTotal    int            `json:"scenarios_total"`
-	Runs              int            `json:"runs"`
-	Passed            int            `json:"passed"`
-	Reliability       *float64       `json:"reliability"`
-	LatencyP50MS      *int64         `json:"latency_p50_ms"`
-	LatencyP95MS      *int64         `json:"latency_p95_ms"`
-	Reported          aiCertOutcomes `json:"reported"`
-	StaleReason       string         `json:"stale_reason"`
+	ScenariosMeasured   *int                        `json:"scenarios_measured"`
+	ScenariosTotal      int                         `json:"scenarios_total"`
+	Runs                int                         `json:"runs"`
+	Passed              int                         `json:"passed"`
+	Reliability         *float64                    `json:"reliability"`
+	ReliabilityInterval *aicert.ReliabilityInterval `json:"reliability_interval"`
+	LatencyP50MS        *int64                      `json:"latency_p50_ms"`
+	LatencyP95MS        *int64                      `json:"latency_p95_ms"`
+	Reported            aiCertOutcomes              `json:"reported"`
+	StaleReason         string                      `json:"stale_reason"`
 	// StaleCause is the same finding a reader can filter on: which half of the
 	// stamp moved, rather than a sentence they have to parse. A tool asking
 	// "which records went stale because the PRODUCT changed" is asking about
@@ -273,8 +280,9 @@ func buildAICertRecord(row aicert.ReadinessRow, siteScenarios int) aiCertRecord 
 	rec := aiCertRecord{
 		Binding: bindingRefOf(row.Record), State: row.Status(), Band: row.Tally.Verdict,
 		ScenariosTotal: siteScenarios, Runs: row.Tally.Runs, Passed: row.Tally.Passed,
-		Reliability:  ratio(row.Tally.Passed, row.Tally.Runs),
-		LatencyP50MS: measuredMS(row.Record.LatencyP50), LatencyP95MS: measuredMS(row.Record.LatencyP95),
+		Reliability:         ratio(row.Tally.Passed, row.Tally.Runs),
+		ReliabilityInterval: aicert.ReliabilityIntervalOf(row.Tally.Passed, row.Tally.Runs),
+		LatencyP50MS:        measuredMS(row.Record.LatencyP50), LatencyP95MS: measuredMS(row.Record.LatencyP95),
 		Reported: aiCertOutcomes{
 			Accepted: row.Tally.ReportedAccepted, WrongAnswer: row.Tally.ReportedWrongAnswer,
 			Invalid: row.Tally.ReportedInvalid, Abstained: row.Tally.ReportedAbstained,
@@ -331,7 +339,8 @@ func pickAICertRecord(records []aiCertRecord) *aiCertPick {
 		return nil
 	}
 	return &aiCertPick{
-		Binding: best.Binding, Band: best.Band, Reliability: best.Reliability, State: best.State,
+		Binding: best.Binding, Band: best.Band, Runs: best.Runs, Passed: best.Passed,
+		Reliability: best.Reliability, ReliabilityInterval: best.ReliabilityInterval, State: best.State,
 	}
 }
 
@@ -403,6 +412,7 @@ func foldAICertBindings(rows []aicert.ReadinessRow) []aiCertBinding {
 		fold := byKey[key]
 		fold.Sites = len(sites[key])
 		fold.Reliability = ratio(fold.Passed, fold.Runs)
+		fold.ReliabilityInterval = aicert.ReliabilityIntervalOf(fold.Passed, fold.Runs)
 		out = append(out, *fold)
 	}
 	return out

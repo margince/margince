@@ -43,7 +43,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 32✓ 15✗ | 11✓ 36✗ | 26✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 44 | 44✓ 0✗ | 38✓ 6✗ | 38✓ 6✗ | 44✓ 0✗ | 28✓ 16✗ | 37✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 39 | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 34✓ 5✗ | 39✓ 0✗ |
-| [Admin settings](#admin-settings) | 115 | 115✓ 0✗ | 10✓ 105✗ | 0✓ 115✗ | 82✓ 33✗ | 0✓ 115✗ | 0✓ 115✗ |
+| [Admin settings](#admin-settings) | 116 | 116✓ 0✗ | 10✓ 106✗ | 0✓ 116✗ | 83✓ 33✗ | 0✓ 116✗ | 0✓ 116✗ |
 | [The user's own account and security](#the-users-own-account-and-security) | 18 | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 17✓ 1✗ | 18✓ 0✗ |
 | [Agent governance](#agent-governance) | 4 | 4✓ 0✗ | 4✓ 0✗ | 4✓ 0✗ | 4✓ 0✗ | 3✓ 1✗ | 4✓ 0✗ |
 | [Operator and system](#operator-and-system) | 16 | 16✓ 0✗ | 0✓ 16✗ | 0✓ 16✗ | 16✓ 0✗ | 0✓ 16✗ | 0✓ 16✗ |
@@ -835,6 +835,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
+| `change_settings.create_review_template` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.update_duplicate_settings` | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | `change_settings.update_follow_up_settings` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.update_lead_settings` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
@@ -1645,6 +1646,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Sales lists and reasons | `change_settings.update_lead_source` | `update_lead_source` | `custom_field.update` `lead.read` |
 | Sales lists and reasons | `change_settings.update_loss_reason` | `update_loss_reason` | `custom_field.update` |
 | Sales lists and reasons | `read_workspace.legacy_loss_reasons` | `list_legacy_loss_reasons` | `custom_field.update` `deal.read` |
+| Sales rules and templates | `change_settings.create_review_template` | `create_activity_review_template` | `custom_field.create` |
 | Sales rules and templates | `change_settings.update_duplicate_settings` | `update_contact_case_settings` | `admin` `installation_settings.update` |
 | Sales rules and templates | `change_settings.update_follow_up_settings` | `update_follow_up_settings` | `installation_settings.update` |
 | Sales rules and templates | `change_settings.update_lead_settings` | `update_lead_settings` | `custom_field.read` `custom_field.update` |
