@@ -1,8 +1,15 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { UsersAdminCard } from "./users-admin";
@@ -384,6 +391,37 @@ describe("UsersAdminCard", () => {
     });
   });
 
+  // Two presses inside one act run against one render, as a fast double click
+  // does before React re-renders the form.
+  it("sends one invite for a double click on Invite", async () => {
+    const calls: { method: string; url: string; body?: unknown }[] = [];
+    vi.stubGlobal("fetch", backend(calls));
+    render(<UsersAdminCard />);
+    await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
+    const dialog = await openInvite();
+    await userEvent.type(
+      within(dialog).getByPlaceholderText("name@company.com"),
+      "new@acme.test",
+    );
+    await userEvent.type(
+      within(dialog).getByPlaceholderText("Full name"),
+      "New Contact",
+    );
+    const form = dialog.querySelector("form");
+    if (form === null) throw new Error("the invite dialog has no form");
+    act(() => {
+      form.requestSubmit();
+      form.requestSubmit();
+    });
+    // Both presses have run their course once the invite's own answer shows.
+    expect(
+      await screen.findByText("Set-password link for New Contact"),
+    ).toBeTruthy();
+    expect(
+      calls.filter((c) => c.method === "POST" && c.url.endsWith("/users")),
+    ).toHaveLength(1);
+  });
+
   it("removes a locked-out member's second factor after a confirm", async () => {
     const user = userEvent.setup();
     const calls: { method: string; url: string; body?: unknown }[] = [];
@@ -416,7 +454,12 @@ describe("UsersAdminCard", () => {
     const user = userEvent.setup();
     const calls: { method: string; url: string; body?: unknown }[] = [];
     vi.stubGlobal("fetch", backend(calls));
-    render(<UsersAdminCard />);
+    render(
+      <ToastProvider>
+        <UsersAdminCard />
+        <ToastRegion />
+      </ToastProvider>,
+    );
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     await user.click(
@@ -436,6 +479,9 @@ describe("UsersAdminCard", () => {
         ),
       ).toBe(true),
     );
+    // The note names the member as the confirm before it did.
+    expect(await screen.findByText("Ada Active deactivated")).toBeTruthy();
+    expect(screen.queryByText(/ada@acme\.test deactivated/)).toBeNull();
   });
 
   // The confirm's own trigger does not survive the action it confirms: a
