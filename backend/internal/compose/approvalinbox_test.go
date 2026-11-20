@@ -158,7 +158,7 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		"capture_counterparty": true, "company_name_promotion": true, "linkedin_match": true,
 		"vcard_create":     true,
 		"lifecycle_change": true, "assign_owner": true, "close_date_correction": true,
-		"deal_follow_up": true, "commitment_task": true,
+		"deal_follow_up": true, "commitment_task": true, "employer_change": true,
 		"fx_rate_proposal": true,
 		// A captured record that collided with a lead already here: accepting
 		// folds the message's fields onto that lead. It writes one record and

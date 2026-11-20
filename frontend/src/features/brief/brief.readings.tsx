@@ -15,7 +15,7 @@ import { pipelineValueDetail } from "../../format/pipelinevalue";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
-import { WORKLIST_FILTER_PARAM } from "../worklist/worklist";
+import { WORKLIST_FILTER_PARAM } from "../../lib/worklistrouting";
 import type { Worklist, WorklistFilter } from "../worklist/worklist.queries";
 import { calendarDay } from "./brief.facts";
 import {

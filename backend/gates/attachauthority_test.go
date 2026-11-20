@@ -68,6 +68,7 @@ var readProbeCallers = gatekit.Waive(map[string]string{
 	"contacts.setCompanyCheckedFields":        "reference: a company update re-points its own parent company",
 	"contacts.setCompanyRoleTx":               "reference: sets a company's role on a project the caller writes",
 	"contacts.Store.attachEmployerTx":         "reference: the contact's employment names its company; the contact write is gated",
+	"contacts.Store.ApplyEmployerChangeTx":    "reference: an accepted employer change names the new company; the contact write is held",
 	"contacts.Store.DecideHandoff":            "reference: a handoff decision names the deal it produced",
 	"contacts.Store.EnsureDealVisible":        "read: a relationship read asks whether the deal is visible",
 	"contacts.Store.EnsureProjectVisible":     "read: a relationship read asks whether the project is visible",
