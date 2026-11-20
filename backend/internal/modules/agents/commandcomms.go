@@ -184,8 +184,8 @@ func (r *sendMessageResolver) Subject(ctx context.Context, cmd SendMessageComman
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
-		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.sendMessage", systemtext.Text(fmt.Sprint(cmd.Body)))},
-		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).sendMessage, cmd.Body),
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.sendMessage", systemtext.Text(systemtext.Inline(cmd.Body)))},
+		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).sendMessage, systemtext.Inline(cmd.Body)),
 	}, nil
 }
 

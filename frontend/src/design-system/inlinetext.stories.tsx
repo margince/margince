@@ -33,8 +33,7 @@ function Example({ multiline = false }: { multiline?: boolean }) {
       placeholder="Not set"
       value={value}
       multiline={multiline}
-      type={multiline ? "text" : "number"}
-      step="any"
+      type={multiline ? "text" : "decimal"}
       canEdit
       onSave={async (next) => setValue(next)}
     />

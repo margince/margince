@@ -19,7 +19,6 @@ package company360
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -152,7 +151,7 @@ func (said suggestionCopy) noNextStepReason(open pipeline) string {
 		if len(names) == namedDeals {
 			break
 		}
-		names = append(names, strconv.Quote(deal.Name))
+		names = append(names, said.Quote(deal.Name))
 	}
 	switch {
 	case len(names) == 0 && open.OpenCount == 1:

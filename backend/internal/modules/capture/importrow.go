@@ -73,8 +73,9 @@ func recordImportTx(
         ON CONFLICT ` + who.conflict + ` DO UPDATE SET
          provider_received_at = coalesce(capture_import.provider_received_at, EXCLUDED.provider_received_at),
          source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at),
-         delivered_by = ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1),
+         delivered_by = ` + mergedDeliveredBySQL + `,
          bcc_only = coalesce(capture_import.bcc_only, EXCLUDED.bcc_only),
+         legal_entity_id = ` + deliveringEntitySQL("capture_import", mergedDeliveredBySQL) + `,
          provider_message_ids = ARRAY(SELECT DISTINCT unnest(capture_import.provider_message_ids || EXCLUDED.provider_message_ids) ORDER BY 1)
         WHERE (capture_import.provider_received_at IS NULL AND EXCLUDED.provider_received_at IS NOT NULL)
            OR (capture_import.source_occurred_at IS NULL AND EXCLUDED.source_occurred_at IS NOT NULL)
@@ -92,6 +93,10 @@ func recordImportTx(
 	}
 	return nil
 }
+
+// mergedDeliveredBySQL is the mailboxes that delivered an import once the
+// arriving one is added.
+const mergedDeliveredBySQL = `ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1)`
 
 // AudienceRecomputer derives a captured activity's audience from every
 // mailbox that imported it. The activities module owns the activity table and

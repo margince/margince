@@ -46,8 +46,8 @@ const QUIET: Moment = {
   claim_key: "moment:nothing_needed",
   evidence_fingerprint: "quiet",
   rule: "nothing_needed",
-  headline: "Nothing is owed to this account",
-  why_now: "No promise to this account is open or coming due.",
+  headline: "Nothing is owed to this company",
+  why_now: "No promise to this company is open or coming due.",
   confidence: "observed_fact",
   evidence: [],
   recommended_action: {

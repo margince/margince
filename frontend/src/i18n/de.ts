@@ -3207,6 +3207,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gib den Betrag ohne Tausendertrennzeichen ein, etwa {example}.",
   "amount.refused.notNumber": "Gib den Betrag in Ziffern ein, etwa {example}.",
   "amount.refused.tooLarge": "Dieser Betrag ist zu groß zum Speichern.",
+  "amount.refused.noCurrency": "Dieser Betrag braucht zuerst eine Währung.",
+  "amount.waitsForCurrency": "Eingabe möglich, sobald eine Währung feststeht.",
+  "amount.currencyUnread":
+    "Die Währung konnte nicht gelesen werden, darum kannst du noch keinen Betrag eingeben.",
   "amount.refused.negative": "Gib einen Betrag von null oder mehr ein.",
   "number.refused.ambiguous": "Gib die Zahl als {whole} oder {fraction} ein.",
   "number.refused.grouping":
@@ -6261,8 +6265,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.dealName": "Deal-Name",
   "lead.qualify.amount": "Betrag ({currency})",
   "lead.qualify.amountHint": "Optional. In der Basiswährung der Installation.",
-  "lead.qualify.amountNoCurrency":
-    "Eingabe möglich, sobald die Basiswährung der Installation geladen ist.",
   "lead.qualify.why": "Warum",
   "lead.qualify.reasonReplied": "Grund: Der Lead hat am {at} geantwortet.",
   "lead.qualify.reasonMeetingBooked":
@@ -6394,7 +6396,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability": "Abschlusschance",
   "deal.winProbability.hint":
     "Leer lassen, um die Abschlusschance der Phase zu verwenden.",
-  "deal.winProbability.invalid": "Gib eine ganze Zahl von 0 bis 100 ein.",
   "deal.winProbability.source.stage": "aus der Phase",
   "deal.winProbability.source.human": "von Hand gesetzt",
   "deal.winProbability.source.you": "von dir gesetzt",
@@ -8423,6 +8424,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "calendar.patternMonth": "MM",
   "calendar.patternYear": "JJJJ",
   "calendar.invalidDate": "Gib ein Datum im Format {pattern} ein.",
+  "calendar.noSuchDay": "Den {date} gibt es nicht.",
   "calendar.patternHour": "hh",
   "calendar.patternMinute": "mm",
   "calendar.invalidTime": "Gib eine Uhrzeit im Format {pattern} ein.",
@@ -15343,8 +15345,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für heute leer lassen. Eine spät erfasste Anfrage behält die Frist ihres tatsächlichen Eingangs.",
   "privacy.earlierDue": "Frühere Frist",
   "privacy.earlierDueHint":
-    "Optional. Nur ein Datum vor der Frist oben wird angenommen.",
+    "Optional. Ein Tag ab dem Eingang der Anfrage bis zur Frist oben.",
   "privacy.earlierDueTooLate": "Wähle ein Datum vor dem {date}.",
+  "privacy.earlierDueTooEarly": "Wähle den {date} oder ein späteres Datum.",
   "privacy.dueRule": "Fristregel",
   "privacy.dueRuleUnknown":
     "Manuell eingetragen, bevor Fristen berechnet wurden",
@@ -21969,7 +21972,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.because.promised": "von dir zugesagt",
   "worklist.because.approved_and_failed": "freigegeben, aber nicht ausgeführt",
   "worklist.because.account_termination":
-    "Kontobeendigung braucht eine Entscheidung",
+    "Das Ende der Kundenbeziehung braucht eine Entscheidung",
   "worklist.because.blocks_customer_work": "ein Kontakt wartet darauf",
   "worklist.because.routine": "routinemäßiges Aufräumen",
   "worklist.because.repeated_failure": "wiederholter Fehler",

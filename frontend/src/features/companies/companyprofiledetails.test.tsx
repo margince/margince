@@ -178,6 +178,38 @@ describe("CompanyProfileDetails", () => {
     );
   });
 
+  it("refuses an address with no @ in the app's words and sends nothing", async () => {
+    const methods: string[] = [];
+    stub({
+      "/me": writableSeat,
+      "/companies/o-1": (request) => {
+        methods.push(request.method);
+        return jsonResponse(company);
+      },
+    });
+    render(
+      <CompanyProfileDetails
+        company={{ ...company, email: null }}
+        edit={EDITABLE}
+        {...NO_FIELDS}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: new RegExp(`^Change ${en["create.email"]}`),
+      }),
+    );
+    const box = screen.getByRole("textbox", { name: en["create.email"] });
+    await userEvent.type(box, "keine-mail{Enter}");
+
+    expect(
+      await screen.findByText("Enter an email address for Email."),
+    ).toBeInTheDocument();
+    expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(methods).not.toContain("PATCH");
+  });
+
   // No register answers for a postal address, so the VAT verdict mark belongs
   // to the VAT row alone.
   it("reads back a registered address the crawl found, with no verdict on it", async () => {

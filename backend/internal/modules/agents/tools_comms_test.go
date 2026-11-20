@@ -356,7 +356,7 @@ func TestRefusedOutboundCallsReachTheInbox(t *testing.T) {
 			tool:        "send_email",
 			args:        fmt.Sprintf(`{"activity_id":%q,"to":["buyer@example.test"],"subject":"Next steps","body":"b","consent_purpose":"support"}`, anchor),
 			wantTarget:  string(datasource.EntityActivity),
-			wantSummary: `Send an email to buyer@example.test, subject "Next steps"`,
+			wantSummary: `Send an email to buyer@example.test, subject “Next steps”`,
 		},
 	} {
 		t.Run(tc.tool, func(t *testing.T) {
@@ -458,7 +458,7 @@ func TestAStagedSummaryNamesEveryArgumentItReleases(t *testing.T) {
 		got := describeSend(summaryByLang[textlang.English], SendEmailCommand{
 			To: []string{"buyer@example.test"}, Cc: []string{"rival@example.test"}, Subject: "Q3 pricing",
 		})
-		for _, want := range []string{"buyer@example.test", "rival@example.test", `"Q3 pricing"`} {
+		for _, want := range []string{"buyer@example.test", "rival@example.test", `“Q3 pricing”`} {
 			if !strings.Contains(got, want) {
 				t.Errorf("summary %q does not name %q", got, want)
 			}
@@ -474,7 +474,7 @@ func TestAStagedSummaryNamesEveryArgumentItReleases(t *testing.T) {
 		got := describeBooking(summaryByLang[textlang.English], cmd, []RecordLink{
 			{EntityType: "deal", EntityID: deal}, {EntityType: "company", EntityID: company},
 		})
-		for _, want := range []string{host.String(), "2 record(s)", `"Review"`} {
+		for _, want := range []string{host.String(), "2 record(s)", `“Review”`} {
 			if !strings.Contains(got, want) {
 				t.Errorf("summary %q does not name %q", got, want)
 			}

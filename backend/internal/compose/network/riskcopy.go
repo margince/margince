@@ -38,17 +38,17 @@ var riskWords = riskSentences{
 		Vi: "chưa tới hai người liên hệ đang tương tác — thương vụ chỉ dựa vào một mối quan hệ",
 	},
 	CoverageGap: phrase{
-		En: "no engaged champion — nobody inside the account is carrying this",
+		En: "no engaged champion — nobody inside the company is carrying this",
 		De: "kein aktiver Fürsprecher — niemand im Unternehmen trägt das mit",
 		Vi: "không có người ủng hộ đang tương tác — không ai bên trong công ty đang dẫn dắt việc này",
 	},
 	ChampionDeparted: phrase{
-		En: "the champion has left the account — the contact arguing for this deal no longer works there",
+		En: "the champion has left the company — the contact arguing for this deal no longer works there",
 		De: "der Fürsprecher hat das Unternehmen verlassen — der Kontakt, der für diesen Deal eingetreten ist, arbeitet dort nicht mehr",
 		Vi: "người ủng hộ đã rời công ty — người liên hệ từng vận động cho thương vụ này không còn làm việc ở đó",
 	},
 	StakeholderLeft: phrase{
-		En: "a stakeholder has left the account — the seat is still on the deal, the relationship is not",
+		En: "a stakeholder has left the company — the seat is still on the deal, the relationship is not",
 		De: "ein Beteiligter hat das Unternehmen verlassen — die Rolle steht noch am Deal, die Beziehung nicht mehr",
 		Vi: "một bên liên quan đã rời công ty — vị trí vẫn còn trong thương vụ, còn quan hệ thì không",
 	},

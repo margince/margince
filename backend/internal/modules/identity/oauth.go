@@ -402,6 +402,7 @@ const refusedMethodDescription = "an admin has turned off this way of registerin
 
 // oauthError is the RFC 6749 §5.2 error shape.
 func oauthError(w http.ResponseWriter, status int, code, description string) {
+	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, status, map[string]string{oauthParamError: code, "error_description": description})
 }
 

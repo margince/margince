@@ -10,10 +10,15 @@ package colleaguework
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Reading is one figure's SQL fragments, each a placeholder or a predicate
@@ -96,4 +101,23 @@ func meetingsBookedForColleaguesSQL(ctx context.Context, r Reading, arg func(any
  AND ` + readable + ` AND ` + r.Fields + `
  AND a.created_at>=` + r.From + ` AND a.created_at<` + r.Until + ` AND ` + r.Credited + `
  ORDER BY a.id LIMIT ` + r.Limit, nil
+}
+
+// NameSystemWritten names a meeting Margince wrote in the report's own
+// language, the language every other word of the report is in.
+func NameSystemWritten(ctx context.Context, tx pgx.Tx, facts []reporting.Fact, lang textlang.Lang) error {
+	activityIDs := make([]ids.UUID, 0, len(facts))
+	for _, fact := range facts {
+		activityIDs = append(activityIDs, fact.SourceID)
+	}
+	written, err := storekit.SystemWrittenActivities(ctx, tx, activityIDs)
+	if err != nil {
+		return err
+	}
+	for i := range facts {
+		if words, ok := written[facts[i].SourceID]; ok && facts[i].Row.Label == words.Subject {
+			facts[i].Row.Label = words.Message.SubjectIn(words.Subject, lang)
+		}
+	}
+	return nil
 }

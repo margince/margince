@@ -27,3 +27,17 @@ export function wholeNumberFault(
       })
     : undefined;
 }
+
+/**
+ * What is wrong with a typed win probability: a whole percent from 0 to 100.
+ * A blank box is no probability, which the caller allows.
+ */
+export function winProbabilityFault(
+  typed: string,
+  locale: Locale,
+  label: FieldLabel,
+): string | undefined {
+  return typed.trim() === ""
+    ? undefined
+    : wholeNumberFault(typed, locale, label, { min: 0, max: 100 });
+}
