@@ -103,7 +103,7 @@ func employerArmSQL(ctx context.Context, query string, headPos, tailPos int, has
 	       ) e`,
 		contactBranch.entity, contactBranch.title, companyBranch.title,
 		companyWhole, edgeWhere, contactWhere,
-		contactBranch.ownMatch("t", matchExpression(entityContact, headPos, tailPos, hasFragment), identifierPos),
+		contactBranch.ownMatch("t", matchExpression(entityContact, headPos, tailPos, hasFragment), identifierPos, everyIdentifier),
 		companyScore, words.any(),
 		words.seedsSQL(companyWhole, companyScore, companyWhere, arg(employerArmCompanies)),
 		words.everyFoundIn("t", "m"), companyNameTSV("o")), nil

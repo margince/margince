@@ -21664,6 +21664,7 @@ const (
 	ReportingMetricIDClosedWinRate                 ReportingMetricID = "closed_win_rate"
 	ReportingMetricIDForecastLanding               ReportingMetricID = "forecast_landing"
 	ReportingMetricIDInitiativePipeline            ReportingMetricID = "initiative_pipeline"
+	ReportingMetricIDIntroductionsMade             ReportingMetricID = "introductions_made"
 	ReportingMetricIDLeadCohortOutcomes            ReportingMetricID = "lead_cohort_outcomes"
 	ReportingMetricIDLeadFirstResponse             ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves               ReportingMetricID = "lead_status_moves"
@@ -21672,6 +21673,7 @@ const (
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
 	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
+	ReportingMetricIDMeetingsBookedForColleagues   ReportingMetricID = "meetings_booked_for_colleagues"
 	ReportingMetricIDMeetingsHeld                  ReportingMetricID = "meetings_held"
 	ReportingMetricIDOpenPipeline                  ReportingMetricID = "open_pipeline"
 	ReportingMetricIDPartnerActivity               ReportingMetricID = "partner_activity"
@@ -21702,6 +21704,8 @@ func (e ReportingMetricID) Valid() bool {
 		return true
 	case ReportingMetricIDInitiativePipeline:
 		return true
+	case ReportingMetricIDIntroductionsMade:
+		return true
 	case ReportingMetricIDLeadCohortOutcomes:
 		return true
 	case ReportingMetricIDLeadFirstResponse:
@@ -21717,6 +21721,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadsPromoted:
 		return true
 	case ReportingMetricIDLeadsQualified:
+		return true
+	case ReportingMetricIDMeetingsBookedForColleagues:
 		return true
 	case ReportingMetricIDMeetingsHeld:
 		return true
@@ -82859,6 +82865,9 @@ type SearchParams struct {
 
 	// WithEmployees Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
 	WithEmployees *bool `form:"with_employees,omitempty" json:"with_employees,omitempty"`
+
+	// Typeahead The caller is a search box answering each keystroke. Messages (`activity`) are left out of the answer while the word being typed is under 4 letters, because a short prefix matches a large share of all messages and ranking them is the slow part. Every other type is searched from the first letter as usual. A query that ends in a finished word, or uses the websearch operators, has no word being typed and keeps its messages, and so does a request whose `types` names messages alone. Only a human caller's flag is honoured.
+	Typeahead *bool `form:"typeahead,omitempty" json:"typeahead,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -152289,6 +152298,19 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_employees"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_employees", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "typeahead" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "typeahead", r.URL.Query(), &params.Typeahead, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "typeahead"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "typeahead", Err: err})
 		}
 		return
 	}

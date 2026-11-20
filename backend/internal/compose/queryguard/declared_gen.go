@@ -490,7 +490,7 @@ var Declared = map[string][]string{
 	"GET /v1/scheduling/profile":                                               {},
 	"GET /v1/scheduling/proposals":                                             {"contact_id"},
 	"GET /v1/sdr-handoffs/{id}/assignee":                                       {},
-	"GET /v1/search":                                                           {"cursor", "exclude_ids", "limit", "per_type", "q", "types", "with_employees"},
+	"GET /v1/search":                                                           {"cursor", "exclude_ids", "limit", "per_type", "q", "typeahead", "types", "with_employees"},
 	"GET /v1/shared-mailboxes":                                                 {},
 	"GET /v1/signals":                                                          {"company_id", "cursor", "include_archived", "kind", "limit", "resolution_state", "status"},
 	"GET /v1/signals/{id}":                                                     {},

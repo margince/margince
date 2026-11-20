@@ -111,6 +111,14 @@ describe("the palette's type strip", () => {
     ).toEqual(["All, 3+", "Contacts, 1", "Deals, 2+"]);
   });
 
+  it("asks as a typeahead and keeps a trailing blank that finishes the word", async () => {
+    const fetchMock = renderPalette();
+    await typeAndSettle("acme ");
+    const asked = searchParams(fetchMock.mock.calls.at(-1)?.[0] ?? "");
+    expect(asked.get("q")).toBe("acme ");
+    expect(asked.get("typeahead")).toBe("true");
+  });
+
   it("narrows the list to the type picked and asks for more of it", async () => {
     const fetchMock = renderPalette();
     const user = await typeAndSettle("acme");
