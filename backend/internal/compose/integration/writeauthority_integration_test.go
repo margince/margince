@@ -98,7 +98,7 @@ func (f sharedContactFixture) share(t *testing.T, access string) {
 // AAD-AC-4 against the database: a read-seat member holding a WRITE share is
 // still refused.
 //
-// The rule had one guard, at grant creation (refuseWriteGrantToReadSeat), and
+// The rule had one guard, at grant creation (identity.grantAccessFor), and
 // nothing revokes a standing grant when a seat is downgraded. So the stored
 // row can say the opposite of the rule, and the only thing making that inert
 // is the seat ceiling on the doors that exist today — which is exactly the

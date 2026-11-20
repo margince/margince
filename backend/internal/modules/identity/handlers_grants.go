@@ -65,9 +65,7 @@ func (h Handlers) CreateRecordGrant(w http.ResponseWriter, r *http.Request, _ cr
 		return
 	}
 	out := wireGrant(grant)
-	if grant.LimitedByRole {
-		out.LimitedByRole = &grant.LimitedByRole
-	}
+	out.LimitedByRole = grant.LimitedByRole
 	httperr.WriteJSON(w, http.StatusCreated, out)
 }
 

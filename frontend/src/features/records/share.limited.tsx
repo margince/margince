@@ -1,7 +1,25 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useState } from "react";
 import { useT } from "../../i18n";
+
+/**
+ * The colleague a write share was last saved for as read, because of their
+ * role. On such a save the notice replaces "Nothing changed", which may be false.
+ */
+export function useLimitedByRole() {
+  const [name, setName] = useState<string | null>(null);
+  return {
+    name,
+    note(answer: { limited_by_role?: boolean } | undefined, subject: string) {
+      const limited = answer?.limited_by_role === true;
+      setName(limited ? subject : null);
+      return limited;
+    },
+    clear: () => setName(null),
+  };
+}
 
 /**
  * Says that an edit share was saved as read, because the colleague's role

@@ -251,7 +251,7 @@ Also called: contact already exists, email already taken, hidden contact.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**. Margince confirms who now has which access, for example "Mira Voss now has Read access to Acme renewal."
-You cannot share more than you hold, and **Grant access** needs the right to change the record.
+You cannot share more than you hold, and **Grant access** needs the right to change the record. A **Write** share is saved as **Read** if the colleague's role can neither change such records nor log activities. A team share keeps **Write**.
 
 On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
 
@@ -337,8 +337,8 @@ Rules worth knowing:
 - Sharing never widens what a *role* may do, only which records it reaches.
   Share a deal with someone whose role cannot read deals at all and the share
   does nothing.
-- A write share to someone on a read seat is refused: "A read-only seat cannot hold write access. Upgrade the seat first, or grant read access."
-- A write share to a colleague whose role cannot change that kind of record is saved as read, and Margince says so: "Saved as read access. Mira Voss can't edit Acme renewal with their role." A team share keeps write; each member edits only when their own role allows it.
+- A write share to someone on a read seat is refused: "A read-only seat cannot
+  hold write access. Upgrade the seat first, or grant read access."
 - Sharing the same record again **replaces** the whole share. Anything you leave out
   is cleared.
 - Taking back a share counts from the next request of the user it was shared with. There is no undo.
@@ -351,7 +351,7 @@ There are no levels of shares, no sharing by rules, and no way to give someone e
 
 When two contacts merge, the owner of the merged-away contact keeps access to the contact that remains. Margince gives them a share on it:
 
-- **Write** for a full seat whose role can change contacts, **Read** otherwise.
+- **Write** for a full seat whose role can change contacts or log activities, and **Read** for anyone else.
 - A share they already held keeps its end date. It only goes from read to write.
 - A colleague who has left gets nothing, and the owner of the remaining contact needs no share.
 

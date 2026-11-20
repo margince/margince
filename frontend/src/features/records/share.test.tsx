@@ -503,6 +503,36 @@ describe("ShareScreen", () => {
     expect(notice.textContent).toContain("Mor Adler");
   });
 
+  it("shows only the limited notice when re-saving a write share the colleague's role cannot use", async () => {
+    const posts: Record<string, unknown>[] = [];
+    const listed = grantEndpoint(posts, writeGrant);
+    installBaseFetch({
+      "/record-grants": async (request) => {
+        const answer = await listed(request);
+        if (request.method !== "POST") {
+          return answer;
+        }
+        const saved = await answer.json();
+        return jsonResponse(
+          { ...saved, access: "read", limited_by_role: true },
+          201,
+        );
+      },
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toMatchObject({ access: "write" });
+    expect(
+      (await screen.findByTestId("share-limited-by-role")).textContent,
+    ).toContain("Mor Adler");
+    expect(screen.queryByTestId("share-unchanged")).toBeNull();
+  });
+
   it("names the recipient's seat for a 403 seat_tier_insufficient", async () => {
     installBaseFetch({
       "/record-grants": (request) => {

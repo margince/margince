@@ -9,8 +9,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 type limitedGrantBody struct {
@@ -49,6 +48,19 @@ func (e roleShareEnv) shareContact(t *testing.T, subjectType, subject, access st
 	return got
 }
 
+// limitedShareAudits counts the record_share rows that say a write share to
+// the subject was cut to read by their role.
+func (e roleShareEnv) limitedShareAudits(t *testing.T, subject string) int {
+	t.Helper()
+	var n int
+	if err := e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM audit_log
+		WHERE action = 'record_share' AND after->>'subject_id' = $1 AND after->>'access' = 'read'
+		  AND evidence->>'requested_access' = 'write' AND evidence->>'limited_by_role' = 'true'`, subject).Scan(&n); err != nil {
+		t.Fatalf("counting the limited share audit rows: %v", err)
+	}
+	return n
+}
+
 func TestAnEditShareToAColleagueWhoseRoleCannotEditIsSavedAsViewOnly(t *testing.T) {
 	e := setupRoleShare(t)
 
@@ -56,19 +68,39 @@ func TestAnEditShareToAColleagueWhoseRoleCannotEditIsSavedAsViewOnly(t *testing.
 	if limited.Access != "read" || limited.LimitedByRole == nil || !*limited.LimitedByRole {
 		t.Fatalf("edit share to a read_only role answered %+v, want access read and limited_by_role true", limited)
 	}
-	var stored, audited, requested string
-	if err := e.Owner.QueryRow(t.Context(), `SELECT g.access, a.after->>'access', a.evidence->>'requested_access'
-		FROM record_grant g JOIN audit_log a ON a.action = 'record_share' AND a.after->>'subject_id' = g.subject_id::text
-		WHERE g.id = $1`, limited.ID).Scan(&stored, &audited, &requested); err != nil {
-		t.Fatalf("reading the saved grant and its audit row: %v", err)
-	}
-	if stored != "read" || audited != "read" || requested != "write" {
-		t.Fatalf("stored %q, audited %q, requested %q; want read, read, write", stored, audited, requested)
+	if n := e.limitedShareAudits(t, e.viewer); n != 1 {
+		t.Fatalf("%d audit rows record the cut, want 1", n)
 	}
 
 	full := e.shareContact(t, "user", e.editor, "write")
 	if full.Access != "write" || full.LimitedByRole != nil {
 		t.Fatalf("edit share to a rep answered %+v, want access write and no limited_by_role", full)
+	}
+}
+
+// Attaching an activity uses a write share. So a role that may log activities
+// but not change contacts keeps write, and can attach.
+func TestAnEditShareToARoleThatOnlyLogsActivitiesKeepsWrite(t *testing.T) {
+	e := setupRoleShare(t)
+	var role struct {
+		Key string `json:"key"`
+	}
+	mustCall(t, e.AppEnv, "POST", "/v1/roles", AnyMap{"copy_from": "rep", "name": "Logs only"}, http.StatusCreated, &role)
+	mustCall(t, e.AppEnv, "PATCH", "/v1/roles/"+role.Key+"/objects/contact",
+		AnyMap{"create": false, "read": true, "update": false, "delete": false}, http.StatusOK, nil)
+	const email, password = "logger@grantrole.test", "grantrole-logger-password"
+	logger := createdID(t, e.AppEnv, "/v1/users", AnyMap{"email": email, "display_name": "Logger", "role": role.Key})
+
+	got := e.shareContact(t, "user", logger, "write")
+	if got.Access != "write" || got.LimitedByRole != nil {
+		t.Fatalf("edit share to a role that logs activities answered %+v, want access write", got)
+	}
+	apptest.SetPasswordByLink(t, e.AppEnv, logger, password)
+	if status := e.AsSecondSeat(t, email, password).Call(t, "POST", "/v1/activities", AnyMap{
+		"kind": "note", "subject": "Called about the renewal",
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": e.contactID}},
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("logging a note on the shared contact → %d, want 201", status)
 	}
 }
 
@@ -88,42 +120,37 @@ func TestAnEditShareToATeamIsNeverLimitedByRole(t *testing.T) {
 	}
 }
 
-func TestSharingCompanyContactsForEditWithAViewOnlyRoleSaysSo(t *testing.T) {
-	e := setupRoleShare(t)
-	for subject, want := range map[string]bool{e.viewer: true, e.editor: false} {
-		var result struct {
-			LimitedByRole bool `json:"limited_by_role"`
-		}
-		if status := e.Call(t, "POST", "/v1/companies/"+e.companyID+"/share-contacts", AnyMap{
-			"subject_type": "user", "subject_id": subject, "access": "write",
-		}, nil, &result); status != http.StatusOK {
-			t.Fatalf("share company contacts with %s → %d, want 200", subject, status)
-		}
-		if result.LimitedByRole != want {
-			t.Errorf("company contacts shared for edit with %s: limited_by_role = %v, want %v", subject, result.LimitedByRole, want)
-		}
+func shareCompanyContacts(t *testing.T, e roleShareEnv, subject string) *bool {
+	t.Helper()
+	var result struct {
+		LimitedByRole *bool `json:"limited_by_role"`
 	}
+	if status := e.Call(t, "POST", "/v1/companies/"+e.companyID+"/share-contacts", AnyMap{
+		"subject_type": "user", "subject_id": subject, "access": "write",
+	}, nil, &result); status != http.StatusOK {
+		t.Fatalf("share company contacts with %s → %d, want 200", subject, status)
+	}
+	return result.LimitedByRole
 }
 
-// A share request's accept and a merge's owner carry ask ShareAccessForTx.
-func TestTheWidestShareFollowsTheRole(t *testing.T) {
+func TestSharingCompanyContactsForEditWithAViewOnlyRoleSaysSo(t *testing.T) {
 	e := setupRoleShare(t)
-	tx, err := e.Owner.Begin(t.Context())
-	if err != nil {
-		t.Fatal(err)
+	// No contact works there yet: no grant is written, so the answer reveals nothing.
+	if limited := shareCompanyContacts(t, e, e.viewer); limited != nil {
+		t.Fatalf("an empty company answered limited_by_role = %v, want it absent", *limited)
 	}
-	defer func() {
-		if err := tx.Rollback(t.Context()); err != nil {
-			t.Errorf("rolling back: %v", err)
-		}
-	}()
-	for member, want := range map[string]string{e.viewer: "read", e.editor: "write"} {
-		got, err := identity.ShareAccessForTx(t.Context(), tx, "contact", ids.MustParse(member))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got != want {
-			t.Errorf("widest share for %s = %q, want %q", member, got, want)
-		}
+	mustCall(t, e.AppEnv, "POST", "/v1/relationships", AnyMap{
+		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
+		"is_current_primary": true, "source": "manual",
+	}, http.StatusCreated, nil)
+
+	if limited := shareCompanyContacts(t, e, e.viewer); limited == nil || !*limited {
+		t.Fatal("an edit share of company contacts to a read_only role did not say it was limited")
+	}
+	if n := e.limitedShareAudits(t, e.viewer); n != 1 {
+		t.Fatalf("%d audit rows record the cut, want 1", n)
+	}
+	if limited := shareCompanyContacts(t, e, e.editor); limited != nil {
+		t.Fatalf("company contacts shared for edit with a rep answered limited_by_role = %v", *limited)
 	}
 }

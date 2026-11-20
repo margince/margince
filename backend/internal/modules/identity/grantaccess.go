@@ -17,66 +17,74 @@ import (
 
 const grantAccessRead = string(crmcontracts.RecordGrantAccessRecordGrantAccessRead)
 
-// grantAccessWrite is the wider of a grant's two access levels.
-const grantAccessWrite = string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite)
+// GrantAccessWrite is the wider of a grant's two access levels.
+const GrantAccessWrite = string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite)
 
-// writeReach is whether a member could use a write grant on one record type.
-// The seat ceiling (AAD-AC-4) and the role's update permission both refuse
-// every write the grant would seem to allow.
-type writeReach struct {
-	seat bool
-	role bool
+// grantCut names what narrowed a write share to read, if anything did.
+type grantCut string
+
+const (
+	grantCutNone grantCut = ""
+	grantCutSeat grantCut = "seat"
+	grantCutRole grantCut = "role"
+)
+
+// grantAccessFor is the access a share saves, and what cut it. Every grant
+// writer asks it, so the cut and its audit evidence are decided here.
+// A team keeps what was asked: each member's write is judged by their own role.
+// A stored write grant the role cannot use is inert, because every use asks
+// the role at write time. So a role change needs no rewrite of grants.
+func grantAccessFor(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (string, grantCut, error) {
+	if in.Access != GrantAccessWrite || in.SubjectType == grantSubjectTeam {
+		return in.Access, grantCutNone, nil
+	}
+	seat, err := seatOf(ctx, tx, in.SubjectID)
+	if err != nil {
+		return "", grantCutNone, err
+	}
+	// The seat test is auth.AdmitChangers': only a read seat is refused writes.
+	// This runs at grant creation only, so whoever ships a seat-change endpoint
+	// owes the other half: revoke the member's write grants there, audited.
+	// Until then they are inert, as the write-authority predicate drops the
+	// record_grant arm for a read seat.
+	if seat == principal.SeatRead {
+		if !in.FitToRecipient {
+			return "", grantCutNone, fmt.Errorf("a write grant needs a full seat: %w", apperrors.ErrSeatTierInsufficient)
+		}
+		return grantAccessRead, grantCutSeat, nil
+	}
+	usable, err := roleUsesWriteShare(ctx, tx, in.RecordType, in.SubjectID)
+	if err != nil {
+		return "", grantCutNone, err
+	}
+	if !usable {
+		// The answer says the role cut the share, and never names the role.
+		return grantAccessRead, grantCutRole, nil
+	}
+	return GrantAccessWrite, grantCutNone, nil
 }
 
-func memberWriteReach(ctx context.Context, tx pgx.Tx, recordType string, member ids.UUID) (writeReach, error) {
-	seat, err := seatOf(ctx, tx, member)
-	if err != nil {
-		return writeReach{}, err
+// roleUsesWriteShare is whether a member's role can use a write share on a
+// record type. Changing the record needs update on it. Attaching an activity
+// to it needs the role's activity create.
+func roleUsesWriteShare(ctx context.Context, tx pgx.Tx, recordType string, member ids.UUID) (bool, error) {
+	seat := ids.From[ids.UserKind](member)
+	changes, err := SeatAllows(ctx, tx, seat, recordType, principal.ActionUpdate)
+	if err != nil || changes {
+		return changes, err
 	}
-	grants, err := loadGrantsFor(ctx, tx, []ids.UUID{member})
-	if err != nil {
-		return writeReach{}, fmt.Errorf("read the subject's role: %w", err)
-	}
-	return writeReach{
-		seat: seat.CanMutate(),
-		role: grants[member].perms.Allows(recordType, principal.ActionUpdate),
-	}, nil
+	return SeatAllows(ctx, tx, seat, "activity", principal.ActionCreate)
 }
 
-// grantAccessFor is the access an explicit share saves, and whether the
-// subject's role cut write to read. A read seat is refused, as the contract
-// states; the answer names no role.
-//
-// A team keeps what was asked: its members hold different roles, and each
-// write is judged by the writer's own.
-func grantAccessFor(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (access string, limitedByRole bool, err error) {
-	if in.Access != grantAccessWrite || in.SubjectType == grantSubjectTeam {
-		return in.Access, false, nil
+// grantCutEvidence is the audit evidence of a cut share, nil when nothing cut.
+func grantCutEvidence(requested string, cut grantCut) map[string]any {
+	switch cut {
+	case grantCutRole:
+		return map[string]any{"requested_access": requested, "limited_by_role": true}
+	case grantCutSeat:
+		return map[string]any{"requested_access": requested, "limited_by_seat": true}
 	}
-	reach, err := memberWriteReach(ctx, tx, in.RecordType, in.SubjectID)
-	if err != nil {
-		return "", false, err
-	}
-	if !reach.seat {
-		return "", false, fmt.Errorf("a write grant needs a full seat: %w", apperrors.ErrSeatTierInsufficient)
-	}
-	if !reach.role {
-		return grantAccessRead, true, nil
-	}
-	return grantAccessWrite, false, nil
-}
-
-// ShareAccessForTx is the widest access a share may give this member on one
-// record type: write when both seat and role allow it, read otherwise.
-func ShareAccessForTx(ctx context.Context, tx pgx.Tx, recordType string, member ids.UUID) (string, error) {
-	reach, err := memberWriteReach(ctx, tx, recordType, member)
-	if err != nil {
-		return "", err
-	}
-	if reach.seat && reach.role {
-		return grantAccessWrite, nil
-	}
-	return grantAccessRead, nil
+	return nil
 }
 
 func seatOf(ctx context.Context, tx pgx.Tx, member ids.UUID) (principal.SeatType, error) {

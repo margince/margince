@@ -37,11 +37,13 @@ func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType 
 		out.Skipped = authz.OwnerCarryInactive
 		return out, nil
 	}
-	access, err := ShareAccessForTx(ctx, tx, recordType, owner)
+	in := CreateGrantInput{RecordType: recordType, RecordID: record, SubjectType: "user", SubjectID: owner,
+		Access: GrantAccessWrite, FitToRecipient: true}
+	access, cut, err := grantAccessFor(ctx, tx, in)
 	if err != nil {
 		return out, err
 	}
-	in := CreateGrantInput{RecordType: recordType, RecordID: record, SubjectType: "user", SubjectID: owner, Access: access}
+	in.Access = access
 	if err := storekit.LockWriteIdentity(ctx, tx, "record_grant", grantIdentity(in)); err != nil {
 		return out, err
 	}
@@ -57,7 +59,11 @@ func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType 
 	if err != nil {
 		return out, err
 	}
-	evidence := map[string]any{"owner_carry": true}
+	evidence := grantCutEvidence(GrantAccessWrite, cut)
+	if evidence == nil {
+		evidence = map[string]any{}
+	}
+	evidence["owner_carry"] = true
 	if !mergedFrom.IsZero() {
 		evidence["merged_from"] = mergedFrom
 	}
@@ -96,7 +102,7 @@ func foldPriorGrant(ctx context.Context, tx pgx.Tx, in *CreateGrantInput, granto
 		return grantor, nil, false, err
 	}
 	if live {
-		if prior.Access == in.Access || in.Access != grantAccessWrite {
+		if prior.Access == in.Access || in.Access != GrantAccessWrite {
 			return grantor, nil, true, nil
 		}
 		in.ExpiresAt, in.Reason, grantor = prior.ExpiresAt, prior.Reason, prior.GrantedBy

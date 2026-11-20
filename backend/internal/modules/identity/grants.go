@@ -51,9 +51,9 @@ type grantRow struct {
 	ExpiresAt   *time.Time
 	CreatedAt   time.Time
 	Version     int64
-	// LimitedByRole is set on a share's answer, not stored: the share asked
-	// for write and the subject's role made it read.
-	LimitedByRole bool
+	// LimitedByRole is set on a share's answer, not stored, and only to true:
+	// the share asked for write and the subject's role made it read.
+	LimitedByRole *bool
 }
 
 func scanGrant(r pgx.Row) (grantRow, error) {
@@ -80,6 +80,9 @@ type CreateGrantInput struct {
 	Access      string
 	Reason      *string
 	ExpiresAt   *time.Time
+	// FitToRecipient saves read for a read seat asked for write, instead of
+	// refusing: a share the product makes for the recipient fits their seat.
+	FitToRecipient bool
 }
 
 // refuseAnExpiryAlreadyPast refuses a grant that would be dead on arrival.
@@ -145,12 +148,11 @@ func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (g
 // CreateRecordGrantTx is CreateRecordGrant on a transaction the caller owns,
 // for a share that must commit with the decision releasing it. The checks are
 // the same, in the same order.
-func (s *Service) CreateRecordGrantTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {
+func (s *Service) CreateRecordGrantTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (grantRow, error) {
 	if err := s.refuseMalformedGrant(ctx, in); err != nil {
-		return err
+		return grantRow{}, err
 	}
-	_, err := createRecordGrantInTx(ctx, tx, in)
-	return err
+	return createRecordGrantInTx(ctx, tx, in)
 }
 
 // refuseMalformedGrant is what a share settles before any transaction opens.
@@ -212,7 +214,7 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 		return grantRow{}, err
 	}
 	requested := in.Access
-	access, limitedByRole, err := grantAccessFor(ctx, tx, in)
+	access, cut, err := grantAccessFor(ctx, tx, in)
 	if err != nil {
 		return grantRow{}, err
 	}
@@ -244,15 +246,13 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	// the verb, and `record_unshare` belongs to revocation. Both images render
 	// the persisted row through one shape. An image that omitted a field the
 	// upsert can change would report that nothing moved when it did.
-	var evidence map[string]any
-	if limitedByRole {
-		evidence = map[string]any{"requested_access": requested, "limited_by_role": true}
-	}
 	if _, err := storekit.AuditWithEvidence(ctx, tx, "record_share",
-		in.RecordType, in.RecordID, before, grantImage(out), evidence); err != nil {
+		in.RecordType, in.RecordID, before, grantImage(out), grantCutEvidence(requested, cut)); err != nil {
 		return grantRow{}, fmt.Errorf("audit record_share: %w", err)
 	}
-	out.LimitedByRole = limitedByRole
+	if cut == grantCutRole {
+		out.LimitedByRole = new(true)
+	}
 	return out, nil
 }
 

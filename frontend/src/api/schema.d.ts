@@ -19890,9 +19890,10 @@ export interface paths {
          *     authority their licence already carries and is accepted. A `team` subject is not a seat and is
          *     not filtered — the read seats inside it are still refused every write at their own admission.
          *
-         *     The recipient's role binds as well: a `write` grant to a user whose role cannot change records
-         *     of this type is saved as `read`, and the answer carries `limited_by_role: true`. The answer
-         *     names no role. A `team` grant keeps `write`.
+         *     The recipient's role binds as well: a `write` grant to a user whose role can neither change
+         *     records of this type nor create activities (attaching one needs `write`) is saved as `read`,
+         *     and the answer carries `limited_by_role: true`. The answer names no role. A `team` grant
+         *     keeps `write`.
          */
         post: operations["createRecordGrant"];
         delete?: never;
@@ -55791,9 +55792,9 @@ export interface components {
             /** Format: int64 */
             version: number;
             /**
-             * @description Only on the answer to a share. True when the share asked for `write` and the user's role
-             *     cannot change records of this type, so the grant was saved as `read`. A team grant is never
-             *     limited, because its members hold different roles.
+             * @description Only on the answer to a share, and only when true: the share asked for `write` and the
+             *     user's role can neither change records of this type nor create activities, so the grant
+             *     was saved as `read`. A team grant is never limited, because its members hold different roles.
              */
             limited_by_role?: boolean;
         };
@@ -55826,8 +55827,12 @@ export interface components {
         ShareCompanyContactsResult: {
             shared: number;
             skipped: number;
-            /** @description True when the share asked for `write` and the user's role cannot change contacts, so every grant was saved as `read`. */
-            limited_by_role: boolean;
+            /**
+             * @description Present, and true, only when at least one grant was written and the share asked for `write`
+             *     while the user's role can neither change contacts nor create activities, so the grants were
+             *     saved as `read`.
+             */
+            limited_by_role?: boolean;
         };
         /**
          * @description Who can open one contact or company and who can change it. `data` is one page of the

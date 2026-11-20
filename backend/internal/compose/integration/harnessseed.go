@@ -260,6 +260,33 @@ func (e *Env) GrantRole(t *testing.T, user ids.UUID, roleKey string) {
 	grantSystemRole(t, e.Admin(), e.Pool, user, roleKey)
 }
 
+// GrantRoleToEach is GrantRole for several seats.
+func (e *Env) GrantRoleToEach(t *testing.T, roleKey string, users ...ids.UUID) {
+	t.Helper()
+	for _, user := range users {
+		e.GrantRole(t, user, roleKey)
+	}
+}
+
+// MoveToRole replaces every role a seat holds with one shipped role.
+func (e *Env) MoveToRole(t *testing.T, user ids.UUID, roleKey string) {
+	t.Helper()
+	e.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, user)
+	e.GrantRole(t, user, roleKey)
+}
+
+// CutShareAudits counts the record_share audit rows of a user's contact grant
+// asked as write and saved as read. The cause is the evidence key,
+// limited_by_seat or limited_by_role.
+func (e *Env) CutShareAudits(t *testing.T, record, user ids.UUID, cause string) int {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM record_grant share JOIN audit_log logged
+		ON logged.action = 'record_share' AND logged.entity_type = 'contact' AND logged.entity_id = share.record_id
+		AND logged.after->>'subject_id' = share.subject_id::text
+		WHERE share.record_id = $1 AND share.subject_id = $2 AND share.access = 'read'
+		  AND logged.evidence->>'requested_access' = 'write' AND logged.evidence->>$3 = 'true'`, record, user, cause)
+}
+
 // GrantRole is Env.GrantRole for a search fixture, which seeds no roles until
 // a case asks for one.
 func (e *SearchEnv) GrantRole(t *testing.T, user ids.UUID, roleKey string) {
