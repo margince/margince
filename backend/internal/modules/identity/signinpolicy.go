@@ -94,9 +94,10 @@ func (s *InstallationSettingsStore) SSOEnforced(ctx context.Context) (bool, erro
 	return enforced, nil
 }
 
-// MFARequired reports the password-session enrolment policy at admission.
-func (s *InstallationSettingsStore) MFARequired(ctx context.Context) (bool, error) {
-	required, err := config.StoredVal(s.asInstallation(ctx), s.config, RequireMFA)
+// MFARequired reports the password-session enrolment policy at admission, read
+// in the admission transaction.
+func (s *InstallationSettingsStore) MFARequired(ctx context.Context, tx pgx.Tx) (bool, error) {
+	required, err := config.StoredApplyTx(ctx, tx, s.config, RequireMFA)
 	if err != nil {
 		return false, fmt.Errorf("identity: reading the require-MFA policy: %w", err)
 	}

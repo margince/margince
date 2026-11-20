@@ -52508,8 +52508,11 @@ type HandoverCounts struct {
 	Lead    int `json:"lead" minimum:"0"`
 
 	// List Live lists owned by the member.
-	List    int `json:"list" minimum:"0"`
-	Project int `json:"project" minimum:"0"`
+	List int `json:"list" minimum:"0"`
+
+	// MailDraft Unsent messages the member saved in the composer. Only the count is shown; the words stay readable by the author alone until a handover moves them.
+	MailDraft int `json:"mail_draft" minimum:"0"`
+	Project   int `json:"project" minimum:"0"`
 
 	// RecordAssignment Current user responsibilities on records.
 	RecordAssignment int `json:"record_assignment" minimum:"0"`
@@ -71252,6 +71255,9 @@ type UserHandover struct {
 type UserHandoverResult struct {
 	// Left Live records per kind.
 	Left HandoverCounts `json:"left"`
+
+	// MailDraftDiscarded The member's saved drafts deleted because the receiver already had a draft in the same place.
+	MailDraftDiscarded int `json:"mail_draft_discarded" minimum:"0"`
 
 	// Moved Live records per kind.
 	Moved HandoverCounts `json:"moved"`

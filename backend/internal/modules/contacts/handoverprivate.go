@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // handoverObject is the grant a member handover is admitted on.
@@ -39,7 +38,7 @@ func OwnerPrivateCountsTx(ctx context.Context, tx pgx.Tx, owner ids.UserID) (Pri
 	if err := auth.Require(ctx, handoverObject, principal.ActionUpdate); err != nil {
 		return PrivateCounts{}, err
 	}
-	if left, err := departed(ctx, tx, owner); err != nil || !left {
+	if left, err := auth.MemberDeparted(ctx, tx, owner); err != nil || !left {
 		return PrivateCounts{}, err
 	}
 	var counts PrivateCounts
@@ -67,7 +66,7 @@ func HandOverOwnerPrivateTx(ctx context.Context, tx pgx.Tx, from, to ids.UserID)
 	if err := auth.EnsureAssignee(ctx, tx, to.UUID); err != nil {
 		return PrivateCounts{}, err
 	}
-	if left, err := departed(ctx, tx, from); err != nil || !left {
+	if left, err := auth.MemberDeparted(ctx, tx, from); err != nil || !left {
 		return PrivateCounts{}, err
 	}
 	var moved PrivateCounts
@@ -84,19 +83,6 @@ func HandOverOwnerPrivateTx(ctx context.Context, tx pgx.Tx, from, to ids.UserID)
 		moved.set(table, len(ownedIDs))
 	}
 	return moved, nil
-}
-
-// departed reports whether member left. The handover holds the member's row
-// lock, so the answer stands for the rest of its transaction.
-func departed(ctx context.Context, tx pgx.Tx, member ids.UserID) (bool, error) {
-	var left bool
-	err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND `+workforce.DepartedMemberSQL("")+`)`,
-		member).Scan(&left)
-	if err != nil {
-		return false, fmt.Errorf("ask whether %s left: %w", member, err)
-	}
-	return left, nil
 }
 
 func (c *PrivateCounts) set(table string, n int) {

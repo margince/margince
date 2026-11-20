@@ -26,15 +26,9 @@ package compose
 //     about that contact — including asks the member is not party to and could
 //     not otherwise read or write.
 //
-//     The test is `captured_by`, and nothing weaker holds. `source_system` is
-//     settable on the public log endpoint, so a body naming a connector's
-//     system forges that in one line. (The one mail identity is refused there
-//     now, which closes that spelling and no other: any other value a caller
-//     invents still lands in the column.) `captured_by` comes from
-//     the AUTHENTICATED principal through storekit.CapturedBy — a connector's
-//     is `connector:…`, a colleague's is `human:…` — so it is provenance a caller
-//     cannot assert. capture/sinkprovenance.go states the same rule for the
-//     same reason.
+//     The test is `captured_by`, and nothing weaker holds: `source_system` is
+//     settable on the public log endpoint. `captured_by` comes from the
+//     authenticated principal (storekit.CapturedBy), so a caller cannot assert it.
 //   - The activity is INBOUND. An outbound mail is the rep writing to the
 //     contact, which is the opposite of the contact answering.
 //   - The contact is the SENDER, not merely present. Being cc'd on a colleague's
@@ -45,20 +39,12 @@ package compose
 //     correspondence would mark every introduction ever made as answered, using
 //     mail sent before anyone was introduced.
 //
-// WHAT THIS DELIBERATELY DOES NOT CLAIM. A connector delivers what a mail
-// server handed it, and an unauthenticated From header is a header its sender
-// typed. So `replied` means "a message arrived that this workspace's own
-// capture attributes to the contact, after the introduction" — which is what
-// the status is for, and why the evidence id travels on both the row and the
-// event: the claim stays checkable against the message it rests on. Making it
-// stronger is a question for capture, which owns sender authentication on
-// behalf of every consumer, rather than one this consumer answers alone.
+// `replied` means a message that capture attributes to the contact arrived
+// after the introduction. The evidence id travels on the row and the event, so
+// the claim stays checkable. Sender authentication belongs to capture.
 //
-// Idempotency is the ask's own status: the UPDATE matches only from `introduced`
-// or `name_dropped`, so a redelivered event and the second message in a thread
-// both find nothing to do. events.Dedupe sits in front of that as a cache, never
-// as the guarantee — it marks AFTER the effect, so a crash in that window
-// replays.
+// Idempotency is the ask's own status: the UPDATE matches only `introduced` or
+// `name_dropped`. events.Dedupe in front is a cache, not the guarantee.
 
 import (
 	"context"
