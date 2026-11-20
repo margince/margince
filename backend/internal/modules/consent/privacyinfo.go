@@ -122,7 +122,7 @@ func (s *Store) assembleDisclosure(
 		if err := readStatedSourceTx(ctx, tx, contactID, &out); err != nil {
 			return err
 		}
-		return readControllerTx(ctx, tx, &out)
+		return readControllerTx(ctx, tx, &out, ruleSubject{Kind: entityContact, ID: contactID.String()})
 	})
 	if err != nil {
 		return out, err
@@ -143,7 +143,7 @@ func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (
 			return fmt.Errorf("consent: reading when this lead was obtained: %w", err)
 		}
 		out.AcquiredAt = &capturedAt
-		return readControllerTx(ctx, tx, &out)
+		return readControllerTx(ctx, tx, &out, ruleSubject{Kind: entityLead, ID: leadID.String()})
 	})
 	if err != nil {
 		return out, err

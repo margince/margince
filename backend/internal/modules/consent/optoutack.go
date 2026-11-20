@@ -289,7 +289,7 @@ func (s *Store) prepareAcknowledgementTx(
 	} else {
 		send.ContactID = ids.From[ids.ContactKind](sub.id)
 	}
-	_, err = s.confirmSender.QueueConfirmationTx(ctx, tx, send)
+	_, err = s.queueControllerMailTx(ctx, tx, send)
 	return err
 }
 

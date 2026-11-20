@@ -104,7 +104,7 @@ func (s *Store) queueRestrictionLiftTx(ctx context.Context, tx pgx.Tx, sub subje
 		return err
 	}
 	messageID := restrictionLiftMessageID(in.SuppressionID, act)
-	if _, err := s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{
+	if _, err := s.queueControllerMailTx(ctx, tx, ConfirmationSend{
 		ContactID: in.ContactID, Recipient: address, Category: category, MessageID: messageID, Rendered: rendered, StagedAt: requestedAt,
 	}); err != nil {
 		return err

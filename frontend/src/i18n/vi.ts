@@ -6260,6 +6260,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.displayName": "Tên",
   "legalEntities.legalName": "Tên pháp lý",
   "legalEntities.country": "Quốc gia",
+  "legalEntities.defaultCountry":
+    "Quốc gia: {country}. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultCountryNone":
+    "Chưa đặt quốc gia. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultCountryLink": "Đổi ở mục Khu vực pháp lý",
+  "jurisdiction.entities.title": "Pháp nhân",
+  "jurisdiction.entities.lead":
+    "Quốc gia của mỗi công ty quyết định luật áp dụng cho thư nhân viên gửi và hồ sơ họ phụ trách.",
+  "jurisdiction.entities.default": "{country}, theo lựa chọn ở trên",
+  "jurisdiction.entities.none": "Chưa đặt quốc gia",
+  "jurisdiction.entities.edit": "Đổi pháp nhân",
   "legalEntities.edit": "Sửa",
   "legalEntities.archive": "Lưu trữ",
   "legalEntities.editTitle": "Sửa {name}",
@@ -6303,9 +6314,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.logoEmpty": "Thả ảnh vào đây hoặc chọn ảnh",
   "legalEntities.logoRemove": "Gỡ logo",
   "legalEntities.countryPlaceholder": "Chọn quốc gia",
-  "legalEntities.countryInstallation": "Quốc gia của bản cài đặt",
-  "legalEntities.countryInstallationHint":
-    "Giữ quốc gia của bản cài đặt, trừ khi công ty này đặt trụ sở ở nơi khác.",
   "legalEntities.archiveTitle": "Lưu trữ {name}?",
   "legalEntities.archiveBody":
     "Pháp nhân này rời khỏi danh sách và không ai được gán vào nữa.",

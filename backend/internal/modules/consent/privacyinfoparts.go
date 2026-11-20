@@ -84,24 +84,41 @@ func disclosureRecipients() []string {
 	return []string{"colleagues", "service_providers"}
 }
 
-// readControllerTx is who answers for the data: the installation's own
-// particulars. The installation sends the notice, so its default legal entity
-// is the sending entity whose rules the data follows.
-func readControllerTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) error {
+// readControllerTx is who answers for the record's data: the installation's
+// particulars, with the legal name and address of the further entity that
+// answers for the record (recordEntityTx) in place of its own.
+func readControllerTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation, who ruleSubject) error {
 	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
 	if err != nil {
 		return fmt.Errorf("consent: reading who answers for this data: %w", err)
 	}
-	out.Controller = identity
+	entity, err := recordEntityTx(ctx, tx, who)
+	if err != nil {
+		return err
+	}
+	facts, err := sendingEntityFactsTx(ctx, tx, entity)
+	if err != nil {
+		return err
+	}
+	out.Controller = controllerOf(identity, facts)
 	return nil
 }
 
-// controllerParticulars reads the installation's particulars for a confirm page,
-// in a transaction of its own.
-func (s *Store) controllerParticulars(ctx context.Context) (ControllerParticulars, error) {
+// controllerParticulars reads the particulars a confirm page names for the
+// record its link is about, in a transaction of its own.
+func (s *Store) controllerParticulars(ctx context.Context, ref ConfirmRef) (ControllerParticulars, error) {
 	var out PrivacyInformation
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error { return readControllerTx(ctx, tx, &out) })
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error { return readControllerTx(ctx, tx, &out, confirmRuleSubject(ref)) })
 	return out.Controller, err
+}
+
+// confirmRuleSubject is the record a confirm link is about: the lead, else the
+// contact.
+func confirmRuleSubject(ref ConfirmRef) ruleSubject {
+	if !ref.LeadID.IsZero() {
+		return ruleSubject{Kind: entityLead, ID: ref.LeadID.String()}
+	}
+	return ruleSubject{Kind: entityContact, ID: ref.ContactID.String()}
 }
 
 // readHeld fills the parts read about this subject. Unwired, the page names no
@@ -119,9 +136,7 @@ func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *Privac
 	out.DataCategories = append(out.DataCategories, held.Categories...)
 	out.Retention = append(out.Retention, held.Retention...)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The page has no sending entity, so the default entity's country is the
-		// sender's, as senderCountryOf answers for a zero entity.
-		sender, err := s.senderCountryOf(ctx, tx, ids.UUID{})
+		sender, err := s.recordCountryTx(ctx, tx, noticeRuleSubject(subject))
 		if err != nil {
 			return err
 		}
@@ -140,10 +155,8 @@ func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *Privac
 // business correspondence, so the page always names a purpose
 // (GDPR Art. 14(1)(c)). Its basis is defaultUseBasis.
 func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []NoticeUse, sender jurisdiction.Code) ([]NoticeUse, error) {
-	who := subjectRef{Kind: entityContact, ID: subject.ContactID.String()}
-	if subject.ContactID.IsZero() {
-		who = subjectRef{Kind: entityLead, ID: subject.LeadID.String()}
-	}
+	rule := noticeRuleSubject(subject)
+	who := subjectRef{Kind: rule.Kind, ID: rule.ID}
 	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: who.Kind, ID: who.ID})
 	if err != nil {
 		return nil, err
@@ -207,4 +220,13 @@ func namePurposesTx(ctx context.Context, tx pgx.Tx, uses []NoticeUse, out *Priva
 		out.PurposeSince = append(out.PurposeSince, use.Since)
 	}
 	return nil
+}
+
+// noticeRuleSubject is the record a notice page is about: the contact, else
+// the lead.
+func noticeRuleSubject(subject NoticeSubject) ruleSubject {
+	if subject.ContactID.IsZero() {
+		return ruleSubject{Kind: entityLead, ID: subject.LeadID.String()}
+	}
+	return ruleSubject{Kind: entityContact, ID: subject.ContactID.String()}
 }

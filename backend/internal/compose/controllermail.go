@@ -186,9 +186,12 @@ func stagingRequest(in consent.ConfirmationSend, body string) commsauthz.Request
 		Recipients: []connector.Recipient{{Email: in.Recipient}},
 		Context:    in.Category,
 		Evidence:   commsauthz.Evidence{LeadID: in.LeadID.UUID},
-		Subject:    in.Rendered.Subject,
-		Body:       body,
-		HTMLBody:   in.Rendered.HTMLBody,
+		// The entity that answers for the record, so the decision is judged
+		// and recorded under its law.
+		SendingEntity: in.Entity,
+		Subject:       in.Rendered.Subject,
+		Body:          body,
+		HTMLBody:      in.Rendered.HTMLBody,
 	}
 }
 

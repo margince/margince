@@ -6432,6 +6432,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
+  "legalEntities.defaultCountry":
+    "Land: {country}. Die Standardfirma folgt dem Rechtsraum der Installation.",
+  "legalEntities.defaultCountryNone":
+    "Kein Land gesetzt. Die Standardfirma folgt dem Rechtsraum der Installation.",
+  "legalEntities.defaultCountryLink": "Unter Rechtsraum ändern",
+  "jurisdiction.entities.title": "Firmen",
+  "jurisdiction.entities.lead":
+    "Das Land jeder Firma bestimmt das Recht für die Mails ihrer Leute und die Datensätze, die sie verantworten.",
+  "jurisdiction.entities.default": "{country}, die Auswahl oben",
+  "jurisdiction.entities.none": "Kein Land gesetzt",
+  "jurisdiction.entities.edit": "Firmen ändern",
   "legalEntities.edit": "Bearbeiten",
   "legalEntities.archive": "Archivieren",
   "legalEntities.editTitle": "{name} bearbeiten",
@@ -6475,9 +6486,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.logoEmpty": "Bild hier ablegen oder auswählen",
   "legalEntities.logoRemove": "Logo entfernen",
   "legalEntities.countryPlaceholder": "Land auswählen",
-  "legalEntities.countryInstallation": "Land der Installation",
-  "legalEntities.countryInstallationHint":
-    "Lass das Land der Installation stehen, außer dieses Unternehmen hat seinen Sitz anderswo.",
   "legalEntities.archiveTitle": "{name} archivieren?",
   "legalEntities.archiveBody":
     "Er verschwindet aus dieser Liste, und niemand kann ihm mehr zugeordnet werden.",

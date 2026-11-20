@@ -30,9 +30,14 @@ import {
 } from "../../lib/jurisdictiontext";
 import { labelFor } from "../../lib/labelfor";
 import { DSR_KIND_LABEL } from "../../lib/privacy.logic";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
+import {
+  JURISDICTION_QUERY_KEY,
+  JurisdictionEntitiesPanel,
+  useInstallationJurisdiction,
+} from "./jurisdictionentities";
 
 // Settings → Governance → Jurisdiction: which country's pack this installation
 // runs under, what that selection puts in force, and the documents the pack
@@ -46,22 +51,11 @@ type RetentionClass = components["schemas"]["JurisdictionRetentionClass"];
 // chosen", so the explicit choice needs a value of its own; it is sent as "".
 const NO_PACK = "none";
 
-const QUERY_KEY = ["installation-jurisdiction"] as const;
+const QUERY_KEY = JURISDICTION_QUERY_KEY;
 
 export function JurisdictionCard() {
   const t = useT();
-  const query = useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: async () => {
-      const { data, error, response } = await api.GET(
-        "/installation/jurisdiction",
-      );
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const query = useInstallationJurisdiction();
   return (
     <QueryGate query={query} pendingLabel={t("jurisdiction.card.title")}>
       {(jurisdiction) => <JurisdictionReading jurisdiction={jurisdiction} />}
@@ -75,6 +69,7 @@ export function JurisdictionReading({
   return (
     <>
       <SelectionPanel jurisdiction={jurisdiction} />
+      <JurisdictionEntitiesPanel selected={jurisdiction.selected} />
       <EffectsPanel jurisdiction={jurisdiction} />
       <DocumentsPanel jurisdiction={jurisdiction} />
     </>
