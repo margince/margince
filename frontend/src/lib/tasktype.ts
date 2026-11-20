@@ -18,7 +18,7 @@ export const TASK_TYPES: readonly TaskType[] = [
   "do",
 ];
 
-const TASK_TYPE_LABELS: Readonly<Record<TaskType, MessageKey>> = {
+export const TASK_TYPE_LABELS: Readonly<Record<TaskType, MessageKey>> = {
   reply: "task.type.reply",
   reach_out: "task.type.reachOut",
   meet: "task.type.meet",

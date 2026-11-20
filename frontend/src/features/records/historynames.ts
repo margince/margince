@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { entityNameObserverQuery } from "../../components/entityref.queries";
 import { useLocale } from "../../i18n";
 import { translatedPipeline } from "../../lib/labeltranslation";
+import { useLeadDisqualifyReasons } from "../../lib/leaddisqualifyreasons";
 import { useMemberNames } from "../../lib/membernames";
 import {
   pipelinesOptions,
@@ -21,7 +22,7 @@ type Pipeline = components["schemas"]["Pipeline"];
 // rest of the page names that kind of record with.
 const ID_FIELD_KINDS = new Map<
   string,
-  "member" | "stage" | "company" | "project"
+  "member" | "stage" | "company" | "project" | "leadReason"
 >([
   ["owner_id", "member"],
   ["assignee_id", "member"],
@@ -30,6 +31,7 @@ const ID_FIELD_KINDS = new Map<
   ["parent_company_id", "company"],
   ["partner_company_id", "company"],
   ["project_id", "project"],
+  ["disqualify_reason_id", "leadReason"],
 ]);
 
 /**
@@ -52,6 +54,7 @@ export function useHistoryNameOf(
         ? ids.map((id) => entityNameObserverQuery(kind, id))
         : [],
   });
+  const reasons = useLeadDisqualifyReasons(kind === "leadReason");
   const nameStages = useCallback(
     (pipelines: readonly Pipeline[]) =>
       stageNames(
@@ -82,5 +85,8 @@ export function useHistoryNameOf(
     named.get(id) ??
     (kind === "stage"
       ? (live.data?.get(id) ?? archived.data?.get(id))
+      : undefined) ??
+    (kind === "leadReason"
+      ? reasons.data?.find((reason) => reason.id === id)?.label
       : undefined);
 }

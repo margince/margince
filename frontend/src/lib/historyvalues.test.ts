@@ -48,6 +48,22 @@ describe("historyValue", () => {
     },
   );
 
+  it("names the stored codes of a company and a lead in both languages", () => {
+    expect(historyValue("lifecycle", "former_customer", ctx())).toBe(
+      "Former customer",
+    );
+    expect(historyValue("margin_tier", "tier2_20", ctx())).not.toBe("tier2_20");
+    expect(historyValue("trigger", "human_qualify", ctx())).toBe(
+      "Qualified manually",
+    );
+    expect(
+      historyValue("trigger", "human_qualify", ctx({ locale: "de" })),
+    ).toBe("Manuell qualifiziert");
+    expect(historyValue("relationship_stage", "no_fit", ctx())).not.toBe(
+      "no_fit",
+    );
+  });
+
   it("names a change of time precision in words, not wire spellings", () => {
     expect(historyValue("occurred_precision", "day", ctx())).toBe("Date only");
     expect(historyValue("occurred_precision", "instant", ctx())).toBe(

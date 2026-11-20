@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useAddedNotice } from "../../components/addednotice";
 import { CreateAction, type CreateField } from "../../components/create";
 import { amountField, currencyField } from "../../components/currencyfield";
 import { useDealCreateFields } from "../../components/dealcreatefields";
@@ -43,6 +44,7 @@ export function NewDealAction({
   onCreated?: (deal: components["schemas"]["Deal"]) => void;
 }>) {
   const t = useT();
+  const added = useAddedNotice();
   const { locale } = useLocale();
   const target = useQuery({ ...pipelinesOptions, select: defaultPipelineOf });
   const leading = useLeadingCurrencies();
@@ -114,8 +116,11 @@ export function NewDealAction({
       create={createDeal}
       fields={fields}
       aboutId={companyId}
-      stay={onCreated !== undefined}
-      onCreated={onCreated}
+      stay
+      onCreated={
+        onCreated ??
+        ((deal) => added(deal.name, { screen: "deals", id: deal.id }))
+      }
       link={link}
     />
   );
@@ -152,6 +157,7 @@ function NewProjectDialog({
 }: Readonly<{ companyId: string; companyName: string }>) {
   const t = useT();
   const form = useProjectCreateForm({ pinned: companyId });
+  const added = useAddedNotice();
   return (
     <CreateAction
       label={t("co.project.new", { name: companyName })}
@@ -164,6 +170,10 @@ function NewProjectDialog({
       onValuesChange={form.onValuesChange}
       fields={form.fields}
       aboutId={companyId}
+      stay
+      onCreated={(project) =>
+        added(project.name, { screen: "projects", id: project.id })
+      }
     />
   );
 }

@@ -1,10 +1,8 @@
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { sourceFileAt } from "../../scripts/lib/source-tree";
 import { stable } from "../format/collate";
 import { en } from "../i18n/en";
+import { membersOf, propertyOf, schemaSource } from "./contractschema.testkit";
 import {
   historyFieldLabel,
   historyFieldLabelKey,
@@ -26,53 +24,6 @@ import {
 //
 // It reads the generated types rather than the six Go stores for the same
 // reason the client does: the contract is the seam between the two trees.
-
-const schemaPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "api",
-  "schema.d.ts",
-);
-
-function schemaSource(): ts.SourceFile {
-  return sourceFileAt(schemaPath);
-}
-
-// The property of one named type in the contract, wherever it is declared.
-function propertyOf(
-  source: ts.SourceFile,
-  owner: string,
-  property: string,
-): ts.PropertySignature | undefined {
-  let found: ts.PropertySignature | undefined;
-  const walk = (node: ts.Node) => {
-    if (
-      ts.isPropertySignature(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === owner &&
-      node.type
-    ) {
-      for (const member of membersOf(node.type)) {
-        if (ts.isIdentifier(member.name) && member.name.text === property) {
-          found = member;
-        }
-      }
-    }
-    ts.forEachChild(node, walk);
-  };
-  walk(source);
-  return found;
-}
-
-function membersOf(node: ts.TypeNode): ts.PropertySignature[] {
-  if (ts.isIntersectionTypeNode(node)) {
-    return node.types.flatMap(membersOf);
-  }
-  if (!ts.isTypeLiteralNode(node)) {
-    return [];
-  }
-  return node.members.filter(ts.isPropertySignature);
-}
 
 // The record types a field-history row can be ABOUT — the contract's own
 // closed enum, so a type added upstream widens this corpus rather than

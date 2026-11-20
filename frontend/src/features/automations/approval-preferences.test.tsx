@@ -79,7 +79,7 @@ it("opens an explicit include-muted review without changing the preference", asy
   });
   mount();
   await user.click(
-    await screen.findByRole("button", { name: "Review including muted" }),
+    await screen.findByRole("button", { name: /^Review including muted: / }),
   );
   await waitFor(() => expect(reviews).toHaveLength(1));
   expect(reviews[0].searchParams.get("include_muted")).toBe("true");
@@ -88,6 +88,8 @@ it("opens an explicit include-muted review without changing the preference", asy
   expect(
     screen.getByText(/Bundles in your ordinary queue can show fewer members/),
   ).toBeTruthy();
+  const title = screen.getByRole("heading", { name: /^Muted: / });
+  expect(document.activeElement).toBe(title);
 });
 
 it("keeps the current preference when saving fails and shows the server explanation", async () => {
@@ -156,7 +158,7 @@ it("pages explicit muted history, returns to the first page, and closes review",
   });
   mount();
   await user.click(
-    await screen.findByRole("button", { name: "Review including muted" }),
+    await screen.findByRole("button", { name: /^Review including muted: / }),
   );
   expect(await screen.findByText("First reviewed date")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Next page" }));
@@ -195,7 +197,7 @@ it("draws an answered proposal in the review as history, without verbs", async (
   });
   mount();
   await user.click(
-    await screen.findByRole("button", { name: "Review including muted" }),
+    await screen.findByRole("button", { name: /^Review including muted: / }),
   );
   await screen.findByText("A rejected date");
 
