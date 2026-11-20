@@ -100,8 +100,8 @@ function PreferenceReview({
 }: Readonly<{ kind: string; close: () => void }>) {
   const t = useT();
   const title = useRef<HTMLHeadingElement>(null);
-  // The review mounts below the whole list, often off screen, so the click must
-  // bring it into view and hand keyboard and screen-reader focus to its title.
+  // The review mounts below the whole list, often off screen.
+  // Bring it into view and give its title the focus.
   useEffect(() => {
     title.current?.scrollIntoView?.({ block: "start" });
     title.current?.focus({ preventScroll: true });

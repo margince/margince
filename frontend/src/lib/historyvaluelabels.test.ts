@@ -12,9 +12,9 @@ import { SHIPPED_LABEL_KEYS } from "./shippedlabels";
 // history row can hold has words, in every language.
 //
 // A code with no words is printed as stored, so "former_customer" reaches the
-// reader looking deliberate. The corpus is derived from the generated contract:
-// the columns of each record type History serves, the fields their updates
-// write, a partner's, and a lead's qualification trigger.
+// reader. The corpus is derived from the generated contract. It holds the
+// columns of each record type History serves, the fields their updates write,
+// a partner's, and a lead's qualification trigger.
 
 const RECORD_TYPES = [
   "Activity",
@@ -35,9 +35,9 @@ const WRITE_BODIES = [
   "PromoteLeadRequest",
 ];
 
-// Fields History words by another route, which this census must not demand a
-// second table for: `industry` goes through industryWords, and a size band is
-// a number range that reads as it is stored.
+// Fields History words by another route, so no second table is demanded.
+// `industry` goes through industryWords. A size band is a number range that
+// reads as it is stored.
 // `stage_meaning` is read from the stage a partner stands on and is never a
 // column of the partner, so no history row holds it.
 const WORDED_ELSEWHERE = new Set(["industry", "size_band", "stage_meaning"]);

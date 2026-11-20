@@ -43,8 +43,8 @@ async function createContact(
 }
 
 // The full contact form. On a company's page the company is already chosen,
-// so its box is left out and the company goes as `company_id`, and the reader
-// stays on the company to add the next one.
+// so its box is left out and the company goes as `company_id`.
+// The reader stays on the company to add the next one.
 export function NewContactAction({
   company,
   listCreate,
