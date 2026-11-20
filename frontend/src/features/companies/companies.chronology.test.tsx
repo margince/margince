@@ -30,7 +30,6 @@ function History({ view }: Readonly<{ view: Company360 }>) {
     company,
     view,
     loading: false,
-    failed: false,
     active: true,
   });
   return (

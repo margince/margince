@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration
 
 import (
 	"fmt"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -21,8 +20,8 @@ import (
 func TestContactMergePreviewMatchesRelationshipRetirementAndPrimaryChanges(t *testing.T) {
 	for _, occupied := range []bool{false, true} {
 		t.Run(fmt.Sprintf("primary=%t", occupied), func(t *testing.T) {
-			e := integration.Setup(t)
-			perms := integration.AdminPerms
+			e := Setup(t)
+			perms := AdminPerms
 			perms.Objects = maps.Clone(perms.Objects)
 			perms.Objects["relationship"] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 			ctx := e.As(e.AdminUser, nil, perms)
@@ -112,8 +111,8 @@ func TestContactMergePreviewMatchesRelationshipRetirementAndPrimaryChanges(t *te
 }
 
 func TestCompanyMergePreviewMatchesBothRelationshipEndpoints(t *testing.T) {
-	e := integration.Setup(t)
-	perms := integration.AdminPerms
+	e := Setup(t)
+	perms := AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
 	perms.Objects["relationship"] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	ctx := e.As(e.AdminUser, nil, perms)

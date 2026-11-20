@@ -38,7 +38,7 @@ func checkDueWindow(due *time.Time, now time.Time) error {
 // admitPatchDueWindow checks only a due date the patch moves, so a task already
 // overdue past the window can still be edited, completed or snoozed.
 func (in *UpdateActivityInput) admitPatchDueWindow(current crmcontracts.Activity) error {
-	if !movesDueDate(current.DueAt, in) {
+	if in.confirmedDue || !movesDueDate(current.DueAt, in) {
 		return nil
 	}
 	return checkDueWindow(in.DueAt, orWallClock(in.recordedAt))

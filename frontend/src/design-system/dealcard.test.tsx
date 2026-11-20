@@ -1,5 +1,12 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
@@ -8,7 +15,9 @@ import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./button";
 import { DealCard } from "./dealcard";
+import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import type { BoardDeal } from "./pipelineboard";
+import { stubLineClamp } from "./tooltip-testing";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -211,3 +220,116 @@ describe("DealCard menu", () => {
     expect(window.location.hash).toBe("");
   });
 });
+
+describe("DealCard name held to two lines", () => {
+  const LONG_NAME =
+    "Group-wide ERP connector rollout for the northern distribution centres, phase two of three";
+
+  function nameLink(name: string): HTMLElement {
+    render(
+      <LocaleProvider initial="en">
+        <DealCard
+          deal={{
+            id: "d1",
+            name,
+            company: "",
+            companyId: "",
+            valueMinor: 100_000,
+            currency: "EUR",
+            idleSince: "2026-06-01T12:00:00Z",
+            measuredAt: Date.parse("2026-06-10T12:00:00Z"),
+          }}
+          href="#/deals/d1"
+          zone="UTC"
+        />
+      </LocaleProvider>,
+    );
+    return screen.getByRole("link", { name });
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("shows the whole name when focus reaches the link, and Escape hides it", () => {
+    stubLineClamp({ lines: "2", scroll: 72, client: 40 });
+    const link = nameLink(LONG_NAME);
+
+    act(() => link.focus());
+
+    const tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent(LONG_NAME);
+    expect(link).not.toHaveAttribute("aria-describedby");
+    fireEvent.keyDown(link, { key: "Escape" });
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(link).toHaveFocus();
+  });
+
+  it("shows the whole name when the pointer rests on it", () => {
+    takeHoverClock();
+    armHoverIntent();
+    stubLineClamp({ lines: "2", scroll: 72, client: 40 });
+    const link = nameLink(LONG_NAME);
+
+    fireEvent.pointerEnter(within(link).getByText(LONG_NAME));
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent(LONG_NAME);
+  });
+
+  it("raises no tip over a name the two lines hold whole", () => {
+    stubLineClamp({ lines: "2", scroll: 40, client: 40 });
+    const link = nameLink("ERP connector");
+
+    act(() => link.focus());
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("raises no tip when a press, not the keyboard, focused the link", () => {
+    stubLineClamp({ lines: "2", scroll: 72, client: 40 });
+    focusFromPointer();
+    const link = nameLink(LONG_NAME);
+
+    act(() => link.focus());
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("takes a hover's tip down as the pointer leaves a link a press focused", () => {
+    takeHoverClock();
+    armHoverIntent();
+    stubLineClamp({ lines: "2", scroll: 72, client: 40 });
+    focusFromPointer();
+    const link = nameLink(LONG_NAME);
+    const name = within(link).getByText(LONG_NAME);
+    act(() => link.focus());
+    fireEvent.pointerEnter(name);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+
+    fireEvent.pointerLeave(name);
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+});
+
+// happy-dom matches `:focus-visible` on every focus; a pointer's focus in a
+// browser does not.
+function focusFromPointer() {
+  const matches = Element.prototype.matches;
+  vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+    this: Element,
+    selector: string,
+  ) {
+    if (selector === ":focus-visible") return false;
+    if (selector === ":focus:not(:focus-visible)") {
+      return matches.call(this, ":focus");
+    }
+    return matches.call(this, selector);
+  });
+}

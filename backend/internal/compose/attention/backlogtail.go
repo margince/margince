@@ -134,7 +134,16 @@ func (s *Service) withTail(
 	above := s.aboveTheTail(ranking)
 	page.dealsAbove = dealsReported(ranking, above)
 	tail, rest, failed := s.backlogTail(ctx, page, limit-len(shown), from, above)
-	return append(shown, tail...), rest, failed
+	return append(shown, pastTheRanking(tail)...), rest, failed
+}
+
+// pastTheRanking marks the tail's rows as read in store order, not ranked. They
+// head their own last band and explain no order (renderInOrder).
+func pastTheRanking(tail []ranked) []ranked {
+	for i := range tail {
+		tail[i].pastRanking = true
+	}
+	return tail
 }
 
 // aboveTheTail is what the ranked rows hold: the frozen walk when one is

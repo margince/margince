@@ -51,7 +51,9 @@ public.activity_identity.attested_by document
 public.activity_identity.identity_key document
 public.activity_identity.identity_kind document
 public.activity_kind.kind document
+public.activity_link.deal_relevance document
 public.activity_link.entity_type document
+public.activity_link.relevance_source document
 public.activity_link_suggestion.captured_by document
 public.activity_link_suggestion.decided_by document
 public.activity_link_suggestion.entity_type document

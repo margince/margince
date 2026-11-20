@@ -92,7 +92,7 @@ func withoutActivityPrivacyGuard(expression string) string {
 	}
 	// A personal hold names the seat that holds it, which is privacy, not performance.
 	for _, match := range regexp.MustCompile(`\b([a-z_]+)\.audience_reason\b`).FindAllStringSubmatch(expression, -1) {
-		expression = strings.ReplaceAll(expression, relstrength.DealEvidenceSQL(match[1]), "TRUE")
+		expression = strings.ReplaceAll(expression, relstrength.NotPersonalSQL(match[1]), "TRUE")
 	}
 	return expression
 }
@@ -102,7 +102,7 @@ func TestMailReadabilityDoesNotCountAsAColleaguesPerformance(t *testing.T) {
 	if got := unpolicedSeatColumns(map[string]reportSpec{"example": spec}, []string{"user_id", "owner_id"}); len(got) != 0 {
 		t.Fatalf("privacy join was counted as performance: %v", got)
 	}
-	spec.filters["evidence"] = relstrength.DealEvidenceSQL("a")
+	spec.filters["evidence"] = relstrength.DealEvidenceSQL("a", "d.id")
 	if got := unpolicedSeatColumns(map[string]reportSpec{"example": spec}, []string{"user_id", "owner_id"}); len(got) != 0 {
 		t.Fatalf("personal hold was counted as performance: %v", got)
 	}

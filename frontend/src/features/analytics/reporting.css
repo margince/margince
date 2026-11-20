@@ -58,6 +58,12 @@
   gap: var(--space-5);
   margin-bottom: var(--space-5);
 }
+/* The name is the author's text and may be one unbroken run; it gives way to
+   the actions instead of pushing them off the row. */
+.reporting-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 /* The author's line breaks are kept; a long purpose wraps at reading width. */
 .reporting-description {
   margin: var(--space-2) 0 0;

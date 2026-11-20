@@ -292,7 +292,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []ClaimIn {
 	out := make([]ClaimIn, 0, len(found))
 	for _, claim := range found {
-		if claim.Status == crmcontracts.ConversationClaimStatusDismissed || notCurrentPromise(claim) || claim.LooksKept != nil {
+		if claim.Status == crmcontracts.ConversationClaimStatusDismissed || notCurrentPromise(claim) || claim.LooksKept != nil || claim.AutoKept != nil {
 			continue
 		}
 		folded := ClaimIn{
@@ -320,17 +320,30 @@ func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []Cl
 type LooksKeptIn struct {
 	ContactName string
 	Body        string
-	Guest       string
-	MeetingAt   Occurred
+	// Auto marks a promise Margince closed itself. Guest and MeetingAt are
+	// empty when the reader may not open the meeting.
+	Auto      bool
+	Guest     string
+	MeetingAt Occurred
 	// SourceID is the conversation the promise was made in, which a line about
 	// it cites.
 	SourceID string
 }
 
-// foldLooksKept takes the promises the claims read marks as looking kept.
+// foldLooksKept takes the promises the claims read marks as kept: the open ones
+// that look kept, and the ones Margince closed itself.
 func foldLooksKept(contactName string, found []crmcontracts.ConversationClaim) []LooksKeptIn {
 	var out []LooksKeptIn
 	for _, claim := range found {
+		if claim.AutoKept != nil && claim.Status == crmcontracts.ConversationClaimStatusDone {
+			kept := LooksKeptIn{ContactName: contactName, Body: claim.Body, Auto: true, SourceID: ids.UUID(claim.SourceActivityId).String()}
+			if evidence := claim.AutoKept.Evidence; evidence != nil {
+				kept.Guest = evidence.GuestName
+				kept.MeetingAt = Occurred{At: evidence.MeetingAt, DateOnly: occurredday.IsDay(evidence.MeetingPrecision)}
+			}
+			out = append(out, kept)
+			continue
+		}
 		if claim.LooksKept == nil || claim.Status != crmcontracts.ConversationClaimStatusOpen {
 			continue
 		}

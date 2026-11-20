@@ -24,7 +24,13 @@ type DealFiler interface {
 	// FileOnDealIfUnfiled writes the link under the activity's lock only if
 	// it still has no deal link. It answers whether the link landed, and
 	// whether a deal link was already there.
-	FileOnDealIfUnfiled(ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any) (landed, filed bool, err error)
+	// A non-empty relevance is the topic check's mark on the new link.
+	FileOnDealIfUnfiled(
+		ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any, relevance string,
+	) (landed, filed bool, err error)
+	// MarkDealLink records the topic check's mark on the activity's link to
+	// deal. A colleague's mark stands; it answers whether the link changed.
+	MarkDealLink(ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, relevance string, evidence map[string]any) (bool, error)
 	// RetractMachineDeal takes one deal link off under the activity's lock,
 	// only while no human or agent ever filed the activity on a deal.
 	RetractMachineDeal(ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any) (bool, error)
@@ -50,7 +56,7 @@ func linkActivityToDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, deal
 	if err != nil || current.Outcome != DealLinked || current.Deal != dealID {
 		return DealNotWritable, err
 	}
-	landed, filed, err := f.filer.FileOnDealIfUnfiled(f.writer, tx, activityID, dealID, f.evidence)
+	landed, filed, err := f.filer.FileOnDealIfUnfiled(f.writer, tx, activityID, dealID, f.evidence, current.Relevance)
 	switch {
 	case err != nil:
 		return "", err
@@ -73,6 +79,18 @@ func retractMachineDealLink(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, 
 		return false, err
 	}
 	return f.filer.RetractMachineDeal(f.writer, tx, activityID, dealID, f.evidence)
+}
+
+// markMachineDealLink records the topic check's mark on a link the rule
+// wrote. A decider who may not change the activity marks nothing.
+func markMachineDealLink(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, dealID ids.UUID, relevance string) (bool, error) {
+	if err := auth.Require(f.decider, "activity", principal.ActionUpdate); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return false, nil
+		}
+		return false, err
+	}
+	return f.filer.MarkDealLink(f.writer, tx, activityID, dealID, relevance, f.evidence)
 }
 
 // mayFileOnDeal is the decider's authority over the activity and the deal,

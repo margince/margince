@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // DealBasis is the rung of the deal rule that reached a verdict.
@@ -160,7 +161,9 @@ func settleSuggestion(verdict DealVerdict, answer topicAnswer) DealVerdict {
 	case answer.topic.Deal.IsZero() || !slices.Contains(verdict.Candidates, answer.topic.Deal):
 		return none
 	}
-	return DealVerdict{Outcome: DealLinked, Deal: answer.topic.Deal, Basis: verdict.Basis, Candidates: verdict.Candidates}
+	return DealVerdict{
+		Outcome: DealLinked, Deal: answer.topic.Deal, Basis: verdict.Basis, Candidates: verdict.Candidates, Relevance: relstrength.DealRelevant,
+	}
 }
 
 // decideFiling is the deal rule with the topic check folded in. A suggestion

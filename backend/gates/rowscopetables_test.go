@@ -684,5 +684,9 @@ const (
 	// 167: contacts.CompaniesWhoseEmploymentEndedTx reads the company ids of
 	// employments that ended, as the system principal (auth.RequireSystem). The
 	// clock refold job takes them and returns nothing to a caller.
-	modulesTierUnscopedCeiling = 167
+	//
+	// 168: contacts.autoMove reads the contact id of a claim it moves as the
+	// system principal (auth.RequireSystem in the sweep's entry points). The id
+	// goes to the claim's audit row and is returned to no caller.
+	modulesTierUnscopedCeiling = 168
 )

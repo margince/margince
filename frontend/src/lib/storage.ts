@@ -122,6 +122,13 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // Whether this account read what Margince reads and writes, per account id.
+  // The server holds no such fact; a new browser asks once more.
+  setupPermissionsSeen: {
+    prefix: "margince.setup.permissionsSeen:",
+    area: "local",
+    lifetime: "account",
+  },
   // What the last Undo of many deals answered for each deal. The server keeps
   // no record of a run, so this browser keeps the last one.
   lastBulkUndo: {

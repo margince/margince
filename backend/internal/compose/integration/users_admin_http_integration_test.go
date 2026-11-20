@@ -53,25 +53,18 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 	assertRoles(t, "invite", invited, "rep")
 	base := "/v1/users/" + invited.ID
 
-	// A duplicate email refuses, and says so in words.
-	var dupe refusalWire
-	if status := e.Call(t, "POST", "/v1/users", map[string]any{
-		"email": "newbie@acme.test", "display_name": "Dupe", "role": "rep",
-	}, nil, &dupe); status != http.StatusConflict {
-		t.Fatalf("duplicate invite -> %d, want 409", status)
-	}
-	assertActionableRefusal(t, "duplicate invite", dupe, "email_taken")
+	// A duplicate email refuses, and says so in words. To a roster reader the
+	// refusal also tells a waiting invitation from a member who signs in.
+	assertInviteRefused(t, e, "duplicate invite", "newbie@acme.test", "rep",
+		http.StatusConflict, "already_invited")
+	assertInviteRefused(t, e, "inviting an active member's address", "ada@example.com", "rep",
+		http.StatusConflict, "email_taken")
 
 	// The same unknown-role refusal as change-role: the `role` enum is
 	// documentation, not binding validation, so a mistyped key reaches the
 	// server here too and must not read as "no such member".
-	var badRole refusalWire
-	if status := e.Call(t, "POST", "/v1/users", map[string]any{
-		"email": "badrole@acme.test", "display_name": "Bad Role", "role": "no-such-role",
-	}, nil, &badRole); status != http.StatusNotFound {
-		t.Fatalf("invite with an undefined role -> %d, want 404", status)
-	}
-	assertActionableRefusal(t, "invite with an undefined role", badRole, "unknown_role")
+	assertInviteRefused(t, e, "invite with an undefined role", "badrole@acme.test", "no-such-role",
+		http.StatusNotFound, "unknown_role")
 
 	// Malformed input is refused before any member is created.
 	if status := e.Call(t, "POST", "/v1/users", map[string]any{
@@ -244,6 +237,19 @@ type refusalWire struct {
 // as a sentence, and is not merely the code again — these once reached the
 // operator as the bare word "conflict". For a CLIENT: the specific code it
 // branches on, since a generic one leaves a UI matching prose.
+// assertInviteRefused invites email as role and asserts the refusal's status
+// and code, and that its detail tells an admin what to do.
+func assertInviteRefused(t *testing.T, e *apptest.AppEnv, what, email, role string, wantStatus int, wantCode string) {
+	t.Helper()
+	var got refusalWire
+	if status := e.Call(t, "POST", "/v1/users", map[string]any{
+		"email": email, "display_name": "Refused Invitee", "role": role,
+	}, nil, &got); status != wantStatus {
+		t.Fatalf("%s -> %d, want %d", what, status, wantStatus)
+	}
+	assertActionableRefusal(t, what, got, wantCode)
+}
+
 func assertActionableRefusal(t *testing.T, what string, got refusalWire, wantCode string) {
 	t.Helper()
 	if got.Code != wantCode {

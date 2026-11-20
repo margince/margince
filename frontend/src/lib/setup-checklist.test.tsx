@@ -15,7 +15,7 @@ import {
   type SetupReads,
   useSetupChecklist,
 } from "./setup-checklist";
-import { forgetSeat } from "./storage";
+import { forgetSeat, STORAGE_KEYS, writeStored } from "./storage";
 
 // The reminder and the settings home both draw these steps. These cases pin
 // what each roster asks of the reader. Nothing is stored except the reader's
@@ -173,6 +173,7 @@ function reads(overrides: Partial<SetupReads> = {}): SetupReads {
     passports: null,
     now: Date.parse("2026-11-05T12:00:00Z"),
     modelReady: null,
+    personal: null,
     ...overrides,
   };
 }
@@ -542,12 +543,19 @@ function serve(answers: Readonly<Record<string, () => Response>>) {
 }
 
 // A signed-in seat holding allow, as /me answered it.
-function wrapperFor(allow: GrantSpec) {
+function wrapperFor(allow: GrantSpec, personalChoicesMade = true) {
   return function SignedIn({ children }: Readonly<{ children: ReactNode }>) {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    client.setQueryData(["me"], meFixture({ allow }));
+    const me = meFixture({ allow, personalChoicesMade });
+    client.setQueryData(["me"], me);
+    if (personalChoicesMade) {
+      writeStored(
+        { family: STORAGE_KEYS.setupPermissionsSeen, member: me.user.id },
+        "1",
+      );
+    }
     return (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
@@ -589,16 +597,19 @@ describe("useSetupChecklist", () => {
     expect(result.current.steps.map((step) => step.id)).toEqual([
       "mail",
       "calendar",
+      "timezone",
+      "language",
+      "permissions",
       "voice",
       "booking",
     ]);
     // An unknown voice is never counted done, so the reminder cannot read as
     // complete just because the profile could not be read.
-    expect(result.current.steps[2]).toMatchObject({
+    expect(result.current.steps[5]).toMatchObject({
       state: "open",
       voice: null,
     });
-    expect([result.current.done, result.current.total]).toEqual([1, 4]);
+    expect([result.current.done, result.current.total]).toEqual([4, 7]);
   });
 
   it("is complete only once every read answered and every step is done", async () => {

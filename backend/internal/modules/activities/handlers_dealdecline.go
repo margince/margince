@@ -29,3 +29,17 @@ func (h Handlers) DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
+
+// SetActivityDealRelevance implements (PUT /activities/{id}/deal-relevance).
+func (h Handlers) SetActivityDealRelevance(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.SetActivityDealRelevanceRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	out, err := h.store.SetDealRelevance(r.Context(), pathID[ids.ActivityKind](id), ids.UUID(req.DealId), string(req.DealRelevance))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}

@@ -110,11 +110,22 @@ func (r approvalPreviewReader) commitmentCreationPreview(ctx context.Context, pr
 		changes = append(changes, commitmentCreateValue("recipients", previewValueText, strings.Join(recipients, ", ")))
 	}
 	out.Changes, out.Evidence, out.State = changes, &[]crmcontracts.ApprovalEvidence{citation}, previewReadyState
+	var details []crmcontracts.ApprovalPreviewDetail
 	if proposal.Tentative {
-		out.Details = &[]crmcontracts.ApprovalPreviewDetail{previewDetail(promiseStrengthField, string(promiseband.Tentative))}
+		details = append(details, previewDetail(promiseStrengthField, string(promiseband.Tentative)))
+	}
+	if proposal.OddDueDate != "" {
+		details = append(details, previewDetail(oddDueDateField, proposal.OddDueDate))
+	}
+	if details != nil {
+		out.Details = &details
 	}
 	return out, nil
 }
+
+// oddDueDateField carries the stated day outside the due window, so the card
+// can ask about it.
+const oddDueDateField = "odd_due_date"
 
 // promiseStrengthField says on the card how firmly the promise was made.
 const promiseStrengthField = "promise_strength"

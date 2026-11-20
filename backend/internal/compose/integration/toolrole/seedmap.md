@@ -60,6 +60,7 @@ Each kind of record the role sweep hands a call, the function that seeds it, the
 | `deactivated_user` | `toolroleseedmembers_integration_test.go memberSeeders` |  |  |  |
 | `deal` | `toolroleseed_integration_test.go toolRoleSeeders` | `/v1/deals` |  |  |
 | `deal_attachment` | `toolroleseedsales_integration_test.go roomSeeders` |  |  |  |
+| `deal_note` | `toolroleseedwork_integration_test.go workSeeders` | `/v1/activities` |  |  |
 | `deal_room` | `toolroleseed_integration_test.go configSeeders` | `/v1/deal-rooms` | `deal` |  |
 | `deal_suggestion` | `toolroleseedwork_integration_test.go workSeeders` |  |  |  |
 | `dedupe_candidate` | `toolroleseedwork_integration_test.go workSeeders` | `/v1/dedupe/candidates` |  |  |

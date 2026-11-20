@@ -291,7 +291,7 @@ func engagedAmong(
 			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND %[2]s AND %[5]s AND a.direction = 'outbound')`,
 		dealsPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", windowPos)), bound, healthInteraction(fmt.Sprintf("$%d::timestamptz", nowPos)),
-		relstrength.DealEvidenceSQL("a")), args...)
+		relstrength.DealEvidenceSQL("a", "r.deal_id")), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading engagement across a set of deals: %w", err)
 	}

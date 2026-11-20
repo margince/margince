@@ -104,6 +104,11 @@
   display: grid;
   gap: var(--space-4);
 }
+/* The subject is data: one long word must wrap inside the card, not widen it. */
+.book-review {
+  grid-template-columns: minmax(0, 1fr);
+  overflow-wrap: anywhere;
+}
 .book-picker-bar {
   display: flex;
   flex-wrap: wrap;

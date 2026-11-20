@@ -146,3 +146,92 @@ it("turns single-key shortcuts off for this browser on the flip", async () => {
   expect(singleKeyShortcutsOn()).toBe(false);
   expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
 });
+
+it("scrolls to the language and time zone card a setup step points at, then clears the dial", async () => {
+  window.location.hash = "#/settings/account?focus=account-language";
+  const scrolled: (string | null)[] = [];
+  vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (
+    this: Element,
+  ) {
+    scrolled.push(this.id);
+  });
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  await screen.findByRole("combobox", { name: "Time zone" });
+  await vi.waitFor(() => expect(scrolled).toEqual(["account-language"]));
+  expect(window.location.hash).toBe("#/settings/account");
+  window.location.hash = "";
+});
+
+it("keeps the language on screen as the account's own choice in one click", async () => {
+  const user = userEvent.setup();
+  const writes: unknown[] = [];
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+    "PUT /me/locale": (body) => {
+      writes.push(body);
+      return jsonResponse({ ...meFixture({}).user, locale: "en" });
+    },
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  await user.click(await screen.findByRole("button", { name: "Keep English" }));
+  await vi.waitFor(() => expect(writes).toEqual([{ locale: "en" }]));
+});
+
+it("keeps a guessed time zone as the account's own choice in one click", async () => {
+  const user = userEvent.setup();
+  const writes: unknown[] = [];
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+    "PUT /me/timezone": (body) => {
+      writes.push(body);
+      return jsonResponse({ ...meFixture({}).user, timezone_chosen: true });
+    },
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Keep Europe/Berlin" }),
+  );
+  await vi.waitFor(() =>
+    expect(writes).toEqual([{ timezone: "Europe/Berlin", source: "chosen" }]),
+  );
+});
+
+it("offers no keep button once the account chose both", async () => {
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({ personalChoicesMade: true })),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  await screen.findByRole("combobox", { name: "Time zone" });
+  expect(screen.queryByRole("button", { name: /^Keep/ })).toBeNull();
+});
