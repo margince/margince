@@ -107,7 +107,6 @@
   inline-size: 100%;
   block-size: var(--space-1);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgHover);
   overflow: hidden;
 }

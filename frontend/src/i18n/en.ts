@@ -2769,7 +2769,6 @@ export const en = {
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
   "shell.searchEverything": "Search or ask Margince",
-  "shell.breadcrumbAria": "Breadcrumb",
   "shell.back": "Back",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
@@ -3486,7 +3485,6 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
   "ref.memberLeft": "{name} (left)",
-  "ref.leadUnnamed": "Unnamed lead",
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",

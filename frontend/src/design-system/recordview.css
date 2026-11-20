@@ -1,6 +1,6 @@
 /* RecordView: two cards in a row. The details card is a
    fixed 340px and stays in view as the page scrolls; the sheet takes the
-   rest up to 920px and may shrink to nothing, so the row never scrolls
+   rest and may shrink to nothing, so the row never scrolls
    sideways. Under 900px of row the details card takes the full width above
    the sheet and scrolls with the page. */
 
@@ -9,8 +9,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-inline-size: 1320px;
-  margin-inline: auto;
 }
 .record-split-row {
   display: flex;
@@ -26,7 +24,6 @@
 }
 .record-split-sheet {
   flex: 1 1 0;
-  max-inline-size: 920px;
   overflow: hidden;
 }
 
@@ -288,7 +285,6 @@
   min-inline-size: 0;
   padding: 0 var(--space-1);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgInset);
   color: var(--textSecondary);
   font: var(--fontBodySmall);

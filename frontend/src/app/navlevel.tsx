@@ -10,6 +10,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { AppLink } from "../design-system/applink";
@@ -34,6 +35,7 @@ import {
 } from "./nav";
 import { useRowIntent } from "./navintent";
 import { type TipState, useRowTip } from "./navrowtip";
+import { NavTip } from "./navtip";
 
 // ONE navigation level, whatever its depth. The rail's ten destinations and the
 // entries of a section drilled into from them render through this, so the two
@@ -237,11 +239,26 @@ function NavLevelRow({
   const active = level.activeId === entry.id;
   const key = navTipKey(level, entry.id);
   const tip = useRowTip(state, { key, level, id: entry.id, label });
+  // A label the open rail cuts gets a tip that carries all of it.
+  const labelBox = useRef<HTMLSpanElement>(null);
+  const [cut, setCut] = useState(false);
+  const raise = (by: "pointer" | "focus") => {
+    const box = labelBox.current;
+    const clipped =
+      !state.collapsed && box !== null && box.scrollWidth > box.clientWidth;
+    setCut(clipped);
+    if (clipped) {
+      state.onTip(key, by);
+    } else {
+      tip.raise(by);
+    }
+  };
+  const tipText = cut && !state.collapsed ? label : tip.text;
   const handlers = useRowIntent({
     level,
     entry,
     active,
-    raiseTip: tip.raise,
+    raiseTip: raise,
     closeTip: () => state.onTip(null),
     select: () => onSelect(entry),
   });
@@ -256,7 +273,9 @@ function NavLevelRow({
       <entry.icon aria-hidden />
       {/* The label stays mounted and fades, so the transition is continuous
           rather than a pop. aria-label carries the accessible name either way. */}
-      <span className="navlabel">{label}</span>
+      <span className="navlabel" ref={labelBox}>
+        {label}
+      </span>
       {count !== undefined && count > 0 && (
         // The wrapper only places the figure: trailing in a row, pinned to
         // the glyph's corner when the rail is collapsed or a phone bar.
@@ -271,11 +290,7 @@ function NavLevelRow({
           row and never tears it away mid-read (WCAG 1.4.13, hoverable). A
           sibling could not manage that without making the wrapper itself
           interactive. */}
-      {tip.text !== null && state.tip === key && (
-        <span className="navtip" role="tooltip">
-          {tip.text}
-        </span>
-      )}
+      {tipText !== null && state.tip === key && <NavTip>{tipText}</NavTip>}
     </AppLink>
   );
 }
@@ -325,12 +340,8 @@ function NavLevelGroupView({
       role={labelId ? "group" : undefined}
       aria-labelledby={labelId}
     >
-      {/* Collapsed the label hides its text and draws a hairline inside the same
-          space — it keeps its box in both states, and swapping it for a shorter
-          <hr> re-spaced every group and drifted the icons. The group is still
-          NAMED there: a hidden element referenced by `aria-labelledby` is read
-          for the name, which is the whole reason the name is wired this way
-          rather than taken from the content. */}
+      {/* Hidden when collapsed: `aria-labelledby` still reads a hidden
+          element, so the group keeps its name. */}
       {heading && (
         <div className="navheading" id={labelId}>
           {t(heading)}
@@ -408,9 +419,7 @@ function NavLevelBack({
         {above === undefined ? t("shell.navBackApp") : t("shell.navBack")}
       </span>
       {state.collapsed && state.tip === BACK_TIP_KEY && (
-        <span className="navtip" role="tooltip">
-          {label}
-        </span>
+        <NavTip>{label}</NavTip>
       )}
     </button>
   );

@@ -237,7 +237,6 @@
     inset-block-end: anchor(bottom);
     block-size: 2px;
     border-radius: var(--r-full);
-    corner-shape: round;
     background: var(--textPrimary);
     pointer-events: none;
     transition:
@@ -259,7 +258,6 @@
   inline-size: 5px;
   block-size: 5px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
 }
 

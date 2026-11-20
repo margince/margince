@@ -110,21 +110,13 @@ function mountTopBar(hash = "#/deals") {
   client.setQueryData(["me"], meFixture({ allow: VOICE_WRITER }));
   const view = renderWith(
     client,
-    <TopBar
-      route={parseHash(hash)}
-      collapsed={false}
-      onOpenSearch={ignoreSearch}
-    />,
+    <TopBar route={parseHash(hash)} onOpenSearch={ignoreSearch} />,
   );
   const rerouted = (next: string) =>
     view.rerender(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
-          <TopBar
-            route={parseHash(next)}
-            collapsed={false}
-            onOpenSearch={ignoreSearch}
-          />
+          <TopBar route={parseHash(next)} onOpenSearch={ignoreSearch} />
         </LocaleProvider>
       </QueryClientProvider>,
     );

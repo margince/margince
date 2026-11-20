@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CSSProperties } from "react";
 import { MarginceCoreScene } from "../design-system/margince-core";
 import { trialStandingOf } from "../lib/license-posture";
 import { StoryProviders } from "../testing/story-utils";
@@ -10,6 +11,18 @@ import "./agentrail.css";
 import "./shell.css";
 
 const DAY = 86_400_000;
+
+// The shell sets `--railW` on `.app`, which a story does not render.
+type OrbFrame = CSSProperties & Readonly<{ "--railW": string }>;
+
+function frame(folded: boolean): OrbFrame {
+  return {
+    width: folded ? 72 : 240,
+    padding: "var(--space-5)",
+    alignItems: "center",
+    "--railW": folded ? "var(--railWShut)" : "var(--railWOpen)",
+  };
+}
 
 // The orb as the rail draws it, with the trial's ring at one stage of 14 days.
 function Orb({
@@ -27,14 +40,7 @@ function Orb({
     now,
   );
   return (
-    <nav
-      className={folded ? "rail collapsed" : "rail"}
-      style={{
-        width: folded ? 72 : 240,
-        padding: "var(--space-5)",
-        alignItems: "center",
-      }}
-    >
+    <nav className={folded ? "rail collapsed" : "rail"} style={frame(folded)}>
       <span className="artoggle">
         <MarginceCoreScene size="md" className="arorb" />
         <TrialRing standing={standing} />

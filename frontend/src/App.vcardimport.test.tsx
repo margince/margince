@@ -4,7 +4,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   memoryStorage,
@@ -93,18 +93,12 @@ describe("the vCard import address", () => {
           /\/v1\/contacts\/import\b/.test(url),
         ),
       ).toEqual([]);
-      // The trail leads back to the list and ends in this page, and only the
-      // trail claims to be the page: the Contacts row is its ancestor.
+      // The page stands below the Contacts list: the bar leads back to it, and
+      // the Contacts row is its ancestor rather than the page.
       expect(screen.queryByText("Name could not load")).not.toBeInTheDocument();
-      const trail = screen.getByRole("navigation", { name: "Breadcrumb" });
-      expect(
-        within(trail).getByRole("link", { name: "Contacts" }),
-      ).toHaveAttribute("href", "/#/contacts");
-      expect(trail.querySelector('[aria-current="page"]')).toHaveTextContent(
-        "Import business cards",
-      );
+      expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
       expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(
-        1,
+        0,
       );
       expect(
         screen.getByRole("link", { name: "Contacts", current: true }),

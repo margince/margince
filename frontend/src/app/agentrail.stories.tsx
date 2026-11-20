@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
 import type { GrantSpec } from "../testing/mefixture";
 import {
@@ -125,12 +125,18 @@ function callRow(task: string, minutesAgo: number, index: number) {
 // renders.
 type RailState = "expanded" | "collapsed" | "leveled";
 
+// The shell sets `--railW` on `.app`, which a story does not render.
+type RailWidth = CSSProperties & Readonly<{ "--railW": string }>;
+
 function Rail({
   state,
   children,
 }: Readonly<{ state: RailState; children: ReactNode }>) {
+  const width: RailWidth = {
+    "--railW": state === "collapsed" ? "var(--railWShut)" : "var(--railWOpen)",
+  };
   return (
-    <nav className={`rail ${state}`}>
+    <nav className={`rail ${state}`} style={width}>
       <div className="grow" />
       <div className="railagent">{children}</div>
     </nav>
@@ -290,15 +296,12 @@ type Story = StoryObj<typeof AgentRail>;
  *  the afternoon: one true reading, and it is "Nothing needs attention". The
  *  line holds it; no standing advice rotates in beside it.
  *
- *  It is also the block's last line with no figure on it: this seat holds no
- *  `ai_diagnostics:read`, so the row carries the chevron alone. The row is what
- *  makes that state legible — the disclosure keeps its place instead of moving
- *  up into the corner when there is nothing to spend beside it. */
+ *  It is also the block with no figure under the line: this seat holds no
+ *  `ai_diagnostics:read`, so the line ends the block. */
 export const Idle: Story = { render: story(HEALTHY) };
 
-/** The month's spend, on the block's last line with the chevron that opens the
- *  panel behind it: one figure, the scope it was spent in, and the disclosure,
- *  all on one baseline. The seat is an administrator holding
+/** The month's spend under the line: one figure and the scope it was spent in,
+ *  on one baseline. The seat is an administrator holding
  *  `ai_diagnostics:read`, which is the only seat the server serves it to. */
 export const SpendReported: Story = {
   render: story({ ...HEALTHY, pricedMinor: 1_240 }, "expanded", SPEND_READER),
@@ -478,7 +481,7 @@ export const NothingHasRunYet: Story = {
 };
 
 /** The collapsed rail: the orb is the whole report at 56px, the words and the
- *  chevron gone. */
+ *  figure gone. */
 export const CollapsedRail: Story = {
   render: story(HEALTHY, "collapsed"),
 };

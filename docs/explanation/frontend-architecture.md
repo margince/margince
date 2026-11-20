@@ -107,8 +107,8 @@ refuses a second one while the first is in flight.
   that needs a feature, such as the record page's mail drawer, lives in that feature.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
-  `topbar.tsx` is the top bar of the session: the control that makes the
-  sidebar small, the breadcrumb, search, and the account. `pagemeta.ts` holds
+  `topbar.tsx` is the top bar of the session: a record page's Back control,
+  search, and the actions and the account. `pagemeta.ts` holds
   what both of them know about a page before it renders.
 
   Then come `nav.ts`
@@ -239,11 +239,16 @@ labels.
 | Insights | `analytics`, `progress`, `goals` |
 
 The groups belong to the **open sidebar** alone. When the sidebar is small,
-each group title keeps its place and shows a line there. So the
+each group title is hidden and takes no space (`.navheading` in `shell.css`). So the
 `56px` rail is the plain list that [DESIGN.md](../../DESIGN.md#6-the-shell)
 shows; the open state adds to it. Whether the sidebar is small is a stored
 setting (`margince.sidebarCollapsed` in `localStorage`, read once when it first
-renders). The column moves between `256px` and `56px` over `--dur-move`.
+renders).
+
+With no stored choice, a window from `701px` to `1024px` starts with the
+sidebar small, and a wider one starts open. A stored choice wins both ways.
+The control that sets it sits at the foot of the sidebar, under the agent block.
+`⌘B` does the same. The column moves between `256px` and `56px` over `--dur-move`.
 
 At `≤700px` the same `<nav>` element becomes a bar of 5 places of the same
 size, fixed below the page. `MOBILE_PRIMARY` (`home`, `contacts`, `deals`) is on
@@ -255,7 +260,7 @@ the routes not on the bar are `display:none`, so **More** carries
 
 That value sits on the place a hidden row stands for. Some pages sit below such
 a place: a company, lead or project record, a Filters and views page, or one
-list. There the top bar's trail claims the page, so **More** says `"true"`. A contact
+list. There the page below the list is the current page, so **More** says `"true"`. A contact
 or deal record leaves **More** without the value, because the bar shows that
 place and claims the page. **More** drops the value once it is open, so two
 elements never both claim the current page.
@@ -319,7 +324,7 @@ too.
 
 ## Colour
 
-The app shell has a panel rail and a clear top bar over the theme ground, as
+The app shell has a sidebar and a top bar with no ground of their own, so the page ground shows (`--bgPage`). The page is a white card (`--pageCard`) beside them, as
 [DESIGN.md](../../DESIGN.md#6-the-shell) and the top of `src/app/shell.css`
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
@@ -497,7 +502,7 @@ merge gate and needs Node and pnpm.
 | Registering the service worker, install state / the worker and its offline page | `frontend/src/lib/pwa.ts` / `frontend/src/offline/`, built by `frontend/scripts/vite-pwa.ts` |
 | Route → screen, the sign-in gate, the onboarding gate | `frontend/src/App.tsx` |
 | The shell, sidebar, page title | `frontend/src/app/{shell.tsx,shell.css}` |
-| Top bar: breadcrumb, search, account | `frontend/src/app/{topbar.tsx,topbar.css,account.tsx}` |
+| Top bar: Back, search, account | `frontend/src/app/{topbar.tsx,topbar.css,account.tsx}` |
 | The rail list, the badge set, the phone set, the set with no rail | `frontend/src/app/nav.ts` |
 | The hash router | `frontend/src/lib/router.tsx` |
 | The `⌘K` palette, the agent in the rail | `frontend/src/app/{palette.tsx,agentrail.tsx}` |

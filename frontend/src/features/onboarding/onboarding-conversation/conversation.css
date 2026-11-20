@@ -28,7 +28,6 @@
   display: grid;
   place-items: center;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--aiLight);
   color: var(--aiText);
 }
@@ -596,7 +595,6 @@
   width: 8px;
   height: 8px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ai);
   animation: ob-distill-pulse 1.6s ease-in-out infinite;
 }
@@ -1053,7 +1051,6 @@
   position: relative;
   height: 4px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderSubtle);
 }
 
@@ -1065,7 +1062,6 @@
   width: 10px;
   height: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
   transform: translate(-50%, -50%);
 }
@@ -1602,7 +1598,6 @@
   inset-inline-start: 0;
   inline-size: 3px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--textPrimary);
 }
 
@@ -2242,7 +2237,6 @@
 .ob-conv-meter-bar {
   block-size: var(--space-2);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgChip);
   overflow: hidden;
 }
@@ -2254,7 +2248,6 @@
   display: block;
   block-size: 100%;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--info);
 }
 

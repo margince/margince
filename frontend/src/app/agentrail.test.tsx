@@ -534,9 +534,6 @@ describe("AgentRail", () => {
       ),
     );
     expect(container.querySelector(".arspend")).toBeNull();
-    // Whether the panel is open is a fact about the block rather than about the
-    // money, so the line the two share outlives the figure on it.
-    expect(container.querySelector(".arlast > .archev")).not.toBeNull();
   });
 
   // The exact figure, not merely a figure: 120 minor units of the summary's
@@ -557,11 +554,8 @@ describe("AgentRail", () => {
     );
     expect(paths.some((path) => path.endsWith("/ai/usage/summary"))).toBe(true);
     expect(paths.some((path) => path.endsWith("/ai/usage"))).toBe(false);
-    // And on the same line as the disclosure: one row of chrome, not a figure
-    // with a chevron half a line below it.
-    const foot = container.querySelector(".arlast");
-    expect(foot?.querySelector(".arspend")).not.toBeNull();
-    expect(foot?.querySelector(".archev")).not.toBeNull();
+    // Inside the words' block, so it folds and centres with the line.
+    expect(container.querySelector(".arwords > .arspend")).not.toBeNull();
   });
 
   // A priced month that cost under a cent is a real zero and draws one.

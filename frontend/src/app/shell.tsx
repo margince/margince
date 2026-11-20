@@ -19,6 +19,7 @@ import { ShownAddressSink } from "../lib/screenaddress";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { useShortcutDispatcher, useShortcutHandler } from "../lib/shortcuts";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { PHONE_MAX_WIDTH, widthMedia } from "../lib/viewport";
 import { AgentEdge } from "./agent-edge";
 import { CaptureChip } from "./capture-chip";
 import { CaptureHealthBanner } from "./capturehealthbanner";
@@ -50,7 +51,7 @@ import "./shell.css";
 // which stands INSIDE the scroller and scrolls with the page because it belongs
 // to the document, and the agent, which floats at the column's foot.
 import { type RailProps, SettingsRail, WorkspaceRail } from "./shellrail";
-import { PageTitle, SettingsPageTitle, SettingsTopBar } from "./shelltitle";
+import { PageTitle, SettingsPageTitle } from "./shelltitle";
 
 export { SettingsRail, WorkspaceRail } from "./shellrail";
 export { PageTitle } from "./shelltitle";
@@ -63,11 +64,8 @@ export { PageTitle } from "./shelltitle";
 // prop stays because a deeper level declaring `badgeIds` needs this door.
 export type ShellCounts = NavCounts;
 
-// WCAG 2.4.1, Bypass Blocks. Every page in the product puts the same block ahead
-// of its content — up to twelve navigation rows and the agent in the sidebar,
-// then the strip's collapse control, trail, search, system-of-record
-// chip, approvals bell and account menu — and without this a keyboard reader
-// walked all of it again on every page they opened.
+// WCAG 2.4.1, Bypass Blocks. Every page puts the sidebar and the top bar ahead
+// of its content, and without this a keyboard reader walks them on every page.
 //
 // The destination is the SCROLLER, not the content column: the strip is the first
 // row of that column, so a skip that landed on `.main` put the reader in front of
@@ -96,16 +94,26 @@ function SkipToContent({
   );
 }
 
-// The work column's own classes. `main-gridded` is the capped reading column and
-// there is one measure for every page that keeps it (--pageColumn);
-// `main-record` adds nothing to that width and never appears without it — it
-// names the column's SCROLLER as a container, so the record's tab strip
-// measures the width content can use (shell.css, `container-name: work`).
-function mainClasses(gridded: boolean, griddedRecord: boolean): string {
-  if (!gridded) {
-    return "main";
+// The work column's own classes. `main-gridded` is the capped reading column.
+// `main-record` adds no width: it names the column's scroller as a container,
+// so the record's tab strip measures the width content can use (shell.css).
+const RAIL_FOLDS_MAX_WIDTH = 1024;
+
+// A stored choice wins; with none a tablet starts folded, and nothing is stored.
+function startsCollapsed(): boolean {
+  const stored = readStored(STORAGE_KEYS.sidebarCollapsed);
+  if (stored !== null) {
+    return stored === "1";
   }
-  return griddedRecord ? "main main-gridded main-record" : "main main-gridded";
+  const under = (width: number) =>
+    globalThis.matchMedia?.(widthMedia(width)).matches ?? false;
+  return under(RAIL_FOLDS_MAX_WIDTH) && !under(PHONE_MAX_WIDTH);
+}
+
+function mainClasses(gridded: boolean, record: boolean): string {
+  return ["main", gridded && "main-gridded", record && "main-record"]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function Shell({
@@ -119,27 +127,19 @@ export function Shell({
 }>) {
   const route = useRoute();
   const railless = RAIL_LESS_SCREENS.has(route.screen);
-  // An extension unit's page is REACHED from settings and says so in its trail
-  // (`Settings / <unit>`), so it keeps the settings level in the sidebar. It did
-  // not: the rail fell back to the destinations, and following "Open" on a
-  // settings card swapped the whole sidebar out from under a reader whose URL
-  // and breadcrumb still said Settings. `activeRowFor` in app/nav.ts has always
-  // answered `settings` for a unit route; this is the other half of it.
+  // An extension unit's page is REACHED from settings, so it keeps the settings
+  // level in the sidebar, as `activeRowFor` in app/nav.ts answers `settings`.
   //
   // Conditioned on the descriptor RESOLVING, like the page title's own branch:
   // `#/ext/nonesuch` is a genuinely unknown page and belongs to nothing.
   const onUnitPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
-  const { gridded, griddedRecord } = useReadingColumn(route);
-  const [collapsed, setCollapsed] = useState(
-    () => readStored(STORAGE_KEYS.sidebarCollapsed) === "1",
-  );
-  // What the sidebar's walk between levels remembers — where a walk OUT of a
-  // level returns to, and whether the level that arrives was asked for and takes
-  // focus. The shell holds it because the shell outlives every rail: the rail on
-  // a section route is a different component, mounted on the way in and gone
-  // again on the way out.
+  const { gridded, record } = useReadingColumn(route);
+  const [collapsed, setCollapsed] = useState(startsCollapsed);
+  // What the sidebar's walk between levels remembers: where a walk out of a
+  // level returns to, and whether the arriving level takes focus. The shell
+  // holds it because it outlives every rail; a section route mounts another one.
   const walk = useNavWalk(route, !railless && !leveled);
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -205,6 +205,7 @@ export function Shell({
     route,
     counts,
     collapsed,
+    onToggle: toggle,
   };
 
   return (
@@ -228,22 +229,8 @@ export function Shell({
               <WorkspaceRail {...railProps} />
             )}
           </NavWalkProvider>
-          <main className={mainClasses(gridded, griddedRecord)}>
-            {leveled ? (
-              <SettingsTopBar
-                route={route}
-                collapsed={collapsed}
-                onToggle={toggle}
-                onOpenSearch={onOpenSearch}
-              />
-            ) : (
-              <TopBar
-                route={route}
-                collapsed={collapsed}
-                onToggle={toggle}
-                onOpenSearch={onOpenSearch}
-              />
-            )}
+          <main className={mainClasses(gridded, record)}>
+            <TopBar route={route} onOpenSearch={onOpenSearch} />
             {/* Mounted from the start: it holds the outage watcher, and a
                 known offline state shows in the first paint. */}
             <ConnectivityBanner />

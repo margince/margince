@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ChevronRight } from "lucide-react";
 import {
   type MouseEvent,
   type RefObject,
@@ -379,7 +378,7 @@ export function AgentRail({
           (the same reason the CTA underneath keeps its own row). The pointer
           still gets the whole block through `useHit`; the keyboard gets the
           button. */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: the button inside is the interactive element; this only widens its pointer target to the words and chevron beside it */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: the button inside is the interactive element; this only widens its pointer target to the words beside it */}
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard's toggle is the button's, whose Enter and Space arrive here as the same click */}
       <div className="arhit" onClick={hit} ref={well}>
         <button
@@ -412,37 +411,18 @@ export function AgentRail({
               agent's own sentence otherwise. The panel keeps the agent's line
               regardless, because it is the agent's report. */}
           <RailSaying line={shown} />
-        </span>
-        {/* The block's last line, and it exists whether or not there is a figure
-            on it: the chevron reports whether the panel is open, which is a fact
-            about the block rather than about the spend, so a row that came and
-            went with the money would take the disclosure with it. */}
-        {/* The same reading as the panel's head, in the width a rail has:
-            small, secondary and tabular, with the figure in the primary ink.
-            The classes are the type; this file only places the row. */}
-        <span className="arlast t-caption t-num">
           {/* The spend sits in the bar and not only in the panel: it is the one
               figure somebody is accountable for, and a number nobody opens a
               panel to see is a number nobody sees. Absent when this seat may not
               read it, and absent again when nothing in the month carried a
               price. */}
           {spend.allowed && spend.minor !== undefined && (
-            <span className="arspend">
+            <span className="arspend t-caption t-num">
               <b>{money}</b>
-              {/* The scope beside the figure, in the slot the stylesheet
-                  reserved for it (`.arspend > .arscope`, "the money, and the
-                  scope it was spent in, on one line"): a bare currency amount
-                  names nothing. The expanded panel says "Cost this month";
-                  this is the same fact in the space a rail has, from the same
-                  string. */}
+              {/* A bare currency amount names nothing. */}
               <span className="arscope">{t("agent.thisMonth")}</span>
             </span>
           )}
-          <ChevronRight
-            size={15}
-            className={open ? "archev open" : "archev"}
-            aria-hidden="true"
-          />
         </span>
       </div>
       {/* Beside the hit area, not in it: its press opens the dialog to the

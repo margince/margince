@@ -92,7 +92,6 @@
   bottom: calc(4px - var(--padCard));
   width: 2px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderSubtle);
 }
 

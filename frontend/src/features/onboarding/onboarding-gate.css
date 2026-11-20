@@ -299,7 +299,6 @@
   height: 9px;
   flex: none;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--aiText);
   animation: ob-scan-pulse 2s ease-in-out infinite;
 }
@@ -358,7 +357,6 @@
   margin-right: var(--space-2);
   vertical-align: middle;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderStrong);
 }
 

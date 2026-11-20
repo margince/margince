@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { listAddress } from "../lib/listreturn";
 import { navigate, type Route, useRoute } from "../lib/router";
 import { sessionOnlyFetch } from "../testing/appharness";
 import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
@@ -26,7 +27,7 @@ afterEach(() => {
 // The bar as the shell mounts it: it re-renders with whatever the address says.
 function RoutedTopBar() {
   const route = useRoute();
-  return <TopBar route={route} collapsed={false} onOpenSearch={ignoreSearch} />;
+  return <TopBar route={route} onOpenSearch={ignoreSearch} />;
 }
 
 // Resolves once the browser has delivered the next `hashchange`. Listened for
@@ -61,7 +62,6 @@ async function pressBack(user: ReturnType<typeof userEvent.setup>) {
   await moved;
 }
 
-const trail = () => screen.getByRole("navigation", { name: "Breadcrumb" });
 const ANNA: Route = { screen: "contacts", id: "p-anna" };
 
 describe("Top bar way back from a record", () => {
@@ -102,11 +102,6 @@ describe("Top bar way back from a record", () => {
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
 
     await moveTo(ANNA);
-    expect(
-      within(trail())
-        .getByRole("link", { name: "Contacts" })
-        .getAttribute("href"),
-    ).toBe("/#/contacts?city=Berlin&sort=name");
     await moveTo({ ...ANNA, id2: "activity" });
     await moveTo({ ...ANNA, id2: "deals" });
 
@@ -131,15 +126,9 @@ describe("Top bar way back from a record", () => {
 
   // The Ask dialog stands over a list and is not part of it. A way back must
   // not reopen a question the reader had already closed.
-  it("keeps the filter and drops the Ask dialog from the trail's parent", async () => {
+  it("notes the list it stands over with its filter and without the Ask dialog", async () => {
     await mountAt("#/contacts?ask=1&askq=Who&city=Hamburg");
 
-    await moveTo(ANNA);
-
-    expect(
-      within(trail())
-        .getByRole("link", { name: "Contacts" })
-        .getAttribute("href"),
-    ).toBe("/#/contacts?city=Hamburg");
+    expect(listAddress("contacts")).toBe("#/contacts?city=Hamburg");
   });
 });

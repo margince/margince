@@ -23,6 +23,8 @@ import { useNavTip } from "./navtip";
 // the way the shell hands them.
 
 const RESTING = { collapsed: false, tip: null, onTip: () => {} };
+// The `.app` grid gives the rail its width, as it does in the product.
+const frame = (collapsed: boolean) => (collapsed ? "app" : "app railexpanded");
 const COLLAPSED = { collapsed: true, tip: null, onTip: () => {} };
 
 // The one section the app publishes is settings, and it is assembled from live
@@ -67,16 +69,18 @@ function level(
 ) {
   return () => (
     <StoryProviders>
-      <nav className={state.collapsed ? "rail collapsed" : "rail expanded"}>
-        <NavLevelView
-          level={which}
-          parent={parent}
-          counts={counts}
-          state={state}
-          onSelect={() => {}}
-          onWalkUp={() => {}}
-        />
-      </nav>
+      <div className={frame(state.collapsed)}>
+        <nav className={state.collapsed ? "rail collapsed" : "rail expanded"}>
+          <NavLevelView
+            level={which}
+            parent={parent}
+            counts={counts}
+            state={state}
+            onSelect={() => {}}
+            onWalkUp={() => {}}
+          />
+        </nav>
+      </div>
     </StoryProviders>
   );
 }
@@ -105,15 +109,17 @@ export const WithCounts: Story = {
 export const WithCountsGerman: Story = {
   render: () => (
     <StoryProviders locale="de">
-      <nav className="rail expanded">
-        <NavLevelView
-          level={primary}
-          counts={{ tasks: 1204, inbox: 12 }}
-          state={RESTING}
-          onSelect={() => {}}
-          onWalkUp={() => {}}
-        />
-      </nav>
+      <div className={frame(false)}>
+        <nav className="rail expanded">
+          <NavLevelView
+            level={primary}
+            counts={{ tasks: 1204, inbox: 12 }}
+            state={RESTING}
+            onSelect={() => {}}
+            onWalkUp={() => {}}
+          />
+        </nav>
+      </div>
     </StoryProviders>
   ),
 };
@@ -135,14 +141,19 @@ function LiveRail({
   const state = useNavTip(collapsed, nav);
   return (
     <StoryProviders>
-      <nav ref={nav} className={collapsed ? "rail collapsed" : "rail expanded"}>
-        <NavLevelView
-          level={which}
-          state={state}
-          onSelect={() => {}}
-          onWalkUp={() => {}}
-        />
-      </nav>
+      <div className={frame(collapsed)}>
+        <nav
+          ref={nav}
+          className={collapsed ? "rail collapsed" : "rail expanded"}
+        >
+          <NavLevelView
+            level={which}
+            state={state}
+            onSelect={() => {}}
+            onWalkUp={() => {}}
+          />
+        </nav>
+      </div>
     </StoryProviders>
   );
 }

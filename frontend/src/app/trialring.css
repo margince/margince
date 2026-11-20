@@ -73,7 +73,6 @@
   height: 16px;
   padding-inline: var(--space-1);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--trialTone);
   color: var(--textOnStatusControl);
   font: var(--fontBodySmall);

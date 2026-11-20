@@ -2789,7 +2789,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
-  "shell.breadcrumbAria": "Đường dẫn điều hướng",
   "shell.back": "Quay lại",
   "shell.license.none": "Chưa có giấy phép",
   "shell.license.refused": "Giấy phép bị từ chối",
@@ -3466,7 +3465,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Đang tải…",
   "ref.nameLoadFailed": "Không thể tải tên",
   "ref.memberLeft": "{name} (đã nghỉ)",
-  "ref.leadUnnamed": "Lead chưa có tên",
   "roster.failedUsers": "Không thể tải danh sách thành viên.",
   "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed":

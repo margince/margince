@@ -146,7 +146,7 @@ export function BriefScreen() {
       <LinkedApprovalDrawer />
       {/* The head stands over the panes in both views, so the dial never
           moves when it is pressed. */}
-      <div className="brief-frame">
+      <div className="brief-frame arrive-stack">
         {glance}
         <BriefBody address={address} query={query} queueToggle={queueToggle} />
       </div>
@@ -255,8 +255,8 @@ function PersonalMorning({
       <PageZones
         shape="aside"
         panes
-        className="brief-morning"
-        mainClassName="brief-main"
+        className="brief-morning arrive-stack"
+        mainClassName="brief-main arrive-stack"
         asideClassName="brief-rail"
         asideLabel={t("brief.rail")}
         main={

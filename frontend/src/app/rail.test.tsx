@@ -153,12 +153,16 @@ function mountShellStyles(): HTMLStyleElement {
 // A row that is not in the rail at all is not the same thing as a hidden one,
 // and must not read as one: the head keeps its elements and the level takes
 // their space.
-function railDisplay(container: HTMLElement, selector: string): string {
+function railStyle(
+  container: HTMLElement,
+  selector: string,
+  property: "display" | "visibility" = "display",
+): string {
   const node = container.querySelector(selector);
   if (!node) {
     throw new Error(`${selector} is missing from the rail entirely`);
   }
-  return getComputedStyle(node).display;
+  return getComputedStyle(node)[property];
 }
 
 describe("WorkspaceRail (AC-shell-1/2)", () => {
@@ -186,23 +190,20 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(navGroupNames()).toEqual(["Records", "Work", "Insights"]);
   });
 
-  // Collapsed, a group label has no word to show — 56px carries a glyph and not
-  // a label — so it is not drawn, and the break between two groups is what says
-  // where one ends. It stays in the DOCUMENT either way: what a screen reader
-  // walks does not depend on how wide the reader left the panel.
-  //
-  // Asserted as a COMPARISON of the two states rather than as one absolute, for
-  // the reason the brand head's own pair gives: two independent expectations
-  // would both pass against a label that had quietly stopped being drawn in
-  // either state.
+  // Collapsed, a group label folds away hidden; it stays in the document to
+  // name its group. The two states are compared, so neither can pass alone.
   it("draws the group labels expanded and not collapsed", () => {
     shellStyles = mountShellStyles();
     const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
     const collapsed = render(
       <WorkspaceRail route={{ screen: "home" }} collapsed />,
     );
-    expect(railDisplay(expanded.container, ".navheading")).not.toBe("none");
-    expect(railDisplay(collapsed.container, ".navheading")).toBe("none");
+    expect(railStyle(expanded.container, ".navheading", "visibility")).not.toBe(
+      "hidden",
+    );
+    expect(railStyle(collapsed.container, ".navheading", "visibility")).toBe(
+      "hidden",
+    );
     // Both panels still publish all three, whichever width they are at.
     for (const rail of [expanded, collapsed]) {
       expect(
@@ -740,9 +741,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
       />,
     );
     for (const part of parts) {
-      expect(railDisplay(plain.container, part)).not.toBe("none");
-      expect(railDisplay(leveled.container, part)).toBe(
-        railDisplay(plain.container, part),
+      expect(railStyle(plain.container, part)).not.toBe("none");
+      expect(railStyle(leveled.container, part)).toBe(
+        railStyle(plain.container, part),
       );
     }
   });
@@ -766,9 +767,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
       />,
     );
     for (const part of parts) {
-      expect(railDisplay(plain.container, part)).not.toBe("none");
-      expect(railDisplay(leveled.container, part)).toBe(
-        railDisplay(plain.container, part),
+      expect(railStyle(plain.container, part)).not.toBe("none");
+      expect(railStyle(leveled.container, part)).toBe(
+        railStyle(plain.container, part),
       );
     }
   });

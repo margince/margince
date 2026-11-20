@@ -22,6 +22,27 @@
   overflow: hidden;
 }
 
+/* Above phone width a list page IS the content card: the surface fills it edge
+   to edge and the card's edge is its only edge. */
+@media (width > 700px) {
+  .scroll:has(> .wrap > .lt) {
+    --scrollPadTop: 0px;
+    scrollbar-gutter: auto;
+  }
+  .scroll > .wrap:has(> .lt) {
+    padding: 0;
+  }
+  .scroll > .wrap > .lt {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  /* What stands beside the surface, a notice over it, keeps the page's inset. */
+  .scroll > .wrap:has(> .lt) > :not(.lt) {
+    margin: var(--pageGapTop) var(--pageGutter) 0;
+  }
+}
+
 /* ---- header: views, count, primary action ---- */
 
 /* The row wraps, and what gives way first is the count (`.lt-count`): the tabs
@@ -67,7 +88,6 @@
   background: transparent;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-full);
-  corner-shape: round;
   cursor: pointer;
 }
 .lt-vtab:hover {
@@ -156,7 +176,6 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .lt-search:focus-within {
   border-color: var(--accent);
@@ -192,7 +211,6 @@
 .lt-tools input.input {
   width: auto;
   border-radius: var(--r-full);
-  corner-shape: round;
   border-color: var(--borderSubtle);
 }
 
@@ -204,7 +222,6 @@
  * control answering the question of its own height twice. */
 .lt-tools .btn {
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 
 /* EVERY CARET ON THIS SURFACE, at one size: the product's other carets are
@@ -231,7 +248,6 @@
   inline-size: 6px;
   block-size: 6px;
   border-radius: 50%;
-  corner-shape: round;
   background: currentColor;
 }
 
@@ -358,7 +374,6 @@
   background: var(--bgElevated);
   border: 1px solid var(--accentMed);
   border-radius: var(--r-full);
-  corner-shape: round;
   /* NOT clipped: the row hosts the popups for its own condition, value and
    * delete steps, and a pill that clips its contents clips those too — they
    * open inside it and are simply never seen. The end segments carry the
@@ -368,12 +383,10 @@
 .lt-frow > :first-child {
   border-top-left-radius: var(--r-full);
   border-bottom-left-radius: var(--r-full);
-  corner-shape: round;
 }
 .lt-frow-more {
   border-top-right-radius: var(--r-full);
   border-bottom-right-radius: var(--r-full);
-  corner-shape: round;
 }
 
 .lt-frow-attr {
@@ -912,7 +925,6 @@
   display: block;
   height: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .lt-loading td {
   border-bottom: 1px solid var(--borderSubtle);

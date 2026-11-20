@@ -34,6 +34,7 @@ import {
 import { DESTINATION_ROW, NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
+import { NavRailToggle } from "./railtoggle";
 import type { ShellCounts } from "./shell";
 import { useSquareMark } from "./squaremark";
 
@@ -136,7 +137,7 @@ function BrandBlock() {
       <div className="railhead">
         <WorkspaceChip />
         <AppLink className="ws" href={start} aria-label={homeLabel}>
-          <Heading size="small" as="div" className="ws-name">
+          <Heading size="xsmall" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
         </AppLink>
@@ -155,7 +156,7 @@ function BrandBlock() {
       >
         {/* `as="div"`: the workspace name is the rail's identity, not a section
             of the page, so an h5 here would be a level nothing opened. */}
-        <Heading size="small" as="div" className="ws-name">
+        <Heading size="xsmall" as="div" className="ws-name">
           {installation.display_name}
         </Heading>
         {nameTip}
@@ -219,12 +220,15 @@ export type RailProps = {
   route: Route;
   counts?: ShellCounts;
   collapsed?: boolean;
+  /** Folds or widens the panel; without it the panel draws no control for it. */
+  onToggle?: () => void;
 };
 
 export function WorkspaceRail({
   route,
   counts,
   collapsed = false,
+  onToggle,
   section,
 }: Readonly<RailProps & { section?: NavSection }>) {
   const t = useT();
@@ -412,6 +416,9 @@ export function WorkspaceRail({
           <div className="railagent">
             <AgentRail />
           </div>
+        )}
+        {!phone && onToggle && (
+          <NavRailToggle state={navTip} onToggle={onToggle} />
         )}
       </nav>
     </>
