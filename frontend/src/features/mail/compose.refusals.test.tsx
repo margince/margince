@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -189,12 +189,14 @@ describe("ComposeWindow send refusals", () => {
 
     expect(screen.queryByText(/more than one recipient/i)).toBeNull();
     await pickWhy(user, WHY_LABEL.marketing);
+    await pressSend(user);
 
-    await screen.findByRole("button", { name: /recipients checked/i });
+    await waitFor(() =>
+      expect(
+        sent.some((r) => r.key === "POST /activities/act-1/send-email"),
+      ).toBe(true),
+    );
     expect(screen.queryByText(/more than one recipient/i)).toBeNull();
-    expect(
-      sent.some((r) => r.key === "POST /activities/act-1/send-email"),
-    ).toBe(false);
   });
 
   it("does not warn about a lone addressee under the same purpose", async () => {

@@ -32,11 +32,9 @@ const (
 	// citationNotDeclared is no pack for the recipient, or none citing this
 	// code for this sender.
 	citationNotDeclared citationOutcome = "not_declared"
-	// citationNotYetReviewed is a pack whose review is dated after the lookup.
-	// A review that has not happened yet approves nothing.
-	citationNotYetReviewed citationOutcome = "not_yet_reviewed"
-	// citationReviewOverdue is a pack whose review fell due. The pack still
-	// applies; only its citations are withheld.
+	// citationReviewOverdue is a reviewed pack whose next review fell due. The
+	// pack still applies; only its citations are withheld. A draft has no
+	// review to fall due, and cites.
 	citationReviewOverdue citationOutcome = "review_overdue"
 	// citationLawExpired is an instrument whose ExpiresFrom has passed.
 	citationLawExpired citationOutcome = "law_expired"
@@ -54,7 +52,6 @@ type citationContext struct {
 
 // citationFor returns the citation of the recipient's pack for code, with its
 // provision and source filled from the instrument, or the reason there is none.
-// An unreviewed pack has none to return: Register refuses one that cites.
 func citationFor(code string, where citationContext) (messagingrules.Citation, citationOutcome) {
 	rules, _, found := applicableRules(where.Recipient.Code)
 	if !found {
@@ -64,10 +61,7 @@ func citationFor(code string, where citationContext) (messagingrules.Citation, c
 		if declared.Code != code || !senderTerritoryHolds(declared.Territory, rules.Jurisdiction, where.Sender) {
 			continue
 		}
-		if where.At.Before(rules.Provenance.ReviewedAt) {
-			return messagingrules.Citation{}, citationNotYetReviewed
-		}
-		if due := rules.Provenance.ReviewDue; !due.IsZero() && deadline.Passed(&due, where.At) {
+		if reviewOverdue(rules.Provenance, where.At) {
 			return messagingrules.Citation{}, citationReviewOverdue
 		}
 		// Register validated the pack, so this fails only for a citation that
@@ -90,6 +84,15 @@ func citationFor(code string, where citationContext) (messagingrules.Citation, c
 		return resolved, citationShown
 	}
 	return messagingrules.Citation{}, citationNotDeclared
+}
+
+// reviewOverdue reports whether a reviewed pack's next review fell due by at.
+// A draft carries no review stamp, so it has no due date to miss.
+func reviewOverdue(p messagingrules.Provenance, at time.Time) bool {
+	if p.ReviewedAt.IsZero() || p.ReviewDue.IsZero() {
+		return false
+	}
+	return deadline.Passed(&p.ReviewDue, at)
 }
 
 // citationsFor resolves every code the recipient's pack cites, for the entity
@@ -121,7 +124,7 @@ func citedCodes(country RecipientCountry) []string {
 }
 
 // provisionsShown keeps each code whose citation is shown at where. An
-// overdue, unreviewed or expired one is left out, and the surface then shows
+// overdue, expired or not yet binding one is left out, and the surface then shows
 // its facts without a citation.
 func provisionsShown(codes []string, where citationContext) map[string]commsauthz.Provision {
 	out := make(map[string]commsauthz.Provision, len(codes))

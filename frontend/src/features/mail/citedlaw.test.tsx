@@ -6,7 +6,6 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { DraftContentNotice } from "./compose.notices";
 import { render } from "./compose.testkit";
 import type { InlineReview } from "./composeinlinereview";
 import { SendAnywayRows } from "./composesendanyway";
@@ -81,17 +80,32 @@ function expectLawLink(name: string, href: string) {
 afterEach(cleanup);
 
 describe("the inline send review", () => {
-  it("leads with the law the refusal rests on, linked, and keeps the fact", () => {
+  it("says the fact with its law in brackets, as one sentence", () => {
     renderRows([objected({ provision: UWG })]);
 
     const title = document.querySelector(".callout-title");
     expect(title).toHaveTextContent(
-      "Attention: sending to anna@example.de may break UWG § 7(2)",
+      "anna@example.de objected to marketing (UWG § 7(2)).",
     );
     expectLawLink("UWG § 7(2)", UWG.source_url);
-    expect(
-      screen.getByText("anna@example.de objected to marketing."),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText(/objected to marketing/)).toHaveLength(1);
+  });
+
+  it("names an instrument by the short name it carries in brackets", () => {
+    renderRows([
+      objected({
+        reason_code: "no_compatible_evidence",
+        provision: {
+          instrument: "Regulation (EU) 2016/679 (GDPR)",
+          provision: "Art. 6(1)",
+          source_url: "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+        },
+      }),
+    ]);
+
+    expect(document.querySelector(".callout-title")).toHaveTextContent(
+      "No reason to contact anna@example.de is on record (GDPR Art. 6(1)).",
+    );
   });
 
   it("keeps the factual sentence and links nothing without a provision", () => {
@@ -151,9 +165,7 @@ describe("the direct-send dialog", () => {
       />,
     );
 
-    expect(
-      screen.getByText(/Attention: sending to anna@example\.de may break/),
-    ).toBeInTheDocument();
+    expect(document.body).toHaveTextContent("(UWG § 7(2)).");
     expectLawLink("UWG § 7(2)", UWG.source_url);
     expectLawLink("Decree 91/2020/ND-CP Art. 8", DECREE.source_url);
   });
@@ -169,30 +181,5 @@ describe("the direct-send dialog", () => {
 
     expect(screen.getByText("anna@example.de")).toBeInTheDocument();
     expect(screen.queryByText(/Attention:/)).toBeNull();
-  });
-});
-
-describe("the draft content notice", () => {
-  it("links the law a finding cites and leaves an uncited one plain", () => {
-    render(
-      <DraftContentNotice
-        findings={[
-          {
-            requirement: "foreign_advertiser",
-            detail: "not established in vn",
-            country: "vn",
-            provision: DECREE,
-          },
-          {
-            requirement: "advertising_language_first",
-            detail: "does not open in vi",
-            language: "vi",
-          },
-        ]}
-      />,
-    );
-
-    expectLawLink("Decree 91/2020/ND-CP Art. 8", DECREE.source_url);
-    expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 });

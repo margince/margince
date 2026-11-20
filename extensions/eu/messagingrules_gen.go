@@ -20,8 +20,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Telekommunikationsgesetz 2021 (TKG 2021)",
 			Provision: "§ 174",
+			SourceURL: "https://www.ris.bka.gv.at/eli/bgbl/i/2021/190/P174/NOR40238632",
 		}, {
 			Name:      "E-Commerce-Gesetz (ECG)",
 			Provision: "§ 7",
@@ -40,7 +46,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "d55846c74e5d3f03cf11357260d2e50494f4542bd439410d97ac52137e09b838",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Telekommunikationsgesetz 2021 (TKG 2021)",
+			Provision:  "§ 174 Abs. 3",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Telekommunikationsgesetz 2021 (TKG 2021)",
+			Provision:  "§ 174 Abs. 3",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Telekommunikationsgesetz 2021 (TKG 2021)",
+			Provision:  "§ 174 Abs. 3",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Telekommunikationsgesetz 2021 (TKG 2021)",
+			Provision:  "§ 174 Abs. 3",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(4)",
+		}},
+		Digest: "697f008405920cd282604ae5e4505a8262a8939d7d79bbcdc87c5e1462d35286",
 	}, {
 		Jurisdiction: "be",
 		Version:      1,
@@ -50,8 +121,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Code de droit économique / Wetboek van economisch recht",
 			Provision: "art. XII.13",
+			SourceURL: "https://www.ejustice.just.fgov.be/eli/loi/2013/02/28/2013A11134/justel",
 		}, {
 			Name: "Arrêté royal du 4 avril 2003 visant à réglementer l'envoi de publicités par courrier électronique",
 		}},
@@ -76,7 +153,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "2637b7bc65df379d14d0dee769d11872b799aa953a7e116e36765162787feea9",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Code de droit économique / Wetboek van economisch recht",
+			Provision:  "art. XII.13, § 1",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Code de droit économique / Wetboek van economisch recht",
+			Provision:  "art. XII.13, § 1",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Code de droit économique / Wetboek van economisch recht",
+			Provision:  "art. XII.13, § 1",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Code de droit économique / Wetboek van economisch recht",
+			Provision:  "art. XII.13, § 1",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Code de droit économique / Wetboek van economisch recht",
+			Provision:  "art. XII.13, § 2",
+		}},
+		Digest: "7771f6a2ffbe1ed054fd719fa7cbf40c1eb3047bc92ea4e1c35037b7e4dad8fe",
 	}, {
 		Jurisdiction: "bg",
 		Version:      1,
@@ -85,6 +227,11 @@ func messagingRules() []messaging.Rules {
 			EffectiveFrom: time.Date(2002, time.July, 31, 0, 0, 0, 0, time.UTC),
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
+		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
 		}, {
 			Name:      "Закон за електронната търговия (Electronic Commerce Act)",
 			Provision: "чл. 6",
@@ -105,7 +252,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "31fce3477dc72573da6a0596ce25b3243aefad4967d1fc17bd7a474861664793",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(4)",
+		}},
+		Digest: "e957a196f2e7f9ad5c9d6341f3519dbb51020a92d4b4800e69c0859aba62a8ca",
 	}, {
 		Jurisdiction: "cy",
 		Version:      1,
@@ -114,6 +326,11 @@ func messagingRules() []messaging.Rules {
 			EffectiveFrom: time.Date(2002, time.July, 31, 0, 0, 0, 0, time.UTC),
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
+		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
 		}, {
 			Name:      "Ο περί Ρυθμίσεως Ηλεκτρονικών Επικοινωνιών και Ταχυδρομικών Υπηρεσιών Νόμος 112(Ι)/2004",
 			Provision: "άρθρο 106",
@@ -139,7 +356,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "8c007b6d664866b1c256991916ac9c01114ac23a7aee0bef121f6a1a5c6e685b",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(4)",
+		}},
+		Digest: "345be1b72d5919f73d6e7776db7db2e964b995286e34f3d731d251b6b8be6653",
 	}, {
 		Jurisdiction: "cz",
 		Version:      1,
@@ -149,8 +431,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Zákon č. 480/2004 Sb., o některých službách informační společnosti",
 			Provision: "§ 7",
+			SourceURL: "https://www.e-sbirka.cz/sb/2004/480",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -173,10 +461,90 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "a18932e6f14e49eacf86278bb0590f482aac79a0ef4e3648a8c91797dd15926b",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Zákon č. 480/2004 Sb., o některých službách informační společnosti",
+			Provision:  "§ 7 odst. 2",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Zákon č. 480/2004 Sb., o některých službách informační společnosti",
+			Provision:  "§ 7 odst. 2",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Zákon č. 480/2004 Sb., o některých službách informační společnosti",
+			Provision:  "§ 7 odst. 2",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Zákon č. 480/2004 Sb., o některých službách informační společnosti",
+			Provision:  "§ 7 odst. 2",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Zákon č. 480/2004 Sb., o některých službách informační společnosti",
+			Provision:  "§ 7 odst. 4 písm. b) a c)",
+		}},
+		Digest: "0e1592f697b29f7c7c1998dda1a50038003b464222021dac8c0b7c844d1a28f4",
 	}, {
-		Jurisdiction:       "de",
-		Version:            2,
+		Jurisdiction: "de",
+		Version:      2,
+		Instruments: []messaging.Instrument{{
+			Name:          "Directive 2002/58/EC",
+			EffectiveFrom: time.Date(2002, time.July, 31, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 13",
+			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
+		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
+			Name:      "Gesetz gegen den unlauteren Wettbewerb (UWG)",
+			Provision: "§ 7",
+			SourceURL: "https://www.gesetze-im-internet.de/uwg_2004/__7.html",
+		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
 		MarketingExceptions: []messaging.MarketingException{{
@@ -198,7 +566,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.September, 4, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "08545dbef099ad9d9dd6812adb7814fdd66e32dad4843e4234445cc0b4766e5f",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)",
+			Provision:  "§ 7 Abs. 2 Nr. 2",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)",
+			Provision:  "§ 7 Abs. 2 Nr. 2",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)",
+			Provision:  "§ 7 Abs. 2 Nr. 2",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)",
+			Provision:  "§ 7 Abs. 2 Nr. 2",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)",
+			Provision:  "§ 7 Abs. 2 Nr. 3 Buchst. c",
+		}},
+		Digest: "e5e5261c5a13e5bd8639c6258da116750aa9a6017ff904926fd6953618716a6b",
 	}, {
 		Jurisdiction: "dk",
 		Version:      1,
@@ -208,8 +641,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Markedsføringsloven",
 			Provision: "§ 10",
+			SourceURL: "https://www.retsinformation.dk/eli/lta/2022/866",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -232,7 +671,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "35dc318abc8a5002ce835e455be1fc1356b9a9e799e763ccb3095a5c236df20f",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Markedsføringsloven",
+			Provision:  "§ 10, stk. 1",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Markedsføringsloven",
+			Provision:  "§ 10, stk. 1",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Markedsføringsloven",
+			Provision:  "§ 10, stk. 1",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Markedsføringsloven",
+			Provision:  "§ 10, stk. 1",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Markedsføringsloven",
+			Provision:  "§ 10, stk. 3",
+		}},
+		Digest: "667ff41c49af26491e62095e16ce431854a0b26e433dbe0a48016b5fd64b74eb",
 	}, {
 		Jurisdiction: "ee",
 		Version:      1,
@@ -242,8 +746,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Elektroonilise side seadus (Electronic Communications Act)",
 			Provision: "§ 103¹",
+			SourceURL: "https://www.riigiteataja.ee/akt/ESS",
 		}, {
 			Name:      "Infoühiskonna teenuse seadus (Information Society Services Act)",
 			Provision: "§ 6",
@@ -269,7 +779,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "66ed47728751162582b10986d451c2226f5cb908e1c3bb860265cb78acedaec4",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Elektroonilise side seadus (Electronic Communications Act)",
+			Provision:  "§ 103¹ lg 1",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Elektroonilise side seadus (Electronic Communications Act)",
+			Provision:  "§ 103¹ lg 1",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Elektroonilise side seadus (Electronic Communications Act)",
+			Provision:  "§ 103¹ lg 1",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Elektroonilise side seadus (Electronic Communications Act)",
+			Provision:  "§ 103¹ lg 1",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Elektroonilise side seadus (Electronic Communications Act)",
+			Provision:  "§ 103¹ lg 4",
+		}},
+		Digest: "04f4f35c6155d7fca34a0f51ffc48cd9759b101559fc320d078eaa27523441a1",
 	}, {
 		Jurisdiction: "es",
 		Version:      1,
@@ -279,8 +854,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)",
 			Provision: "arts. 20 y 21",
+			SourceURL: "https://www.boe.es/buscar/act.php?id=BOE-A-2002-13758",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -304,7 +885,80 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "7e02fdd4323b65f5d774709c13968a79054f142d34dda4f59a3d485e99412f93",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)",
+			Provision:  "art. 21.1",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)",
+			Provision:  "art. 21.1",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)",
+			Provision:  "art. 21.1",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)",
+			Provision:  "art. 21.1",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)",
+			Provision:  "art. 21.2",
+		}, {
+			Code:       "subject_label_missing",
+			Instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)",
+			Provision:  "art. 20.1",
+		}, {
+			Code:       "subject_prefix",
+			Instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)",
+			Provision:  "art. 20.1",
+		}},
+		Digest: "8639484e4bbe282224b3cc99d71816ee4d75c3a3bd18efc8b3d1a6fd2c51a66f",
 	}, {
 		Jurisdiction: "fi",
 		Version:      1,
@@ -314,8 +968,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Laki sähköisen viestinnän palveluista (917/2014)",
 			Provision: "200–202 §",
+			SourceURL: "https://www.finlex.fi/fi/lainsaadanto/2014/917",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -338,7 +998,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "5eecca3bc03d961ef30c62c0f20a33154720271ad4d7922ba18036281c766db7",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Laki sähköisen viestinnän palveluista (917/2014)",
+			Provision:  "200 § 1 mom.",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Laki sähköisen viestinnän palveluista (917/2014)",
+			Provision:  "200 § 1 mom.",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Laki sähköisen viestinnän palveluista (917/2014)",
+			Provision:  "200 § 1 mom.",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Laki sähköisen viestinnän palveluista (917/2014)",
+			Provision:  "200 § 1 mom.",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(4)",
+		}},
+		Digest: "f06065280fd8413a1668d0272a62bb4b7591a95498b57bf91ccf8be46037e2fa",
 	}, {
 		Jurisdiction: "fr",
 		Version:      1,
@@ -348,8 +1073,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Code des postes et des communications électroniques",
 			Provision: "art. L34-5",
+			SourceURL: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000042155961",
 		}, {
 			Name:      "Loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique",
 			Provision: "art. 20",
@@ -375,7 +1106,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "96e30f2cb4748a490103954e4a41fefb269741bcb9d5d2062e14e0af8559968a",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Code des postes et des communications électroniques",
+			Provision:  "art. L34-5",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Code des postes et des communications électroniques",
+			Provision:  "art. L34-5",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Code des postes et des communications électroniques",
+			Provision:  "art. L34-5",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Code des postes et des communications électroniques",
+			Provision:  "art. L34-5",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(4)",
+		}},
+		Digest: "a24649ade74a25cc402b0046f54d4a61fe1357c3a80c01799dce1dbbb3b672af",
 	}, {
 		Jurisdiction: "gr",
 		Version:      1,
@@ -385,8 +1181,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Νόμος 3471/2006",
 			Provision: "άρθρο 11",
+			SourceURL: "https://www.dpa.gr/sites/default/files/2019-09/%CE%9D3471_06.PDF",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -409,7 +1211,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "0533d4c811130e0d3e70e3d444d6909bf3c895b289d69bfdf12bb15d669090c9",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Νόμος 3471/2006",
+			Provision:  "άρθρο 11 παρ. 1",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Νόμος 3471/2006",
+			Provision:  "άρθρο 11 παρ. 1",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Νόμος 3471/2006",
+			Provision:  "άρθρο 11 παρ. 1",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Νόμος 3471/2006",
+			Provision:  "άρθρο 11 παρ. 1",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(4)",
+		}},
+		Digest: "6830946bd1b7dfa44efe56d1f98bce87074d131c427407e7046b85b7fda652e5",
 	}, {
 		Jurisdiction: "hr",
 		Version:      1,
@@ -419,7 +1286,13 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
-			Name: "Zakon o elektroničkim komunikacijama (NN 76/22)",
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
+			Name:      "Zakon o elektroničkim komunikacijama (NN 76/22)",
+			SourceURL: "https://narodne-novine.nn.hr/clanci/sluzbeni/2022_07_76_1116.html",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -442,7 +1315,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "533f28d5f7f8e7839c13229c432ff292c211ec7b9135bc833f67cd43485cad2f",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)",
+			Provision:  "članak 50. stavak 1.",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)",
+			Provision:  "članak 50. stavak 1.",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)",
+			Provision:  "članak 50. stavak 1.",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)",
+			Provision:  "članak 50. stavak 1.",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)",
+			Provision:  "članak 50. stavak 3.",
+		}},
+		Digest: "f9fcc499a498632dff977243b15e235a6c64e96bed5fb778e13b8f1d807193c6",
 	}, {
 		Jurisdiction: "hu",
 		Version:      1,
@@ -452,8 +1390,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "2008. évi XLVIII. törvény a gazdasági reklámtevékenység alapvető feltételeiről és egyes korlátairól",
 			Provision: "6. §",
+			SourceURL: "https://njt.hu/jogszabaly/2008-48-00-00",
 		}, {
 			Name:      "2001. évi CVIII. törvény az elektronikus kereskedelmi szolgáltatások, valamint az információs társadalommal összefüggő szolgáltatások egyes kérdéseiről",
 			Provision: "14. §",
@@ -472,7 +1416,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "0522f4a48ff6bebcdbce4608477e3fc853da90c7e02106b1d94e14ba248f6929",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "2008. évi XLVIII. törvény a gazdasági reklámtevékenység alapvető feltételeiről és egyes korlátairól",
+			Provision:  "6. § (1)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "2008. évi XLVIII. törvény a gazdasági reklámtevékenység alapvető feltételeiről és egyes korlátairól",
+			Provision:  "6. § (1)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "2008. évi XLVIII. törvény a gazdasági reklámtevékenység alapvető feltételeiről és egyes korlátairól",
+			Provision:  "6. § (1)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "2008. évi XLVIII. törvény a gazdasági reklámtevékenység alapvető feltételeiről és egyes korlátairól",
+			Provision:  "6. § (1)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(4)",
+		}},
+		Digest: "1ea6650d0913b098e26625da2ef634f4c58746bdd0c5ec067e5120ff8e358012",
 	}, {
 		Jurisdiction: "ie",
 		Version:      1,
@@ -482,8 +1491,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011",
 			Provision: "Regulation 13",
+			SourceURL: "https://www.irishstatutebook.ie/eli/2011/si/336/made/en/print",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -499,7 +1514,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "2e57d39180c0a803ddba6968d1ac278046bc650036341d93eab080a66a13272a",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011",
+			Provision:  "Regulation 13(1)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011",
+			Provision:  "Regulation 13(1)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011",
+			Provision:  "Regulation 13(1)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011",
+			Provision:  "Regulation 13(1)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011",
+			Provision:  "Regulation 13(12)",
+		}},
+		Digest: "902e5a89ebdbf43ecdb5d3d75c0eac428322d0655fdf04aecee74cdb88a0024f",
 	}, {
 		Jurisdiction: "it",
 		Version:      1,
@@ -509,8 +1589,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)",
 			Provision: "art. 130",
+			SourceURL: "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2003-06-30;196~art130",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -534,7 +1620,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "8e2ac5766e3c91fba9fe538412aa8d8e76cb938a2283dac6a85d6c950585b507",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)",
+			Provision:  "art. 130, commi 1 e 2",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)",
+			Provision:  "art. 130, commi 1 e 2",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)",
+			Provision:  "art. 130, commi 1 e 2",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)",
+			Provision:  "art. 130, commi 1 e 2",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)",
+			Provision:  "art. 130, comma 5",
+		}},
+		Digest: "b29df2801db29627a1e511d1084e3d6b9bc74168a5df1eb5f5806527ea3db65c",
 	}, {
 		Jurisdiction: "lt",
 		Version:      1,
@@ -543,6 +1694,11 @@ func messagingRules() []messaging.Rules {
 			EffectiveFrom: time.Date(2002, time.July, 31, 0, 0, 0, 0, time.UTC),
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
+		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
 		}, {
 			Name: "Elektroninių ryšių įstatymas (Law on Electronic Communications)",
 		}},
@@ -567,7 +1723,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "14b8ad9db77801b0ac28c5b43160b3375ff1162cb2259710d34f81f5d47726d6",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(1)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(4)",
+		}},
+		Digest: "ae6ec5962bd8bfcf3d370b9b9de63f2296d5246b4ed7d3437964537daeabe0e4",
 	}, {
 		Jurisdiction: "lu",
 		Version:      1,
@@ -577,8 +1798,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques",
 			Provision: "art. 11",
+			SourceURL: "https://legilux.public.lu/eli/etat/leg/loi/2005/05/30/n4/jo",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -601,7 +1828,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "5f56ad63ce2974b8e41a2556b138cfc20e90aad92f50186af4cbdde4c6b29d9a",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques",
+			Provision:  "art. 11, paragraphe 1",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques",
+			Provision:  "art. 11, paragraphe 1",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques",
+			Provision:  "art. 11, paragraphe 1",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques",
+			Provision:  "art. 11, paragraphe 1",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques",
+			Provision:  "art. 11, paragraphe 4",
+		}},
+		Digest: "19103ef6fc1ea7b533c0686c56f0d371ff7c0f656ac3592645afd0e49fbfa000",
 	}, {
 		Jurisdiction: "lv",
 		Version:      1,
@@ -611,8 +1903,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Informācijas sabiedrības pakalpojumu likums",
 			Provision: "9. pants",
+			SourceURL: "https://likumi.lv/ta/id/96619",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -635,7 +1933,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "322fe60ac3da739cd50ed8c000702a713fdabf6380d2409623ad045ec233cb49",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Informācijas sabiedrības pakalpojumu likums",
+			Provision:  "9. panta pirmā daļa",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Informācijas sabiedrības pakalpojumu likums",
+			Provision:  "9. panta pirmā daļa",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Informācijas sabiedrības pakalpojumu likums",
+			Provision:  "9. panta pirmā daļa",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Informācijas sabiedrības pakalpojumu likums",
+			Provision:  "9. panta pirmā daļa",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Informācijas sabiedrības pakalpojumu likums",
+			Provision:  "9. panta ceturtā daļa",
+		}},
+		Digest: "ebcec8f7b17d0d9fc6aa090aaef9292af4d058453d6bbefd8480b6cfbe0cab69",
 	}, {
 		Jurisdiction: "mt",
 		Version:      1,
@@ -645,8 +2008,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Processing of Personal Data (Electronic Communications Sector) Regulations, S.L. 586.01",
 			Provision: "regulation 9",
+			SourceURL: "https://legislation.mt/eli/sl/586.1/eng",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -669,7 +2038,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "8a7d00f5db367197626c11a6b097b751f19a7858825f9ee2acefb298de722bc9",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Processing of Personal Data (Electronic Communications Sector) Regulations, S.L. 586.01",
+			Provision:  "regulation 9(1)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Processing of Personal Data (Electronic Communications Sector) Regulations, S.L. 586.01",
+			Provision:  "regulation 9(1)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Processing of Personal Data (Electronic Communications Sector) Regulations, S.L. 586.01",
+			Provision:  "regulation 9(1)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Processing of Personal Data (Electronic Communications Sector) Regulations, S.L. 586.01",
+			Provision:  "regulation 9(1)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Processing of Personal Data (Electronic Communications Sector) Regulations, S.L. 586.01",
+			Provision:  "regulation 9(4)",
+		}},
+		Digest: "f00e84524f58c3be6cb0c30a97b8fdd92e59539de27abef3275a6229a5e1e742",
 	}, {
 		Jurisdiction: "nl",
 		Version:      1,
@@ -679,8 +2113,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Telecommunicatiewet",
 			Provision: "art. 11.7",
+			SourceURL: "https://wetten.overheid.nl/BWBR0009950/",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -703,7 +2143,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "ff3dde571459428abcdb189c9991c006b1faa6357d8302d321d5b6cec1478a75",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Telecommunicatiewet",
+			Provision:  "art. 11.7, eerste lid",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Telecommunicatiewet",
+			Provision:  "art. 11.7, eerste lid",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Telecommunicatiewet",
+			Provision:  "art. 11.7, eerste lid",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Telecommunicatiewet",
+			Provision:  "art. 11.7, eerste lid",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Telecommunicatiewet",
+			Provision:  "art. 11.7, zevende lid",
+		}},
+		Digest: "190f69a059f37564158f34abd08471f5de9f6b3f500de8de9a36dc5af97a1f1f",
 	}, {
 		Jurisdiction: "pl",
 		Version:      1,
@@ -713,8 +2218,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej",
 			Provision: "art. 398",
+			SourceURL: "https://eli.gov.pl/eli/DU/2024/1221/ogl",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -730,7 +2241,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "42a9581b4b3e556a4a2413c3f256facae1defa1ae48c7e3ddf3c5ace91d441d1",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej",
+			Provision:  "art. 398 ust. 1",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej",
+			Provision:  "art. 398 ust. 1",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej",
+			Provision:  "art. 398 ust. 1",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej",
+			Provision:  "art. 398 ust. 1",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Directive 2002/58/EC",
+			Provision:  "Art. 13(4)",
+		}},
+		Digest: "616280786243f00c938dad8e5cdf0217075c6b93961eb314be6a0ea76703ba43",
 	}, {
 		Jurisdiction: "pt",
 		Version:      1,
@@ -740,8 +2316,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Lei n.º 41/2004, de 18 de agosto",
 			Provision: "art. 13.º-A",
+			SourceURL: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2004-106523049",
 		}, {
 			Name:      "Decreto-Lei n.º 7/2004, de 7 de janeiro",
 			Provision: "art. 22.º",
@@ -767,7 +2349,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "8c6634e5fe3103607f6e0fe890744f780f18d55400aec7c1d28ef8d8e902803a",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Lei n.º 41/2004, de 18 de agosto",
+			Provision:  "art. 13.º-A, n.º 1",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Lei n.º 41/2004, de 18 de agosto",
+			Provision:  "art. 13.º-A, n.º 1",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Lei n.º 41/2004, de 18 de agosto",
+			Provision:  "art. 13.º-A, n.º 1",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Lei n.º 41/2004, de 18 de agosto",
+			Provision:  "art. 13.º-A, n.º 1",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Lei n.º 41/2004, de 18 de agosto",
+			Provision:  "art. 13.º-A, n.º 4",
+		}},
+		Digest: "e355bb84258930fa116972421dfee26c698372c65a32c23b43b7088d00fb972d",
 	}, {
 		Jurisdiction: "ro",
 		Version:      1,
@@ -777,8 +2424,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice",
 			Provision: "art. 12",
+			SourceURL: "https://legislatie.just.ro/Public/DetaliiDocument/56973",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -801,7 +2454,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "628c8a9b0c256449cc7625249f9a184a94e2d6d6dbe624347209e7b33597e57f",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice",
+			Provision:  "art. 12 alin. (1)",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice",
+			Provision:  "art. 12 alin. (1)",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice",
+			Provision:  "art. 12 alin. (1)",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice",
+			Provision:  "art. 12 alin. (1)",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice",
+			Provision:  "art. 12 alin. (3)",
+		}},
+		Digest: "6b552133644d82dfe6ea734ca091576c7645cf87d9b5f9375ebee77da8519e47",
 	}, {
 		Jurisdiction: "se",
 		Version:      1,
@@ -811,8 +2529,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Marknadsföringslagen (2008:486)",
 			Provision: "19–20 §§",
+			SourceURL: "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/marknadsforingslag-2008486_sfs-2008-486/",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -835,7 +2559,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "9e9ece41235e8cdde4431bc054c55535ba3d2eea77cb6aaabbd6880cc2617918",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Marknadsföringslagen (2008:486)",
+			Provision:  "19 § första stycket",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Marknadsföringslagen (2008:486)",
+			Provision:  "19 § första stycket",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Marknadsföringslagen (2008:486)",
+			Provision:  "19 § första stycket",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Marknadsföringslagen (2008:486)",
+			Provision:  "19 § första stycket",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Marknadsföringslagen (2008:486)",
+			Provision:  "20 §",
+		}},
+		Digest: "913acea4a50300cdb1ee52ace719a8ff8cd1780b14aed2250e4dd2bb499d4520",
 	}, {
 		Jurisdiction: "si",
 		Version:      1,
@@ -845,7 +2634,13 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
-			Name: "Zakon o elektronskih komunikacijah (ZEKom-2)",
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
+			Name:      "Zakon o elektronskih komunikacijah (ZEKom-2)",
+			SourceURL: "https://pisrs.si/pregledPredpisa?id=ZAKO8611",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -868,7 +2663,72 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "bceb39134510c7d89c6a6854410950c38889af52efc8d8fc5829a488e39a24b5",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)",
+			Provision:  "226. člen, (1) odstavek",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)",
+			Provision:  "226. člen, (1) odstavek",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)",
+			Provision:  "226. člen, (1) odstavek",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)",
+			Provision:  "226. člen, (1) odstavek",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)",
+			Provision:  "226. člen, (5) odstavek",
+		}},
+		Digest: "661ef62ababa71050dee18f4bf2d3a787194400c6fb243060f96e57255f717fb",
 	}, {
 		Jurisdiction: "sk",
 		Version:      1,
@@ -878,8 +2738,14 @@ func messagingRules() []messaging.Rules {
 			Provision:     "Art. 13",
 			SourceURL:     "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
 		}, {
+			Name:          "Regulation (EU) 2016/679 (GDPR)",
+			EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC),
+			Provision:     "Art. 6(1)",
+			SourceURL:     "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+		}, {
 			Name:      "Zákon č. 452/2021 Z. z. o elektronických komunikáciách",
 			Provision: "§ 116",
+			SourceURL: "https://www.slov-lex.sk/ezbierky/pravne-predpisy/SK/ZZ/2021/452/",
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -902,6 +2768,71 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "c9b6ebef7d495496f5d22c8e7ee2a5e32c8214b155e37d74381419a8f5d7909d",
+		Citations: []messaging.Citation{{
+			Code:       "no_compatible_evidence",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "deal_not_requested",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 6(1)",
+		}, {
+			Code:       "marketing_objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "objection",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "opted_out_after_request",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(3)",
+		}, {
+			Code:       "consent_withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "withdrawn",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 7(3)",
+		}, {
+			Code:       "processing_restricted",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 18(2)",
+		}, {
+			Code:       "objection_route",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 21(4)",
+		}, {
+			Code:       "controller_identity",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(a) and Art. 14(1)(a)",
+		}, {
+			Code:       "privacy_contact",
+			Instrument: "Regulation (EU) 2016/679 (GDPR)",
+			Provision:  "Art. 13(1)(b) and Art. 14(1)(b)",
+		}, {
+			Code:       "no_marketing_consent",
+			Instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách",
+			Provision:  "§ 116 ods. 3",
+		}, {
+			Code:       "marketing_permission_required",
+			Instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách",
+			Provision:  "§ 116 ods. 3",
+		}, {
+			Code:       "marketing_consent_required",
+			Instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách",
+			Provision:  "§ 116 ods. 3",
+		}, {
+			Code:       "unconfirmed_double_opt_in",
+			Instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách",
+			Provision:  "§ 116 ods. 3",
+		}, {
+			Code:       "public_opt_out_link",
+			Instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách",
+			Provision:  "§ 116 ods. 15",
+		}},
+		Digest: "2104f7a7d576ef086ee2c86be857b35b12f0e130058270afc74f681b3c725af8",
 	}}
 }

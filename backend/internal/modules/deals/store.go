@@ -72,6 +72,8 @@ type Store struct {
 	reviewDocs LegalReviewDocuments
 	// reviewRecords lists the agreements and activity a review pack carries.
 	reviewRecords LegalReviewRecords
+	// reviewDesk tells the seats that answer a legal review that one waits.
+	reviewDesk LegalReviewDesk
 }
 
 // InstallationValue resolves ONE installation-identity value inside a

@@ -5,6 +5,7 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
   "systemJob.promise_kept":
     "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
@@ -4861,6 +4862,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
   "approval.kind.contact_share": "Kontakt teilen",
+  "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
@@ -8081,16 +8083,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
-  "compose.fact.open": "Gespräch festhalten",
-  "compose.fact.title": "Gespräch mit {address} festhalten",
-  "compose.fact.scope":
-    "Hält den Austausch mit {address} für das sendende Unternehmen fest. Sendet keine E-Mail, erfasst keine Werbeeinwilligung und erstellt keine Ausnahme.",
-  "compose.fact.kind": "Was ist passiert?",
-  "compose.fact.request": "Der Kontakt hat um eine Nachricht gebeten",
-  "compose.fact.quoteRequest": "Der Kontakt hat um dieses Angebot gebeten",
   "compose.fact.met": "Persönlich getroffen",
-  "compose.fact.note": "Was wurde vereinbart?",
-  "compose.fact.save": "Gespräch festhalten",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
   "compose.draftReply": "Antwort entwerfen",
@@ -8322,6 +8315,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Vertrag der Gegenseite",
   "compose.why.account": "Kundenbeziehung der Gegenseite",
   "compose.why.marketing": "Marketing",
+  "compose.why.met": "Persönlich getroffen",
+  "compose.why.asked": "Auf ihre Anfrage",
+  "compose.why.openDeal": "Offener Deal",
+  "compose.why.customer": "Bestandskunde",
+  "compose.whyHint.met":
+    "Persönliche Mail, ohne Abmeldelink. Das Treffen wird beim Kontakt gespeichert.",
+  "compose.whyHint.asked":
+    "Persönliche Mail, ohne Abmeldelink. Die Anfrage muss gespeichert sein.",
+  "compose.whyHint.openDeal": "Persönliche Mail zum Deal, ohne Abmeldelink.",
+  "compose.whyHint.customer": "Service-Mail, ohne Abmeldelink.",
+  "compose.whyHint.marketing":
+    "Fügt einen Abmeldelink und die Firmenangaben hinzu. Braucht ihre Einwilligung oder einen früheren Kauf.",
+  "compose.met.failed":
+    "Das Treffen wurde nicht gespeichert, daher wurde nichts gesendet. Versuch es erneut.",
   "sendPermission.stopWithReason": "Senden braucht deine Begründung",
   "sendPermission.refused": "Nachricht kann nicht gesendet werden",
   "sendPermission.sayWhy": "Kontaktgrund erfassen",
@@ -8361,19 +8368,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.recheck": "Erneut prüfen",
   "compose.sendWithReason": "Mit Begründung senden…",
   "compose.scheduleWithReason": "Mit Begründung planen…",
-  "compose.holdForCheck": "Senden wartet auf die Versandprüfung.",
   "compose.legacyFooter":
     "Diese Version von Margince kann E-Mails mit fehlenden Angaben zum Unternehmen noch nicht mit einer Begründung senden. Dein Entwurf bleibt erhalten. Frag einen Admin nach einem Update von Margince. Versuche es danach erneut.",
-  "compose.holdRefused":
-    "Senden ist gesperrt. Behebe, was die Prüfung oben nennt, oder entferne diese Empfangsadresse.",
-  "compose.holdWithReason":
-    "Die Prüfung hat diese Nachricht abgelehnt. Senden fragt nach deiner Begründung, und sie gilt nur für diese eine Nachricht.",
   "sendPermission.appliesToSome_one":
     "Das betrifft {count} von {total} Empfangsadressen.",
   "sendPermission.appliesToSome_other":
     "Das betrifft {count} von {total} Empfangsadressen.",
-  "sendPermission.ready": "Empfangsadressen geprüft",
-  "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
   "lawfulBasis.title": "Keine gültige Grundlage erfasst",
@@ -8547,17 +8547,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Nachricht kann so nicht an {address} gesendet werden.",
   "compose.sendAnyway.finding.none":
     "Diese Nachricht kann so nicht gesendet werden.",
-  "compose.sendAnyway.cited":
-    "Achtung: Eine E-Mail an {address} verstößt vielleicht gegen",
   "compose.citation.law": "Vorschrift:",
-  "compose.sendAnyway.warning":
-    "Die Versandprüfung blockiert diese Nachricht weiterhin. Trotzdem senden sendet nur diese Nachricht und erlaubt keine späteren. Dein Name, deine Begründung und die Nachricht werden in einem Eintrag gespeichert, der nicht geändert werden kann.",
   "compose.sendAnyway.editOnly":
     "Bearbeite die Nachricht oder entferne diese Empfangsadresse, um sie zu senden.",
   "compose.sendAnyway.more_one": "{count} weiterer Befund",
   "compose.sendAnyway.more_other": "{count} weitere Befunde",
-  "compose.sendAnyway.details": "Details",
-  "compose.sendAnyway.reasonLabel": "Grund für den Versand",
   "compose.sendAnyway.confirm": "Trotzdem senden",
   "compose.sendAnyway.marked": "im Hinweis genannt",
   "compose.sendAnyway.failed":
@@ -8568,7 +8562,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendAnyway.retry": "Erneut versuchen",
   "compose.sendAnyway.unreviewed":
     "Diese Nachricht wurde nicht gesendet. Dein Entwurf bleibt erhalten. Wende dich an einen Admin, um Margince zu aktualisieren, und sende dann erneut.",
-  "compose.reviewReference": "Prüfung",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",
   "compose.draftUnsupportedHere":
@@ -8580,8 +8573,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapableGoto": "Postfach neu verbinden",
   "compose.sharedUnsubscribeToken":
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
-  "compose.newContact":
-    "{address} steht noch in keinem Datensatz. Beim Senden wird die Adresse als dein Kontakt angelegt.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget":
     "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",
@@ -8598,9 +8589,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.missingSubject": "Gib einen Betreff ein.",
   "compose.missingBody": "Gib vor dem Senden eine Nachricht ein.",
   "compose.missingWhy": "Wähle den Kontaktgrund aus.",
-  "compose.reasonSwitchText":
-    "Für diese Nachricht steht schon ein anderer Grund im Datensatz.",
-  "compose.reasonSwitch": "Stattdessen „{reason}“ verwenden",
   "compose.missingDeal": "Wähle den Deal, um den es in diesem Follow-up geht.",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",
@@ -18685,6 +18673,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Entscheidung der Käuferseite zu einem Dokument",
   "webhooks.event.deal_room.decision_recorded.when":
     "Wird derzeit nicht gesendet. Bleibt für Empfangssysteme erhalten, die noch ältere Ereignisse lesen.",
+  "webhooks.eventGroup.legal_reviews": "Rechtsprüfungen",
+  "webhooks.event.legal_review.requested.label": "Rechtsprüfung angefragt",
+  "webhooks.event.legal_review.requested.when":
+    "Ein Deal wird zur Prüfung an die Rechtsabteilung geschickt.",
+  "webhooks.event.legal_review.decided.label": "Rechtsprüfung beantwortet",
+  "webhooks.event.legal_review.decided.when":
+    "Die Rechtsabteilung gibt einen Deal frei oder verlangt Änderungen.",
+  "webhooks.event.legal_review.withdrawn.label": "Rechtsprüfung zurückgezogen",
+  "webhooks.event.legal_review.withdrawn.when":
+    "Eine Anfrage an die Rechtsabteilung wird zurückgenommen.",
   "webhooks.eventGroup.introductions": "Vorstellungen",
   "webhooks.event.intro_request.created.label": "Vorstellung angefragt",
   "webhooks.event.intro_request.created.when":
@@ -22934,6 +22932,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.status.approved": "Freigegeben",
   "legalReview.status.changes_needed": "Änderungen nötig",
   "legalReview.status.withdrawn": "Zurückgezogen",
+  "legalReview.openQueue": "Rechtsprüfungen öffnen",
+  "legalReview.dismissRequest": "Ausblenden",
   "legalReview.queueTitle": "Rechtsprüfungen",
   "legalReview.queueOpen": "Offen",
   "legalReview.queueDecided": "Beantwortet",
@@ -23995,11 +23995,4 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "particulars.translationIntro":
     "E-Mails und Seiten auf {language} zeigen diesen Text, wo du ihn ausfüllst. Werbung, die auf {language} sein muss, geht erst raus, wenn Ablehnung und Kontaktdaten des werbenden Unternehmens hier ausgefüllt sind.",
   "particulars.objectionExample": "Beispiel: {example}",
-  "compose.contentFinding.title": "Werberegeln für diese E-Mail",
-  "compose.contentFinding.claim":
-    "„{words}“ darfst du nur mit Nachweis behaupten. Ergänze Name, Nummer und Datum des Nachweises in der E-Mail.",
-  "compose.contentFinding.language":
-    "Schreibe diese E-Mail zuerst auf {language}. Text in einer anderen Sprache steht darunter und ist nicht größer als der Text auf {language}.",
-  "compose.contentFinding.foreignAdvertiser":
-    "Dein Unternehmen ist nicht in {country} niedergelassen. Ein ausländisches Unternehmen, das in {country} nicht tätig ist, darf dort nur über ein Werbeunternehmen aus {country} werben. Dafür ist dein Unternehmen verantwortlich.",
 };

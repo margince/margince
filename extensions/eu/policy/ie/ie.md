@@ -3,17 +3,35 @@ jurisdiction: ie
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011"
     provision: "Regulation 13"
+    source-url: https://www.irishstatutebook.ie/eli/2011/si/336/made/en/print
 marketing-exceptions: []
 fixtures:
   - finding: objection_route
     triggers: ie/fixtures/advertising-without-objection-route.md
     clears: ie/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011"
+    provision: "Regulation 13(1)"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011"
+    provision: "Regulation 13(1)"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011"
+    provision: "Regulation 13(1)"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011"
+    provision: "Regulation 13(1)"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011"
+    provision: "Regulation 13(12)"
 ---
 
 # What Irish law requires of an outbound message

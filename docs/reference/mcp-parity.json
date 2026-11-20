@@ -8551,7 +8551,7 @@
       "verb": "record_qualifying_event",
       "router": "change_compliance",
       "action": "record_qualifying_event",
-      "web_app": "inferred"
+      "web_app": "direct"
     },
     {
       "method": "POST",
@@ -12827,7 +12827,7 @@
       "verb": "record_lead_qualifying_event",
       "router": "change_compliance",
       "action": "record_lead_qualifying_event",
-      "web_app": "inferred"
+      "web_app": "direct"
     },
     {
       "method": "POST",

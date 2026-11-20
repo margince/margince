@@ -184,7 +184,6 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	if err := deleteConversationClaimsFor(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
-	// And the handoffs naming them, for the same reason and on the same act.
 	if err := deleteSubjectHandoffs(ctx, tx, contactID); err != nil {
 		return nil, err
 	}

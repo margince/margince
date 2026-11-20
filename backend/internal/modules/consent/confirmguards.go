@@ -210,8 +210,8 @@ func linkSubjectOf(contactID ids.ContactID, leadID ids.LeadID) subject {
 	return subject{entityType: entityContact, column: subjectColumnContact, id: contactID.UUID}
 }
 
-// requireUpdate asks for update on the subject's own object. Each object is
-// named as a constant, so the grant scan sees which seeded roles reach this door.
+// requireUpdate asks for update on the subject's own object.
+// Each object is a named constant, so the grant scan sees who reaches this door.
 func (s subject) requireUpdate(ctx context.Context) error {
 	if s.entityType == entityLead {
 		return auth.Require(ctx, entityLead, principal.ActionUpdate)

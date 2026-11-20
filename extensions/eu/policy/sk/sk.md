@@ -3,16 +3,34 @@ jurisdiction: sk
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách"
     provision: "§ 116"
+    source-url: https://www.slov-lex.sk/ezbierky/pravne-predpisy/SK/ZZ/2021/452/
 fixtures:
   - finding: objection_route
     triggers: sk/fixtures/advertising-without-objection-route.md
     clears: sk/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách"
+    provision: "§ 116 ods. 3"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách"
+    provision: "§ 116 ods. 3"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách"
+    provision: "§ 116 ods. 3"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách"
+    provision: "§ 116 ods. 3"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách"
+    provision: "§ 116 ods. 15"
 ---
 
 # What Slovak law requires of an outbound message

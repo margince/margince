@@ -44,16 +44,17 @@ func ReliabilityIntervalOf(passed, runs int) *ReliabilityInterval {
 		return nil
 	}
 	lower, upper := wilsonBounds(passed, runs)
-	// The page holds these as JSON numbers, and the last digits of a float
-	// differ by machine. Four decimals read the same everywhere. The verdict
-	// reads wilsonBounds itself, so this changes no grade.
-	return &ReliabilityInterval{Lower: roundedBound(lower), Upper: roundedBound(upper)}
-}
-
-// roundedBound is a bound to four decimals. Adding zero turns a negative zero
-// into a positive one, which JSON would print as -0.
-func roundedBound(x float64) float64 {
-	return math.Round(x*1e4)/1e4 + 0
+	// The last digits of the formula differ between CPUs, and the committed
+	// report must read the same on every machine. Six decimals is far finer
+	// than any report prints. An end on 0 or 1 is the edge itself.
+	if passed == 0 {
+		lower = 0
+	}
+	if passed == runs {
+		upper = 1
+	}
+	lower, upper = roundReported(lower), roundReported(upper)
+	return &ReliabilityInterval{Lower: lower, Upper: upper}
 }
 
 // ReliabilityCell is how every report prints a reliability: the point with its
@@ -109,4 +110,9 @@ func tQuantile(df int) float64 {
 		df = len(tQuantile90)
 	}
 	return tQuantile90[df-1]
+}
+
+// roundReported rounds a printed bound to six decimals.
+func roundReported(bound float64) float64 {
+	return math.Round(bound*1e6) / 1e6
 }

@@ -659,7 +659,7 @@ describe("a saved draft", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Reason for contact" }),
-      "Follow-up they requested",
+      "They asked for it",
     );
 
     await pressSend(user);
@@ -754,7 +754,7 @@ describe("a saved draft", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Reason for contact" }),
-      "Follow-up they requested",
+      "They asked for it",
     );
 
     await pressSend(user);
@@ -778,7 +778,7 @@ describe("a saved draft", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Reason for contact" }),
-      "Follow-up they requested",
+      "They asked for it",
     );
 
     await pressSend(user);

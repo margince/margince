@@ -14,6 +14,7 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "systemJob.legal_review_desk": "Rà soát pháp lý",
   "systemJob.import_identity_links": "Liên kết email đã nhập",
   "systemJob.promise_kept": "Đóng cam kết mà cuộc họp cho thấy đã thực hiện",
   "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
@@ -4735,6 +4736,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
   "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
+  "approval.kind.legal_review_request": "Yêu cầu rà soát pháp lý",
   "approval.kind.task_due_date": "Kiểm tra hạn",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
@@ -7881,16 +7883,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Chuỗi thư mới",
   "compose.copies": "Cc và Bcc",
   "compose.signsOffAs": "Kết thư bằng “{closing}”.",
-  "compose.fact.open": "Ghi lại sự việc",
-  "compose.fact.title": "Ghi lại trao đổi với {address}",
-  "compose.fact.scope":
-    "Ghi lại trao đổi với {address} cho công ty gửi email. Không gửi email này, không ghi nhận đồng ý nhận quảng cáo hay tạo ngoại lệ.",
-  "compose.fact.kind": "Đã xảy ra việc gì?",
-  "compose.fact.request": "Đã yêu cầu tôi liên hệ",
-  "compose.fact.quoteRequest": "Đã yêu cầu báo giá này",
   "compose.fact.met": "Đã gặp trực tiếp",
-  "compose.fact.note": "Đã thống nhất điều gì?",
-  "compose.fact.save": "Ghi lại trao đổi",
   "compose.replyIntent": "Mục đích trả lời",
   "compose.newIntent": "Mục đích email",
   "compose.draftReply": "Soạn trả lời",
@@ -8113,6 +8106,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Hợp đồng của họ",
   "compose.why.account": "Quan hệ khách hàng của họ",
   "compose.why.marketing": "Tiếp thị",
+  "compose.why.met": "Đã gặp trực tiếp",
+  "compose.why.asked": "Họ đã yêu cầu",
+  "compose.why.openDeal": "Deal đang mở",
+  "compose.why.customer": "Khách hàng hiện tại",
+  "compose.whyHint.met":
+    "Thư cá nhân, không có liên kết hủy đăng ký. Cuộc gặp được lưu vào liên hệ.",
+  "compose.whyHint.asked":
+    "Thư cá nhân, không có liên kết hủy đăng ký. Cần có yêu cầu của họ trong hồ sơ.",
+  "compose.whyHint.openDeal":
+    "Thư cá nhân về deal, không có liên kết hủy đăng ký.",
+  "compose.whyHint.customer": "Thư dịch vụ, không có liên kết hủy đăng ký.",
+  "compose.whyHint.marketing":
+    "Thêm liên kết hủy đăng ký và thông tin công ty. Cần sự đồng ý của họ hoặc một lần mua trước đó.",
+  "compose.met.failed": "Cuộc gặp chưa được lưu nên chưa gửi gì. Hãy thử lại.",
   "sendPermission.stopWithReason": "Cần lý do của bạn để gửi",
   "sendPermission.refused": "Không thể gửi tin nhắn",
   "sendPermission.sayWhy": "Ghi lý do liên hệ",
@@ -8150,19 +8157,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.recheck": "Kiểm tra lại",
   "compose.sendWithReason": "Gửi kèm lý do…",
   "compose.scheduleWithReason": "Lên lịch kèm lý do…",
-  "compose.holdForCheck": "Nút Gửi chờ bước kiểm tra gửi.",
   "compose.legacyFooter":
     "Máy chủ này chưa hỗ trợ gửi kèm lý do khi thiếu thông tin email của công ty. Bản nháp được giữ lại. Liên hệ quản trị viên để cập nhật Margince rồi thử lại.",
-  "compose.holdRefused":
-    "Không thể gửi. Hãy sửa điều bước kiểm tra ở trên nêu ra, hoặc bỏ người nhận đó.",
-  "compose.holdWithReason":
-    "Bước kiểm tra đã từ chối tin nhắn này. Nút Gửi sẽ hỏi lý do của bạn, và lý do chỉ áp dụng cho riêng tin nhắn này.",
   "sendPermission.appliesToSome_one":
     "Điều này áp dụng cho {count} trên {total} người nhận.",
   "sendPermission.appliesToSome_other":
     "Điều này áp dụng cho {count} trên {total} người nhận.",
-  "sendPermission.ready": "Đã kiểm tra người nhận",
-  "sendPermission.markName": "Trạng thái liên lạc của tin nhắn này",
   "sendPermission.checking": "Đang kiểm tra xem có thể gửi tin nhắn này không…",
   "lawfulBasis.title": "Chưa ghi nhận căn cứ hợp lệ",
   "lawfulBasis.body":
@@ -8324,15 +8324,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể gửi tin nhắn này tới {address} ở dạng hiện tại.",
   "compose.sendAnyway.finding.none":
     "Không thể gửi tin nhắn này ở dạng hiện tại.",
-  "compose.sendAnyway.cited": "Lưu ý: gửi tới {address} có thể vi phạm",
   "compose.citation.law": "Quy định:",
-  "compose.sendAnyway.warning":
-    "Lần kiểm tra trước khi gửi vẫn chặn tin nhắn này. Vẫn gửi chỉ gửi tin nhắn này và không cho phép các tin nhắn sau. Tên, lý do của bạn và tin nhắn được lưu trong một bản ghi không thể chỉnh sửa.",
   "compose.sendAnyway.editOnly": "Sửa tin nhắn hoặc bỏ địa chỉ này để gửi.",
   "compose.sendAnyway.more_one": "Thêm {count} kết quả",
   "compose.sendAnyway.more_other": "Thêm {count} kết quả",
-  "compose.sendAnyway.details": "Chi tiết",
-  "compose.sendAnyway.reasonLabel": "Lý do gửi",
   "compose.sendAnyway.confirm": "Vẫn gửi",
   "compose.sendAnyway.marked": "có trong cảnh báo",
   "compose.sendAnyway.failed": "Chưa gửi được tin nhắn. Chọn Vẫn gửi lần nữa.",
@@ -8342,7 +8337,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.sendAnyway.retry": "Thử lại",
   "compose.sendAnyway.unreviewed":
     "Chưa gửi tin nhắn này. Bản nháp vẫn được giữ. Liên hệ quản trị viên để cập nhật Margince, rồi gửi lại.",
-  "compose.reviewReference": "Phê duyệt",
   "compose.draftUnavailable":
     "Không thể soạn nháp bằng AI vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",
   "compose.draftUnsupportedHere":
@@ -8353,8 +8347,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapableGoto": "Kết nối lại hộp thư",
   "compose.sharedUnsubscribeToken":
     "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
-  "compose.newContact":
-    "{address} chưa có trong hồ sơ nào. Khi gửi, địa chỉ này sẽ được thêm làm liên hệ của bạn.",
   "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",
   "compose.relinkTarget": "Tìm liên hệ, công ty, deal, lead hoặc dự án",
   "compose.relinkNoVersion":
@@ -8370,8 +8362,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.missingSubject": "Nhập tiêu đề.",
   "compose.missingBody": "Nhập nội dung trước khi gửi.",
   "compose.missingWhy": "Chọn lý do liên hệ.",
-  "compose.reasonSwitchText": "Hồ sơ đã có một lý do khác cho thư này.",
-  "compose.reasonSwitch": "Dùng “{reason}” thay thế",
   "compose.missingDeal": "Chọn deal mà thư theo dõi này nói về.",
   "compose.actionFailed": "Yêu cầu không thành công. Thử lại.",
 
@@ -18190,6 +18180,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quyết định của bên mua về tài liệu",
   "webhooks.event.deal_room.decision_recorded.when":
     "Hiện không còn gửi. Giữ lại cho hệ thống nhận vẫn đọc sự kiện cũ.",
+  "webhooks.eventGroup.legal_reviews": "Rà soát pháp lý",
+  "webhooks.event.legal_review.requested.label": "Đã yêu cầu rà soát pháp lý",
+  "webhooks.event.legal_review.requested.when":
+    "Một deal được gửi cho bộ phận pháp lý rà soát.",
+  "webhooks.event.legal_review.decided.label": "Đã trả lời rà soát pháp lý",
+  "webhooks.event.legal_review.decided.when":
+    "Bộ phận pháp lý duyệt một deal hoặc yêu cầu chỉnh sửa.",
+  "webhooks.event.legal_review.withdrawn.label":
+    "Đã rút yêu cầu rà soát pháp lý",
+  "webhooks.event.legal_review.withdrawn.when":
+    "Một yêu cầu gửi bộ phận pháp lý được rút lại.",
   "webhooks.eventGroup.introductions": "Giới thiệu",
   "webhooks.event.intro_request.created.label": "Đã yêu cầu giới thiệu",
   "webhooks.event.intro_request.created.when":
@@ -22318,6 +22319,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalReview.status.approved": "Đã duyệt",
   "legalReview.status.changes_needed": "Cần thay đổi",
   "legalReview.status.withdrawn": "Đã rút",
+  "legalReview.openQueue": "Mở Rà soát pháp lý",
+  "legalReview.dismissRequest": "Ẩn",
   "legalReview.queueTitle": "Rà soát pháp lý",
   "legalReview.queueOpen": "Đang chờ",
   "legalReview.queueDecided": "Đã trả lời",
@@ -23353,11 +23356,4 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "particulars.translationIntro":
     "Email và trang bằng {language} hiển thị nội dung này ở những trường bạn điền. Quảng cáo phải viết bằng {language} chỉ được gửi khi cách từ chối và liên hệ bên quảng cáo đã được điền ở đây.",
   "particulars.objectionExample": "Ví dụ: {example}",
-  "compose.contentFinding.title": "Quy định quảng cáo cho email này",
-  "compose.contentFinding.claim":
-    "Chỉ được dùng “{words}” khi có bằng chứng. Hãy thêm tên, số và ngày của tài liệu chứng minh vào email.",
-  "compose.contentFinding.language":
-    "Viết email này bằng {language} trước. Nội dung bằng ngôn ngữ khác đặt bên dưới và không lớn hơn phần bằng {language}.",
-  "compose.contentFinding.foreignAdvertiser":
-    "Công ty của bạn không được thành lập tại {country}. Tổ chức nước ngoài không hoạt động tại {country} phải quảng cáo tại đó thông qua một doanh nghiệp kinh doanh dịch vụ quảng cáo của {country}. Công ty của bạn chịu trách nhiệm về việc này.",
 };
