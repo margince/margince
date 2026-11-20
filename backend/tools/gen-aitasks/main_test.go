@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -52,6 +53,24 @@ func TestEmitGoProducesTaskConstantsLaddersAndExecutionModes(t *testing.T) {
 	}
 	if !strings.Contains(out, `const TaskContractHash = "deadbeef"`) {
 		t.Errorf("generated source missing TaskContractHash:\n%s", out)
+	}
+}
+
+// The embed lane traces under TaskEmbeddings, so the workload's no_payload must
+// land in the same table every capture site reads, and only when declared.
+func TestEmbedNoPayloadJoinsTheNoPayloadTable(t *testing.T) {
+	for _, declared := range []bool{true, false} {
+		c, err := parseContract([]byte(minimalContract + fmt.Sprintf("embed:\n  tier: embed\n  no_payload: %t\n", declared)))
+		if err != nil {
+			t.Fatalf("parseContract: %v", err)
+		}
+		out, err := emitGo(c, "deadbeef")
+		if err != nil {
+			t.Fatalf("emitGo: %v", err)
+		}
+		if got := strings.Contains(out, "\tTaskEmbeddings: true,\n"); got != declared {
+			t.Errorf("embed no_payload=%t, but the noPayloadTasks entry for TaskEmbeddings present=%t", declared, got)
+		}
 	}
 }
 

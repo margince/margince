@@ -30,6 +30,9 @@ func TestNoPayloadTasksMatchTheTaskContract(t *testing.T) {
 		Tasks map[string]struct {
 			NoPayload bool `yaml:"no_payload"`
 		} `yaml:"tasks"`
+		Embed struct {
+			NoPayload bool `yaml:"no_payload"`
+		} `yaml:"embed"`
 	}
 	if err := yaml.Unmarshal(raw, &contract); err != nil {
 		t.Fatalf("parsing the task contract: %v", err)
@@ -46,6 +49,12 @@ func TestNoPayloadTasksMatchTheTaskContract(t *testing.T) {
 		if got := NoPayload(Task(name)); got != def.NoPayload {
 			t.Errorf("task %q: contract no_payload=%t, runtime NoPayload=%t", name, def.NoPayload, got)
 		}
+	}
+	// The embed lane traces under TaskEmbeddings and has no capture path, so
+	// the workload must declare what the lane does: its inputs are record text.
+	if !contract.Embed.NoPayload || !NoPayload(TaskEmbeddings) {
+		t.Errorf("embed workload: contract no_payload=%t, runtime NoPayload=%t; both must be true, "+
+			"because an embed input is record text such as a mail body", contract.Embed.NoPayload, NoPayload(TaskEmbeddings))
 	}
 	if declared == 0 {
 		t.Fatal("no task in the contract declares no_payload — either the field was dropped upstream or the pin was lost")

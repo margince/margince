@@ -98,9 +98,8 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	// one for the embed lane today), so this always falls back to the
 	// tier's configured binding.
 	trace.ServedModel, trace.ServedIdentitySource = servedIdentity(trace.Provider, trace.ModelID, "")
-	if r.CapturesPayload(TaskEmbeddings) && trace.ErrorSentinel == "" {
-		trace.Payload = r.buildEmbedPayload(req, res)
-	}
+	// No payload, whatever the capture posture: the contract declares the embed
+	// workload no_payload, because an input is record text such as a mail body.
 	lc := newLogicalCall()
 	lc.append(trace)
 	r.flushDetached(ctx, b, lc)

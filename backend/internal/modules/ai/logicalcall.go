@@ -115,9 +115,8 @@ func computeConfigHash(taskContractHash, routingConfigHash, promptVersion string
 // every single embed. The width guard that keeps this static value
 // truthful lives at the consumer (search's UpsertEmbedding rejects any
 // provider response whose width != the configured dims), not in
-// Router.Embed itself. Marshaling a struct of one int field cannot fail (same reasoning
-// as buildEmbedPayload in payloadcapture.go), so the error is deliberately
-// discarded rather than advertising a path that can never run.
+// Router.Embed itself. Marshaling a struct of one int field cannot fail, so the error
+// is deliberately discarded rather than advertising a path that can never run.
 func embedDimensionsParams(dims int) json.RawMessage {
 	params, _ := json.Marshal(struct {
 		EmbedDimensions int `json:"embed_dimensions"`

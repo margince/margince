@@ -206,7 +206,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "c0f4b7bc703347f35647d0d22e321bfa1d72eb377518b824a872fc42abbd4402"
+const TaskContractHash = "6e3dd48d9f5428323191480533e9399ca15f69e8b375aebfc5ea810e494237a5"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -609,7 +609,7 @@ var taskAgents = map[Task][]Agent{
 // task that schedules none returns none.
 func AgentsFor(t Task) []Agent { return taskAgents[t] }
 
-// noPayloadTasks are the tasks whose content must NEVER reach
+// noPayloadTasks are the tasks, and the embed workload, whose content must NEVER reach
 // ai_call_payload, whatever the deployment's capture posture says. The
 // contract pins the prohibition as a hard property, not a default.
 var noPayloadTasks = map[Task]bool{
@@ -627,6 +627,7 @@ var noPayloadTasks = map[Task]bool{
 	TaskSignalExtract:                 true,
 	TaskStageEvidenceExtract:          true,
 	TaskTagSuggest:                    true,
+	TaskEmbeddings:                    true,
 }
 
 // NoPayload reports the contract's payload prohibition for a task.
