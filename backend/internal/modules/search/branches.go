@@ -157,8 +157,10 @@ func (b searchBranch) identifierMatch(alias string, identifierPos identifierBind
 	return fmt.Sprintf("(%s OR %s OR %s)", b.identifier.ExactSQL(pos, alias+".id"), exact, prefix)
 }
 
-// unrankedScoreCeiling is the most a row that only contains an identifier can
-// score: no text rank and no tier, plus a company's domain similarity share.
+// unrankedScoreCeiling bounds the score of a row found only by a contained
+// identifier: 0, or 0.1 for a company. For one plain word such a row matches
+// no tsquery, so its text rank, whole-word bonus and tier are all 0. A company
+// adds only its domain similarity, at most 1, over companyDomainSimilarityDivisor.
 func (b searchBranch) unrankedScoreCeiling() float64 {
 	if b.identifier == storekit.CompanyDomains {
 		return 1.0 / companyDomainSimilarityDivisor
