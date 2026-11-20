@@ -65,7 +65,7 @@ export function ComposeWhy({
           </>
         ) : (
           <>
-            <strong>{t("compose.why")}</strong> {t(reasonHint(reason))}
+            <strong>{t("compose.why")}:</strong> {t(reasonHint(reason))}
           </>
         )}
       </p>
