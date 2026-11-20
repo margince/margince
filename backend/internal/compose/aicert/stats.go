@@ -44,17 +44,16 @@ func ReliabilityIntervalOf(passed, runs int) *ReliabilityInterval {
 		return nil
 	}
 	lower, upper := wilsonBounds(passed, runs)
-	// At 0 and at n of n the two terms cancel exactly on paper, and a machine
-	// that fuses multiply-add leaves a residue of 1e-18 on either side of the
-	// edge. The rendered page must read the same on every machine. The verdict
+	// The page holds these as JSON numbers, and the last digits of a float
+	// differ by machine. Four decimals read the same everywhere. The verdict
 	// reads wilsonBounds itself, so this changes no grade.
-	if passed == 0 {
-		lower = 0
-	}
-	if passed == runs {
-		upper = 1
-	}
-	return &ReliabilityInterval{Lower: lower, Upper: upper}
+	return &ReliabilityInterval{Lower: roundedBound(lower), Upper: roundedBound(upper)}
+}
+
+// roundedBound is a bound to four decimals. Adding zero turns a negative zero
+// into a positive one, which JSON would print as -0.
+func roundedBound(x float64) float64 {
+	return math.Round(x*1e4)/1e4 + 0
 }
 
 // ReliabilityCell is how every report prints a reliability: the point with its

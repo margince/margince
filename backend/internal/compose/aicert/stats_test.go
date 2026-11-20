@@ -72,15 +72,19 @@ func TestTheReliabilityCellPrintsTheWilsonInterval(t *testing.T) {
 	}
 }
 
-// The page renders the bounds as numbers, so an edge must be the exact 0 or 1
-// and not a residue that differs by machine.
-func TestTheWilsonEdgesAreExact(t *testing.T) {
+// The page renders the bounds as numbers. They carry no residue of a machine's
+// float arithmetic: an edge is 0 or 1, and a bound has four decimals.
+func TestTheRenderedIntervalCarriesNoFloatResidue(t *testing.T) {
 	for _, runs := range []int{1, 3, 7, 30} {
-		if lower := ReliabilityIntervalOf(0, runs).Lower; lower != 0 {
-			t.Errorf("0 of %d has lower bound %g, want exactly 0", runs, lower)
+		if got := ReliabilityIntervalOf(0, runs).Lower; got != 0 || math.Signbit(got) {
+			t.Errorf("0 of %d has lower bound %g, want a plain 0", runs, got)
 		}
-		if upper := ReliabilityIntervalOf(runs, runs).Upper; upper != 1 {
-			t.Errorf("%d of %d has upper bound %g, want exactly 1", runs, runs, upper)
+		if got := ReliabilityIntervalOf(runs, runs).Upper; got != 1 {
+			t.Errorf("%d of %d has upper bound %g, want 1", runs, runs, got)
 		}
+	}
+	got := ReliabilityIntervalOf(27, 30)
+	if got.Lower != math.Round(got.Lower*1e4)/1e4 || got.Upper != math.Round(got.Upper*1e4)/1e4 {
+		t.Errorf("27 of 30 carries more than four decimals: %+v", got)
 	}
 }
