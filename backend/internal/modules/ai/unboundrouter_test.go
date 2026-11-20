@@ -27,8 +27,8 @@ func TestAnUnboundRouterServesOnceItIsRebound(t *testing.T) {
 	}
 	req := model.Request{Messages: []model.Message{{Role: "user", Content: "hello"}}}
 	_, _, err := r.Complete(wsContext(t), TaskRateExtract, req)
-	if fault, ok := httperr.Classify(err); !ok || fault.Status != http.StatusNotImplemented || fault.Code != "not_implemented" {
-		t.Fatalf("a call on an unbound router answered %v (%+v), want the 501 an unwired surface gives", err, fault)
+	if fault, ok := httperr.Classify(err); !ok || fault.Status != http.StatusConflict || fault.Code != httperr.CodeAINotConfigured {
+		t.Fatalf("a call on an unbound router answered %v (%+v), want the 409 ai_not_configured refusal", err, fault)
 	}
 	if _, err := r.Embed(wsContext(t), model.EmbedRequest{}); err == nil {
 		t.Fatal("an embed on an unbound router succeeded, want a refusal")

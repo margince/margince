@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
@@ -73,14 +74,19 @@ type DigestConnRow struct {
 	LastErrorClass *string    `json:"last_sync_error_class,omitempty"`
 }
 
-// BuildDigests assembles one digest per user holding a live connection in
-// the current workspace, for digestDate covering the window since the
-// previous build day. Idempotent per (user, day): a re-run replaces the
-// day's payload (the counts are as-of-now truths, not increments).
-func (r *Registry) BuildDigests(ctx context.Context, digestDate time.Time) error {
-	day := digestDate.Format(time.DateOnly)
-	since := time.Date(digestDate.Year(), digestDate.Month(), digestDate.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
+// BuildDigests assembles one digest per user holding a live connection in the
+// current workspace. Each is labelled with the installation's day at the
+// instant at. It covers the window since the start of the day before.
+// Idempotent per (user, day): a re-run replaces the day's payload, because the
+// counts are as-of-now truths and not increments.
+func (r *Registry) BuildDigests(ctx context.Context, at time.Time) error {
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
+		var day string
+		var since time.Time
+		if err := tx.QueryRow(ctx, `SELECT to_char(`+occurredday.TodaySQL("$1::timestamptz")+`, 'YYYY-MM-DD'),
+			`+occurredday.DayStartSQL("("+occurredday.TodaySQL("$1::timestamptz")+" - 1)"), at).Scan(&day, &since); err != nil {
+			return fmt.Errorf("capture: reading the digest day: %w", err)
+		}
 		users, err := connectedUsers(ctx, tx)
 		if err != nil {
 			return err
@@ -242,7 +248,10 @@ func (r *Registry) ReadDigest(ctx context.Context, userID ids.UUID, day *time.Ti
 		return nil, fmt.Errorf("capture: reading digest day: %w", err)
 	}
 	if err := r.db.Tx(readerCtx, func(tx pgx.Tx) error {
-		since := digestDay.AddDate(0, 0, -1)
+		var since time.Time
+		if err := tx.QueryRow(ctx, `SELECT `+occurredday.DayStartSQL("($1::date - 1)"), digestDay).Scan(&since); err != nil {
+			return fmt.Errorf("capture: reading the digest window: %w", err)
+		}
 		if err := readDigestCounts(readerCtx, tx, userID, since, p.GeneratedAt, &p); err != nil {
 			return err
 		}

@@ -1,75 +1,540 @@
 [
   {
+    "kind": "email",
     "direction": null,
     "author": null,
     "side": null
   },
   {
+    "kind": "email",
     "direction": null,
     "author": "contact_record",
     "side": null
   },
   {
+    "kind": "email",
     "direction": null,
     "author": "colleague",
     "side": null
   },
   {
+    "kind": "email",
     "direction": null,
     "author": "machine",
     "side": null
   },
   {
+    "kind": "email",
     "direction": null,
     "author": "unresolved",
     "side": null
   },
   {
+    "kind": "email",
     "direction": "inbound",
     "author": null,
     "side": "theirs"
   },
   {
+    "kind": "email",
     "direction": "inbound",
     "author": "contact_record",
     "side": "theirs"
   },
   {
+    "kind": "email",
     "direction": "inbound",
     "author": "colleague",
     "side": "ours"
   },
   {
+    "kind": "email",
     "direction": "inbound",
     "author": "machine",
     "side": "theirs"
   },
   {
+    "kind": "email",
     "direction": "inbound",
     "author": "unresolved",
     "side": "theirs"
   },
   {
+    "kind": "email",
     "direction": "outbound",
     "author": null,
     "side": "ours"
   },
   {
+    "kind": "email",
     "direction": "outbound",
     "author": "contact_record",
     "side": "theirs"
   },
   {
+    "kind": "email",
     "direction": "outbound",
     "author": "colleague",
     "side": "ours"
   },
   {
+    "kind": "email",
     "direction": "outbound",
     "author": "machine",
     "side": "ours"
   },
   {
+    "kind": "email",
+    "direction": "outbound",
+    "author": "unresolved",
+    "side": "ours"
+  },
+  {
+    "kind": "call",
+    "direction": null,
+    "author": null,
+    "side": null
+  },
+  {
+    "kind": "call",
+    "direction": null,
+    "author": "contact_record",
+    "side": null
+  },
+  {
+    "kind": "call",
+    "direction": null,
+    "author": "colleague",
+    "side": null
+  },
+  {
+    "kind": "call",
+    "direction": null,
+    "author": "machine",
+    "side": null
+  },
+  {
+    "kind": "call",
+    "direction": null,
+    "author": "unresolved",
+    "side": null
+  },
+  {
+    "kind": "call",
+    "direction": "inbound",
+    "author": null,
+    "side": "theirs"
+  },
+  {
+    "kind": "call",
+    "direction": "inbound",
+    "author": "contact_record",
+    "side": "theirs"
+  },
+  {
+    "kind": "call",
+    "direction": "inbound",
+    "author": "colleague",
+    "side": "theirs"
+  },
+  {
+    "kind": "call",
+    "direction": "inbound",
+    "author": "machine",
+    "side": "theirs"
+  },
+  {
+    "kind": "call",
+    "direction": "inbound",
+    "author": "unresolved",
+    "side": "theirs"
+  },
+  {
+    "kind": "call",
+    "direction": "outbound",
+    "author": null,
+    "side": "ours"
+  },
+  {
+    "kind": "call",
+    "direction": "outbound",
+    "author": "contact_record",
+    "side": "ours"
+  },
+  {
+    "kind": "call",
+    "direction": "outbound",
+    "author": "colleague",
+    "side": "ours"
+  },
+  {
+    "kind": "call",
+    "direction": "outbound",
+    "author": "machine",
+    "side": "ours"
+  },
+  {
+    "kind": "call",
+    "direction": "outbound",
+    "author": "unresolved",
+    "side": "ours"
+  },
+  {
+    "kind": "meeting",
+    "direction": null,
+    "author": null,
+    "side": null
+  },
+  {
+    "kind": "meeting",
+    "direction": null,
+    "author": "contact_record",
+    "side": null
+  },
+  {
+    "kind": "meeting",
+    "direction": null,
+    "author": "colleague",
+    "side": null
+  },
+  {
+    "kind": "meeting",
+    "direction": null,
+    "author": "machine",
+    "side": null
+  },
+  {
+    "kind": "meeting",
+    "direction": null,
+    "author": "unresolved",
+    "side": null
+  },
+  {
+    "kind": "meeting",
+    "direction": "inbound",
+    "author": null,
+    "side": "theirs"
+  },
+  {
+    "kind": "meeting",
+    "direction": "inbound",
+    "author": "contact_record",
+    "side": "theirs"
+  },
+  {
+    "kind": "meeting",
+    "direction": "inbound",
+    "author": "colleague",
+    "side": "ours"
+  },
+  {
+    "kind": "meeting",
+    "direction": "inbound",
+    "author": "machine",
+    "side": "theirs"
+  },
+  {
+    "kind": "meeting",
+    "direction": "inbound",
+    "author": "unresolved",
+    "side": "theirs"
+  },
+  {
+    "kind": "meeting",
+    "direction": "outbound",
+    "author": null,
+    "side": "ours"
+  },
+  {
+    "kind": "meeting",
+    "direction": "outbound",
+    "author": "contact_record",
+    "side": "theirs"
+  },
+  {
+    "kind": "meeting",
+    "direction": "outbound",
+    "author": "colleague",
+    "side": "ours"
+  },
+  {
+    "kind": "meeting",
+    "direction": "outbound",
+    "author": "machine",
+    "side": "ours"
+  },
+  {
+    "kind": "meeting",
+    "direction": "outbound",
+    "author": "unresolved",
+    "side": "ours"
+  },
+  {
+    "kind": "note",
+    "direction": null,
+    "author": null,
+    "side": null
+  },
+  {
+    "kind": "note",
+    "direction": null,
+    "author": "contact_record",
+    "side": null
+  },
+  {
+    "kind": "note",
+    "direction": null,
+    "author": "colleague",
+    "side": null
+  },
+  {
+    "kind": "note",
+    "direction": null,
+    "author": "machine",
+    "side": null
+  },
+  {
+    "kind": "note",
+    "direction": null,
+    "author": "unresolved",
+    "side": null
+  },
+  {
+    "kind": "note",
+    "direction": "inbound",
+    "author": null,
+    "side": "theirs"
+  },
+  {
+    "kind": "note",
+    "direction": "inbound",
+    "author": "contact_record",
+    "side": "theirs"
+  },
+  {
+    "kind": "note",
+    "direction": "inbound",
+    "author": "colleague",
+    "side": "theirs"
+  },
+  {
+    "kind": "note",
+    "direction": "inbound",
+    "author": "machine",
+    "side": "theirs"
+  },
+  {
+    "kind": "note",
+    "direction": "inbound",
+    "author": "unresolved",
+    "side": "theirs"
+  },
+  {
+    "kind": "note",
+    "direction": "outbound",
+    "author": null,
+    "side": "ours"
+  },
+  {
+    "kind": "note",
+    "direction": "outbound",
+    "author": "contact_record",
+    "side": "ours"
+  },
+  {
+    "kind": "note",
+    "direction": "outbound",
+    "author": "colleague",
+    "side": "ours"
+  },
+  {
+    "kind": "note",
+    "direction": "outbound",
+    "author": "machine",
+    "side": "ours"
+  },
+  {
+    "kind": "note",
+    "direction": "outbound",
+    "author": "unresolved",
+    "side": "ours"
+  },
+  {
+    "kind": "task",
+    "direction": null,
+    "author": null,
+    "side": null
+  },
+  {
+    "kind": "task",
+    "direction": null,
+    "author": "contact_record",
+    "side": null
+  },
+  {
+    "kind": "task",
+    "direction": null,
+    "author": "colleague",
+    "side": null
+  },
+  {
+    "kind": "task",
+    "direction": null,
+    "author": "machine",
+    "side": null
+  },
+  {
+    "kind": "task",
+    "direction": null,
+    "author": "unresolved",
+    "side": null
+  },
+  {
+    "kind": "task",
+    "direction": "inbound",
+    "author": null,
+    "side": "theirs"
+  },
+  {
+    "kind": "task",
+    "direction": "inbound",
+    "author": "contact_record",
+    "side": "theirs"
+  },
+  {
+    "kind": "task",
+    "direction": "inbound",
+    "author": "colleague",
+    "side": "theirs"
+  },
+  {
+    "kind": "task",
+    "direction": "inbound",
+    "author": "machine",
+    "side": "theirs"
+  },
+  {
+    "kind": "task",
+    "direction": "inbound",
+    "author": "unresolved",
+    "side": "theirs"
+  },
+  {
+    "kind": "task",
+    "direction": "outbound",
+    "author": null,
+    "side": "ours"
+  },
+  {
+    "kind": "task",
+    "direction": "outbound",
+    "author": "contact_record",
+    "side": "ours"
+  },
+  {
+    "kind": "task",
+    "direction": "outbound",
+    "author": "colleague",
+    "side": "ours"
+  },
+  {
+    "kind": "task",
+    "direction": "outbound",
+    "author": "machine",
+    "side": "ours"
+  },
+  {
+    "kind": "task",
+    "direction": "outbound",
+    "author": "unresolved",
+    "side": "ours"
+  },
+  {
+    "kind": "message",
+    "direction": null,
+    "author": null,
+    "side": null
+  },
+  {
+    "kind": "message",
+    "direction": null,
+    "author": "contact_record",
+    "side": null
+  },
+  {
+    "kind": "message",
+    "direction": null,
+    "author": "colleague",
+    "side": null
+  },
+  {
+    "kind": "message",
+    "direction": null,
+    "author": "machine",
+    "side": null
+  },
+  {
+    "kind": "message",
+    "direction": null,
+    "author": "unresolved",
+    "side": null
+  },
+  {
+    "kind": "message",
+    "direction": "inbound",
+    "author": null,
+    "side": "theirs"
+  },
+  {
+    "kind": "message",
+    "direction": "inbound",
+    "author": "contact_record",
+    "side": "theirs"
+  },
+  {
+    "kind": "message",
+    "direction": "inbound",
+    "author": "colleague",
+    "side": "ours"
+  },
+  {
+    "kind": "message",
+    "direction": "inbound",
+    "author": "machine",
+    "side": "theirs"
+  },
+  {
+    "kind": "message",
+    "direction": "inbound",
+    "author": "unresolved",
+    "side": "theirs"
+  },
+  {
+    "kind": "message",
+    "direction": "outbound",
+    "author": null,
+    "side": "ours"
+  },
+  {
+    "kind": "message",
+    "direction": "outbound",
+    "author": "contact_record",
+    "side": "theirs"
+  },
+  {
+    "kind": "message",
+    "direction": "outbound",
+    "author": "colleague",
+    "side": "ours"
+  },
+  {
+    "kind": "message",
+    "direction": "outbound",
+    "author": "machine",
+    "side": "ours"
+  },
+  {
+    "kind": "message",
     "direction": "outbound",
     "author": "unresolved",
     "side": "ours"

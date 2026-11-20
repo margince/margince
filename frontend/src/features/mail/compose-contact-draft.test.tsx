@@ -125,6 +125,7 @@ afterEach(() => {
 
 describe("drafting to a contact", () => {
   it("asks the contact's own endpoint and fills the fields", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
@@ -140,7 +141,7 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     expect(
       await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung"),
@@ -155,6 +156,7 @@ describe("drafting to a contact", () => {
   });
 
   it("carries the reader's own steering and nothing else", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
@@ -170,11 +172,11 @@ describe("drafting to a contact", () => {
     );
 
     draftButton();
-    await userEvent.type(
+    await user.type(
       screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "kurz halten",
     );
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
 
     const call = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
@@ -189,6 +191,7 @@ describe("drafting to a contact", () => {
   // composer swaps it in over the first: a different email rather than a
   // shorter one, and whatever the rep had edited is gone with it.
   it("sends the draft on screen when the reader asks for a rewrite", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
       [REWRITE_ROUTE]: () => rewrittenBody("Kürzer.", "de"),
@@ -205,10 +208,10 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
 
-    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
+    await user.click(screen.getByRole("button", { name: "Shorter" }));
 
     await waitFor(() =>
       expect(sent.some((c) => c.key === REWRITE_ROUTE)).toBe(true),
@@ -225,6 +228,7 @@ describe("drafting to a contact", () => {
   // draft has nothing to rewrite, and a body sent with one would ask the model
   // to revise an empty composer.
   it("sends nothing to rewrite on a first draft", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
@@ -240,7 +244,7 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
 
     const first = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
@@ -387,6 +391,7 @@ describe("drafting to a contact", () => {
   });
 
   it("discloses a model-written draft", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
@@ -402,7 +407,7 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     expect(
       await screen.findByRole("heading", { name: "AI-assisted draft" }),
@@ -412,6 +417,7 @@ describe("drafting to a contact", () => {
   // The sentence a deployment with no model earns, and the one this page used
   // to say without asking anybody.
   it("says the model is unconfigured only when the server says so", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse({}, 501),
     });
@@ -427,7 +433,7 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     await waitFor(() =>
       expect(screen.getByText(/AI drafting is unavailable/i)).toBeTruthy(),
@@ -440,6 +446,7 @@ describe("drafting to a contact", () => {
   // An origin with no route says THAT, and does not blame the deployment. A
   // deal has no draft-email endpoint to reach.
   it("says drafting is not offered here for an origin with no route", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes();
     render(
       <ComposeWindow
@@ -452,7 +459,7 @@ describe("drafting to a contact", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     await waitFor(() =>
       expect(screen.getByText(/not available on this page/i)).toBeTruthy(),
@@ -465,6 +472,7 @@ describe("drafting to a contact", () => {
 
 describe("drafting to everyone a meeting was with", () => {
   it("names the further contacts and opens with all of them in To", async () => {
+    const user = userEvent.setup();
     const everyone = [
       "ana@customer.example",
       "ben@customer.example",
@@ -486,7 +494,7 @@ describe("drafting to everyone a meeting was with", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
 
     const call = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
@@ -497,5 +505,71 @@ describe("drafting to everyone a meeting was with", () => {
     for (const address of everyone) {
       expect(await screen.findByText(address)).toBeTruthy();
     }
+  });
+});
+
+describe("saying which writer drafted the email", () => {
+  const TEMPLATE_DRAFT = {
+    subject: "Following up",
+    body: "Hi Annabelle,\n\nWould a short call in the next week or two be useful?",
+    generated_by: "deterministic",
+    ai_generated: false,
+    ai_disclosure: null,
+    language: "en",
+  };
+
+  function draftTo(answer: object) {
+    stubRoutes({
+      "POST /contacts/c-1/draft-email": () => jsonResponse(answer),
+    });
+    render(
+      <ComposeWindow
+        intent="Ask whether they want a demo next Tuesday"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+  }
+
+  it("says a template wrote the words and offers no rewrites", async () => {
+    const user = userEvent.setup();
+    draftTo(TEMPLATE_DRAFT);
+
+    await user.click(draftButton());
+
+    expect(
+      await screen.findByText("AI could not write this draft"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("A basic template was used. Your purpose was not used."),
+    ).toBeTruthy();
+    expect(messageText("Body")).toContain("Would a short call");
+    // The arrival in indigo says a model wrote the words, so a template has none.
+    expect(document.querySelector("[data-ai-reveal]")).toBeNull();
+    expect(screen.queryByText("AI-assisted draft")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Polish" })).toBeNull();
+    expect(
+      screen.queryByRole("combobox", { name: "Draft language" }),
+    ).toBeNull();
+    // The purpose stays, so the reader can ask again.
+    expect(
+      screen.getByDisplayValue("Ask whether they want a demo next Tuesday"),
+    ).toBeTruthy();
+    expect(draftButton()).toBeTruthy();
+  });
+
+  it("discloses a model's draft and offers its rewrites", async () => {
+    const user = userEvent.setup();
+    draftTo(CONTACT_DRAFT);
+
+    await user.click(draftButton());
+
+    expect(await screen.findByText("AI-assisted draft")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Polish" })).toBeTruthy();
+    expect(screen.queryByText("AI could not write this draft")).toBeNull();
   });
 });

@@ -1230,7 +1230,7 @@ jobs:
         run: |
           # Composed boot (ADR-0120): a plain `go run` would resolve the
           # vanilla composition stub and this lane would never boot with
-          # the enabled extensions (extensions/de ships by default). The
+          # the enabled extensions (extensions/eu ships by default). The
           # generator itself pins the ROOT workspace (the tool is its own
           # module — a stray GOWORK would break its resolution).
           GOWORK="$PWD/../go.work" go run ./tools/gen-composition -include-development

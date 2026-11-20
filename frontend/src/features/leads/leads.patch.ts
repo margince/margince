@@ -83,7 +83,10 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     version: requireVersion(from.version),
     archived: Boolean(from.archived_at),
   });
-  const save = (body: UpdateLeadRequest) => patch.mutate(write(body, lead));
+  const save = (
+    body: UpdateLeadRequest,
+    options?: Readonly<{ onSuccess?: () => void }>,
+  ) => patch.mutate(write(body, lead), options);
   // Taking an unowned lead is a claim, not a patch: the write arm refuses an
   // ownerless row.
   const assign = (

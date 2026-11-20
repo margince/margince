@@ -25,6 +25,8 @@ const OUTCOME_LABEL: Readonly<Record<string, MessageKey>> = {
   accepted: "reporting.cohortOutcome.accepted",
   qualified: "reporting.cohortOutcome.qualified",
   disqualified: "reporting.cohortOutcome.disqualified",
+  opportunity_linked: "reporting.cohortOutcome.opportunity_linked",
+  not_linked: "reporting.cohortOutcome.not_linked",
 };
 
 /** An outcome's name in the reader's words, else the server's label. */
@@ -62,6 +64,7 @@ export function CohortTable({
   const t = useT();
   const { locale } = useLocale();
   const stages = chart.kind === "stage_cohort";
+  const sources = chart.kind === "source_quality";
   const outcomes = chart.points[0]?.outcomes ?? [];
   const members = chart.points.reduce(
     (total, point) => total + (point.observations ?? 0),
@@ -132,7 +135,9 @@ export function CohortTable({
             : []),
           {
             key: "rate",
-            header: t("reporting.cohortRate"),
+            header: t(
+              sources ? "reporting.cohortLinkedRate" : "reporting.cohortRate",
+            ),
             render: (point) =>
               point.value == null
                 ? t("reporting.cohortNoRate")
@@ -142,19 +147,22 @@ export function CohortTable({
       />
       {Object.entries(NOTE_OF_OUTCOME).map(
         ([key, note]) =>
+          !sources &&
           (key === "unresolved" || shown(key)) && (
             <p key={key} className="sub">
               {t(note)}
             </p>
           ),
       )}
-      <p className="sub">
-        {t(
-          stages
-            ? "reporting.cohortStageDaysNote"
-            : "reporting.cohortLeadDaysNote",
-        )}
-      </p>
+      {!sources && (
+        <p className="sub">
+          {t(
+            stages
+              ? "reporting.cohortStageDaysNote"
+              : "reporting.cohortLeadDaysNote",
+          )}
+        </p>
+      )}
     </>
   );
 }

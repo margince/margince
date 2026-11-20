@@ -87,4 +87,39 @@ describe("the committee's rows", () => {
       t("deal.committee.missing.firstContact"),
     ]);
   });
+
+  it("draws one row per contact, naming every role they hold", () => {
+    const { seats } = committeeRows(
+      {
+        deal_id: "d1",
+        stakeholders: [
+          {
+            contact_id: "c1",
+            contact_name: "Zoe",
+            role: "economic_buyer",
+            engaged: false,
+          },
+          {
+            contact_id: "c1",
+            contact_name: "Zoe",
+            role: "champion",
+            engaged: false,
+          },
+          {
+            contact_id: "c2",
+            contact_name: "Bob",
+            role: "user",
+            engaged: false,
+          },
+        ],
+        our_side: [],
+        risks: [],
+        sections_omitted: [],
+      },
+      t,
+      (role) => role,
+    );
+    expect(seats.map((seat) => seat.key)).toEqual(["c1", "c2"]);
+    expect(seats[0]?.sub).toContain("economic_buyer, champion");
+  });
 });

@@ -13,6 +13,10 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { watchStartedAiRun } from "../../app/ai-activity";
 import { Badge, Button, Skeleton } from "../../design-system/atoms";
+import {
+  ModelWorkError,
+  useConnectAiGate,
+} from "../../design-system/connectai";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { AutonomyDot } from "../../design-system/trust";
@@ -366,6 +370,7 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
   const [readId, setReadId] = useState<string | null>(null);
   const latest = useLatestSiteRead(companyId);
   const shownReadId = readId ?? latest.data?.read_id ?? null;
+  const aiGate = useConnectAiGate(`deepread-ai-${companyId}`);
   const start = useMutation({
     mutationKey: ["site-read", companyId],
     mutationFn: async () => {
@@ -422,6 +427,7 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
         <Button
           pending={start.isPending}
           busyLabel={t("deepread.starting")}
+          reasonId={aiGate.reasonId}
           onClick={() => start.mutate()}
         >
           {t(offering ? "deepread.cta" : "deepread.ctaAgain")}
@@ -433,7 +439,8 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
             says nothing is written until a contact accepts it. Drawn only while
             the panel is still an offer — see `offering`. */}
         {offering && <p className="t-sub">{t("deepread.sub")}</p>}
-        <ErrorLine error={start.error} />
+        {aiGate.notice}
+        <ModelWorkError error={start.error} />
         {shownReadId && (
           <SiteReadPanel companyId={companyId} readId={shownReadId} />
         )}

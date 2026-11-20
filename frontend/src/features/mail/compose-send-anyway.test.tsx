@@ -143,10 +143,11 @@ afterEach(() => {
 
 describe("the email composer with the switch off", () => {
   it("keeps the check while writing and the reason for contact", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     render(<Composer />);
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
+    await fillSendableForm(user);
     expect(previews(sent)).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Send anyway" })).toBeNull();
   });
@@ -154,7 +155,7 @@ describe("the email composer with the switch off", () => {
 
 describe("the email composer with the switch on", () => {
   it("asks nothing while the rep opens, types and the draft saves", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({ "GET /me": inlineMe });
     await openInline(sent);
     await fillInline(user);
@@ -166,7 +167,7 @@ describe("the email composer with the switch on", () => {
   });
 
   it("sends a clean message with one request and closes", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "GET /me": inlineMe,
@@ -186,7 +187,7 @@ describe("the email composer with the switch on", () => {
   });
 
   it("closes a scheduled send with the scheduled note", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "GET /me": inlineMe,
       "POST /emails": () => jsonResponse(activity202, 201),
@@ -203,7 +204,7 @@ describe("the email composer with the switch on", () => {
   });
 
   it("draws a refusal from the embedded review without asking again", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({ "GET /me": inlineMe, "POST /emails": refused });
     await openInline(sent);
     await fillInline(user);
@@ -228,7 +229,7 @@ describe("the email composer with the switch on", () => {
   });
 
   it("reads the review once from an older server that only names it", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": inlineMe,
       "POST /emails": () => refused({}, null),
@@ -242,7 +243,7 @@ describe("the email composer with the switch on", () => {
   });
 
   it("keeps the draft and offers a retry when that read fails", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": inlineMe,
       "POST /emails": () => refused({}, null),
@@ -266,7 +267,7 @@ describe("the email composer with the switch on", () => {
   });
 
   it("confirms with the reason, the inline warning and the review revision", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "GET /me": inlineMe,
@@ -321,7 +322,7 @@ describe("the email composer with the switch on", () => {
       },
     ],
   ])("ignores %s on Send anyway", async (_stray, stray) => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": inlineMe,
       "POST /emails": refused,
@@ -349,7 +350,7 @@ describe("the email composer with the switch on", () => {
   });
 
   it("sends the same key on a retried send and a new one after an edit", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": inlineMe,
       "POST /emails": () =>
@@ -373,7 +374,7 @@ describe("the email composer with the switch on", () => {
   });
 
   async function sendAnywayTwice(changeReason: boolean) {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": inlineMe,
       "POST /emails": refused,
@@ -412,7 +413,7 @@ describe("the email composer with the switch on", () => {
   });
 
   it("sends one decision for a double press while it is in flight", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let answer: (response: Response) => void = () => {};
     const sent = stubRoutes({
       "GET /me": inlineMe,
@@ -442,7 +443,7 @@ describe("the email composer with the switch on", () => {
   it(
     "holds the words, the close and the draft while Send anyway is out",
     async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       let answer: (response: Response) => void = () => {};
       const sent = stubRoutes({
         "GET /me": inlineMe,
@@ -497,7 +498,7 @@ describe("the email composer with the switch on", () => {
   );
 
   it("detaches the review on an edit and sends the edited message anew", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({ "GET /me": inlineMe, "POST /emails": refused });
     await openInline(sent);
     await fillInline(user);
@@ -516,7 +517,7 @@ describe("the email composer with the switch on", () => {
   it(
     "keeps the reason through a typo fix, sends once on it, and starts the next message empty",
     async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const onClose = vi.fn();
       const second = { ...REVIEW, id: "r-2", assessment_revision: "rev-2" };
       let sends = 0;
@@ -575,7 +576,7 @@ describe("the email composer with the switch on", () => {
   );
 
   it("sends the edited message when the finding is gone", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     let sends = 0;
     stubRoutes({
@@ -600,7 +601,7 @@ describe("the email composer with the switch on", () => {
   it(
     "asks for a fresh press when the review comes back refreshed",
     async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       let decisions = 0;
       const sent = stubRoutes({
         "GET /me": inlineMe,
@@ -633,7 +634,7 @@ describe("the email composer with the switch on", () => {
   it(
     "shows the country a refusal was judged under, and the refreshed one",
     async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const judged = (
         country: string | undefined,
         source: string,
@@ -689,7 +690,7 @@ describe("the email composer with the switch on", () => {
   );
 
   it("keeps the reason in the saved draft and restores it", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const saved = {
       id: "md-1",
       anchor_type: "contact",
@@ -730,7 +731,7 @@ describe("the email composer with the switch on", () => {
   });
 
   it("offers no Send anyway where the server offers no decision", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": inlineMe,
       "POST /emails": () => refused({ available_actions: [] }),
@@ -748,7 +749,7 @@ describe("the email composer with the switch on", () => {
   });
 
   it("offers no Send anyway for a warning version this build does not know", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": inlineMe,
       "POST /emails": () =>

@@ -747,6 +747,14 @@ func (stubs) UploadAttachment(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UploadAttachment")
 }
 
+func (stubs) AddAttachmentLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AddAttachmentLink")
+}
+
+func (stubs) PreviewAttachmentLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAttachmentLink")
+}
+
 func (stubs) DeleteAttachment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeleteAttachment")
 }
@@ -869,6 +877,10 @@ func (stubs) GetAutonomy(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) UpdateAutonomy(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UpdateAutonomy")
+}
+
+func (stubs) UpdateAutoApplyInstallation(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateAutoApplyInstallation")
 }
 
 func (stubs) GetAvailability(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAvailabilityParams) {
@@ -2065,6 +2077,14 @@ func (stubs) UpdateDealLine(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 
 func (stubs) ListDealMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListDealMarginceChangesParams) {
 	httperr.NotImplemented(w, r, "ListDealMarginceChanges")
+}
+
+func (stubs) MoveDealPipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MoveDealPipelineParams) {
+	httperr.NotImplemented(w, r, "MoveDealPipeline")
+}
+
+func (stubs) UndoDealPipelineMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UndoDealPipelineMoveParams) {
+	httperr.NotImplemented(w, r, "UndoDealPipelineMove")
 }
 
 func (stubs) RestoreDealMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RestoreDealMoveParams) {

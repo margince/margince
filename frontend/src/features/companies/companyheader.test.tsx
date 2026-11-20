@@ -1,9 +1,16 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import { pickOption } from "../../design-system/select-testing";
@@ -11,15 +18,13 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { companyDocumentsKey } from "../../lib/attachmentkeys";
-import {
-  changeChoice,
-  openChoiceDialog,
-} from "../../testing/choicedialog.testkit";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
-import { CompanyActionBadges, CompanyOwnerControl } from "./companyheader";
+import { CompanyActionBadges } from "./companyheader";
 import { CompanyHeadLines } from "./companyheaderfacts";
 import { CompanyLifecycleControl } from "./companylifecycle";
 import { CompanyMarks } from "./companymarks";
+import { CompanyRail } from "./companyrail";
 
 // Who wrote the record and the record's own verbs are pinned in
 // companyheaderfacts.test.tsx and companyheaderactions.test.tsx: the two
@@ -150,16 +155,27 @@ function renderInApp(
   );
 }
 
+// The owner's dialog, opened from the details' Ownership Edit.
+async function openOwner(user: UserEvent) {
+  return openChoiceDialog(
+    user,
+    "Owner",
+    await screen.findByRole("button", { name: "Edit Ownership" }),
+  );
+}
+
 // The owner's choices as its dialog offers them.
 async function openOwnerChoices(user: UserEvent) {
-  const { chooser } = await openChoiceDialog(user, "Owner");
+  const { chooser } = await openOwner(user);
   await user.click(chooser);
 }
 
-// The owner control, as the details' Ownership row mounts it.
-function renderFacts() {
-  renderInApp(<CompanyOwnerControl company={COMPANY} />);
+// The details column, where the Ownership section names and changes the owner.
+function renderOwnership(company: Company = COMPANY) {
+  renderInApp(<CompanyRail company={company} loading={false} />);
 }
+
+const ownership = () => screen.getByRole("region", { name: "Ownership" });
 
 // Who owns the record, off the roster read. The owner has three states.
 // Reading the owner through the generic record reference would paint the id
@@ -168,7 +184,7 @@ function renderFacts() {
 describe("who owns this record", () => {
   it("names the owner the roster can resolve", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
-    renderFacts();
+    renderOwnership();
 
     expect(await screen.findByText("Mira Voss")).toBeTruthy();
     expect(document.body.textContent).not.toContain("u-owner");
@@ -176,15 +192,13 @@ describe("who owns this record", () => {
 
   it("does not call the owner gone while the roster read is still in flight", async () => {
     const answer = stubRosterInFlight();
-    renderFacts();
+    renderOwnership();
 
     // "no longer in the user list" is a claim about a read that came back. Said
     // over one still running, it reports an owner as departed on the evidence
     // of nothing having arrived yet.
-    expect(
-      (await screen.findByRole("button", { name: /^Change Owner/ }))
-        .textContent,
-    ).toContain("Loading…");
+    await screen.findByRole("button", { name: "Edit Ownership" });
+    expect(ownership()).toHaveTextContent("Loading…");
     expect(
       screen.queryByText("Current owner (no longer in the user list)"),
     ).toBeNull();
@@ -206,7 +220,7 @@ describe("who owns this record", () => {
 
   it("does not call the owner gone when the roster read failed", async () => {
     stubRosterRefused();
-    renderFacts();
+    renderOwnership();
 
     // A refused read excludes nobody. Reading it as "no longer in the user
     // list" turns a 403 into a fact about who owns this account, which is the
@@ -222,7 +236,7 @@ describe("who owns this record", () => {
     stub([
       { id: "u-owner", display_name: "Rainer Schuller", status: "invited" },
     ]);
-    renderFacts();
+    renderOwnership();
 
     // An import hands accounts to colleagues before they first sign in. They
     // are not offered as a new owner, and they are still named as this one.
@@ -232,7 +246,7 @@ describe("who owns this record", () => {
 
   it("says the owner is outside the user list once the roster has answered without them", async () => {
     stub([]);
-    renderFacts();
+    renderOwnership();
 
     expect(await screen.findByText(en["ref.notInRoster"])).toBeTruthy();
     // An owner the roster cannot name is still not shown as a uuid: waiting
@@ -284,9 +298,11 @@ describe("claiming an unowned account", () => {
   it("claims the account when the reader picks themselves", async () => {
     const calls = stubClaim();
     const user = userEvent.setup();
-    renderInApp(<CompanyOwnerControl company={UNOWNED} />);
+    renderOwnership(UNOWNED);
 
-    await changeChoice(user, "Owner", "The Reader");
+    const { dialog, chooser } = await openOwner(user);
+    await pickOption(user, chooser, "The Reader");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(calls.find((call) => call.path.endsWith("/claim"))).toMatchObject({
@@ -307,7 +323,7 @@ describe("claiming an unowned account", () => {
   it("offers a reader who cannot write the row only themselves", async () => {
     stubClaim(READER, TEAM);
     const user = userEvent.setup();
-    renderInApp(<CompanyOwnerControl company={UNOWNED} />);
+    renderOwnership(UNOWNED);
 
     await openOwnerChoices(user);
     await screen.findByRole("option", { name: "The Reader" });
@@ -319,9 +335,7 @@ describe("claiming an unowned account", () => {
   it("offers every colleague to a reader who can write the unowned row", async () => {
     stubClaim(READER, TEAM);
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyOwnerControl company={{ ...UNOWNED, writable: true }} />,
-    );
+    renderOwnership({ ...UNOWNED, writable: true });
 
     await openOwnerChoices(user);
     expect(
@@ -333,10 +347,12 @@ describe("claiming an unowned account", () => {
     stubClaim({
       authorization: meFixture({ allow: { company: ["read"] } }).authorization,
     });
-    renderInApp(<CompanyOwnerControl company={UNOWNED} />);
+    renderOwnership(UNOWNED);
 
-    expect(await screen.findByText(en["field.unset"])).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
+    await waitFor(() =>
+      expect(ownership()).toHaveTextContent(en["field.unset"]),
+    );
+    expect(screen.queryByRole("button", { name: "Edit Ownership" })).toBeNull();
   });
 });
 
@@ -656,11 +672,9 @@ describe("the shape of the header's verbs", () => {
 
 it("names an owner for readers who cannot edit the company", async () => {
   stub([{ id: "u-owner", display_name: "Mira Voss" }]);
-  renderInApp(
-    <CompanyOwnerControl company={{ ...COMPANY, writable: false }} />,
-  );
+  renderOwnership({ ...COMPANY, writable: false });
   expect(await screen.findByText("Mira Voss")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Edit Ownership" })).toBeNull();
 });
 // The stage beside the account's name. A real control, not the inline value
 // the Details grid carries: the header's is the design system's dropdown worn

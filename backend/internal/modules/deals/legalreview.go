@@ -188,12 +188,12 @@ func (s *Store) RequestLegalReview(
 	if err != nil {
 		return out, err
 	}
-	if s.reviewDocs == nil {
-		return out, errors.New("deals: legal review needs a document reader, and none is wired")
+	if s.reviewDocs == nil || s.reviewRecords == nil {
+		return out, errors.New("deals: legal review needs its record readers, and they are not wired")
 	}
-	// Before the transaction: the reader opens its own connection, and one
+	// Before the transaction: the readers open their own connection, and one
 	// opened inside this transaction could deadlock against a lock it holds.
-	docs, err := s.reviewDocs.ReviewDocuments(ctx, dealID.UUID)
+	records, err := s.readPacketRecords(ctx, dealID.UUID)
 	if err != nil {
 		return out, err
 	}
@@ -212,7 +212,7 @@ func (s *Store) RequestLegalReview(
 		if err := checkPreviousReview(ctx, tx, dealID, in.PreviousReviewID); err != nil {
 			return err
 		}
-		packet, err := s.buildReviewPacket(ctx, tx, dealID, docs)
+		packet, err := s.buildReviewPacket(ctx, tx, dealID, records)
 		if err != nil {
 			return err
 		}

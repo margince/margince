@@ -76,7 +76,7 @@ func readWords(
 		scope = scopeAll
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, a.kind, coalesce(a.direction, ''), coalesce(a.subject, ''), a.occurred_at,
+		SELECT a.id, a.kind, coalesce(`+activities.WriterSideSQL("a", "true")+`, ''), coalesce(a.subject, ''), a.occurred_at,
 		       coalesce(left(a.body, $%[3]d), ''),
 		       greatest(coalesce(char_length(a.body), 0) - $%[3]d, 0),
 		       coalesce(a.thread_key || '/' || a.kind || '/' || coalesce(a.channel_provider, ''), '')

@@ -13,7 +13,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
-import { type Translator, useT } from "../../i18n";
+import { useFieldFaults } from "../../design-system/savepage";
+import { type Translator, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import {
   type CreateLegalEntity,
@@ -21,12 +22,18 @@ import {
   useCreateLegalEntity,
   useLegalEntities,
 } from "../../lib/legalentities.queries";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   ArchiveEntityDialog,
   CountryField,
   EditEntityDialog,
   TextField,
 } from "./legalentityeditor";
+import {
+  entityLabels,
+  entityRefusal,
+  missingEntityFields,
+} from "./legalentityfields";
 
 // The companies this installation trades as. With one entity the card lists
 // the default alone, named after the company above it. An installation that
@@ -171,6 +178,8 @@ function nameOf(entity: LegalEntity, t: Translator): string {
   return entity.display_name || t("legalEntities.defaultUnnamed");
 }
 
+const NEW_ENTITY_FIELDS = ["display_name", "legal_name", "country"] as const;
+
 const EMPTY_FORM: CreateLegalEntity = {
   display_name: "",
   legal_name: "",
@@ -181,14 +190,32 @@ const EMPTY_FORM: CreateLegalEntity = {
 // is added in the editor once it exists.
 function NewEntityDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const formId = useId();
   const create = useCreateLegalEntity();
   const [form, setForm] = useState<CreateLegalEntity>(EMPTY_FORM);
-  const set = (key: keyof CreateLegalEntity) => (value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+  const labels = entityLabels(t, NEW_ENTITY_FIELDS);
+  const [faults, faultsRoot] = useFieldFaults();
+  const refused = entityRefusal(create.error, t, labels);
+  const field = (key: (typeof NEW_ENTITY_FIELDS)[number]) => ({
+    value: form[key] ?? "",
+    error: faults.of(key),
+    onChange: (value: string) => {
+      setForm((current) => ({ ...current, [key]: value }));
+      faults.edited(key);
+    },
+  });
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    create.mutate(form, { onSuccess: onClose });
+    if (create.isPending) return;
+    if (faults.show(missingEntityFields(form, labels, locale))) {
+      create.reset();
+      return;
+    }
+    create.mutate(form, {
+      onSuccess: onClose,
+      onError: (error) => faults.show(entityRefusal(error, t, labels).byField),
+    });
   };
   return (
     <RecordFormDialog
@@ -200,25 +227,27 @@ function NewEntityDialog({ onClose }: Readonly<{ onClose: () => void }>) {
         (value) => (value ?? "").trim() !== "",
       )}
       form={
-        <form id={formId} onSubmit={submit} className="form-stack">
+        <form
+          id={formId}
+          ref={faultsRoot}
+          onSubmit={submit}
+          className="form-stack"
+          noValidate
+        >
           <TextField
             label={t("legalEntities.displayName")}
             required
-            value={form.display_name}
-            onChange={set("display_name")}
+            maxLength={TEXT_LIMITS.label}
+            {...field("display_name")}
           />
           <TextField
             label={t("legalEntities.legalName")}
             required
-            value={form.legal_name}
-            onChange={set("legal_name")}
+            maxLength={TEXT_LIMITS.line}
+            {...field("legal_name")}
           />
-          <CountryField
-            required
-            value={form.country}
-            onChange={set("country")}
-          />
-          <ErrorLine error={create.error} />
+          <CountryField required {...field("country")} />
+          {refused.rest !== null && <ErrorLine>{refused.rest}</ErrorLine>}
         </form>
       }
       actions={

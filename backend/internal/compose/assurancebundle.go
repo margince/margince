@@ -46,6 +46,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // bundleDeps are the two doors this seam needs, named as functions so the
@@ -136,9 +137,8 @@ func bundleRunFindings(
 // bundleableFindings reads the open findings THIS RUN observed, minus the ones
 // somebody has deferred.
 //
-// Two narrowings the surface read (AssuranceExceptions) does not make, and both
-// are the difference between a task somebody should act on and one that will
-// annoy them:
+// It makes three narrowings the surface read (AssuranceExceptions) does not.
+// Each tells a task somebody should act on from one that will annoy them:
 //
 //   - JOINED TO assurance_run_finding. Scan returns early when a source cannot
 //     be read, finishing the run INCOMPLETE with nothing observed — and the
@@ -155,6 +155,8 @@ func bundleRunFindings(
 //     sibling clause in CloseCleared still said 'deferred' — the vocabulary the
 //     table shipped with, renamed by migration 1788416000 — and so had never
 //     matched a row.
+//   - A FINDING THE VIABILITY DECISION ANSWERS, on a deal this pass judged, files
+//     no task: that decision asks nobody. The walk's twin is answeredOtherwise.
 //
 // It reads assurance_exception directly rather than going through the deal join
 // AssuranceExceptions uses. The pass runs as PrincipalSystem over the whole
@@ -177,7 +179,11 @@ func bundleableFindings(
 		                    WHERE r.exception_id = e.id
 		                      AND r.outcome = $2
 		                      AND `+assurance.LiveRemindAtSQL("r", "$3")+` > now())
-		 ORDER BY `+findingRank, runID, assurance.OutcomeRemindLater, assurance.MaxSuppressionDays())
+		   AND NOT (e.type = ANY ($4) AND EXISTS (SELECT 1 FROM assurance_deal_receipt v
+		                                          WHERE v.deal_id = e.subject_id AND v.run_id = $1
+		                                            AND v.outcome <> $5))
+		 ORDER BY `+findingRank, runID, assurance.OutcomeRemindLater, assurance.MaxSuppressionDays(),
+		assurance.ViabilityAnsweredTypes(), string(viability.OutcomeUnknown))
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the findings to bundle: %w", err)
 	}

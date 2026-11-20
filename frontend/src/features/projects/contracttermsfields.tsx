@@ -10,27 +10,160 @@
 // component on the record form and nowhere near the renewal, because a renewal
 // is a fresh negotiation and inherits none of them.
 
+import { dayOutOfRange } from "../../components/create";
 import { Field, TextInput } from "../../design-system/atoms";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { MoneyInput } from "../../design-system/moneyinput";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import {
+  type FieldLabels,
+  fieldCheckSentence,
+  refusalSentences,
+} from "../../lib/problem";
 import { ContractArrField } from "./contractarr";
 import type { ContractDraft, ValueBasis } from "./contractform";
+
+type TermsWire =
+  | "title"
+  | "contract_number"
+  | "value_minor"
+  | "value_basis"
+  | "starts_on"
+  | "ends_on"
+  | "renewal_on"
+  | "notice_period_days"
+  | "payment_term_days"
+  | "signed_on";
+
+// Each term of the draft and the wire field it is sent as, which a refusal names.
+export const TERMS_WIRE: readonly (readonly [
+  keyof ContractDraft,
+  TermsWire,
+])[] = [
+  ["title", "title"],
+  ["contractNumber", "contract_number"],
+  ["valueMinor", "value_minor"],
+  ["valueBasis", "value_basis"],
+  ["startsOn", "starts_on"],
+  ["endsOn", "ends_on"],
+  ["renewalOn", "renewal_on"],
+  ["noticePeriodDays", "notice_period_days"],
+  ["paymentTermDays", "payment_term_days"],
+  ["signedOn", "signed_on"],
+];
+
+export function termsLabels(t: Translator): Record<TermsWire, string> {
+  return {
+    title: t("contracts.form.name"),
+    contract_number: t("contracts.form.number"),
+    value_minor: t("contracts.form.value"),
+    value_basis: t("contracts.form.basis"),
+    starts_on: t("contracts.form.startsOn"),
+    ends_on: t("contracts.form.endsOn"),
+    renewal_on: t("contracts.form.renewalOn"),
+    notice_period_days: t("contracts.form.noticeDays"),
+    payment_term_days: t("contracts.form.paymentTerms"),
+    signed_on: t("contracts.form.signedOn"),
+  } satisfies FieldLabels;
+}
+
+// A count of days the server takes: a whole number, zero or more.
+function daysFault(
+  text: string,
+  locale: Locale,
+  label: string,
+): string | undefined {
+  const typed = text.trim();
+  if (typed === "") return undefined;
+  if (!/^-?\d+$/.test(typed)) {
+    return fieldCheckSentence("not_integer", locale, label);
+  }
+  return Number(typed) < 0
+    ? fieldCheckSentence("out_of_range", locale, label, { min: "0" })
+    : undefined;
+}
+
+/** What the terms refuse before sending, by wire field, in the server's words. */
+export function termsFaults(
+  draft: ContractDraft,
+  locale: Locale,
+  t: Translator,
+): ReadonlyMap<string, string> {
+  const labels = termsLabels(t);
+  const faults = [
+    ["starts_on", dayOutOfRange(draft.startsOn, locale, labels.starts_on)],
+    ["ends_on", dayOutOfRange(draft.endsOn, locale, labels.ends_on)],
+    ["renewal_on", dayOutOfRange(draft.renewalOn, locale, labels.renewal_on)],
+    [
+      "notice_period_days",
+      daysFault(draft.noticePeriodDays, locale, labels.notice_period_days),
+    ],
+    [
+      "payment_term_days",
+      daysFault(draft.paymentTermDays, locale, labels.payment_term_days),
+    ],
+    ["signed_on", dayOutOfRange(draft.signedOn, locale, labels.signed_on)],
+  ] as const;
+  return new Map(
+    faults.flatMap(([field, fault]) => (fault ? [[field, fault]] : [])),
+  );
+}
+
+/**
+ * The terms' refusals, before sending and from the server, each until its term changes.
+ * The ref of the form's fields comes apart from them, as `useFieldFaults` gives it.
+ */
+export function useTermsFaults(
+  draft: ContractDraft,
+  setDraft: (draft: ContractDraft) => void,
+) {
+  const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
+  const checked = termsFaults(draft, locale, t);
+  const labels = termsLabels(t);
+  const terms = {
+    errors: (field: TermsWire) => checked.get(field) ?? faults.of(field),
+    setDraft: (next: ContractDraft) => {
+      for (const [key, wire] of TERMS_WIRE) {
+        if (next[key] !== draft[key]) faults.edited(wire);
+      }
+      setDraft(next);
+    },
+    // True when a term is refused before sending; focus moves to it.
+    refused: () => faults.show(checked),
+    showRefusal: (error: unknown) =>
+      faults.show(refusalSentences(error, t, labels).byField),
+    // What the foot of the form says about a refusal no term stands beside.
+    rest: (error: unknown) =>
+      error ? refusalSentences(error, t, labels).rest : null,
+    clear: () => faults.show(new Map()),
+  };
+  return [terms, faultsRoot] as const;
+}
 
 export function ContractTermsFields({
   draft,
   setDraft,
   currency,
+  errors,
 }: Readonly<{
   draft: ContractDraft;
   setDraft: (draft: ContractDraft) => void;
   currency: string;
+  // The sentence that refuses a term, by its wire field (TERMS_WIRE).
+  errors?: (field: TermsWire) => string | undefined;
 }>) {
   const t = useT();
   return (
     <div className="form-stack">
-      <Field label={t("contracts.form.name")} required>
+      <Field
+        label={t("contracts.form.name")}
+        required
+        error={errors?.("title")}
+      >
         {(props) => (
           <TextInput
             {...props}
@@ -40,7 +173,10 @@ export function ContractTermsFields({
         )}
       </Field>
 
-      <Field label={t("contracts.form.number")}>
+      <Field
+        label={t("contracts.form.number")}
+        error={errors?.("contract_number")}
+      >
         {(props) => (
           <TextInput
             {...props}
@@ -52,7 +188,7 @@ export function ContractTermsFields({
         )}
       </Field>
 
-      <Field label={t("contracts.form.value")}>
+      <Field label={t("contracts.form.value")} error={errors?.("value_minor")}>
         {(props) => (
           // MoneyInput rather than a TextInput this file scales itself, and the
           // reasons are the two defects the hand-rolled version had.
@@ -92,7 +228,11 @@ export function ContractTermsFields({
           the amount means. An open-ended agreement has no finite total, so it
           records twelve months and says so — and a figure whose basis was
           picked on another screen is a figure nobody checked. */}
-      <Field label={t("contracts.form.basis")} required>
+      <Field
+        label={t("contracts.form.basis")}
+        required
+        error={errors?.("value_basis")}
+      >
         {(props) => (
           <Select
             {...props}
@@ -108,7 +248,7 @@ export function ContractTermsFields({
         )}
       </Field>
 
-      <Field label={t("contracts.form.startsOn")}>
+      <Field label={t("contracts.form.startsOn")} error={errors?.("starts_on")}>
         {(props) => (
           <DateInput
             {...props}
@@ -122,6 +262,7 @@ export function ContractTermsFields({
           answer — and it is exactly the case the annualized basis exists for. */}
       <Field
         label={t("contracts.form.endsOn")}
+        error={errors?.("ends_on")}
         hint={t("contracts.form.endsOnHint")}
       >
         {(props) => (
@@ -133,7 +274,10 @@ export function ContractTermsFields({
         )}
       </Field>
 
-      <Field label={t("contracts.form.renewalOn")}>
+      <Field
+        label={t("contracts.form.renewalOn")}
+        error={errors?.("renewal_on")}
+      >
         {(props) => (
           <DateInput
             {...props}
@@ -145,6 +289,7 @@ export function ContractTermsFields({
 
       <Field
         label={t("contracts.form.noticeDays")}
+        error={errors?.("notice_period_days")}
         hint={t("contracts.form.noticeDaysHint")}
       >
         {(props) => (
@@ -162,6 +307,7 @@ export function ContractTermsFields({
 
       <Field
         label={t("contracts.form.paymentTerms")}
+        error={errors?.("payment_term_days")}
         hint={t("contracts.form.paymentTermsHint")}
       >
         {(props) => (
@@ -179,6 +325,7 @@ export function ContractTermsFields({
 
       <Field
         label={t("contracts.form.signedOn")}
+        error={errors?.("signed_on")}
         hint={t("contracts.form.signedOnHint")}
       >
         {(props) => (

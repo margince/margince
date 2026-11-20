@@ -15,11 +15,13 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -249,13 +251,15 @@ func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
 	_, roomID, version := openRoomOnANewDeal(t, e, "Expiry agreement")
 
 	var set versionedWire
-	body := AnyMap{"expires_at": "2027-01-15T10:00:00Z"}
+	// An expiry before the room existed is stored as the time of the call, so the day comes from the clock.
+	expiry := clocktest.Now(t).AddDate(0, 2, 0).Truncate(time.Second)
+	body := AnyMap{"expires_at": expiry.Format(time.RFC3339)}
 	if status := e.Call(t, "PUT", "/v1/deal-rooms/"+roomID+"/expiry", body,
 		map[string]string{"If-Match": strconv.FormatInt(version, 10)}, &set); status != http.StatusOK {
 		t.Fatalf("setting the expiry -> %d", status)
 	}
 	assertSaveChangesNothing(t, e, "PUT", "/v1/deal-rooms/"+roomID+"/expiry",
-		AnyMap{"expires_at": "2027-01-15T12:00:00+02:00"}, roomID, set.Version)
+		AnyMap{"expires_at": expiry.In(time.FixedZone("UTC+2", 2*60*60)).Format(time.RFC3339)}, roomID, set.Version)
 
 	stale := map[string]string{"If-Match": strconv.FormatInt(set.Version-1, 10)}
 	if status := e.Call(t, "PUT", "/v1/deal-rooms/"+roomID+"/expiry", body, stale, nil); status != http.StatusConflict &&

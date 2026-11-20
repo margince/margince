@@ -6,12 +6,13 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 
 ## comms_outbound
 
-46 columns · primary key `(id)` · referenced by 5 foreign keys
+47 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
+| `answers_activity_id` | `uuid` |  | Points at `activity.id`. |
 | `attachments` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `attempts` | `integer`, default `0` | yes |  |
 | `bcc` | `jsonb` |  |  |
@@ -62,6 +63,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `answers_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `connection_id` | `capture_connection` | deleting the parent keeps this row and clears the link |
 | `instruction_id` | `communication_instruction` | the parent cannot be deleted while this row points at it |
 | `link_id` | `confirm_token` | deleting the parent keeps this row and clears the link |
@@ -91,6 +93,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 
 **Indexes**
 
+- `comms_outbound_answers_ix`: `btree (answers_activity_id) WHERE (answers_activity_id IS NOT NULL)`
 - `comms_outbound_bounced_idx`: `btree (bounced_at DESC) WHERE (bounced_at IS NOT NULL)`
 - `comms_outbound_controller_payload`: `btree (payload_expires_at) WHERE (payload_ref IS NOT NULL)`
 - `comms_outbound_due`: `btree (delivery_due_at) WHERE ((delivery_due_at IS NOT NULL) AND (status <> 'sent'))`

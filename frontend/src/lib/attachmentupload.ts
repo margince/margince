@@ -50,6 +50,45 @@ export const ACCEPTED_ATTACHMENT_EXTENSIONS = [
   ".msg",
 ] as const;
 
+/**
+ * The declared media types the server accepts, aliases included, held to
+ * `activities.AcceptedAttachmentMediaTypes` by the same gate. A file the browser
+ * types as one of these is kept whatever its ending.
+ */
+export const ACCEPTED_ATTACHMENT_MEDIA_TYPES = [
+  "application/csv",
+  "application/msword",
+  "application/pdf",
+  "application/rtf",
+  "application/vnd.ms-excel",
+  "application/vnd.ms-outlook",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.oasis.opendocument.presentation",
+  "application/vnd.oasis.opendocument.spreadsheet",
+  "application/vnd.oasis.opendocument.text",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/x-zip-compressed",
+  "application/zip",
+  "image/gif",
+  "image/heic",
+  "image/heif",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/tiff",
+  "image/webp",
+  "message/rfc822",
+  "text/csv",
+  "text/html",
+  "text/markdown",
+  "text/plain",
+  "text/rtf",
+  "text/x-csv",
+  "text/x-markdown",
+] as const;
+
 /** The same list as a file input's `accept` attribute. */
 export const ACCEPTED_ATTACHMENT_ATTR =
   ACCEPTED_ATTACHMENT_EXTENSIONS.join(",");

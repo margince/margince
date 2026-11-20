@@ -120,7 +120,7 @@ func TestAGatedStageReorderedBehindADealHoldsIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Contract, the gated stage, now comes first; the deal sits after it.
-	if _, err := e.store.ReorderStages(e.as(), pipelineID, []ids.UUID{third.UUID, first.UUID, second.UUID}, nil); err != nil {
+	if _, err := e.store.ReorderStages(e.as(), pipelineID, append([]ids.UUID{third.UUID, first.UUID, second.UUID}, closingStageUUIDs(t, e.owner, pipelineID)...), nil); err != nil {
 		t.Fatalf("reordering the stages: %v", err)
 	}
 	refusedFor(t, e.advance(dealID, laterStage(t, e, pipelineID)), "")

@@ -68,7 +68,10 @@ type BuyerRoomDocument = components["schemas"]["BuyerRoomDocument"];
 // for, and one reading "Confirm this version" under a transcript cannot tell
 // what they would be agreeing to. What they want to say goes in the thread
 // under it, which is the whole point of the board.
-function BuyerDocumentVerbs({ doc }: Readonly<{ doc: BuyerRoomDocument }>) {
+function BuyerDocumentVerbs({
+  doc,
+  onSessionLost,
+}: Readonly<{ doc: BuyerRoomDocument; onSessionLost: () => void }>) {
   const t = useT();
   const download = useMutation({
     mutationKey: ["buyer-room-document-download"],
@@ -87,6 +90,9 @@ function BuyerDocumentVerbs({ doc }: Readonly<{ doc: BuyerRoomDocument }>) {
           parseAs: "blob",
         },
       );
+      if (response.status === 401) {
+        throw new SessionRefusedError();
+      }
       if (error || !data) {
         // A refusal this screen decided, with copy it already translated, so
         // it rides as a problem body — a plain Error is wording nobody wrote
@@ -98,6 +104,7 @@ function BuyerDocumentVerbs({ doc }: Readonly<{ doc: BuyerRoomDocument }>) {
       // opens in nothing.
       downloadBytes(data, input.filename, data.type);
     },
+    onError: retireOnRefusal(onSessionLost),
   });
   return (
     <div className="buyer-doc-actions">
@@ -239,7 +246,7 @@ export function BuyerBoard({
       meta: doc.filename,
       byteSize: doc.byte_size,
       read,
-      actions: <BuyerDocumentVerbs doc={doc} />,
+      actions: <BuyerDocumentVerbs doc={doc} onSessionLost={onSessionLost} />,
     };
   });
   return (

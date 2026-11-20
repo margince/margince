@@ -64,6 +64,7 @@
     "acknowledgeCompanyView": "business",
     "acknowledgeContactView": "business",
     "activateHomeRepair": "operator",
+    "addAttachmentLink": "business",
     "addConsumerMailDomain": "workspace_settings",
     "addDealLine": "business",
     "addDealRoomDocument": "business",
@@ -647,6 +648,7 @@
     "mergeMembers": "admin_settings",
     "mergeTags": "business",
     "messageAnchorCompanySiteRead": "workspace_settings",
+    "moveDealPipeline": "business",
     "nameSeats": "workspace_settings",
     "offerOwnershipTransfer": "business",
     "openDealRoomThread": "business",
@@ -935,6 +937,7 @@
     "acknowledgeCompanyView": "companies",
     "acknowledgeContactView": "contacts",
     "activateHomeRepair": "system_health",
+    "addAttachmentLink": "documents",
     "addConsumerMailDomain": "capture_rules",
     "addDealLine": "deals",
     "addDealRoomDocument": "deal_rooms",
@@ -1663,6 +1666,7 @@
     "mergeTags": "tags",
     "messageAnchorCompanySiteRead": "company_profile",
     "messageOnboardingCompany": "company_profile",
+    "moveDealPipeline": "deals",
     "nameSeats": "members",
     "offerOwnershipTransfer": "sharing",
     "oidcSignInCallback": "sign_in",
@@ -1683,6 +1687,7 @@
     "previewAiBudget": "ai_models",
     "previewAiRouting": "ai_models",
     "previewAiTaskOverrides": "ai_models",
+    "previewAttachmentLink": "documents",
     "previewAutomation": "automations",
     "previewBookingReturn": "booking_pages",
     "previewBulkChange": "bulk",
@@ -1935,6 +1940,7 @@
     "transferProjectOwnership": "projects",
     "undoActivityProjectFiling": "activities",
     "undoBulkChange": "bulk",
+    "undoDealPipelineMove": "deals",
     "undoDedupeDisposition": "duplicates",
     "undoImportRun": "imports",
     "undoMarginceChanges": "deals",
@@ -1951,6 +1957,7 @@
     "updateAgentClient": "agent_clients",
     "updateApprovalPreference": "agent_limits",
     "updateAttachmentMetadata": "documents",
+    "updateAutoApplyInstallation": "agent_limits",
     "updateAutomation": "automations",
     "updateAutonomy": "agent_limits",
     "updateCaptureSettings": "capture_rules",
@@ -2207,6 +2214,9 @@
       "deals"
     ],
     "attach_document": [
+      "documents"
+    ],
+    "attach_link": [
       "documents"
     ],
     "backfill_employment_import": [
@@ -3295,6 +3305,9 @@
     "message_anchor_company_site_read": [
       "company_profile"
     ],
+    "move_deal_pipeline": [
+      "deals"
+    ],
     "offer_ownership_transfer": [
       "sharing"
     ],
@@ -4328,6 +4341,9 @@
       "business"
     ],
     "attach_document": [
+      "business"
+    ],
+    "attach_link": [
       "business"
     ],
     "backfill_employment_import": [
@@ -5396,6 +5412,9 @@
     ],
     "message_anchor_company_site_read": [
       "workspace_settings"
+    ],
+    "move_deal_pipeline": [
+      "business"
     ],
     "offer_ownership_transfer": [
       "business"

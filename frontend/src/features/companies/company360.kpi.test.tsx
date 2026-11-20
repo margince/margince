@@ -31,12 +31,8 @@ afterEach(() => {
 // unchecked. That lets a shape drift off the contract while every test passes.
 type StateStrip360 = NonNullable<Company360["state_strip"]>;
 
-// The page's two lifecycle controls, header first. They are different
-// primitives. The header's is the design system's dropdown worn as a button
-// beside the name (a combobox named by its field). The grid's is the inline
-// value a row of values carries ("Change Lifecycle"). One of each, so a third
-// mount point or a lost one fails here. An account nobody has assessed has an
-// empty lifecycle row, which folds behind the details' "Show N empty fields".
+// The header's one lifecycle control, then the details' About reading; a second
+// control fails here. An unassessed stage folds behind "Show N empty fields".
 async function lifecycleControls(): Promise<HTMLElement[]> {
   const header = await screen.findAllByRole("combobox", { name: "Lifecycle" });
   const unfold = screen.queryByRole("button", {
@@ -45,12 +41,13 @@ async function lifecycleControls(): Promise<HTMLElement[]> {
   if (unfold) {
     await userEvent.click(unfold);
   }
-  const grid = await screen.findAllByRole("button", {
-    name: /^Change Lifecycle/,
-  });
+  const about = await screen.findByRole("region", { name: "About" });
+  const row = within(about).getByText("Lifecycle", { selector: "dt" });
   expect(header).toHaveLength(1);
-  expect(grid).toHaveLength(1);
-  return [...header, ...grid];
+  if (!(row.nextElementSibling instanceof HTMLElement)) {
+    throw new Error("the About section draws no Lifecycle value");
+  }
+  return [...header, row.nextElementSibling];
 }
 
 describe("company view — where the account stands, and what it is to us", () => {
@@ -75,9 +72,8 @@ describe("company view — where the account stands, and what it is to us", () =
     // read as "Prospect" while it was also a partner. Lifecycle is the editable
     // control; the types stay read-only badges. findAllBy, not getBy: the
     // controls appear only once /me answers with the viewer's grants, which
-    // resolves apart from the 360 awaited above. Two controls, the header's
-    // button and the Details grid's field. Both show the same value,
-    // because both read the one row and write through the same patch.
+    // resolves apart from the 360 awaited above. The header's button and the
+    // details' row show the same value, because both read the one row.
     for (const control of await lifecycleControls()) {
       expect(control.textContent).toContain("Former customer");
     }
@@ -165,9 +161,8 @@ describe("company view — where the account stands, and what it is to us", () =
 
     await waitFor(() => expect(patchCount).toBe(1));
     expect(lastIfMatch).toBe("1");
-    // Both controls read "Prospect" (the header's own and the grid's reused
-    // copy). The single write invalidates the one query both read from; neither
-    // wrote a second time.
+    // Both read "Prospect": the single write invalidates the one query both
+    // read from, and nothing wrote a second time.
     await waitFor(async () => {
       for (const control of await lifecycleControls()) {
         expect(control.textContent).toContain("Prospect");

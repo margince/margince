@@ -154,16 +154,13 @@ func project360Commitments(rows []crmcontracts.Project360Commitment, asOf time.T
 	return out
 }
 
-func project360Activities(rows []crmcontracts.Activity) []Project360Activity {
+func project360Activities(rows []crmcontracts.Activity, writerSide ActivityWriterSide) []Project360Activity {
 	out := make([]Project360Activity, 0, len(rows))
 	for _, a := range rows {
-		item := Project360Activity{
+		out = append(out, Project360Activity{
 			ActivityID: ids.UUID(a.Id), Kind: string(a.Kind), Subject: orBlank(a.Subject), OccurredAt: a.OccurredAt,
-		}
-		if a.Direction != nil {
-			item.Direction = string(*a.Direction)
-		}
-		out = append(out, item)
+			Direction: writerSide(a),
+		})
 	}
 	return out
 }

@@ -46,7 +46,9 @@ func (w *PullWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	}
 	// Marks are held to the millisecond, so the start is compared at that grain.
 	started := w.Puller.Now().Truncate(time.Millisecond)
-	if err := w.Puller.Pull(bound, job.Args.Connection()); err != nil {
+	if err := w.Puller.Pull(bound, job.Args.Connection()); errors.Is(err, errPullAgain) {
+		return river.JobSnooze(noticeRerun)
+	} else if err != nil {
 		return jobs.FaultContext(bound, err)
 	}
 	if w.Marks == nil {

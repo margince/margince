@@ -71,6 +71,7 @@ type fakeSitePage struct {
 	// how many bundles it loads. Together they are what tells a
 	// client-rendered application shell from an empty document.
 	headText []string
+	siteName string
 	scripts  int
 	modules  int
 }
@@ -109,7 +110,7 @@ func (s *fakeSite) FetchPage(_ context.Context, rawURL string) (webread.Page, er
 	return webread.Page{
 		URL: rawURL, FinalURL: finalURL, Text: page.text, Links: page.links, Bytes: len(page.text),
 		OGImage: page.ogImage, Icons: page.icons, Refresh: page.refresh,
-		HeadText: page.headText, ExternalScripts: page.scripts, ModuleScripts: page.modules,
+		HeadText: page.headText, SiteNameOrTitle: page.siteName, ExternalScripts: page.scripts, ModuleScripts: page.modules,
 	}, nil
 }
 

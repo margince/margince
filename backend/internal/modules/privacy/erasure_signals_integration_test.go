@@ -62,7 +62,7 @@ func TestErasingAContactWithholdsTheKeptEvidenceOfTheirSignals(t *testing.T) {
 	if served() != 1 {
 		t.Fatal("the correction's audit row is not served before any erasure, so the test proves nothing")
 	}
-	if err := tombstoneSubjectSignals(ctx, tx, subject, "subject request"); err != nil {
+	if err := scrubSubjectSignals(ctx, tx, subject, nil, "subject request", causeContactErasure); err != nil {
 		t.Fatalf("tombstoning the subject's signals: %v", err)
 	}
 	if served() != 0 {
@@ -80,6 +80,7 @@ func TestErasingAContactRedactsTheExtensionEvidenceAboutThem(t *testing.T) {
 			{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText},
 		},
 	}})
+	ctx, _ = auditActorCtx(ctx, t, tx)
 	subject, other := ids.New[ids.ContactKind](), ids.New[ids.ContactKind]()
 	for _, c := range []ids.ContactID{subject, other} {
 		mustExec(ctx, t, tx,
@@ -97,7 +98,7 @@ func TestErasingAContactRedactsTheExtensionEvidenceAboutThem(t *testing.T) {
 	}
 	declared, undeclared, theirs := seed("ext:erasetest:loss", subject), seed("ext:erasetest:gone", subject), seed("ext:erasetest:loss", other)
 
-	if err := redactSubjectExtensionSignals(ctx, tx, subject); err != nil {
+	if err := scrubSubjectSignals(ctx, tx, subject, nil, "subject request", causeContactErasure); err != nil {
 		t.Fatal(err)
 	}
 	read := func(id ids.UUID) (summary, evidence string) {

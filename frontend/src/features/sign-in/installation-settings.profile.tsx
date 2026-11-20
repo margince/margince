@@ -85,6 +85,7 @@ export function InstallationProfileDialog({
   dirty,
   pending,
   refused,
+  formRef,
   blanketError,
   describe,
   onChange,
@@ -99,6 +100,8 @@ export function InstallationProfileDialog({
   dirty: boolean;
   pending: boolean;
   refused: ReadonlyMap<string, string>;
+  // The form's ref, where a refused save looks for the field to focus.
+  formRef: (form: HTMLFormElement | null) => void;
   blanketError: string | null;
   describe: (control: FieldControl) => string | undefined;
   onChange: (next: InstallationSettings) => void;
@@ -143,8 +146,12 @@ export function InstallationProfileDialog({
       <DrawerBody>
         <form
           id={formId}
-          ref={form}
+          ref={(node) => {
+            form.current = node;
+            formRef(node);
+          }}
           className="form-stack"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             onSubmit();

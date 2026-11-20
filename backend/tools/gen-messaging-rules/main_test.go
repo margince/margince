@@ -17,7 +17,7 @@ func TestTheCommittedRulesMatchTheirPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(units) < 2 {
-		t.Fatalf("found %d units with a policy, want the German and Vietnamese packs at least: %v", len(units), units)
+		t.Fatalf("found %d units with a policy, want the EU and Asia-Pacific units at least: %v", len(units), units)
 	}
 	if err := run(repoRoot, "", true); err != nil {
 		t.Fatal(err)
@@ -35,9 +35,9 @@ func unit(t *testing.T, name string) string {
 }
 
 func TestCheckFailsAStaleGeneratedFile(t *testing.T) {
-	dir := unit(t, "vn")
+	dir := unit(t, "apac")
 	target := filepath.Join(dir, "messagingrules_gen.go")
-	if err := os.WriteFile(target, []byte("package vn\n"), 0o600); err != nil {
+	if err := os.WriteFile(target, []byte("package apac\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := run("", dir, true); err == nil {
@@ -51,12 +51,12 @@ func TestCheckFailsAStaleGeneratedFile(t *testing.T) {
 	}
 }
 
-// rootWithVN copies both shipped packs into a temporary repository root and
-// answers the Vietnamese one. The German one keeps the census from being empty.
-func rootWithVN(t *testing.T) (root, unit string) {
+// rootWith copies both shipped policy units into a temporary repository root
+// and answers the one named. The other keeps the census from being empty.
+func rootWith(t *testing.T, name string) (root, unit string) {
 	t.Helper()
 	root = t.TempDir()
-	for _, name := range []string{"de", "vn"} {
+	for _, name := range []string{"eu", "apac"} {
 		if err := os.CopyFS(filepath.Join(root, "extensions", name), os.DirFS(filepath.Join(repoRoot, "extensions", name))); err != nil {
 			t.Fatal(err)
 		}
@@ -64,17 +64,16 @@ func rootWithVN(t *testing.T) (root, unit string) {
 	if err := run(root, "", true); err != nil {
 		t.Fatalf("the copied packs fail -check before anything is removed: %v", err)
 	}
-	return root, filepath.Join(root, "extensions", "vn")
+	return root, filepath.Join(root, "extensions", name)
 }
 
 func TestCheckFailsWhenAPackLosesPartOfItsPolicy(t *testing.T) {
 	for name, remove := range map[string][]string{
 		"the policy folder":                        {"policy"},
 		"the generated file and the policy folder": {"messagingrules_gen.go", "policy"},
-		"the index":            {"policy/index.md"},
-		"the go:generate file": {"gen.go"},
+		"the go:generate file":                     {"gen.go"},
 	} {
-		root, unit := rootWithVN(t)
+		root, unit := rootWith(t, "apac")
 		for _, path := range remove {
 			if err := os.RemoveAll(filepath.Join(unit, path)); err != nil {
 				t.Fatal(err)
@@ -83,5 +82,31 @@ func TestCheckFailsWhenAPackLosesPartOfItsPolicy(t *testing.T) {
 		if err := run(root, "", true); err == nil {
 			t.Errorf("-check passed a pack without %s", name)
 		}
+	}
+}
+
+func TestCheckFailsWhenAPerCountryUnitLosesAPackOrItsSharedLayer(t *testing.T) {
+	for name, remove := range map[string]string{
+		"a country's index":     "policy/fr/index.md",
+		"the shared EU layer":   "policy/regional/eu.md",
+		"a country's own layer": "policy/fr/fr.md",
+	} {
+		root, unit := rootWith(t, "eu")
+		if err := os.Remove(filepath.Join(unit, remove)); err != nil {
+			t.Fatal(err)
+		}
+		if err := run(root, "", true); err == nil {
+			t.Errorf("-check passed the eu unit without %s", name)
+		}
+	}
+}
+
+func TestCheckFailsAPerCountryUnitWhoseCountryDropsOut(t *testing.T) {
+	root, unit := rootWith(t, "eu")
+	if err := os.RemoveAll(filepath.Join(unit, "policy", "fr")); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(root, "", true); err == nil {
+		t.Error("-check passed a generated file that still declares a country whose policy folder is gone")
 	}
 }

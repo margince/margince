@@ -66,12 +66,12 @@ func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now t
 		       -- scan fails at RUNTIME on any deal that names a close date —
 		       -- and it 500s the whole company page, not just this card.
 		       to_char(d.expected_close_date, 'YYYY-MM-DD'),
-		       d.created_at, d.last_activity_at, d.wait_until, %[4]s
+		       d.created_at, d.last_activity_at, %[6]s, %[4]s
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		%[1]s
 		ORDER BY d.created_at DESC, d.id DESC
-		LIMIT %[2]d`, openDealsWhere(companyPos, dealScope), sectionLimit+1, amountSQL, deals.MeetingAheadSQL("d"), stageName), args...)
+		LIMIT %[2]d`, openDealsWhere(companyPos, dealScope), sectionLimit+1, amountSQL, deals.MeetingAheadSQL("d"), stageName, deals.PauseEndsSQL("d")), args...)
 	if err != nil {
 		return crmcontracts.Company360Deals{}, err
 	}

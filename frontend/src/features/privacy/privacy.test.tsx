@@ -90,15 +90,17 @@ describe("ConsentPurposesCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("refuses to submit without a key and a label", async () => {
+  it("refuses to submit without a key and a label, and says so on each", async () => {
     stubRoutes();
     render(<ConsentPurposesCard />);
     await userEvent.click(
       await screen.findByRole("button", { name: /add purpose/i }),
     );
-    expect(
+    await userEvent.click(
       screen.getByRole("button", { name: /create purpose/i }),
-    ).toBeDisabled();
+    );
+    expect(await screen.findByText("Key is required.")).toBeInTheDocument();
+    expect(screen.getByText("Label is required.")).toBeInTheDocument();
   });
 
   it("surfaces a create failure inline without losing the typed values", async () => {
@@ -118,7 +120,10 @@ describe("ConsentPurposesCard", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /create purpose/i }),
     );
-    expect(await screen.findByText(/"news": conflict/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(en["privacy.purposeKeyTakenUnnamed"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/"news": conflict/)).toBeNull();
     expect(screen.getByLabelText(/key/i)).toHaveValue("news");
   });
 

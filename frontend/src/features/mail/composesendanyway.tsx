@@ -25,6 +25,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { addressKey } from "../../lib/addresskey";
 import { ComposeOutcome } from "./compose.parts";
 import type { InlineReview } from "./composeinlinereview";
 import type { Refusal } from "./composerefusal";
@@ -71,10 +72,10 @@ export function markedRecipients(
   if (!review) return undefined;
   const lines = [...fields.to, ...fields.cc, ...fields.bcc];
   const named = new Set(
-    review.refusals.map((refusal) => refusal.address.toLowerCase()),
+    review.refusals.map((refusal) => addressKey(refusal.address)),
   );
   const values = new Set(
-    lines.filter((address) => named.has(address.trim().toLowerCase())),
+    lines.filter((address) => named.has(addressKey(address))),
   );
   return { values, label: t("compose.sendAnyway.marked") };
 }

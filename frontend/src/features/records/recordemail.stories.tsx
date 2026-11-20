@@ -109,6 +109,25 @@ export const WriteVerbRefused: Story = {
     ),
 };
 
+// Refused by a sentence the page states: the tooltip shows it, and the
+// description points at the page's copy.
+export const WriteVerbRefusedByThePage: Story = {
+  render: () =>
+    withClient(
+      <>
+        <RecordEmailVerb
+          entityType="deal"
+          entityId="deal-1"
+          disabledReasonId="deal-log-refused"
+          reasonTip="You do not have permission to log activities on this record."
+        />
+        <p id="deal-log-refused" className="t-caption">
+          You do not have permission to log activities on this record.
+        </p>
+      </>,
+    ),
+};
+
 // The same verb carrying its own composer, for a record page that keeps no
 // composer state — the deal, the lead and the project all mount this one.
 export const WriteVerbWithOwnComposer: Story = {

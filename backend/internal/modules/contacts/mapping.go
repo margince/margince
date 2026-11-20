@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -170,6 +171,10 @@ func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64)
 	if req.RelationshipMark != nil {
 		mark := relationshipmark.Mark(*req.RelationshipMark)
 		in.RelationshipMark = &mark
+	}
+	if req.GreetingRegister != nil {
+		register := greetingregister.Register(*req.GreetingRegister)
+		in.GreetingRegister = &register
 	}
 	if req.Social != nil {
 		in.Social = *req.Social

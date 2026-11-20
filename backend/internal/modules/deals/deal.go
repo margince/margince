@@ -77,6 +77,12 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 	return nil
 }
 
+// dealNameWithin refuses a name past its column's limit at the field, so the
+// caller learns the limit from a 422 rather than from a refused write.
+func dealNameWithin(name string) error {
+	return httperr.RequireWithin(dealNameColumn, name, values.TextLabelCharacters)
+}
+
 // moved answers whether a supplied value differs from the one the row holds.
 // A request that did not supply the field moved nothing; one that supplied the
 // value already there moved nothing either, and the second is the reading a
@@ -110,6 +116,9 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 	if in.Name != nil {
 		name, err := httperr.RequireNonBlank("name", *in.Name)
 		if err != nil {
+			return nil, err
+		}
+		if err := dealNameWithin(name); err != nil {
 			return nil, err
 		}
 		p.Set(dealNameColumn, current.Name, name)

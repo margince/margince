@@ -389,11 +389,101 @@ it("refuses a file over the installation limit before anything is logged", async
   );
   expect(
     screen.getByText(
-      "The file exceeds 1 MB, the limit on this installation. Choose a smaller file.",
+      "scan.pdf was not added. The file exceeds 1 MB, the limit on this installation. Choose a smaller file.",
     ),
   ).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Remove scan\.pdf/ })).toBeNull();
   expect(created(calls)).toBe(false);
+});
+
+it("names each dropped file the server would refuse, before anything is logged", async () => {
+  const calls = stubApi();
+  renderForm();
+  const input = await screen.findByLabelText("Attach files");
+  await screen.findByText("Up to 1 MB.");
+  // A drop skips the picker's filter, so these reach the form as they are.
+  fireEvent.drop(input, {
+    dataTransfer: {
+      files: [
+        new File(["MZ"], "setup.exe", { type: "application/x-msdownload" }),
+        new File([], "blank.pdf", { type: "application/pdf" }),
+        pdf("agenda.pdf"),
+      ],
+    },
+  });
+  expect(
+    await screen.findByText(
+      "setup.exe was not added. This kind of file cannot be attached. Choose a document, image, zip archive or saved email.",
+    ),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(
+      "blank.pdf was not added. The file is empty, so there is nothing to add. Choose a file that has content.",
+    ),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: /Remove agenda\.pdf/ }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: /Remove setup\.exe/ }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /Remove blank\.pdf/ }),
+  ).toBeNull();
+  expect(created(calls)).toBe(false);
+});
+
+it("judges a file's kind as the server does: by its declared type, else its ending", async () => {
+  stubApi();
+  renderForm();
+  const input = await screen.findByLabelText("Attach files");
+  await screen.findByText("Up to 1 MB.");
+  fireEvent.drop(input, {
+    dataTransfer: {
+      files: [
+        new File(["%PDF"], "scan", { type: "application/pdf" }),
+        new File(["%PDF"], "minutes.pdf", { type: "application/x-unknown" }),
+      ],
+    },
+  });
+  expect(
+    await screen.findByRole("button", { name: /Remove scan/ }),
+  ).toBeTruthy();
+  expect(screen.getByText(/minutes\.pdf was not added/)).toBeTruthy();
+});
+
+it("clears a file's refusal once a file of that name is accepted", async () => {
+  stubApi();
+  renderForm();
+  const input = await screen.findByLabelText("Attach files");
+  await screen.findByText("Up to 1 MB.");
+  const refusal = /blank\.pdf was not added/;
+  fireEvent.drop(input, {
+    dataTransfer: {
+      files: [new File([], "blank.pdf", { type: "application/pdf" })],
+    },
+  });
+  expect(await screen.findByText(refusal)).toBeTruthy();
+  fireEvent.drop(input, { dataTransfer: { files: [pdf("blank.pdf")] } });
+  expect(
+    await screen.findByRole("button", { name: /Remove blank\.pdf/ }),
+  ).toBeTruthy();
+  expect(screen.queryByText(refusal)).toBeNull();
+});
+
+it("clears the refused-file lines once the activity is logged", async () => {
+  const calls = stubApi();
+  renderForm();
+  const input = await screen.findByLabelText("Attach files");
+  fireEvent.drop(input, {
+    dataTransfer: { files: [new File(["MZ"], "setup.exe", { type: "" })] },
+  });
+  expect(await screen.findByText(/setup\.exe was not added/)).toBeTruthy();
+  await logWith([pdf("agenda.pdf")]);
+  await waitFor(() => expect(uploads(calls)).toHaveLength(1));
+  await waitFor(() =>
+    expect(screen.queryByText(/setup\.exe was not added/)).toBeNull(),
+  );
 });
 
 it("lets a picked file be taken off before logging", async () => {

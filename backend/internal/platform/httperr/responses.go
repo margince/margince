@@ -58,12 +58,17 @@ func Unavailable(w http.ResponseWriter, r *http.Request, code, detail string) {
 	writeProblem(w, problem{Status: http.StatusServiceUnavailable, Code: code, Detail: detail})
 }
 
-// ErrNotConfigured is what a model call returns while no AI model is bound: the
-// 501 an unwired operation answers. A job that meets it has nothing to do yet,
-// and a handler that returns it as it came says the same to its caller.
+// CodeAINotConfigured is the one problem code that says no AI model is bound.
+// A screen maps it to its "connect an AI" copy.
+const CodeAINotConfigured = "ai_not_configured"
+
+// ErrNotConfigured is what a model call returns while no AI model is bound.
+// It is a 409 with CodeAINotConfigured: the request is fine and the
+// installation lacks a model. A job that meets it has nothing to do yet, and a
+// handler that returns it as it came says the same to its caller.
 var ErrNotConfigured = &DetailedError{
-	Status: http.StatusNotImplemented, Code: "not_implemented",
-	Detail: "no AI model is bound yet; save one under Settings, AI models",
+	Status: http.StatusConflict, Code: CodeAINotConfigured,
+	Detail: "No AI model is connected. Connect one under Settings, AI.",
 }
 
 // NotImplementedBecause is NotImplemented for a route that IS implemented and

@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, Suspense } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -13,7 +12,8 @@ import {
   type Section,
 } from "../../lib/analytics.address";
 import { translatedPipeline } from "../../lib/labeltranslation";
-import { problemStatus, unwrap } from "../../lib/problem";
+import { pipelinesWithArchivedOptions } from "../../lib/pipelines.queries";
+import { problemStatus } from "../../lib/problem";
 import {
   type ReviewActions,
   ReviewActionsContext,
@@ -74,18 +74,12 @@ export function AnalyticsScreen({
   const { route, section, tabs, setup, library, holding } =
     useAnalyticsSections(context.data?.default_scope.kind);
   const pipelinesQuery = useQuery({
+    // Archived too: a deal keeps its stage when its pipeline is archived.
+    ...pipelinesWithArchivedOptions,
     select: (pipelines) =>
       pipelines.map((pipeline) => translatedPipeline(pipeline, locale)),
-    queryKey: ["pipelines", "with-archived"],
     // Only report cards name stages, so the other sections never wait on this.
     enabled: !holding && SECTION_REPORTS[section].length > 0,
-    // Archived too: a deal keeps its stage when its pipeline is archived.
-    queryFn: async () =>
-      unwrap(
-        await api.GET("/pipelines", {
-          params: { query: { include_archived: true } },
-        }),
-      ).data,
   });
   const scopeControl =
     selection && context.data ? (

@@ -116,7 +116,11 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 	if err != nil {
 		return "", "", err
 	}
-	subject, body, _ := c.store.FloorDraft(ctx, anchor, activity, textlang.Unknown)
+	own, err := c.own.Colleagues(ctx)
+	if err != nil {
+		return "", "", fmt.Errorf("compose: reading who counts as a colleague: %w", err)
+	}
+	subject, body, _ := c.store.FloorDraft(ctx, anchor, activity, textlang.Unknown, own.Covers)
 	return subject, body, nil
 }
 

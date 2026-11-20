@@ -29,8 +29,7 @@ const proposalDeadline = 20 * time.Second
 // The codes a refused proposal answers with. The editor hides its ask on the
 // first and says the second in the reader's language.
 const (
-	codeAINotConfigured = "ai_not_configured"
-	codeNoSalesHistory  = "no_sales_history"
+	codeNoSalesHistory = "no_sales_history"
 )
 
 // Handlers serves the proposal the Sales goals editor asks for. It reads the
@@ -75,7 +74,7 @@ func (h Handlers) propose(ctx context.Context, owner ids.UUID, year int, req crm
 	}
 	if h.Lane == nil {
 		return crmcontracts.SalesGoalProposal{}, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: codeAINotConfigured,
+			Status: http.StatusConflict, Code: httperr.CodeAINotConfigured,
 			Detail: "a proposed plan needs an AI model — an administrator can bind one under Settings → AI; the months can still be entered by hand",
 		}
 	}

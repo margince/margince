@@ -191,8 +191,35 @@ func HappenedSQL(alias, asOf string) string {
 
 // TodayAnchorSQL is AnchorIn(asOf, installation zone) in SQL.
 func TodayAnchorSQL(asOf string) string {
-	return `((date_trunc('day', CAST(` + asOf + ` AS timestamptz) AT TIME ZONE ` + installationZoneSQL +
+	return `((date_trunc('day', CAST(` + asOf + ` AS timestamptz) AT TIME ZONE ` + InstallationZoneSQL +
 		`) + interval '12 hours') AT TIME ZONE 'UTC')`
+}
+
+// TodaySQL is the installation's calendar day at asOf, a date. CURRENT_DATE is
+// the session zone's day, which is the installation's only by coincidence.
+func TodaySQL(asOf string) string {
+	return `(CAST(` + asOf + ` AS timestamptz) AT TIME ZONE ` + InstallationZoneSQL + `)::date`
+}
+
+// DayStartSQL is the first instant of the installation's day for a date
+// expression day, as storekit.StartOfDay answers it. A bare
+// `timestamp AT TIME ZONE` takes the later of two instants at a fall-back
+// midnight, which would cut the first hour of that day off. So each shift a
+// zone makes at midnight is tried: an hour, or Lord Howe's half hour. The
+// earliest instant still on the day wins. Day is SQL the caller renders.
+func DayStartSQL(day string) string {
+	return DayStartInSQL(day, InstallationZoneSQL)
+}
+
+// DayStartInSQL is DayStartSQL for a day cut in the zone the SQL expression
+// zone names, such as a stored user's zone. zone is SQL the caller renders.
+func DayStartInSQL(day, zone string) string {
+	local := `((` + day + `)::timestamp AT TIME ZONE ` + zone + `)`
+	earlier := func(shift string) string {
+		return `CASE WHEN ((` + local + ` - interval '` + shift + `') AT TIME ZONE ` + zone +
+			`)::date = (` + day + `)::date THEN ` + local + ` - interval '` + shift + `' END`
+	}
+	return `LEAST(` + local + `, ` + earlier("1 hour") + `, ` + earlier("30 minutes") + `)`
 }
 
 // EndSQL is when the activity under alias ends. An instant ends at its start
@@ -258,7 +285,7 @@ func AnsweredTieOrderSQL(alias string) string {
 // dateEndSQL is when the date the day entry under alias names ends in the
 // installation zone.
 func dateEndSQL(alias string) string {
-	return `(date_trunc('day', ` + alias + `.occurred_at AT TIME ZONE 'UTC') + interval '1 day') AT TIME ZONE ` + installationZoneSQL
+	return `(date_trunc('day', ` + alias + `.occurred_at AT TIME ZONE 'UTC') + interval '1 day') AT TIME ZONE ` + InstallationZoneSQL
 }
 
 // StartSQL is when the activity under alias starts: an instant at its time,
@@ -278,7 +305,7 @@ func IsAnchorSQL(at string) string {
 // row: at is the instant stored the way occurred_at is, precision its kind.
 func StartAtSQL(at, precision string) string {
 	return fmt.Sprintf(`(CASE WHEN %[2]s = 'day'
-		THEN date_trunc('day', %[1]s AT TIME ZONE 'UTC') AT TIME ZONE `+installationZoneSQL+`
+		THEN date_trunc('day', %[1]s AT TIME ZONE 'UTC') AT TIME ZONE `+InstallationZoneSQL+`
 		ELSE %[1]s END)`, at, precision)
 }
 
@@ -343,7 +370,7 @@ func AheadSQL(alias, now string) string {
 		    AND %[3]s > %[2]s))`, alias, now, EndSQL(alias))
 }
 
-// installationZoneSQL is the installation zone as SQL reads it: the row of
+// InstallationZoneSQL is the installation zone as SQL reads it: the row of
 // identity.Timezone, else that entry's default. A subquery, so a statement
 // judging many meetings reads the zone once and binds nothing.
-const installationZoneSQL = `COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')`
+const InstallationZoneSQL = `COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')`

@@ -12,11 +12,10 @@ import { lockReasonOr } from "../../format/settinglocks";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useAiModelCatalogue, withBorrowedRows } from "../../lib/ai-models";
-import { invalidateProviderHealth } from "../../lib/ai-provider-health";
 import { providerName } from "../../lib/ai-provider-names";
 import {
-  ROUTING_KEY,
   type RoutingRead,
+  refreshAfterBindingSaved,
   useRouting,
 } from "../../lib/ai-routing-query";
 import { TIER_ORDER, tierLabel, tierRank } from "../../lib/ai-tier-label";
@@ -314,10 +313,7 @@ function FirstBinding({
       return { routing: data, version: response.headers.get("ETag") ?? "" };
     },
     onSuccess: async (saved) => {
-      queryClient.setQueryData(ROUTING_KEY, saved);
-      await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
-      await queryClient.invalidateQueries({ queryKey: ["assistant-profile"] });
-      await invalidateProviderHealth(queryClient);
+      await refreshAfterBindingSaved(queryClient, saved);
     },
   });
   const refusal = lockReasonOr(
