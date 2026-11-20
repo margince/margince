@@ -35,15 +35,19 @@ behind Chrome and lacks `:has()`, `@container` and `dvh`, which the app already 
 [`frontend/scripts/browser-targets.ts`](../../frontend/scripts/browser-targets.ts) turns the list into
 the oldest version of each engine, and `vite.config.ts` passes that as `build.target`. Vite lowers
 JavaScript syntax to it and hands the same floor to Lightning CSS for the CSS. Samsung Internet,
-Android WebView and Opera Mobile have no Vite target name, so the build lowers for the Chrome floor
-and leaves them out. Any other browser the list admits without a Vite target name fails the build.
+Android WebView and Opera Mobile have no Vite target name. Each counts toward the Chrome floor with
+the Chromium its version runs, which `baseline-browser-mapping` knows. Samsung Internet runs an older
+Chromium than Chrome does, so it often sets that floor. Any other browser the list admits without a
+Vite target name fails the build.
 
 The TypeScript `lib` in `tsconfig.app.json` names the JavaScript built-ins every browser on the list
 has (`ES2024`). A newer built-in needs the check below before code uses it.
 
 [`frontend/scripts/browser-targets.test.ts`](../../frontend/scripts/browser-targets.test.ts) fails when
 the list loses a primary or secondary family, admits a browser it shuts out or a dead one, drops the
-Firefox extended support release, or when `build.target` stops being the list's floor.
+Firefox extended support release, or when `build.target` stops being the list's floor. The build
+fails when a Chromium build on the list is older than the Chromium data. A version newer than that
+data counts with the newest Chromium the data knows.
 
 ## Using a web feature
 

@@ -25,10 +25,37 @@ describe("viteTargets", () => {
     ).toEqual(["chrome146", "ios18.5", "safari9.1"]);
   });
 
-  it("leaves out Chromium builds that Vite has no target name for", () => {
-    expect(viteTargets(["samsung 30", "android 157", "chrome 150"])).toEqual([
-      "chrome150",
+  it("lowers for the Chromium that a Chromium build runs", () => {
+    const chromium = new Map([
+      ["samsunginternet_android", [{ version: [30, 0], chromium: 143 }]],
+      ["webview_android", [{ version: [157], chromium: 157 }]],
     ]);
+    expect(
+      viteTargets(["samsung 30", "android 157", "chrome 150"], chromium),
+    ).toEqual(["chrome143"]);
+  });
+
+  it("gives a build newer than the mapping's data the newest Chromium it knows", () => {
+    const chromium = new Map([
+      [
+        "samsunginternet_android",
+        [
+          { version: [29, 0], chromium: 136 },
+          { version: [30, 0], chromium: 143 },
+        ],
+      ],
+    ]);
+    expect(viteTargets(["samsung 31", "chrome 150"], chromium)).toEqual([
+      "chrome143",
+    ]);
+  });
+
+  it("refuses a Chromium build whose Chromium the mapping does not know", () => {
+    const chromium = new Map([
+      ["samsunginternet_android", [{ version: [30, 0], chromium: 143 }]],
+    ]);
+    expect(() => viteTargets(["samsung 28"], chromium)).toThrow(/samsung 28/);
+    expect(() => viteTargets(["op_mob 80"], chromium)).toThrow(/op_mob 80/);
   });
 
   it("refuses a browser the build cannot lower for", () => {
