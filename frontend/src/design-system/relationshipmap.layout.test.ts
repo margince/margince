@@ -4,10 +4,14 @@
 import { expect, test } from "vitest";
 import {
   COL_W,
+  fitLabel,
   GUTTER,
   LANE_CAP,
   layout,
+  type MeasureText,
+  NAME_CHARS,
   NODE_H,
+  NODE_INSET,
   PAD,
   type RelationshipMapModel,
   routeFor,
@@ -253,8 +257,56 @@ test("walks lane by lane in the order the lanes were declared", () => {
   expect(order.indexOf("u-1")).toBeLessThan(order.indexOf("u-2"));
 });
 
-test("truncates a long label and leaves a short one alone", () => {
+test("truncates a long label by count and leaves a short one alone", () => {
   expect(truncate("Ute Sommer")).toBe("Ute Sommer");
-  expect(truncate("A name far longer than any node can draw")).toHaveLength(22);
+  expect(truncate("A name far longer than any node can draw")).toHaveLength(
+    NAME_CHARS,
+  );
   expect(truncate("A name far longer than any node can draw")).toMatch(/…$/);
+});
+
+// A face where every glyph is 8 wide and "W" is 16, so width and count part.
+const eightWide: MeasureText = (text) =>
+  Array.from(text).reduce((sum, glyph) => sum + (glyph === "W" ? 16 : 8), 0);
+const NAME_ROOM = COL_W.right - NODE_INSET * 2;
+
+test("cuts a label by its drawn width, not its length", () => {
+  const name = "Benjamin Alpha-Hartmann";
+  expect(name.length).toBeGreaterThan(NAME_CHARS);
+  const fitted = fitLabel(name, NAME_ROOM, eightWide, NAME_CHARS);
+  expect(fitted).toMatch(/…$/);
+  expect(eightWide(fitted)).toBeLessThanOrEqual(NAME_ROOM);
+  // The longest cut that fits: one glyph more would not.
+  expect(eightWide(`${name.slice(0, fitted.length)}…`)).toBeGreaterThan(
+    NAME_ROOM,
+  );
+});
+
+test("cuts a short label of wide glyphs that a count would leave whole", () => {
+  const wide = "WWWWWWWWWWWW";
+  expect(truncate(wide)).toBe(wide);
+  const fitted = fitLabel(wide, NAME_ROOM, eightWide, NAME_CHARS);
+  expect(fitted).toBe("WWWWWWWWW…");
+});
+
+test("leaves a label that fits its node untouched", () => {
+  expect(fitLabel("Ute Sommer", NAME_ROOM, eightWide, NAME_CHARS)).toBe(
+    "Ute Sommer",
+  );
+});
+
+test("drops the space before the ellipsis", () => {
+  const room = eightWide("Ute…");
+  expect(fitLabel("Ute Sommer", room + 8, eightWide)).toBe("Ute…");
+});
+
+test("never splits a character made of two code units", () => {
+  const fitted = fitLabel("😀😀😀😀", eightWide("😀…"), eightWide);
+  expect(fitted).toBe("😀…");
+});
+
+test("falls back to the count where nothing measures", () => {
+  const name = "A name far longer than any node can draw";
+  expect(fitLabel(name, NAME_ROOM, null, NAME_CHARS)).toBe(truncate(name));
+  expect(fitLabel(name, NAME_ROOM, null)).toBe(name);
 });

@@ -82,6 +82,8 @@ export const CENTER_GAP = 24;
 /** How many nodes a right-hand lane draws before it offers the rest. */
 export const LANE_CAP = 8;
 export const NAME_CHARS = 22;
+/** How far a node's words sit in from each side of its box. */
+export const NODE_INSET = 12;
 export const WIDTH =
   PAD * 2 + COL_W.left + GUTTER + COL_W.center + GUTTER + COL_W.right;
 
@@ -105,6 +107,7 @@ export type LaneHead = Readonly<{
   id: string;
   x: number;
   y: number;
+  w: number;
   label: string;
   hidden: number;
 }>;
@@ -211,6 +214,7 @@ function stackColumn(
       id: lane.id,
       x: COLUMN_X[column],
       y,
+      w: COL_W[column],
       label: lane.label,
       hidden,
     });
@@ -415,7 +419,43 @@ export function travelOrder(layoutResult: Layout): readonly string[] {
   return layoutResult.placed.map((node) => node.id);
 }
 
-/** truncate cuts a label to fit its node, deterministically. */
+/** A string's drawn width in the type it is drawn in, in the drawing's units. */
+export type MeasureText = (text: string) => number;
+
+/** truncate cuts a label by character count, for where nothing can measure. */
 export function truncate(text: string, chars = NAME_CHARS): string {
   return text.length <= chars ? text : `${text.slice(0, chars - 1)}…`;
+}
+
+/** fitLabel cuts a label by drawn width: SVG text is never clipped, so a
+ * character count draws a wide name past its box. */
+export function fitLabel(
+  text: string,
+  width: number,
+  measure: MeasureText | null,
+  fallbackChars?: number,
+): string {
+  if (!measure) {
+    return fallbackChars === undefined ? text : truncate(text, fallbackChars);
+  }
+  if (measure(text) <= width) {
+    return text;
+  }
+  // Code points, so a cut never splits a surrogate pair.
+  const glyphs = Array.from(text);
+  let fits = 0;
+  let over = glyphs.length;
+  while (over - fits > 1) {
+    const mid = Math.floor((fits + over) / 2);
+    if (measure(cutAt(glyphs, mid)) <= width) {
+      fits = mid;
+    } else {
+      over = mid;
+    }
+  }
+  return cutAt(glyphs, fits);
+}
+
+function cutAt(glyphs: readonly string[], count: number): string {
+  return `${glyphs.slice(0, count).join("").trimEnd()}…`;
 }
