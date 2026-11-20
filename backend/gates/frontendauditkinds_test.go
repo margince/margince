@@ -125,11 +125,15 @@ func TestEveryAuditedRecordTypeHasWordsInTheAuditLog(t *testing.T) {
 			t.Errorf("runtimeTypedAuditWriters names %s, whose audit call no longer takes its record type at runtime", key)
 		}
 	}
-	direct, seedSeen := directAuditInserts(t)
-	for _, at := range direct {
+	direct := directAuditInserts(t)
+	for _, at := range direct.others {
 		t.Errorf("%s sends its own INSERT into audit_log, which this census does not follow: call a storekit door", at)
 	}
-	if !seedSeen {
+	for _, at := range direct.opaque {
+		t.Errorf("%s hands an INSERT into audit_log to code this census cannot follow to the call that runs it: "+
+			"pass the SQL straight to Exec, or call a storekit door", at)
+	}
+	if !direct.seedSeen {
 		t.Errorf("no INSERT into audit_log was found in storekit's %s, so the direct-INSERT check has stopped seeing it", auditSeed)
 	}
 	migrated, opaque := auditMigrationTypes(t)

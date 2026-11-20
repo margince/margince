@@ -300,9 +300,16 @@ func callsPrivacyWrapper(site auditWriteSite, privacyDir string, wrappers map[st
 // reads that shape as this class.
 const extensionScrubbedTypes = "ext_*"
 
+// extensionClearPath and extensionClearWriter name the scrub whose record type
+// is an extprivacy.Cleared row's Table, which holds a table a unit declared.
+const (
+	extensionClearPath   = "backend/internal/modules/privacy/erasure_extension.go"
+	extensionClearWriter = "clearExtensionRows"
+)
+
 // isExtensionEntity reports whether a site's record type is an extension
 // table's name. Every value it resolves to is one, or it is a field of a value
-// an extension package types, or a cleared row's Table.
+// an extension package types. The named site's cleared row Table is one too.
 func isExtensionEntity(site auditWriteSite) bool {
 	if len(site.types) > 0 {
 		return !slices.ContainsFunc(site.types, func(entity string) bool { return !strings.HasPrefix(entity, "ext_") })
@@ -311,7 +318,7 @@ func isExtensionEntity(site auditWriteSite) bool {
 	if !ok {
 		return false
 	}
-	if sel.Sel.Name == "Table" && isIdentNamed(sel.X, "row") {
+	if site.src.path == extensionClearPath && funcName(site.at.fn) == extensionClearWriter && sel.Sel.Name == "Table" {
 		return true
 	}
 	typeDir, _, typed := auditCensusRead.exprType(site.src, site.at.fn, sel.X, 0)

@@ -107,12 +107,12 @@ func (c *auditCensus) returnedValues(decl *ast.FuncDecl, result, depth int) ([]s
 
 // paramBehind is the parameter an argument hands on, through local names that
 // each hold one value, or -1.
-func paramBehind(fn *ast.FuncDecl, closures []*ast.FuncType, arg ast.Expr, depth int) int {
+func (c *auditCensus) paramBehind(src *auditSource, fn *ast.FuncDecl, closures []*ast.FuncType, arg ast.Expr, depth int) int {
 	ident, ok := unconverted(arg).(*ast.Ident)
 	if fn == nil || !ok || depth > auditResolveDepth || shadowedByClosure(closures, ident.Name) {
 		return -1
 	}
-	if declaredTwice(fn, ident.Name) {
+	if c.ambiguousLocal(src, fn, ident.Name) {
 		return -1
 	}
 	bindings, bound := localValues(fn, ident.Name)
@@ -121,46 +121,57 @@ func paramBehind(fn *ast.FuncDecl, closures []*ast.FuncType, arg ast.Expr, depth
 	case !bound:
 		return param
 	case param < 0 && len(bindings) == 1 && bindings[0].value != nil:
-		return paramBehind(fn, closures, bindings[0].value, depth+1)
+		return c.paramBehind(src, fn, closures, bindings[0].value, depth+1)
 	}
 	return -1
 }
 
-// declaredTwice reports whether fn declares name more than once, so that a
-// binding read by name alone could be another variable's.
-func declaredTwice(fn *ast.FuncDecl, name string) bool {
+// ambiguousLocal reports whether a read of name in fn could be another variable
+// than the one binding it. Either fn declares it twice, or its body declares a
+// name the package declares too.
+func (c *auditCensus) ambiguousLocal(src *auditSource, fn *ast.FuncDecl, name string) bool {
+	signature, body := declarationsOf(fn, name)
+	return signature+body > 1 || (body > 0 && c.pkgValues[src.dir+"."+name])
+}
+
+// declarationsOf counts where fn declares name: as its receiver or a parameter,
+// and inside its body.
+func declarationsOf(fn *ast.FuncDecl, name string) (signature, body int) {
 	if fn == nil {
-		return false
+		return 0, 0
 	}
-	declarations := 0
-	count := func(fields *ast.FieldList) {
+	for _, fields := range []*ast.FieldList{fn.Recv, fn.Type.Params} {
 		if fieldListNames(fields)[name] {
-			declarations++
+			signature++
 		}
 	}
-	count(fn.Recv)
-	ast.Inspect(fn, func(n ast.Node) bool {
+	if fn.Body == nil {
+		return signature, 0
+	}
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.FuncType:
-			count(node.Params)
+			if fieldListNames(node.Params)[name] {
+				body++
+			}
 		case *ast.ValueSpec:
 			for _, ident := range node.Names {
 				if ident.Name == name {
-					declarations++
+					body++
 				}
 			}
 		case *ast.AssignStmt:
 			if node.Tok == token.DEFINE && slices.ContainsFunc(node.Lhs, func(lhs ast.Expr) bool { return isIdentNamed(lhs, name) }) {
-				declarations++
+				body++
 			}
 		case *ast.RangeStmt:
 			if node.Tok == token.DEFINE && (isIdentNamed(node.Key, name) || isIdentNamed(node.Value, name)) {
-				declarations++
+				body++
 			}
 		}
 		return true
 	})
-	return declarations > 1
+	return signature, body
 }
 
 // shadowedByClosure reports whether a closure around the call rebinds name.
@@ -193,7 +204,7 @@ func (c *auditCensus) resolveLocal(src *auditSource, fn *ast.FuncDecl, closures 
 	if fn == nil {
 		return nil, false, false
 	}
-	if declaredTwice(fn, name) {
+	if c.ambiguousLocal(src, fn, name) {
 		return nil, true, false
 	}
 	param := auditParamIndex(fn, name)
@@ -278,7 +289,7 @@ func (c *auditCensus) literalCollection(src *auditSource, fn *ast.FuncDecl, clos
 	case *ast.Ident:
 		if bindings, found := localValues(fn, e.Name); fn != nil && found {
 			if len(bindings) != 1 || bindings[0].value == nil || shadowedByClosure(closures, e.Name) ||
-				declaredTwice(fn, e.Name) || writesInto(fn, e.Name) {
+				c.ambiguousLocal(src, fn, e.Name) || escapes(fn, e.Name) {
 				return nil, nil, false
 			}
 			return c.literalCollection(src, fn, closures, bindings[0].value, depth+1)
@@ -304,20 +315,62 @@ func (c *auditCensus) literalCollection(src *auditSource, fn *ast.FuncDecl, clos
 	return c.literalCollection(constant.src, nil, nil, constant.expr, depth+1)
 }
 
-// writesInto reports whether fn stores into the collection name holds.
-func writesInto(fn *ast.FuncDecl, name string) bool {
-	written := false
-	ast.Inspect(fn, func(n ast.Node) bool {
-		if assign, ok := n.(*ast.AssignStmt); ok {
-			for _, lhs := range assign.Lhs {
-				if index, isIndex := lhs.(*ast.IndexExpr); isIndex && isIdentNamed(index.X, name) {
-					written = true
-				}
-			}
+// escapes reports whether some use of name in fn could change the collection
+// it holds or hand it on.
+func escapes(fn *ast.FuncDecl, name string) bool {
+	escaped := false
+	ast.PreorderStack(fn.Body, nil, func(n ast.Node, stack []ast.Node) bool {
+		if ident, isIdent := n.(*ast.Ident); isIdent && ident.Name == name && len(stack) > 0 {
+			escaped = collectionEscapes(ident, stack)
 		}
-		return !written
+		return !escaped
 	})
-	return written
+	return escaped
+}
+
+// collectionEscapes reports whether a use of a collection could change it or
+// hand it on. Ranging over it, reading one element, taking its length and
+// binding the name are the uses that cannot.
+func collectionEscapes(use ast.Node, stack []ast.Node) bool {
+	parent := stack[len(stack)-1]
+	if ident, isIdent := use.(*ast.Ident); isIdent && bindsOrNames(parent, ident) {
+		return false
+	}
+	switch p := parent.(type) {
+	case *ast.RangeStmt:
+		return p.X != use
+	case *ast.IndexExpr:
+		return p.X != use || elementWritten(p, stack[:len(stack)-1])
+	case *ast.CallExpr:
+		return !isIdentNamed(p.Fun, "len") && !isIdentNamed(p.Fun, "cap")
+	}
+	return true
+}
+
+// elementWritten reports whether the element place reads is written. A store,
+// an increment, a range into it, its address and a selector on it all count.
+func elementWritten(place ast.Node, stack []ast.Node) bool {
+	for _, parent := range slices.Backward(stack) {
+		switch p := parent.(type) {
+		case *ast.IndexExpr:
+			if p.X != place {
+				return false
+			}
+		case *ast.ParenExpr, *ast.StarExpr:
+		case *ast.SelectorExpr, *ast.IncDecStmt:
+			return true
+		case *ast.AssignStmt:
+			return slices.ContainsFunc(p.Lhs, func(lhs ast.Expr) bool { return lhs == place })
+		case *ast.UnaryExpr:
+			return p.Op == token.AND
+		case *ast.RangeStmt:
+			return p.Tok == token.ASSIGN && (p.Key == place || p.Value == place)
+		default:
+			return false
+		}
+		place = parent
+	}
+	return false
 }
 
 // resolveSelector reads pkg.Name, or x.Field by every value written to that

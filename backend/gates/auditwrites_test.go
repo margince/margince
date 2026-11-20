@@ -106,10 +106,12 @@ type auditCensus struct {
 	calls       map[string][]auditCall
 	typeNames   map[string]bool       // "dir.Type" for every declared type
 	fieldTypes  map[string]auditConst // "dir.Type.field" → the field's declared type
-	// mutated are the package-level names some function stores into or
-	// assigns again, by "dir.name".
+	// mutated are the package-level names some use could change, hand on
+	// or assign again, by "dir.name".
 	mutated map[string]bool
-	methods map[string][]auditFuncKey
+	// pkgValues are the package-level consts and vars, by "dir.name".
+	pkgValues map[string]bool
+	methods   map[string][]auditFuncKey
 	// writers holds each writer and every parameter position its entity
 	// arguments arrive at.
 	writers map[auditFuncKey]map[int]bool
@@ -141,7 +143,7 @@ func auditWriteSites(t *testing.T) []auditWriteSite {
 			importers: map[string]map[string]bool{},
 			calls:     map[string][]auditCall{}, writers: map[auditFuncKey]map[int]bool{},
 			typeNames: map[string]bool{}, methods: map[string][]auditFuncKey{}, fieldTypes: map[string]auditConst{},
-			mutated: map[string]bool{},
+			mutated: map[string]bool{}, pkgValues: map[string]bool{},
 		}
 		auditCensusFailed = c.load()
 		for _, src := range c.sources {
@@ -271,6 +273,7 @@ func (c *auditCensus) index(path string, file *ast.File) {
 				switch sp := spec.(type) {
 				case *ast.ValueSpec:
 					for i, name := range sp.Names {
+						c.pkgValues[src.dir+"."+name.Name] = true
 						if len(sp.Values) == len(sp.Names) {
 							consts[name.Name] = auditConst{src: src, expr: sp.Values[i]}
 						}
@@ -347,10 +350,6 @@ func (c *auditCensus) indexBodies(src *auditSource) {
 				switch target := lhs.(type) {
 				case *ast.SelectorExpr:
 					c.indexFieldWrite(src, fn, target, auditAssignedValue(node.Rhs, len(node.Lhs), i))
-				case *ast.IndexExpr:
-					if x, ok := target.X.(*ast.Ident); ok && fn != nil {
-						c.mutated[src.dir+"."+x.Name] = true
-					}
 				case *ast.Ident:
 					if node.Tok == token.ASSIGN && fn != nil {
 						c.mutated[src.dir+"."+target.Name] = true
@@ -359,6 +358,14 @@ func (c *auditCensus) indexBodies(src *auditSource) {
 			}
 		case *ast.UnaryExpr:
 			c.indexAddressTaken(src, fn, node)
+		case *ast.Ident:
+			c.indexEscape(src.dir+"."+node.Name, node, stack[:len(stack)-1])
+		case *ast.SelectorExpr:
+			if q, isIdent := node.X.(*ast.Ident); isIdent {
+				if dir, imported := src.imports[q.Name]; imported {
+					c.indexEscape(dir+"."+node.Sel.Name, node, stack[:len(stack)-1])
+				}
+			}
 		case *ast.IndexExpr:
 			if c.isFuncName(src, node.X) {
 				c.markWholeWrite(src, fn, node.Index)
@@ -372,6 +379,14 @@ func (c *auditCensus) indexBodies(src *auditSource) {
 		}
 		return true
 	})
+}
+
+// indexEscape marks a package-level name mutated when a use of it could change
+// the collection it holds or hand it on.
+func (c *auditCensus) indexEscape(key string, use ast.Node, stack []ast.Node) {
+	if collectionEscapes(use, stack) {
+		c.mutated[key] = true
+	}
 }
 
 // indexFieldWrite records an assignment to x.F under x's type, or under this
@@ -575,7 +590,7 @@ type auditForward struct {
 // enclosing function a writer; anything else is recorded as a site.
 func (c *auditCensus) visit(at auditCall, index int, writer auditFuncKey) (auditForward, bool) {
 	arg := at.call.Args[index]
-	if p := paramBehind(at.fn, at.closures, arg, 0); p >= 0 {
+	if p := c.paramBehind(at.src, at.fn, at.closures, arg, 0); p >= 0 {
 		return auditForward{key: auditFuncKeyOf(at.src, at.fn), index: p}, true
 	}
 	site := auditWriteSite{

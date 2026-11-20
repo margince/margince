@@ -6,13 +6,10 @@ package gates
 // The audit rows migrations insert, and the Go statements that insert one.
 
 import (
-	"go/ast"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -21,6 +18,10 @@ import (
 
 // auditColumnList reads the column list an INSERT opens with.
 var auditColumnList = regexp.MustCompile(`(?s)^"?\s*\(([^)]*)\)`)
+
+// auditInsertAnywhere finds an INSERT into audit_log, with or without a column
+// list.
+var auditInsertAnywhere = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(?:"?public"?\.)?"?audit_log\b`)
 
 // auditMigrationTypes reads the record types the migrations' own audit rows name,
 // by the file that names them. A statement whose entity_type holds no literal is
@@ -167,71 +168,4 @@ func topLevelFrom(list string) int {
 		}
 	}
 	return -1
-}
-
-// auditInsertAnywhere finds an INSERT into audit_log, with or without a column
-// list. auditInsertStatement asks for a statement's rows too, so a message that
-// names the INSERT is not one.
-var (
-	auditInsertAnywhere  = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(?:"?public"?\.)?"?audit_log\b`)
-	auditInsertStatement = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(?:"?public"?\.)?"?audit_log\b.*\b(?:VALUES|SELECT)\b`)
-)
-
-// directAuditInserts answers each Go statement other than the seed's that
-// inserts into audit_log, reading string concatenations through constants.
-func directAuditInserts(t *testing.T) (others []string, seedSeen bool) {
-	t.Helper()
-	auditWriteSites(t)
-	c := auditCensusRead
-	for _, src := range c.sources {
-		var fn *ast.FuncDecl
-		ast.Inspect(src.file, func(n ast.Node) bool {
-			if decl, isDecl := n.(*ast.FuncDecl); isDecl {
-				fn = decl
-			}
-			expr, isExpr := n.(ast.Expr)
-			if !isExpr || !c.insertsIntoAuditLog(src, expr) {
-				return true
-			}
-			if src.dir == auditSeedDir && funcName(fn) == auditSeed {
-				seedSeen = true
-			} else {
-				others = append(others, src.path+":"+strconv.Itoa(gatekit.SourceFileSet().Position(expr.Pos()).Line))
-			}
-			return false
-		})
-	}
-	return others, seedSeen
-}
-
-// insertsIntoAuditLog reads a string literal or concatenation, with each named
-// part taken from its constant, as SQL that inserts into audit_log.
-func (c *auditCensus) insertsIntoAuditLog(src *auditSource, expr ast.Expr) bool {
-	var text strings.Builder
-	var walk func(ast.Expr) bool
-	walk = func(e ast.Expr) bool {
-		switch node := e.(type) {
-		case *ast.BinaryExpr:
-			if node.Op != token.ADD {
-				return false
-			}
-			return walk(node.X) && walk(node.Y)
-		case *ast.ParenExpr:
-			return walk(node.X)
-		case *ast.BasicLit:
-			value, err := strconv.Unquote(node.Value)
-			text.WriteString(value)
-			return node.Kind == token.STRING && err == nil
-		case *ast.Ident, *ast.SelectorExpr:
-			values, ok := c.resolve(src, nil, nil, node, 0)
-			if ok && len(values) == 1 {
-				text.WriteString(values[0])
-			} else {
-				text.WriteString(" ? ")
-			}
-			return true
-		}
-		return false
-	}
-	return walk(expr) && auditInsertStatement.MatchString(text.String())
 }
