@@ -537,6 +537,18 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       expect(normalize(dark["--bgPage"])).toBe("#0c1311");
     });
 
+    // A scrim sets a dialog apart by dimming the page it covers, in both
+    // themes. census/rules/overlayscrim.census.ts holds every layer to it.
+    it("dims the page behind an overlay in both themes", () => {
+      for (const [theme, pal] of Object.entries(themes)) {
+        const ground = pal["--bgPage"];
+        const covered = composite(pal["--overlayScrim"], ground);
+        expect(luminanceOf(covered), theme).toBeLessThan(
+          luminanceOf(ground) * 0.6,
+        );
+      }
+    });
+
     // The two neutrals, pinned in dark because dark is where they diverge most
     // from the light values and where the sweeps read them against near-black.
     it("pins both neutral inks", () => {
