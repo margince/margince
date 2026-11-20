@@ -170,14 +170,15 @@ type SubscriptionCard struct {
 // link was never minted to ask.
 func (s *Store) consentCardFor(ctx context.Context, ref ConfirmRef) (SubscriptionCard, error) {
 	var card SubscriptionCard
+	who := linkSubjectOf(ref.ContactID, ref.LeadID)
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT cp.key, cp.label, cp.frequency,
 			       coalesce((SELECT pc.state FROM contact_consent pc
-			                  WHERE pc.contact_id = $1 AND pc.purpose_id = cp.id), 'unknown')
+			                  WHERE pc.`+who.column+` = $1 AND pc.purpose_id = cp.id), 'unknown')
 			  FROM consent_purpose cp
 			 WHERE cp.id = $2 AND cp.archived_at IS NULL`,
-			ref.ContactID, ref.PurposeID).Scan(&card.PurposeKey, &card.PurposeLabel, &card.Frequency, &card.State)
+			who.id, ref.PurposeID).Scan(&card.PurposeKey, &card.PurposeLabel, &card.Frequency, &card.State)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The purpose was archived after the link went out. The link is live

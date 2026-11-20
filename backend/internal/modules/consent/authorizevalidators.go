@@ -43,9 +43,9 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if subject.Kind != entityContact && category != commsauthz.CategoryReplyToInbound &&
 		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrecontractQuote &&
-		category != commsauthz.CategoryPrivacyNotice &&
+		category != commsauthz.CategoryPrivacyNotice && category != commsauthz.CategoryConsentConfirmation &&
 		category != commsauthz.CategoryOptoutConfirmation {
-		// Leads hold their own requests, captured replies, notice links and stops.
+		// Leads hold their own requests, captured replies, notice and consent links and stops.
 		// Categories needing company documents or deal stakeholders remain contact-only.
 		return unsupported, nil
 	}

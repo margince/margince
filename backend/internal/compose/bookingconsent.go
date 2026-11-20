@@ -146,13 +146,15 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contac
 	if err != nil {
 		return activities.MarketingNotRequested, err
 	}
-	outcome, err := a.askMarketing(ctx, contactID, c.Marketing)
-	return outcome, err
+	return a.ask(c.Marketing, func(m *activities.BookingMarketing) (consent.IssuedConfirm, error) {
+		return a.store.IssueBookedConsentLink(ctx,
+			ids.From[ids.ContactKind](contactID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom, m.AskedBySubject)
+	})
 }
 
 // CaptureLeadBookingConsent records the operational grant on the live lead a
-// booking landed on. No link is minted for a lead. A tick still gets the
-// neutral answer a contact's gets, so the door cannot tell the two apart.
+// booking landed on. The marketing question then goes through the mint, guards
+// and budget a contact's tick uses.
 func (a bookingConsentAdapter) CaptureLeadBookingConsent(ctx context.Context, leadID ids.LeadID, c activities.BookingConsent) (activities.MarketingOutcome, error) {
 	record := bookingConsentRecord(ids.Nil, c)
 	record.ContactID, record.LeadID = ids.ContactID{}, leadID
@@ -163,10 +165,10 @@ func (a bookingConsentAdapter) CaptureLeadBookingConsent(ctx context.Context, le
 	if err != nil {
 		return activities.MarketingNotRequested, err
 	}
-	if c.Marketing == nil {
-		return activities.MarketingNotRequested, nil
-	}
-	return activities.MarketingPendingConfirmation, nil
+	return a.ask(c.Marketing, func(m *activities.BookingMarketing) (consent.IssuedConfirm, error) {
+		return a.store.IssueBookedLeadConsentLink(ctx,
+			leadID, ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom, m.AskedBySubject)
+	})
 }
 
 // RecordBookingInquiry stamps the qualifying event a public booking IS: the
@@ -184,14 +186,14 @@ func (a bookingConsentAdapter) RecordBookingInquiry(ctx context.Context, contact
 	return a.store.RecordInquiry(ctx, ids.From[ids.ContactKind](contactID), activityID)
 }
 
-// askMarketing mails the confirmation link an affirmative tick earns, and it
-// runs AFTER the operational grant on purpose: the meeting the subject actually
-// booked must not fail because a newsletter question could not be asked.
+// ask mails the confirmation link an affirmative tick earns. It runs after the
+// operational grant so that a failed newsletter question cannot cost the
+// meeting the subject booked.
 //
-// What it mails is a question, not a subscription. IssueConsentLink mints
-// against the contact's OWN live primary address — read from the record, never
-// taken from the request — so the mail cannot be aimed at a third party, and
-// the grant that follows exists only if that mailbox answers.
+// What it mails is a question, not a subscription. The mint goes to the
+// subject's own live address (a contact's primary, or the lead's), read from
+// the record and never taken from the request. So the mail cannot be aimed at
+// a third party, and the grant follows only if that mailbox answers.
 //
 // TickedFrom is passed so the mint can refuse a mismatch. A booking email
 // resolves to any existing contact holding it, including on a NON-primary
@@ -209,14 +211,13 @@ func (a bookingConsentAdapter) RecordBookingInquiry(ctx context.Context, contact
 // installation that has not wired that text has a consent problem whether or
 // not this code reads it. Carrying both through to the grant needs columns on
 // confirm_token, which is its own change.
-func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.UUID,
-	m *activities.BookingMarketing,
+func (a bookingConsentAdapter) ask(m *activities.BookingMarketing,
+	issue func(*activities.BookingMarketing) (consent.IssuedConfirm, error),
 ) (activities.MarketingOutcome, error) {
 	if m == nil {
 		return activities.MarketingNotRequested, nil
 	}
-	issued, err := a.store.IssueBookedConsentLink(ctx,
-		ids.From[ids.ContactKind](contactID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom, m.AskedBySubject)
+	issued, err := issue(m)
 	if err == nil {
 		// Only an installation with no mail lane is reported as not asked, as
 		// that is the same for every visitor. Every state-dependent outcome
