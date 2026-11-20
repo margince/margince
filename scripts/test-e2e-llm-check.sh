@@ -1103,11 +1103,14 @@ done <<'SENTENCES'
 1	Nothing pending approval this time.
 1	Nothing is waiting for a decision.
 1	None of it is waiting for you.
+1	Logged the meeting with Jannik Feddersen. There is nothing for you to approve.
+1	There are no approvals.
 0	Nothing has been sent yet; the recap draft to Jannik is waiting for your approval.
 0	Nothing goes out until you read and approve it.
 0	Three other items sit in your approval queue that have nothing to do with this task.
 0	An automation drafted a recap email to Jannik that waits for your approval before it is sent.
 0	Logged the coffee meeting and added a follow-up task for you, due Friday.
+0	No draft was sent to Jannik; the recap waits for you to approve it.
 SENTENCES
 
 c62="case62-held-meetings-to-opportunities.yaml"

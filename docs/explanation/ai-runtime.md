@@ -83,7 +83,9 @@ tasks:
   an `interactive` task is pinned to `local_small`, not blocked, and a `background` task waits.
 - A background wait is a **typed refusal**. The Router returns `BudgetDeferralError` (which wraps
   `ErrBudgetDeferred`) with `NextAttemptAt`, the next budget window. It does so **before any provider
-  attempt or `ai_call` row exists**, so a deferral costs nothing and traces nothing.
+  attempt or `ai_call` row exists**, so the refused attempt costs nothing and traces nothing. Each attempt
+  reads the band again. So an attempt that already ran in the same call keeps its tokens and its
+  `ai_call` row when a later one is deferred.
 
 Every field of `ai-tasks.yaml`, top level and per task:
 [ai-runtime-fields.md](../reference/ai-runtime-fields.md#every-field-in-ai-tasksyaml).

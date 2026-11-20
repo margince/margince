@@ -75,6 +75,8 @@ must_not_mention:
   - "(?i)\bno\s+(?:\w+\s+){0,2}?(?:pending|outstanding|open|waiting)\s+(?:approvals?|items?|drafts?|proposals?|reviews?|decisions?|requests?)\b"
   - "(?i)\bno\s+(?:\w+\s+){0,2}?(?:approvals?|items?|drafts?|proposals?|reviews?|decisions?|requests?)\s+(?:is\s+|are\s+)?(?:currently\s+|still\s+)?(?:waiting|pending|awaiting|queued)\b"
   - "(?i)\b(?:queue|inbox)\s+(?:is|was|looks)\s+(?:currently\s+|now\s+|still\s+)?(?:empty|clear)\b"
+  - "(?i)\bnothing\s+(?:for\s+you\s+|left\s+)?to\s+(?:approve|review|decide)\b"
+  - "(?i)\b(?:are|is|has|have)\s+no\s+(?:\w+\s+)?(?:approvals?|drafts?|proposals?|reviews?)\b"
 
 judge:
   - "Criterion 2. The answer keeps to what this task left waiting. This task is the coffee meeting with Jannik Feddersen of Husumer Windservice: the meeting, its quote and its follow-up task are this task's own items, and reporting them is a yes. It does not list, name or describe any waiting item that has nothing to do with this task, such as contact-card reviews for other people; a bare count of other waiting items that says nothing about what they are or whom they concern is a yes. Answer no if the answer lists, names or summarises an unrelated waiting item, for example by saying what kind of item it is or whom it is about."
