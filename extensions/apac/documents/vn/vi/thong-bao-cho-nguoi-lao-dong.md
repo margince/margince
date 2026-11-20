@@ -1,16 +1,19 @@
 # Thông báo cho người lao động về việc lưu email công việc
 
-> Dành cho người sử dụng lao động. Điền các mục trong ngoặc vuông và rà soát nội dung theo
-> cấu hình thực tế và quy định áp dụng trước khi gửi thông báo và kết nối hộp thư.
+> Dành cho người sử dụng lao động. Điền các mục trong ngoặc vuông.
+> Rà soát theo cấu hình thực tế và quy định áp dụng.
+> Gửi thông báo trước khi kết nối hộp thư.
 
-- Người sử dụng lao động và bên quyết định việc xử lý dữ liệu: [tên, địa chỉ]
+- Người sử dụng lao động và bên kiểm soát dữ liệu: [tên và địa chỉ của từng bên]
 - Đầu mối bảo vệ dữ liệu cá nhân: [tên hoặc bộ phận, email, điện thoại]
 - Phiên bản thông báo và ngày áp dụng: [phiên bản, ngày]
 
 ## Vì sao chúng tôi lưu email
 
-[Tên đơn vị] sử dụng Margince để lưu trao đổi công việc, theo dõi việc cần xử lý và giúp
-đồng nghiệp tiếp tục công việc khi cần. Căn cứ xử lý dữ liệu cá nhân: [căn cứ áp dụng cho từng mục đích].
+[Tên người sử dụng lao động] dùng Margince để lưu trao đổi công việc.
+Nhờ đó, bạn có thể theo dõi việc cần xử lý và bàn giao cho đồng nghiệp.
+
+- Căn cứ xử lý dữ liệu cá nhân: [căn cứ áp dụng cho từng mục đích]
 
 ## Dữ liệu nào được lưu
 
@@ -38,8 +41,10 @@ thể chia sẻ trao đổi công việc với đồng nghiệp có quyền xem.
 
 ## Hỏi hoặc gửi yêu cầu về dữ liệu cá nhân
 
-Liên hệ đầu mối nêu trên để hỏi về việc lưu email hoặc gửi yêu cầu thực hiện quyền đối với dữ
-liệu cá nhân, chẳng hạn như yêu cầu truy cập, chỉnh sửa hoặc xóa dữ liệu theo quy định áp dụng.
+Liên hệ đầu mối nêu trên nếu bạn có câu hỏi về việc lưu email.
+Bạn cũng có thể gửi yêu cầu về dữ liệu cá nhân cho đầu mối này.
+
+Ví dụ, bạn có thể yêu cầu truy cập, chỉnh sửa hoặc xóa dữ liệu theo quy định áp dụng.
 
 - Cách gửi yêu cầu và thông tin cần cung cấp: [quy trình của đơn vị]
 

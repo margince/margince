@@ -37,10 +37,10 @@ The one tree here for the user of Margince, not the developer. It has no code an
   that can answer a question, and to measure it, read
   [how-to/update-the-handbook.md](how-to/update-the-handbook.md).
 
-### Compliance documents for employee email capture
+### Compliance documents for mail capture
 
-[The compliance document catalog](compliance/README.md) lists the built-in documents for
-Germany and Vietnam. [The handbook](handbook/compliance.md) explains how to find them in Settings.
+[The list of compliance documents](compliance/README.md) links to the built-in forms.
+[The handbook](handbook/compliance.md) shows where to find them in Settings.
 
 ### Attacks: what we must do as the maker
 
