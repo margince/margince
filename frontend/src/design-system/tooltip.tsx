@@ -311,9 +311,17 @@ function useTip<T extends HTMLElement>(
     if (!earnsTabStop) {
       return;
     }
-    const measure = () => setReachable(worthShowing(anchor.current));
+    let live = true;
+    const measure = () => {
+      if (live) setReachable(worthShowing(anchor.current));
+    };
+    // A late web font can rewrap the text with no resize and no render.
+    document.fonts?.ready.then(measure, measure);
     globalThis.addEventListener("resize", measure);
-    return () => globalThis.removeEventListener("resize", measure);
+    return () => {
+      live = false;
+      globalThis.removeEventListener("resize", measure);
+    };
   }, [earnsTabStop, worthShowing]);
 
   // Which of the two ways the tip is up matters to the Escape key alone.

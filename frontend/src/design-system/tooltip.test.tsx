@@ -12,7 +12,7 @@ import {
   waitForElementToBeRemoved,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { useTooltip, useTruncationTooltip } from "./tooltip";
 import { stubLineClamp } from "./tooltip-testing";
@@ -186,6 +186,37 @@ describe("a string its row can already show in full", () => {
     });
 
     expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("takes a tab stop once a late web font leaves it cut", async () => {
+    const scroll = { value: 220 };
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(
+      () => scroll.value,
+    );
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(220);
+    let loaded: () => void = () => {};
+    const ready = new Promise<void>((resolve) => {
+      loaded = resolve;
+    });
+    const fonts = Object.getOwnPropertyDescriptor(document, "fonts");
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready },
+    });
+    onTestFinished(() => {
+      if (fonts) Object.defineProperty(document, "fonts", fonts);
+      else Reflect.deleteProperty(document, "fonts");
+    });
+    render(<Row text="Sontana" />);
+    expect(screen.getByText("Sontana")).not.toHaveAttribute("tabindex");
+
+    scroll.value = 480;
+    await act(async () => {
+      loaded();
+      await ready;
+    });
+
+    expect(screen.getByText("Sontana")).toHaveAttribute("tabindex", "0");
   });
 
   it("takes no tab stop, so a page of short names adds none", () => {
