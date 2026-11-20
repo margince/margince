@@ -193,7 +193,7 @@ func homeCalls(dailyInput) []dailyCall {
 
 // paletteCall is the command palette's request: three hits per type, colleagues included.
 func paletteCall(name, q string) dailyCall {
-	return dailyCall{Name: name, Path: "/v1/search?q=" + url.QueryEscape(q) + "&per_type=3&with_employees=true"}
+	return dailyCall{Name: name, Path: "/v1/search?q=" + url.QueryEscape(q) + "&per_type=3&with_employees=true&typeahead=true"}
 }
 
 func paletteCalls(in dailyInput) []dailyCall {

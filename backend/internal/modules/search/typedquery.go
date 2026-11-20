@@ -5,6 +5,7 @@ package search
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -196,4 +197,11 @@ func scoreExpression(entity, alias string, headPos, tailPos int, hasFragment boo
 	}
 	return fmt.Sprintf(`((%s.search_tsv @@ (%s))::int + %s)`,
 		alias, simpleWholeWords(tailPos), rank)
+}
+
+// namesOnlyMail reports whether the request asked for messages and nothing
+// else, as a palette narrowed to mail does. Dropping the only type asked for
+// would answer an empty page.
+func namesOnlyMail(types []string) bool {
+	return len(types) > 0 && !slices.ContainsFunc(types, func(t string) bool { return t != entityActivity })
 }

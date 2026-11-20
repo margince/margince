@@ -174,8 +174,9 @@ type Input struct {
 	// searched either way, and the other lanes keep their core types.
 	WithExtensions bool
 	// Typeahead leaves messages out while the word being typed is under four
-	// letters. Only GET /v1/search's typeahead callers ask; the results page
-	// and search_records rank messages from the first letter.
+	// letters, unless the request names messages alone. Only a human's typeahead
+	// box asks; the results page and search_records rank messages from the
+	// first letter.
 	Typeahead bool
 	// Exclude drops these records, of any type, before ranking and counting.
 	Exclude []ids.UUID
@@ -203,7 +204,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			words, maxQueryWords)}
 	}
 	types := requestedTypes(in)
-	if in.Typeahead && fragmentTooShortForMail(query) {
+	if in.Typeahead && !namesOnlyMail(in.Types) && fragmentTooShortForMail(query) {
 		types = slices.DeleteFunc(slices.Clone(types), func(t string) bool { return t == entityActivity })
 	}
 	for _, t := range types {

@@ -129,10 +129,9 @@ the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per
 
 **`typeahead=true` leaves mail out of a short prefix.** A short prefix matches a large share of
 all activities, and ranking them is slow. The `⌘K` menu sends `typeahead=true`. `Store.Search` then
-drops the `activity` type while the word being typed has fewer than four letters
-(`fragmentTooShortForMail`, counted in runes). Other types are searched from the first letter. A
-query that ends in a finished word or uses the operators has no word being typed and keeps its
-mail.
+drops the `activity` type for a word under four letters (`fragmentTooShortForMail`, counted in runes). Other types are searched from the first letter. A
+query that ends in a finished word, or a request for mail alone, keeps its mail, and only a
+human's flag counts.
 
 **`with_employees=true` finds contacts through their company.** The `search_tsv` of
 a contact holds its name and title, never the company. So "Acme" alone would find Acme, and none

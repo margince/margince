@@ -29,6 +29,10 @@ func TestTypeaheadLeavesMessagesOutUntilTheLastWordHasFourLetters(t *testing.T) 
 			t.Fatal(err)
 		}
 	}
+	narrowed, err := search.NewStore(e.DB()).Search(e.Admin(), search.Input{Query: "ki", Types: []string{"activity"}, Typeahead: true})
+	if err != nil || len(narrowed.Hits) == 0 {
+		t.Errorf("a palette narrowed to mail with a 2-letter word returned %d hits (err %v), want its mail", len(narrowed.Hits), err)
+	}
 	perThree := 3
 	types := func(query string, typeahead bool, perType *int) []string {
 		page, err := search.NewStore(e.DB()).Search(e.Admin(), search.Input{Query: query, Typeahead: typeahead, PerType: perType})

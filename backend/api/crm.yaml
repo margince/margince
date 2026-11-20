@@ -67,6 +67,8 @@ openapi: 3.1.0
 #     `x-agent-access: auth-bootstrap` — the auth/session machinery itself (workspace bootstrap,
 #     login/logout); the pre-auth endpoints (bootstrap, login) override `security: []` (no prior
 #     credential required); not tier-gated, not an agent tool.
+#   - `x-agent-hidden: true` on a PARAMETER — a switch for one human screen. The generated agent
+#     contract leaves it out, and the handler ignores it from any caller but a human.
 #   - `x-waits-on-model: always | on-miss` — the handler calls an AI model and HOLDS THE REQUEST
 #     OPEN until the model answers, so the caller is waiting on the agent for the whole of that
 #     time. `always` is a handler that generates on every call (a draft, the meeting brief);
@@ -19239,6 +19241,7 @@ paths:
             Honoured by both page shapes, so a contact a grouped page shows is also on the ranked
             list narrowed to `types=contact`.
         - name: typeahead
+          x-agent-hidden: true
           in: query
           schema: { type: boolean, default: false }
           description: >
@@ -19247,7 +19250,8 @@ paths:
             prefix matches a large share of all messages and ranking them is the slow part.
             Every other type is searched from the first letter as usual. A query that ends in a
             finished word, or uses the websearch operators, has no word being typed and keeps its
-            messages.
+            messages, and so does a request whose `types` names messages alone. Only a human
+            caller's flag is honoured.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:

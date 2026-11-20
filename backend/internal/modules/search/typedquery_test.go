@@ -4,11 +4,13 @@
 package search
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Which part of a query is matched whole, and which is offered as a prefix.
@@ -378,6 +380,37 @@ func TestFragmentTooShortForMailCountsLettersNotBytes(t *testing.T) {
 	} {
 		if got := fragmentTooShortForMail(query); got != want {
 			t.Errorf("fragmentTooShortForMail(%q) = %v, want %v", query, got, want)
+		}
+	}
+}
+
+func TestTypeaheadIsHonouredForAHumanAlone(t *testing.T) {
+	yes := true
+	for name, c := range map[string]struct {
+		ctx  context.Context
+		want bool
+	}{
+		"human":     {principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman}), true},
+		"agent":     {principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent}), false},
+		"connector": {principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalConnector}), false},
+		"nobody":    {context.Background(), false},
+	} {
+		if got := typeaheadFor(c.ctx, &yes); got != c.want {
+			t.Errorf("%s: typeaheadFor = %v, want %v", name, got, c.want)
+		}
+	}
+	if typeaheadFor(principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman}), nil) {
+		t.Error("an absent flag was read as set")
+	}
+}
+
+func TestNamesOnlyMail(t *testing.T) {
+	for _, c := range []struct {
+		types []string
+		want  bool
+	}{{nil, false}, {[]string{"activity"}, true}, {[]string{"activity", "contact"}, false}, {[]string{"contact"}, false}} {
+		if got := namesOnlyMail(c.types); got != c.want {
+			t.Errorf("namesOnlyMail(%v) = %v, want %v", c.types, got, c.want)
 		}
 	}
 }

@@ -59,6 +59,10 @@ paths:
           name: q
           in: query
           schema: { type: string }
+        - name: typeahead
+          x-agent-hidden: true
+          in: query
+          schema: { type: boolean }
       responses:
         '200':
           description: ok
@@ -413,5 +417,15 @@ func TestTheIndexCarriesEveryOperationTheContractKeeps(t *testing.T) {
 		if n := strings.Count(string(index), "| "+m[1]+" |"); n != 1 {
 			t.Errorf("%s is in the bundled contract and %d times in the index", m[1], n)
 		}
+	}
+}
+
+func TestAParameterMarkedAgentHiddenIsLeftOutOfTheContract(t *testing.T) {
+	_, out := generate(t)
+	if strings.Contains(out, "typeahead") {
+		t.Errorf("the agent contract still publishes a hidden parameter:\n%s", out)
+	}
+	if !strings.Contains(out, "name: q") {
+		t.Error("the parameter beside the hidden one was dropped with it")
 	}
 }
