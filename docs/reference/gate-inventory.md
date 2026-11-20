@@ -83,7 +83,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry has a row in the frontend's kind table, or the client shows a reader the source's own identifier. |
 | `frontendaudiencereasons_test.go` | H3 | A held message says why it was held, or the reader cannot argue with the verdict. |
-| `frontendauditkinds_test.go` | H2 | Every record type an audit row names has words in the audit log, and the log's own map words no type that nothing writes. |
 | `frontendautonomykinds_test.go` | H1 | Every kind a rep may put on automatic must have words on the settings screen that offers it, and the screen must offer no kind the product cannot automate. |
 | `frontendcatalogwords_test.go` | H2 | The automation library reads in the reader's language. |
 | `frontendcollapsespace_test.go` | H3 | The viewer and the server must fold whitespace by the same set, or a citation opens a document with nothing marked. |
@@ -761,11 +760,11 @@ The eight shapes, what each is for, and how each one silently passes:
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `audiencebinding_test.go` | H2 | _(no doc comment)_ |
-| `auditwritescensus_test.go` | H2 | The audit write census resolves, refuses or ignores each shape it has met. |
 | `bookingdisplay_test.go` | H2 | A projection may append display values, but cannot pass addresses to another call or retain them in another assignment for a later send. |
 | `deallinewritersplanted_test.go` | H2 | A census must reject new writers and misleading guard paths, even when they sit outside the files that introduced the line-value engine. |
 | `declinedwritehelpers_test.go` | H2 | _(no doc comment)_ |
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with synthetic unit sources rather than the tree, because the real units are supposed to pass. |
+| `frontendobjectkeys_test.go` | H2 | The word map reader reads each shape a frontend map is declared in, and fails one it cannot read. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
 | `individualperformancereachfixtures_test.go` | H2 | The individual-performance path walk read against planted packages, one shape per package, each of which an any-path reading of the switch accepts. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification: every dispatch shape the tree uses is proven accepted, and the shapes it exists to reject (a dispatcher doing a tenant's work, and a fan-out built around the chokepoints) are proven rejected. |

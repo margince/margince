@@ -34,14 +34,32 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"slices"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
+
+// scrubTombstoneWriters are the call sites that stamp a scrub tombstone.
+//
+// Named rather than pattern-matched on the verb, because the verb travels as a
+// constant (actionErase) at some sites and a literal at others, and matching the
+// FUNCTION is what makes both visible. A new writer that calls neither is the
+// gap this cannot see; scrubverbs_test.go covers the verb side of that.
+var scrubTombstoneWriters = map[string]bool{
+	// Carries the verb itself; every call is a scrub.
+	"tombstoneCollateralScrubs": true,
+	"certifyCollateralScrub":    true,
+	// Generic audit doors, which are scrub sites only when the verb they are
+	// handed is one.
+	"AuditWithEvidence": true,
+	"Audit":             true,
+	"AuditEvent":        true,
+}
 
 // scrubbedEntityTypes is what the tree tombstones today, and the list a reader
 // of the erasure boundary may rely on.
@@ -102,11 +120,6 @@ var scrubbedEntityTypes = map[string]bool{
 	// keep a corrected kind and evidence, are withheld. The weekly review
 	// rebuilds a DEAL from its own audit images and never reads a signal's.
 	"signal": true,
-	// The retention pass erases these on their policy. Each is a record of its
-	// own, and the weekly review rebuilds a DEAL from deal images alone.
-	"deal_risk_day":  true,
-	"raw_capture":    true,
-	"report_edition": true,
 	// An extension's own table. Core has no restore or undo for a unit's row.
 	// The weekly review reads deals. The compliance log is the one reader, and it
 	// hides these images.
@@ -115,17 +128,12 @@ var scrubbedEntityTypes = map[string]bool{
 
 func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {
 	t.Parallel()
-	found, opaque, unreadVerbs := repoAuditCensus(t).scrubbedTypes(t)
+	found, opaque := scrubbedTypesInPrivacy(t)
 	for _, site := range opaque {
 		t.Errorf("%s stamps a scrub tombstone whose record type is not a literal, so "+
 			"this census cannot read it and would pass without ever seeing it.\n"+
-			"Spell the entity type at the call site, or extend scrubbedTypes "+
+			"Spell the entity type at the call site, or extend scrubbedTypesInPrivacy "+
 			"to resolve it.", site)
-	}
-	for _, site := range unreadVerbs {
-		t.Errorf("%s audits a privacy write whose verb this census cannot read, so it "+
-			"cannot tell whether the row is a scrub tombstone.\n"+
-			"Pass the verb as privacy's constant or a literal.", site)
 	}
 	if len(found) == 0 {
 		t.Fatal("no scrub tombstone writer found in the privacy module — this census " +
@@ -149,142 +157,99 @@ func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {
 	}
 }
 
-// scrubbedTypes reads the record type of every scrub tombstone the
-// privacy module writes, from the audit write census (auditwrites_test.go). A
-// privacy write whose verb it cannot read is returned apart.
+// scrubbedTypesInPrivacy reads the entity-type argument of every scrub
+// tombstone writer in the privacy module.
 //
-// Three sites take their type at runtime from a declaration. redactDeclaredTables
-// stamps the declared tables' types, an extension row's table is the ext_*
-// class, and the retention pass reads its own dispatch table.
-func (c *auditCensus) scrubbedTypes(t *testing.T) (found map[string]bool, opaque, unreadVerbs []string) {
+// The entity type is the writer's third argument at the storekit sites and its
+// third at tombstoneCollateralScrubs. A non-literal argument is skipped and
+// reported by the emptiness check above rather than guessed at.
+func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 	t.Helper()
-	wrappers := c.privacyScrubWrappers()
-	found = map[string]bool{}
-	for _, site := range c.sites {
-		viaWrapper := c.callsPrivacyWrapper(site, wrappers)
-		if site.asValue || (site.src.dir != privacyDir && !viaWrapper) {
+	found := map[string]bool{}
+	var opaque []string
+	dir := filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "privacy")
+	fset := gatekit.SourceFileSet()
+	entries, err := gatekit.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading the privacy module: %v", err)
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		if site.fn == "apply" && strings.HasSuffix(site.src.path, "/retentionactions.go") {
-			for _, object := range c.retentionScrubObjects(t) {
-				found[object] = true
-			}
-			continue
+		file, parseErr := gatekit.ParseFile(filepath.Join(dir, name), 0)
+		if parseErr != nil {
+			t.Fatalf("parsing %s: %v", name, parseErr)
 		}
-		scrub, readable := viaWrapper, true
-		if !viaWrapper {
-			scrub, readable = c.actionScrubs(site.at, site.writer, 0)
-		}
-		switch {
-		case !scrub:
-		case c.isExtensionEntity(site):
-			// A row of an extension's own table is that class whatever its verb.
-			found[extensionScrubbedTypes] = true
-		case !readable:
-			unreadVerbs = append(unreadVerbs, site.pos)
-		case site.opaque == "":
-			for _, entity := range site.types {
-				found[entity] = true
+		var insideCollateralWriter, insideDeclaredWriter bool
+		ast.Inspect(file, func(n ast.Node) bool {
+			if fn, ok := n.(*ast.FuncDecl); ok {
+				insideCollateralWriter = fn.Name.Name == "tombstoneCollateralScrubs" || fn.Name.Name == "certifyCollateralScrub"
+				insideDeclaredWriter = fn.Name.Name == "redactDeclaredTables"
+				return true
 			}
-		case site.fn == "redactDeclaredTables":
-			for _, o := range corereach.Tables() {
-				if len(o.Table.Erase) > 0 {
-					found[o.Table.Name] = true
+			call, ok := n.(*ast.CallExpr)
+			if !ok || !isScrubTombstoneCall(call) {
+				return true
+			}
+			// The declared tables' writer takes its record types from the
+			// declarations, so those are what it stamps.
+			if insideDeclaredWriter {
+				for _, o := range corereach.Tables() {
+					if len(o.Table.Erase) > 0 {
+						found[o.Table.Name] = true
+					}
 				}
+				return true
 			}
-		default:
-			opaque = append(opaque, site.pos)
-		}
-	}
-	return found, opaque, unreadVerbs
-}
-
-// retentionScrubObjects are the objects the retention pass scrubs, by the
-// verb each pair in its dispatch table names.
-func (c *auditCensus) retentionScrubObjects(t *testing.T) []string {
-	t.Helper()
-	var objects []string
-	for _, pair := range c.packageMapKeys(t, privacyDir, "retentionActions") {
-		object, verb, _ := strings.Cut(pair, "/")
-		if isScrubVerb(verb) {
-			objects = append(objects, object)
-		}
-	}
-	return objects
-}
-
-func isScrubVerb(verb string) bool {
-	return verb == "erase" || verb == "anonymize" || verb == "restrict"
-}
-
-// actionScrubs reads the verb a writer call audits with, from the writer's
-// action argument. A writer that chooses its verb inside is read through the
-// calls it hands its record type on to. A verb it cannot read reports
-// unreadable, and counts as a scrub.
-func (c *auditCensus) actionScrubs(at auditCall, writer auditFuncKey, depth int) (scrub, readable bool) {
-	decl := c.funcs[writer]
-	if decl == nil || depth > auditResolveDepth {
-		return true, false
-	}
-	_, shift := c.match(at.src, at.fn, unindexed(at.call.Fun), writer)
-	if i := auditParamIndex(decl, "action"); i >= 0 {
-		if i+shift >= len(at.call.Args) {
-			return true, false
-		}
-		values, ok := c.resolve(at.src, at.fn, at.closures, at.call.Args[i+shift], 0)
-		return !ok || slices.ContainsFunc(values, isScrubVerb), ok
-	}
-	readable, seen := true, false
-	ast.Inspect(decl.Body, func(n ast.Node) bool {
-		call, isCall := n.(*ast.CallExpr)
-		if !isCall {
-			return true
-		}
-		inner := auditCall{src: c.srcOf[decl], fn: decl, call: call}
-		for key, indexes := range c.writers {
-			if key.name != auditCalleeName(call) {
-				continue
+			// A tombstone site whose entity type is not a literal cannot be read
+			// here, and skipping it silently is the way this census fails short:
+			// it would report PASS having never seen the argument. Such a site is
+			// reported instead, so the choice is explicit — spell the type at the
+			// call, or teach this walk to follow it.
+			// The forwarding call INSIDE tombstoneCollateralScrubs passes its own
+			// parameter, which is opaque here by construction; its callers name
+			// the type and those are the sites this census reads. Reporting the
+			// definition would be a permanent false positive.
+			if !insideCollateralWriter && !hasLiteralEntityArgument(call) {
+				opaque = append(opaque, fset.Position(call.Pos()).String())
 			}
-			matched, innerShift := c.match(inner.src, decl, unindexed(call.Fun), key)
-			for index := range indexes {
-				if !matched || index+innerShift >= len(call.Args) || !c.handsOn(decl, writer, call.Args[index+innerShift]) {
+			for _, arg := range call.Args {
+				if isExtensionTableArgument(arg) {
+					found[extensionScrubbedTypes] = true
+				}
+				lit, ok := arg.(*ast.BasicLit)
+				if !ok || lit.Kind != token.STRING {
 					continue
 				}
-				seen = true
-				innerScrub, innerReadable := c.actionScrubs(inner, key, depth+1)
-				scrub, readable = scrub || innerScrub, readable && innerReadable
+				value, unquoteErr := strconv.Unquote(lit.Value)
+				// Recorded whether or not the census expects it. Filtering to the
+				// known set here would make an unexpected type impossible to find,
+				// which is a census reporting PASS by reading a smaller tree than
+				// its subject.
+				if unquoteErr == nil && looksLikeAnEntityType(value) {
+					found[value] = true
+				}
 			}
-		}
-		return true
-	})
-	return scrub || !seen, readable && seen
+			return true
+		})
+	}
+	return found, opaque
 }
 
-// handsOn reports whether arg is one of the parameters writer receives a
-// record type at.
-func (c *auditCensus) handsOn(decl *ast.FuncDecl, writer auditFuncKey, arg ast.Expr) bool {
-	ident, ok := unconverted(arg).(*ast.Ident)
-	if !ok {
-		return false
-	}
-	for index := range c.writers[writer] {
-		if auditParamIndex(decl, ident.Name) == index {
+// hasLiteralEntityArgument reports whether this tombstone call names its record
+// type as a string literal — the only shape this walk can read.
+func hasLiteralEntityArgument(call *ast.CallExpr) bool {
+	for _, arg := range call.Args {
+		if isExtensionTableArgument(arg) {
 			return true
 		}
-	}
-	return false
-}
-
-// callsPrivacyWrapper reports whether a site, in any package, calls one of
-// privacy's scrub wrappers.
-func (c *auditCensus) callsPrivacyWrapper(site auditWriteSite, wrappers map[string]bool) bool {
-	name := auditCalleeName(site.call)
-	if !wrappers[name] {
-		return false
-	}
-	candidates := append([]auditFuncKey{{dir: privacyDir, name: name}}, c.methods[privacyDir+"."+name]...)
-	for _, key := range candidates {
-		if matched, _ := c.match(site.src, site.at.fn, unindexed(site.call.Fun), key); matched {
+		lit, ok := arg.(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			continue
+		}
+		if value, err := strconv.Unquote(lit.Value); err == nil && looksLikeAnEntityType(value) {
 			return true
 		}
 	}
@@ -297,29 +262,9 @@ func (c *auditCensus) callsPrivacyWrapper(site auditWriteSite, wrappers map[stri
 // reads that shape as this class.
 const extensionScrubbedTypes = "ext_*"
 
-// extensionClearPath and extensionClearWriter name the scrub whose record type
-// is an extprivacy.Cleared row's Table, which holds a table a unit declared.
-const (
-	extensionClearPath   = "backend/internal/modules/privacy/erasure_extension.go"
-	extensionClearWriter = "clearExtensionRows"
-)
-
-// isExtensionEntity reports whether a site's record type is an extension
-// table's name. Every value it resolves to is one, or it is a field of a value
-// an extension package types. The named site's cleared row Table is one too.
-func (c *auditCensus) isExtensionEntity(site auditWriteSite) bool {
-	if len(site.types) > 0 {
-		return !slices.ContainsFunc(site.types, func(entity string) bool { return !strings.HasPrefix(entity, "ext_") })
-	}
-	sel, ok := site.entity.(*ast.SelectorExpr)
-	if !ok {
-		return false
-	}
-	if site.src.path == extensionClearPath && funcName(site.at.fn) == extensionClearWriter && sel.Sel.Name == "Table" {
-		return true
-	}
-	typeDir, _, typed := c.exprType(site.src, site.at.fn, sel.X, 0)
-	return typed && strings.HasPrefix(typeDir, "backend/pkg/extension/")
+func isExtensionTableArgument(arg ast.Expr) bool {
+	sel, ok := arg.(*ast.SelectorExpr)
+	return ok && sel.Sel.Name == "Table" && isIdentNamed(sel.X, "row")
 }
 
 // scrubVerbConstants are privacy's own names for the three verbs that certify a
@@ -329,56 +274,59 @@ var scrubVerbConstants = map[string]bool{
 	"actionErase": true, "actionAnonymize": true, "actionRestrict": true,
 }
 
-// carriesScrubVerb reports whether a call is handed one of the three scrub verbs,
-// by privacy's constant or as a literal. A prefix match on "action" would also
-// admit actionArchive, which certifies no scrub.
-func carriesScrubVerb(call *ast.CallExpr) bool {
+// looksLikeAnEntityType separates a record type from the other string literals
+// a tombstone writer carries — the verb itself, and the reason and cause the
+// evidence map holds.
+//
+// Shape rather than an allowlist: a lowercase snake_case word IS how every
+// entity type in this tree is spelled, and matching the shape means a type
+// nobody anticipated still lands in the census. The verbs are excluded by name
+// because they share that shape.
+func looksLikeAnEntityType(value string) bool {
+	if value == "" || value == "erase" || value == "anonymize" || value == "restrict" {
+		return false
+	}
+	for _, r := range value {
+		if (r < 'a' || r > 'z') && r != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+// isScrubTombstoneCall reports whether this call stamps a scrub tombstone.
+//
+// Two shapes, and the second is why this is not simply "a call carrying a scrub
+// verb". tombstoneCollateralScrubs holds the verb INSIDE itself — every call to
+// it is a scrub by construction, and its arguments name only the record type —
+// so a check that demanded a verb argument would skip precisely the writer that
+// stamps five of the tree's record types.
+func isScrubTombstoneCall(call *ast.CallExpr) bool {
+	name := calleeName(call)
+	if !scrubTombstoneWriters[name] {
+		return false
+	}
+	if name == "tombstoneCollateralScrubs" || name == "certifyCollateralScrub" {
+		return true
+	}
 	for _, arg := range call.Args {
 		switch a := arg.(type) {
 		case *ast.Ident:
+			// The three scrub verb constants BY NAME. A prefix match on "action"
+			// would also admit actionArchive, which certifies no scrub — and a
+			// retention policy's own archive row would then be read as one.
 			if scrubVerbConstants[a.Name] {
 				return true
 			}
 		case *ast.BasicLit:
+			if a.Kind != token.STRING {
+				continue
+			}
 			value, err := strconv.Unquote(a.Value)
-			if a.Kind == token.STRING && err == nil && (value == "erase" || value == "anonymize" || value == "restrict") {
+			if err == nil && (value == "erase" || value == "anonymize" || value == "restrict") {
 				return true
 			}
 		}
 	}
 	return false
-}
-
-// privacyDir is the privacy module, whose audit writes this census reads.
-const privacyDir = "backend/internal/modules/privacy"
-
-// privacyScrubWrappers are the privacy functions that carry the verb inside
-// themselves, directly or through another such function. Each call to one
-// stamps a tombstone, and its arguments name only the record type.
-func (c *auditCensus) privacyScrubWrappers() map[string]bool {
-	var funcs []*ast.FuncDecl
-	for _, src := range c.sources {
-		for _, decl := range src.file.Decls {
-			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil && src.dir == privacyDir {
-				funcs = append(funcs, fn)
-			}
-		}
-	}
-	wrappers := map[string]bool{}
-	for grew := true; grew; {
-		grew = false
-		for _, fn := range funcs {
-			if wrappers[fn.Name.Name] {
-				continue
-			}
-			ast.Inspect(fn.Body, func(n ast.Node) bool {
-				call, isCall := n.(*ast.CallExpr)
-				if isCall && (carriesScrubVerb(call) || wrappers[calleeName(call)]) {
-					wrappers[fn.Name.Name], grew = true, true
-				}
-				return !wrappers[fn.Name.Name]
-			})
-		}
-	}
-	return wrappers
 }

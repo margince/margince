@@ -157,17 +157,37 @@ func schemaEnum(raw any) []string {
 	return nil
 }
 
-// tsImportedMapKeys reads the keys of a map that path imports by name.
-func tsImportedMapKeys(t *testing.T, path, name string) map[string]bool {
+// tsImportedMapKeys reads the keys of a map that path imports, by the name
+// it is exported under.
+func tsImportedMapKeys(t *testing.T, path, local string) map[string]bool {
 	t.Helper()
 	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
-	from := regexp.MustCompile(`import\s*\{[^}]*\b` + regexp.QuoteMeta(name) + `\b[^}]*\}\s*from\s*"([^"]+)"`).FindSubmatch(source)
-	if from == nil {
-		t.Fatalf("%s neither declares nor imports %s, which OPTION_LABELS names", path, name)
+	exported, from, ok := tsImportOf(string(source), local)
+	if !ok {
+		t.Fatalf("%s neither declares nor imports %s, which OPTION_LABELS names", path, local)
 	}
-	target := filepath.Join(filepath.Dir(path), string(from[1])) + ".ts"
-	return tsKeySet(t, tsObjectEntries(t, target, "export const "+name))
+	target := filepath.Join(filepath.Dir(path), from) + ".ts"
+	return tsKeySet(t, tsObjectEntries(t, target, "export const "+exported))
+}
+
+var tsNamedImport = regexp.MustCompile(`import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*"([^"]+)"`)
+
+// tsImportOf finds the import that binds local, and answers the name the
+// module exports it under and the module it comes from.
+func tsImportOf(source, local string) (exported, from string, ok bool) {
+	for _, m := range tsNamedImport.FindAllStringSubmatch(source, -1) {
+		for spec := range strings.SplitSeq(m[1], ",") {
+			fields := strings.Fields(strings.TrimPrefix(strings.TrimSpace(spec), "type "))
+			switch {
+			case len(fields) == 1 && fields[0] == local:
+				return local, m[2], true
+			case len(fields) == 3 && fields[1] == "as" && fields[2] == local:
+				return fields[0], m[2], true
+			}
+		}
+	}
+	return "", "", false
 }

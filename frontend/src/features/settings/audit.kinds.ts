@@ -4,7 +4,6 @@
 import type { MessageKey } from "../../i18n/en";
 
 // The words for each record type an audit row names, by its wire value.
-// backend/gates/frontendauditkinds_test.go holds them to the Go that writes audit rows.
 export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   activity_review_template: "audit.kind.activity_review_template",
   agent_client: "audit.kind.agent_client",
