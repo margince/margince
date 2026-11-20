@@ -16,6 +16,7 @@ import (
 func TestARenameDropsTheNamePartsTheNewNameNoLongerHolds(t *testing.T) {
 	altmann := crmcontracts.Contact{FullName: "Stefan Altmann", FirstName: new("Stefan"), LastName: new("Altmann")}
 	zoe := crmcontracts.Contact{FullName: "Zoë Müller-Lüdenscheidt", FirstName: new("Zoë"), LastName: new("Müller-Lüdenscheidt")}
+	anna := crmcontracts.Contact{FullName: "Anna van der Meer", FirstName: new("Anna"), LastName: new("van der Meer")}
 	cases := []struct {
 		name      string
 		stored    crmcontracts.Contact
@@ -31,7 +32,9 @@ func TestARenameDropsTheNamePartsTheNewNameNoLongerHolds(t *testing.T) {
 		{"a stated part decides itself, a held one stays", altmann, UpdateContactInput{FullName: new("Maria Altmann"), FirstName: new("Maria")}, nil},
 		{"a cleared part decides itself", altmann, UpdateContactInput{FullName: new("Maria Neumann"), Clear: []string{"last_name"}}, []string{"last_name", "first_name"}},
 		{"restated stored parts still drop", altmann, UpdateContactInput{FullName: new("Maria Neumann"), FirstName: new("Stefan"), LastName: new("Altmann")}, []string{"first_name", "last_name"}},
-		{"a many-word surname it still holds stays", zoe, UpdateContactInput{FullName: new("Prof. Zoë Müller-Lüdenscheidt")}, nil},
+		{"a hyphenated surname it still holds stays", zoe, UpdateContactInput{FullName: new("Prof. Zoë Müller-Lüdenscheidt")}, nil},
+		{"a surname of several words it still holds stays", anna, UpdateContactInput{FullName: new("Dr. Anna van der Meer")}, nil},
+		{"a surname of several words it lost drops", anna, UpdateContactInput{FullName: new("Anna van Dijk")}, []string{"last_name"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
