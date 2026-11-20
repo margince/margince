@@ -172,15 +172,18 @@ const (
 	replaySalesTargetObject = "sales_target"
 	salesGoalPlanOwnerParam = "owner_id"
 	salesGoalPlanReplayNote = "a plan carries no owner column a scope reads; it answers the seller's draft and history, so the reporting module owns the probe"
+	memberRecordNote        = "a member record carries no row scope; the user_admin grant that governed the invitation governs its replay"
 )
 
 var replayableOperations = map[string]replayTarget{
-	"POST /v1/users/{id}/merge":       {object: replayMemberAdminObject, rowNote: "the response is only a boolean acknowledgment; it contains no member record or private content"},
-	"POST /v1/scheduling/invitations": {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/scheduling/proposals":   {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/analytics/decisions":    {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/forecast/calls":         {object: "forecast", rowNote: "the answer is the call the caller just recorded under their own write authority; it carries no deal or other row-scoped record"},    //nolint:goconst // the replay gates read this map's keys as string literals
-	"POST /v1/analytics/reports":      {object: "report_definition", rowNote: "the answer is the report the caller just created and owns; it carries no row-scoped record, only the selection they sent"}, //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/users/{id}/merge":         {object: replayMemberAdminObject, rowNote: "the response is only a boolean acknowledgment; it contains no member record or private content"},
+	"POST /v1/users":                    {object: replayMemberAdminObject, rowNote: memberRecordNote},
+	"POST /v1/users/{id}/resend-invite": {object: replayMemberAdminObject, rowNote: memberRecordNote},
+	"POST /v1/scheduling/invitations":   {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/scheduling/proposals":     {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/analytics/decisions":      {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/forecast/calls":           {object: "forecast", rowNote: "the answer is the call the caller just recorded under their own write authority; it carries no deal or other row-scoped record"},    //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/analytics/reports":        {object: "report_definition", rowNote: "the answer is the report the caller just created and owns; it carries no row-scoped record, only the selection they sent"}, //nolint:goconst // the replay gates read this map's keys as string literals
 	"PUT /v1/analytics/sales-goals/{owner_id}/{year}/draft": {
 		object: replaySalesTargetObject, moduleProbe: probeSalesGoalPlan, pathParam: salesGoalPlanOwnerParam, rowNote: salesGoalPlanReplayNote,
 	},
@@ -358,15 +361,18 @@ var replayableOperations = map[string]replayTarget{
 	"PATCH /v1/stages/{id}":              {object: objectPipeline, rowNote: noOwnerStage}, //nolint:goconst // the replay gates read this map's keys as string literals
 	// A criterion is stage config one level down, governed by the same
 	// pipeline grant and carrying no owner column of its own.
-	"POST /v1/stages/{id}/exit-criteria": {object: objectPipeline, rowNote: noOwnerStage},
-	"POST /v1/products":                  {object: objectProduct, rowNote: noOwnerCatalog},
-	"POST /v1/offer-templates":           {object: objectOfferTemplate, rowNote: noOwnerTemplate},
-	"PUT /v1/offer-templates/{id}":       {object: objectOfferTemplate, rowNote: noOwnerTemplate},
-	"POST /v1/signals":                   {object: objectSignal, table: tableSignal, idPath: "id"},
-	"PATCH /v1/signals/{id}":             {object: objectSignal, table: tableSignal, idPath: "id"},
-	"POST /v1/signals/{id}/resolve":      {object: objectSignal, table: tableSignal, idPath: "id"},
-	"POST /v1/contacts/{id}/consent":     {object: tableContact, table: tableContact, pathParam: "id"},
-	"POST /v1/company/site-reads":        {object: tableCompany, rowNote: "an ingestion job against the installation's own company (A107), not a customer record"},
+	"POST /v1/stages/{id}/exit-criteria":             {object: objectPipeline, rowNote: noOwnerStage},
+	"POST /v1/products":                              {object: objectProduct, rowNote: noOwnerCatalog},
+	"POST /v1/offer-templates":                       {object: objectOfferTemplate, rowNote: noOwnerTemplate},
+	"PUT /v1/offer-templates/{id}":                   {object: objectOfferTemplate, rowNote: noOwnerTemplate},
+	"POST /v1/signals":                               {object: objectSignal, table: tableSignal, idPath: "id"},
+	"PATCH /v1/signals/{id}":                         {object: objectSignal, table: tableSignal, idPath: "id"},
+	"POST /v1/signals/{id}/resolve":                  {object: objectSignal, table: tableSignal, idPath: "id"},
+	"POST /v1/contacts/{id}/consent":                 {object: tableContact, table: tableContact, pathParam: "id"},
+	"POST /v1/contacts/{id}/consent/privacy-notice":  {object: tableContact, table: tableContact, pathParam: "id"},
+	"POST /v1/contacts/{id}/consent/confirm-request": {object: tableContact, table: tableContact, pathParam: "id"},
+	"POST /v1/contacts/{id}/consent/double-opt-in":   {object: tableContact, table: tableContact, pathParam: "id"},
+	"POST /v1/company/site-reads":                    {object: tableCompany, rowNote: "an ingestion job against the installation's own company (A107), not a customer record"},
 
 	"POST /v1/company/site-reads/{readId}/confirm":   {object: tableCompany, rowNote: "the installation's singleton company profile — one company per installation (A107), so there is no row to scope"},
 	"POST /v1/voice-profiles/{id}/builds":            {object: tableVoiceProfile, table: tableVoiceProfile, pathParam: "id"},

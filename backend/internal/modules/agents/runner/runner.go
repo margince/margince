@@ -40,6 +40,9 @@ type Invoker interface {
 	// tools an observation may be attributed to, which is about what already
 	// happened rather than what may be chosen next — see sourceVocabulary.
 	Specs() []mcp.ToolSpec
+	// Explain is what a caller of tool is told about err, in the words the MCP
+	// door uses: a fault no taxonomy recognises is one fixed sentence.
+	Explain(tool string, err error) string
 }
 
 // Meta names the model identity a completion was served with — the
@@ -248,7 +251,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 		// state (a re-staging is a fresh human decision). The step records
 		// "refused" — replay must never claim a mutation that the gate did
 		// not apply.
-		observation = "approved action could not be applied: " + err.Error()
+		observation = "approved action could not be applied: " + r.refusalText(dec.Pending.Tool, err)
 		admission = AdmissionRefused
 	}
 	win.observe(dec.Pending.Tool, observation)
@@ -342,7 +345,7 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 			// The release did not hold after all — the decision lapsed, the
 			// target moved, the passport died. That is a refusal the model can
 			// re-plan around, not a run to park on an id nothing will resume.
-			acc.Steps = append(acc.Steps, observeRefusal(win, step, err, meta, resp))
+			acc.Steps = append(acc.Steps, observeRefusal(win, step, r.refusalText(step.Tool, err), err, meta, resp))
 		case errors.As(err, &staged):
 			// 🟡 mid-loop: the proposal is durably staged; suspend, never
 			// block (§5). The snapshot makes the run resumable.
@@ -352,7 +355,7 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 			// back as observations — the model learns it cannot do that
 			// and re-plans; agent ≤ human holds without the loop knowing
 			// the policy.
-			acc.Steps = append(acc.Steps, observeRefusal(win, step, err, meta, resp))
+			acc.Steps = append(acc.Steps, observeRefusal(win, step, r.refusalText(step.Tool, err), err, meta, resp))
 		default:
 			win.observe(step.Tool, string(out))
 			acc.Steps = append(acc.Steps, Step{

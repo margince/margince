@@ -6,6 +6,7 @@ package agents
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -256,5 +257,19 @@ func TestExplainSendsAMissingModelToTheSettings(t *testing.T) {
 	}
 	if strings.Contains(got, "Correct the arguments") {
 		t.Errorf("explain = %q, sends the agent to change arguments no change can fix", got)
+	}
+}
+
+// The registry answers the scheduled runner in the MCP door's words: a fault the
+// taxonomy does not know is withheld, and a governed refusal keeps its detail.
+func TestTheRegistryExplainsARefusalAsTheMCPDoorDoes(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	const raw = "pg: dial tcp 10.0.0.7:5432: connection refused"
+	if got := r.Explain("read_record", errors.New(raw)); got != internalFaultAdvice {
+		t.Errorf("an unclassified fault was explained as %q, want the fixed sentence", got)
+	}
+	denied := r.Explain("read_record", fmt.Errorf("compose: %w", apperrors.ErrPermissionDenied))
+	if !strings.Contains(denied, "permission_denied") {
+		t.Errorf("a governed refusal was explained as %q, want its code and detail", denied)
 	}
 }

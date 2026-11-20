@@ -58,7 +58,7 @@ func TestAConfirmRequestRefusesALanguageItCannotWriteIn(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/contacts/x/consent/confirm-request", strings.NewReader(`{"language":"fr"}`)).
 		WithContext(repWith(principal.ObjectGrant{Update: true}))
-	Handlers{store: &Store{}}.RequestDetailsConfirmation(rec, req, crmcontracts.Id{})
+	Handlers{store: &Store{}}.RequestDetailsConfirmation(rec, req, crmcontracts.Id{}, crmcontracts.RequestDetailsConfirmationParams{})
 	if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), "language") {
 		t.Fatalf("status = %d (body: %s), want a 422 naming the language", rec.Code, rec.Body.String())
 	}

@@ -72,10 +72,8 @@ func claimHolder(ctx context.Context, verb string) (string, error) {
 	return retryHolder(actor), nil
 }
 
-// retryHolder is the claim owner both doors key a retry on. A connected agent
-// owns its keys through its connection, the subject its volume counters use,
-// because a token refresh retires the passport and the retry that follows comes
-// from its replacement. Two agents acting for one human still never share a key.
+// retryHolder owns a retry key on both doors: a connected agent's connection,
+// which a token refresh keeps, else the actor. Two agents never share a key.
 func retryHolder(actor principal.Principal) string {
 	if actor.Type == principal.PrincipalAgent {
 		if subject := agentvolume.SubjectOf(actor.PassportID, actor.ConnectionID); subject != "" {

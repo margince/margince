@@ -113,6 +113,24 @@ func TestAPromptRefusesAMissingArgumentAndAnUnknownName(t *testing.T) {
 	}
 }
 
+// An unknown name is quoted back bounded and escaped, as tools/call quotes one,
+// so a caller cannot make the answer as long as its request or forge a line.
+func TestAnUnknownPromptNameIsQuotedBackBounded(t *testing.T) {
+	s := promptDispatcher(t)
+	name := strings.Repeat("x", 20000) + "\nforged line"
+	params, err := json.Marshal(map[string]string{"name": name})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp := callPrompt(scopedAgentCtx(principal.ScopeRead), s, methodPromptsGet, string(params))
+	if resp.Error == nil {
+		t.Fatalf("an unknown prompt name was answered: %+v", resp)
+	}
+	if len(resp.Error.Message) > 300 || strings.Contains(resp.Error.Message, "\n") {
+		t.Fatalf("the refusal quoted back %d bytes of the caller's name: %.120q", len(resp.Error.Message), resp.Error.Message)
+	}
+}
+
 func TestTheServerAdvertisesPrompts(t *testing.T) {
 	capabilities := promptDispatcher(t).capabilities(false)
 	if _, ok := capabilities["prompts"]; !ok {

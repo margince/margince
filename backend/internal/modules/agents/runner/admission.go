@@ -15,13 +15,23 @@ import (
 // turn took, and must read the same word this package writes.
 const AdmissionRefused = "refused"
 
+// refusalText is what the model reads about a refused call. The allowlist
+// refusal is the runner's own words; whatever the surface answered is told as
+// the MCP door tells it, so an unclassified fault's text never reaches a model.
+func (r *Runner) refusalText(tool string, err error) string {
+	if errors.Is(err, errOutsideAgentSpec) {
+		return err.Error()
+	}
+	return r.tools.Explain(tool, err)
+}
+
 // observeRefusal feeds a refusal back as an observation and returns the
 // trace step for it. A DECLARED capability gap is called out as terminal,
 // because it is not a fault the model can route around by trying again — and
 // this is the loop with a step budget, so a re-plan that re-calls the same
 // tool spends the run on a permanent no.
-func observeRefusal(win *window, step modelStep, err error, meta Meta, resp model.Response) Step {
-	observation := "tool call refused: " + err.Error()
+func observeRefusal(win *window, step modelStep, explained string, err error, meta Meta, resp model.Response) Step {
+	observation := "tool call refused: " + explained
 	// Telling the model not to retry is an ORDER, so it rides the directive
 	// argument: inside the fence it would be text the prompt has already
 	// declared to be data the model must disregard (observeThen's own doc). The

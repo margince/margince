@@ -165,7 +165,7 @@ func (s *Dispatcher) promptGet(ctx context.Context, params json.RawMessage) (map
 			}},
 		}, nil
 	}
-	return nil, invalidPromptParams("no prompt is named " + p.Name + "; prompts/list names the ones you are offered")
+	return nil, invalidPromptParams("no prompt is named " + echoSafe(p.Name, maxToolNameEcho) + "; prompts/list names the ones you are offered")
 }
 
 func invalidPromptParams(message string) *rpcError {

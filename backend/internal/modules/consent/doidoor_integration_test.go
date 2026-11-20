@@ -263,6 +263,6 @@ func postDoubleOptInWith(
 	body := strings.NewReader(`{"purpose_id":"` + purpose.String() + `"}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/consent/double-opt-in", body).WithContext(e.ctx)
 	req.Header.Set("Content-Type", "application/json")
-	h.IssueDoubleOptIn(rec, req, crmcontracts.Id(e.contact.UUID))
+	h.IssueDoubleOptIn(rec, req, crmcontracts.Id(e.contact.UUID), crmcontracts.IssueDoubleOptInParams{})
 	return rec
 }

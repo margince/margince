@@ -44,11 +44,14 @@ func TestEveryMutatingToolIsAdvertisedWithTheRetryKey(t *testing.T) {
 	// provenance marker is on the TOOL (mcp.UnitScopedTool) — and this is the
 	// question that map already answers for the contract sweeps.
 	fromExtension := composedToolNames()
-	runsARoute := map[string]bool{}
+	// A route verb takes the key exactly when the idempotency middleware claims
+	// one on its route, which is the contract's declaration mirrored.
+	runsARoute, routeReplays := map[string]bool{}, map[string]bool{}
 	for _, v := range declaredRouteVerbs(agentPolicies) {
 		runsARoute[v.Verb] = true
+		_, routeReplays[v.Verb] = replayableOperations[v.Method+" "+v.Pattern]
 	}
-	var mutating, readOnly int
+	var mutating, readOnly, routeKeyed int
 	for _, spec := range specs {
 		advertised := advertisesRetryKey(t, spec)
 		switch {
@@ -69,8 +72,16 @@ func TestEveryMutatingToolIsAdvertisedWithTheRetryKey(t *testing.T) {
 				t.Errorf("%s is an extension's and advertises `%s`, promising a retry the replay gate "+
 					"would refuse to serve", spec.Name, retryKeyMember)
 			}
-		// A route-backed verb's answer is its route's, which carries no replay
-		// evidence, so it offers no key it could not honour.
+		// A route that claims a key replays its own answer, re-checked as a read,
+		// so the verb hands the caller's key to it.
+		case runsARoute[spec.Name] && routeReplays[spec.Name]:
+			routeKeyed++
+			if !advertised {
+				t.Errorf("%s runs a route that replays a retry key, and does not advertise `%s`",
+					spec.Name, retryKeyMember)
+			}
+		// Any other route-backed verb's answer is its route's, which carries no
+		// replay evidence, so it offers no key it could not honour.
 		case runsARoute[spec.Name]:
 			if advertised {
 				t.Errorf("%s runs its REST route and advertises `%s`, promising a retry the replay gate "+
@@ -87,9 +98,9 @@ func TestEveryMutatingToolIsAdvertisedWithTheRetryKey(t *testing.T) {
 	// Neither side may be empty, or the loop above would pass by having nothing
 	// to check — the shape of green this whole surface's fitness tests guard
 	// against.
-	if mutating == 0 || readOnly == 0 {
-		t.Fatalf("the surface has %d mutating and %d read-only tools; both halves must be exercised",
-			mutating, readOnly)
+	if mutating == 0 || readOnly == 0 || routeKeyed == 0 {
+		t.Fatalf("the surface has %d mutating, %d read-only and %d route-keyed tools; every half must be exercised",
+			mutating, readOnly, routeKeyed)
 	}
 }
 

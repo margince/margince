@@ -13,10 +13,9 @@ package compose
 // The effect a task performs is executed through Registry.Invoke and carries
 // the full write shape there.
 //
-// EVERY QUERY IS SCOPED TO THE CALLING AGENT, in the SQL rather than by a caller
-// remembering to filter: its connection, or the passport a human minted without
-// one. A task belonging to another agent is absent, not forbidden: distinguishing
-// the two would tell a caller which ids exist.
+// EVERY QUERY IS SCOPED TO THE CALLING AGENT, in the SQL rather than by a
+// caller remembering to filter. A task belonging to another agent is absent,
+// not forbidden: distinguishing the two would tell a caller which ids exist.
 
 import (
 	"context"
@@ -48,37 +47,26 @@ func toolTasks(pool *pgxpool.Pool) agentTasks { return agentTasks{pool: pool} }
 const taskColumns = `id, approval_id, tool, status, COALESCE(status_message, ''), result, error,
 	served_records, expires_at, created_at, updated_at`
 
-// taskOwner is the agent a task method acts for. A token refresh retires the
-// passport and mints another under the same connection, so a row matches on
-// either: the connection keeps the handle, and the passport answers for a
-// credential a human minted without one.
-type taskOwner struct {
-	passport ids.UUID
-	// connection is nil without an OAuth grant, which SQL compares as NULL and
-	// so matches no row.
-	connection *ids.UUID
-}
-
-// taskOwnedBy is the predicate every query scopes a row with; $2 and $3 are
-// the owner's passport and connection in each of them.
+// taskOwnedBy scopes every query to the agent: $2 is its passport and $3 its
+// connection, which a token refresh keeps while it retires the passport.
 const taskOwnedBy = `(passport_id = $2 OR connection_id = $3)`
 
-// taskOwnerOf answers the agent a task method is acting under.
+// taskOwnerOf answers the passport a task method acts under, and its connection
+// (nil without one, which SQL compares as NULL and so matches no row).
 //
 // A ZERO passport is refused as hard as a missing principal. principal.Actor
 // answers ok for a zero-value Principal, and a passport-less task row would be
 // one row every such caller in the workspace shares — which is precisely the
 // binding that makes a task id worthless to anyone but its owner.
-func taskOwnerOf(ctx context.Context, verb string) (taskOwner, error) {
+func taskOwnerOf(ctx context.Context, verb string) (ids.UUID, *ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.PassportID.IsZero() {
-		return taskOwner{}, fmt.Errorf("compose: no agent passport %s an MCP task", verb)
+		return ids.Nil, nil, fmt.Errorf("compose: no agent passport %s an MCP task", verb)
 	}
-	owner := taskOwner{passport: actor.PassportID}
-	if !actor.ConnectionID.IsZero() {
-		owner.connection = &actor.ConnectionID
+	if actor.ConnectionID.IsZero() {
+		return actor.PassportID, nil, nil
 	}
-	return owner, nil
+	return actor.PassportID, &actor.ConnectionID, nil
 }
 
 // Create records the handle. It commits before answering, which is the
@@ -104,7 +92,7 @@ func taskOwnerOf(ctx context.Context, verb string) (taskOwner, error) {
 // closed. A terminal row therefore fails the predicate and the caller gets the
 // plain refusal, which names the approval and the header that redeems it.
 func (t agentTasks) Create(ctx context.Context, in agents.NewTask) (agents.Task, error) {
-	owner, err := taskOwnerOf(ctx, "creating")
+	passport, connection, err := taskOwnerOf(ctx, "creating")
 	if err != nil {
 		return agents.Task{}, err
 	}
@@ -129,7 +117,7 @@ func (t agentTasks) Create(ctx context.Context, in agents.NewTask) (agents.Task,
 			ON CONFLICT (approval_id) DO UPDATE SET approval_id = agent_task.approval_id
 			  WHERE (agent_task.passport_id = $2 OR agent_task.connection_id = $3) AND agent_task.status = $7
 			RETURNING `+taskColumns,
-			in.ApprovalID, owner.passport, owner.connection, in.Tool, in.StatusMessage, in.ExpiresAt, agents.TaskWorking)
+			in.ApprovalID, passport, connection, in.Tool, in.StatusMessage, in.ExpiresAt, agents.TaskWorking)
 		return scanTask(row, &task)
 	})
 	if err != nil {
@@ -142,14 +130,14 @@ func (t agentTasks) Create(ctx context.Context, in agents.NewTask) (agents.Task,
 // as this server is concerned — the specification permits discarding it — so it
 // reads as absent rather than as a task nobody can use.
 func (t agentTasks) Load(ctx context.Context, id ids.UUID) (agents.Task, error) {
-	owner, err := taskOwnerOf(ctx, "reading")
+	passport, connection, err := taskOwnerOf(ctx, "reading")
 	if err != nil {
 		return agents.Task{}, err
 	}
 	var task agents.Task
 	err = database.WithWorkspaceTx(ctx, t.pool, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `SELECT `+taskColumns+`
-			FROM agent_task WHERE id = $1 AND `+taskOwnedBy+` AND expires_at > now()`, id, owner.passport, owner.connection)
+			FROM agent_task WHERE id = $1 AND `+taskOwnedBy+` AND expires_at > now()`, id, passport, connection)
 		return scanTask(row, &task)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -170,7 +158,7 @@ func (t agentTasks) Load(ctx context.Context, id ids.UUID) (agents.Task, error) 
 // execution died mid-flight, since the approval cannot tell a poll that crashed
 // from a direct call that redeemed it.
 func (t agentTasks) Claim(ctx context.Context, id ids.UUID, lease time.Duration) (agents.TaskClaim, error) {
-	owner, err := taskOwnerOf(ctx, "claiming")
+	passport, connection, err := taskOwnerOf(ctx, "claiming")
 	if err != nil {
 		return agents.TaskClaim{}, err
 	}
@@ -191,7 +179,7 @@ func (t agentTasks) Claim(ctx context.Context, id ids.UUID, lease time.Duration)
 			)
 			SELECT EXISTS (SELECT 1 FROM taken),
 			       COALESCE((SELECT claimed_at IS NOT NULL FROM prior), false)`,
-			id, owner.passport, owner.connection, lease).Scan(&claim.Won, &claim.Reclaimed)
+			id, passport, connection, lease).Scan(&claim.Won, &claim.Reclaimed)
 	})
 	if err != nil {
 		return agents.TaskClaim{}, fmt.Errorf("compose: claiming an MCP task: %w", err)
@@ -211,7 +199,7 @@ func (t agentTasks) Claim(ctx context.Context, id ids.UUID, lease time.Duration)
 // for an already-settled task changes nothing and returns what is stored, so
 // the first answer a client was given stays the answer.
 func (t agentTasks) Settle(ctx context.Context, id ids.UUID, s agents.Settlement) (agents.Task, error) {
-	owner, err := taskOwnerOf(ctx, "settling")
+	passport, connection, err := taskOwnerOf(ctx, "settling")
 	if err != nil {
 		return agents.Task{}, err
 	}
@@ -222,7 +210,7 @@ func (t agentTasks) Settle(ctx context.Context, id ids.UUID, s agents.Settlement
 				result = $6, error = $7, served_records = $8, updated_at = now()
 			WHERE id = $1 AND `+taskOwnedBy+` AND status = 'working'
 			RETURNING `+taskColumns,
-			id, owner.passport, owner.connection, string(s.Status), s.StatusMessage,
+			id, passport, connection, string(s.Status), s.StatusMessage,
 			nullableJSON(s.Result), nullableJSON(s.Error), s.ServedRecords)
 		if scanErr := scanTask(row, &task); !errors.Is(scanErr, pgx.ErrNoRows) {
 			return scanErr
@@ -231,7 +219,7 @@ func (t agentTasks) Settle(ctx context.Context, id ids.UUID, s agents.Settlement
 		// what is stored IS the answer — including for the caller that just
 		// tried to overwrite it.
 		return scanTask(tx.QueryRow(ctx, `SELECT `+taskColumns+`
-			FROM agent_task WHERE id = $1 AND `+taskOwnedBy, id, owner.passport, owner.connection), &task)
+			FROM agent_task WHERE id = $1 AND `+taskOwnedBy, id, passport, connection), &task)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return agents.Task{}, apperrors.ErrNotFound
@@ -257,7 +245,7 @@ func (t agentTasks) Settle(ctx context.Context, id ids.UUID, s agents.Settlement
 // cancellation is cooperative, and the specification permits a terminal state
 // other than cancelled.
 func (t agentTasks) Cancel(ctx context.Context, id ids.UUID, lease time.Duration, message string) (bool, error) {
-	owner, err := taskOwnerOf(ctx, "cancelling")
+	passport, connection, err := taskOwnerOf(ctx, "cancelling")
 	if err != nil {
 		return false, err
 	}
@@ -270,7 +258,7 @@ func (t agentTasks) Cancel(ctx context.Context, id ids.UUID, lease time.Duration
 				  AND (claimed_at IS NULL OR claimed_at < now() - $4::interval)
 				RETURNING id
 			)
-			SELECT EXISTS (SELECT 1 FROM taken)`, id, owner.passport, owner.connection, lease, message).Scan(&cancelled)
+			SELECT EXISTS (SELECT 1 FROM taken)`, id, passport, connection, lease, message).Scan(&cancelled)
 	})
 	if err != nil {
 		return false, fmt.Errorf("compose: cancelling an MCP task: %w", err)

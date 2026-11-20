@@ -18952,6 +18952,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -19063,6 +19065,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -19095,6 +19099,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -19643,6 +19649,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -20129,6 +20137,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
           description: The member, and whether the new invitation email was handed to the sender.
@@ -26751,7 +26761,8 @@ components:
         Client-supplied key making a mutation safe to retry — an update exactly as much as a
         create. **Scope:** the key is unique within
         `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-        returns the original status + body. Reusing the same key with a *different* request body
+        returns the original status + body. A connected agent's principal is its connection, so a
+        retry on a refreshed token replays too. Reusing the same key with a *different* request body
         returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
         do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
         means the first request under the key is still running and carries `Retry-After`;

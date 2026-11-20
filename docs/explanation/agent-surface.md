@@ -46,8 +46,10 @@ several hidden tools, picked by an argument: `change_state` with `action: promot
 `promote_lead`. `Registry.InvokeServed` picks the hidden tool before anything else runs.
 
 So the gate, the approval and its later use, retry keys and MCP Tasks all see the name of the hidden
-tool. That name is the approval kind and the contract verb, and a router changes neither. A hidden tool
-still runs when a client calls it by name; `tools/list` leaves it out. Two are hidden with no router:
+tool. That name is the approval kind and the contract verb, and a router changes neither. `tools/list`
+leaves a hidden tool out, and an MCP client that calls one by name is told no such tool exists
+(`agents/unoffered.go`). A scheduled run still calls one by name when its agent lists it. Two are hidden
+with no router:
 `progress_deal` does what `advance_deal` does, and `relink_activities` what `relink_thread` refuses to.
 `TestThePublishedToolCountStaysUnderItsCeiling` holds the count.
 
@@ -225,8 +227,8 @@ contract or index.
 
 ## Open gaps
 
-- **A passport's share of model tokens only warns.** The admission gate meters each passport's reads,
-  writes, outbound data and calls (`platform/agentvolume`). Going past one of those stops the agent
+- **A passport's share of model tokens only warns.** The admission gate meters each passport's writes,
+  calls that send something out and total calls (`platform/agentvolume`). Going past one of those stops the agent
   or asks the human who granted the passport. The cost counter, its share of the workspace AI budget,
   refuses nothing: past the share, the answer has a warning. So only the workspace budget limits what
   one passport spends on the model.

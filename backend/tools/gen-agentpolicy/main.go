@@ -43,6 +43,9 @@ type policy struct {
 	Router     string // x-mcp-tool router: the listed tool that fronts this verb (served_by: route)
 	Action     string // x-mcp-tool action: the router's name for this verb
 	AskFirst   bool   // x-mcp-tool ask_user_first: the app confirms this act before it runs
+	// StaysInside is x-mcp-tool `egress: false`: an operation on an outbound
+	// cap that sends nothing out of the workspace.
+	StaysInside bool
 	// HumanOnlyReason is x-human-only-reason: why an agent may not reach an
 	// operation its user reaches in the app (security | covered | pending).
 	HumanOnlyReason string
@@ -152,6 +155,7 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 					Router     string `yaml:"router"`
 					Action     string `yaml:"action"`
 					AskFirst   bool   `yaml:"ask_user_first"`
+					Egress     *bool  `yaml:"egress"`
 				} `yaml:"x-mcp-tool"`
 				AgentAccess     string                 `yaml:"x-agent-access"`
 				HumanOnlyReason string                 `yaml:"x-human-only-reason"`
@@ -187,6 +191,11 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 				p.Router = op.MCPTool.Router
 				p.Action = op.MCPTool.Action
 				p.AskFirst = op.MCPTool.AskFirst
+				if defect := egressDefect(op.MCPTool.Egress, p.Scope); defect != "" {
+					defects = append(defects, fmt.Sprintf("%s %s (%s): %s", httpMethod, path, op.OperationID, defect))
+					continue
+				}
+				p.StaysInside = op.MCPTool.Egress != nil
 				if p.Tool == "" || (p.Tier != "auto_execute" && p.Tier != "confirmation_required" && p.Tier != "dynamic") {
 					defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool needs a verb and an auto_execute|confirmation_required|dynamic tier", httpMethod, path, op.OperationID))
 					continue
@@ -216,6 +225,22 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 	return policies, defects
 }
 
+// egressDefect refuses an egress declaration that says nothing. The outbound
+// caps leave the workspace unless an operation says it does not, so an
+// operation may declare `false`, and only on a send or enrich cap.
+func egressDefect(declared *bool, scope string) string {
+	switch {
+	case declared == nil:
+		return ""
+	case *declared:
+		return "x-mcp-tool egress: true is what the scope already says; declare only `egress: false`, on an operation that sends nothing out"
+	case scope != "send" && scope != "enrich":
+		return "x-mcp-tool egress: false lowers only a send or enrich cap, and scope " + scope + " sends nothing out already"
+	default:
+		return ""
+	}
+}
+
 // scopeCoherence reports any verb whose routes disagree about the cap it
 // spends. Tier is deliberately per-operation — the A34 tighten-only rule lets
 // one route of a verb confirm where another auto-executes — but scope is a
@@ -223,7 +248,10 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 // `enrich` on one path and `write` on another means an agent denied the cap
 // can still spend it by picking the other door.
 func scopeCoherence(policies []policy) []string {
-	type claim struct{ scope, route string }
+	type claim struct {
+		scope, route string
+		inside       bool
+	}
 	first := map[string]claim{}
 	var defects []string
 	for _, p := range policies {
@@ -232,8 +260,13 @@ func scopeCoherence(policies []policy) []string {
 		}
 		seen, ok := first[p.Tool]
 		if !ok {
-			first[p.Tool] = claim{scope: p.Scope, route: p.Route}
+			first[p.Tool] = claim{scope: p.Scope, route: p.Route, inside: p.StaysInside}
 			continue
+		}
+		if seen.inside != p.StaysInside {
+			defects = append(defects, fmt.Sprintf(
+				"%s (%s): x-mcp-tool.egress differs from %s for the same verb — one verb either sends something out or does not",
+				p.Route, p.Op, seen.route))
 		}
 		if seen.scope != p.Scope {
 			defects = append(defects, fmt.Sprintf(
@@ -276,6 +309,9 @@ type agentPolicy struct {
 	// AskUserFirst: the app asks its user to confirm this act, so the tool
 	// tells an agent to ask first too.
 	AskUserFirst bool
+	// StaysInside: the operation spends a send or enrich cap and sends nothing
+	// out of the workspace (x-mcp-tool egress: false).
+	StaysInside bool
 	// HumanOnlyReason says why a human-only operation stays out of an agent's
 	// reach; empty for one no signed-in user reaches either.
 	HumanOnlyReason agentHumanOnlyReason
@@ -297,6 +333,9 @@ var agentPolicies = map[string]agentPolicy{
 		}
 		if p.AskFirst {
 			b.WriteString(", AskUserFirst: true")
+		}
+		if p.StaysInside {
+			b.WriteString(", StaysInside: true")
 		}
 		if p.HumanOnlyReason != "" {
 			fmt.Fprintf(&b, ", HumanOnlyReason: %q", p.HumanOnlyReason)

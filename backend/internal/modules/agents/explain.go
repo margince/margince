@@ -16,6 +16,7 @@ package agents
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -179,6 +180,13 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	default:
 		return s.explainClassified(tool, err)
 	}
+}
+
+// Explain is what a caller of tool is told about err, in the words the MCP door
+// answers with. The scheduled runner shows its model the same text, so neither
+// door hands a model a fault's raw words.
+func (r *Registry) Explain(tool string, err error) string {
+	return (&Dispatcher{registry: r, log: slog.Default()}).explain(tool, err)
 }
 
 // internalFaultAdvice is what an agent is told when nothing in the taxonomy

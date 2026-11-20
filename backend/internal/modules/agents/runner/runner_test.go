@@ -68,6 +68,17 @@ type fakeSurface struct {
 	// offered narrows what a run is SHOWN, leaving Specs — what an observation
 	// may be attributed to — whole. Nil means the surface offers everything.
 	offered []mcp.ToolSpec
+	// explained is what the surface tells a caller about any refusal; empty
+	// tells it the error's own words.
+	explained string
+}
+
+// Explain stands in for the registry's wording, which agents tests hold.
+func (s *fakeSurface) Explain(_ string, err error) string {
+	if s.explained != "" {
+		return s.explained
+	}
+	return err.Error()
 }
 
 type recordedCall struct {
@@ -346,6 +357,34 @@ func TestRefusalFedBackAsObservation(t *testing.T) {
 	}
 }
 
+// The model reads a refusal in the surface's words, never in the error's own:
+// an unclassified fault's text (a driver error, a host) stays in the log.
+func TestARefusalReachesTheModelInTheSurfacesWords(t *testing.T) {
+	const raw = "pg: dial tcp 10.0.0.7:5432: connection refused"
+	surface := &fakeSurface{
+		errs:      map[string]error{"read_record": errors.New(raw)},
+		explained: "The tool failed for an internal reason.",
+	}
+	brain := &scriptedBrain{texts: []string{
+		`{"tool":"read_record","args":{}}`,
+		`{"final":{"summary":"done without the read"}}`,
+	}}
+	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Tools: []string{"read_record"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var prompt strings.Builder
+	for _, m := range brain.requests[len(brain.requests)-1].Messages {
+		prompt.WriteString(m.Content)
+	}
+	if strings.Contains(prompt.String(), raw) || strings.Contains(res.Steps[0].Observation, raw) {
+		t.Fatalf("the fault's own text reached the model or the trace: %q", res.Steps[0].Observation)
+	}
+	if !strings.Contains(prompt.String(), surface.explained) {
+		t.Fatalf("the model was not told the surface's explanation: %q", prompt.String())
+	}
+}
+
 // A DECLARED capability gap is terminal, and the observation must say so: this
 // is the loop with a step budget, so a model that re-plans into the same tool
 // spends the run on a permanent no. Contrast the refusal above, which the
@@ -396,8 +435,8 @@ func TestTerminalDirectiveStaysOutsideTheObservationSpan(t *testing.T) {
 		t.Fatal("the run's system prompt declares no data boundary")
 	}
 
-	observeRefusal(win, modelStep{Tool: "run_report"},
-		fmt.Errorf("reports: %w", apperrors.ErrUnsupportedBySoR), Meta{}, model.Response{})
+	refused := fmt.Errorf("reports: %w", apperrors.ErrUnsupportedBySoR)
+	observeRefusal(win, modelStep{Tool: "run_report"}, refused.Error(), refused, Meta{}, model.Response{})
 
 	msgs := win.snapshot()
 	last := msgs[len(msgs)-1].Content
@@ -942,8 +981,8 @@ func TestALongRefusalDoesNotCrowdTheTerminalFindingOutOfTheTrace(t *testing.T) {
 	win := newWindow(Job{Goal: "g"}, nil, nil)
 	huge := strings.Repeat("x", traceObservationLimit*2)
 
-	step := observeRefusal(win, modelStep{Tool: "run_report"},
-		fmt.Errorf("%s: %w", huge, apperrors.ErrUnsupportedBySoR), Meta{}, model.Response{})
+	refused := fmt.Errorf("%s: %w", huge, apperrors.ErrUnsupportedBySoR)
+	step := observeRefusal(win, modelStep{Tool: "run_report"}, refused.Error(), refused, Meta{}, model.Response{})
 
 	if !strings.Contains(step.Observation, "do not call it again") {
 		t.Errorf("the terminal finding was truncated out of the trace: %q", step.Observation)

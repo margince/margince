@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -150,7 +151,7 @@ func TestATaskHandleOutlivesItsConnectionsTokenRefresh(t *testing.T) {
 	first, grant := seedConnectionPassport(t, e)
 	held, err := tasks.Create(asConnection(e, first, grant), agents.NewTask{
 		ApprovalID: stageApprovalForTask(t, e), Tool: "disqualify_lead",
-		StatusMessage: "staged for a human", ExpiresAt: time.Now().Add(time.Hour),
+		StatusMessage: "staged for a human", ExpiresAt: clocktest.Now(t).Add(time.Hour),
 	})
 	if err != nil {
 		t.Fatalf("creating the handle: %v", err)

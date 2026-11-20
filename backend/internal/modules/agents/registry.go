@@ -65,10 +65,13 @@ type Registry struct {
 	// must not diverge: what the schema advertises (withRetryKey) and what a
 	// call carrying `idempotency_key` is answered with (refuseUnkeyableCall).
 	unitOwned map[string]bool
-	// routeServed names the verbs that run a REST route's own handler. Their
-	// answers carry no replay evidence, so withRetryKey and
-	// refuseUnkeyableCall both read this one set.
+	// routeServed names the verbs that run a REST route's own handler and whose
+	// route claims no retry key. Their answers carry no replay evidence, so
+	// withRetryKey and refuseUnkeyableCall both read this one set.
 	routeServed map[string]bool
+	// routeKeyed names the route-backed verbs whose route claims a caller's
+	// Idempotency-Key and replays its recorded answer (WithRouteRetryKeys).
+	routeKeyed map[string]bool
 	// routeActions are the contract's route-backed actions per router name,
 	// added to that router's own targets when it registers.
 	routeActions map[string]map[string]string
@@ -331,6 +334,7 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 // approval it already spent. Redemption comes second, so a refused redemption
 // gives the key straight back — nothing ran.
 func (r *Registry) runClaimed(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved) (json.RawMessage, int, error) {
+	ctx, res = r.handKeyToRoute(ctx, spec, res)
 	fresh, attempt, answered, records, err := r.claimFor(ctx, spec, res)
 	if !fresh {
 		// A replay hands over the records the original call served, and claimFor

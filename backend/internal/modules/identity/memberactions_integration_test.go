@@ -78,7 +78,7 @@ func callMemberVerb(e *revocationEnv, h Handlers, caller Identity, action member
 	case actionIssuePasswordLink:
 		h.IssueUserPasswordLink(rec, req, id)
 	case actionResendInvite:
-		h.ResendUserInvite(rec, req, id)
+		h.ResendUserInvite(rec, req, id, crmcontracts.ResendUserInviteParams{})
 	case actionDeactivate:
 		h.DeactivateUser(rec, req, id)
 	case actionReactivate:

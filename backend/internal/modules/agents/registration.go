@@ -142,9 +142,10 @@ func (r *Registry) Register(t mcp.Tool) {
 	owned := unitOwned(t)
 	r.unitOwned[spec.Name] = owned
 	_, served := t.(routeVerbTool)
-	r.routeServed[spec.Name] = served
+	keyless := served && !r.routeKeyed[spec.Name]
+	r.routeServed[spec.Name] = keyless
 	spec.Areas = workarea.OfVerb(spec.Name)
-	r.specs[spec.Name] = copySchemas(withRetryKey(envelopedSpec(spec), owned || served))
+	r.specs[spec.Name] = copySchemas(withRetryKey(envelopedSpec(spec), owned || keyless))
 	// Derived from the tool's OWN schema, never the spliced one: the reserved
 	// members are popped before any of these checks runs, so a check that knew
 	// about them would be describing arguments no handler can be reached with.
