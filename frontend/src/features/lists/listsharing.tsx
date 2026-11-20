@@ -30,8 +30,21 @@ export type ListAudience = Readonly<{
   teamId: string | null;
 }>;
 
-/** What a new list starts with: the server's own default, now shown. */
-export const DEFAULT_AUDIENCE: ListAudience = { sharing: "team", teamId: null };
+const TEAM_AUDIENCE: ListAudience = { sharing: "team", teamId: null };
+const PRIVATE_AUDIENCE: ListAudience = { sharing: "private", teamId: null };
+
+/** Whether the signed-in reader is known to belong to no team. */
+function useInNoTeam(): boolean {
+  return useMe().data?.teams.length === 0;
+}
+
+/**
+ * What a new list starts with: the reader's teams, or only the reader when
+ * they are in no team. A team list would then reach nobody else.
+ */
+export function useDefaultAudience(): ListAudience {
+  return useInNoTeam() ? PRIVATE_AUDIENCE : TEAM_AUDIENCE;
+}
 
 // A Select value cannot be null, so the owner's-teams choice needs a spelling
 // no team id can collide with.
@@ -70,7 +83,10 @@ export function ListAudienceFields({
   const t = useT();
   const me = useMe();
   const teamName = useTeamName();
+  const inNoTeam = useInNoTeam();
   const mine = me.data?.teams ?? [];
+  // A list already shared with a team keeps that answer on offer.
+  const teamBarred = ownerIsReader && inNoTeam && value.sharing !== "team";
   // A list already shared with a team the reader is not in keeps that team on
   // offer, so opening the form never silently proposes a different one.
   const teamIds =
@@ -79,7 +95,14 @@ export function ListAudienceFields({
       : mine;
   return (
     <>
-      <Field label={t("lists.sharingLabel")} hint={t("lists.sharingHint")}>
+      <Field
+        label={t("lists.sharingLabel")}
+        hint={
+          teamBarred
+            ? `${t("lists.sharing.noTeamHint")} ${t("lists.sharingHint")}`
+            : t("lists.sharingHint")
+        }
+      >
         {(control) => (
           <Select
             {...control}
@@ -90,6 +113,7 @@ export function ListAudienceFields({
             options={SHARINGS.map((sharing) => ({
               value: sharing,
               label: t(labelFor(SHARING_LABEL, sharing)),
+              disabled: sharing === "team" && teamBarred,
             }))}
           />
         )}
@@ -141,6 +165,7 @@ export function useListAudienceLabel(): (
   const t = useT();
   const me = useMe();
   const teamName = useTeamName();
+  const inNoTeam = useInNoTeam();
   return (list) => {
     const ownerIsReader = ownedByReader(list, me.data?.user.id);
     if (list.sharing === "private") {
@@ -156,6 +181,11 @@ export function useListAudienceLabel(): (
     // every seat, so nobody is left unable to take it over.
     if (!list.owner_id) {
       return t("lists.sharing.workspace");
+    }
+    // The owner's teams are read when the list is found, so an owner in no
+    // team is found by nobody but themselves and the steward.
+    if (ownerIsReader && inNoTeam) {
+      return t(privateAudienceOf(list, ownerIsReader));
     }
     return ownerIsReader
       ? t("lists.audience.yourTeams")

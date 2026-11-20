@@ -19718,6 +19718,7 @@ export const en = {
   "lists.sharing.private": "Only me",
   "lists.sharing.team": "A team",
   "lists.sharing.workspace": "Everyone",
+  "lists.sharing.noTeamHint": "You are in no team.",
   "lists.sharingLabel": "Who can find it",
   "lists.sharingHint":
     "Sharing a list shows nobody a record they could not already see.",

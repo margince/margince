@@ -19919,6 +19919,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.sharing.private": "Privat",
   "lists.sharing.team": "Ein Team",
   "lists.sharing.workspace": "Alle",
+  "lists.sharing.noTeamHint": "Du bist in keinem Team.",
   "lists.sharingLabel": "Wer sie finden kann",
   "lists.sharingHint":
     "Wer eine Liste sieht, sieht dadurch keinen Datensatz, den er nicht schon sehen durfte.",

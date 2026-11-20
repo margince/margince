@@ -19391,6 +19391,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.sharing.private": "Chỉ riêng tôi",
   "lists.sharing.team": "M\u1ed9t nh\u00f3m",
   "lists.sharing.workspace": "Cả công ty",
+  "lists.sharing.noTeamHint": "Bạn không thuộc nhóm nào.",
   "lists.sharingLabel": "Ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y",
   "lists.sharingHint":
     "Chia sẻ danh sách không cho phép ai xem hồ sơ mà họ vốn không có quyền xem.",
