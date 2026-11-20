@@ -368,7 +368,7 @@ func departureRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 		if !departed[s.ContactID] {
 			continue
 		}
-		if s.Role == roleChampion {
+		if dealrole.Recorded(s.Role) == roleChampion {
 			champions = append(champions, s.ContactID)
 			continue
 		}
@@ -450,7 +450,7 @@ func ourSideConcentration(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
 // hasEngagedChampion answers whether any engaged seat is the champion.
 func hasEngagedChampion(stakeholders []deals.DealStakeholder) bool {
 	for _, s := range stakeholders {
-		if s.Engaged && s.Role == roleChampion {
+		if s.Engaged && dealrole.Recorded(s.Role) == roleChampion {
 			return true
 		}
 	}

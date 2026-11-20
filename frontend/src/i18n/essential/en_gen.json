@@ -2386,6 +2386,7 @@
   "co.roleLabel.blocker": "Blocker",
   "co.roleLabel.influencer": "Influencer",
   "co.roleLabel.user": "End user",
+  "co.roleLabel.decision_maker": "Decision-maker",
   "co.factField.founded_year": "Founded",
   "co.factField.employee_range": "Employees",
   "co.factField.phone": "Phone",
