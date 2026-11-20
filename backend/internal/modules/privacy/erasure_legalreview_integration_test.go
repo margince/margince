@@ -100,3 +100,25 @@ func TestTheExportCarriesTheLegalReviewTextOfTheSubjectsDeals(t *testing.T) {
 		t.Errorf("exported review = %v, want its status, note and comments", row)
 	}
 }
+
+func TestTheExportLeavesOutTheLegalReviewOfADealWhoseStakeholderLinkWasArchived(t *testing.T) {
+	e := setupSARIdentifiers(t)
+	_, live := seedReviewedDeal(e.ctx, t, e.owner, e.contact.UUID)
+	retiredDeal, retired := seedReviewedDeal(e.ctx, t, e.owner, e.contact.UUID)
+	if _, err := e.owner.Exec(e.ctx,
+		`UPDATE relationship SET archived_at = now() WHERE deal_id = $1`, retiredDeal); err != nil {
+		t.Fatal(err)
+	}
+
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
+	if err != nil {
+		t.Fatalf("AssembleSAR: %v", err)
+	}
+	if len(pkg.LegalReviews) != 1 {
+		t.Fatalf("legal reviews in the export = %d, want only the live link's (live %s, archived %s)",
+			len(pkg.LegalReviews), live, retired)
+	}
+	if len(pkg.Deals) != 1 {
+		t.Errorf("deals in the export = %d, want the same one deal", len(pkg.Deals))
+	}
+}

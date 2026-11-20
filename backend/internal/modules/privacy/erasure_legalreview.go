@@ -18,6 +18,10 @@ import (
 const subjectDealIDsSQL = `SELECT r.deal_id FROM relationship r
 	WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $1 AND r.deal_id IS NOT NULL`
 
+// subjectLiveDealIDsSQL is the same question for the Art. 15 export, which lists
+// only the deals the subject stands in now. Erasure keeps the wider set above.
+const subjectLiveDealIDsSQL = subjectDealIDsSQL + ` AND r.archived_at IS NULL`
+
 // clearSubjectLegalReviewText empties the note and the reviewer's comments of every
 // legal review on a deal the subject is a stakeholder of, and tombstones each row it
 // cleared.
