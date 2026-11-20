@@ -6930,6 +6930,97 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.feed.caughtUpDetail":
     "Khi Margince kiểm tra lúc {time}, không có ai đang chờ bạn.",
   "teamweekly.pickTeam": "Chọn nhóm",
+  "teamweekly.agenda.copied": "Đã sao chép",
+  "teamweekly.agenda.copy": "Sao chép chương trình",
+  "teamweekly.agenda.copyFailed":
+    "Không thể sao chép chương trình họp. Chọn danh sách rồi sao chép thủ công.",
+  "teamweekly.agenda.empty":
+    "Không thể tải tuần làm việc của thành viên nào trong nhóm này, nên chưa có chương trình họp.",
+  "teamweekly.agenda.summary_one":
+    "{count} mục cho thứ Hai, bắt đầu bằng {first}.",
+  "teamweekly.agenda.summary_other":
+    "{count} mục cho thứ Hai, bắt đầu bằng {first}.",
+  "teamweekly.agenda.title": "Chương trình họp thứ Hai",
+  "teamweekly.card.commitments": "Cam kết đã giữ đúng",
+  "teamweekly.card.commitmentsBasis": "Đến hạn trong kế hoạch",
+  "teamweekly.card.firstResponse": "Lead đã được phản hồi",
+  "teamweekly.card.firstResponseBasis": "{breached} quá hạn phản hồi",
+  "teamweekly.card.meetings": "Cuộc họp có việc tiếp theo",
+  "teamweekly.card.meetingsBasis": "Đã liên kết việc cần làm trước cuối tuần",
+  "teamweekly.card.noCommitments": "Không có cam kết đến hạn",
+  "teamweekly.card.noLeads": "Chưa nhận lead nào",
+  "teamweekly.card.noMeetings": "Chưa ghi nhận",
+  "teamweekly.card.reps": "Thành viên được tính",
+  "teamweekly.card.repsBasis": "Đã ghi nhận đủ tuần",
+  "teamweekly.card.won": "Thắng",
+  "teamweekly.card.wonBasis": "{lost} thua · giá trị không khả dụng",
+  "teamweekly.card.wonBasisValue": "{value} · {lost} thua",
+  "teamweekly.commitmentRate":
+    "Đã hoàn tất {done} trên {total} cam kết đến hạn.",
+  "teamweekly.coverage.atRisk": "Độ phủ có rủi ro so với {basis}",
+  "teamweekly.coverage.basis.historical_median": "trung vị lịch sử",
+  "teamweekly.coverage.basis.manager_call": "nhận định của quản lý",
+  "teamweekly.coverage.holds": "Độ phủ đạt so với {basis}",
+  "teamweekly.coverage.month": "Tháng",
+  "teamweekly.coverage.notAuthorized":
+    "Không đọc được nhận định của kỳ này khi tuần khép lại.",
+  "teamweekly.coverage.percent": "{percent} giá trị deal cần có",
+  "teamweekly.coverage.quarter": "Quý",
+  "teamweekly.coverage.replan": "Nên lập lại kế hoạch",
+  "teamweekly.coverage.title": "Độ phủ giá trị deal",
+  "teamweekly.focus.close_dates_provisional": "Ngày chốt còn tạm tính",
+  "teamweekly.focus.commitments_missed": "Cam kết kế hoạch bị lỡ",
+  "teamweekly.focus.deals_at_risk": "Vực dậy deal",
+  "teamweekly.focus.forecast_downgrades": "Dự báo bị hạ",
+  "teamweekly.focus.help_requested": "Đã yêu cầu hỗ trợ",
+  "teamweekly.focus.leads_breached": "Không đạt mục tiêu phản hồi",
+  "teamweekly.focus.meetings_without_next_step":
+    "Thiếu bằng chứng về việc tiếp theo",
+  "teamweekly.focus.no_next_step_coverage": "Thiếu bước tiếp theo",
+  "teamweekly.focus.quiet_week": "Chưa xác định ưu tiên",
+  "teamweekly.focus.stage_regressions": "Deal bị lùi giai đoạn",
+  "teamweekly.focus.strong_week": "Tuần hiệu quả",
+  "teamweekly.forbidden":
+    "Bạn không còn mở được tuần của nhóm này. Tuần của nhóm dành cho trưởng nhóm và các vai trò giám sát mọi nhóm.",
+  "teamweekly.funnel.line": "{stage} → {next}: {rep} so với {team} của nhóm",
+  "teamweekly.funnel.lineLast": "{stage}: {rep} so với {team} của nhóm",
+  "teamweekly.headline.notRecorded":
+    "Một số số liệu của tuần này không được ghi nhận nên đã bị lược bỏ.",
+  "teamweekly.headline.partial":
+    "Độ bao phủ chưa đầy đủ. Số liệu này gồm các thành viên được tính bên dưới.",
+  "teamweekly.headline.plain":
+    "Không ghi nhận cuộc họp hay cam kết đến hạn nào.",
+  "teamweekly.headline.unmeasured":
+    "Tuần này không có ảnh chụp số liệu nào của thành viên. Hiệu suất không được đo lường.",
+  "teamweekly.loading": "Đang tải tuần của nhóm…",
+  "teamweekly.meetingRate":
+    "{done} trên {total} cuộc họp đã ghi nhận bước tiếp theo.",
+  "teamweekly.mine": "Tuần của tôi",
+  "teamweekly.movement.leads": "Lead đã phân bổ",
+  "teamweekly.movement.lost": "Thua",
+  "teamweekly.movement.meetings": "Cuộc họp đã diễn ra",
+  "teamweekly.movement.moved": "Tiến lên",
+  "teamweekly.movement.title": "Hoạt động trong tuần",
+  "teamweekly.movement.won": "Thắng",
+  "teamweekly.noPriority": "Chỉ số đã ghi nhận không cho thấy ưu tiên nào",
+  "teamweekly.noSnapshot":
+    "Chưa có bản tổng kết đã lưu cho nhóm và tuần này. Chọn tuần khác hoặc xem công việc hiện tại của nhóm.",
+  "teamweekly.ofTotal": "{part} trên {whole}",
+  "teamweekly.outcomes":
+    "{won} thắng · {lost} thua · {moved} deal đã chuyển · {leads} lead đã giao",
+  "teamweekly.quality.accepted": "Đề xuất được chấp nhận",
+  "teamweekly.quality.basis": "Cố định cùng tuần",
+  "teamweekly.quality.notMeasured": "Chưa đo",
+  "teamweekly.quality.rejected": "Đề xuất bị từ chối",
+  "teamweekly.quality.reversals": "Thay đổi tự động đã hoàn tác",
+  "teamweekly.quality.title": "Chất lượng dữ liệu",
+  "teamweekly.repsUnread_one":
+    "Không đọc được tuần của {count} thành viên. Số liệu này gồm {counted} thành viên đã được tính.",
+  "teamweekly.repsUnread_other":
+    "Không đọc được tuần của {count} thành viên. Số liệu này gồm {counted} thành viên đã được tính.",
+  "teamweekly.week": "Tuần bắt đầu",
+  "teamweekly.weekOf": "{team} · tuần từ {day}",
+  "teamweekly.whose": "Tuần của ai",
 
   "plan.loading": "Đang tải kế hoạch…",
   "plan.empty": "Chưa có gì trong kế hoạch.",

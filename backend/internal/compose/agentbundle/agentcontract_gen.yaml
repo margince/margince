@@ -44,9 +44,6 @@ info:
     GET /v1/stage-automation/report:
       release: ""
       announced_at: ""
-    GET /v1/weekly-reviews/team:
-      release: ""
-      announced_at: ""
     PATCH /v1/lead-sources/{id}:
       release: ""
       announced_at: ""
@@ -22653,12 +22650,9 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamWeeklyReview
-      deprecated: true
       security: [{bearerAuth: []}]
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
-      description: |-
-        Deprecated: no screen reads the team week. The operation stays callable through
-        the notice window in the API compatibility policy.
+      description: Home, Weekly reads it when a lead or an overseer picks a team.
       parameters:
         - name: team
           in: query
@@ -56278,8 +56272,8 @@ components:
           $ref: '#/components/schemas/TeamWeekReach'
           deprecated: true
           description: |-
-            Deprecated: no screen opens the team week, and the operation it describes,
-            `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
+            Deprecated: read `team_week` from `GET /me`, which carries the same answer
+            without assembling the day.
         filter: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming, website_inquiries], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.'}
         view: {type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.'}
         summary: {$ref: '#/components/schemas/WorklistSummary'}
