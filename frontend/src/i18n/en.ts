@@ -6398,6 +6398,17 @@ export const en = {
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
+  "legalEntities.defaultCountry":
+    "Country: {country}. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultCountryNone":
+    "No country set. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultCountryLink": "Change it under Jurisdiction",
+  "jurisdiction.entities.title": "Legal entities",
+  "jurisdiction.entities.lead":
+    "Each company’s country sets the law for the mail its team sends and the contacts it owns.",
+  "jurisdiction.entities.default": "{country}, the selection above",
+  "jurisdiction.entities.none": "No country set",
+  "jurisdiction.entities.edit": "Change legal entities",
   "legalEntities.edit": "Edit",
   "legalEntities.archive": "Archive",
   "legalEntities.editTitle": "Edit {name}",
@@ -6441,9 +6452,6 @@ export const en = {
   "legalEntities.logoEmpty": "Drop an image here or choose one",
   "legalEntities.logoRemove": "Remove logo",
   "legalEntities.countryPlaceholder": "Choose a country",
-  "legalEntities.countryInstallation": "The installation’s country",
-  "legalEntities.countryInstallationHint":
-    "Leave it on the installation’s country unless this company is established elsewhere.",
   "legalEntities.archiveTitle": "Archive {name}?",
   "legalEntities.archiveBody":
     "It leaves this list, and nobody can be assigned to it any more.",

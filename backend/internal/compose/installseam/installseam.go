@@ -98,10 +98,18 @@ func dealsIssuerEntity(ctx context.Context, tx pgx.Tx, id *ids.LegalEntityID) (d
 		}
 		return *value
 	}
+	country := text(e.Country)
+	if e.IsDefault {
+		// The default entity's country is the installation's jurisdiction, the
+		// one value data protection and retention read for it too.
+		if country, err = installationCountry(ctx, tx); err != nil {
+			return deals.IssuerEntity{}, err
+		}
+	}
 	a := e.Address
 	return deals.IssuerEntity{
 		ID: e.ID, IsDefault: e.IsDefault, Live: live,
-		DisplayName: e.DisplayName, LegalName: text(e.LegalName), Country: text(e.Country),
+		DisplayName: e.DisplayName, LegalName: text(e.LegalName), Country: country,
 		Address: deals.IssuerAddress{
 			Line1: text(a.Line1), Line2: text(a.Line2), PostalCode: text(a.PostalCode),
 			City: text(a.City), Region: text(a.Region),

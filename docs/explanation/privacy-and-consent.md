@@ -434,9 +434,9 @@ An installation runs under one jurisdiction, stored as `installation.country`. I
 `ports/jurisdiction` seam; see [extensibility.md](extensibility.md), and [messaging-policy-packs.md](messaging-policy-packs.md) for where their rules are read. Core code never names a
 jurisdiction.
 
-The selected pack is the jurisdiction of the installation's default legal entity. It decides the retention
-floor and the request deadlines. Messaging rules are chosen by two other selectors, one per message
-recipient (see [Which rules a send follows](#which-rules-a-send-follows)).
+The selected pack is the default legal entity's jurisdiction, its only one. Someone acting uses their own
+entity (`legal_entity_member`, else the default); a record nobody acts on uses its owner's
+(`consent/recordentity.go`). Messaging rules: [Which rules a send follows](#which-rules-a-send-follows).
 
 - With no jurisdiction set, requests get one calendar month (GDPR Art. 12(3)). Retention keeps the
   longest floor of every compiled-in pack, so a new release exposes no mail that was kept safe the day
