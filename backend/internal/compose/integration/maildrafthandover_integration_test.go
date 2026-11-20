@@ -176,3 +176,32 @@ func TestAHandoverOfAMemberWithNoDraftsMovesNone(t *testing.T) {
 			moved.MailDraft, moved.Contact, left.MailDraft)
 	}
 }
+
+// Removing a member who left moves their drafts with the rest of their work,
+// so a saved draft is never a reason the removal must wait.
+func TestRemovingAMemberWhoLeftMovesTheirDrafts(t *testing.T) {
+	d := setupDraftHandover(t)
+	saveContactDraft(t, d.leaver, d.adopt, "The leaver's words")
+	if status := d.admin.Call(t, "POST", "/v1/users/"+d.leaverID+"/deactivate", AnyMap{}, nil, nil); status != http.StatusOK {
+		t.Fatalf("deactivating the leaver → %d, want 200", status)
+	}
+	var preview struct {
+		Owned    handoverCounts `json:"owned"`
+		Blockers []string       `json:"blockers"`
+		Token    string         `json:"token"`
+	}
+	path := "/v1/users/" + d.leaverID + "/retirement-preview?mode=remove&to_user_id=" + d.successorID
+	if status := d.admin.Call(t, "GET", path, nil, nil, &preview); status != http.StatusOK {
+		t.Fatalf("the removal preview → %d, want 200", status)
+	}
+	if preview.Owned.MailDraft != 1 || len(preview.Blockers) != 0 {
+		t.Fatalf("the removal preview counts %d drafts with blockers %v, want 1 draft to move and no blocker", preview.Owned.MailDraft, preview.Blockers)
+	}
+	if status := d.admin.Call(t, "POST", "/v1/users/"+d.leaverID+"/remove",
+		AnyMap{"to_user_id": d.successorID, "preview_token": preview.Token}, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("removing the leaver → %d, want 204", status)
+	}
+	if status, got := readContactDraft(t, d.successor, d.adopt); status != http.StatusOK || got.Body != "The leaver's words" {
+		t.Errorf("the successor reading the removed member's draft → %d %q, want 200 with their words", status, got.Body)
+	}
+}
