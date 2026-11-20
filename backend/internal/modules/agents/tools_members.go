@@ -47,10 +47,11 @@ type memberToolArgs struct {
 func (t memberTool) Spec() mcp.ToolSpec {
 	spec := mcp.ToolSpec{
 		Name: toolMergeMembers, Title: "Merge duplicate members", Version: toolVersionV1,
-		AskUserFirst:  true,
-		Description:   "Transfer an unused imported or invited duplicate member's work to the selected account and remove the duplicate. Use the token from preview_member_retirement after the user has confirmed which account survives. The survivor keeps its sign-in settings and access; original attribution remains in history. Use resolve_duplicates for customer contacts or companies.",
-		Instead:       "Use resolve_duplicates for customer contacts or companies.",
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, WaitsEvenForItsUser: true, Unlisted: true,
+		ProductMadeAnswer: true,
+		AskUserFirst:      true,
+		Description:       "Transfer an unused imported or invited duplicate member's work to the selected account and remove the duplicate. Use the token from preview_member_retirement after the user has confirmed which account survives. The survivor keeps its sign-in settings and access; original attribution remains in history. Use resolve_duplicates for customer contacts or companies.",
+		Instead:           "Use resolve_duplicates for customer contacts or companies.",
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, WaitsEvenForItsUser: true, Unlisted: true,
 		OpenAPIOp: "mergeMembers", ReplayGrant: &mcp.ReplayGrant{Object: memberAdminObject, Action: principal.ActionDelete},
 		InputSchema:  schema(`{"type":"object","required":["source_id","to_user_id","preview_token"],"properties":{"source_id":{"type":"string","format":"uuid"},"to_user_id":{"type":"string","format":"uuid"},"preview_token":{"type":"string","minLength":1},"approval_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
 		OutputSchema: schema(`{"type":"object","required":["merged"],"properties":{"merged":{"type":"boolean"}},"additionalProperties":false}`),

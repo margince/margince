@@ -78,13 +78,14 @@ type advanceDeal struct {
 func (t advanceDeal) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "advance_deal", Title: "Advance a deal to a stage", Version: toolVersionV1,
-		Description:   advanceDealCopy.render(),
-		Instead:       advanceDealCopy.Instead,
-		RequiredScope: principal.ScopeWrite,
-		Tier:          mcp.TierDynamic,
-		Unlisted:      true, // replaced by progress_deal, which takes every argument this does
-		TierResolver:  advanceDealTier,
-		OpenAPIOp:     "advanceDeal",
+		ProductMadeAnswer: true,
+		Description:       advanceDealCopy.render(),
+		Instead:           advanceDealCopy.Instead,
+		RequiredScope:     principal.ScopeWrite,
+		Tier:              mcp.TierDynamic,
+		Unlisted:          true, // replaced by progress_deal, which takes every argument this does
+		TierResolver:      advanceDealTier,
+		OpenAPIOp:         "advanceDeal",
 		InputSchema: schema(`{"type":"object","required":["deal_id","to_stage_id"],"properties":{
 			"deal_id":{"type":"string","format":"uuid"},
 			"to_stage_id":{"type":"string","format":"uuid"` + stageIDNote + `},

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -21,8 +22,8 @@ import (
 // own fault.
 var ErrEmbedLaneFailed = errors.New("ai: the embed lane did not answer")
 
-// Embed routes the embedding lane. Inputs are stripped before egress —
-// the EmbedRequest carries no per-request hook, so the router is the
+// Embed routes the embedding lane. Inputs are masked before egress, because
+// the EmbedRequest carries no per-request hook and the router is the
 // enforcement point here. One provider call is exactly one logical call —
 // the embed lane has no retry ladder to bundle.
 func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -35,12 +36,11 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return model.Embeddings{}, errors.New("ai: embeddings outside workspace context")
 	}
+	// An input is record text, not a request body, so it takes the text lane.
+	// No key in it marks attachment bytes the scan must skip.
 	stripped := make([]string, len(req.Inputs))
 	for i, input := range req.Inputs {
-		clean, _, err := r.stripper.Strip(ctx, []byte(input))
-		if err != nil {
-			return model.Embeddings{}, fmt.Errorf("ai: stripping embed input: %w", err)
-		}
+		clean, _ := credentialmask.Replace([]byte(input), credentialmask.Text, strippedMarker)
 		stripped[i] = string(clean)
 	}
 	req.Inputs = stripped

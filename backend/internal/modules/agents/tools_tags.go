@@ -217,9 +217,10 @@ type listTags struct{ tags Tags }
 func (t listTags) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "list_tags", Title: "List tags", Version: toolVersionV1,
-		Description:   listTagsCopy.render(),
-		Instead:       listTagsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       listTagsCopy.render(),
+		Instead:           listTagsCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listTags",
 		InputSchema: schema(`{"type":"object","properties":{
 			"include_archived":{"type":"boolean","description":"Also list retired words; they cannot be applied"},
@@ -255,9 +256,10 @@ type getTag struct{ tags Tags }
 func (t getTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "get_tag", Title: "Get a tag", Version: toolVersionV1,
-		Description:   getTagCopy.render(),
-		Instead:       getTagCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       getTagCopy.render(),
+		Instead:           getTagCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getTag",
 		InputSchema: schema(`{"type":"object","required":["tag_id"],"properties":{
 			"tag_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
@@ -293,9 +295,10 @@ func (t getRecordTags) Spec() mcp.ToolSpec {
 	}
 	return mcp.ToolSpec{
 		Name: "get_record_tags", Title: "Get a record's tags", Version: toolVersionV1,
-		Description:   getRecordTagsCopy.render(),
-		Instead:       getRecordTagsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       getRecordTagsCopy.render(),
+		Instead:           getRecordTagsCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getRecordTags",
 		InputSchema: schema(`{"type":"object","required":["record_type","record_id"],"properties":{
 			"record_type":{"type":"string","enum":[` + strings.Join(quoted, ",") + `]},
@@ -329,9 +332,10 @@ type applyTag struct{ tags Tags }
 func (t applyTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "apply_tag", Title: "Apply a tag to a record", Version: toolVersionV1,
-		Description:   applyTagCopy.render(),
-		Instead:       applyTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       applyTagCopy.render(),
+		Instead:           applyTagCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "applyTag",
 		InputSchema:  schema(taggingSchema(t.tags.TaggableTypes())),
 		OutputSchema: schemaFor[TagAppliedResult](),
@@ -380,9 +384,10 @@ type removeTag struct{ tags Tags }
 func (t removeTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "remove_tag", Title: "Take a tag off a record", Version: toolVersionV1,
-		Description:   removeTagCopy.render(),
-		Instead:       removeTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       removeTagCopy.render(),
+		Instead:           removeTagCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "removeTag",
 		InputSchema:  schema(taggingSchema(t.tags.TaggableTypes())),
 		OutputSchema: schemaFor[TagAppliedResult](),

@@ -153,9 +153,10 @@ type resolveEntities struct {
 func (t resolveEntities) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "resolve_entities", Title: "Resolve contacts and companies", Version: toolVersionV1,
-		Description:   resolveEntitiesCopy.render(),
-		Instead:       resolveEntitiesCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       resolveEntitiesCopy.render(),
+		Instead:           resolveEntitiesCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "resolveEntities",
 		InputSchema: schema(`{"type":"object","required":["candidates"],"properties":{

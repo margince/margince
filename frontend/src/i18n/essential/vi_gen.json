@@ -1365,6 +1365,7 @@
   "systemJob.linkedin_rematch": "Đối chiếu dữ liệu nhập từ LinkedIn",
   "systemJob.list_checker": "Kiểm tra danh sách tự cập nhật",
   "systemJob.mail_draft_retention": "Dọn dẹp thư nháp",
+  "systemJob.oauth_client_unused_sweep": "Dọn dẹp ứng dụng AI chưa dùng",
   "systemJob.privacy_request_proof_expiry": "Dọn dẹp bằng chứng yêu cầu quyền riêng tư",
   "systemJob.waiting_horizon_refresh": "Đo thời gian phản hồi",
   "systemJob.evidence_authorship": "Kiểm tra bên viết bằng chứng giao dịch",

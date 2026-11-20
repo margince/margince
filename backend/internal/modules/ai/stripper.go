@@ -65,12 +65,13 @@ func (s secretStripper) Strip(_ context.Context, payload []byte) ([]byte, model.
 	return out, report, nil
 }
 
+// strippedMarker is what a removed credential leaves in model-bound text.
+func strippedMarker(kind string) string { return "[SECRET-REMOVED:" + kind + "]" }
+
 // stripSegment runs the shared credential rules for the JSON lane over one
 // scannable stretch of the body.
 func (secretStripper) stripSegment(payload []byte, report *model.StripReport, kinds map[string]bool) []byte {
-	stripped, found := credentialmask.Replace(payload, credentialmask.JSON, func(kind string) string {
-		return "[SECRET-REMOVED:" + kind + "]"
-	})
+	stripped, found := credentialmask.Replace(payload, credentialmask.JSON, strippedMarker)
 	report.Findings += len(found)
 	for _, kind := range found {
 		kinds[kind] = true

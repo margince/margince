@@ -53,9 +53,10 @@ type forecastReadings struct {
 func (t forecastReadings) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_readings", Title: "Read the forecast", Version: toolVersionV1,
-		Description:   forecastReadingsCopy.render(),
-		Instead:       forecastReadingsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       forecastReadingsCopy.render(),
+		Instead:           forecastReadingsCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getForecast",
 		InputSchema: schema(`{"type":"object","properties":{
 			"period":{"type":"string","enum":["quarter","month","week"],"description":"The window length. Quarters and months follow the installation's own financial year, which may not start in January; a week runs Monday to Sunday."},
@@ -220,9 +221,10 @@ type forecastMovement struct {
 func (t forecastMovement) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_movement", Title: "What moved the forecast", Version: toolVersionV1,
-		Description:   forecastMovementCopy.render(),
-		Instead:       forecastMovementCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       forecastMovementCopy.render(),
+		Instead:           forecastMovementCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getForecastMovement",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"from":{"type":"string","format":"uuid","description":"The opening snapshot."},
@@ -289,10 +291,11 @@ type forecastInputChecks struct {
 func (t forecastInputChecks) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_input_checks", Title: "What the forecast's inputs were checked against",
-		Version:       toolVersionV1,
-		Description:   forecastInputChecksCopy.render(),
-		Instead:       forecastInputChecksCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Version:           toolVersionV1,
+		Description:       forecastInputChecksCopy.render(),
+		Instead:           forecastInputChecksCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getForecastAssurance",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastAssuranceResult](),
@@ -366,9 +369,10 @@ type dataCoverage struct {
 func (t dataCoverage) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "data_coverage", Title: "How current the sources are", Version: toolVersionV1,
-		Description:   dataCoverageCopy.render(),
-		Instead:       dataCoverageCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       dataCoverageCopy.render(),
+		Instead:           dataCoverageCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getDataCoverage",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[DataCoverageResult](),

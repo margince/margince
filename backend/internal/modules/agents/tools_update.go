@@ -39,11 +39,12 @@ type updateRecordArgs struct {
 func (t updateRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "update_record", Title: "Update a record", Version: toolVersionV1,
-		Description:   updateRecordCopy.render(),
-		Instead:       updateRecordCopy.Instead,
-		RequiredScope: principal.ScopeWrite,
-		Tier:          mcp.TierAutoExecute,
-		OpenAPIOp:     "updateContact/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship/updateProduct/updateOfferTemplate/updateOffer",
+		ProductMadeAnswer: true,
+		Description:       updateRecordCopy.render(),
+		Instead:           updateRecordCopy.Instead,
+		RequiredScope:     principal.ScopeWrite,
+		Tier:              mcp.TierAutoExecute,
+		OpenAPIOp:         "updateContact/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship/updateProduct/updateOfferTemplate/updateOffer",
 		InputSchema: schema(`{"type":"object","required":["record_type","id","fields"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer"]},
 			"id":{"type":"string","format":"uuid"},

@@ -125,13 +125,14 @@ type relinkActivity struct {
 func (t relinkActivity) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: relinkActivityTool, Title: "Re-associate an activity to a record", Version: toolVersionV1,
-		Description: relinkActivityCopy.render(),
-		Instead:     relinkActivityCopy.Instead,
-		// Dynamic because filing under a PROJECT classifies the activity as
-		// commercial correspondence, which a contact confirms first; every
-		// other destination is an association that runs at once. See
-		// relinkActivityTier.
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
+		ProductMadeAnswer: true,
+		Description:       relinkActivityCopy.render(),
+		Instead:           relinkActivityCopy.Instead,
+		// Dynamic because filing under a PROJECT sets a retention floor only a
+		// member can undo. A human confirms it first, even for its user's own
+		// agent. Every other destination is an association that runs at once.
+		// See relinkActivityTier.
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic, WaitsEvenForItsUser: true,
 		Unlisted:     true,
 		TierResolver: relinkActivityTier,
 		OpenAPIOp:    "relinkActivity",
@@ -256,10 +257,11 @@ type disqualifyLead struct {
 func (t disqualifyLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "disqualify_lead", Title: "Disqualify a lead", Version: toolVersionV1,
-		AskUserFirst:  true,
-		Description:   disqualifyLeadCopy.render(),
-		Instead:       disqualifyLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		AskUserFirst:      true,
+		Description:       disqualifyLeadCopy.render(),
+		Instead:           disqualifyLeadCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "disqualifyLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id"],"properties":{
 			"lead_id":{"type":"string","format":"uuid","description":"The lead to disqualify"},
@@ -315,9 +317,10 @@ type demoteLead struct {
 func (t demoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "demote_lead", Title: "Reverse a lead promotion", Version: toolVersionV1,
-		Description:   demoteLeadCopy.render(),
-		Instead:       demoteLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       demoteLeadCopy.render(),
+		Instead:           demoteLeadCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "demoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","reason"],"properties":{
 			"lead_id":{"type":"string","format":"uuid","description":"The lead whose promotion is being reversed"},
@@ -391,9 +394,10 @@ type advanceProjectPhase struct {
 func (t advanceProjectPhase) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "advance_project_phase", Title: "Move a project to a phase", Version: toolVersionV1,
-		Description:   advanceProjectPhaseCopy.render(),
-		Instead:       advanceProjectPhaseCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       advanceProjectPhaseCopy.render(),
+		Instead:           advanceProjectPhaseCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "advanceProjectPhase",
 		InputSchema: schema(`{"type":"object","required":["project_id","to_phase"],"properties":{

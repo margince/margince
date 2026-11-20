@@ -32,10 +32,11 @@ type describeViews struct {
 func (t describeViews) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "describe_views", Title: "Describe the views",
-		Version:       toolVersionV1,
-		Description:   describeViewsCopy.render(),
-		Instead:       describeViewsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Version:           toolVersionV1,
+		Description:       describeViewsCopy.render(),
+		Instead:           describeViewsCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "describeReadViews",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[DescribeViewsResult](),

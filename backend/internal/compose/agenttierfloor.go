@@ -234,3 +234,26 @@ func AgentHumanOnlyRoutes() map[string][]string {
 	}
 	return routes
 }
+
+// AgentToolsWaitingForTheirUser names what a client is offered that waits for a
+// human even when the agent acts as its user. A tool is named, and a router's
+// action by the action. It reads the registered specs, the flag the gate admits on.
+func AgentToolsWaitingForTheirUser() []string {
+	registry := NewRegistry(nil, SendPath{})
+	var names []string
+	for _, spec := range registry.Specs() {
+		if spec.Unlisted {
+			continue
+		}
+		if len(spec.Actions) == 0 && spec.WaitsEvenForItsUser {
+			names = append(names, spec.Name)
+		}
+		for _, action := range spec.Actions {
+			if verb, ok := registry.Spec(action.Verb); ok && verb.WaitsEvenForItsUser {
+				names = append(names, action.Action)
+			}
+		}
+	}
+	sort.Strings(names)
+	return names
+}

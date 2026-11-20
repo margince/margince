@@ -49,9 +49,10 @@ type taskFields struct {
 func (t createTask) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "create_task", Title: "Create a task", Version: toolVersionV1,
-		Description:   createTaskCopy.render(),
-		Instead:       createTaskCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       createTaskCopy.render(),
+		Instead:           createTaskCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "createTask",
 		// Terse on purpose: the listing rides every run under a token ceiling,

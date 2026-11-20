@@ -123,9 +123,10 @@ type listRecords struct {
 func (t listRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "list_records", Title: "List records", Version: toolVersionV1,
-		Description:   listRecordsCopy.render(),
-		Instead:       listRecordsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       listRecordsCopy.render(),
+		Instead:           listRecordsCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects/listProducts/listOfferTemplates/listActivities/listDealOffers/listCommissionEntries/listDealRooms/listDealRoomThreads/listDealRoomDocuments/listDealRoomParticipants/listPartners",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{

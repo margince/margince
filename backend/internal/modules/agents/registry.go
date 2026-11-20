@@ -384,7 +384,7 @@ func (r *Registry) handle(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, re
 // costs, and only this frame can see it.
 func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, args json.RawMessage) (json.RawMessage, int, error) {
 	ctx, trace := withTrace(ctx)
-	ctx, facts := withEnvelopeFacts(ctx)
+	ctx, facts := withEnvelopeFacts(ctx, spec)
 	ctx = agentvolume.WithEffectTally(ctx)
 	// An answer about the caller reads no workspace rows, so it has nothing a
 	// row scope could have hidden.

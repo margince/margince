@@ -18,8 +18,9 @@ type describeImportFormat struct{ imports Imports }
 func (t describeImportFormat) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "describe_import_format", Title: "Describe the import format", Version: toolVersionV1,
-		Description:   describeImportFormatCopy.render(),
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       describeImportFormatCopy.render(),
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getImportFormat",
 		InputSchema: schema(`{"type":"object","properties":{
 			"lang":{"type":"string","enum":["en","de","vi"],"description":"The language of the guide text; the installation's when absent"}},

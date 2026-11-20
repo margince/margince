@@ -83,6 +83,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   meeting_delivery: "systemJob.meeting_delivery",
   notification_digest: "systemJob.notification_digest",
   notification_email: "jobs.kind.notification_email",
+  oauth_client_unused_sweep: "systemJob.oauth_client_unused_sweep",
   owed_verdict: "systemJob.owed_verdict",
   participant_backfill: "systemJob.participant_backfill",
   reply_settled_stamp: "systemJob.reply_settled_stamp",

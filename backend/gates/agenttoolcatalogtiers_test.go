@@ -248,3 +248,42 @@ func catalogToolNames[V any](in map[string]V) []string {
 	sort.Strings(out)
 	return out
 }
+
+// stillWaits is the guide's sentence on what waits even for an agent acting as
+// its own user, up to the paragraph's end.
+var stillWaits = regexp.MustCompile(`(?s)Some\s+still wait for a human then\.(.*?)\n\n`)
+
+// waitingName is one name the sentence lists. A name after "on" is the router
+// that offers the actions before it, not a thing that waits.
+var waitingName = regexp.MustCompile("(on\\s+)?`([a-z0-9_]+)`")
+
+// The guide's "still wait" sentence is held to WaitsEvenForItsUser in both
+// directions. The tier column cannot carry it: the contract tier is not what a
+// passport is admitted on.
+func TestTheToolGuidesStillWaitsSentenceIsTheCodes(t *testing.T) {
+	t.Parallel()
+	page, err := gatekit.ReadFile(catalogPage)
+	if err != nil {
+		t.Fatalf("reading %s: %v", catalogPage, err)
+	}
+	sentence := stillWaits.FindStringSubmatch(string(page))
+	if sentence == nil {
+		t.Fatalf("%s has no \"Some still wait for a human then.\" sentence, so nothing holds what it promises", catalogPage)
+	}
+	var written []string
+	for _, name := range waitingName.FindAllStringSubmatch(sentence[1], -1) {
+		if name[1] == "" {
+			written = append(written, name[2])
+		}
+	}
+	sort.Strings(written)
+	declared := compose.AgentToolsWaitingForTheirUser()
+	if len(declared) == 0 {
+		t.Fatal("no offered tool or action waits even for its user, so this gate compares the sentence against nothing")
+	}
+	if strings.Join(written, " ") != strings.Join(declared, " ") {
+		t.Errorf("%s says %v still wait for a human when the agent acts as its user; the code makes %v wait "+
+			"(mcp.ToolSpec.WaitsEvenForItsUser). A reader decides what to hand a passport from this sentence",
+			catalogPage, written, declared)
+	}
+}

@@ -44,8 +44,9 @@ type relinkThread struct {
 func (t relinkThread) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "relink_thread", Title: "Re-associate a whole conversation to a record", Version: toolVersionV1,
-		Description: relinkThreadCopy.render(),
-		Instead:     relinkThreadCopy.Instead,
+		ProductMadeAnswer: true,
+		Description:       relinkThreadCopy.render(),
+		Instead:           relinkThreadCopy.Instead,
 		// Dynamic for the reason relink_activity is: a PROJECT destination is
 		// a retention classification a human confirms, here over every
 		// message in the thread. relinkActivityTier reads `entity_type` off these
@@ -111,9 +112,12 @@ type relinkActivities struct {
 func (t relinkActivities) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: relinkActivitiesTool, Title: "Re-associate a set of activities to a record", Version: toolVersionV1,
-		Description:   relinkActivitiesCopy.render(),
-		Instead:       relinkActivitiesCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
+		ProductMadeAnswer: true,
+		Description:       relinkActivitiesCopy.render(),
+		Instead:           relinkActivitiesCopy.Instead,
+		// Dynamic, and waiting even for its user's own agent on a project
+		// destination, for the reason relink_activity gives.
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic, WaitsEvenForItsUser: true,
 		Unlisted:     true,
 		TierResolver: relinkActivityTier,
 		OpenAPIOp:    "relinkActivities",

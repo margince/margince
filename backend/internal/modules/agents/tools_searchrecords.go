@@ -166,9 +166,10 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 	types := `["` + strings.Join(recordSearchTypes, `","`) + `"]`
 	return mcp.ToolSpec{
 		Name: "search_records", Title: "Search records", Version: toolVersionV1,
-		Description:   searchRecordsCopy.render(),
-		Instead:       searchRecordsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       searchRecordsCopy.render(),
+		Instead:           searchRecordsCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "search",
 		InputSchema: schema(fmt.Sprintf(`{"type":"object","required":["q"],"properties":{
