@@ -27,6 +27,9 @@ const (
 	filingRetracted      = "retracted"
 )
 
+// hookDeal names the deal hook in a recorded change.
+const hookDeal = "deal"
+
 // Filing is the latest decision about a mail's deal. Actor is "core" or the
 // name of the extension. Hook is empty for core. Reason is the rung core used,
 // or the reason key the extension declared.
@@ -56,6 +59,10 @@ func filingOf(verdict DealVerdict, result string) *Filing {
 	switch {
 	case failed != nil:
 		return &Filing{Actor: failed.Unit, Hook: failed.Hook, Result: string(HookFailed), Reason: failed.Reason}
+	case ignored != nil && ignored.Hook == hookDeal:
+		// A refused deal answer shows even after a parties change: it is the
+		// one a unit's author looks for when the mail is not filed where expected.
+		return &Filing{Actor: ignored.Unit, Hook: ignored.Hook, Result: string(HookIgnored), Reason: ignored.Reason}
 	case changed != nil:
 		return &Filing{Actor: changed.Unit, Hook: changed.Hook, Result: changedResult(*changed, verdict, result), Reason: changed.Reason}
 	case ignored != nil:

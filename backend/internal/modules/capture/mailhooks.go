@@ -286,20 +286,15 @@ func dealReachable(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates D
 	if slices.Contains(prev.Candidates, deal) {
 		return true, nil
 	}
-	var open []ids.UUID
-	var err error
 	if !facts.project.IsZero() {
-		open, err = candidates.OpenDealsOfProject(ctx, tx, facts.project)
-	}
-	for _, company := range facts.companies {
-		if err != nil {
-			break
+		if open, err := candidates.IsOpenDealOfProject(ctx, tx, deal, facts.project); open || err != nil {
+			return open, err
 		}
-		var more []ids.UUID
-		more, err = candidates.OpenDealsOfCompany(ctx, tx, company)
-		open = append(open, more...)
 	}
-	return slices.Contains(open, deal), err
+	if len(facts.companies) == 0 {
+		return false, nil
+	}
+	return candidates.IsOpenDealOfCompanies(ctx, tx, deal, facts.companies)
 }
 
 // withHookEvidence adds the extensions that shaped a verdict to the link's

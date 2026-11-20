@@ -14,6 +14,7 @@ import (
 	"errors"
 	"net/http"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -139,6 +140,25 @@ func TestADealHookCannotReachADealOfAnotherCompany(t *testing.T) {
 	if slices.Contains(dealsOf(t, e, "hook5@acme.example"), foreign) {
 		t.Fatal("the mail was filed on a deal of another company")
 	}
+}
+
+// A company has three open deals, and core's own reads name only the first two.
+// A hook may name any open deal of the company, the one with the highest id too.
+func TestADealHookCanNameAnyOpenDealOfTheCompanyNotOnlyTheFirstTwo(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	open := []ids.UUID{w.deal(t, "Acme rollout"), w.deal(t, "Acme renewal"), w.deal(t, "Acme expansion")}
+	last := slices.MaxFunc(open, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, _ extension.MailDeal) (extension.MailDeal, error) {
+		return extension.MailDeal{Outcome: "linked", Deal: last.String(), Reason: "purchase_order"}, nil
+	}})
+	env.sync(t, mailFrom("alice@acme.example", "hook9@acme.example", "", "purchase order"))
+	if got := dealsOf(t, e, "hook9@acme.example"); len(got) != 1 || got[0] != last {
+		t.Fatalf("the mail is filed on %v, want the deal %v", got, last)
+	}
+	wantFiling(t, e, activityOf(t, e, "hook9@acme.example"), "deal-rules", "linked", "purchase_order")
 }
 
 // A deal hook reads the mail's text, looks the reference in it up in the

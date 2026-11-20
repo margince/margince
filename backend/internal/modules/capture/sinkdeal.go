@@ -37,6 +37,10 @@ type DealCandidates interface {
 	// OpenDealsOfCompanyUpTo is up to limit open deals of one company, the
 	// candidates a topic check weighs for an ambiguous mail.
 	OpenDealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int) ([]ids.UUID, error)
+	// IsOpenDealOfCompanies and IsOpenDealOfProject answer membership, which
+	// the two-id reads above cannot: a deal is open on the company whatever its id.
+	IsOpenDealOfCompanies(ctx context.Context, tx pgx.Tx, deal ids.UUID, companies []ids.UUID) (bool, error)
+	IsOpenDealOfProject(ctx context.Context, tx pgx.Tx, deal, project ids.UUID) (bool, error)
 }
 
 // WhichDeal is a mail the rule could not place on one deal of the company or
