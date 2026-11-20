@@ -4949,7 +4949,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.from_address": "Gesendet von",
   "approval.field.sender_check": "Absenderprüfung",
   "approval.senderCheck.authenticated":
-    "Bestanden: Die Maildomain des Absenders hat diese Adresse bestätigt",
+    "Bestanden: Die Absendedomain hat diese Adresse bestätigt",
   "approval.linkedin.useAsTitle": "Als Jobtitel übernehmen",
   "approval.linkedin.useAsEmployer": "{company} als Arbeitgeber übernehmen",
   "approval.linkedin.employerNow": "Arbeitet jetzt bei {company}",
