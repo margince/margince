@@ -28,8 +28,8 @@ function useContactCaptureGaps(id: string) {
 /**
  * Whether CaptureGapsNotice draws anything, for a host that must not frame
  * nothing. It reads the notice's own query, so it asks the server nothing new.
- * A failure counts while its retry runs: the notice's mount starts that retry,
- * and unmounting it then would start the next one on the following mount.
+ * A failure counts while its retry runs. The notice's mount starts that retry,
+ * and unmounting it then would start another on the next mount.
  */
 export function useCaptureGapsShown(contactId: string): boolean {
   const network = useContactCaptureGaps(contactId);

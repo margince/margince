@@ -66,9 +66,9 @@ function recordAccessQuery(kind: AccessKind, id: string) {
 }
 
 /**
- * The record's owner, as the access answer names it: undefined until that
- * answer is in, failed reads included, and null where it names none or is not
- * asked. It observes the read the panel makes, whose Retry also answers this.
+ * The record's owner, as the access answer names it. It is undefined until
+ * that answer is in, after a failed read too, and null where it names none or
+ * is not asked. It observes the panel's read, whose Retry also answers this.
  */
 export function useRecordOwnerId(
   kind: string,
