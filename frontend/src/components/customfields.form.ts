@@ -37,6 +37,7 @@ import {
   joinMultiselectValue,
   splitMultiselectValue,
 } from "./create";
+import { dayOutOfRange } from "./create.fields";
 
 export type CustomField = components["schemas"]["CustomField"];
 
@@ -71,7 +72,11 @@ export function customFieldToFormField(
         validate: (value) => typedNumberFault(value, locale, t),
       };
     case "date":
-      return { ...base, type: "date" };
+      return {
+        ...base,
+        type: "date",
+        validate: (value) => dayOutOfRange(value, locale, base.labelText),
+      };
     case "currency":
       return {
         ...base,

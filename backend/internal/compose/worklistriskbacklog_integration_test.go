@@ -68,11 +68,15 @@ func seedRiskBacklog(t *testing.T) riskBacklog {
 	// Another team's deal, and a healthy one, are never at risk here.
 	b.closes(t, b.healthy(t, w.r.e.Rep3, "Rep3 overdue"), -3)
 	b.healthy(t, rep1, "Healthy")
-	// A customer waits on a swept deal, inside the waiting lane's scan. Another
-	// waits on a deal past the sweep, older than the scan reaches.
+	// A customer waits on a swept deal, inside the waiting lane's scan. One
+	// waits on a swept deal older than the scan reaches, and one on a deal past
+	// the sweep, older than the scan reaches.
 	swept := b.healthy(t, rep1, "Waited on, swept")
 	b.closes(t, swept, -200)
 	w.mailOnDeal(t, swept, "Waited on, swept", w.r.now.Add(-5*time.Minute))
+	sweptPastScan := b.healthy(t, rep1, "Waited on past the scan, swept")
+	b.closes(t, sweptPastScan, -199)
+	w.mailOnDeal(t, sweptPastScan, "Waited on past the scan, swept", w.older().AddDate(0, 0, -2))
 	past := b.healthy(t, rep1, "Waited on, past the sweep")
 	b.closes(t, past, -3)
 	w.mailOnDeal(t, past, "Waited on, past the sweep", w.older().AddDate(0, 0, -1))

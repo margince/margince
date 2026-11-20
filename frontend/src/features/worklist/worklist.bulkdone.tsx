@@ -11,7 +11,11 @@ import { SelectionBar } from "../../design-system/selectionbar";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useMarkRowsDone, type WorklistRowRef } from "./worklist.donequeries";
+import {
+  doneFailure,
+  useMarkRowsDone,
+  type WorklistRowRef,
+} from "./worklist.donequeries";
 import type { WorklistItem } from "./worklist.queries";
 import { rowIdentity } from "./worklist.rowidentity";
 
@@ -179,8 +183,10 @@ function usePutDownRows() {
               },
             },
           ),
-        onError: () =>
-          toast.show(t("worklist.disposition.failed"), { tone: "danger" }),
+        onError: (error) => {
+          const failure = doneFailure(error);
+          toast.show(t(failure.key), { tone: failure.tone });
+        },
       },
     );
 }

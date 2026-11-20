@@ -49,24 +49,55 @@ func TestNoTestPackageRegistersOneMessagingCodeTwice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	codes, tables := 0, 0
+	codes := 0
+	var tables []string
 	for dir, files := range byPackage {
 		codes += len(registeredCodes(files))
-		if len(handedOut(files)) > 0 {
-			tables++
-		}
+		tables = append(tables, readableTables(files)...)
 		for _, finding := range codeFindings(dir, files) {
 			t.Error(finding)
 		}
 	}
-	// The consent and compose test packages register 21 codes this way.
-	if codes < 20 {
+	// The consent and compose test packages register 19 codes this way. The
+	// shipped packs register under codes shippedPackCodeRanges hands out.
+	if codes < 18 {
 		t.Fatalf("the census read %d registered codes; the registrations moved or changed shape", codes)
 	}
-	if tables == 0 {
-		t.Fatalf("no test package declares %s; the consent allocator moved, and the codes it hands out are unchecked",
-			handedOutTable)
+	for _, missing := range missingTables(tables) {
+		t.Errorf("no test package declares %s as a table of ranges this gate reads; the allocator moved or changed "+
+			"shape, and the codes it hands out are unchecked", missing)
 	}
+}
+
+// readableTables names each handedOutTables declaration the files hold in the
+// shape handedOut reads: a composite literal of range entries.
+func readableTables(files []*ast.File) []string {
+	var out []string
+	for _, file := range files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			spec, isSpec := n.(*ast.ValueSpec)
+			if !isSpec || len(spec.Names) != 1 || !slices.Contains(handedOutTables, spec.Names[0].Name) || len(spec.Values) != 1 {
+				return true
+			}
+			if table, isTable := spec.Values[0].(*ast.CompositeLit); isTable && slices.ContainsFunc(table.Elts,
+				func(e ast.Expr) bool { _, isEntry := e.(*ast.CompositeLit); return isEntry }) {
+				out = append(out, spec.Names[0].Name)
+			}
+			return false
+		})
+	}
+	return out
+}
+
+// missingTables are the handedOutTables names found lists none of.
+func missingTables(found []string) []string {
+	var out []string
+	for _, name := range handedOutTables {
+		if !slices.Contains(found, name) {
+			out = append(out, name)
+		}
+	}
+	return out
 }
 
 // codeFindings names each code two registrations in one package share, and
@@ -84,21 +115,34 @@ func codeFindings(dir string, files []*ast.File) []string {
 	for _, c := range codes {
 		if slices.ContainsFunc(ranges, func(r codeRange) bool { return r.holds(c.code) }) {
 			out = append(out, fmt.Sprintf("%s: test code %q at %s is one %s hands out; pick a code outside it",
-				dir, c.code, positions.Position(c.where), handedOutTable))
+				dir, c.code, positions.Position(c.where), strings.Join(handedOutTables, " or ")))
+		}
+	}
+	for i, a := range ranges {
+		for _, b := range ranges[i+1:] {
+			if a.overlaps(b) {
+				out = append(out, fmt.Sprintf("%s: two handed-out ranges both hold codes under %q; one code would be "+
+					"handed out twice. Move one range", dir, string(a.prefix)))
+			}
 		}
 	}
 	return out
 }
 
-// handedOutTable is the declaration that states which codes a package's
-// run-time allocator hands out, as prefix, first and last rune.
-const handedOutTable = "testCodeRanges"
+// handedOutTables are the declarations that state which codes a package's
+// run-time allocators hand out, as prefix, first and last rune. One is for test
+// rule sets and one for the shipped packs.
+var handedOutTables = []string{"testCodeRanges", "shippedPackCodeRanges"}
 
 // codeRange is one prefix and the second letters handed out under it.
 type codeRange struct {
 	prefix, first, last rune
 	// any marks an entry the gate could not read, which holds every code.
 	any bool
+}
+
+func (r codeRange) overlaps(o codeRange) bool {
+	return r.any || o.any || (r.prefix == o.prefix && r.first <= o.last && o.first <= r.last)
 }
 
 func (r codeRange) holds(code string) bool {
@@ -109,13 +153,13 @@ func (r codeRange) holds(code string) bool {
 	return len(runes) == 2 && runes[0] == r.prefix && runes[1] >= r.first && runes[1] <= r.last
 }
 
-// handedOut reads the ranges the files declare in handedOutTable.
+// handedOut reads the ranges the files declare in handedOutTables.
 func handedOut(files []*ast.File) []codeRange {
 	var out []codeRange
 	for _, file := range files {
 		ast.Inspect(file, func(n ast.Node) bool {
 			spec, isSpec := n.(*ast.ValueSpec)
-			if !isSpec || len(spec.Names) != 1 || spec.Names[0].Name != handedOutTable || len(spec.Values) != 1 {
+			if !isSpec || len(spec.Names) != 1 || !slices.Contains(handedOutTables, spec.Names[0].Name) || len(spec.Values) != 1 {
 				return true
 			}
 			if table, isTable := spec.Values[0].(*ast.CompositeLit); isTable {
@@ -392,5 +436,43 @@ func TestThree(t *testing.T) { messagingrules.Register(messagingrules.Rules{Juri
 	findings := codeFindings("probe", []*ast.File{file})
 	if len(findings) != 1 || !strings.Contains(findings[0], `"qv"`) {
 		t.Errorf("want one finding, on \"qv\": %q", findings)
+	}
+}
+
+func TestALiteralCodeInsideAHandedOutRangeIsFound(t *testing.T) {
+	t.Parallel()
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe_test.go", `package probe
+var testCodeRanges = [...]r{{prefix: 'q', first: 'm', last: 'z'}}
+var shippedPackCodeRanges = [...]r{{prefix: 'm', first: 'a', last: 'z'}, {prefix: 'q', first: 'a', last: 'n'}}
+func TestOne(t *testing.T) { messagingrules.Register(messagingrules.Rules{Jurisdiction: "mb", Version: 1}) }`,
+		parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	findings := strings.Join(codeFindings("probe", []*ast.File{file}), "\n")
+	if !strings.Contains(findings, `test code "mb"`) {
+		t.Errorf("a literal code inside shippedPackCodeRanges passed: %s", findings)
+	}
+	if !strings.Contains(findings, `under "q"`) {
+		t.Errorf("two tables handing out the same q codes passed: %s", findings)
+	}
+}
+
+func TestEachAllocatorTableMustBeFoundByName(t *testing.T) {
+	t.Parallel()
+	for name, src := range map[string]string{
+		"one table missing": `package probe
+var testCodeRanges = [...]r{{prefix: 'q', first: 'm', last: 'z'}}`,
+		"one table in a shape the gate cannot read": `package probe
+var testCodeRanges = [...]r{{prefix: 'q', first: 'm', last: 'z'}}
+var shippedPackCodeRanges = rangesFrom("m")`,
+	} {
+		file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe_test.go", src, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := missingTables(readableTables([]*ast.File{file})); !slices.Equal(got, []string{"shippedPackCodeRanges"}) {
+			t.Errorf("%s: missing tables %v, want shippedPackCodeRanges", name, got)
+		}
 	}
 }

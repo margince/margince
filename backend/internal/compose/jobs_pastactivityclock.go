@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/companyclockrefold"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -86,6 +87,11 @@ func RefoldPastActivityClocks(ctx context.Context, db *database.DB) (int, error)
 		return 0, err
 	}
 	refolded, err := refoldDayActivities(ctx, db, mark, asOf, zone)
+	if err != nil {
+		return refolded, err
+	}
+	ended, err := companyclockrefold.RefoldEnded(ctx, db, mark.At, asOf)
+	refolded += ended
 	if err != nil {
 		return refolded, err
 	}

@@ -84,6 +84,8 @@ type siteCrawl struct {
 	// resolve read the declarations instead of asking the site for its home
 	// page a second time.
 	SeedAssets declaredAssets
+	// SeedSiteName is the name the seed page's <head> gives the site.
+	SeedSiteName string
 	// SeedURL is the spelling that ANSWERED, which is not always the one asked
 	// for: the fallback ladder may have reached the site on www or over http.
 	// Anything derived from the site's address afterwards — /favicon.ico above
@@ -351,9 +353,10 @@ func newCrawlRun(c *siteCrawler, pacer crawlPacer, seedURL string, seedPage webr
 		pacer:   pacer,
 		seedURL: seedURL,
 		crawl: siteCrawl{
-			Pages:      []crawlPage{pageFrom(seedURL, crmcontracts.SiteReadPageKindHome, seedPage)},
-			SeedAssets: declaredAssets{ogImage: seedPage.OGImage, icons: seedPage.Icons, logos: seedPage.Logos},
-			SeedURL:    seedURL,
+			Pages:        []crawlPage{pageFrom(seedURL, crmcontracts.SiteReadPageKindHome, seedPage)},
+			SeedAssets:   declaredAssets{ogImage: seedPage.OGImage, icons: seedPage.Icons, logos: seedPage.Logos},
+			SeedSiteName: seedPage.SiteNameOrTitle,
+			SeedURL:      seedURL,
 		},
 		visited:       visited,
 		seenText:      map[string]bool{bodyIdentity(seedPage.Text, seedPage.HeadText): true},

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -71,6 +72,15 @@ export const RenewOpen: Story = {
 
 /** Asserting a new status — draft, active, expired or cancelled. Superseded
  * is never offered here: a contract only arrives at it through renewal. */
+/** A notice period below zero, refused on its field before anything is sent. */
+export const RenewNoticeRefused: Story = {
+  ...RenewOpen,
+  play: async () => {
+    await userEvent.type(await screen.findByLabelText(/^Notice period/), "-1");
+    await screen.findByText("Notice period (days) must be at least 0.");
+  },
+};
+
 export const StatusChangeOpen: Story = {
   render: () => {
     routes();

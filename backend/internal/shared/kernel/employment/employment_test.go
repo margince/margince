@@ -18,6 +18,8 @@ package employment
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 func TestACurrentEmploymentIsADateComparisonAndNotANullCheck(t *testing.T) {
@@ -29,7 +31,7 @@ func TestACurrentEmploymentIsADateComparisonAndNotANullCheck(t *testing.T) {
 	// column's presence as "gone" took a contact off their employer's contact
 	// list the day their notice was filed — with no way back, because ended_at
 	// cannot be cleared through the API.
-	if !strings.Contains(got, "current_date") {
+	if !strings.Contains(got, occurredday.TodaySQL("now()")) {
 		t.Errorf("the predicate is %q, with no date comparison in it: a contact serving notice "+
 			"drops off their employer's contact list the day it is filed", got)
 	}
@@ -71,7 +73,7 @@ func TestTheSlotPredicatesStayDateBlind(t *testing.T) {
 		"the live-employment slot": LiveSlotSQL("r"),
 		"the current-primary slot": CurrentPrimarySlotSQL("r"),
 	} {
-		if strings.Contains(got, "current_date") {
+		if strings.Contains(got, occurredday.TodaySQL("now()")) {
 			t.Errorf("%s asks a date question (%q): the index does not, so the guard would think "+
 				"the slot was free while the index still held it", name, got)
 		}
@@ -79,7 +81,7 @@ func TestTheSlotPredicatesStayDateBlind(t *testing.T) {
 
 	// And the READER's question is not: it pairs the flag with the currency
 	// test, which is what stops a new reader trusting a flag written months ago.
-	if got := CurrentPrimarySQL("r"); !strings.Contains(got, "current_date") {
+	if got := CurrentPrimarySQL("r"); !strings.Contains(got, occurredday.TodaySQL("now()")) {
 		t.Errorf("the reader's predicate is %q and asks no date question: somebody goes on "+
 			"counting at a company after their last day has passed", got)
 	}

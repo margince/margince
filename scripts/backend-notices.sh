@@ -12,6 +12,11 @@
 # from embedded-binaries.txt, the declaration that
 # scripts/embedded-binary-licenses.sh holds to the build.
 #
+# Downloaded extensions are copied under build/extensions/ inside this
+# repository, so the own-code rule above would skip them. The composer's
+# build/extensions/fetched-units.txt (`name | module@version`) names them, and
+# each needs licence text like any other module.
+#
 # A linked module with no LICENSE, NOTICE or COPYING file in its root fails the
 # run: a notice file that quietly skips a module claims a completeness it lacks.
 #
@@ -21,6 +26,7 @@
 # Environment, for scripts/backend-notices.test.sh to plant a corpus:
 #   BACKEND_NOTICES_MODULES  file of `path|version|dir` lines, replacing `go list`
 #   BACKEND_NOTICES_GOROOT   directory holding the Go toolchain's LICENSE
+#   BACKEND_NOTICES_UNITS    the downloaded-unit index, default build/extensions/fetched-units.txt
 #   BACKEND_NOTICES_DECLARED the embedded-binary declaration, default embedded-binaries.txt
 set -eu
 
@@ -32,6 +38,7 @@ fi
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 declared="${BACKEND_NOTICES_DECLARED:-$root/embedded-binaries.txt}"
+units="${BACKEND_NOTICES_UNITS:-$root/build/extensions/fetched-units.txt}"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
@@ -44,6 +51,18 @@ goroot="${BACKEND_NOTICES_GOROOT:-$(go env GOROOT)}"
 
 # Own code lives under the repository root; everything else is third party.
 grep -v '^$' "$work/all" | sort -u | awk -F'|' -v root="$root/" 'index($3, root) != 1' >"$work/modules"
+if [ ! -f "$units" ] && [ -d "$(dirname "$units")" ] && [ -n "$(find "$(dirname "$units")" -mindepth 1 -maxdepth 1 -type d)" ]; then
+	echo "backend-notices: $(dirname "$units") holds downloaded units but $units is missing; rerun gen-composition." >&2
+	exit 1
+fi
+if [ -f "$units" ]; then
+	while IFS='|' read -r name source; do
+		name="$(echo "$name" | tr -d ' ')"
+		source="$(echo "$source" | tr -d ' ')"
+		[ -n "$name" ] || continue
+		echo "${source%@*}|${source##*@}|$(dirname "$units")/$name" >>"$work/modules"
+	done <"$units"
+fi
 if [ ! -s "$work/modules" ]; then
 	echo "backend-notices: the programs link no third-party module, so the corpus is wrong." >&2
 	exit 1

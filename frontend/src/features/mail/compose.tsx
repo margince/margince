@@ -12,6 +12,6 @@ export type Activity = components["schemas"]["Activity"];
 export type VoiceProfile = components["schemas"]["VoiceProfile"];
 
 export { ChannelReplyAction } from "./compose.reply";
-export { ComposeModal } from "./composedock";
+export { ComposeModal, loadComposeWindow } from "./composedock";
 export type { ComposeProps } from "./composeprops";
 export { RELINK_KINDS, type RelinkKind, RelinkModal } from "./composerelink";

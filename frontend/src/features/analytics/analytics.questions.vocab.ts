@@ -42,6 +42,7 @@ export const ENTITY_LABEL_KEY = {
   forecast: "analytics.reportForecast",
   "open-deals-per-company": "analytics.reportOpenByCompany",
   "win-loss": "analytics.reportWinLoss",
+  "loss-events": "analytics.reportLossEvents",
   "stage-age": "analytics.reportStageAge",
   "leads-by-status": "analytics.reportLeadsByStatus",
   "activities-by-kind": "analytics.reportActivitiesByKind",

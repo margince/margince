@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -89,4 +90,24 @@ export const TwoEntitiesPhone: Story = {
 export const TwoEntitiesDark: Story = {
   globals: { theme: "dark" },
   render: story(ADMIN, [DEFAULT, VIENNA]),
+};
+
+// The new-entity dialog pressed with a blank name and no country: each field
+// says what it needs, and the name takes focus.
+export const NewEntityRefused: Story = {
+  render: story(ADMIN, [DEFAULT]),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await page.findByRole("button", { name: "New legal entity" }),
+    );
+    const dialog = within(await page.findByRole("dialog"));
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: "Legal name" }),
+      "Acme Wien GmbH",
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Add legal entity" }),
+    );
+  },
 };

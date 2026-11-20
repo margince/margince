@@ -935,7 +935,7 @@ export const installationJurisdiction: components["schemas"]["InstallationJurisd
     available: [
       {
         code: "de",
-        unit_name: "de",
+        unit_name: "eu",
         unit_version: "1.0.0",
         description: "German jurisdiction pack.",
         correspondence_floor: {
@@ -946,14 +946,14 @@ export const installationJurisdiction: components["schemas"]["InstallationJurisd
       },
       {
         code: "vn",
-        unit_name: "vn",
+        unit_name: "apac",
         unit_version: "1.0.0",
         description: "Vietnamese jurisdiction pack.",
       },
     ],
     unit: {
       code: "de",
-      unit_name: "de",
+      unit_name: "eu",
       unit_version: "1.0.0",
       description: "German jurisdiction pack.",
     },

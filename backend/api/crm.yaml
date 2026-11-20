@@ -3718,7 +3718,7 @@ paths:
         Renaming the installation's own company (`is_anchor`) renames the installation in the same
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-        past 200 characters (`too_long`); other companies' names have no length cap.
+        past 120 characters (`too_long`), the limit of every company name typed by hand.
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
@@ -17446,7 +17446,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed.'
+          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), the chat refused the channel name even in the form derived from the record (`code: channel_name_refused`), or the request is malformed.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -18581,6 +18581,7 @@ paths:
             - deals-by-stage
             - forecast
             - leads-by-status
+            - loss-events
             - meeting-conversion
             - open-deals-per-company
             - pipeline-current
@@ -22253,9 +22254,10 @@ paths:
         on a deal at risk.
 
         Each row must be one the caller's Worklist draws now, under a scope they hold, with
-        every lane's own grant and row scope. Any other row answers 404, the same as one
-        that does not exist, and nothing in the batch is written. A source whose rows never
-        offer Done answers 422. A row named twice is written once.
+        every lane's own grant and row scope, or one the caller already marked done. A row
+        already done answers 204 and is not written again. Any other row answers 404, the
+        same as one that does not exist, and nothing in the batch is written. A source whose
+        rows never offer Done answers 422. A row named twice is written once.
       requestBody:
         required: true
         content:
@@ -25300,6 +25302,35 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /autonomy/installation:
+    put:
+      tags: [Approvals]
+      operationId: updateAutoApplyInstallation
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Switch automatic application on or off for the whole installation.
+      description: |
+        Admin only (`approvals.auto_apply_enabled`). Off, no proposal applies itself
+        for anybody, whatever a reader's own setting says. On, nothing changes for a
+        reader: their own mode per kind still decides, so turning it back on never
+        switches on a kind somebody turned off. The switch is read back as
+        `auto_apply_enabled` on `GET /autonomy`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AutoApplyInstallation' }
+      responses:
+        '200':
+          description: The switch as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutoApplyInstallation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
 
   /me/approval-preferences:
     get:
@@ -38165,7 +38196,7 @@ paths:
         Renaming the installation's own company (`is_anchor`) renames the installation in the same
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-        past 200 characters (`too_long`); other companies' names have no length cap.
+        past 120 characters (`too_long`), the limit of every company name typed by hand.
       x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -43117,7 +43148,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site, unknown]
           x-extensible-enum: true
           description: |
             Why, as a code the client words in the reader's language.
@@ -43128,7 +43159,7 @@ components:
               as a company.
             - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
               company this business works with. `sender_kind` says which, when it is known.
-            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
               domain's open question, as `source` describes each one.
             - `unknown`: the row records a reason this server has no word for. `reason` still
               carries its stored sentence.
@@ -43147,7 +43178,7 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain]
+          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site]
           x-extensible-enum: true
           description: |
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
@@ -43157,7 +43188,9 @@ components:
             old to mint one from today's site; `near_duplicate` means more than one company
             here already carries the name it resolved to, and which of them this domain belongs
             to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-            as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+            as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+            `foreign_site` means the site names a different business than the domain, which may
+            have changed hands.
         decided_at: { type: string, format: date-time, description: 'When the decision was recorded. For an `undecided` domain, when the row last moved.' }
         company_id:
           type: string
@@ -45393,6 +45426,24 @@ components:
           type: array
           description: The deal's contract, legal and offer documents, newest first.
           items: { $ref: '#/components/schemas/LegalReviewPacketDocument' }
+        contracts:
+          type: array
+          description: |
+            The agreements filed against the deal, newest term first. Absent on a
+            pack asked for before agreements were packed. An agreement this reader
+            may not open, and every agreement for a reader without `deal.read`, is not listed.
+          items: { $ref: '#/components/schemas/LegalReviewPacketContract' }
+        touches:
+          type: array
+          description: |
+            The deal's latest calls, meetings, messages and notes, newest first. One
+            this reader may not read, such as mail outside their audience, is not
+            listed. Absent on an older pack.
+          items: { $ref: '#/components/schemas/LegalReviewPacketTouch' }
+        tasks:
+          type: array
+          description: The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+          items: { $ref: '#/components/schemas/LegalReviewPacketTask' }
 
     LegalReviewPacketDeal:
       type: object
@@ -45456,6 +45507,46 @@ components:
       properties:
         stage_name: { type: string }
         entered_at: { type: string, format: date-time }
+
+    LegalReviewPacketContract:
+      type: object
+      description: |
+        One agreement as it stood at the request. Its title is read now for this
+        reader. The dates and notice terms are the ones frozen with the pack.
+      required: [id, title, status]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        contract_number: { type: [string, 'null'] }
+        status: { type: string, enum: [draft, active, expired, cancelled, superseded], x-extensible-enum: true }
+        starts_on: { type: [string, 'null'], format: date }
+        ends_on: { type: [string, 'null'], format: date }
+        renewal_on: { type: [string, 'null'], format: date }
+        cancellation_notice_on: { type: [string, 'null'], format: date }
+        notice_period_days: { type: [integer, 'null'] }
+        auto_renew: { type: [boolean, 'null'] }
+
+    LegalReviewPacketTouch:
+      type: object
+      description: One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+      required: [activity_id, kind, occurred_at, occurred_precision]
+      properties:
+        activity_id: { type: string, format: uuid }
+        kind: { type: string, enum: [call, email, meeting, message, note], x-extensible-enum: true }
+        occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+        subject: { type: [string, 'null'] }
+
+    LegalReviewPacketTask:
+      type: object
+      description: One task that was open at the request. Its subject is read now.
+      required: [activity_id]
+      properties:
+        activity_id: { type: string, format: uuid }
+        subject: { type: [string, 'null'] }
+        due_at: { type: [string, 'null'], format: date-time }
 
     LegalReviewPacketDocument:
       type: object
@@ -47641,6 +47732,14 @@ components:
             code names other values carries them in `params`, an object of text values by
             name, so a screen can word the code in the reader's language; `message` stays
             the English sentence.
+
+            A value its field cannot hold names the field's path (`address.city` for a key of a
+            nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+            `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+            `invalid_type` for any other shape. A body that is not one JSON object, and a value
+            inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+            carries its bounds as `params.min` and `params.max`, as the schema spells them;
+            a date-time range states them as ISO dates.
 
             A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
             `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -53991,6 +54090,16 @@ components:
             `our_side` has carried a display name from the start, and a buyer-side seat
             that carries only an id is the same list rendered half-anonymous.
         role:      { type: string }
+        reach:
+          type: string
+          enum: [reached, not_reached, unknown]
+          x-extensible-enum: true
+          description: |
+            Whether a current colleague has exchanged mail with or met this seat, as the caller
+            can prove it. `not_reached` only when no activity links the seat to a colleague at
+            all. Anything withheld from the caller, or an exchange only with a colleague who has
+            left, is `unknown`. Absent for a seat the caller cannot read, and without the
+            `activity` grant.
         engaged:
           type: boolean
           description: 'A two-way exchange in the window — both directions, not just our sends.'
@@ -54004,6 +54113,21 @@ components:
         last_inbound_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
+
+    DealCoverageLine:
+      type: object
+      description: One colleague's exchange with one buyer seat, as the newest event in each direction.
+      required: [user_id, contact_id, colleague_name]
+      properties:
+        user_id:    { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        colleague_name: { type: string }
+        last_inbound_at:  { type: [string, 'null'], format: date-time, description: When the contact last wrote to this colleague. }
+        last_inbound_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_inbound_at`." }
+        last_outbound_at: { type: [string, 'null'], format: date-time, description: "When this colleague last wrote to the contact, or was copied on our mail to them." }
+        last_outbound_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_outbound_at`." }
+        last_met_at:      { type: [string, 'null'], format: date-time, description: The newest meeting or call of the pair that neither declined. }
+        last_met_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_met_at`." }
 
     DealCoverageRisk:
       type: object
@@ -55123,6 +55247,14 @@ components:
             score is their warmest single relationship. `single_threaded_ours` reads the same
             entries, so its colleague is always one of them.
           items: { $ref: '#/components/schemas/ContactNetworkColleague' }
+        lines:
+          type: array
+          description: |
+            One entry per current colleague and readable seat who have exchanged mail or met,
+            from the activities the caller may open, at the time of the read. A seat the caller
+            cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+            the edge sections are withheld: absence says nothing about who has talked.
+          items: { $ref: '#/components/schemas/DealCoverageLine' }
         risks:        { type: array, items: { $ref: '#/components/schemas/DealCoverageRisk' } }
         sections_omitted:
           type: array
@@ -56920,6 +57052,7 @@ components:
         expected_close_date: { type: [string, 'null'], format: date, description: 'An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.' }
         close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.' }
         wait_until: { type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag." }
+        wait_ends_at: { type: [string, 'null'], format: date-time, readOnly: true, description: "The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date." }
         closed_at: { type: [string, 'null'], format: date-time }
         last_activity_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.' }
         stalled: { type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.' }
@@ -65388,6 +65521,8 @@ components:
       - bookings_mix
       - qualified_opportunities_created
       - initiative_pipeline
+      - account_progression
+      - source_quality
       x-extensible-enum: true
     ReportingBlockKind:
       type: string
@@ -65402,6 +65537,10 @@ components:
         `lead_cohort` follows the leads that arrived in the interval the same
         way: one point, its `outcomes` saying whether each lead was accepted,
         qualified, disqualified or is still open.
+        `account_cohort` follows the distinct accounts of those leads: one point,
+        its `outcomes` saying the furthest outcome any of an account's leads
+        reached. `source_quality` is one point per lead origin: how many leads
+        arrived from it and how many of them were linked to an opportunity.
       enum:
       - bookings_trend
       - stage_distribution
@@ -65415,6 +65554,8 @@ components:
       - breakdown
       - stage_cohort
       - lead_cohort
+      - account_cohort
+      - source_quality
       x-extensible-enum: true
     ReportingStatus:
       type: string
@@ -65847,6 +65988,8 @@ components:
       - breakdown
       - stage_cohort
       - lead_cohort
+      - account_cohort
+      - source_quality
       - question
       - assessment
       x-extensible-enum: true
@@ -71280,7 +71423,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete], x-extensible-enum: true}
         sources:
           type: array
-          maxItems: 9
+          maxItems: 10
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -71295,7 +71438,13 @@ components:
       properties:
         id: {type: string}
         availability: {type: string, enum: [available, unknown, stale, failed, withheld, not_configured, not_monitored], x-extensible-enum: true}
-        condition: {type: string, enum: [clear, processing, retrying, waiting_human, technical, unverified, recovered, unknown], x-extensible-enum: true}
+        condition:
+          type: string
+          enum: [clear, processing, retrying, waiting_human, technical, unverified, recovered, unknown, information]
+          x-extensible-enum: true
+          description: >-
+            `information` is a fact an operator may want, never a fault: it needs no action, raises no
+            finding and leaves the assessment and completeness as they are.
         code: {type: string, description: "Safe presentation code, never raw failure text."}
         permission: {type: string}
         scope: {type: string, enum: [workspace, installation, shared], x-extensible-enum: true}
@@ -71308,6 +71457,26 @@ components:
         unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads], x-extensible-enum: true}
         window_start: {type: string, format: date-time}
         window_end: {type: string, format: date-time}
+        unplaced_changes:
+          type: array
+          maxItems: 50
+          description: >-
+            The `unplaced` source's breakdown of the machine changes in its window that the
+            `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds
+            the sum of these entries when more kinds occurred than are listed.
+          items: {$ref: '#/components/schemas/HealthUnplacedChange'}
+    HealthUnplacedChange:
+      type: object
+      additionalProperties: false
+      required: [entity_type, action, count]
+      properties:
+        entity_type: {type: string}
+        action:
+          type: string
+          description: >-
+            The audit action, or for a list membership or a tagging the link it filed:
+            `added`, `removed` or `applied`.
+        count: {type: integer, minimum: 1}
     HealthFinding:
       type: object
       additionalProperties: false
@@ -73247,7 +73416,7 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too, so it carries the installation name''s rule: `422 required` when blank, `422 too_long` past 200 characters.' }
+        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
         legal_name: { type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
@@ -74668,9 +74837,22 @@ components:
       description: |
         What the reader has decided about answering their own queue: one row per kind
         that is eligible to apply automatically, whether or not they have ever met it.
-      required: [data]
+      required: [data, auto_apply_enabled]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         data: { type: array, items: { $ref: '#/components/schemas/KindAutonomy' } }
+        auto_apply_enabled:
+          type: boolean
+          description: |
+            The installation's switch over every row. False means nothing applies
+            itself for anybody; the modes in `data` stay as the reader set them.
+
+    AutoApplyInstallation:
+      type: object
+      required: [enabled]
+      properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
+        enabled: { type: boolean }
 
     KindAutonomy:
       type: object
@@ -81738,8 +81920,9 @@ components:
     WorklistPlanCoverage:
       type: object
       description: |
-        Whose weekly plans this read looked at, present only when `scope` is `team` and the
-        due commitments were read across the team roster. Absent under every other scope.
+        Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+        Both read the due commitments across the reader's team roster, the reader included.
+        Absent under every other scope.
 
         It exists because "nothing due" and "not looked at" differ. A teammate whose plan
         could not be read contributes no rows, and without this a lead would read their

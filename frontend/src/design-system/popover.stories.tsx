@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { Badge } from "./atoms";
-import { Popover } from "./popover";
+import { Badge, Button } from "./atoms";
+import { Popover, PopoverSheet } from "./popover";
 import "./popover.stories.css";
 
 // Popover: a short aside opened beside its trigger, portalled to the body so a
@@ -185,4 +186,43 @@ export const Pinned: Story = {
       space("--space-4"),
     );
   },
+};
+
+function CallerOpenedSheet() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="link" onClick={() => setOpen(true)}>
+        Edit
+      </Button>
+      <PopoverSheet
+        opener="caller"
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Change product"
+      >
+        <p>Pick the product this lead is about.</p>
+      </PopoverSheet>
+    </>
+  );
+}
+
+// `PopoverSheet` opened by a control elsewhere is the drawer at every width.
+// Escape hands focus back to that control.
+export const SheetOpenedByCaller: Story = {
+  render: () => <CallerOpenedSheet />,
+  play: async ({ canvasElement }) => {
+    const edit = within(canvasElement).getByRole("button", { name: "Edit" });
+    await userEvent.click(edit);
+    const page = within(document.body);
+    await page.findByRole("dialog", { name: "Change product" });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(page.queryByRole("dialog")).toBeNull());
+    await expect(edit).toBe(document.activeElement);
+  },
+};
+export const SheetOpenedByCallerPhone: Story = {
+  ...SheetOpenedByCaller,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

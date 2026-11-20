@@ -11,15 +11,12 @@ import { PanelBody } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useLatestSiteRead } from "./companydeepread";
 import { AddFactForm, useCompanyFacts } from "./companyfactspanel";
 import { emptyReason } from "./companyprofiletab";
-import {
-  useCompanyEditGate,
-  useIndustryOptions,
-  useRowBuilders,
-} from "./companyrail";
+import { useCompanyEditGate, useRowBuilders } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
 import { useCompanyProfileFields } from "./evidenceverdict";
 
@@ -151,7 +148,7 @@ function ProfileInputRow({
 function IndustryRow({ company, input, present, edit }: RowProps) {
   const t = useT();
   const { choice } = useRowBuilders(company, edit);
-  const options = useIndustryOptions(company);
+  const options = useIndustryOptions(company.industry);
   const row = choice("industry", "create.industry", options);
   const profile = useCompanyProfileFields(company.id);
   const read = row.empty

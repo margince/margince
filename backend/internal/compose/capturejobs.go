@@ -221,7 +221,7 @@ func (w *captureDigestWorker) digestWorkspace(ctx context.Context, workspace ids
 	if clock == nil {
 		clock = time.Now
 	}
-	return w.registry.BuildDigests(principal.WithWorkspaceID(ctx, workspace), clock().UTC())
+	return w.registry.BuildDigests(principal.WithWorkspaceID(ctx, workspace), clock())
 }
 
 // CounterpartyVerdictArgs runs one counterparty-verdict pass (ADR-0072/A118 §4).

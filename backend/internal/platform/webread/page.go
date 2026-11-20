@@ -78,6 +78,9 @@ type Page struct {
 	// wants it — which for a client-rendered site is the only prose the server
 	// ever sends.
 	HeadText []string
+	// SiteNameOrTitle is og:site_name, else the <title> tag: the name a site
+	// check compares when the page states no other. "" when it gives neither.
+	SiteNameOrTitle string
 	// ExternalScripts counts the <script src=…> tags the page loads, and
 	// ModuleScripts how many of those are ES modules.
 	//
@@ -180,6 +183,7 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 		Logos:           declaredLogos(body, base),
 		Refresh:         head.refresh,
 		HeadText:        append(head.text, linkedDataClaims(body)...),
+		SiteNameOrTitle: head.naming.siteNameOrTitle(),
 		ExternalScripts: external,
 		ModuleScripts:   modules,
 		Fingerprint:     fingerprintOf(got.header, body, base),

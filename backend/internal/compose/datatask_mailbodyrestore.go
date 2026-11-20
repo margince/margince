@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/storedmail"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -32,7 +33,7 @@ const recoverableMailBodyScope = `FROM activity a ` + mailOriginalJoin + `
    AND rc.payload IS NOT NULL AND ` + capturedByMailConnector
 
 func restoreMailBodiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-	return pageStoredMail(ctx, tx, in,
+	return storedmail.Page(ctx, tx, in,
 		"a.id, a.version, a.body, "+originalstore.SQL("rc"),
 		recoverableMailBodyScope,
 		func(c *recoverableMailBody) (ids.UUID, *[]byte) { return c.ID, &c.Payload },
@@ -65,5 +66,5 @@ func restoreMailBody(ctx context.Context, tx pgx.Tx, candidate recoverableMailBo
 }
 
 func estimateRecoverableMailBodies(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
-	return countStoredMail(ctx, q, recoverableMailBodyScope, maximum)
+	return storedmail.Count(ctx, q, recoverableMailBodyScope, maximum)
 }

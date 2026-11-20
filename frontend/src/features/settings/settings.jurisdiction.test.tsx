@@ -25,7 +25,7 @@ const UNSET: Jurisdiction = {
   available: [
     {
       code: "de",
-      unit_name: "de",
+      unit_name: "eu",
       unit_version: "1.0.0",
       description: "German pack",
       correspondence_floor: {
@@ -36,7 +36,7 @@ const UNSET: Jurisdiction = {
     },
     {
       code: "vn",
-      unit_name: "vn",
+      unit_name: "apac",
       unit_version: "1.0.0",
       description: "Vietnamese pack",
     },

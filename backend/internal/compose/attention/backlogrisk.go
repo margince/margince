@@ -101,13 +101,11 @@ func (s *Service) dealsElsewhere(
 	if len(deals) == 0 {
 		return elsewhere, nil
 	}
-	if s.backlog.waiting != nil {
-		waiting, err := s.backlog.waiting.DealsWaiting(ctx, asOf, s.waitingFor(ctx), deals)
-		if err != nil {
-			return nil, err
-		}
-		maps.Copy(elsewhere, waiting)
+	waiting, err := s.dealsWaiting(ctx, asOf, deals)
+	if err != nil {
+		return nil, err
 	}
+	maps.Copy(elsewhere, waiting)
 	if s.backlog.tasks != nil {
 		tasked, err := s.dealsWithNearTask(ctx, asOf, deals)
 		if err != nil {
@@ -116,6 +114,50 @@ func (s *Service) dealsElsewhere(
 		maps.Copy(elsewhere, tasked)
 	}
 	return elsewhere, nil
+}
+
+// dealsWaiting is step B's one waiting decision, for the ranked rows and the
+// tail alike: the deals a waiting card names under this page's narrowing.
+func (s *Service) dealsWaiting(ctx context.Context, asOf time.Time, deals []ids.UUID) (map[ids.UUID]bool, error) {
+	if s.backlog.waiting == nil || len(deals) == 0 {
+		return map[ids.UUID]bool{}, nil
+	}
+	return s.backlog.waiting.DealsWaiting(ctx, asOf, s.waitingFor(ctx), deals)
+}
+
+// waitingPastScanLane names dealsWaitingPastTheScan's read on /metrics, apart
+// from the waiting lane it follows.
+const waitingPastScanLane = "waiting_past_scan"
+
+// dealsWaitingPastTheScan are the day's at-risk deals whose waiting card lies
+// past a cut waiting scan. A deal a scanned card names is left out, since
+// step B already sees that card. A failed read answers none, and the deal
+// shows at risk; degradable keeps that failure off the page's snapshot.
+func (s *Service) dealsWaitingPastTheScan(ctx context.Context, day crmcontracts.Attention, read waitingRead) map[ids.UUID]bool {
+	if !read.cut || day.AtRisk == nil {
+		return nil
+	}
+	scanned := map[ids.UUID]bool{}
+	for _, row := range read.rows {
+		scanned[row.DealID] = true
+	}
+	var deals []ids.UUID
+	for _, item := range *day.AtRisk {
+		if item.Subject != nil && item.Subject.Type == subjectDeal && !scanned[ids.UUID(item.Subject.Id)] {
+			deals = append(deals, ids.UUID(item.Subject.Id))
+		}
+	}
+	var waiting map[ids.UUID]bool
+	err := s.degradable(ctx, waitingPastScanLane, laneBudget, func(ctx context.Context) error {
+		var err error
+		waiting, err = s.dealsWaiting(ctx, day.AsOf, deals)
+		return err
+	})
+	if err != nil {
+		slog.Log(ctx, laneFailureLevel(ctx), "the at-risk rows could not read who is waiting past the scan", "error", err)
+		return nil
+	}
+	return waiting
 }
 
 // dealsWithNearTask are the deals whose task, read past the lane's cap, would

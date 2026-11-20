@@ -1954,6 +1954,7 @@
     "updateAgentClient": "agent_clients",
     "updateApprovalPreference": "agent_limits",
     "updateAttachmentMetadata": "documents",
+    "updateAutoApplyInstallation": "agent_limits",
     "updateAutomation": "automations",
     "updateAutonomy": "agent_limits",
     "updateCaptureSettings": "capture_rules",

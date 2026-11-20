@@ -46,6 +46,10 @@ export const companyZoneSites: { file: string; why: string }[] = [
     why: "The rates day behind a converted total is the company's, counted on its clock like every report figure.",
   },
   { file: "lib/deals.queries.ts", why: SERVER_TODAY },
+  {
+    file: "lib/employmentcurrency.ts",
+    why: "A departure day belongs to the installation's zone, which is the day the server judges a job current on.",
+  },
   { file: "features/settings/rates.tsx", why: SERVER_TODAY },
   { file: "features/settings/taxrates.tsx", why: SERVER_TODAY },
   {

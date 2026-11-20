@@ -10,18 +10,27 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
+import { useFieldFaults } from "../../design-system/savepage";
 import { typedNumberFault, typedNumberOrNaN } from "../../format/decimalinput";
 import { formatMoney } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import {
+  type FieldLabels,
+  moneyLimit,
+  percentLimit,
+  problemCodeOf,
+  problemMessageOf,
+  refusalSentences,
+  unwrap,
+} from "../../lib/problem";
 import {
   EMPTY_LINE_BILLING,
   type LineBilling,
   lineBillingBody,
   OfferLineBillingFields,
 } from "./offerlinebilling";
-import { NewLineRates } from "./offerlinerates";
+import { discountFault, NewLineRates, taxRateFault } from "./offerlinerates";
 import type {
   Offer,
   OfferLineItem,
@@ -72,6 +81,12 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   // Set by an Add that found "Other" with no unit typed; any unit change clears it.
   const [unitRefused, setUnitRefused] = useState(false);
   const [product, setProduct] = useState<RecordPickerCandidate | null>(null);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const labels = lineLabels(offer.currency, locale, t);
+  const edit = (field: string, change: Partial<NewLineState>) => {
+    setNewLine((prev) => ({ ...prev, ...change }));
+    faults.edited(field);
+  };
 
   const applyOffer = (updated: Offer) => {
     queryClient.setQueryData(["offer", offer.id], updated);
@@ -127,12 +142,24 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
     },
   });
 
-  const activeError =
-    addMutation.error ?? updateMutation.error ?? removeMutation.error;
-  const errorMessage = activeError ? problemMessageOf(activeError, t) : null;
+  // Only the last write speaks: an earlier refusal is about a different try.
+  const writes = [addMutation, updateMutation, removeMutation];
+  const attempt = (write: (typeof writes)[number]) => {
+    for (const other of writes) if (other !== write) other.reset();
+  };
+  const errorMessage = addMutation.isError
+    ? refusalSentences(addMutation.error, t, labels).rest
+    : updateMutation.isError
+      ? problemCodeOf(updateMutation.error) === "conflict"
+        ? t("offer.positionTaken")
+        : problemMessageOf(updateMutation.error, t, undefined, labels)
+      : removeMutation.isError
+        ? problemMessageOf(removeMutation.error, t)
+        : null;
 
   const saveLine =
     (lineItemId: string) => (patch: UpdateOfferLineItemRequest) => {
+      attempt(updateMutation);
       updateMutation.mutate({ lineItemId, patch });
     };
 
@@ -197,6 +224,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           value={line.discount_pct}
           width={90}
           testId={`line-discount-${line.id}`}
+          check={(text) => discountFault(text, locale, t)}
           onSave={(num) => saveLine(line.id)({ discount_pct: num })}
         />
       ),
@@ -210,6 +238,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             value={line.tax_rate}
             width={90}
             testId={`line-tax-rate-${line.id}`}
+            check={(text) => taxRateFault(text, locale, t)}
             onSave={(num) => saveLine(line.id)({ tax_rate: num })}
           />
           {line.tax_category && (
@@ -242,7 +271,10 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         <Button
           data-testid={`remove-line-${line.id}`}
           disabled={removeMutation.isPending}
-          onClick={() => removeMutation.mutate(line.id)}
+          onClick={() => {
+            attempt(removeMutation);
+            removeMutation.mutate(line.id);
+          }}
         >
           {t("offer.removeLine")}
         </Button>
@@ -264,8 +296,11 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           being written. */}
       <PanelBody>
         <span className="t-label">{t("offer.addLine")}</span>
-        <div className="offers-new-line">
-          <Field label={t("offer.description")}>
+        <div ref={faultsRoot} className="offers-new-line">
+          <Field
+            label={t("offer.description")}
+            error={faults.of("description")}
+          >
             {(control) => (
               <TextInput
                 {...control}
@@ -273,17 +308,16 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 className="offers-line-description"
                 value={newLine.description}
                 onChange={(event) =>
-                  setNewLine((prev) => ({
-                    ...prev,
-                    description: event.target.value,
-                  }))
+                  edit("description", { description: event.target.value })
                 }
               />
             )}
           </Field>
           <Field
             label={t("offer.unit")}
-            error={unitRefused ? t("product.unitOtherRequired") : undefined}
+            error={
+              unitRefused ? t("product.unitOtherRequired") : faults.of("unit")
+            }
           >
             {(control) => (
               <UnitPicker
@@ -293,14 +327,17 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 value={newLine.unit}
                 onChange={(unit) => {
                   setUnitRefused(false);
-                  setNewLine((prev) => ({ ...prev, unit }));
+                  edit("unit", { unit });
                 }}
               />
             )}
           </Field>
           <Field
             label={t("offer.quantity")}
-            error={typedNumberFault(newLine.quantity, locale, t)}
+            error={
+              typedNumberFault(newLine.quantity, locale, t) ??
+              faults.of("quantity")
+            }
           >
             {(control) => (
               <input
@@ -310,15 +347,15 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 className="input offers-line-quantity"
                 value={newLine.quantity}
                 onChange={(event) =>
-                  setNewLine((prev) => ({
-                    ...prev,
-                    quantity: event.target.value,
-                  }))
+                  edit("quantity", { quantity: event.target.value })
                 }
               />
             )}
           </Field>
-          <Field label={t("offer.unitPrice")}>
+          <Field
+            label={t("offer.unitPrice")}
+            error={faults.of("unit_price_minor")}
+          >
             {(control) => (
               <MoneyInput
                 {...control}
@@ -328,12 +365,20 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 valueMinor={newLine.unit_price_minor}
                 onChangeMinor={(minor) => {
                   setPriceTouched(true);
-                  setNewLine((prev) => ({ ...prev, unit_price_minor: minor }));
+                  edit("unit_price_minor", { unit_price_minor: minor });
                 }}
               />
             )}
           </Field>
-          <NewLineRates value={newLine} onChange={setNewLine} />
+          <NewLineRates
+            value={newLine}
+            onChange={setNewLine}
+            refused={{
+              discount_pct: faults.of("discount_pct"),
+              tax_rate: faults.of("tax_rate"),
+            }}
+            onEdited={faults.edited}
+          />
           <OfferLineBillingFields value={billing} onChange={setBilling} />
         </div>
         <div className="offers-new-line-product">
@@ -362,21 +407,31 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 return;
               }
               // Each refused figure already names why under its field.
-              if (priceRefused || figuresRefused(newLine, locale, t)) {
+              if (
+                priceRefused ||
+                faults.show(figureFaults(newLine, locale, t))
+              ) {
                 return;
               }
-              addMutation.mutate({
-                product_id: product?.id ?? undefined,
-                description: newLine.description || undefined,
-                unit:
-                  storedUnitOf(newLine.unit.choice, newLine.unit.other) ||
-                  undefined,
-                ...newLineFigures(newLine, locale),
-                unit_price_minor: priceTouched
-                  ? newLine.unit_price_minor
-                  : undefined,
-                ...lineBillingBody(billing),
-              });
+              attempt(addMutation);
+              addMutation.mutate(
+                {
+                  product_id: product?.id ?? undefined,
+                  description: newLine.description || undefined,
+                  unit:
+                    storedUnitOf(newLine.unit.choice, newLine.unit.other) ||
+                    undefined,
+                  ...newLineFigures(newLine, locale),
+                  unit_price_minor: priceTouched
+                    ? newLine.unit_price_minor
+                    : undefined,
+                  ...lineBillingBody(billing),
+                },
+                {
+                  onError: (error) =>
+                    faults.show(refusalSentences(error, t, labels).byField),
+                },
+              );
             }}
           >
             {t("offer.addLine")}
@@ -388,14 +443,40 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   );
 }
 
-function figuresRefused(
+function figureFaults(
   line: NewLineState,
   locale: Locale,
   t: Translator,
-): boolean {
-  return [line.quantity, line.discount_pct, line.tax_rate].some((text) =>
-    typedNumberFault(text, locale, t),
+): ReadonlyMap<string, string> {
+  const faults = [
+    ["quantity", typedNumberFault(line.quantity, locale, t)],
+    ["discount_pct", discountFault(line.discount_pct, locale, t)],
+    ["tax_rate", taxRateFault(line.tax_rate, locale, t)],
+  ] as const;
+  return new Map(
+    faults.flatMap(([field, fault]) => (fault ? [[field, fault]] : [])),
   );
+}
+
+// A line's fields as a refusal names them, with bounds in the reader's unit.
+function lineLabels(
+  currency: string,
+  locale: Locale,
+  t: Translator,
+): FieldLabels {
+  const percent = percentLimit(locale);
+  return {
+    description: t("offer.description"),
+    unit: t("offer.unit"),
+    quantity: t("offer.quantity"),
+    position: t("offer.position"),
+    unit_price_minor: {
+      label: t("offer.unitPrice"),
+      limit: moneyLimit(currency, locale),
+    },
+    discount_pct: { label: t("offer.discountPct"), limit: percent },
+    tax_rate: { label: t("offer.taxRate"), limit: percent },
+  };
 }
 
 // An empty discount or tax rate is left out, so the stored default applies.

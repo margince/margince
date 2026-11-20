@@ -12,7 +12,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { stillHeld } from "../../lib/employmentcurrency";
+import { stillHeld, useEmploymentZone } from "../../lib/employmentcurrency";
 import { datePatch, patchEmployment, validDateEntry } from "./employmentpatch";
 import "../../design-system/querystates.css";
 
@@ -40,10 +40,11 @@ export function EmploymentEdit({
 }>) {
   const t = useT();
   const id = useId();
+  const employmentZone = useEmploymentZone();
   const [primary, setPrimary] = useState(employment.is_current_primary);
   const [role, setRole] = useState(employment.role ?? "");
   const [status, setStatus] = useState<"current" | "former" | "">(
-    stillHeld(employment)
+    stillHeld(employment, employmentZone)
       ? "current"
       : employment.employment_status === "unknown"
         ? ""

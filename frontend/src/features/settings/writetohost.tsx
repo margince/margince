@@ -6,8 +6,16 @@ import { lazy } from "../../i18n/lazy";
 import { useMailboxConnected } from "../../lib/connectors";
 import { WriteToProvider, type WriteToTarget } from "../../lib/writeto";
 
+// Both of the composer's chunks in one load, so the window's does not start
+// only once the dock renders. A test loads the same before a press.
+export async function loadComposer() {
+  const compose = await import("../mail/compose");
+  await compose.loadComposeWindow();
+  return compose;
+}
+
 const ComposeModal = lazy(async () => ({
-  default: (await import("../mail/compose")).ComposeModal,
+  default: (await loadComposer()).ComposeModal,
 }));
 
 /**

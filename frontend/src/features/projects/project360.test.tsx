@@ -5,7 +5,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
-  renderHook,
   render as rtlRender,
   screen,
   waitFor,
@@ -16,7 +15,6 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { useShortcutDispatcher } from "../../lib/shortcuts";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { project, project360 } from "../../testing/projects.fixtures";
@@ -561,7 +559,9 @@ describe("ProjectScreen", () => {
     await screen.findByRole("heading", { name: "CRM rollout" });
 
     expect(screen.getByText(/You cannot edit this project/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Edit (About|Ownership)$/ }),
+    ).toBeNull();
   });
 
   // Absent is not "unknown", it is "no": a response from a server too old to
@@ -635,6 +635,96 @@ describe("ProjectScreen", () => {
     expect(landed).not.toBe(document.body);
     expect(landed?.isConnected).toBe(true);
     expect(landed?.closest("[hidden]")).toBeNull();
+  });
+});
+
+describe("Edit project in the More menu", () => {
+  const region = {
+    id: "cf-region",
+    object: "project",
+    label: "Region",
+    slug: "region",
+    type: "text",
+    status: "active",
+    column_name: "cf_region",
+    show_in_create: true,
+    reportable: false,
+    created_by: "human:u-1",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+
+  it("opens the project's fields in one dialog and saves them through the record write", async () => {
+    const user = userEvent.setup();
+    const writes: { body: unknown; ifMatch: string | null }[] = [];
+    projectsBackend({
+      view: project360({
+        project: Object.assign(project(), { cf_region: "North" }),
+      }),
+      respond: async (url, method, request) => {
+        if (new URL(url).pathname === "/v1/custom-fields") {
+          return jsonResponse({ data: [region] });
+        }
+        if (method === "PATCH") {
+          writes.push({
+            body: await request.json(),
+            ifMatch: request.headers.get("If-Match"),
+          });
+          return jsonResponse(project({ name: "CRM rollout two", version: 4 }));
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("button", { name: en["project.edit"] }));
+    const dialog = within(
+      await screen.findByRole("dialog", { name: en["project.edit"] }),
+    );
+    expect(dialog.getByRole("textbox", { name: "Description" })).toBeTruthy();
+    expect(dialog.getByLabelText(en["project.targetEnd"])).toBeTruthy();
+    expect(dialog.getByLabelText(/^Owner/)).toBeTruthy();
+    const regionBox = await dialog.findByRole("textbox", { name: "Region" });
+    await user.clear(regionBox);
+    await user.type(regionBox, "South");
+    const name = dialog.getByRole("textbox", { name: /^Project name/ });
+    await user.clear(name);
+    await user.type(name, "CRM rollout two");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(writes).toEqual([
+        { body: { name: "CRM rollout two", cf_region: "South" }, ifMatch: "3" },
+      ]),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("opens only once the custom fields have read, so a quick press still shows them", async () => {
+    const user = userEvent.setup();
+    let answer: (response: Response) => void = () => undefined;
+    const fieldsRead = new Promise<Response>((resolve) => {
+      answer = resolve;
+    });
+    projectsBackend({
+      view: project360(),
+      respond: async (url) =>
+        new URL(url).pathname === "/v1/custom-fields" ? fieldsRead : null,
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("button", { name: en["project.edit"] }));
+    expect(
+      screen.queryByRole("dialog", { name: en["project.edit"] }),
+    ).toBeNull();
+    answer(jsonResponse({ data: [region] }));
+    const dialog = await screen.findByRole("dialog", {
+      name: en["project.edit"],
+    });
+    expect(
+      within(dialog).getByRole("textbox", { name: "Region" }),
+    ).toBeTruthy();
   });
 });
 
@@ -864,65 +954,5 @@ describe("a phase this build does not know", () => {
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
     expect(screen.getAllByText(en["common.unknownValue"]).length).toBe(2);
-  });
-});
-
-describe("the project's record keys", () => {
-  async function mountProject(view = project360()) {
-    projectsBackend({ view });
-    renderHook(() => useShortcutDispatcher());
-    render(<ProjectScreen id="pr-1" />);
-    await screen.findByRole("heading", { name: "CRM rollout" });
-    return screen.getByRole("button", { name: en["log.title"] });
-  }
-
-  it.each([
-    ["n", en["log.title"]],
-    ["t", en["log.addTask"]],
-  ])("open on %s the drawer its verb opens: %s", async (key, verb) => {
-    const user = userEvent.setup();
-    const log = await mountProject();
-    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
-    expect(log.getAttribute("aria-keyshortcuts")).toBe("n");
-
-    await user.keyboard(key);
-    const drawer = await screen.findByRole("dialog");
-    expect(within(drawer).getByRole("heading", { name: verb })).toBeTruthy();
-  });
-
-  it("bind no M: a project has no Email verb", async () => {
-    const user = userEvent.setup();
-    const log = await mountProject();
-    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
-
-    await user.keyboard("m");
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("open the log on a project this caller may not change", async () => {
-    const user = userEvent.setup();
-    const log = await mountProject(
-      project360({
-        project: project({ owner_id: "u-someone-else", writable: false }),
-      }),
-    );
-    await screen.findByText(/You cannot edit this project/);
-    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
-
-    await user.keyboard("n");
-    expect(await screen.findByRole("dialog")).toBeTruthy();
-  });
-
-  it("do nothing on an archived project", async () => {
-    const user = userEvent.setup();
-    await mountProject(
-      project360({
-        project: project({ archived_at: "2026-01-02T00:00:00Z" }),
-      }),
-    );
-    await screen.findByText(en["project.archivedReadOnly"]);
-
-    await user.keyboard("nt");
-    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

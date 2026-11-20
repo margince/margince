@@ -21,8 +21,12 @@ import type { ComposeProps } from "./composeprops";
 
 // A page that offers to write never carries the window's code; it arrives
 // when someone opens the composer.
+export function loadComposeWindow() {
+  return import("./composewindow");
+}
+
 const ComposeWindow = lazy(async () => ({
-  default: (await import("./composewindow")).ComposeWindow,
+  default: (await loadComposeWindow()).ComposeWindow,
 }));
 
 /**

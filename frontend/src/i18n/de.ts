@@ -1631,6 +1631,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.conversion": "Weiterkommen pro Phase",
   "reporting.stage_cohort": "Weiterkommen pro Phase",
   "reporting.lead_cohort": "Was aus neuen Leads wurde",
+  "reporting.account_cohort": "Wie weit Unternehmen kamen",
+  "reporting.source_quality": "Qualität der Lead-Quellen",
   "reporting.cohortStage": "Phase",
   "reporting.cohortEntered": "Eingetreten",
   "reporting.cohortArrived": "Eingegangen",
@@ -1652,6 +1654,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.accepted": "Übergabe angenommen",
   "reporting.cohortOutcome.qualified": "Qualifiziert",
   "reporting.cohortOutcome.disqualified": "Disqualifiziert",
+  "reporting.cohortOutcome.opportunity_linked": "Mit einem Deal verknüpft",
+  "reporting.cohortOutcome.not_linked": "Noch nicht verknüpft",
+  "reporting.cohortLinkedRate": "Anteil verknüpft",
   "reporting.cohortEntry.repeat": "Erneut in dieser Phase",
   "reporting.cohortEntry.reopened": "Nach Abschluss wieder geöffnet",
   "reporting.cohortStillOpenNote":
@@ -3054,6 +3059,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.phone.empty": "Gib eine Telefonnummer ein.",
   "common.fieldTooLongMax": "{field}: höchstens {max} Zeichen.",
   "common.valueTooLongMax": "Dieser Wert darf höchstens {max} Zeichen haben.",
+  "common.fieldRequiredNamed": "{field} ist erforderlich.",
+  "common.fieldNotInteger": "Gib für {field} eine ganze Zahl ein.",
+  "common.valueNotInteger": "Gib eine ganze Zahl ein.",
+  "common.fieldNotNumber": "Gib für {field} eine Zahl ein.",
+  "common.valueNotNumber": "Gib eine Zahl ein.",
+  "common.fieldNotEmail": "Gib für {field} eine E-Mail-Adresse ein.",
+  "common.valueNotEmail": "Gib eine E-Mail-Adresse ein.",
+  "common.fieldNotDate": "Gib für {field} ein gültiges Datum ein.",
+  "common.valueNotDate": "Gib ein gültiges Datum ein.",
+  "common.fieldNotDateTime":
+    "Gib für {field} ein gültiges Datum mit Uhrzeit ein.",
+  "common.valueNotDateTime": "Gib ein gültiges Datum mit Uhrzeit ein.",
+  "common.fieldNotInSet": "Wähle für {field} einen der angebotenen Werte.",
+  "common.valueNotInSet": "Wähle einen der angebotenen Werte.",
+  "common.fieldInvalidNamed": "Prüfe {field} und versuche es erneut.",
+  "common.fieldBetween": "{field} muss zwischen {min} und {max} liegen.",
+  "common.valueBetween": "Gib einen Wert von {min} bis {max} ein.",
+  "common.fieldAtLeast": "{field} muss mindestens {min} sein.",
+  "common.valueAtLeast": "Gib einen Wert von mindestens {min} ein.",
+  "common.fieldAtMost": "{field} darf höchstens {max} sein.",
+  "common.valueAtMost": "Gib einen Wert von höchstens {max} ein.",
+  "common.fieldOutOfRange": "{field} liegt außerhalb des erlaubten Bereichs.",
+  "common.valueOutOfRange":
+    "Dieser Wert liegt außerhalb des erlaubten Bereichs.",
+  "common.fieldRepeated":
+    "{field} enthält denselben Wert zweimal. Entferne die Wiederholung.",
+  "common.valueRepeated":
+    "Derselbe Wert steht zweimal in der Liste. Entferne die Wiederholung.",
+  "common.fieldOneLine": "Gib {field} in einer Zeile ein.",
+  "common.valueOneLine": "Gib den Wert in einer Zeile ein.",
+  "common.fieldDateInFuture": "{field} darf nicht in der Zukunft liegen.",
+  "common.dateInFuture": "Dieses Datum darf nicht in der Zukunft liegen.",
+  "common.fieldDecimalPlaces": "Erlaubte Nachkommastellen für {field}: {max}.",
+  "common.valueDecimalPlaces": "Erlaubte Nachkommastellen: {max}.",
   "common.valueTooLong": "Dieser Wert ist zu lang.",
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
@@ -3984,7 +4023,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleTheOwnerAndShared_other":
     "Die verantwortliche Person · {count} Freigaben",
   "co.aside.vatId": "USt-IdNr.",
-  "co.aside.add": "Hinzufügen…",
   "co.strip.unanswered": "Unbeantwortet",
   "co.strip.engagement.never_contacted": "Nie kontaktiert",
   "co.strip.engagement.active": "Aktiv",
@@ -5740,6 +5778,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.emptyBody":
     "Füge dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
   "tags.pickerLabel": "Tags suchen",
+  "tags.nameTaken": "Einen Tag mit diesem Namen gibt es schon.",
   "tags.alreadyAdded": "Bereits hinzugefügt",
   "tags.offerCompanyTitle": "{company} auch mit {tag} taggen?",
   "tags.offerCompanyAccept": "{company} taggen",
@@ -6896,6 +6935,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.termsText": "Bedingungstext",
   "offer.lines": "Positionen",
   "offer.addLine": "Position hinzufügen",
+  "offer.positionTaken": "Eine andere Zeile hat schon diese Position.",
+  "offer.lapsed":
+    "Das Datum „Gültig bis“ dieses Angebots ist überschritten. Ändere es bei einem Entwurf unter „Kopfdaten bearbeiten“ oder erzeuge für ein gesendetes Angebot eine neue Revision.",
   "offer.position": "Position",
   "offer.description": "Beschreibung",
   "offer.unit": "Einheit",
@@ -8328,6 +8370,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+  "sendPermission.reason.subjectLabelMissing":
+    "Marketing an eine empfangende Person in diesem Land muss den Betreff mit der Kennzeichnung beginnen, die ihr Recht vorschreibt. Ergänze sie im Betreff.",
+  "sendPermission.reason.subjectLabelsConflict":
+    "Die Länder dieser empfangenden Personen schreiben für Marketing verschiedene Kennzeichnungen im Betreff vor, und ein Betreff beginnt mit einer. Sende eine Nachricht je Kennzeichnung.",
   "sendPermission.reason.optedOutAfterRequest":
     "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
   "sendPermission.reason.permissionRequired":
@@ -9139,6 +9185,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.outcomesOwnLensOnly":
     "Dieser Bereich misst die Datensätze eines einzelnen Nutzerkontos. Die breiteren Bereiche decken den Rest der Sicht ab.",
   "analytics.reportWinLoss": "Gewonnen und verloren",
+  "analytics.reportLossEvents": "Jeder Verlust einzeln",
   "analytics.reportStageAge": "Verweildauer je Phase",
   "analytics.baseValue": "Deal-Wert · {currency}",
   "analytics.baseValueUnnamed": "Deal-Wert",
@@ -11345,6 +11392,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.correctionAccept": "Annehmen und aktualisieren",
   "privacy.correctionReject": "Unverändert lassen",
   "privacy.purposesRegistry": "Registrierte Zwecke",
+  "privacy.purposeKeyTaken": "Diesen Schlüssel verwendet bereits {label}.",
+  "privacy.purposeKeyTakenUnnamed":
+    "Ein anderer Zweck verwendet diesen Schlüssel bereits.",
   "privacy.purposeKey": "Schlüssel",
   "privacy.purposeLabel": "Bezeichnung",
   "privacy.purposeDoi": "Double-Opt-in erforderlich",
@@ -11946,6 +11996,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "pipeline.new": "Neue Pipeline",
   "pipeline.createRefused":
     "Deine Rolle darf keine Pipelines anlegen. Frage einen Admin.",
+  "pipeline.defaultTaken":
+    "Eine andere Pipeline ist schon der Standard. Lege diese mit „Kein Standard“ an und nutze danach „Zum Standard machen“.",
+  "pipeline.nameTaken": "Eine Pipeline mit diesem Namen gibt es schon.",
   "pipeline.name": "Name",
   "pipeline.default": "Standard",
   "pipeline.notDefault": "Kein Standard",
@@ -12865,6 +12918,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es ist kein Chat-Bot verbunden. Ein Admin verbindet ihn in den Einstellungen.",
   "channelLink.refused.channelNotFound":
     "Der Bot ist in keinem Kanal mit diesem Namen. Füge den Bot im Chat zum Kanal hinzu und versuche es dann erneut.",
+  "channelLink.refused.nameRefused":
+    "Der Chat lehnt diesen Kanalnamen ab. Benenne den Datensatz um oder verknüpfe einen bestehenden Kanal.",
   "channelLink.refused.channelNotPrivate":
     "Dieser Kanal ist öffentlich. Verknüpfe stattdessen einen privaten Kanal.",
   "channelLink.refused.botNotMember":
@@ -12968,6 +13023,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Website wurde gelesen, nennt aber kein Unternehmen.",
   "worklist.domainQuestion.reason.forwarded":
     "Die Website leitet auf eine andere Website weiter. Deshalb konnte Margince das Unternehmen nicht sicher zuordnen.",
+  "worklist.domainQuestion.reason.foreignSite":
+    "Die Website nennt ein anderes Unternehmen als diese Domain. Die Domain gehört vielleicht inzwischen jemand anderem.",
   "worklist.domainQuestion.reason.vendor":
     "Die Website wirkt wie ein Mail- oder Hosting-Anbieter, der Adressen für viele Unternehmen bereitstellen kann.",
   "worklist.domainQuestion.reason.nearDuplicate":
@@ -13038,6 +13095,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kein Unternehmen über die Website gefunden",
   "blockedDomains.source.staleEvidence": "Belegende E-Mails zu alt",
   "blockedDomains.source.nearDuplicate": "Unternehmensname existiert bereits",
+  "blockedDomains.source.foreignSite": "Nennt ein anderes Unternehmen",
   "blockedDomains.source.vendorVerdict":
     "Wirkt wie ein Mail- oder Hosting-Anbieter",
   "blockedDomains.rowAdmit": "Zulassen",
@@ -13897,6 +13955,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Stellen Sie Ihre Frage unter dem betreffenden Dokument. Die Frage geht direkt an {steward}.",
   "buyer.closedOn": "Geschlossen am {date}",
   "room.docs.title": "Dokumente und Diskussionen",
+  "room.docs.alreadyPresent": "Diese Datei ist schon im Raum.",
   "room.docs.empty": "Noch keine Dokumente im Raum.",
   "room.docs.fileLabel": "Datei aus diesem Deal",
   "room.docs.fileHint":
@@ -14294,6 +14353,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "coverage.risk.stakeholder_left": "Stakeholder ist ausgeschieden",
   "coverage.risk.going_cold": "Kühlt ab",
 
+  "cf.labelTaken":
+    "Dieser Datensatztyp hat schon ein eigenes Feld mit dieser Bezeichnung.",
   "cf.title": "Eigene Felder",
   "cf.formSection": "Eigene Felder",
   "cf.subtitle":
@@ -14347,6 +14408,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird automatisch abgeleitet und ist ab dem Livegang fest. Das Präfix cf_ verhindert Konflikte mit Kernfeldern.",
   "cf.typeLabel": "Typ",
   "cf.currencyCode": "Währungscode",
+  "cf.currencyNotCode":
+    "Gib einen Währungscode aus 3 Buchstaben ein, etwa EUR, CHF oder USD.",
   "cf.currencyHint":
     "Dreistelliger ISO-4217-Code, zum Beispiel EUR oder USD. Beträge werden auf den Cent genau gespeichert.",
   "cf.options": "Optionen",
@@ -15166,6 +15229,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.rates.modelEmpty": "Noch keine Modellpreise.",
   "settings.rates.modelModalTitle": "Modellpreis festlegen",
   "settings.rates.notSaved": "Wert nicht gespeichert",
+  "settings.rates.fromIsBase":
+    "Das ist die Basiswährung, ihr Kurs ist immer 1. Wähle eine andere Währung.",
+  "settings.rates.fromNotCurrency":
+    "Gib einen Währungscode aus 3 Buchstaben ein, etwa EUR, CHF oder USD.",
+  "settings.rates.rateNotPositive":
+    "Gib einen Kurs größer als null ein, mit höchstens 10 Stellen vor und 10 nach dem Komma.",
+  "settings.rates.pastDate":
+    "Ein vergangenes Datum geht nur vor dem ersten Kurs dieser Währung. Wähle heute oder ein späteres Datum.",
   "taxRates.title": "Steuersätze",
   "taxRates.withheld": "Nur Admin oder Ops sehen die Steuersätze.",
   "taxRates.intro":
@@ -15736,6 +15807,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.newTeamLabel": "Neues Team",
   "users.newTeamOpen": "Neues Team",
   "users.teamNameLabel": "Teamname",
+  "users.emailTaken":
+    "Ein Mitglied mit dieser E-Mail-Adresse gibt es schon. Wurde es deaktiviert, reaktiviere es stattdessen.",
+  "users.emailReserved":
+    "Diese Adresse gehörte einem endgültig entfernten Mitglied und bleibt reserviert.",
   "users.teamDuplicate":
     "Ein Team mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "users.newTeamPlaceholder": "Zum Beispiel DACH Sales",
@@ -15934,7 +16009,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companySave": "Unternehmenskontext speichern",
   "settings.companySaved": "Gespeichert",
   "settings.companySaveFailed": "Unternehmenskontext nicht gespeichert",
-  "settings.companyNameTooLong": "Kürze den Unternehmensnamen.",
   "settings.companyRefreshFailed": "Analyse der Website nicht abgeschlossen",
   "settings.companyApplyFailed": "Änderungen nicht übernommen",
   "settings.companyRefreshWarnings": "Warnungen aus dieser Analyse",
@@ -15973,6 +16047,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einträge der Preisliste, aus denen Angebotspositionen übernommen werden.",
   "product.new": "Neues Produkt",
   "product.edit": "Produkt bearbeiten",
+  "product.skuTaken": "Ein anderes Produkt hat diese Artikelnummer bereits.",
   "product.taxCategory": "Steuerkategorie",
   "product.taxCategoryUnset": "Nicht eingeordnet",
   "product.taxCategoryFilter": "Steuerkategorie",
@@ -17342,6 +17417,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "autonomy.sub":
     "Mit jedem Schalter läuft eine Art von Änderung ohne deine Prüfung. Jeder Schalter gilt für deine Arbeit, nicht für das ganze Team.",
   "autonomy.updateFailed": "Einstellung nicht gespeichert",
+  "autonomy.installationOff":
+    "Ein Admin hat automatische Änderungen für alle ausgeschaltet. Nichts läuft von selbst, und deine Schalter unten bleiben, wie du sie gesetzt hast.",
+  "autonomy.installationSwitch": "Automatische Änderungen für alle",
+  "autonomy.installationHelp":
+    "Aus stoppt jede automatische Änderung. Die eigenen Schalter aller bleiben, wie sie gesetzt wurden.",
   "autonomy.noneDecidedYet":
     "Du hast noch keinen dieser Vorschläge geprüft. Je nachdem, was unten aktiviert ist, können automatische Änderungen bereits laufen. Vorschläge hängen von deinen Datensätzen und der dir zugewiesenen Arbeit ab.",
   "autonomy.noRecord": "Noch keine Entscheidungen dieser Art.",
@@ -19825,6 +19905,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.page": "Liste",
   "lists.loading": "Liste wird geladen",
   "lists.kind.live": "Live-Liste",
+  "lists.alreadyOnShortlist": "Bereits auf dieser Shortlist.",
+  "lists.alreadyOnOption": "{name} (bereits enthalten)",
   "lists.kind.shortlist": "Shortlist",
   "lists.type.contact": "Kontakte",
   "lists.type.company": "Unternehmen",
@@ -20441,6 +20523,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.committee.carriesContact": "Führt den Großteil des Austauschs",
   "deal.committee.teamUnread":
     "Nicht lesbar, wer sonst an diesem Deal arbeitet.",
+  "deal.committee.lines.title": "Wer mit wem spricht",
+  "deal.committee.lines.mailed": "An sie gesendet am {date}",
+  "deal.committee.lines.replied": "Hat am {date} geschrieben",
+  "deal.committee.lines.met": "Am {date} getroffen",
+  "deal.committee.lines.pair": "{colleague} mit {contact}: {how}",
+  "deal.committee.lines.unreached":
+    "Niemand aus deinem aktuellen Team hat {contact} erreicht",
   "deal.committee.missing.champion": "Es fehlt: ein Champion im Austausch",
   "deal.committee.missing.firstContact":
     "Es fehlt: ein Kontakt auf Kundenseite",
@@ -20901,6 +20990,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Aktion konnte nicht rückgängig gemacht werden. Die Nachricht bleibt von deiner Liste entfernt.",
   "worklist.disposition.failed":
     "Der Eintrag konnte nicht entfernt werden. Bitte versuche es erneut.",
+  "worklist.disposition.gone":
+    "Dieser Eintrag steht nicht mehr auf deiner Liste. Die Liste ist jetzt aktuell.",
   "worklist.scope.label": "Wessen Arbeit",
   "worklist.scope.mine": "Meine",
   "worklist.sourceUnavailable":
@@ -22104,20 +22195,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es gibt nichts zurückzunehmen, da sich nichts geändert hat.",
   "magic.undoReason.notEvaluated":
     "Diese Installation hat nicht geprüft, ob sich das zurücknehmen lässt.",
-  "magic.notShown_one": "{count} Änderung wird nicht gezeigt: {reason}",
-  "magic.notShown_other": "{count} Änderungen werden nicht gezeigt: {reason}",
-  "magic.notShown.unknownEntityType":
-    "ein Datensatztyp, den diese Seite nicht einordnen kann",
-  "magic.notShown.outOfScope": "außerhalb deiner eigenen Datensätze",
-  "magic.visibleScope":
-    "Hier siehst du nur Änderungen, auf die du zugreifen darfst.",
-  "magic.coverageIncomplete":
-    "Einige Aktivitäten konnten nicht gezählt werden.",
+  "magic.failed": "Die letzten Änderungen konnten nicht geladen werden.",
   "magic.laneCut": "Es gibt mehr, als hier steht.",
-  "magic.done.all_one": "{count} Änderung im Einzelnen",
-  "magic.done.all_other": "Alle {count} Änderungen im Einzelnen",
-  "magic.done.atLeast_one": "{count} Änderung im Einzelnen",
-  "magic.done.atLeast_other": "{count} Änderungen im Einzelnen",
+  "magic.done.fold_one": "{count} Änderung im Einzelnen",
+  "magic.done.fold_other": "{count} Änderungen im Einzelnen",
   "magic.action.advance_stage": "Ein Deal ist eine Phase weitergerückt",
   "magic.action.promote": "Aus einem Lead wurde ein Deal",
   "magic.action.update": "Ein Datensatz wurde aktualisiert",
@@ -22791,6 +22872,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.docState.draft": "Entwurf",
   "legalReview.docState.current": "Aktuell",
   "legalReview.docState.final": "Endfassung",
+  "legalReview.advanceRefused":
+    "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Frage eine Rechtsprüfung an und verschiebe den Deal danach.",
   "legalReview.packHistory": "Phasenverlauf",
   "legalReview.enteredStage": "{stage}, erreicht {date}",
   "legalReview.settingsTitle": "Rechtsprüfung",
@@ -22816,6 +22899,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.offerLineRecurring_one": "{cadence} über {count} Periode",
   "legalReview.offerLineRecurring_other": "{cadence} über {count} Perioden",
   "legalReview.offerLineStaged": "Vorgeschlagen, noch nicht in der Summe",
+  "legalReview.packContracts": "Verträge",
+  "legalReview.contractNotice": "Kündigungsfrist",
+  "legalReview.contractNoticeDays_one": "{count} Tag",
+  "legalReview.contractNoticeDays_other": "{count} Tage",
+  "legalReview.contractCancelBy": "Kündigung erklärt",
+  "legalReview.contractRenewal": "Verlängerung",
+  "legalReview.contractAutoRenews": "Verlängert sich automatisch",
+  "legalReview.contractNoAutoRenew": "Verlängert sich nicht automatisch",
+  "legalReview.packTouches": "Letzter Kontakt",
+  "legalReview.packTasks": "Offene Aufgaben zum Zeitpunkt der Anfrage",
+  "legalReview.taskDue": "Fällig am {date}",
+  "legalReview.touchLine": "{kind}, {date}",
+  "legalReview.offerPdf": "PDF",
+  "legalReview.packOlder":
+    "Dieses Paket entstand, bevor Verträge, Kontakte und Aufgaben dazugehörten.",
   "legalReview.packBinding": "Weitere an die Käuferseite gesendete Angebote",
   "aiTask.name.account_scan": "Analyse des Kundenbedarfs",
   "aiTask.name.agent_loop": "Agentensteuerung",
@@ -22880,6 +22978,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.handles.fewer": "Weniger anzeigen",
   "record.reach.label": "E-Mail und Telefon",
   "record.details.hideEmpty": "Leere Felder ausblenden",
+  "record.details.editSection": "{section} bearbeiten",
   "record.verb.email": "E-Mail",
   "record.verb.call": "Anruf",
   "record.verb.meet": "Termin",
@@ -23321,6 +23420,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.group.setup": "Noch nicht eingerichtet",
   "health.group.waiting": "Noch nicht bestätigt",
   "health.group.passing": "In Ordnung",
+  "health.group.information": "Zur Information",
   "health.checkPassing": "In Ordnung",
   "health.whatHappened": "Was passiert ist",
   "health.whyItMatters": "Warum es wichtig ist",
@@ -23376,6 +23476,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.condition.technical": "Technische Prüfung erforderlich",
   "health.condition.unverified": "Behebung nicht nachgewiesen",
   "health.condition.recovered": "Wiederhergestellt",
+  "health.condition.information": "Information",
   "health.source.jobs": "Hintergrundverarbeitung",
   "health.source.capture": "E-Mail-Erfassung",
   "health.source.intake": "Konnektoreingang",
@@ -23385,6 +23486,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.source.recovery": "Wiederherstellungsnachweise",
   "health.source.automatic": "Qualität automatischer Arbeit",
   "health.source.receipts": "Bestätigungen von Werbewidersprüchen",
+  "health.source.unplaced": "Von Home ausgelassene Änderungen",
+  "health.code.unplaced_none":
+    "Keine automatische Änderung der letzten 7 Tage fehlt auf Home",
+  "health.code.unplaced_counted":
+    "Einige automatische Änderungen der letzten 7 Tage zeigt Home nicht",
+  "health.unplacedTotal": "In den letzten 7 Tagen ausgelassen",
   "health.scope": "Betroffener Umfang",
   "health.window": "Berichtszeitraum",
   "health.observed": "Letzte Beobachtung",

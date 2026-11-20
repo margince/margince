@@ -10,14 +10,10 @@ import {
   useActivityGate,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
-import {
-  type ObjectCustomFields,
-  useObjectCustomFields,
-} from "../../components/customfields.form";
-import { EditAction } from "../../components/edit";
+import { catalogOfRecord } from "../../components/create.dialog";
 import { useRailRename } from "../../components/railfield";
-import { useOwnerPicker } from "../../components/recordowners";
 import { RecordTeam } from "../../components/recordteam";
+import { useFieldsDialog } from "../../components/sectionedit";
 import {
   snoozedDueAt,
   TaskCompleteCheck,
@@ -54,14 +50,7 @@ import { ProjectNext } from "./projectnext";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal } from "./projectphase";
 import { ProjectKeyChip } from "./projects";
-import {
-  mapProjectUpdate,
-  PHASE_LABEL,
-  type Project,
-  type ProjectPhase,
-  projectEditRecord,
-  projectFields,
-} from "./projects.form";
+import { PHASE_LABEL, type Project, type ProjectPhase } from "./projects.form";
 import {
   type Commitment,
   type Project360,
@@ -139,18 +128,19 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // /activities/{id}, which asks activity:update and the activity's own row
   // authority, whatever the reader may do to the project.
   const canUpdateTask = useCan("activity", "update");
-  // Read here as well as in the details. The schema request then runs beside
-  // the project's rather than after it, and both share its one cache entry.
-  const cf = useObjectCustomFields("project");
   const nextVerbs = useNextTaskVerbs(view, taskUpdate, canUpdateTask);
   // Log in the strip and Add task in the menu open one drawer. The page holds
   // that drawer and the gate both verbs read.
   const activity = useActivityGate();
   const [logDrawer, setLogDrawer] = useState<LogDrawer>(null);
-  const rename = useRailRename(
-    useProjectEdit(project),
-    "name",
-    t("project.name"),
+  const edit = useProjectEdit(project);
+  const rename = useRailRename(edit, "name", t("project.name"));
+  const editAll = useFieldsDialog(
+    edit,
+    t("project.edit"),
+    edit.fields,
+    edit.canEdit,
+    catalogOfRecord("project"),
   );
   return (
     <RecordView
@@ -184,7 +174,8 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
             logRefusedId={logRefusedId}
             activity={activity}
             onAddTask={() => setLogDrawer("task")}
-            cf={cf}
+            onEdit={editAll.start}
+            editWaiting={editAll.waiting}
             health={view.health?.current}
             onOpen={setDrawer}
             onHealth={setHealthEdit}
@@ -238,6 +229,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         to={moveTo}
         onClose={() => setMoveTo(null)}
       />
+      {editAll.element}
       <ProjectHealthModal
         open={healthEdit !== null}
         onClose={() => setHealthEdit(null)}
@@ -370,7 +362,8 @@ function ProjectActions({
   logRefusedId,
   activity,
   onAddTask,
-  cf,
+  onEdit,
+  editWaiting,
   health,
   onOpen,
   onHealth,
@@ -381,14 +374,15 @@ function ProjectActions({
   logRefusedId?: string;
   activity: ActivityGate;
   onAddTask: () => void;
-  cf: ObjectCustomFields;
+  onEdit: () => void;
+  // The edit is open but holds its dialog for the custom-field catalog.
+  editWaiting: boolean;
   // The reading that stands, which Correct reading corrects.
   health?: ProjectHealthAssessment;
   onOpen: (drawer: ProjectDrawerKind) => void;
   onHealth: (edit: ProjectHealthAssessment | "new") => void;
 }>) {
   const t = useT();
-  const owner = useOwnerPicker(project.owner_id);
   const taskRefusedId = logRefusedId ?? activity.refusedId;
   const taskKeys = useShortcut(
     "record.addTask",
@@ -407,39 +401,9 @@ function ProjectActions({
         {t("log.addTask")}
       </Button>
       {/* Worded: a bare pencil among sentences names nothing to a reader. */}
-      <EditAction<Project>
-        labelled
-        disabledReasonId={refusedReasonId}
-        label={t("project.edit")}
-        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-        fields={[
-          ...projectFields(t, {
-            owner,
-            mode: "edit",
-          }),
-          ...cf.formFields,
-        ]}
-        record={{ ...projectEditRecord(project), ...cf.recordSlice(project) }}
-        update={async (values, _rows, opened) => {
-          return unwrap(
-            await api.PATCH("/projects/{id}", {
-              params: {
-                path: { id: project.id },
-                ...ifMatch(requireVersion(opened?.version)),
-              },
-              // Diffed against what the form opened on. No cf_ column is clearable, so a
-              // snapshot diff would send every untouched empty one as a clear and the
-              // save would be refused.
-              body: {
-                ...mapProjectUpdate(values),
-                ...cf.toPatch(values, opened ?? {}),
-              },
-            }),
-          );
-        }}
-        invalidate="projects"
-        recordKey="project"
-      />
+      <Button reasonId={refusedReasonId} onClick={onEdit} pending={editWaiting}>
+        {t("project.edit")}
+      </Button>
       <ShareAction
         recordType="project"
         recordId={project.id}

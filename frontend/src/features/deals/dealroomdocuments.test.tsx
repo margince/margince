@@ -7,6 +7,7 @@ import {
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -14,6 +15,7 @@ import "@testing-library/jest-dom/vitest";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { DealRoomConversation } from "./dealroomconversation";
 import { AddDocument } from "./dealroomdocuments";
@@ -175,4 +177,57 @@ it("marks a room entry whose file the buyer no longer gets", async () => {
   expect(
     within(live).getByRole("button", { name: "Ask about this document" }),
   ).toBeInTheDocument();
+});
+
+function stubFilesAndRefusal() {
+  const file = (id: string, title: string) => ({
+    attachment: { id, title, filename: `${id}.pdf` },
+  });
+  vi.stubGlobal("fetch", (input: Request) => {
+    const path = new URL(input.url).pathname;
+    if (
+      input.method === "POST" &&
+      path.endsWith("/deal-rooms/room-1/documents")
+    ) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            status: 409,
+            code: "deal_room_document_already_present",
+            detail:
+              "this file is already in the room; rename or regroup the existing entry instead",
+          }),
+          { status: 409, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    }
+    if (path.endsWith("/deals/deal-1/documents")) {
+      return Promise.resolve(
+        jsonResponse({
+          data: [file("a-1", "Price sheet"), file("a-2", "Order form")],
+          page: {},
+        }),
+      );
+    }
+    return Promise.resolve(jsonResponse({ data: [], page: {} }));
+  });
+}
+
+it("says once, on the file, that the file is already in the room, until another is picked", async () => {
+  const user = userEvent.setup();
+  stubFilesAndRefusal();
+  render(<AddDocument room={ROOM} refusal={undefined} />);
+  const picker = await screen.findByRole("combobox", { name: /^File/ });
+  await waitFor(() => expect(picker).toBeEnabled());
+  await pickOption(user, picker, "Price sheet");
+  await user.click(screen.getByRole("button", { name: "Add to room" }));
+
+  expect(
+    await screen.findAllByText("This file is already in the room."),
+  ).toHaveLength(1);
+  expect(picker).toHaveAttribute("aria-invalid", "true");
+  expect(screen.queryByText(/rename or regroup/)).toBeNull();
+
+  await pickOption(user, picker, "Order form");
+  expect(screen.queryByText("This file is already in the room.")).toBeNull();
 });

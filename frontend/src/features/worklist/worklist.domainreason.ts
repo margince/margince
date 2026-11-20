@@ -10,4 +10,5 @@ export const domainReasonLabels: Record<string, MessageKey> = {
   forwarded_identity: "blockedDomains.source.forwardedIdentity",
   vendor_verdict: "blockedDomains.source.vendorVerdict",
   reserved_domain: "blockedDomains.source.reservedDomain",
+  foreign_site: "blockedDomains.source.foreignSite",
 };

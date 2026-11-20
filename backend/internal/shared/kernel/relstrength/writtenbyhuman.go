@@ -73,6 +73,13 @@ func OriginIsEngagementSQL(alias string) string {
 	return alias + ".origin NOT IN (" + sqlList(systemOrigins) + ")"
 }
 
+// SendingSystemSQL is Automatic naming AutomaticSendingSystem, over the stored
+// columns of activity alias.
+func SendingSystemSQL(alias string) string {
+	return "(" + OriginIsEngagementSQL(alias) + " AND " + alias + ".kind = '" + kindEmail + "' AND " +
+		"coalesce(" + alias + ".calendar_method, '') = '' AND " + alias + ".sender_is_machine)"
+}
+
 // WrittenByHumanSQL admits an activity row a human wrote to the other side. A
 // call, meeting or chat message passes unless the product wrote it. An email
 // also needs no calendar method and a sender that is not a sending system. It

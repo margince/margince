@@ -32,14 +32,15 @@ var planCopySuffix = regexp.MustCompile(`_\d+$`)
 //
 //nolint:tagliatelle // fixed by the server's plan format
 type planNode struct {
-	NodeType     string `json:"Node Type"`
-	Strategy     string `json:"Strategy"`
-	SubplanName  string `json:"Subplan Name"`
-	RelationName string `json:"Relation Name"`
-	Alias        string `json:"Alias"`
-	IndexName    string `json:"Index Name"`
-	IndexCond    string `json:"Index Cond"`
-	Filter       string `json:"Filter"`
+	NodeType     string  `json:"Node Type"`
+	Strategy     string  `json:"Strategy"`
+	SubplanName  string  `json:"Subplan Name"`
+	RelationName string  `json:"Relation Name"`
+	Alias        string  `json:"Alias"`
+	IndexName    string  `json:"Index Name"`
+	IndexCond    string  `json:"Index Cond"`
+	PlanRows     float64 `json:"Plan Rows"`
+	Filter       string  `json:"Filter"`
 	// Filled only by EXPLAIN ANALYZE.
 	ActualRows      float64    `json:"Actual Rows"`
 	ActualLoops     float64    `json:"Actual Loops"`

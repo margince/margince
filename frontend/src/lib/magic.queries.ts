@@ -16,6 +16,22 @@ export type MagicLane = MagicLine["lane"];
 
 export { magicKey } from "./workkeys";
 
+/** Every lane, in reading order: what waits, what broke, what needs restoring, what happened. */
+export const MAGIC_LANES = [
+  "needs_you",
+  "could_not_complete",
+  "watching",
+  "done",
+] as const satisfies readonly MagicLane[];
+
+/** Whether a receipt lacks a lane this client draws: version skew, so not a quiet one. */
+export function lacksLane(receipt: MagicReceipt | undefined): boolean {
+  return (
+    receipt !== undefined &&
+    MAGIC_LANES.some((lane) => !Array.isArray(receipt[lane]))
+  );
+}
+
 // The most lines a lane's page may hold, asked for rather than left to the
 // server's default so the client knows its own bound: the receipt carries no
 // "more" flag, so a lane that FILLS its page may have more beyond it, and every
@@ -46,12 +62,31 @@ export function fillsPage(
  * `enabled` is false for a reader without `deal.read`, which the server
  * requires for the whole answer.
  */
-export function useMagic(enabled = true) {
+export function useMagic(enabled = true, retryOnMount = true) {
   return useQuery({
     ...magicOptions,
     enabled,
+    retryOnMount,
     select: (receipt) => (enabled ? receipt : undefined),
   });
+}
+
+/**
+ * Whether the receipt's last answer was a failure: failed now, or read again
+ * after failing with nothing cached, which React Query reports as pending.
+ */
+export function magicFailed(
+  query: Readonly<{
+    isError: boolean;
+    isPending: boolean;
+    isFetching: boolean;
+    errorUpdateCount: number;
+  }>,
+): boolean {
+  return (
+    query.isError ||
+    (query.isPending && query.isFetching && query.errorUpdateCount > 0)
+  );
 }
 
 /** The read useMagic makes, which Home's prefetch also starts. */

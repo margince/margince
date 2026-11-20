@@ -43,8 +43,13 @@ func discoverGateFor(p principal.Principal, alias string, arg func(any) int) str
 }
 
 // discoverReach is the discover gate past availability. taskArm is the task
-// holder's way in, which only a task can use; nil leaves it out.
+// holder's way in, which only a task can use; nil leaves it out. The chat
+// summary arm sits here so every gate that composes the reach carries it.
 func discoverReach(p principal.Principal, alias string, arg func(any) int, taskArm clauseBuilder) string {
+	return chatSummaryArm(p, alias, arg) + " AND " + linkedReach(p, alias, arg, taskArm)
+}
+
+func linkedReach(p principal.Principal, alias string, arg func(any) int, taskArm clauseBuilder) string {
 	access := internalMailAccessClause(p, alias, arg)
 	if UnboundedFor(p, linkTargetTables...) {
 		return access
