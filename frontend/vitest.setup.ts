@@ -176,6 +176,11 @@ if (typeof window !== "undefined") {
     window.HTMLElement.prototype.showPopover = () => {};
     window.HTMLElement.prototype.hidePopover = () => {};
   }
+  // jsdom's own sheet hides each [popover] the no-op above never opens, and
+  // outranks a plain author rule. base.css shows a mounted one, so this wins.
+  const popoverShown = document.createElement("style");
+  popoverShown.textContent = "[popover]{display:block !important}";
+  document.head.append(popoverShown);
 
   // The Margince Core draws its liquid on a WebGL canvas; jsdom has no GL
   // context. Returning null is the same signal a browser without WebGL gives,
