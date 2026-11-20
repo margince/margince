@@ -37,8 +37,10 @@ func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType 
 		out.Skipped = authz.OwnerCarryInactive
 		return out, nil
 	}
-	in := CreateGrantInput{RecordType: recordType, RecordID: record, SubjectType: "user", SubjectID: owner,
-		Access: GrantAccessWrite, FitToRecipient: true}
+	in := CreateGrantInput{
+		RecordType: recordType, RecordID: record, SubjectType: "user", SubjectID: owner,
+		Access: GrantAccessWrite, FitToRecipient: true,
+	}
 	access, cut, err := grantAccessFor(ctx, tx, in)
 	if err != nil {
 		return out, err

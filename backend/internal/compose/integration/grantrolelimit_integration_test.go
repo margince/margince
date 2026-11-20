@@ -36,14 +36,15 @@ func setupRoleShare(t *testing.T) roleShareEnv {
 	}
 }
 
-func (e roleShareEnv) shareContact(t *testing.T, subjectType, subject, access string) limitedGrantBody {
+// shareContact shares the contact for editing.
+func (e roleShareEnv) shareContact(t *testing.T, subjectType, subject string) limitedGrantBody {
 	t.Helper()
 	var got limitedGrantBody
 	if status := e.Call(t, "POST", "/v1/record-grants", AnyMap{
 		"record_type": "contact", "record_id": e.contactID,
-		"subject_type": subjectType, "subject_id": subject, "access": access,
+		"subject_type": subjectType, "subject_id": subject, "access": "write",
 	}, nil, &got); status != http.StatusCreated {
-		t.Fatalf("share %s with %s %s → %d, want 201", access, subjectType, subject, status)
+		t.Fatalf("share write with %s %s → %d, want 201", subjectType, subject, status)
 	}
 	return got
 }
@@ -64,7 +65,7 @@ func (e roleShareEnv) limitedShareAudits(t *testing.T, subject string) int {
 func TestAnEditShareToAColleagueWhoseRoleCannotEditIsSavedAsViewOnly(t *testing.T) {
 	e := setupRoleShare(t)
 
-	limited := e.shareContact(t, "user", e.viewer, "write")
+	limited := e.shareContact(t, "user", e.viewer)
 	if limited.Access != "read" || limited.LimitedByRole == nil || !*limited.LimitedByRole {
 		t.Fatalf("edit share to a read_only role answered %+v, want access read and limited_by_role true", limited)
 	}
@@ -72,7 +73,7 @@ func TestAnEditShareToAColleagueWhoseRoleCannotEditIsSavedAsViewOnly(t *testing.
 		t.Fatalf("%d audit rows record the cut, want 1", n)
 	}
 
-	full := e.shareContact(t, "user", e.editor, "write")
+	full := e.shareContact(t, "user", e.editor)
 	if full.Access != "write" || full.LimitedByRole != nil {
 		t.Fatalf("edit share to a rep answered %+v, want access write and no limited_by_role", full)
 	}
@@ -91,7 +92,7 @@ func TestAnEditShareToARoleThatOnlyLogsActivitiesKeepsWrite(t *testing.T) {
 	const email, password = "logger@grantrole.test", "grantrole-logger-password"
 	logger := createdID(t, e.AppEnv, "/v1/users", AnyMap{"email": email, "display_name": "Logger", "role": role.Key})
 
-	got := e.shareContact(t, "user", logger, "write")
+	got := e.shareContact(t, "user", logger)
 	if got.Access != "write" || got.LimitedByRole != nil {
 		t.Fatalf("edit share to a role that logs activities answered %+v, want access write", got)
 	}
@@ -114,7 +115,7 @@ func TestAnEditShareToATeamIsNeverLimitedByRole(t *testing.T) {
 		}
 	}
 
-	got := e.shareContact(t, "team", team, "write")
+	got := e.shareContact(t, "team", team)
 	if got.Access != "write" || got.LimitedByRole != nil {
 		t.Fatalf("edit share to a team answered %+v, want access write and no limited_by_role", got)
 	}
