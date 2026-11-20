@@ -21,6 +21,8 @@ import {
   QueryStates,
   WriteRefused,
 } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
+import { isAssignedCurrency } from "../../format/assignedcurrencies";
 import { todayIn } from "../../format/calendarday";
 import { forReader } from "../../format/collate";
 import { typedDecimalText, typedNumberFault } from "../../format/decimalinput";
@@ -29,8 +31,13 @@ import { useLocale, useT } from "../../i18n";
 import { providerName } from "../../lib/ai-provider-names";
 import { useCan, useCanUpsert } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import {
+  fieldCheckSentence,
+  refusalSentences,
+  unwrap,
+} from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { isPricedProvider } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
@@ -192,6 +199,20 @@ export function FxRatesCard() {
   );
 }
 
+type FxRateBody = components["schemas"]["SetFxRateRequest"];
+
+// The server's limits on a rate: positive, at most 10 + 10 digits.
+const RATE_DIGITS = 10;
+
+function rateFault(text: string): boolean {
+  const [whole = "", fraction = ""] = text.split(".");
+  return (
+    Number(text) <= 0 ||
+    whole.replace(/^-?0*/, "").length > RATE_DIGITS ||
+    fraction.length > RATE_DIGITS
+  );
+}
+
 function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -201,42 +222,67 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
   // The FX sheet counts its days in the installation's zone, so the form
   // opens on the day the server will read as today.
   const zone = useCompanyZone();
+  const base = useInstallationSettings().data?.base_currency;
   const [from, setFrom] = useState("");
   const [rate, setRate] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(() => todayIn(zone));
-  const [error, setError] = useState<string | null>(null);
+  const [faults, faultsRoot] = useFieldFaults();
+  const labels = {
+    from_currency: t("settings.rates.colFrom"),
+    rate: t("settings.rates.rateToBase"),
+    effective_date: t("settings.rates.colEffective"),
+  };
 
   const save = useMutation({
-    mutationFn: async (rateText: string) => {
-      unwrap(
-        await api.POST("/fx-rates", {
-          body: {
-            from_currency: from.trim().toUpperCase(),
-            rate: rateText,
-            effective_date: effectiveDate,
-          },
-        }),
-      );
+    mutationFn: async (body: FxRateBody) => {
+      unwrap(await api.POST("/fx-rates", { body }));
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["fx-rates"] });
       onClose();
     },
-    onError: (err: Error) => setError(problemMessageOf(err, t)),
+    onError: (err: Error) =>
+      faults.show(refusalSentences(err, t, labels).byField),
   });
+  const refused = refusalSentences(save.error, t, labels);
   const rateText = typedDecimalText(rate, locale);
-  const ready = from.trim() !== "" && rateText !== undefined;
+  const typedFault = typedNumberFault(rate, locale, t);
+
+  // The checks the server makes that need no database, in its own words.
+  function checked(code: string): ReadonlyMap<string, string> {
+    const required = (field: keyof typeof labels) =>
+      fieldCheckSentence("required", locale, labels[field]);
+    const found = new Map<string, string>();
+    if (code === "") found.set("from_currency", required("from_currency"));
+    else if (!isAssignedCurrency(code)) {
+      found.set("from_currency", t("settings.rates.fromNotCurrency"));
+    } else if (code === base) {
+      found.set("from_currency", t("settings.rates.fromIsBase"));
+    }
+    if (rate.trim() === "") found.set("rate", required("rate"));
+    else if (typedFault !== undefined) found.set("rate", typedFault);
+    else if (rateText === undefined || rateFault(rateText)) {
+      found.set("rate", t("settings.rates.rateNotPositive"));
+    }
+    if (effectiveDate === "") {
+      found.set("effective_date", required("effective_date"));
+    }
+    return found;
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (
-      rateText === undefined ||
-      !ready ||
-      save.isPending ||
-      refuseUnreadableField(event.currentTarget)
-    )
+    if (save.isPending || refuseUnreadableField(event.currentTarget)) return;
+    const code = from.trim().toUpperCase();
+    if (faults.show(checked(code)) || rateText === undefined) {
+      save.reset();
       return;
-    setError(null);
-    save.mutate(rateText);
+    }
+    save.mutate({
+      from_currency: code,
+      rate: rateText,
+      effective_date: effectiveDate,
+    });
   }
 
   return (
@@ -244,20 +290,34 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
       <Heading size="large" id={labelId} className="t-h2 modal-title">
         {t("settings.rates.fxModalTitle")}
       </Heading>
-      <form id={formId} className="form-stack" onSubmit={submit}>
-        <Field label={t("settings.rates.colFrom")}>
+      <form
+        id={formId}
+        ref={faultsRoot}
+        className="form-stack"
+        noValidate
+        onSubmit={submit}
+      >
+        <Field
+          label={labels.from_currency}
+          required
+          error={faults.of("from_currency")}
+        >
           {(control) => (
             <TextInput
               {...control}
               value={from}
               maxLength={3}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={(e) => {
+                setFrom(e.target.value);
+                faults.edited("from_currency");
+              }}
             />
           )}
         </Field>
         <Field
-          label={t("settings.rates.rateToBase")}
-          error={typedNumberFault(rate, locale, t)}
+          label={labels.rate}
+          required
+          error={faults.of("rate") ?? typedFault}
         >
           {(control) => (
             <TextInput
@@ -265,20 +325,33 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
               value={rate}
               inputMode="decimal"
               placeholder="0.92"
-              onChange={(e) => setRate(e.target.value)}
+              onChange={(e) => {
+                setRate(e.target.value);
+                faults.edited("rate");
+              }}
             />
           )}
         </Field>
-        <Field label={t("settings.rates.colEffective")}>
+        <Field
+          label={labels.effective_date}
+          required
+          error={faults.of("effective_date")}
+        >
           {(control) => (
             <DateInput
               {...control}
               value={isoOrBlank(effectiveDate)}
-              onChange={(e) => setEffectiveDate(e.target.value)}
+              onChange={(e) => {
+                setEffectiveDate(e.target.value);
+                faults.edited("effective_date");
+              }}
             />
           )}
         </Field>
-        <WriteRefused titleKey="settings.rates.notSaved" message={error} />
+        <WriteRefused
+          titleKey="settings.rates.notSaved"
+          message={refused.rest}
+        />
       </form>
       <div className="actions">
         <Button variant="ghost" onClick={onClose}>
@@ -288,7 +361,7 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
           type="submit"
           form={formId}
           variant="primary"
-          disabled={!ready || save.isPending}
+          pending={save.isPending}
         >
           {t("settings.rates.setRate")}
         </Button>

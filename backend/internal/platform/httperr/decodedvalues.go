@@ -18,7 +18,7 @@ import (
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func DecodedValueRefusal(into any, raw json.RawMessage, owned func(path string) bool) error {
 	if refused := datasource.RefuseDecodedValue(into, raw, owned); refused != nil {
-		return Validation(refused.Field, refused.Code, refused.Error())
+		return Validation(refused.Field, refused.Code, refused.Error()).WithParams(refused.Params)
 	}
 	return nil
 }

@@ -1,5 +1,4 @@
 import type { components } from "../../api/schema";
-import { fieldRefusalSentence } from "../../components/create.refusals";
 import { Field } from "../../design-system/atoms";
 import { Button } from "../../design-system/button";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
@@ -7,7 +6,12 @@ import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemFieldErrorsOf, problemMessageOf } from "../../lib/problem";
+import {
+  type FieldLabel,
+  faultSentenceFor,
+  problemFieldErrorsOf,
+  problemMessageOf,
+} from "../../lib/problem";
 
 type Deal = components["schemas"]["Deal"];
 type Preview = components["schemas"]["PromoteLeadPreview"];
@@ -194,11 +198,13 @@ export function dealBlock(input: {
 export function qualifyRefusals(
   error: unknown,
   t: (key: MessageKey) => string,
+  amountLabel: FieldLabel,
 ) {
   const faults = problemFieldErrorsOf(error);
   const amount = faults.find((fault) => fault.field === "amount_minor");
   return {
-    amount: amount && fieldRefusalSentence(amount, t),
+    amount:
+      amount && faultSentenceFor(amount, t, { amount_minor: amountLabel }),
     foot:
       amount && faults.length === 1 ? undefined : problemMessageOf(error, t),
   };

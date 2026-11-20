@@ -8,7 +8,13 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
-import { PageSaveBar, SavePageProvider, useSaveDraft } from "./savepage";
+import {
+  focusFirstRefused,
+  PageSaveBar,
+  SavePageProvider,
+  useFieldFaults,
+  useSaveDraft,
+} from "./savepage";
 
 afterEach(cleanup);
 
@@ -184,5 +190,73 @@ describe("PageSaveBar", () => {
 
     expect(name).not.toHaveBeenCalled();
     expect(screen.getByText(translate("en", "saveBar.invalid"))).toBeVisible();
+  });
+});
+
+describe("focusFirstRefused", () => {
+  it("focuses the first refused field inside its root and none outside it", () => {
+    render(
+      <>
+        <input aria-label="Outside" aria-invalid="true" />
+        <form aria-label="Form">
+          <input aria-label="Valid" />
+          <input aria-label="First refused" aria-invalid="true" />
+          <input aria-label="Second refused" aria-invalid="true" />
+        </form>
+      </>,
+    );
+    focusFirstRefused(screen.getByRole("form"));
+    expect(screen.getByLabelText("First refused")).toHaveFocus();
+  });
+
+  it("does nothing without a root or a refused field", () => {
+    render(<input aria-label="Valid" />);
+    focusFirstRefused(null);
+    focusFirstRefused(document);
+    expect(document.body).toHaveFocus();
+  });
+});
+
+function TwoFields() {
+  const [faults, faultsRoot] = useFieldFaults();
+  return (
+    <form
+      ref={faultsRoot}
+      onSubmit={(event) => {
+        event.preventDefault();
+        faults.show(
+          new Map([
+            ["city", "Enter a city."],
+            ["zip", "Enter a postal code."],
+          ]),
+        );
+      }}
+    >
+      {(["city", "zip"] as const).map((field) => (
+        <p key={field}>
+          <input
+            aria-label={field}
+            aria-invalid={faults.of(field) ? true : undefined}
+            onChange={() => faults.edited(field)}
+          />
+          <span>{faults.of(field)}</span>
+        </p>
+      ))}
+      <button type="submit">Save</button>
+    </form>
+  );
+}
+
+describe("useFieldFaults", () => {
+  it("shows each sentence on its field, focuses the first, and drops one when its field is edited", async () => {
+    const user = userEvent.setup();
+    render(<TwoFields />);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Enter a city.")).toBeVisible();
+    expect(screen.getByText("Enter a postal code.")).toBeVisible();
+    expect(screen.getByLabelText("city")).toHaveFocus();
+    await user.type(screen.getByLabelText("city"), "Graz");
+    expect(screen.queryByText("Enter a city.")).toBeNull();
+    expect(screen.getByText("Enter a postal code.")).toBeVisible();
   });
 });
