@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package cardphoto
 
 import (
 	"bytes"
@@ -56,7 +56,7 @@ func importCardPhotoThrough(t *testing.T, lane ai.ImageLane) *httptest.ResponseR
 	req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/contacts/card-photos", &body)
 	req.Header.Set("Content-Type", form.FormDataContentType())
 	rec := httptest.NewRecorder()
-	contacts.Handlers{}.WithCardPhotoReader(cardPhotoReader(lane)).ImportCardPhoto(rec, req)
+	contacts.Handlers{}.WithCardPhotoReader(Reader(lane)).ImportCardPhoto(rec, req)
 	return rec
 }
 

@@ -44,52 +44,32 @@ func TestSessionSlotsAreSharedAndReturned(t *testing.T) {
 	again()
 }
 
-// deferringWorker is a worker whose model call the router answered "not now",
-// returned the way the reading workers return it: through FaultContext.
+// deferringWorker returns the router's "not now" as the reading workers do.
 type deferringWorker struct{ err error }
 
 func (w deferringWorker) Work(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
 	return jobs.FaultContext(ctx, w.err)
 }
 
-// Every registered worker passes through sessionBudgetWorker, so a deferral a
-// worker hands back sleeps until the moment the router named instead of
-// spending one of the job's tries.
+// Every worker is registered through sessionBudgetWorker, so a deferral sleeps
+// until the moment the router named instead of spending one of the job's tries.
 func TestAJobToldNotNowSleepsUntilTheRouterSaysAndSpendsNoTry(t *testing.T) {
 	now := time.Date(2026, 11, 20, 9, 0, 0, 0, time.UTC)
-	cases := map[string]struct {
+	other := errors.New("the database went away")
+	for name, tc := range map[string]struct {
 		err  error
 		want time.Duration
 	}{
-		"budget used up": {
-			err:  &ai.BudgetDeferralError{Task: ai.TaskStageEvidenceExtract, NextAttemptAt: now.Add(11 * 24 * time.Hour)},
-			want: 11 * 24 * time.Hour,
-		},
-		"provider down": {
-			err:  &ai.ProviderDownError{Provider: "p", Health: model.HealthDown, RetryAfter: now.Add(90 * time.Second)},
-			want: 90 * time.Second,
-		},
-		"moment already past": {
-			err:  &ai.BudgetDeferralError{Task: ai.TaskDocumentExtract, NextAttemptAt: now.Add(-time.Minute)},
-			want: 0,
-		},
-	}
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
-			worker := sessionBudgetWorker[CloseDateSweepArgs]{work: deferringWorker{err: tc.err}, now: func() time.Time { return now }}
-			err := worker.Work(t.Context(), &river.Job[CloseDateSweepArgs]{})
-			snooze, ok := errors.AsType[*river.JobSnoozeError](err)
-			if !ok {
-				t.Fatalf("err = %v, want a snooze: a failed try is retried at once and the job is dropped after its last", err)
-			}
-			if snooze.Duration != tc.want {
-				t.Errorf("snoozed %s, want %s", snooze.Duration, tc.want)
-			}
-		})
-	}
-	other := errors.New("the database went away")
-	worker := sessionBudgetWorker[CloseDateSweepArgs]{work: deferringWorker{err: other}, now: func() time.Time { return now }}
-	if err := worker.Work(t.Context(), &river.Job[CloseDateSweepArgs]{}); !errors.Is(err, other) {
-		t.Errorf("err = %v, want any other fault returned for River to retry", err)
+		"budget used up": {&ai.BudgetDeferralError{NextAttemptAt: now.Add(264 * time.Hour)}, 264 * time.Hour},
+		"provider down":  {&ai.ProviderDownError{Health: model.HealthDown, RetryAfter: now.Add(90 * time.Second)}, 90 * time.Second},
+		"moment past":    {&ai.BudgetDeferralError{NextAttemptAt: now.Add(-time.Minute)}, 0},
+		"other fault":    {other, -1},
+	} {
+		worker := sessionBudgetWorker[CloseDateSweepArgs]{work: deferringWorker{err: tc.err}, now: func() time.Time { return now }}
+		err := worker.Work(t.Context(), &river.Job[CloseDateSweepArgs]{})
+		snooze, snoozed := errors.AsType[*river.JobSnoozeError](err)
+		if tc.want < 0 && (snoozed || !errors.Is(err, other)) || tc.want >= 0 && (!snoozed || snooze.Duration != tc.want) {
+			t.Errorf("%s: err = %v, want a snooze of %s (negative: the fault itself, for River to retry)", name, err, tc.want)
+		}
 	}
 }

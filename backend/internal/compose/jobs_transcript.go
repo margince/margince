@@ -123,8 +123,6 @@ func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[Trans
 	if _, snoozed := errors.AsType[*river.JobSnoozeError](err); err != nil && !snoozed && lastTry(job.JobRow) {
 		// The reading was handed back for a try that will not come, and a
 		// queued reading with no job is one the door joins forever.
-		w.log.WarnContext(wsCtx, "transcript reading failed on its last try",
-			"transcript_read_id", args.TranscriptReadID, "error", err)
 		err = errors.Join(err, w.closeUnread(wsCtx, args, activities.TranscriptFailureUnanswered))
 	}
 	return jobs.FaultContext(ctx, err)

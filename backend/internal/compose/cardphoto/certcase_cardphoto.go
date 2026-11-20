@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package cardphoto
 
 // The certification case for document_extract/cards.
 //
@@ -34,17 +34,18 @@ type cardPhotoFixture struct {
 	Filename string `json:"filename"`
 }
 
-type cardPhotoCases struct{}
+// CertCases is the certification of the `cards` site of document_extract.
+type CertCases struct{}
 
-func (cardPhotoCases) Site() aitasks.Site {
+func (CertCases) Site() aitasks.Site {
 	return aitasks.Site{Task: ai.TaskDocumentExtract, Variant: laneCards, Kind: ai.SiteKindOneShot}
 }
 
 // CertifiedScope is the site's own kind: a photo is read in one call.
-func (cardPhotoCases) CertifiedScope() string { return aitasks.ScopeFullInvocation }
+func (CertCases) CertifiedScope() string { return aitasks.ScopeFullInvocation }
 
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
-func (cardPhotoCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
+func (CertCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
 	var f cardPhotoFixture
 	if err := json.Unmarshal(fixture, &f); err != nil {
 		return nil, fmt.Errorf("document_extract/cards: the fixture is not the shape this site takes: %w", err)

@@ -31,10 +31,10 @@ const composeRootDir = "internal/compose"
 // landed, so branches already open could still merge. Lower one whenever a
 // change moves code out. Raising one needs a reason in the pull request.
 const (
-	composeRootProductionFiles = 1376
+	composeRootProductionFiles = 1373
 	composeRootTestFiles       = 1901
-	composeRootProductionLines = 229_178
-	composeRootTestLines       = 356_898
+	composeRootProductionLines = 228_911
+	composeRootTestLines       = 356_895
 )
 
 // A read under these floors stopped early or read the wrong place, and would

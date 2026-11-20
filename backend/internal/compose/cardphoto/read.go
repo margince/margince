@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
-
-// Reading a photo of business cards into contact cards.
+// Package cardphoto reads a photo of business cards into contact cards.
 //
 // This file owns the question put to the model and what may come back.
 // ai.ReadImage owns the shared image steps. ai.PrepareImage, which document
 // extraction uses too, bounds the bytes and checks carriage. What leaves here are cards
 // marked ModelRead. The contacts module never writes such a card; it reports
 // it for approval, so a misread name needs a human before it is a record.
+package cardphoto
 
 import (
 	"context"
@@ -113,7 +112,7 @@ func cardValues(card cardPhotoCard) []string {
 
 // errTooManyCards closes a reading whose photo shows more cards than one photo
 // may yield. The list is refused whole: a cut list reads as the full photo.
-var errTooManyCards = errors.New("compose: the photo shows more cards than one photo may yield")
+var errTooManyCards = errors.New("cardphoto: the photo shows more cards than one photo may yield")
 
 // cardPhotoReading is the question put to the model for one photo, a pure
 // function so the certification case issues the shipping request.
@@ -181,9 +180,9 @@ func cardChannels(values []string, keep func(string) bool) []contacts.VCardChann
 	return out
 }
 
-// cardPhotoReader adapts readCardPhoto to the contacts module's injected port,
-// turning each outcome into the refusal a client can act on.
-func cardPhotoReader(lane ai.ImageLane) contacts.CardPhotoReader {
+// Reader adapts readCardPhoto to the contacts module's injected port, turning
+// each outcome into the refusal a client can act on.
+func Reader(lane ai.ImageLane) contacts.CardPhotoReader {
 	return func(ctx context.Context, photo []byte) ([]contacts.VCardEntry, error) {
 		mime, ok := ai.SniffImage(photo)
 		if ai.IsHEIFType(mime) {

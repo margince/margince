@@ -5,15 +5,13 @@
 
 package compose
 
-// What River sees when a transcript reading's model call fails, try by try:
-// the reading is handed back for the next try, closed with a reason on the
-// last, and put to sleep, not failed, when the router says "not now".
+// A transcript reading's failed model call, try by try: handed back for the
+// next try, closed with a reason on the last, asleep when told "not now".
 
 import (
 	"context"
 	"errors"
 	"log/slog"
-	"os"
 	"testing"
 	"time"
 
@@ -22,27 +20,29 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// workTranscriptTry runs the production worker once over the reading, as try
-// attempt of max.
-func (e *transcriptEnv) workTranscriptTry(t *testing.T, readID ids.UUID, brain completer, attempt, maxAttempts int) error {
+// workTranscriptTry runs the production worker once over a reading, as try
+// attempt of oneOffJobMaxAttempts, and returns the reading after and its error.
+func (e *transcriptEnv) workTranscriptTry(t *testing.T, readID ids.UUID, brain completer, attempt int) (activities.TranscriptRead, error) {
 	t.Helper()
-	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	now := func() time.Time { return clocktest.Now(t) }
 	worker := &transcriptProposeWorker{
-		language:   installationLanguage(e.Pool),
-		activities: e.Activities,
-		proposer:   NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet),
-		log:        quiet,
+		language: installationLanguage(e.Pool), activities: e.Activities, log: slog.New(slog.DiscardHandler),
+		proposer: NewTranscriptProposer(e.Pool, brain, e.svc, now, slog.New(slog.DiscardHandler)),
 	}
-	return worker.Work(context.Background(), &river.Job[TranscriptProposeArgs]{
-		JobRow: &rivertype.JobRow{Attempt: attempt, MaxAttempts: maxAttempts},
-		Args: TranscriptProposeArgs{
-			Workspace: e.WS, ActivityID: e.activity.UUID, TranscriptReadID: readID,
-			RequestedBy: "human:" + e.Rep1.String(),
-		},
+	err := worker.Work(context.Background(), &river.Job[TranscriptProposeArgs]{
+		JobRow: &rivertype.JobRow{Attempt: attempt, MaxAttempts: oneOffJobMaxAttempts},
+		Args: TranscriptProposeArgs{Workspace: e.WS, ActivityID: e.activity.UUID, TranscriptReadID: readID,
+			RequestedBy: "human:" + e.Rep1.String()},
 	})
+	read, readErr := e.Activities.GetTranscriptRead(e.ctx, e.activity, readID)
+	if readErr != nil {
+		t.Fatalf("reading back the run record: %v", readErr)
+	}
+	return read, err
 }
 
 func (e *transcriptEnv) queueReading(t *testing.T) ids.UUID {
@@ -54,65 +54,39 @@ func (e *transcriptEnv) queueReading(t *testing.T) ids.UUID {
 	return started.ID
 }
 
-func (e *transcriptEnv) readingNow(t *testing.T, readID ids.UUID) activities.TranscriptRead {
-	t.Helper()
-	read, err := e.Activities.GetTranscriptRead(e.ctx, e.activity, readID)
-	if err != nil {
-		t.Fatalf("reading back the run record: %v", err)
-	}
-	return read
-}
-
-// One failed model call is a try River repeats a second later. The repeat must
-// find the reading it can claim, or it takes the reading for somebody else's,
-// ends as success, and the rep watches "reading…" with no job left behind it.
+// River repeats a failed try a second later, inside the claim's lease. The
+// repeat must find a reading it can claim, or it takes it for somebody else's,
+// ends as success, and the rep watches "reading…" with no job behind it.
 func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) {
 	e := setupTranscript(t)
 	readID := e.queueReading(t)
-
-	if err := e.workTranscriptTry(t, readID, cannedBrain{err: ai.ErrAllTiersFailed}, 1, oneOffJobMaxAttempts); err == nil {
-		t.Fatal("a failed model call is a fault for River to retry, got nil")
+	read, err := e.workTranscriptTry(t, readID, cannedBrain{err: ai.ErrAllTiersFailed}, 1)
+	if err == nil || read.Status != activities.TranscriptReadQueued {
+		t.Fatalf("failed try: err = %v, reading %q; want the fault for River and the reading handed back as queued", err, read.Status)
 	}
-	if got := e.readingNow(t, readID).Status; got != activities.TranscriptReadQueued {
-		t.Fatalf("after the failed try the reading is %q, want it handed back as queued", got)
-	}
-
-	if err := e.workTranscriptTry(t, readID, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)}, 2, oneOffJobMaxAttempts); err != nil {
-		t.Fatalf("the second try: %v", err)
-	}
-	if got := e.readingNow(t, readID).Status; got != activities.TranscriptReadDone {
-		t.Errorf("after the second try the reading is %q, want done", got)
+	if read, err = e.workTranscriptTry(t, readID, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)}, 2); err != nil || read.Status != activities.TranscriptReadDone {
+		t.Errorf("second try: err = %v, reading %q; want done", err, read.Status)
 	}
 }
 
 // The last try leaves no job to hand the reading back to, so it closes the
-// reading as failed with a sentence, and the rep can press Read again.
+// reading with a sentence, and the rep can press Read again.
 func TestATranscriptReadingWhoseLastTryFailedSaysSo(t *testing.T) {
 	e := setupTranscript(t)
-	readID := e.queueReading(t)
-
-	err := e.workTranscriptTry(t, readID, cannedBrain{err: ai.ErrAllTiersFailed}, oneOffJobMaxAttempts, oneOffJobMaxAttempts)
-	if err == nil {
-		t.Fatal("the last failed try still reports its fault on the job, got nil")
-	}
-	read := e.readingNow(t, readID)
-	if read.Status != activities.TranscriptReadFailed || read.StatusDetail == nil || *read.StatusDetail == "" {
-		t.Errorf("reading = %q with detail %v, want failed with a sentence the rep can act on", read.Status, read.StatusDetail)
+	read, err := e.workTranscriptTry(t, e.queueReading(t), cannedBrain{err: ai.ErrAllTiersFailed}, oneOffJobMaxAttempts)
+	if err == nil || read.Status != activities.TranscriptReadFailed || read.StatusDetail == nil || *read.StatusDetail == "" {
+		t.Errorf("err = %v, reading %q with detail %v; want the fault on the job and the reading failed with a sentence",
+			err, read.Status, read.StatusDetail)
 	}
 }
 
-// The budget stop is not a failed try: the job sleeps until the next budget
-// window, even on its last try, and the reading waits queued for it.
+// The budget stop is not a failed try: even on its last try the job sleeps
+// until the next budget window, and the reading waits queued for it.
 func TestATranscriptReadingToldNotNowSleepsInsteadOfFailing(t *testing.T) {
 	e := setupTranscript(t)
-	readID := e.queueReading(t)
-	deferral := &ai.BudgetDeferralError{Task: ai.TaskTranscriptPropose, NextAttemptAt: time.Now().Add(10 * 24 * time.Hour)}
-
-	err := e.workTranscriptTry(t, readID, cannedBrain{err: deferral}, oneOffJobMaxAttempts, oneOffJobMaxAttempts)
-	if _, snoozed := errors.AsType[*river.JobSnoozeError](err); !snoozed {
-		t.Fatalf("err = %v, want a snooze: a deferral spends no try", err)
-	}
-	if got := e.readingNow(t, readID).Status; got != activities.TranscriptReadQueued {
-		t.Errorf("the deferred reading is %q, want queued for the job that wakes", got)
+	deferral := &ai.BudgetDeferralError{Task: ai.TaskTranscriptPropose, NextAttemptAt: clocktest.Now(t).Add(240 * time.Hour)}
+	read, err := e.workTranscriptTry(t, e.queueReading(t), cannedBrain{err: deferral}, oneOffJobMaxAttempts)
+	if _, snoozed := errors.AsType[*river.JobSnoozeError](err); !snoozed || read.Status != activities.TranscriptReadQueued {
+		t.Errorf("err = %v, reading %q; want a snooze, which spends no try, and the reading queued", err, read.Status)
 	}
 }
