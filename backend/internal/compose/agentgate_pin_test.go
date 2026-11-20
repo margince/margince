@@ -277,54 +277,30 @@ func TestEveryConfirmFirstTargetTypeIsDecidable(t *testing.T) {
 }
 
 // The approvals inbox and the webhook fan-out each decide, from the staged
-// target's type, whether an approval may be shown at all — and BOTH must have a
-// rule for a type or NEITHER may. A type only the inbox classifies is an
-// approval.requested silently dropped, so nobody is told authority is waiting; a
-// type only the fan-out classifies is a staged row the inbox strands, which
-// nothing then clears.
+// target's type, whether an approval may be shown. Both must classify a type,
+// or neither may. A type only the inbox classifies drops approval.requested, so
+// nobody hears that authority is waiting. A type only the fan-out classifies
+// leaves a staged row the inbox strands. Each module is complete on its own
+// terms, so only this layer, which imports both, can see them disagree.
 //
-// Two hand-written classifications in two modules that must agree is the shape
-// that drifts: each is complete on its own terms, so neither module's own tests
-// can see the disagreement. The assertion belongs in the composition layer
-// because a module never imports a sibling and this layer imports both.
+// The subjects are the union of three sources, because each misses part of the
+// invariant:
 //
-// THE SUBJECT SET IS THE UNION OF THREE SOURCES, and each is there because the
-// others cannot see part of the invariant:
+//   - every record type in the generated policy table, so a type the contract
+//     adds is covered and the gate cannot pass on two empty lists;
+//   - every type the inbox classifies, which covers targets staged by a server
+//     flow that no agent policy names (an effective-dated rate sheet);
+//   - every type the fan-out classifies, the mirror direction.
 //
-//   - every record type in the generated policy table — so a type the CONTRACT
-//     adds is covered without anybody remembering to extend a list, and so the
-//     gate cannot pass vacuously if both enumerators below went empty;
-//   - every type the approvals inbox classifies — a target staged by a
-//     server-side proposal flow rather than by an agent's call (an effective-dated
-//     rate sheet) appears in NO agent policy, so the policy table alone reads
-//     green over it;
-//   - every type the fan-out classifies — the mirror direction, a type the
-//     fan-out delivers on and the inbox strands.
+// Derived here: both surfaces classify a type or neither does, and a classified
+// type is an RBAC object a role document may name.
 //
-// A gate whose subject set is narrower than the invariant it claims reads the
-// wrong tree, which is quieter than reading it wrongly.
-//
-// WHAT IS DERIVED HERE, AND WHAT IS NOT. Two dimensions are derived from the
-// union above: that both surfaces classify a type or neither does, and that a
-// classified type is an RBAC object a role document may name — the second because
-// BOTH surfaces gate a classified target on read of that type, so a type outside
-// identity's vocabulary is a floor no principal can pass and a disclosure rule
-// that silently means "never".
-//
-// What this layer canNOT derive is the CONTENT of each surface's floor. Both
-// probes are package-internal on purpose (a module does not export its
-// authorization internals so a test can drive them), so "do both actually require
-// object-read for every type they classify" is not observable from here — which is
-// exactly how the two agreed on the vocabulary while disagreeing on the floor.
-// That half is gated inside each module, over each module's own classification
-// table: the object-read floor by
+// Not derivable here: the content of each surface's read floor, because both
+// checks are package-internal. Each module gates that over its own table:
 // approvals.TestEveryClassifiedTargetTypeRequiresReadOnItsOwnType and
-// webhooks.TestEveryClassifiedApprovalTargetRidesTheObjectReadFloor, and the one
-// classification that floor is NOT enough for — a staged create against a
-// personal table, bounded by the member it was staged for — by each module's
-// ...IsDecidableByItsStagerAlone / ...IsAnnouncedToItsStagerAlone twin. Those
-// module-internal gates and this one are the whole invariant; none is complete
-// alone.
+// webhooks.TestEveryClassifiedApprovalTargetRidesTheObjectReadFloor, plus each
+// module's ...IsDecidableByItsStagerAlone / ...IsAnnouncedToItsStagerAlone twin
+// for staged creates against a personal table. Together they are the invariant.
 func TestTheInboxAndTheFanOutClassifyEveryTargetTypeAlike(t *testing.T) {
 	subjects := map[string]bool{}
 	for _, pol := range agentPolicies {
