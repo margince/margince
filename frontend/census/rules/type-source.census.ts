@@ -97,6 +97,8 @@ function cssDeclarationHolds(
 ): boolean {
   if (value === INHERIT) return true;
   if (property === "font") return TYPE_TOKEN.test(value);
+  // A face's descriptor names the weight its file draws; it dresses nothing.
+  if (property === "font-weight" && selector === "@font-face") return true;
   if (property === "font-weight") return WEIGHT_TOKEN.test(value);
   // These three carry figure shapes and ligatures too; only capitals count.
   if (property === "font-variant-caps") return value === "normal";

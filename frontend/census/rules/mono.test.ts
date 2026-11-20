@@ -36,6 +36,18 @@ describe("mono is for code", () => {
     expect(refused(":root { --code-face: var(--fontFamilyMono); }")).toBe(true);
     expect(refused(':root { --fontFamilyMono: "Geist Mono"; }')).toBe(true);
     expect(refused(".t-mono { color: red; }")).toBe(true);
+    // A face declared beside or inside a rule does not open that rule to mono.
+    expect(
+      refused(
+        '@font-face { font-family: "Geist Mono"; } .a { font-family: "Geist Mono"; }',
+      ),
+    ).toBe(true);
+    expect(refused('@font-face { font: 12px "Geist Mono"; }')).toBe(true);
+    expect(
+      refused(
+        '.a { @font-face { font-family: "Geist Mono"; } font-family: monospace; }',
+      ),
+    ).toBe(true);
   });
 
   it("allows mono on code, pre, samp and .code-block, and on the token", () => {
@@ -64,6 +76,9 @@ describe("mono is for code", () => {
         ':root { --fontFamilyMono: "Geist Mono", ui-monospace, monospace; }',
         "src/design-system/tokens.css",
       ),
+    ).toEqual([]);
+    expect(
+      allowed('@font-face { font-family: "Geist Mono"; src: url(a.woff2); }'),
     ).toEqual([]);
     // A comment discussing the rule is not breaking it.
     expect(

@@ -14,7 +14,9 @@ import {
 } from "./scripts/vite-entry-chunks.ts";
 import { buildRevision, serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
+import { precompress } from "./scripts/vite-precompress.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
+import { startupStyles } from "./scripts/vite-startup-styles.ts";
 import {
   CostSequencer,
   compilerTests,
@@ -154,6 +156,12 @@ export default defineConfig({
   // name — so both views would be permanently unadvertised in every dev stack.
   plugins: [
     preloadEntries([...entries.startup, ...entries.analyticsPreparation]),
+    // The faces both sign-in and Home draw: body and labels in Geist, headings in Outfit.
+    startupStyles(entries.startup, [
+      "geist-latin-400-normal.woff2",
+      "geist-latin-500-normal.woff2",
+      "outfit-latin-700-normal.woff2",
+    ]),
     bootstrap.plugin,
     analyticsPreparation.plugin,
     startup.plugin,
@@ -168,6 +176,7 @@ export default defineConfig({
     serveMcpApps(),
     thirdPartyNotices(),
     pwa({ release }),
+    precompress(),
   ],
   // The release this bundle was built from, compiled IN.
   //

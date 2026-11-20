@@ -37,16 +37,29 @@
       content="Margince — The sovereign AI business platform for the Mittelstand."
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <!-- The page ground before the app's own CSS and theme have loaded, so the
-      first paint is not white in dark mode. It steps aside once the app sets
-      data-theme. The values are --bgPage, and prepaint.test.ts holds them. -->
+    <!-- A stored Light or Dark choice, set before the first paint. nginx.conf
+      admits this script by its sha256; prepaint.test.ts holds both. -->
+    <script>
+      try {
+        const choice = localStorage.getItem("margince.theme");
+        if (choice === "light" || choice === "dark") {
+          document.documentElement.dataset.theme = choice;
+        }
+      } catch {}
+    </script>
+    <!-- The page ground until app.css defines --bgPage, so the first paint is
+      already the theme's. prepaint.test.ts holds the values to tokens.css. -->
     <style>
-      html:not([data-theme]) {
-        background: #eff6f3;
+      html {
+        background: var(--bgPage, #eff6f3);
+      }
+      html[data-theme="dark"] {
+        background: var(--bgPage, #0c1311);
+        color-scheme: dark;
       }
       @media (prefers-color-scheme: dark) {
         html:not([data-theme]) {
-          background: #0c1311;
+          background: var(--bgPage, #0c1311);
           color-scheme: dark;
         }
       }
