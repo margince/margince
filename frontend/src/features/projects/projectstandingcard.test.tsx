@@ -81,6 +81,18 @@ describe("a health reading a colleague recorded", () => {
   });
 });
 
+describe("the dates on the timeline", () => {
+  it("name the year of a day outside the current one", () => {
+    const view = deliveringProject360();
+    standing({
+      ...view,
+      project: { ...view.project, target_end_date: "2025-11-30" },
+    });
+    expect(screen.getAllByText(/30 Nov 2025/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/30 Nov(?! \d{4})/)).toHaveLength(0);
+  });
+});
+
 describe("the project's phase ladder", () => {
   it("writes each rung's days and a dash for a rung never reached", () => {
     render(

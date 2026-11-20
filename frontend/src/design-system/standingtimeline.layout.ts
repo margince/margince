@@ -3,6 +3,8 @@
 
 const DAY_MS = 86_400_000;
 const WEEKLY_SPAN_MS = 42 * DAY_MS;
+// Past two years a line per month is too dense to name; the axis counts years.
+const YEARLY_SPAN_MS = 2 * 366 * DAY_MS;
 
 /** Past this share of the axis a label hangs to the left of its dot, so the
  *  last event's words stay on the canvas. */
@@ -137,13 +139,23 @@ export function pct(at: number, range: TimelineRange): number {
 }
 
 /**
- * The grid lines: every month start inside the range, every other one past
- * seven months, or every seventh day on a range of weeks.
+ * The grid lines: every month start inside the range, and every other one past
+ * seven months. Past two years, every year start; on a range of weeks, every
+ * seventh day.
  */
 export function ticksOf(range: TimelineRange): TimelineTick[] {
   const ticks: TimelineTick[] = [];
   if (isWeekly(range)) {
     for (let at = range.start; at <= range.end; at += 7 * DAY_MS) {
+      ticks.push({ at, pct: pct(at, range) });
+    }
+    return ticks;
+  }
+  if (isYearly(range)) {
+    const year = new Date(range.start).getUTCFullYear();
+    const first = Date.UTC(year, 0, 1) < range.start ? year + 1 : year;
+    for (let year = first; Date.UTC(year, 0, 1) <= range.end; year++) {
+      const at = Date.UTC(year, 0, 1);
       ticks.push({ at, pct: pct(at, range) });
     }
     return ticks;
@@ -190,6 +202,11 @@ export function tickLabelsShown(
 /** Whether the axis counts weeks rather than months. */
 export function isWeekly(range: TimelineRange): boolean {
   return range.end - range.start <= WEEKLY_SPAN_MS;
+}
+
+/** Whether the axis counts years rather than months. */
+export function isYearly(range: TimelineRange): boolean {
+  return range.end - range.start > YEARLY_SPAN_MS;
 }
 
 /** Which events a reader most needs named, most first. */

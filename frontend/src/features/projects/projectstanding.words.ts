@@ -5,10 +5,7 @@ import type {
   TimelineGap,
 } from "../../design-system/standingtimeline";
 import { formatMoney } from "../../format/format";
-import {
-  formatDayMonth,
-  formatDayMonthNearYear,
-} from "../../format/format.dates";
+import { formatDayMonthNearYear } from "../../format/format.dates";
 import type { Translator, Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
@@ -37,11 +34,7 @@ const STATE_WORD: Readonly<Record<ProjectHealthState, MessageKey>> = {
   off_track: "projectHealth.state.offTrack",
 };
 
-function day(iso: string, ctx: Ctx): string {
-  return formatDayMonth(iso, ctx.locale, ctx.zone);
-}
-
-// A verdict's reason may name a day in another year, so it says the year then.
+// A day in another year than the record's today says its year.
 function dayNearYear(iso: string, view: Project360, ctx: Ctx): string {
   return formatDayMonthNearYear(
     iso,
@@ -227,7 +220,7 @@ function timeDim(view: Project360, ctx: Ctx): StandingDim {
       value: ctx.t("project.standing.day", { day: String(used.day) }),
       sub: ctx.t("project.standing.ofDays", {
         total: String(used.total),
-        date: day(used.endsOn, ctx),
+        date: dayNearYear(used.endsOn, view, ctx),
       }),
       tone: used.tone,
     };
@@ -238,7 +231,7 @@ function timeDim(view: Project360, ctx: Ctx): StandingDim {
       label,
       value: ctx.t("project.standing.notStarted"),
       sub: ctx.t("project.standing.startsOn", {
-        date: day(used.startsOn, ctx),
+        date: dayNearYear(used.startsOn, view, ctx),
       }),
       tone: "neutral",
     };
@@ -308,8 +301,8 @@ function momentTitle(moment: ProjectMoment, ctx: Ctx): string {
   }
 }
 
-function momentSub(moment: ProjectMoment, ctx: Ctx): string {
-  const date = day(moment.at, ctx);
+function momentSub(moment: ProjectMoment, view: Project360, ctx: Ctx): string {
+  const date = dayNearYear(moment.at, view, ctx);
   switch (moment.what) {
     case "opened":
       return `${date} · ${phaseMoverSentence(moment.by, true, ctx.t)}`;
@@ -336,7 +329,7 @@ export function projectEvents(view: Project360, ctx: Ctx): TimelineEvent[] {
     at: moment.at,
     kind: moment.kind,
     title: momentTitle(moment, ctx),
-    sub: momentSub(moment, ctx),
+    sub: momentSub(moment, view, ctx),
     outcome: moment.what === "won" ? "won" : undefined,
     // The newest update is a filed activity, so its mark is not drawn twice.
     activityIds:

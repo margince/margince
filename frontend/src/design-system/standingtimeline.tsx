@@ -26,6 +26,7 @@ import {
   groupMarks,
   instant,
   isWeekly,
+  isYearly,
   LABEL_MAX_PX,
   type LabelPlace,
   placeLabels,
@@ -350,18 +351,40 @@ function useWidth(
   return width;
 }
 
+// A grid line's words. On a span across New Year, the first month line and
+// each one that opens a year name the year. So the months read in order.
+function tickText(
+  range: TimelineAxis["range"],
+  at: number,
+  before: number | undefined,
+  locale: Locale,
+): string {
+  const day = new Date(at);
+  if (isWeekly(range)) {
+    return formatDayMonth(day.toISOString(), locale, UTC_ZONE);
+  }
+  if (isYearly(range)) {
+    return String(day.getUTCFullYear());
+  }
+  const year = day.getUTCFullYear();
+  const newYear =
+    before === undefined
+      ? new Date(range.end).getUTCFullYear() !== year
+      : new Date(before).getUTCFullYear() !== year;
+  return newYear
+    ? monthAndYear(day, locale, UTC_ZONE)
+    : monthName(day.getUTCMonth() + 1, locale);
+}
+
 function Ticks({
   axis,
   locale,
   canvasPx,
 }: Readonly<{ axis: TimelineAxis; locale: Locale; canvasPx: number }>) {
-  const weekly = isWeekly(axis.range);
-  const ticks = ticksOf(axis.range).map((tick) => ({
+  const ticks = ticksOf(axis.range).map((tick, index, all) => ({
     ...tick,
     pct: axisPct(tick.at, axis),
-    text: weekly
-      ? formatDayMonth(new Date(tick.at).toISOString(), locale, UTC_ZONE)
-      : monthName(new Date(tick.at).getUTCMonth() + 1, locale),
+    text: tickText(axis.range, tick.at, all[index - 1]?.at, locale),
   }));
   const shown = tickLabelsShown(
     ticks.map((tick) => ({ pct: tick.pct, chars: tick.text.length })),

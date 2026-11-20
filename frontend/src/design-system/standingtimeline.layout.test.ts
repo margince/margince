@@ -10,6 +10,7 @@ import {
   groupMarks,
   instant,
   isWeekly,
+  isYearly,
   LABEL_MAX_PX,
   LABEL_ROWS,
   type LabelBox,
@@ -83,6 +84,24 @@ describe("the grid lines", () => {
     expect(ticks.map((tick) => new Date(tick.at).getUTCMonth() + 1)).toEqual([
       3, 5, 7, 9, 11,
     ]);
+  });
+
+  it("mark each new year on a span of several years", () => {
+    const range = rangeOf([day("2020-11-15"), day("2026-11-16")]);
+    expect(isYearly(range)).toBe(true);
+    expect(
+      ticksOf(range).map((tick) => new Date(tick.at).toISOString()),
+    ).toEqual(
+      [2021, 2022, 2023, 2024, 2025, 2026].map(
+        (year) => `${year}-01-01T00:00:00.000Z`,
+      ),
+    );
+  });
+
+  it("keep counting months up to two years", () => {
+    expect(isYearly(rangeOf([day("2025-01-01"), day("2026-12-31")]))).toBe(
+      false,
+    );
   });
 
   it("mark each week on a span of weeks", () => {

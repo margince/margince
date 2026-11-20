@@ -296,6 +296,43 @@ describe("a date far ahead", () => {
   });
 });
 
+describe("an axis over several years", () => {
+  it("names the years on its grid lines, not the months", () => {
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2026-11-16T09:00:00Z"
+        record={UTC_ZONE}
+        events={[
+          { key: "a", at: "2020-11-15", title: "Target end", kind: "end" },
+          { key: "z", at: "2026-11-16", title: "Opened", kind: "done" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("2021")).toBeInTheDocument();
+    expect(screen.queryByText("January")).toBeNull();
+  });
+
+  it("names the year on the first month line and on each that opens a year", () => {
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2027-02-10T09:00:00Z"
+        record={UTC_ZONE}
+        events={[
+          { key: "a", at: "2026-10-03", title: "Kickoff", kind: "done" },
+          { key: "z", at: "2027-02-10", title: "Review", kind: "last" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("February 2026")).toBeInTheDocument();
+    expect(screen.getByText("February 2027")).toBeInTheDocument();
+    expect(screen.getByText("October")).toBeInTheDocument();
+  });
+});
+
 describe("the zoom", () => {
   // A row the record's list loaded, mark or not; only its date is read.
   const row = (at: string) => ({ occurred_at: `${at}T09:00:00Z` });
