@@ -27,12 +27,17 @@ const DefaultUnusedDynamicClientCap = 1000
 // tool that comes back later registers again.
 const DefaultUnusedDynamicClientRetention = 24 * time.Hour
 
-// unusedSelfMadeClient is the predicate on an oauth_client aliased c: it made
-// itself and no consent ever made a grant through it. A grant pins its client
-// (the foreign key restricts a delete), so a row this matches has nothing that
-// could still point at it.
-const unusedSelfMadeClient = `c.created_via IN ('dcr', 'cimd')
+// unusedSelfMadeClient is the predicate on an oauth_client aliased c. It made
+// itself, no consent ever made a grant through it, and no admin disabled it. A
+// disabled document client is the ban on its URL. Deleting it would let the
+// next sign-in fetch the document again and bring the client back live.
+const unusedSelfMadeClient = `c.created_via IN ('dcr', 'cimd') AND c.disabled_at IS NULL
 	AND NOT EXISTS (SELECT 1 FROM oauth_grant g WHERE g.client_id = c.client_id)`
+
+// selfMadeClientSignInWindow is how long a new client is left alone to finish
+// its first sign-in. Its grant appears only at the token exchange, so a
+// younger client may be mid-consent; evicting it would fail that sign-in.
+const selfMadeClientSignInWindow = time.Hour
 
 // unusedSelfMadeClientLock serialises the count and the insert of a self-made
 // client, so two registrations racing at the cap cannot both pass it.
@@ -57,8 +62,9 @@ func (h Handlers) unusedDynamicClientLimit() int {
 }
 
 // makeRoomForSelfMadeClient admits one more self-made client under the cap.
-// At the cap it deletes the oldest never-used ones instead of refusing. A real
-// tool can then always register, and the table still holds at most the cap.
+// At the cap it deletes the oldest never-used ones past the sign-in window
+// instead of refusing, so a real tool can always register. When none is old
+// enough it admits anyway, and later registrations and the sweep trim back.
 // A client a consent holds locked is skipped, so the consent wins.
 func makeRoomForSelfMadeClient(ctx context.Context, tx pgx.Tx, limit int) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, unusedSelfMadeClientLock); err != nil {
@@ -72,25 +78,22 @@ func makeRoomForSelfMadeClient(ctx context.Context, tx pgx.Tx, limit int) error 
 	if unused < limit {
 		return nil
 	}
-	_, err := deleteUnusedSelfMadeClients(ctx, tx, unused-limit+1, nil)
+	_, err := deleteUnusedSelfMadeClients(ctx, tx, unused-limit+1, selfMadeClientSignInWindow)
 	return err
 }
 
 // deleteUnusedSelfMadeClients deletes up to limit never-used self-made clients,
-// oldest first; with olderThan set, only those registered longer ago. A row a
+// oldest first, registered more than olderThan ago. A row a
 // consent has locked is skipped, and the grant check runs again under the row
 // lock. A consent landing at the same moment keeps its client, and the rest
 // still go.
-func deleteUnusedSelfMadeClients(ctx context.Context, tx pgx.Tx, limit int, olderThan *time.Duration) (int, error) {
-	args := pgx.NamedArgs{"limit": limit, "older_secs": nil}
-	if olderThan != nil {
-		args["older_secs"] = olderThan.Seconds()
-	}
+func deleteUnusedSelfMadeClients(ctx context.Context, tx pgx.Tx, limit int, olderThan time.Duration) (int, error) {
+	args := pgx.NamedArgs{"limit": limit, "older_secs": olderThan.Seconds()}
 	tag, err := tx.Exec(ctx, `
 		WITH picked AS MATERIALIZED (
 		       SELECT c.id FROM oauth_client c
 		        WHERE `+unusedSelfMadeClient+`
-		          AND (@older_secs::float8 IS NULL OR c.created_at < now() - make_interval(secs => @older_secs::float8))
+		          AND c.created_at < now() - make_interval(secs => @older_secs::float8)
 		        ORDER BY c.created_at, c.id LIMIT @limit
 		          FOR UPDATE SKIP LOCKED)
 		DELETE FROM oauth_client WHERE id IN (SELECT id FROM picked)
@@ -127,7 +130,7 @@ func (s *Service) PurgeUnusedDynamicClients(ctx context.Context, olderThan time.
 	var purged int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		purged, err = deleteUnusedSelfMadeClients(ctx, tx, limit, &olderThan)
+		purged, err = deleteUnusedSelfMadeClients(ctx, tx, limit, olderThan)
 		return err
 	})
 	if err != nil {

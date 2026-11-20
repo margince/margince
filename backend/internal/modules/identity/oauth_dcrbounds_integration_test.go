@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -65,6 +66,20 @@ func (e *cimdEnv) clientExists(t *testing.T, clientID string) bool {
 	return exists
 }
 
+// ageSelfMade moves every self-made client's registration back by age, as if
+// that much time had passed since each one registered.
+func (e *cimdEnv) ageSelfMade(t *testing.T, age time.Duration) {
+	t.Helper()
+	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.ctx, `UPDATE oauth_client SET created_at = created_at - make_interval(secs => $1::float8)
+			WHERE created_via IN ('dcr', 'cimd')`, age.Seconds())
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 // unusedSelfMade counts the self-made clients no consent used.
 func (e *cimdEnv) unusedSelfMade(t *testing.T) int {
 	t.Helper()
@@ -100,6 +115,9 @@ func TestAFullCapMakesRoomByRemovingTheOldestUnusedClient(t *testing.T) {
 		if i == 1 {
 			e.consent(t, registered[0])
 		}
+		if i == 2 {
+			e.ageSelfMade(t, 2*selfMadeClientSignInWindow)
+		}
 	}
 	if got := e.unusedSelfMade(t); got != 2 {
 		t.Errorf("never-used self-made clients = %d, want the cap of 2", got)
@@ -120,6 +138,7 @@ func TestADocumentClientMakesRoomUnderTheSameCap(t *testing.T) {
 	e := setupCIMD(t, "cimd-cap")
 	h := Handlers{svc: e.svc}.WithUnusedDynamicClientCap(1)
 	_, registered := e.selfRegister(t, h, "Tool")
+	e.ageSelfMade(t, 2*selfMadeClientSignInWindow)
 	clientID := e.docs.URL + "/client.json"
 	if err := e.svc.resolveCIMDClient(e.ctx, clientID, 1); err != nil {
 		t.Fatal(err)
@@ -133,6 +152,63 @@ func TestADocumentClientMakesRoomUnderTheSameCap(t *testing.T) {
 	}
 	if got := e.unusedSelfMade(t); got != 1 {
 		t.Errorf("refreshing a known document client changed the count to %d, want 1", got)
+	}
+}
+
+// A client inside its sign-in window has no grant yet, because the grant
+// appears only at the token exchange. A registration flood at the cap must not
+// evict it mid-consent, so the table goes over the cap instead.
+func TestAClientStillSigningInIsNotEvictedAtTheCap(t *testing.T) {
+	e := setupCIMD(t, "dcr-window")
+	h := Handlers{svc: e.svc}.WithUnusedDynamicClientCap(1)
+	_, signingIn := e.selfRegister(t, h, "Signing-in")
+	code, flood := e.selfRegister(t, h, "Flood")
+	if code != http.StatusCreated {
+		t.Fatalf("a registration at the cap answered %d, want 201", code)
+	}
+	if !e.clientExists(t, signingIn) || !e.clientExists(t, flood) {
+		t.Errorf("kept signing-in = %v, flood = %v; want both, as neither is past the sign-in window",
+			e.clientExists(t, signingIn), e.clientExists(t, flood))
+	}
+	e.ageSelfMade(t, 2*selfMadeClientSignInWindow)
+	_, next := e.selfRegister(t, h, "Next")
+	if e.clientExists(t, signingIn) || !e.clientExists(t, next) {
+		t.Errorf("past the window: kept oldest = %v, newest = %v; want false, true",
+			e.clientExists(t, signingIn), e.clientExists(t, next))
+	}
+}
+
+// A disabled document client is the ban on its URL. Neither the cap nor the
+// sweep may delete it, or the next sign-in would fetch the document again.
+func TestADisabledDocumentClientSurvivesTheCapAndTheSweep(t *testing.T) {
+	e := setupCIMD(t, "cimd-disabled")
+	h := Handlers{svc: e.svc}.WithUnusedDynamicClientCap(1)
+	banned := e.docs.URL + "/client.json"
+	if err := e.svc.resolveCIMDClient(e.ctx, banned, DefaultUnusedDynamicClientCap); err != nil {
+		t.Fatal(err)
+	}
+	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.ctx, `UPDATE oauth_client SET disabled_at = now() WHERE client_id = $1`, banned)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.ageSelfMade(t, 30*24*time.Hour)
+	for _, name := range []string{"First", "Second"} {
+		if code, _ := e.selfRegister(t, h, name); code != http.StatusCreated {
+			t.Fatalf("registering %s answered %d", name, code)
+		}
+	}
+	if !e.clientExists(t, banned) {
+		t.Fatal("making room under the cap deleted a disabled document client")
+	}
+	if _, err := e.svc.PurgeUnusedDynamicClients(principal.SystemActing(e.ctx, "system:test"),
+		DefaultUnusedDynamicClientRetention, 100); err != nil {
+		t.Fatal(err)
+	}
+	if !e.clientExists(t, banned) {
+		t.Error("the sweep deleted a disabled document client")
 	}
 }
 
