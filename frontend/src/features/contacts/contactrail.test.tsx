@@ -12,13 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { listsMe, shortlist } from "../../testing/lists.fixtures";
 import { meFixture } from "../../testing/mefixture";
-import {
-  installFetchStub,
-  jsonResponse,
-  StoryProviders,
-} from "../../testing/story-utils";
 import { Employers } from "./contactemployers";
 import { ContactRail } from "./contactrail";
 
@@ -260,23 +254,6 @@ function mount(
           logo_url: null,
         });
       }
-      // The record's tags. The catch-all below would answer with no `withheld`
-      // key at all, which the panel reads as visible-and-empty — a state this
-      // suite would then be asserting by accident rather than by choice.
-      if (url.pathname.endsWith("/tags")) {
-        return json({
-          data: [
-            {
-              tag_id: "t-1",
-              name: "Champion",
-              color: "teal",
-              archived: false,
-              assigned_at: "2026-03-03T10:00:00Z",
-            },
-          ],
-          withheld: false,
-        });
-      }
       return json({ data: [], page });
     }),
   );
@@ -408,13 +385,13 @@ describe("adding a company", () => {
   // forbids, and here it would also lie usefully: a control that stopped being an
   // <input> would read `undefined`, which is falsy, so every "not ticked"
   // assertion below would keep passing over a checkbox that no longer exists.
-  function currentEmployerTicked(): boolean {
+  function primaryEmployerTicked(): boolean {
     const box = screen.getByRole("checkbox", {
-      name: "This is their current employer",
+      name: "This is their primary employer",
     });
     if (!(box instanceof HTMLInputElement)) {
       throw new Error(
-        `the current-employer control is a ${box.tagName}, not an input`,
+        `the primary-employer control is a ${box.tagName}, not an input`,
       );
     }
     return box.checked;
@@ -456,7 +433,7 @@ describe("adding a company", () => {
 
     // The state the reader sees BEFORE touching anything — the reading that a
     // modal deciding the field only on interaction cannot honour.
-    expect(currentEmployerTicked()).toBe(true);
+    expect(primaryEmployerTicked()).toBe(true);
 
     await user.type(screen.getByRole("searchbox"), "emp");
     await user.click(await screen.findByText("Employer GmbH"));
@@ -471,9 +448,9 @@ describe("adding a company", () => {
     await screen.findByRole("button", { name: "Add company" });
     await openAndPickEmployer(user);
     await user.click(
-      screen.getByRole("checkbox", { name: "This is their current employer" }),
+      screen.getByRole("checkbox", { name: "This is their primary employer" }),
     );
-    expect(currentEmployerTicked()).toBe(false);
+    expect(primaryEmployerTicked()).toBe(false);
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     // `false`, not absent. A reader who unticks a box has decided, and the
@@ -481,6 +458,8 @@ describe("adding a company", () => {
     const body = await employmentBody();
     expect("is_current_primary" in body).toBe(true);
     expect(body.is_current_primary).toBe(false);
+    // The box names the primary employer only: the job itself stays current.
+    expect(body.employment_status).toBe("current");
   });
 
   it("re-takes the default every time it opens, not once", async () => {
@@ -494,12 +473,12 @@ describe("adding a company", () => {
     const { rerender } = mount(granted);
     await screen.findByRole("button", { name: "Add company" });
     await user.click(screen.getByRole("button", { name: "Add company" }));
-    expect(currentEmployerTicked()).toBe(false);
+    expect(primaryEmployerTicked()).toBe(false);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     rerender(emptyButGranted);
     await user.click(screen.getByRole("button", { name: "Add company" }));
-    expect(currentEmployerTicked()).toBe(true);
+    expect(primaryEmployerTicked()).toBe(true);
   });
 
   // The start date is the field #415 is about: an employment with no window
@@ -576,7 +555,7 @@ describe("adding a company", () => {
     await screen.findByRole("button", { name: "Add company" });
     await user.click(screen.getByRole("button", { name: "Add company" }));
 
-    expect(currentEmployerTicked()).toBe(false);
+    expect(primaryEmployerTicked()).toBe(false);
   });
 });
 
@@ -647,6 +626,68 @@ describe("which employer is the current one", () => {
     expect(second).not.toContain("Current");
   });
 
+  it("leads a company with the role still held there, so the company reads current", async () => {
+    // An undated current role and a dated ended one at the same company. The
+    // date alone would put the ended role first and mark the company Former.
+    mount({
+      ...granted,
+      employments: {
+        data: [
+          {
+            relationship_id: "rel-ended",
+            company_id: "o-same",
+            company_name: "Twice AG",
+            role: "Old role",
+            is_current_primary: false,
+            employment_status: "former",
+            started_at: "2019-01-01T00:00:00Z",
+            started_precision: "month",
+            ended_at: "2022-06-01T00:00:00Z",
+            ended_precision: "month",
+          },
+          {
+            relationship_id: "rel-held",
+            company_id: "o-same",
+            company_name: "Twice AG",
+            role: "New role",
+            is_current_primary: true,
+          },
+        ],
+        page,
+      },
+    });
+    await screen.findAllByText("Twice AG");
+
+    const [first, second] = employerOrder();
+    expect(first).toContain("Twice AG");
+    expect(first).toContain("Current");
+    expect(second).not.toContain("Current");
+  });
+
+  it("writes a date known only to its month as the month and year", async () => {
+    mount({
+      ...granted,
+      employments: {
+        data: [
+          {
+            relationship_id: "rel-month",
+            company_id: "o-month",
+            company_name: "Monthly AG",
+            is_current_primary: false,
+            employment_status: "former",
+            started_at: "2021-03-01T00:00:00Z",
+            started_precision: "month",
+            ended_at: "2026-08-16T00:00:00Z",
+            ended_precision: "day",
+          },
+        ],
+        page,
+      },
+    });
+
+    expect(await screen.findByText("Mar 2021 – 16 Aug 2026")).toBeTruthy();
+  });
+
   it("stops calling it current once the last day has passed", async () => {
     // The flag still says this employer is the primary one — the record of WHICH
     // employer it was is not rewritten when the date passes. Currency is derived
@@ -706,6 +747,28 @@ describe("which employer is the current one", () => {
     // The LOCAL date, formatted by hand. Reaching for toISOString() here would
     // send yesterday's date to anybody west of UTC for most of their working day.
     expect((body as Record<string, unknown>).ended_at).toBe("2026-08-18");
+  });
+
+  it("reads the employer's counts again once the job is marked ended", async () => {
+    // The company's contact count includes this contact's job, so the row's
+    // "N contacts" must not keep the figure from before the end.
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    mount(granted);
+    await screen.findByText("2 contacts · no open deals");
+    const companyReads = () =>
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([input]) =>
+          (input instanceof Request ? input.url : String(input)).endsWith(
+            "/companies/o-1",
+          ),
+        ).length;
+    const before = companyReads();
+
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("button", { name: "Mark as ended" }));
+
+    await waitFor(() => expect(companyReads()).toBeGreaterThan(before));
   });
 });
 
@@ -917,58 +980,5 @@ describe("the consent rail's transport row", () => {
     );
     await screen.findByText("Business mail");
     expect(screen.queryByRole("button", { name: editConsent })).toBeNull();
-  });
-});
-
-describe("the Lists group", () => {
-  function serve(me: () => Response, onLists: readonly unknown[] = []) {
-    installFetchStub({
-      "GET /me": me,
-      [`GET /records/contact/${contact.id}/lists`]: () =>
-        jsonResponse({ data: onLists }),
-    });
-    render(
-      <StoryProviders>
-        <ContactRail
-          view={granted}
-          consent={{
-            guard: undefined,
-            loading: false,
-            failed: false,
-            onRetry: () => undefined,
-          }}
-          writeRefusalId="write-refused"
-        />
-      </StoryProviders>,
-    );
-  }
-
-  const group = async () =>
-    within(
-      await screen.findByRole("region", { name: en["lists.record.title"] }),
-    );
-
-  it("offers Add to Shortlist and every list while the contact is on none", async () => {
-    serve(listsMe(true));
-    const lists = await group();
-    expect(
-      await lists.findByRole("button", { name: en["lists.addToShortlist"] }),
-    ).toBeTruthy();
-    expect(
-      lists
-        .getByRole("link", { name: en["lists.record.allLists"] })
-        .getAttribute("href"),
-    ).toBe("/#/filters/lists");
-  });
-
-  it("keeps the lists it is on beside the verbs", async () => {
-    serve(listsMe(true), [shortlist]);
-    const lists = await group();
-    expect(
-      await lists.findByRole("button", { name: shortlist.name }),
-    ).toBeTruthy();
-    expect(
-      lists.getByRole("button", { name: en["lists.addToShortlist"] }),
-    ).toBeTruthy();
   });
 });

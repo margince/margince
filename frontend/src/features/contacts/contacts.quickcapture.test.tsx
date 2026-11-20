@@ -135,7 +135,7 @@ describe("Quick capture's company box", () => {
     );
     expect(
       screen.getByText(
-        "Creates a new company unless one is picked from the list.",
+        "Links the company with this name, or creates it if there is none.",
       ),
     ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Create" }));

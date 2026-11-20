@@ -337,6 +337,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
     // The person who runs the server restores the backup.
     "health.setup.recovery.todo",
+    // The data subject who asked for the erasure: the privacy term itself.
+    "create.addressErased",
   ],
   vi: [
     // "Người tổ chức" is the meeting's organizer, a person.

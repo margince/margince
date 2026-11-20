@@ -61,3 +61,20 @@ export function withPrimaryDefault<T extends { is_primary: boolean }>(
         index === 0 ? { ...row, is_primary: true } : row,
       );
 }
+
+// The first value a second row repeats, as that row spells it, when the
+// field's values are stored once. Case and edge spaces name no other value.
+export function repeatedRowValue(
+  rows: readonly FormRow[],
+  valueKey: string,
+): string | undefined {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const value = (row[valueKey] ?? "").trim();
+    const key = value.toLowerCase();
+    if (!key) continue;
+    if (seen.has(key)) return value;
+    seen.add(key);
+  }
+  return undefined;
+}
