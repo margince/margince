@@ -624,7 +624,7 @@ func TestNotesLandOnAColleaguesContactTheMeetingIsFiledOn(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	meeting, _, _ := meetingWithNotes(t, env)
-	moved, err := e.Owner.Exec(context.Background(), `UPDATE contact SET owner_id = $1, visibility = 'workspace'
+	moved, err := e.Owner.Exec(context.Background(), `UPDATE contact SET owner_id = $1, visibility = 'workspace', narrowing_reason = NULL
 		WHERE id IN (SELECT contact_id FROM activity_link WHERE activity_id = $2 AND contact_id IS NOT NULL)`, e.Rep3, meeting)
 	if err != nil {
 		t.Fatal(err)

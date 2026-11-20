@@ -35,8 +35,10 @@ func (l *confirmLaneEnv) refusingLead(t *testing.T, email *string) ids.UUID {
 	t.Helper()
 	company := l.e.SeedCompany(t, "Receipt Company", nil)
 	l.e.WsExec(t, `UPDATE company SET address_country = upper($2) WHERE id = $1`, company, string(receiptOwed))
+	// The lane records the press as Rep1, and its receipt is filed onto the
+	// lead, so Rep1 owns it.
 	lead, _, err := l.e.Contacts.CreateLead(l.e.Admin(), contacts.CreateLeadInput{
-		FullName: new("Lead Refusal"), Email: email, Source: "manual",
+		FullName: new("Lead Refusal"), Email: email, Source: "manual", OwnerID: new(ids.From[ids.UserKind](l.e.Rep1)),
 	})
 	if err != nil {
 		t.Fatal(err)
