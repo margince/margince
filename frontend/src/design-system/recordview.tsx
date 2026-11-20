@@ -109,7 +109,7 @@ export type RecordViewProps = Readonly<{
  * open tab's feed. The DOM runs in the order the cards are drawn, so the
  * page's one `h1` is read before the feed.
  *
- * The details stay beside the feed while the page scrolls, and fold above it
+ * The details sit beside the feed and scroll with the page, and fold above it
  * once the row has no room for both cards.
  */
 export function RecordView({

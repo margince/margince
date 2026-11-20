@@ -64,9 +64,6 @@
 .page-zones.page-zones-panes {
   --zonesGap: var(--gapPanes);
 }
-.page-zones-panes > .page-pane {
-  padding: var(--padPane);
-}
 /* Armed one frame after mount (pagezones.tsx), which is what keeps a page that
    LOADS with its pane open — or with it folded — from animating into the state
    it opened in. Nothing else in this file moves.
@@ -139,20 +136,16 @@
    card that re-wraps a dozen times on its way out reads as a smear rather than
    as a column leaving. The clip costs the pane nothing at rest — its width and
    its cards' width are the same number — and every layer it opens (a select, a
-   popover, a tooltip) is portalled to the body. */
+   popover, a tooltip) is portalled to the body.
+   Not `hidden`: that makes the column a scroller of its own, which a focused
+   card scrolls inside the page. The margin keeps a focus ring whole. */
 @media (min-width: 1201px) {
   .page-zones > .page-zones-aside-column {
-    overflow: hidden;
+    overflow: clip;
+    overflow-clip-margin: var(--space-1);
   }
   .page-zones > .page-zones-aside-column > * {
     width: var(--asideOpenW);
-  }
-  /* The pane's own inset and edge, the 1px of `.page-pane`. */
-  .page-zones-panes > .page-zones-aside-column > * {
-    width: calc(var(--asideOpenW) - 2 * (var(--padPane) + 1px));
-  }
-  .page-zones > .page-zones-aside-column.page-pane-sticky {
-    overflow-y: auto;
   }
 }
 @media (max-width: 1200px) {
@@ -192,11 +185,6 @@
   }
   .page-zones[data-aside="closed"] > .page-zones-main {
     margin-inline-end: 0;
-  }
-  .page-zones > .page-pane-sticky {
-    position: static;
-    max-block-size: none;
-    overflow-y: visible;
   }
 }
 @media (max-width: 720px) {

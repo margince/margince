@@ -656,16 +656,6 @@
   list-style: none;
 }
 
-/* ── The work column ──────────────────────────────────────────────────────
- * The cards stand on the page itself: a pane around them would be a card
- * holding cards. The rail's cards stand on the page the same way. */
-.brief-morning > .page-pane {
-  --padPane: 0px;
-  border-color: transparent;
-  background: none;
-  box-shadow: none;
-  padding: 0;
-}
 .brief-morning > .brief-main {
   display: flex;
   flex-direction: column;

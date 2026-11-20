@@ -48,7 +48,7 @@ export const OVERLAY_RUNG = {
 
 // A part that keeps one rung wherever it nests: the whole rung, or its edge alone.
 export const PINNED_RUNGS = [
-  { selector: ".lt-tools", level: 3, takes: "ground" },
+  { selector: ".lt-tools", level: 2, takes: "ground" },
   { selector: '.stat-strip[data-density="plate"]', level: 2, takes: "edge" },
 ] as const;
 

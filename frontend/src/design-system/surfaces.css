@@ -12,7 +12,7 @@
   --groundSeam: var(--borderSubtle);
 }
 :where(
-  .panel,
+  .panel:not(.analytics-sheet .panel),
   .panel-plate,
   .card,
   .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -111,7 +111,7 @@
   background-color: var(--ladder1);
 }
 :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -195,7 +195,7 @@
     .recorddetails-group
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -294,7 +294,7 @@
   background-color: var(--ladder2);
 }
 :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -378,7 +378,7 @@
     .recorddetails-group
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -462,7 +462,7 @@
     .recorddetails-group
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -561,7 +561,7 @@
   background-color: var(--ladder3);
 }
 :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -645,7 +645,7 @@
     .recorddetails-group
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -729,7 +729,7 @@
     .recorddetails-group
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -813,7 +813,7 @@
     .recorddetails-group
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -969,7 +969,7 @@
     .overflow-menu-labelled
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -1089,7 +1089,7 @@
     .overflow-menu-labelled
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -1173,7 +1173,7 @@
     .recorddetails-group
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -1293,7 +1293,7 @@
     .overflow-menu-labelled
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -1377,7 +1377,7 @@
     .recorddetails-group
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -1461,7 +1461,7 @@
     .recorddetails-group
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
@@ -1560,9 +1560,9 @@
   background-color: var(--ladder4);
 }
 :where(.lt-tools) {
-  --ground: var(--ladder3);
-  --groundEdge: var(--ladder3Edge);
-  --groundSeam: var(--ladder3Edge);
+  --ground: var(--ladder2);
+  --groundEdge: var(--ladder2Edge);
+  --groundSeam: var(--ladder2Edge);
   --groundHover: color-mix(
     in srgb,
     var(--hoverShade) var(--hoverShare),
@@ -1573,7 +1573,7 @@
     var(--stripShade) var(--stripShare),
     var(--ground)
   );
-  background-color: var(--ladder3);
+  background-color: var(--ladder2);
 }
 :where(.stat-strip[data-density="plate"]) {
   --groundEdge: var(--ladder2Edge);
@@ -1608,7 +1608,7 @@
     [data-ai-reveal="run"]
   )
   :where(
-    .panel,
+    .panel:not(.analytics-sheet .panel),
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),

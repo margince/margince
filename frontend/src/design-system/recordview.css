@@ -32,7 +32,6 @@
 @media (width > 700px) {
   .record-split
     :is(
-      .page-pane,
       .panel,
       .card,
       .lt,
@@ -46,7 +45,6 @@
     ) {
     box-shadow: none;
   }
-  .record-split .page-pane,
   .record-split
     :is(
       .panel,
@@ -414,9 +412,15 @@
     justify-self: start;
   }
 }
-/* Only a phone's cards keep their edge, so only there does content stand in
-   from it; the first tab and the feed's first card move together. */
+/* Only on a phone are the two columns cards, so only there does content stand
+   in from an edge; the first tab and the feed's first card move together. */
 @media (max-width: 700px) {
+  .record-split .page-pane {
+    background-color: var(--ground);
+    border: 1px solid var(--groundEdge);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-rest);
+  }
   .record-split-head {
     padding: var(--padPane);
   }

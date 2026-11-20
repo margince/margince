@@ -126,7 +126,7 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
   const openable = [...reach.acts, ...reach.looksUp];
 
   return (
-    <div className="settings-stack arrive-stack">
+    <div className="settings-stack page-pane arrive-stack">
       {/* The rail holds this box above phone width; below it this page is the
           directory, so the box comes here. */}
       {phone && <SettingsSearchBox pages={openable} />}

@@ -27,16 +27,15 @@
   }
 }
 
-/* The work column's sections as one pane: the sheet wears the pane's edge,
-   corner and resting shadow, and each panel inside gives up its own. A
-   hairline parts two sections. A results part has no box of its own
-   (reporting.css), so these rules reach through it to its sections. */
+/* The work column's sections as one pane: the sheet wears a panel's edge and
+   corner, and each panel inside gives up its own. A hairline parts two
+   sections. A results part has no box of its own (reporting.css), so these
+   rules reach through it to its sections. */
 .analytics-sheet {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-rest);
   overflow: hidden;
 }
 .analytics-sheet > :where(*) + :where(*),
@@ -44,13 +43,13 @@
 .analytics-sheet > :where(*) + .reporting-results-part > :where(:first-child) {
   border-top: 1px solid var(--groundEdge);
 }
-/* Each panel is a section on the sheet's own ground. */
+/* Each panel is a section on the sheet's own ground: the ladder leaves it out
+   (surfaces.css), so it paints nothing and reads the sheet's rung. */
 .analytics-sheet .panel {
   border: 0;
   border-top: 1px solid var(--groundEdge);
   border-radius: 0;
   box-shadow: none;
-  background: none;
 }
 .analytics-sheet > .panel:first-child,
 .analytics-sheet > .reporting-results-part:first-child > .panel:first-child,

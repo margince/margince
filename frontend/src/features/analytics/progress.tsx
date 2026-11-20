@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import "./analytics.board.css";
 import "./progress.css";
 import { useState } from "react";
 import { Button, Field, SegmentedControl } from "../../design-system/atoms";
@@ -20,6 +19,7 @@ import { useLocale, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { isUuid } from "../../lib/uuid";
+import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import {
   type AnalyticsScope,
   scopeKey,
@@ -99,7 +99,7 @@ export function ProgressScreen() {
     (_, index) => now.getFullYear() + 1 - index,
   );
   return (
-    <div className="wrap progress-page">
+    <div className="wrap progress-page page-pane">
       <FilterBar
         label={t("progress.controls")}
         actions={
@@ -212,27 +212,32 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
   const open = progress.evaluation ? setEvidence : undefined;
   const team = progress.scope.kind === "team";
   return (
-    <div className="analytics-board">
-      <div className="analytics-board-main">
-        <div className="analytics-sheet">
-          <ProgressResult
-            progress={progress}
-            onEvidence={open}
-            onGoals={() =>
-              navigate({ screen: "goals" }, goalDials(askOf(progress)))
-            }
-          />
-          <ProgressScenarios progress={progress} />
-          <ProgressReadings progress={progress} onEvidence={open} />
-          {team && <ProgressMembers progress={progress} />}
-          <ProgressWork progress={progress} />
-          <ProgressMonths progress={progress} />
-        </div>
-      </div>
-      <aside className="analytics-board-rail" aria-label={t("progress.rail")}>
-        <ProgressSummary ask={askOf(progress)} progress={progress} />
-        <ProgressGoalBasis progress={progress} />
-      </aside>
+    <>
+      <AnalyticsBoard
+        main={
+          <AnalyticsSheet>
+            <ProgressResult
+              progress={progress}
+              onEvidence={open}
+              onGoals={() =>
+                navigate({ screen: "goals" }, goalDials(askOf(progress)))
+              }
+            />
+            <ProgressScenarios progress={progress} />
+            <ProgressReadings progress={progress} onEvidence={open} />
+            {team && <ProgressMembers progress={progress} />}
+            <ProgressWork progress={progress} />
+            <ProgressMonths progress={progress} />
+          </AnalyticsSheet>
+        }
+        rail={
+          <>
+            <ProgressSummary ask={askOf(progress)} progress={progress} />
+            <ProgressGoalBasis progress={progress} />
+          </>
+        }
+        railLabel={t("progress.rail")}
+      />
       {evidence && progress.evaluation && (
         <ReportingEvidenceDrawer
           evaluation={progress.evaluation}
@@ -240,7 +245,7 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
           onClose={() => setEvidence(null)}
         />
       )}
-    </div>
+    </>
   );
 }
 
