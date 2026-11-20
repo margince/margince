@@ -5,10 +5,9 @@ import {
   NAME_CHARS,
   NODE_INSET,
   type Placed,
+  SUB_CHARS,
 } from "./relationshipmap.layout";
 import type { MapTextMeasures } from "./relationshipmap.measure";
-
-const SUB_CHARS = 26;
 
 export function Node({
   placed,

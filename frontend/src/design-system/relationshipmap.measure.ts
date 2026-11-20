@@ -21,21 +21,20 @@ const SELECTORS = [
   ".rmap-more text",
 ] as const;
 
-/**
- * useMapTextMeasures measures the map's words in the type `scope` draws them
- * in. A kind is null until one of its elements is drawn, and wherever no canvas
- * exists (jsdom), so the caller falls back to counting characters.
- */
+let faceLoads = 0;
+
+/** A kind is null until drawn, or with no canvas (happy-dom), so the caller
+ * falls back to counting characters. */
 export function useMapTextMeasures(
   scope: RefObject<Element | null>,
 ): MapTextMeasures {
-  // The fonts' load state rides in the key, so a face that lands late
-  // re-measures although the computed font names did not change.
+  // Every face that lands changes the key, so a late one re-measures although
+  // the computed font names did not change.
   const key = useSyncExternalStore(
     watchFonts,
     () =>
       [
-        globalThis.document?.fonts?.status ?? "",
+        `${faceLoads} ${globalThis.document?.fonts?.status ?? ""}`,
         ...SELECTORS.map((selector) =>
           fontOf(scope.current?.querySelector(selector)),
         ),
@@ -59,11 +58,15 @@ function watchFonts(changed: () => void) {
   if (!fonts?.addEventListener) {
     return () => undefined;
   }
-  fonts.addEventListener("loadingdone", changed);
-  fonts.addEventListener("loadingerror", changed);
+  const landed = () => {
+    faceLoads += 1;
+    changed();
+  };
+  fonts.addEventListener("loadingdone", landed);
+  fonts.addEventListener("loadingerror", landed);
   return () => {
-    fonts.removeEventListener("loadingdone", changed);
-    fonts.removeEventListener("loadingerror", changed);
+    fonts.removeEventListener("loadingdone", landed);
+    fonts.removeEventListener("loadingerror", landed);
   };
 }
 
@@ -87,5 +90,10 @@ function canvasMeasure(font: string | undefined): MeasureText | null {
     return null;
   }
   context.font = font;
+  // A context that cannot measure would cut every label to "…".
+  const probe = context.measureText("M").width;
+  if (!Number.isFinite(probe) || probe <= 0) {
+    return null;
+  }
   return (text) => context.measureText(text).width;
 }

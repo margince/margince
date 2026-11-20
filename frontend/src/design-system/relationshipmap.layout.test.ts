@@ -305,6 +305,19 @@ test("never splits a character made of two code units", () => {
   expect(fitted).toBe("😀…");
 });
 
+test("never splits a flag made of two code points", () => {
+  const flags = "🇩🇪🇫🇷🇮🇹";
+  expect(fitLabel(flags, eightWide("🇩🇪🇫…"), eightWide)).toBe("🇩🇪…");
+});
+
+test("leaves an empty label empty", () => {
+  expect(fitLabel("", 0, eightWide)).toBe("");
+});
+
+test("draws only the ellipsis when the first glyph is wider than the room", () => {
+  expect(fitLabel("WWW", 8, eightWide)).toBe("…");
+});
+
 test("falls back to the count where nothing measures", () => {
   const name = "A name far longer than any node can draw";
   expect(fitLabel(name, NAME_ROOM, null, NAME_CHARS)).toBe(truncate(name));

@@ -82,6 +82,7 @@ export const CENTER_GAP = 24;
 /** How many nodes a right-hand lane draws before it offers the rest. */
 export const LANE_CAP = 8;
 export const NAME_CHARS = 22;
+export const SUB_CHARS = 26;
 /** How far a node's words sit in from each side of its box. */
 export const NODE_INSET = 12;
 export const WIDTH =
@@ -441,8 +442,7 @@ export function fitLabel(
   if (measure(text) <= width) {
     return text;
   }
-  // Code points, so a cut never splits a surrogate pair.
-  const glyphs = Array.from(text);
+  const glyphs = graphemes(text);
   let fits = 0;
   let over = glyphs.length;
   while (over - fits > 1) {
@@ -454,6 +454,15 @@ export function fitLabel(
     }
   }
   return cutAt(glyphs, fits);
+}
+
+// Graphemes, so a cut never splits a flag, a joined emoji or an accent.
+function graphemes(text: string): string[] {
+  if (typeof Intl.Segmenter !== "function") {
+    return Array.from(text);
+  }
+  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  return Array.from(segmenter.segment(text), (part) => part.segment);
 }
 
 function cutAt(glyphs: readonly string[], count: number): string {
