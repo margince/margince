@@ -227,6 +227,8 @@ jobs:
       # database admin goes through cmd/migrate's db verbs on the test DSN
       # (scripts/lib-testdb.sh db_admin), so no host psql is assumed.
       - name: Start the dev infra stack (compose + app role)
+        env:
+          PG_FSYNC: "off"
         run: make db-up
       # Needs the checkout and not the binaries, so it runs while they build.
       # The shard step checks it again (INTEGRATION_TEMPLATE_READY).

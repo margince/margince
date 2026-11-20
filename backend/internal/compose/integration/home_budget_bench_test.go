@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Cold reads start without kept answers or prepared plans. The three-second
@@ -374,8 +373,9 @@ func inCustomPlanTrials(before, after map[preparedStatement]planCount) []prepare
 	return trying
 }
 
-// forgetHomeAnswers ends the seat's kept Home answers through the cache's own
-// Forget, and returns the database clock from before it.
+// forgetHomeAnswers drops the seat's kept Home answers outright and returns the
+// database clock from before it. The cache's own Forget only marks an answer
+// behind a write and still serves it, which would time no assembly.
 func forgetHomeAnswers(t *testing.T, e *apptest.AppEnv, s Seat) time.Time {
 	t.Helper()
 	ctx := context.Background()
@@ -383,9 +383,8 @@ func forgetHomeAnswers(t *testing.T, e *apptest.AppEnv, s Seat) time.Time {
 	if err := e.Owner.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&since); err != nil {
 		t.Fatalf("reading the database clock: %v", err)
 	}
-	ws := principal.WithWorkspaceID(ctx, apptest.InstallationWorkspaceUUID(ctx, t, e.Pool))
-	if err := homecache.New(e.Pool).Forget(ws, []ids.UUID{ids.MustParse(s.UserID)}); err != nil {
-		t.Fatalf("ending %s's kept Home answers: %v", s.Name, err)
+	if _, err := e.Owner.Exec(ctx, `DELETE FROM home_read_cache WHERE reader_id = $1`, ids.MustParse(s.UserID)); err != nil {
+		t.Fatalf("dropping %s's kept Home answers: %v", s.Name, err)
 	}
 	return since
 }

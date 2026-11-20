@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -196,6 +197,15 @@ func TestAHandLoggedMeetingTheCalendarCopyFoldedOntoIsNotTheAuthorsToArchive(t *
 func TestANoteAnAgentLoggedForAMemberIsTheirsToArchive(t *testing.T) {
 	e := Setup(t)
 	elsewhere := e.SeedContact(t, "Other team's", &e.Rep3)
+	// Team1's agents may file onto it only through a write share.
+	if _, err := identity.NewService(e.Pool).CreateRecordGrant(e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn,
+		Objects: map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+	}), identity.CreateGrantInput{
+		RecordType: "contact", RecordID: elsewhere, SubjectType: "team", SubjectID: e.Team1, Access: "write",
+	}); err != nil {
+		t.Fatalf("sharing the contact: %v", err)
+	}
 	forMe := logOwnActivity(e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, ownArchivePerms), t, e, "note", elsewhere)
 	forTeammate := logOwnActivity(e.AgentFor(t, e.Rep2, []ids.UUID{e.Team1}, ownArchivePerms), t, e, "note", elsewhere)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)

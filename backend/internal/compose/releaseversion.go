@@ -5,58 +5,20 @@ package compose
 
 // The guard that keeps a torn release set from running.
 //
-// WHY THERE IS ANYTHING TO GUARD. A customer pulls each role image by tag, and
-// the tag resolver answers each pull separately. Two pulls are two requests, so
-// a publish landing between them hands back a set whose roles come from
-// different releases — the classic case being `latest` moving mid-install. The
-// OCI distribution protocol has no way to express "these three manifests, or
-// none", so the registry cannot refuse it at the pull. The refusal has to happen
-// where the set first exists as a whole, which is at run time.
+// Each role image is pulled by tag in its own request, so a publish between two
+// pulls can hand back roles from different releases. The registry cannot refuse
+// that, so the refusal happens at run time.
 //
-// THE API IS THE AUTHORITY, and it is the authority because it already is one:
-// the api image ships cmd/migrate and its entrypoint applies the schema before it
-// serves, so the schema the installation runs on is the schema THIS role's release
-// brought. (cmd/migrate is its own process role and the only caller of the
-// migrator; what makes the api the authority is that the two ship and run
-// together, not that this binary migrates.) Recording its own release as the
-// installation's is therefore a statement of fact, not an election. Every other
-// role compares itself against that record and refuses to start when it
-// disagrees.
+// The api is the authority: it ships with the migrator, so the schema in use is
+// the one its release brought. It records its own release, and every other role
+// refuses to start when it disagrees. This asymmetry lets an upgrade proceed:
+// the api moves first. The check compares for equality, never order, so a
+// rollback is an ordinary move.
 //
-// THAT ASYMMETRY IS WHAT MAKES AN UPGRADE POSSIBLE. A symmetric rule — every
-// role refuses while any peer disagrees — deadlocks the moment two roles restart
-// independently, because each sees the other's old version and neither can be
-// the first to move. Here the api moves first by definition: it records the new
-// release, and the roles that follow match it. A rollback works for the same
-// reason, which is why this compares for EQUALITY and never for order: the api
-// simply states the release, so going back to an older one is an ordinary move
-// rather than a special case somebody has to remember to allow.
-//
-// A TORN SET STOPS, AND STAYS STOPPED. If the api is release B and the worker is
-// release A, the worker exits on every start and the orchestrator keeps
-// restarting it. That is the intended outcome: a crash-looping role with the two
-// versions in its log is visible, where a worker quietly running the wrong
-// release is not. It does not resolve itself, because nothing about a torn pull
-// resolves itself — an operator has to deploy the set again, at one release.
-//
-// TWO PROPERTIES ARE BOUNDED RATHER THAN ABSOLUTE, and a reader has to know which:
-//
-//   - The check happens AT BOOT, once. A worker already running when the api
-//     records a new release is not re-checked, so an api-only restart leaves the
-//     old worker serving until something else restarts it.
-//   - The record is LAST WRITER WINS. During a rollout that has api replicas from
-//     two releases alive at once, either may be the last to record, so the release
-//     the installation reports can move backwards on its own.
-//
-// What holds regardless is the invariant this exists for: whichever release wins
-// the record, the roles that disagree with it refuse, so no mixed set serves.
-// Closing either bound is a design change rather than a fix — a monotonic record
-// would cost rollback — so both are tracked rather than worked around here.
-//
-// The second bound costs DIAGNOSIS rather than correctness, and that part is not
-// left to be rediscovered: refuseMixedRelease names the backwards move as one of
-// the two shapes that produce a refusal, so an operator whose deploy was clean is
-// not sent to audit it.
+// A torn set crash-loops with both versions in its log until an operator
+// deploys one release. Two bounds hold: the check runs once at boot, and the
+// record is last writer wins during a rollout. refuseMixedRelease names the
+// backwards move as one cause of a refusal, so a clean deploy is not audited.
 
 import (
 	"context"
