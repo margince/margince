@@ -3,16 +3,34 @@ jurisdiction: nl
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Telecommunicatiewet"
     provision: "art. 11.7"
+    source-url: https://wetten.overheid.nl/BWBR0009950/
 fixtures:
   - finding: objection_route
     triggers: nl/fixtures/advertising-without-objection-route.md
     clears: nl/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Telecommunicatiewet"
+    provision: "art. 11.7, eerste lid"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Telecommunicatiewet"
+    provision: "art. 11.7, eerste lid"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Telecommunicatiewet"
+    provision: "art. 11.7, eerste lid"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Telecommunicatiewet"
+    provision: "art. 11.7, eerste lid"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Telecommunicatiewet"
+    provision: "art. 11.7, zevende lid"
 ---
 
 # What Dutch law requires of an outbound message

@@ -3,16 +3,34 @@ jurisdiction: dk
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Markedsføringsloven"
     provision: "§ 10"
+    source-url: https://www.retsinformation.dk/eli/lta/2022/866
 fixtures:
   - finding: objection_route
     triggers: dk/fixtures/advertising-without-objection-route.md
     clears: dk/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Markedsføringsloven"
+    provision: "§ 10, stk. 1"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Markedsføringsloven"
+    provision: "§ 10, stk. 1"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Markedsføringsloven"
+    provision: "§ 10, stk. 1"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Markedsføringsloven"
+    provision: "§ 10, stk. 1"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Markedsføringsloven"
+    provision: "§ 10, stk. 3"
 ---
 
 # What Danish law requires of an outbound message

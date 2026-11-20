@@ -40477,8 +40477,8 @@ type ChatEpisode struct {
 
 // CitedProvision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
 // for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+// pack's next review is overdue, or the law has not taken effect or has expired. On a
 // review it is the citation shown when the refusal was assessed, never today's.
 type CitedProvision struct {
 	// Instrument The law or decree, as a regulator cites it. Not translated.
@@ -49996,8 +49996,8 @@ type DraftContentFinding struct {
 
 	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
 	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+	// pack's next review is overdue, or the law has not taken effect or has expired. On a
 	// review it is the citation shown when the refusal was assessed, never today's.
 	Provision *CitedProvision `json:"provision,omitempty"`
 
@@ -51572,8 +51572,8 @@ type FooterFinding struct {
 
 	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
 	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+	// pack's next review is overdue, or the law has not taken effect or has expired. On a
 	// review it is the citation shown when the refusal was assessed, never today's.
 	Provision *CitedProvision `json:"provision,omitempty"`
 }

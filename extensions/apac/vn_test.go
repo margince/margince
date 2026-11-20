@@ -130,6 +130,8 @@ func TestThePackStatesTheInstrumentsItsRulesRestOn(t *testing.T) {
 		"Decree 91/2020/ND-CP":  time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC),
 		"Law 91/2025/QH15":      time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 		"Decree 356/2025/ND-CP": time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		// The claim and foreign-advertiser findings cite it.
+		"Advertising Law 16/2012/QH13, as amended by Law 75/2025/QH15": time.Date(2013, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 	got := map[string]time.Time{}
 	for _, in := range vietnam(t).Instruments {
@@ -257,17 +259,12 @@ func TestOnlyAdvertisingConsentNeedsTheRequestFirst(t *testing.T) {
 }
 
 // TestTheCompiledRulesAreTheV5Rules pins every value of the compiled rule set.
-// Provenance and the digest describe the policy source, so they are left out.
+// Provenance, the digest, instruments and citations describe the policy source
+// and decide no send, so they are left out; the test above pins the instruments.
 func TestTheCompiledRulesAreTheV5Rules(t *testing.T) {
-	commencement2025 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	want := messaging.Rules{
-		Jurisdiction: "vn",
-		Version:      5,
-		Instruments: []messaging.Instrument{
-			{Name: "Decree 91/2020/ND-CP", EffectiveFrom: time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC)},
-			{Name: "Law 91/2025/QH15", EffectiveFrom: commencement2025},
-			{Name: "Decree 356/2025/ND-CP", EffectiveFrom: commencement2025},
-		},
+		Jurisdiction:       "vn",
+		Version:            5,
 		ReplyWindow:        365 * 24 * time.Hour,
 		DealFollowUpWindow: 182 * 24 * time.Hour,
 		ConsentOnly:        true,
@@ -297,7 +294,7 @@ func TestTheCompiledRulesAreTheV5Rules(t *testing.T) {
 		ConsentRequestFirstFor:            messaging.AdvertisingPurposeClasses(),
 	}
 	got := vietnam(t)
-	got.Provenance, got.Digest = messaging.Provenance{}, ""
+	got.Provenance, got.Digest, got.Instruments, got.Citations = messaging.Provenance{}, "", nil, nil
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("the compiled rules differ from the v5 rules:\n got %+v\nwant %+v", got, want)
 	}

@@ -1,5 +1,14 @@
 ---
 created: 2026-11-19
+instruments:
+  - name: Directive 2002/58/EC
+    effective: 2002-07-31
+    provision: "Art. 13"
+    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
+  - name: "Regulation (EU) 2016/679 (GDPR)"
+    effective: 2018-05-25
+    provision: "Art. 6(1)"
+    source-url: https://eur-lex.europa.eu/eli/reg/2016/679/oj
 reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-exceptions:
@@ -27,6 +36,51 @@ fixtures:
   - finding: privacy_contact
     triggers: fixtures/invoice-without-privacy-contact.md
     clears: fixtures/invoice-without-objection-route.md
+citations:
+  - code: no_compatible_evidence
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 6(1)"
+  - code: deal_not_requested
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 6(1)"
+  - code: marketing_objection
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 21(3)"
+  - code: objection
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 21(3)"
+  - code: opted_out_after_request
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 21(3)"
+  - code: consent_withdrawn
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 7(3)"
+  - code: withdrawn
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 7(3)"
+  - code: processing_restricted
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 18(2)"
+  - code: objection_route
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 21(4)"
+  - code: controller_identity
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 13(1)(a) and Art. 14(1)(a)"
+  - code: privacy_contact
+    territorial-test: any_sender
+    instrument: "Regulation (EU) 2016/679 (GDPR)"
+    provision: "Art. 13(1)(b) and Art. 14(1)(b)"
 ---
 
 # What every EU member state requires of an outbound message
@@ -67,6 +121,20 @@ An exception that checks less than the law asks would let the engine send where 
 A first message says who is writing and who answers about the data. Art. 13(4) forbids an
 advertising message that hides the sender, or that gives no valid address to ask for it to stop.
 So the objection route binds every advertising message, not only the first.
+
+## The citations
+
+A warning names the law it rests on. This layer cites what the GDPR settles the same way in every
+member state:
+
+- the lawful basis a message needs (Art. 6(1));
+- the withdrawal of a consent (Art. 7(3));
+- a restriction of processing (Art. 18(2));
+- an objection to direct marketing (Art. 21(3));
+- the information a first message owes (Art. 13, 14 and 21(4)).
+
+Each country layer cites its own national act for the marketing consent and the opt-out address.
+One code is cited once, so a country layer cites none of the codes above.
 
 ## The windows
 

@@ -115,12 +115,23 @@ func TestNationalAdditionsReachTheirPack(t *testing.T) {
 	}
 }
 
-// Every pack is a draft until a legal review stamps it, so none may show a
-// citation to a rep.
-func TestEveryPackIsAnUnreviewedDraft(t *testing.T) {
+// citedEverywhere are the codes every member state's pack names the law for:
+// the marketing refusal, the missing reason for contact, and the objection.
+var citedEverywhere = []string{
+	"no_marketing_consent", "marketing_permission_required", "no_compatible_evidence",
+	"marketing_objection", "objection_route", "public_opt_out_link",
+}
+
+// No pack waits for a legal review to name its law, so a draft cites.
+func TestEveryDraftPackCitesItsLaw(t *testing.T) {
 	for _, r := range New().Messaging {
-		if !r.Provenance.ReviewedAt.IsZero() || r.Provenance.Reviewer != "" || len(r.Citations) != 0 {
-			t.Errorf("%s carries review %+v and %d citations, want a draft with none", r.Jurisdiction, r.Provenance, len(r.Citations))
+		if !r.Provenance.ReviewedAt.IsZero() {
+			t.Errorf("%s carries a review %+v; the packs are drafts refreshed at release", r.Jurisdiction, r.Provenance)
+		}
+		for _, code := range citedEverywhere {
+			if !slices.ContainsFunc(r.Citations, func(c messaging.Citation) bool { return c.Code == code }) {
+				t.Errorf("%s cites no law for %s", r.Jurisdiction, code)
+			}
 		}
 	}
 }
