@@ -36,7 +36,7 @@ func renderDecisions(rows []aicert.DecisionRow) string {
 	for _, row := range rows {
 		rec := row.Record
 		lines = append(lines, strings.Join(decisionCells(row), "\t"))
-		if reason := row.Standing.Reason(); reason != "" {
+		if reason := row.NoRowReason(); reason != "" {
 			reasons = append(reasons, "  - "+row.Site+" on "+rec.Provider+" · "+rec.Model+" · "+rec.EnvClass+": "+reason)
 		}
 	}

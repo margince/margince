@@ -4238,6 +4238,7 @@
   "aicalls.reason.decision_error": "Entscheidungsmodell fehlgeschlagen",
   "aicalls.reason.decision_off_enum": "Entscheidungsmodell hat außerhalb der Optionen geantwortet",
   "aicalls.reason.decision_state_too_large": "Eingabe zu groß für das Entscheidungsmodell",
+  "aicalls.reason.decision_uncertified": "Entscheidungsmodell für diese Aufgabe nicht zertifiziert (nur ältere Aufrufe)",
   "aicalls.reason.timeout": "Beim vorherigen Versuch wurde das Zeitlimit überschritten",
   "aicalls.outcome.failed": "Fehlgeschlagen",
   "aicalls.sentinel.provider_quota": "Kontingent erschöpft",

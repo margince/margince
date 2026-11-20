@@ -82,20 +82,20 @@ func certifiedWidgetRecord(t *testing.T, form widgetForm) (Record, []Scenario) {
 		Task: string(ai.TaskSiteTriage), Kind: KindDecision, Site: widgetVariant,
 		Provider: jevLane.Provider, Model: jevLane.Model, EnvClass: string(ai.ProfileCloudFrontier),
 		PromptVersion: FoldScenarioStamps(stamps), CorpusVersion: corpusVersionV1, Verdict: VerdictCertified,
-		Decision:  &DecisionStats{Kept: DecisionMinKept, KeptCorrect: DecisionMinKept},
+		Decision:  &DecisionStats{Kept: ai.DecisionMinKept, KeptCorrect: ai.DecisionMinKept},
 		Scenarios: []ScenarioRecord{{Scenario: "basic", Site: widgetVariant, Stamp: stamps["basic"], Verdict: VerdictCertified}},
 	}, scenarios
 }
 
-// A certified record earns its row only on DecisionMinKept kept answers: one
+// A certified record earns its row only on ai.DecisionMinKept kept answers: one
 // fewer, and the row goes, however right every kept answer was.
 func TestACertifiedRecordEarnsARowOnlyOnEnoughKeptAnswers(t *testing.T) {
 	form := defaultWidgetForm()
 	rec, scenarios := certifiedWidgetRecord(t, form)
-	rec.Decision = &DecisionStats{Kept: DecisionMinKept - 1, KeptCorrect: DecisionMinKept - 1}
+	rec.Decision = &DecisionStats{Kept: ai.DecisionMinKept - 1, KeptCorrect: ai.DecisionMinKept - 1}
 	rows, readiness, err := DecisionCertTable(scenarios, decidingCensus(t, ai.TaskSiteTriage, form), []Record{rec})
 	if err != nil || len(rows) != 0 || len(readiness) != 1 || readiness[0].Certified() {
-		t.Fatalf("a record certified on %d kept answers: %d rows, %v; want none", DecisionMinKept-1, len(rows), err)
+		t.Fatalf("a record certified on %d kept answers: %d rows, %v; want none", ai.DecisionMinKept-1, len(rows), err)
 	}
 }
 

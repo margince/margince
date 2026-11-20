@@ -54,21 +54,30 @@ func DecisionCertTable(corpus []Scenario, census *aitasks.Registry, records []Re
 	return DecisionCertRows(readiness), readiness, nil
 }
 
-// DecisionMinKept is the fewest kept answers a certified decision record needs
-// to earn a row. Zero wrong in 15 bounds the wrong rate under 14% at 90%
-// confidence, the count privacyMinRuns already sets for a privacy case.
-const DecisionMinKept = privacyMinRuns
-
 // Certified is whether this decision record earns a row in the generated
-// table: certified on at least DecisionMinKept kept answers, still describing
+// table: certified on at least ai.DecisionMinKept kept answers, still describing
 // every scenario it measured, and measuring at least one the site still ships.
 // The row is evidence for an operator; the lane answers a site with or without
 // one. Asked of the record rather than of its table key, because the key names
 // no environment class and two records can share one.
 func (r DecisionRow) Certified() bool {
 	rec := r.Record
-	return rec.Verdict == VerdictCertified && rec.Decision != nil && rec.Decision.Kept >= DecisionMinKept &&
+	return rec.Verdict == VerdictCertified && rec.Decision != nil && rec.Decision.Kept >= ai.DecisionMinKept &&
 		!r.Standing.Stale && r.Standing.Measured > 0
+}
+
+// NoRowReason says why a record earns no row: its staleness, or a certified
+// verdict on fewer than ai.DecisionMinKept kept answers. A record that earns a row,
+// or whose verdict is not certified, needs no reason beyond its verdict.
+func (r DecisionRow) NoRowReason() string {
+	if reason := r.Standing.Reason(); reason != "" {
+		return reason
+	}
+	rec := r.Record
+	if rec.Verdict == VerdictCertified && rec.Decision != nil && rec.Decision.Kept < ai.DecisionMinKept {
+		return fmt.Sprintf("certified on %d kept answers, fewer than %d kept, so it earns no row", rec.Decision.Kept, ai.DecisionMinKept)
+	}
+	return ""
 }
 
 // DecisionCertRows is one row per certified key, sorted by key. Two current

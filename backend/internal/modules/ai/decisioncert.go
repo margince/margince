@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 )
@@ -24,6 +25,11 @@ type DecisionCert struct {
 	PromptVersion string
 	CorpusVersion string
 }
+
+// DecisionMinKept is the fewest kept answers a certified decision record needs
+// to earn a row. Zero wrong in 15 kept bounds the wrong rate under 14% at 90%
+// confidence (1 - 0.1^(1/15)); one kept answer bounded nothing.
+const DecisionMinKept = 15
 
 // UncertifiedDecisionSites names each decision site, as task/site, that the
 // bound lane's provider and model hold no certified row for in the generated
@@ -46,14 +52,14 @@ func (cfg RoutingConfig) UncertifiedDecisionSites() []string {
 	return sites
 }
 
-// LogUncertifiedDecisionSites warns, at boot and at save, where the lane
+// logUncertifiedDecisionSites warns, at boot and at save, where the lane
 // answers with no certified record behind it.
-func LogUncertifiedDecisionSites(log *slog.Logger, cfg RoutingConfig) {
+func logUncertifiedDecisionSites(log *slog.Logger, cfg RoutingConfig) {
 	sites := cfg.UncertifiedDecisionSites()
 	if len(sites) == 0 {
 		return
 	}
-	log.Warn("ai: routing: the decisions lane is bound to a model with no current certified record for these sites; "+
-		"it answers them all the same",
+	log.Warn(fmt.Sprintf("ai: routing: the decisions lane is bound to a model with no current certified record for these sites "+
+		"(certified on at least %d kept answers, not stale); it answers them all the same", DecisionMinKept),
 		"provider", cfg.Decisions.Provider, "model", cfg.Decisions.Model, "sites", strings.Join(sites, ","))
 }

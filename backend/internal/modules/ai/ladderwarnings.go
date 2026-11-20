@@ -68,7 +68,7 @@ func LogSingleRungLadders(log *slog.Logger, cfg RoutingConfig) {
 	}
 }
 
-// LogLadderWarnings is what a boot reports about cfg's ladders. Tasks with no
+// LogLadderWarnings is what a boot and a routing save report about cfg. Tasks with no
 // bound rung are refused outright. Tasks whose rungs reach one API have no fallback.
 // A decisions lane answers sites it holds no certified record for.
 func LogLadderWarnings(log *slog.Logger, cfg RoutingConfig) {
@@ -76,5 +76,5 @@ func LogLadderWarnings(log *slog.Logger, cfg RoutingConfig) {
 		log.Warn(w)
 	}
 	LogSingleRungLadders(log, cfg)
-	LogUncertifiedDecisionSites(log, cfg)
+	logUncertifiedDecisionSites(log, cfg)
 }

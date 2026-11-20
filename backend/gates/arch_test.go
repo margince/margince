@@ -18,7 +18,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
@@ -171,14 +170,14 @@ var mintedModelTypes = map[string]bool{"*Router": true, "*FakeClient": true, "mo
 // package, so a new constructor is held the moment it exists. That package is
 // the one gate, and modelPathAssemblySeam names the only other callers.
 // Held by: TestNoModelClientOutsideTheGate (backend/gates/arch_test.go).
-func modelClientConstructors(t *testing.T) []string {
+func modelClientConstructors(t *testing.T) map[string]bool {
 	t.Helper()
 	dir := "internal/modules/ai"
 	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
-	var calls []string
+	constructors := map[string]bool{}
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
@@ -195,7 +194,7 @@ func modelClientConstructors(t *testing.T) []string {
 			}
 			for _, result := range fn.Type.Results.List {
 				if mintedModelTypes[types.ExprString(result.Type)] {
-					calls = append(calls, "ai."+fn.Name.Name+"(")
+					constructors[fn.Name.Name] = true
 					break
 				}
 			}
@@ -203,10 +202,51 @@ func modelClientConstructors(t *testing.T) []string {
 	}
 	// The production constructor is a minted router; a census without it read
 	// the package wrong and would pass every file.
-	if !slices.Contains(calls, "ai.NewRouter(") {
-		t.Fatalf("the constructor census of %s is %v and misses ai.NewRouter", dir, calls)
+	if !constructors["NewRouter"] {
+		t.Fatalf("the constructor census of %s is %v and misses NewRouter", dir, constructors)
 	}
-	return calls
+	return constructors
+}
+
+// aiModulePath is the import path the constructors are reached through.
+const aiModulePath = modulePath + "/internal/modules/ai"
+
+// constructorUses names each constructor file reaches, under whatever name it
+// imports the ai package by, as a call or as a function value.
+func constructorUses(t *testing.T, path string, constructors map[string]bool) []string {
+	t.Helper()
+	file, err := gatekit.ParseFile(path, 0)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", path, err)
+	}
+	local := ""
+	for _, imp := range file.Imports {
+		if strings.Trim(imp.Path.Value, `"`) != aiModulePath {
+			continue
+		}
+		local = "ai"
+		if imp.Name != nil {
+			local = imp.Name.Name
+		}
+	}
+	switch local {
+	case "", "_":
+		return nil
+	case ".":
+		return []string{"a dot import of internal/modules/ai"}
+	}
+	var uses []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		sel, ok := n.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == local && constructors[sel.Sel.Name] {
+			uses = append(uses, "ai."+sel.Sel.Name)
+		}
+		return true
+	})
+	return uses
 }
 
 // modelPathAssemblySeam: the only non-test, non-ai-module files allowed to
@@ -248,10 +288,8 @@ func TestNoModelClientOutsideTheGate(t *testing.T) {
 		text := string(src)
 
 		if !modelPathAssemblySeam[rel] {
-			for _, ctor := range constructors {
-				if strings.Contains(text, ctor) {
-					t.Errorf("%s: calls %s outside the compose gate — only internal/compose/brain.go and internal/compose/sitereaddebug.go may construct a model client directly", rel, strings.TrimSuffix(ctor, "("))
-				}
+			for _, use := range constructorUses(t, path, constructors) {
+				t.Errorf("%s: uses %s outside the compose gate — only internal/compose/brain.go and internal/compose/sitereaddebug.go may construct a model client directly", rel, use)
 			}
 		}
 

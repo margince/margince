@@ -1067,15 +1067,48 @@ judges "$c117" case117 reports-the-draft-and-counts-the-rest 0 "!the judge says 
 judges "$c117" case117 reports-nothing-waiting-yet 1 "said 'Nothing this work started is waiting'" "!the judge says NO"
 judges "$c117" case117 lists-the-whole-queue 1 "the judge says NO to: Criterion 2." "Brandst"
 # The same passing answer with its list_approvals call removed still passes:
-# reading the queue is allowed, never required.
-grep -v '"name": "mcp__margince__list_approvals"' "$root/e2e/llm/testdata/case117/reports-only-the-draft.jsonl" >"$work/case117-no-queue-read.jsonl"
-if ! python3 "$check" --check "$root/e2e/llm/scenarios/$c117" "$work/case117-no-queue-read.jsonl" >"$work/case117.out" 2>&1; then
+# reading the queue is allowed, never required. The fixture is checked to have
+# lost the call first, or this would test the original again.
+c117_draft="$root/e2e/llm/testdata/case117/reports-only-the-draft.jsonl"
+grep -v '"name": "mcp__margince__list_approvals"' "$c117_draft" >"$work/case117-no-queue-read.jsonl"
+if ! grep -q '"name": "mcp__margince__list_approvals"' "$c117_draft" ||
+	grep -q 'list_approvals", "input"' "$work/case117-no-queue-read.jsonl"; then
+	echo "FAIL: case117/no-queue-read — the fixture did not lose its list_approvals call, so this checks nothing"
+	failures=$((failures + 1))
+elif ! python3 "$check" --check "$root/e2e/llm/scenarios/$c117" "$work/case117-no-queue-read.jsonl" >"$work/case117.out" 2>&1; then
 	echo "FAIL: case117/no-queue-read — a run that never reads the queue fails"
 	sed 's/^/    /' "$work/case117.out"
 	failures=$((failures + 1))
 else
 	echo "ok: case117/no-queue-read"
 fi
+
+# The empty-queue patterns, read from the scenario itself, against claims they
+# must catch (1) and correct answers they must spare (0).
+python3 "$check" --field must_not_mention "$root/e2e/llm/scenarios/$c117" >"$work/case117.patterns"
+while IFS=$'\t' read -r want sentence; do
+	if python3 -c 'import re,sys; ps=open(sys.argv[1]).read().splitlines(); sys.exit(0 if any(re.search(p, sys.argv[2], re.I) for p in ps) else 1)' \
+		"$work/case117.patterns" "$sentence"; then got=1; else got=0; fi
+	if [[ "$got" != "$want" ]]; then
+		echo "FAIL: case117 empty-queue patterns — matched=$got, want $want: $sentence"
+		failures=$((failures + 1))
+	else
+		echo "ok: case117 empty-queue patterns ($want): $sentence"
+	fi
+done <<'SENTENCES'
+1	Nothing this work started is waiting for your approval yet.
+1	There are no pending approvals.
+1	No drafts are awaiting your approval.
+1	Your approval queue is empty.
+1	Nothing pending approval this time.
+1	Nothing is waiting for a decision.
+1	None of it is waiting for you.
+0	Nothing has been sent yet; the recap draft to Jannik is waiting for your approval.
+0	Nothing goes out until you read and approve it.
+0	Three other items sit in your approval queue that have nothing to do with this task.
+0	An automation drafted a recap email to Jannik that waits for your approval before it is sent.
+0	Logged the coffee meeting and added a follow-up task for you, due Friday.
+SENTENCES
 
 c62="case62-held-meetings-to-opportunities.yaml"
 judges "$c62" case62 gives-both-counts 0 "!the judge says NO"

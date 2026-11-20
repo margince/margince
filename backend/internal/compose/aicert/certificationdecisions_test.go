@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // aiCertDecision is one decision record as the document carries it. Binding's
@@ -81,10 +82,10 @@ func writeAICertDecisions(page *strings.Builder, decisions []aiCertDecision) {
 	page.WriteString("or answers below the site's own floor. A decision record comes from a\n")
 	page.WriteString("`make e2e-ai ROUTING=` run whose config binds `decisions:`, and is certified\n")
 	page.WriteString("per site with no judge: `certified` means no answer the site kept was wrong in\n")
-	fmt.Fprintf(page, "any run, and at least %d were kept. A bound lane answers every site whether or\n", aicert.DecisionMinKept)
-	page.WriteString("not a record exists (advisory, not a runtime gate); *Certified row* here means\n")
-	page.WriteString("the record itself is certified and not stale, which is what an operator should\n")
-	page.WriteString("trust the binding on. `make gen` writes those rows into\n")
+	page.WriteString("any run, and at least one was kept. A bound lane answers every site whether or\n")
+	page.WriteString("not a record exists (advisory, not a runtime gate). *Certified row* here means\n")
+	fmt.Fprintf(page, "the record is certified on at least %d kept answers and not stale. An operator\n", ai.DecisionMinKept)
+	page.WriteString("trusts the binding on such a row. `make gen` writes those rows into\n")
 	page.WriteString("`internal/modules/ai/decisioncert_gen.go`.\n\n")
 	if len(decisions) == 0 {
 		page.WriteString("No decision record is committed, so no site has a measured verdict.\n\n")

@@ -16670,6 +16670,8 @@ export const en = {
     "Decision model answered outside the options",
   "aicalls.reason.decision_state_too_large":
     "Input too large for the decision model",
+  "aicalls.reason.decision_uncertified":
+    "Decision model not certified for this task (older calls only)",
   "aicalls.reason.timeout": "The attempt before ran out of time",
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",

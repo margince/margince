@@ -16806,6 +16806,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Entscheidungsmodell hat außerhalb der Optionen geantwortet",
   "aicalls.reason.decision_state_too_large":
     "Eingabe zu groß für das Entscheidungsmodell",
+  "aicalls.reason.decision_uncertified":
+    "Entscheidungsmodell für diese Aufgabe nicht zertifiziert (nur ältere Aufrufe)",
   "aicalls.reason.timeout":
     "Beim vorherigen Versuch wurde das Zeitlimit überschritten",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",

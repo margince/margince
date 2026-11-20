@@ -30,6 +30,10 @@ const (
 	attemptReasonDecisionError         = "decision_error"
 	attemptReasonDecisionOffEnum       = "decision_off_enum"
 	attemptReasonDecisionStateTooLarge = "decision_state_too_large"
+	// attemptReasonDecisionUncertifiedLegacy is never written now: the lane
+	// stopped reading certification. Rows stored before that still carry it,
+	// and the decision summary still counts them.
+	attemptReasonDecisionUncertifiedLegacy = "decision_uncertified"
 )
 
 // decisionAttemptReasons lists the reasons a decision attempt hands the walk
@@ -37,7 +41,7 @@ const (
 // constants.
 var decisionAttemptReasons = []string{
 	attemptReasonDecisionBelowFloor, attemptReasonDecisionError, attemptReasonDecisionOffEnum,
-	attemptReasonDecisionStateTooLarge,
+	attemptReasonDecisionStateTooLarge, attemptReasonDecisionUncertifiedLegacy,
 }
 
 func isDecisionFallbackReason(reason string) bool {

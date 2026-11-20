@@ -58,8 +58,8 @@ func recordDecisionOutcomes(ctx context.Context, t *testing.T, meter *CallMeter)
 		// The errored decision's own row and the reason its ladder carries are
 		// one consultation, not two.
 		{triageDecisionRow(errored, false, "provider_error"), triageLadderRow(errored, 2, attemptReasonDecisionError)},
-		// Refused before any call, its state too large: the ladder's row is all there is.
-		{triageLadderRow(refused, 1, attemptReasonDecisionStateTooLarge)},
+		// A row stored before the lane stopped reading certification still counts.
+		{triageLadderRow(refused, 1, attemptReasonDecisionUncertifiedLegacy)},
 		{triageLadderRow(plain, 1, "")},
 		// The caller left during the decision: a consultation, not a decision.
 		{triageDecisionRow(canceled, true, sentinelCanceled)},
@@ -89,7 +89,7 @@ func TestDecisionSummaryCountsEachConsultationOnce(t *testing.T) {
 		t.Errorf("triage = %+v, want asked 5, decided 1", triage)
 	}
 	want := map[string]int{
-		attemptReasonDecisionBelowFloor: 1, attemptReasonDecisionError: 1, attemptReasonDecisionStateTooLarge: 1,
+		attemptReasonDecisionBelowFloor: 1, attemptReasonDecisionError: 1, attemptReasonDecisionUncertifiedLegacy: 1,
 	}
 	if !maps.Equal(triage.Fallbacks, want) {
 		t.Errorf("fallbacks = %v, want %v", triage.Fallbacks, want)

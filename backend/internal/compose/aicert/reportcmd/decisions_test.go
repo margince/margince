@@ -4,10 +4,12 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // Until a decision certification runs, the report says no site has a verdict,
@@ -68,5 +70,19 @@ func TestTheDecisionReportNamesWhatIsCertifiedAndWhatWentStale(t *testing.T) {
 	}
 	if !strings.Contains(out, "the case changed under scenario a") {
 		t.Errorf("the stale record's reason is missing:\n%s", out)
+	}
+}
+
+// A current certified record on too few kept answers prints no as its row and
+// says why, rather than leaving a bare no beside a certified verdict.
+func TestTheDecisionReportSaysWhyAThinRecordEarnsNoRow(t *testing.T) {
+	thin := aicert.Record{
+		Task: "site_triage", Kind: aicert.KindDecision, Site: "triage", Provider: "jev_compatible",
+		Model: "typesafe/jev-1.13", EnvClass: "cloud_frontier", Verdict: aicert.VerdictCertified, Runs: 9,
+		Decision: &aicert.DecisionStats{Kept: 9, KeptCorrect: 9},
+	}
+	out := renderDecisions([]aicert.DecisionRow{{Site: "site_triage/triage", Record: thin, Standing: aicert.Standing{Measured: 1, Total: 1}}})
+	if !strings.Contains(out, fmt.Sprintf("fewer than %d kept", ai.DecisionMinKept)) {
+		t.Errorf("a certified record on 9 kept answers gives no reason for its missing row:\n%s", out)
 	}
 }

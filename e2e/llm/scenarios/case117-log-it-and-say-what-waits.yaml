@@ -61,11 +61,20 @@ must_mention:
   - "Feddersen"
 
 # The unrelated reviews by the names their cards carry. Describing them without
-# a name is criterion 2's to catch. The second pattern is a claim that nothing
-# waits, which the recap draft can make untrue after the answer.
+# a name is criterion 2's to catch.
+#
+# The rest is a claim that nothing waits, which the recap draft can make untrue
+# after the answer. Each pattern is one shape of that claim, kept inside one
+# clause, so "nothing has been sent; the draft is waiting" is not one.
+# scripts/test-e2e-llm-check.sh holds these against sentences that must and
+# must not match.
 must_not_mention:
   - "(?i)brandst(?:ä|ae)tter|rademacher|uphoff"
-  - "(?i)\b(?:nothing|no (?:items?|approvals?|drafts?))\b[^.\n]{0,60}\b(?:waiting|pending)\b"
+  - "(?i)\b(?:nothing|none)\b[^.;:,\n]{0,40}?\b(?:is|are|was|were)\s+(?:currently\s+|still\s+|now\s+)?(?:waiting|pending|awaiting|queued)\b"
+  - "(?i)\bnothing\s+(?:waiting|pending|awaiting|queued)\b"
+  - "(?i)\bno\s+(?:\w+\s+){0,2}?(?:pending|outstanding|open|waiting)\s+(?:approvals?|items?|drafts?|proposals?|reviews?|decisions?|requests?)\b"
+  - "(?i)\bno\s+(?:\w+\s+){0,2}?(?:approvals?|items?|drafts?|proposals?|reviews?|decisions?|requests?)\s+(?:is\s+|are\s+)?(?:currently\s+|still\s+)?(?:waiting|pending|awaiting|queued)\b"
+  - "(?i)\b(?:queue|inbox)\s+(?:is|was|looks)\s+(?:currently\s+|now\s+|still\s+)?(?:empty|clear)\b"
 
 judge:
   - "Criterion 2. The answer keeps to what this task left waiting. This task is the coffee meeting with Jannik Feddersen of Husumer Windservice: the meeting, its quote and its follow-up task are this task's own items, and reporting them is a yes. It does not list, name or describe any waiting item that has nothing to do with this task, such as contact-card reviews for other people; a bare count of other waiting items that says nothing about what they are or whom they concern is a yes. Answer no if the answer lists, names or summarises an unrelated waiting item, for example by saying what kind of item it is or whom it is about."

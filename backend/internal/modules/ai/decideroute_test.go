@@ -516,7 +516,7 @@ func TestABoundLaneAnswersAnUncertifiedSiteAndTheBootSaysSo(t *testing.T) {
 
 	var boot bytes.Buffer
 	LogLadderWarnings(slog.New(slog.NewTextHandler(&boot, nil)), cfg)
-	for _, want := range []string{"no current certified record", "model=" + jevLane.Model, "site_triage/triage"} {
+	for _, want := range []string{"no current certified record", fmt.Sprintf("at least %d kept answers", DecisionMinKept), "model=" + jevLane.Model, "site_triage/triage"} {
 		if !strings.Contains(boot.String(), want) {
 			t.Errorf("the boot warning does not say %q:\n%s", want, boot.String())
 		}

@@ -1853,10 +1853,10 @@ answers instead whenever the lane is unbound, fails,
 or answers below the site's own floor. A decision record comes from a
 `make e2e-ai ROUTING=` run whose config binds `decisions:`, and is certified
 per site with no judge: `certified` means no answer the site kept was wrong in
-any run, and at least 15 were kept. A bound lane answers every site whether or
-not a record exists (advisory, not a runtime gate); *Certified row* here means
-the record itself is certified and not stale, which is what an operator should
-trust the binding on. `make gen` writes those rows into
+any run, and at least one was kept. A bound lane answers every site whether or
+not a record exists (advisory, not a runtime gate). *Certified row* here means
+the record is certified on at least 15 kept answers and not stale. An operator
+trusts the binding on such a row. `make gen` writes those rows into
 `internal/modules/ai/decisioncert_gen.go`.
 
 | Site | Binding | State | Verdict | Certified row | Runs | Kept | Kept wrong | Fallback rate | Fallbacks by reason | Served pass rate |
