@@ -1,3 +1,4 @@
+import { useIsMutating } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -28,6 +29,9 @@ export function TaskOutcomeForm({
   );
   const [selecting, setSelecting] = useState(filing === null);
   const record = filing === UNFILED ? null : filing;
+  // Back or a new pick unmounts the form, and its remount mints a new
+  // idempotency key; so neither is offered while a log is out.
+  const logging = useIsMutating({ mutationKey: ["activity-log"] }) > 0;
   const search = useCallback(async (q: string) => {
     const page = unwrap(
       await api.GET("/search", {
@@ -43,7 +47,7 @@ export function TaskOutcomeForm({
   return (
     <div className="form-stack">
       <div className="form-actions">
-        <Button variant="ghost" onClick={onBack}>
+        <Button variant="ghost" onClick={onBack} disabled={logging}>
           {t("tasks.log.back")}
         </Button>
       </div>
@@ -80,7 +84,11 @@ export function TaskOutcomeForm({
               {record && (
                 <EntityRef kind={record.entity_type} id={record.entity_id} />
               )}
-              <Button variant="ghost" onClick={() => setSelecting(true)}>
+              <Button
+                variant="ghost"
+                onClick={() => setSelecting(true)}
+                disabled={logging}
+              >
                 {t(record ? "tasks.log.chooseRecord" : "tasks.log.pickRecord")}
               </Button>
             </div>

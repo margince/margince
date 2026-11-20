@@ -483,6 +483,13 @@ export const TaskStates: Story = {
         title: "Confirm the meeting",
         isDone: true,
       }),
+      entry("task-withheld", "2026-08-12T09:00:00Z", {
+        kind: "task",
+        title: "Private task",
+        isDone: false,
+        withheld: true,
+        terms: "Lena Fischer · Due 6 Dec 2026",
+      }),
     ],
   },
 };

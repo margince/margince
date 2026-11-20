@@ -37,8 +37,9 @@ To snooze a customer who is waiting for a reply in Margince, press **More action
 3. Choose **Snooze** for one day, or **Snooze for 3 days**, **Snooze for 7 days** or **Until they reply**.
 4. The note that follows offers **Undo**.
 
-A task's **More actions** has no snooze, so press its title and choose **Snooze 1 day** ([How do I complete a task?](#how-do-i-complete-a-task)). Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work.
-A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
+A task's **More actions** has no snooze. In its details, **Snooze 1 day** moves the due date for everyone. A task with no date uses **Move to** ([How do I complete a task?](#how-do-i-complete-a-task)).
+
+Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work. A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
 To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to the top of your Worklist.
@@ -135,12 +136,12 @@ A task filed on no record has no one to write to and offers none. **Draft email*
 **Call** and **Book a meeting** go to the first contact the task is filed on, and an archived contact gets neither. **Call** dials. If you may log activity, it also opens **Log activity** on **Call** under the task, which does not complete the task. A done or read-only task offers the same steps. On the open card under **Needs you** on **Home**, the step is the colour button and **Done** is a plain one. A **Do** task, or one whose step has nothing to act on, keeps **Done** as the colour button.
 
 ### How do I plan my week?
-To plan your week in Margince, open **Home**, switch the view to **Weekly** and add commitments to the **Plan for this week** card.
+To plan your week in Margince, open **Home**, switch the view to **Weekly** and add commitments to the week's plan card.
 1. Click **Home**, then **Weekly**.
-2. On **Plan for this week**, press **Plan week**. The card then takes the week's dates as its title, such as **Plan · 16 – 22 November**.
+2. If the card reads **Plan for this week**, press **Plan week**. It then shows the week's dates, such as **Plan · 16 – 22 November**.
 3. Press **Add commitment** and fill in **Commitment**.
 4. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press **Add**.
-5. Tick commitments to mark them, then press **Save {count} changes**.
+5. Tick a commitment only when it is done, since a tick saves it as done. Then press **Save {count} changes**.
 6. Fill in **Constraints this week**: **Risks** and **Not on your calendar**.
 
 Also called: weekly plan, weekly goals, set commitments. More in [Your week](your-week.md).
@@ -283,8 +284,7 @@ Inside a band, work due tomorrow, this week or later has its own heading. Late w
 A row that does not fit moves down, never up. When one band fills, the rows that do not fit drop to Keep momentum. They never go before work that was already urgent.
 
 ### Which mail is mine?
-Mine shows reply work addressed to you. Owning a contact does not make every message to that contact your work.
-Being copied alone does not assign a reply. Team shows shared work under the access you already have.
+Mine shows reply work addressed to you. Owning a contact does not make every message to that contact your work. Being copied alone does not assign a reply. Team shows shared work under the access you already have.
 
 Old automatic findings without a current check stay with their source for review. On a contact, **Review conversation findings** shows their words, source and date without calling them overdue. Tasks you typed, changed or reopened keep their own state. An import does not count as such a change. An email on another subject does not mean a promise was kept.
 

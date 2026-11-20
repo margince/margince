@@ -34,7 +34,7 @@ func (b *keysetTasks) TasksAfter(_ context.Context, _ TaskWindow, after string, 
 // Overdue tasks past the lane's bound reach the page through the tail. Their
 // own facts say Now. Still, on no page of the walk does a band climb back above
 // the crowded rows the ranking drew before them.
-func TestATailRowNeverHeadsABandAboveTheRankedRows(t *testing.T) {
+func TestOverdueTasksInTheTailNeverReopenTheNowBand(t *testing.T) {
 	var tasks []Task
 	backlog := &keysetTasks{}
 	count := plannedCap + 8

@@ -72,6 +72,27 @@ describe("the outcome of a task filed on no record", () => {
     });
   });
 
+  it("holds Back while the outcome is being logged", async () => {
+    const user = userEvent.setup();
+    stubApi({ "POST /activities": () => new Promise<Response>(() => {}) });
+    render(
+      <TaskOutcomeForm task={unfiled} onLogged={() => {}} onBack={() => {}} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Log without a record" }),
+    );
+    await user.type(await screen.findByLabelText("Subject *"), "Renewed");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Back" })).toHaveProperty(
+        "disabled",
+        true,
+      ),
+    );
+  });
+
   it("goes back to the task's actions", async () => {
     const user = userEvent.setup();
     stubApi({});

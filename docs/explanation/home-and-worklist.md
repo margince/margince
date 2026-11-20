@@ -185,8 +185,8 @@ A count that fails leaves the category a floor and does not fail the page.
 Once the ranked rows run out, the next pages load a tail (`attention/backlogtail.go`). Each cut source goes on
 from its own keyset, skipping the rows the ranked top already holds. The tail rows go through the same admission,
 scope, Done, view and filter steps as the top. The reader's Done marks are read for the tail rows too.
-Every tail row is marked crowded (`crowdedOut`), so its band is never above the ranked rows'. The client
-draws each band once, where the queue first names it (`bandSections` in `worklist.bands.ts`).
+Every tail row is marked crowded (`crowdedOut`), so none heads Now. The client draws each band once, where
+the queue first names it (`bandSections` in `worklist.bands.ts`), and a tail row joins its band's heading.
 
 The cursor carries where each source stopped, and binds the same scope, owner, view and filter as before. The list ends when
 every source in the tail is read to its end. A source that fails while the tail loads is named in
