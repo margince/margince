@@ -2516,6 +2516,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.undo.nullUnwritable":
     "Hoàn tác thay đổi này sẽ xóa trống một trường không được để trống, nên không thể hoàn tác.",
   "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
+  "history.undo.restoreArchiverRequired":
+    "Chỉ đồng nghiệp đã lưu trữ hồ sơ này hoặc quản lý mới có thể khôi phục hồ sơ.",
   "history.undo.edgeRelinkUnsupported":
     "Không thể khôi phục liên kết đã gỡ bằng hoàn tác. Thêm lại liên kết trên hồ sơ này.",
   "history.undo.laterCompanyChange":

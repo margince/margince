@@ -2495,6 +2495,8 @@ export const en = {
     "Undoing this change would clear a field that cannot be empty, so it cannot be undone.",
   "history.undo.notWritableByCaller":
     "You do not have permission to write these fields.",
+  "history.undo.restoreArchiverRequired":
+    "Only the colleague who archived this record, or a manager, can restore it.",
   "history.undo.edgeRelinkUnsupported":
     "A removed link cannot be restored by undo. Add the link again on this record.",
   "history.undo.laterCompanyChange":

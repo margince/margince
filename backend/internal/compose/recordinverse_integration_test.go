@@ -356,11 +356,12 @@ func TestUndoingAMachineActivityCreateArchivesIt(t *testing.T) {
 	}
 }
 
-// Undoing a create archives the record, which asks the delete grant: a seat
-// that may edit contacts and not archive them is told so up front.
+// Undoing a create archives the record, which asks the archive's authority.
+// A teammate who may edit the contact, but neither owns it nor holds delete,
+// is told so up front.
 func TestACreateUndoIsRefusedToASeatThatMayNotArchive(t *testing.T) {
 	e := integration.Setup(t)
-	owner := ids.From[ids.UserKind](e.Rep1)
+	owner := ids.From[ids.UserKind](e.Rep2)
 	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import", OwnerID: &owner})
 	if err != nil {
 		t.Fatal(err)
@@ -369,7 +370,7 @@ func TestACreateUndoIsRefusedToASeatThatMayNotArchive(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	answer := advisoryAnswer(rep, t, e, "contact", contact, latestAuditRowID(t, e, "contact", contact, actionCreate))
 	if answer.Undoable || answer.Reason != string(ReasonNotWritableByCaller) {
-		t.Errorf("a seat without contact delete was answered %+v, want %q", answer, ReasonNotWritableByCaller)
+		t.Errorf("a teammate who may not archive the contact was answered %+v, want %q", answer, ReasonNotWritableByCaller)
 	}
 }
 

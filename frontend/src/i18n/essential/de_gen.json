@@ -1459,6 +1459,7 @@
   "history.undo.recordArchived": "Diese Änderung lässt sich nicht rückgängig machen, da der Datensatz archiviert ist und keine Änderungen zulässt.",
   "history.undo.nullUnwritable": "Diese Änderung lässt sich nicht rückgängig machen, da dabei ein Pflichtfeld leer würde.",
   "history.undo.notWritableByCaller": "Du hast keine Berechtigung, diese Felder zu ändern.",
+  "history.undo.restoreArchiverRequired": "Nur wer diesen Datensatz archiviert hat oder eine Führungskraft kann ihn wiederherstellen.",
   "history.undo.edgeRelinkUnsupported": "Eine entfernte Verknüpfung lässt sich nicht rückgängig machen. Füge die Verknüpfung auf diesem Datensatz erneut hinzu.",
   "history.undo.laterCompanyChange": "Das Unternehmen oder seine Angaben haben sich nach dieser Abfrage geändert. Ein Rückgängigmachen würde diese spätere Änderung überschreiben.",
   "history.undo.noRestoreSnapshot": "Diese Abfrage wurde gespeichert, bevor die früheren Angaben aufbewahrt wurden. Darum lässt sie sich nicht rückgängig machen.",
