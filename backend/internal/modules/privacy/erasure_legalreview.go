@@ -22,19 +22,19 @@ const subjectDealIDsSQL = `SELECT r.deal_id FROM relationship r
 // only the deals the subject stands in now. Erasure keeps the wider set above.
 const subjectLiveDealIDsSQL = subjectDealIDsSQL + ` AND r.archived_at IS NULL`
 
-// redactSubjectLegalReviewText replaces the subject's name and addresses inside the
-// note and comments of every legal review on a deal they are or were a stakeholder
-// of, and tombstones each row it changed.
+// redactSubjectLegalReviewText replaces the subject's name and addresses in the
+// note and comments of legal reviews on deals they are or were a stakeholder of.
+// Each changed row gets a tombstone.
 //
-// The text is a colleague's prose about the deal, shared with its other
-// stakeholders, so only what names the subject goes, as with an unlinked note:
-// the same pattern, from the same helper.
-// Both erasure acts call this, as neither deletes the deal.
+// The text is a colleague's prose about the deal and is shared with its other
+// stakeholders. Only what names the subject goes, as with an unlinked note, using
+// the same pattern from the same helper. Both erasure acts call this, as neither
+// deletes the deal.
 func redactSubjectLegalReviewText(
 	ctx context.Context, tx pgx.Tx, contactID ids.UUID, emails []string, displayName, reason, cause string,
 ) error {
-	// A subject the helper can build no pattern for has nothing to match on, so the
-	// text goes whole: leaving it would keep what cannot be told apart from theirs.
+	// With no pattern there is nothing to match on. The text goes whole, because
+	// what names the subject cannot be told apart from the rest.
 	pattern := subjectTextPattern(emails, displayName)
 	rows, err := tx.Query(ctx, `
 		UPDATE legal_review SET note = CASE WHEN $2 = '' THEN NULL ELSE regexp_replace(note, $2, $3, 'gi') END,

@@ -10,8 +10,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 )
 
-// The card is decided under exactly the grants the review's own answer takes,
-// so a seat is told about a review only if it could answer it.
+// The card takes the grants the review's own answer takes. A seat is told about
+// a review only if it could answer it.
 func TestTheLegalReviewCardTakesTheGrantsTheAnswerTakes(t *testing.T) {
 	var got []string
 	for _, g := range decisionGrants[approvalsubject.KindLegalReviewRequest] {

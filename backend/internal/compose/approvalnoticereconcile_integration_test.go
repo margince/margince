@@ -307,8 +307,7 @@ func TestNoticeReconciliationRetractsALegalReviewNoticeOnceTheGrantIsLost(t *tes
 	a.e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = $2`, a.e.AdminUser, key)
 	desk := legalreviewdesk.Desk{Approvals: a.svc, Notices: notices.NewStore(a.db)}
 	if err := a.db.Tx(a.proposerCtx(ids.Nil), func(tx pgx.Tx) error {
-		return desk.Raise(a.proposerCtx(ids.Nil), tx, deals.ReviewRequest{
-			ReviewID: ids.NewV7(), DealID: a.deal, DealName: "Fleet renewal", Seats: []ids.UUID{a.e.AdminUser}})
+		return desk.Raise(a.proposerCtx(ids.Nil), tx, deals.ReviewRequest{ReviewID: ids.NewV7(), DealID: a.deal, DealName: "Fleet renewal", Seats: []ids.UUID{a.e.AdminUser}})
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -327,6 +326,7 @@ func TestNoticeReconciliationRetractsALegalReviewNoticeOnceTheGrantIsLost(t *tes
 		t.Errorf("the reviewer who lost the grants still has %d notices", got)
 	}
 }
+
 func (a approvalNotifyEnv) requestedEnvelopes(t *testing.T) []kevents.Envelope {
 	t.Helper()
 	var out []kevents.Envelope
