@@ -20,6 +20,7 @@ import {
   PICTURE_MAX_PIXELS,
   PICTURE_TYPES,
 } from "./picturelimits";
+import { SHRINKABLE_MAX_BYTES } from "./pictureshrink";
 import { ProfilePictureRow, pictureProblem } from "./profilepicture";
 
 type User = components["schemas"]["User"];
@@ -122,7 +123,7 @@ it("refuses a file that is not PNG, JPEG or WebP before it is sent", async () =>
   expect(sent).toEqual([]);
 });
 
-it("refuses a file over the server's ceiling before it is sent", async () => {
+it("refuses a file still over the server's ceiling when the browser cannot shrink it", async () => {
   serve(() => json(ME));
   const user = userEvent.setup();
   show();
@@ -310,4 +311,61 @@ it("names the pixel bound when the server refuses a picture for its pixels", asy
   expect(
     screen.queryByText("Picture not uploaded. Use a PNG, JPEG or WebP file."),
   ).toBeNull();
+});
+
+it("sends a phone photo over the server's byte ceiling as its shrunk centre square", async () => {
+  const { drawImage } = browserDraws(4032, 3024);
+  serve(() => json({ ...ME, avatar_url: PICTURE }));
+  const user = userEvent.setup();
+  show();
+  const photo = new File([new Uint8Array(PICTURE_MAX_BYTES + 1)], "me.jpg", {
+    type: "image/jpeg",
+  });
+  await user.upload(picker(), photo);
+
+  expect(await screen.findByText("Picture saved")).toBeInTheDocument();
+  expect(drawImage).toHaveBeenCalled();
+  expect(await sentFile()?.text()).toBe("shrunk");
+});
+
+it("shrinks a picture within the pixel bound when its file is over the byte ceiling", async () => {
+  const { drawImage } = browserDraws(2000, 2000);
+  serve(() => json({ ...ME, avatar_url: PICTURE }));
+  const user = userEvent.setup();
+  show();
+  const scan = new File([new Uint8Array(PICTURE_MAX_BYTES + 1)], "me.png", {
+    type: "image/png",
+  });
+  await user.upload(picker(), scan);
+
+  expect(await screen.findByText("Picture saved")).toBeInTheDocument();
+  expect(drawImage).toHaveBeenCalledWith(
+    expect.anything(),
+    0,
+    0,
+    2000,
+    2000,
+    0,
+    0,
+    1024,
+    1024,
+  );
+  expect(sentFile()?.type).toBe("image/png");
+});
+
+it("refuses a file past what the browser decodes before it reads a pixel", async () => {
+  browserDraws(4032, 3024);
+  serve(() => json(ME));
+  const user = userEvent.setup();
+  show();
+  const huge = new File([new Uint8Array(SHRINKABLE_MAX_BYTES + 1)], "me.jpg", {
+    type: "image/jpeg",
+  });
+  await user.upload(picker(), huge);
+
+  expect(
+    await screen.findByText("Picture not uploaded. Use a file up to 5 MB."),
+  ).toBeInTheDocument();
+  expect(createImageBitmap).not.toHaveBeenCalled();
+  expect(sent).toEqual([]);
 });
