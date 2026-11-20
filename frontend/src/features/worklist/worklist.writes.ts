@@ -4,6 +4,7 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { refetchAfterAssignment } from "../../components/taskwritefollowup";
 import { isEntityKind } from "../../lib/entity";
+import { hideHomeRows } from "../../lib/homerows";
 import { problemCodeOf, throwProblem, unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { nudgeDismissalKey } from "../../lib/workkeys";
@@ -260,16 +261,15 @@ const DISMISSAL_DAYS = 30;
 // has already judged needs a way to leave, or it returns every morning and the
 // count above it stays wrong.
 //
-// The queue is invalidated rather than edited in place, for the reason the
-// reassign mutation states. The rank numbers and the summary above them are
-// the server's. A row removed locally leaves both describing a page that is no
-// longer on screen.
+// Home drops the row at once and shows Updating. The rank numbers and the
+// summary stay the server's, so the queue is read again to replace them.
 export function useSetDisposition() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
       activityId: string;
       disposition: WorklistDisposition;
+      source: string;
       snoozedUntil?: string;
       snoozedIntent?: components["schemas"]["IntentTime"];
       reopenOn?: ReopenCondition;
@@ -295,9 +295,14 @@ export function useSetDisposition() {
         }),
       );
     },
+    onMutate: (input) =>
+      hideHomeRows(queryClient, [
+        { source: input.source, id: input.activityId },
+      ]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });
     },
+    onSettled: (_data, _error, _input, settle) => settle?.(),
   });
 }
 

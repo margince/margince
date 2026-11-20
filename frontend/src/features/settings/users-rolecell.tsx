@@ -147,7 +147,7 @@ export function MemberRole({
     },
     onSuccess: async () => {
       await refresh();
-      toast.show(t("users.roleSaved", { name: member.email }));
+      toast.show(t("users.roleSaved", { name: member.display_name }));
     },
   });
   if (member.is_agent) {

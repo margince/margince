@@ -248,7 +248,7 @@ The moment fires on **owed promises only**, and leads the page in the Next bar a
 so the list never repeats it. The list has two sources: the suggestions (or the scan's findings) first,
 then the moves made by hand. One rule stops the page disagreeing with itself:
 
-- **The quiet card claims only what it read.** It says *"Nothing is owed to this account"*, never
+- **The quiet card claims only what it read.** It says *"Nothing is owed to this company"*, never
   "nothing needs you today". The second would be a claim about work it did not look at, in the payload
   that holds the rows that say the opposite. Every client reads it, the tool surface too, so the bound sits
   on the server.

@@ -189,6 +189,11 @@ export function typedMinorUnits(
   currency: string,
   locale: Locale,
 ): TypedMinor {
+  // A blank code would scale at the two-digit default, and the amount would
+  // move a hundredfold once the real currency is known.
+  if (currency.trim() === "") {
+    return { refused: { key: "amount.refused.noCurrency", params: {} } };
+  }
   const digits = minorUnitDigits(currency);
   const parsed = parseTypedDecimal(text, locale);
   if ("refused" in parsed) {

@@ -872,6 +872,29 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "dormancy_days": {
+          "description": "Three day counts, each above the one before: after how many days with no activity a company moves to each later step of the ladder.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer"
+          },
+          "default": [
+            30,
+            60,
+            90
+          ]
+        },
+        "dormancy_follow_up_enabled": {
+          "description": "Offer the owner of a quiet or stale company a task to get back in touch.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
         "first_response_enabled": {
           "description": "Track a first-response target on every lead.",
           "type": [
@@ -2361,7 +2384,7 @@
           "$ref": "#/$defs/embeddingsBinding"
         },
         "decisions": {
-          "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, on a certified site, and falls back to its ladder whenever the answer does not stand.",
+          "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, with or without a certification record, and falls back to its ladder whenever the answer does not stand.",
           "$ref": "#/$defs/decisionsBinding"
         },
         "providers": {

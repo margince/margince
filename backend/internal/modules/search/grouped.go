@@ -5,6 +5,7 @@ package search
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -38,20 +39,49 @@ func groupedShapeFor(perType int, in Input) (groupedShape, error) {
 // statement caps each branch on its own, before the union, so one type's
 // matches cannot crowd another's out. The cap is one past perType: the extra
 // row is how page tells a type that holds more from one that was exhausted.
-func (g groupedShape) statement(branches []string, within string, arg func(any) int) string {
+//
+// A branch with own rows reads them first. They may fill the cap above every
+// score the rest of the branch can reach. Then the rest and its fallback arms
+// never run, because Postgres plans the filled check as a constant.
+func (g groupedShape) statement(branches []unionBranch, within string, arg func(any) int) string {
 	capPos := arg(g.perType + 1)
-	capped := make([]string, len(branches))
-	for i, branch := range branches {
-		sql := "SELECT " + hitColumns + " FROM (" + branch + ") b"
-		if within != "" {
-			sql += " WHERE " + within
+	capped := func(sql string, conditions ...string) string {
+		where := strings.Join(slices.DeleteFunc(append([]string{within}, conditions...), func(c string) bool { return c == "" }), " AND ")
+		if where != "" {
+			where = " WHERE " + where
 		}
-		capped[i] = fmt.Sprintf("(%s ORDER BY score DESC, id LIMIT $%d)", sql, capPos)
+		return fmt.Sprintf("(SELECT %s FROM (%s) b%s ORDER BY score DESC, id LIMIT $%d)", hitColumns, sql, where, capPos)
+	}
+	var owned []string
+	filled := map[string]string{}
+	for _, branch := range branches {
+		if branch.own == "" {
+			continue
+		}
+		name := "own_" + branch.entity
+		owned = append(owned, name+" AS MATERIALIZED "+capped(branch.own))
+		filled[branch.entity] = fmt.Sprintf("((SELECT count(*) FROM %s WHERE score > $%d) >= $%d)", name, arg(branch.unrankedCeiling), capPos)
+	}
+	var elements []string
+	for _, branch := range branches {
+		switch {
+		case branch.own != "":
+			elements = append(elements, fmt.Sprintf("(SELECT %s FROM own_%s WHERE %s)", hitColumns, branch.entity, filled[branch.entity]),
+				capped(branch.sql, "NOT "+filled[branch.entity]))
+		case filled[branch.fallbackOf] != "":
+			elements = append(elements, capped(branch.sql, "NOT "+filled[branch.fallbackOf]))
+		default:
+			elements = append(elements, capped(branch.sql))
+		}
 	}
 	// Type first, so each type's hits arrive together: a score is no reason
 	// to interleave two types that it cannot compare.
-	return "SELECT " + hitColumns + " FROM (" + strings.Join(capped, " UNION ALL ") +
+	statement := "SELECT " + hitColumns + " FROM (" + strings.Join(elements, " UNION ALL ") +
 		") grouped ORDER BY rtype, score DESC, id"
+	if len(owned) == 0 {
+		return statement
+	}
+	return "WITH " + strings.Join(owned, ", ") + " " + statement
 }
 
 // page drops each type's overfetched row and names the types it came from.

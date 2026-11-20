@@ -173,6 +173,11 @@ type Input struct {
 	// naming none covers. Only GET /v1/search asks: a kind named in Types is
 	// searched either way, and the other lanes keep their core types.
 	WithExtensions bool
+	// Typeahead leaves messages out while the word being typed is under four
+	// letters, unless the request names messages alone. Only a human's typeahead
+	// box asks; the results page and search_records rank messages from the
+	// first letter.
+	Typeahead bool
 	// Exclude drops these records, of any type, before ranking and counting.
 	Exclude []ids.UUID
 }
@@ -199,6 +204,9 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			words, maxQueryWords)}
 	}
 	types := requestedTypes(in)
+	if in.Typeahead && !namesOnlyMail(in.Types) && fragmentTooShortForMail(query) {
+		types = slices.DeleteFunc(slices.Clone(types), func(t string) bool { return t == entityActivity })
+	}
 	for _, t := range types {
 		if !knownEntity(t) {
 			return Page{}, &BadQueryError{Field: "types", Reason: fmt.Sprintf("unknown type %q", t)}
@@ -224,22 +232,10 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
-		headPos, tailPos, hasFragment := bindTypedQuery(query, arg)
-		identifierPos := bindIdentifier(query, arg)
-		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, identifierPos, addressAssociation(in.AddressCompanies), arg)
+		branches, err := searchUnion(ctx, in, query, types, arg)
 		if err != nil {
 			return err
 		}
-		if in.WithEmployees && slices.Contains(types, entityContact) && !carriesOperators(query) {
-			arm, armErr := employerArmSQL(ctx, query, headPos, tailPos, hasFragment, identifierPos, arg)
-			if armErr != nil {
-				return armErr
-			}
-			if arm != "" {
-				branches = append(branches, arm)
-			}
-		}
-		branches = append(branches, admittedExtensionSQL(ctx, types, query, headPos, tailPos, arg)...)
 		if len(branches) == 0 {
 			// Every requested type was denied by object RBAC: an empty
 			// page, not an error — search discloses nothing the entity
@@ -314,70 +310,6 @@ func withinClause(within []ids.UUID, arg func(any) int) string {
 		return ""
 	}
 	return fmt.Sprintf("id = ANY($%d)", arg(within))
-}
-
-type addressAssociation bool
-
-// admittedBranchSQL builds one ranked SELECT per requested-and-admitted
-// entity type. A hit is a read twice over: object RBAC first (a role
-// without contact.read gets no contact hits — search must not out-see the
-// entity lists), then the row scope.
-func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool,
-	identifierPos identifierBinder, addressCompanies addressAssociation, arg func(any) int,
-) ([]string, error) {
-	var branches []string
-	for _, branch := range searchBranches {
-		if !slices.Contains(types, branch.entity) {
-			continue
-		}
-		scope, admitted, err := branchScope(ctx, branch, "t", arg)
-		if err != nil {
-			return nil, err
-		}
-		if !admitted {
-			continue
-		}
-		// What this branch matches and how it scores live with the expressions
-		// in typedquery.go — including the parse configurations each entity
-		// uses and the rule that only the fragment widens.
-		tsquery := matchExpression(branch.entity, headPos, tailPos, hasFragment)
-
-		snippet, err := branch.excerpt(ctx, arg)
-		if err != nil {
-			return nil, err
-		}
-		where := branch.ownMatch("t", tsquery, identifierPos) + " AND t.archived_at IS NULL"
-		if narrowing := branch.narrowing("t"); narrowing != "" {
-			where += " AND " + narrowing
-		}
-		if scope != "" {
-			where += " AND " + scope
-		}
-		score := branch.ownScore("t", scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment), identifierPos)
-		if branch.entity == entityCompany && addressCompanies {
-			associated := sqlFalse
-			if identifierPos.addressPrefix {
-				match, err := companyAddressMatch(ctx, "t", identifierPos.position(false), arg)
-				if err != nil {
-					return nil, err
-				}
-				associated = match
-			}
-			candidates := fmt.Sprintf("t.id=ANY(ARRAY(SELECT lexical.id FROM company lexical WHERE lexical.search_tsv @@ %s UNION SELECT identified.id FROM company identified WHERE %s UNION SELECT t.id FROM company t WHERE %s))",
-				tsquery, branch.identifier.MatchSQL(identifierPos.position(true), "identified.id"), associated)
-			where = candidates + " AND t.archived_at IS NULL AND " + conjunction(branch.narrowing("t"), scope)
-			score = fmt.Sprintf("(%s + %d * (%s)::int)", score, companyAssociationScore, associated)
-		}
-		source := branch.rowSource(ctx, where, arg)
-		branches = append(branches, fmt.Sprintf(
-			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
-			        %s::float8 AS score, %s, %s AS identifier_match
-			 FROM %s`,
-			branch.entity, branch.title, snippet,
-			score,
-			noEmployer, branch.identifierEvidence("t", identifierPos), source))
-	}
-	return branches, nil
 }
 
 // BadQueryError maps to a 422 at the transport. Field names WHICH query input

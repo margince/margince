@@ -227,8 +227,9 @@ func (x *SignalExtractor) emailCommitment(
 		return Commitment{}, false, err
 	}
 	c.NeedsConfirmation = message.Direction != connector.DirectionOutbound || !commitmentPartyHasRole(verified, promiser, commitmentSenderRole)
-	c.SystemText = &systemtext.Message{Version: 1, Subject: systemtext.Prose(systemtext.Generated, ""), Body: systemtext.Sentence("commitment.explanation", systemtext.Text(c.Party), systemtext.Text(message.Subject), systemtext.Date(message.At.Format(time.DateOnly)))}
-	c.Body = fmt.Sprintf("Promiser: %s. Commitment in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
+	explanation := systemtext.Sentence("commitment.explanation", systemtext.Text(c.Party), systemtext.Text(message.Subject), systemtext.Date(message.At.Format(time.DateOnly)))
+	c.SystemText = &systemtext.Message{Version: 1, Subject: systemtext.Prose(systemtext.Generated, ""), Body: explanation}
+	c.Body = systemtext.Canonical(explanation, textlang.English)
 	c.Span = span
 	c.Locator = commitmentLocator(cited, kind, party, span)
 	if promisedOnAnothersPrivateThread(c) {

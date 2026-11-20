@@ -99,6 +99,16 @@ async function recordAgreement(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "Record contract" }));
 }
 
+// The value box, once the installation's currency has opened it.
+async function openedValueBox() {
+  await waitFor(() =>
+    expect((screen.getByLabelText("Value") as HTMLInputElement).disabled).toBe(
+      false,
+    ),
+  );
+  return screen.getByLabelText("Value") as HTMLInputElement;
+}
+
 async function writtenBody(seen: Request[], method: "POST" | "PATCH") {
   const writes = seen.filter(
     (r) =>
@@ -118,7 +128,7 @@ describe("recording an agreement's value", () => {
     const user = userEvent.setup();
     const seen = stubApi({ body: SETTINGS });
     show(<ContractForm companyId="o-1" open onClose={() => {}} />);
-    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeTruthy());
+    await openedValueBox();
 
     await recordAgreement(user);
 
@@ -133,28 +143,88 @@ describe("recording an agreement's value", () => {
     );
   });
 
-  it("states the amount and no currency when the installation has not answered", async () => {
+  it("says the currency could not be read, and opens the amount once a retry reads it", async () => {
     const user = userEvent.setup();
-    // The installation read is the only source of a unit here, so a form that
-    // cannot reach it holds none. It sends the amount anyway: the server refuses
-    // half a money pair where the reader can see the refusal, whereas dropping
-    // the amount would report a saved agreement whose value went nowhere.
-    const seen = stubApi({ body: { detail: "unavailable" }, status: 503 });
+    // The installation read is the only source of a unit here. Without it an
+    // amount has no scale, so the box says why it is shut and offers the retry.
+    let settingsUp = false;
+    const seen: Request[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(String(input), init);
+        seen.push(request);
+        const path = new URL(request.url).pathname;
+        if (path.endsWith("/installation/settings")) {
+          return settingsUp
+            ? jsonResponse(SETTINGS)
+            : jsonResponse({ detail: "unavailable" }, 503);
+        }
+        if (path.includes("/contracts")) return jsonResponse({ id: "c-1" });
+        return jsonResponse({ data: [] });
+      }),
+    );
     show(<ContractForm companyId="o-1" open onClose={() => {}} />);
-    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeTruthy());
 
+    const [unread] = await screen.findAllByText(
+      "The currency could not be read, so no amount can be entered yet.",
+    );
+    const value = screen.getByLabelText("Value") as HTMLInputElement;
+    expect(value.disabled).toBe(true);
+    expect(value.getAttribute("aria-describedby")).toContain(unread.id);
+    expect(value.placeholder).toBe("");
+
+    settingsUp = true;
+    const retry = unread.querySelector("button");
+    expect(retry?.textContent).toBe("Retry");
+    if (retry) await user.click(retry);
+    expect(await openedValueBox()).toHaveProperty("value", "");
     await recordAgreement(user);
 
-    await waitFor(async () => {
-      const body = await writtenBody(seen, "POST");
-      // No currency reached this form, so the amount is scaled at ISO's own
-      // default of two digits — the same assumption the field made
-      // unconditionally before. It is stated here rather than left implicit,
-      // because it is the one path where the figure's unit is genuinely
-      // unknown and the server is what refuses the half-pair.
-      expect(body.value_minor).toBe(500_000);
-      expect(body).not.toHaveProperty("currency");
+    await waitFor(async () =>
+      expect(await writtenBody(seen, "POST")).toMatchObject({
+        value_minor: 5_000,
+        currency: "VND",
+      }),
+    );
+  });
+
+  it("takes no amount while the base currency loads, then reads it at that currency's scale", async () => {
+    const user = userEvent.setup();
+    let answerSettings: (response: Response) => void = () => {};
+    const settingsRead = new Promise<Response>((resolve) => {
+      answerSettings = resolve;
     });
+    const seen: Request[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(String(input), init);
+        seen.push(request);
+        const path = new URL(request.url).pathname;
+        if (path.endsWith("/installation/settings")) return settingsRead;
+        if (path.includes("/contracts")) return jsonResponse({ id: "c-1" });
+        return jsonResponse({ data: [] });
+      }),
+    );
+    show(<ContractForm companyId="o-1" open onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeTruthy());
+    const early = screen.getByLabelText("Value") as HTMLInputElement;
+    expect(early.disabled).toBe(true);
+    await user.type(early, "500");
+
+    answerSettings(jsonResponse(SETTINGS));
+    expect(await openedValueBox()).toHaveProperty("value", "");
+    await recordAgreement(user);
+
+    await waitFor(async () =>
+      expect(await writtenBody(seen, "POST")).toMatchObject({
+        value_minor: 5_000,
+        currency: "VND",
+      }),
+    );
   });
 });
 
@@ -201,7 +271,7 @@ describe("correcting an agreement's value", () => {
     );
     await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeTruthy());
 
-    await user.type(screen.getByLabelText("Value"), "5000");
+    await user.type(await openedValueBox(), "5000");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(async () =>

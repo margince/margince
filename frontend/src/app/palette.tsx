@@ -6,13 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  Button,
-  EmptyState,
-  Kbd,
-  PendingBody,
-  SearchField,
-} from "../design-system/atoms";
+import { Button, Kbd, PendingBody, SearchField } from "../design-system/atoms";
 import { useBackdropDismiss } from "../design-system/backdrop";
 import { Callout } from "../design-system/callout";
 import { useDialogFocus } from "../design-system/dialogfocus";
@@ -22,12 +16,15 @@ import type { StatusKind } from "../design-system/statusbadge";
 import { holdsEveryWord, searchWords } from "../format/collate";
 import { type Translator, useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
+import type { ShortcutId } from "../lib/keymap";
 import { navigate, type Route } from "../lib/router";
 import type { CoreSearchHitType, SearchHitGroup } from "../lib/searchkinds";
+import { pressShortcut } from "../lib/shortcuts";
 import { openAsk, type UrlParams } from "../lib/urlstate";
 import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
 import {
   PaletteAskDocuments,
+  PaletteEmpty,
   PaletteFilter,
   PaletteKeys,
 } from "./palettechrome";
@@ -69,6 +66,9 @@ export type Command = {
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.
   route?: Route;
+  // A binding the row presses instead of going anywhere, as the keyboard
+  // shortcuts list does.
+  presses?: ShortcutId;
   // How the page at `route` opens narrowed: the query half of the address.
   dials?: UrlParams;
   // Execution provenance keeps replay separate from recording a new search.
@@ -112,10 +112,23 @@ export function isCreateCommand(command: Command): boolean {
   return command.id.startsWith(CREATE_COMMAND_PREFIX);
 }
 
-// The row that lands on the full results screen for the typed words.
-function seeAllCommand(searched: string, t: Translator): Command | null {
+// The search answered the words with no record, and no command matches them.
+function foundNothing(
+  search: Readonly<{ empty: boolean }>,
+  matched: readonly Command[],
+): boolean {
+  return search.empty && matched.length === 0;
+}
+
+// The row that lands on the full results screen for the typed words. A results
+// page that would say "No matches" is no row to offer.
+function seeAllCommand(
+  searched: string,
+  t: Translator,
+  nothingFound: boolean,
+): Command | null {
   const words = searched.trim();
-  if (!words) return null;
+  if (!words || nothingFound) return null;
   return {
     id: "search:all",
     executedQuery: words,
@@ -213,7 +226,8 @@ export function CommandPalette({
   const recentCommands = recents.entries.map((entry) =>
     recentCommand(entry, t, recents.activating === recentIdentity(entry)),
   );
-  const seeAll = seeAllCommand(searched, t);
+  const nothingFound = foundNothing(search, filtered);
+  const seeAll = seeAllCommand(searched, t, nothingFound);
 
   const handbook = usePaletteAsk(searched, open, filtered.length);
   const askGroup = t("palette.askGroup");
@@ -265,6 +279,7 @@ export function CommandPalette({
     if (command.executedQuery)
       void recents.remember(command.executedQuery, command.searchedRecord);
     onClose();
+    if (command.presses) pressShortcut(command.presses);
     if (command.route) {
       navigate(command.route, command.dials);
     }
@@ -330,9 +345,8 @@ export function CommandPalette({
               }
             }}
           />
-          {/* The key's own name, not copy: it is what is printed on the cap a
-              reader is looking at, in every locale, the way the ⌘/Ctrl caps
-              beside the search box are. */}
+          {/* The key's own name, not copy: every keyboard prints Esc on this
+              cap, unlike Ctrl, which a German keyboard prints as Strg. */}
           <Kbd>{"esc"}</Kbd>
         </div>
         {!creates && Object.keys(every.counts).length > 0 && (
@@ -380,9 +394,12 @@ export function CommandPalette({
               delayMs={SEARCH_PENDING_DELAY_MS}
             />
           )}
-          {rows.length === 0 && !search.pending && !search.failed && (
-            <EmptyState>{t("palette.empty")}</EmptyState>
-          )}
+          <PaletteEmpty
+            query={searched.trim()}
+            nothingFound={nothingFound}
+            listed={rows.length}
+            search={search}
+          />
           {listsRecents && recents.hasStored && (
             <Eyebrow
               as="h2"

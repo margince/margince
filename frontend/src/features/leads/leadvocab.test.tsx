@@ -212,7 +212,7 @@ describe("LeadOriginsCard", () => {
     const dialog = within(await screen.findByRole("dialog"));
     const field = dialog.getByLabelText(en["leadSources.labelField"]);
     expect(field).toHaveValue("Trade show");
-    expect(dialog.getByText("trade_show").tagName).toBe("CODE");
+    expect(dialog.queryByText("trade_show")).toBeNull();
     await user.clear(field);
     await user.type(field, "Messe{Enter}");
     await waitFor(() =>

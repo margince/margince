@@ -27,7 +27,7 @@ Totals are the same for everyone. You can read a team's totals without being in 
 The **Deals** board itself also shows each stage's total and weighted total at the top of its column. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 
 ### What analytics sections are there?
-The Analytics tabs are **Overview**, **Performance**, **SDR outcomes**, **Leads**, **Partners**, **Forecast**, **Pipeline**, **Account coverage**, **My outcomes** and **Delivery**. At the end of the tab row, **Reports** opens the saved reports and the **Setup** menu holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get. When the row is too narrow, the last tabs move into a **More** menu at its end. The tab you have open stays on the row. The date range and pipeline you choose stay set when you change tabs.
+The Analytics tabs are **Overview**, **Performance**, **SDR outcomes**, **Leads**, **Partners**, **Forecast**, **Pipeline**, **Company coverage**, **My outcomes** and **Delivery**. At the end of the tab row, **Reports** opens the saved reports and the **Setup** menu holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get. When the row is too narrow, the last tabs move into a **More** menu at its end. The tab you have open stays on the row. The date range and pipeline you choose stay set when you change tabs.
 
 The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports. When you can see no deal yet, Performance, Pipeline and Forecast say **No deals to report on yet** and offer **Open Deals**. The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts. It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you.
 
@@ -76,7 +76,7 @@ When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets
 
 Two sections appear only for some seats. **My outcomes** is for a seat that sees only its own records, such as a rep. Under a wider view, it says it measures one user’s records. **Data coverage** is for a seat with permission to see it, even on a new installation where no check has run yet. The section is part of the address, so a link to one opens it.
 
-**Account coverage** lists the accounts at risk among the records you chose, in three views. **Single-contact deals** are open deals where messages or meetings went both ways with at most one contact on the deal within 90 days. **Untouched in pipeline** are accounts with an open deal and no exchange either way in the last 21 days. **Won but silent** are accounts with a deal won in the last 180 days, no open deal and no exchange in the last 30 days. The line under the filters prints these limits, and an admin changes them under **Setup** → **Metric definitions**. A row opens a side panel with the facts behind the verdict, and a deal whose contacts you may not all see is not judged.
+**Company coverage** lists the companies at risk among the records you chose, in three views. **Single-contact deals** are open deals where messages or meetings went both ways with at most one contact on the deal within 90 days. **Untouched in pipeline** are companies with an open deal and no exchange either way in the last 21 days. **Won but silent** are companies with a deal won in the last 180 days, no open deal and no exchange in the last 30 days. The line under the filters prints these limits, and an admin changes them under **Setup** → **Metric definitions**. A row opens a side panel with the facts behind the verdict, and a deal whose contacts you may not all see is not judged.
 
 ## Overview
 
@@ -203,7 +203,7 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 The default **SDR outcomes** tab follows your workflow: first qualifications without handoffs, or accepted handoffs when used. It also shows held meetings, first response time and leads still waiting for a reply. The period’s count includes only leads that came in during that period. Saved reports keep their chosen figures.
 
-**Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures.
+**Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. It also counts introductions made and meetings booked for colleagues, as [Sales reporting](sales-reporting.md) explains. A tab is not offered when your role cannot read its figures.
 
 ## My outcomes
 

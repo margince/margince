@@ -6,10 +6,12 @@ import { type ReactNode, useState } from "react";
 import {
   ENTITY_NAME_KEY,
   EntityRef,
-  entityNameQuery,
   useEntityName,
 } from "../../components/entityref";
-import { usableName } from "../../components/entityref.queries";
+import {
+  entityNameObserverQuery,
+  usableName,
+} from "../../components/entityref.queries";
 import { Disclosure } from "../../design-system/disclosure";
 import { Heading } from "../../design-system/heading";
 import { PanelRow } from "../../design-system/panel";
@@ -116,7 +118,7 @@ function QuietDeals({
 }: Readonly<{ run: MorningBrief; items: readonly MorningBriefItem[] }>) {
   const t = useT();
   const names = useQueries({
-    queries: items.map((item) => entityNameQuery("deal", item.deal_id)),
+    queries: items.map((item) => entityNameObserverQuery("deal", item.deal_id)),
   });
   // A read that answered with no name is a deal this reader may not open; it
   // leaves the list. One still loading or failed stays, for its retry.

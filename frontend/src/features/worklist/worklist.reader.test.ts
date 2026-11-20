@@ -297,3 +297,27 @@ describe("an approved change that did not take effect", () => {
     ).toBe(failed.detail);
   });
 });
+
+// An agreed time is an instant the reader keeps. The row prints it on the
+// reader's clock, as the task's details do; only a due day is the company's.
+// Agreed in another zone, the agreed clock follows the reader's, with its day
+// where that is not the reader's day.
+it("reads a timed task on the reader's clock, not the company's", () => {
+  const now = new Date("2026-09-14T08:00:00Z");
+  const timed = { ...task, due_at: "2026-09-14T15:00:00Z", due_has_time: true };
+  expect(whenText(timed, t, "en", "UTC", "Europe/Berlin", now)).toBe(
+    t("worklist.when.due", { when: "15:00" }),
+  );
+  const berlin = { wall_clock: "2026-09-14T17:00", timezone: "Europe/Berlin" };
+  expect(
+    whenText({ ...timed, due_intent: berlin }, t, "en", "UTC", "UTC", now),
+  ).toBe(t("worklist.when.due", { when: "15:00 (17:00 Europe/Berlin)" }));
+  const bangkok = {
+    ...timed,
+    due_at: "2026-09-14T23:30:00Z",
+    due_intent: { wall_clock: "2026-09-15T06:30", timezone: "Asia/Bangkok" },
+  };
+  expect(whenText(bangkok, t, "en", "UTC", "UTC", now)).toBe(
+    t("worklist.when.due", { when: "23:30 (15 Sept, 06:30 Asia/Bangkok)" }),
+  );
+});

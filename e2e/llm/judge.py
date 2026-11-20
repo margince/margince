@@ -55,6 +55,8 @@ import shutil
 import subprocess
 import tempfile
 
+import candidates
+
 # THE MODEL IS PINNED, for the reason scripts/e2e-llm.sh pins the candidate's:
 # left unset the CLI picks whatever it defaults to in the environment it finds
 # itself in, and a pass rate that moves with the CLI's default answers nothing
@@ -68,18 +70,24 @@ import tempfile
 # the model that produced them, so a corpus judged by one model is never read as
 # another's.
 #
-# HAIKU, AND THE COST OF THAT IS PUBLISHED RATHER THAN ARGUED. Scored against the
-# human-authored fixtures, Opus reads these criteria more accurately than Haiku;
-# docs/reference/mcp-tool-coverage.md carries both numbers and names every
-# criterion each model misread, so the trade is a fact on the page instead of an
-# assumption in this comment. It is the cheap judge on purpose: the judge is a
-# small part of a sweep's bill, and the lane drives THREE candidate models, which
-# is what the budget is for.
+# HAIKU, AND ITS ACCURACY IS PUBLISHED RATHER THAN ARGUED. Each judge is scored
+# against the human-authored fixtures, and docs/reference/mcp-tool-coverage.md
+# carries every model's number and names every criterion it misread. It is the
+# cheap judge on purpose: the judge is a small part of a sweep's bill, and the
+# lane drives THREE candidate models, which is what the budget is for.
 #
-# The criteria Haiku misread were sharpened rather than the labels moved to meet
-# it — a criterion a weaker reader gets wrong is usually a criterion that left a
-# case unstated, and the fixtures still discriminate for every model.
-DEFAULT_MODEL = "claude-haiku-5-5"
+# The criteria a judge misread were sharpened rather than the labels moved to
+# meet it — a criterion a weaker reader gets wrong is usually a criterion that
+# left a case unstated, and the fixtures still discriminate for every model.
+#
+# The model is read from candidates.json, where the judge's routes name it, so
+# the verdict stamp (backend/internal/compose/mcpe2e) reads the same name.
+DEFAULT_MODEL = candidates.table()["judge"]["judge_routes"]["api"]["model"]
+
+# A "no" is asked twice more and the majority decides: one misread would
+# otherwise fail a run on its own. A "yes" is not re-asked, so a judge that
+# misreads towards passing costs no extra calls and gains no extra chances.
+_VOTES_ON_NO = 3
 
 # The judge's own reply is one line of JSON, reason before verdict: a model
 # with thinking off decides at the first token it writes, so a verdict written
@@ -339,7 +347,6 @@ def _cli_asker(model):
 
 def _api_asker(via, model):
     """Ask over a key, through the bridge's own provider client and no tools."""
-    import candidates
     import providers
 
     try:
@@ -405,7 +412,7 @@ def ready():
     if kind not in ("live", "record"):
         return
     via = _via()
-    model = os.environ.get("E2E_LLM_JUDGE_MODEL", DEFAULT_MODEL)
+    model = pinned_model()
     if via == "cli":
         _cli_asker(model)
         return
@@ -449,7 +456,7 @@ def verdict(criterion, answer):
     criterion the answer failed.
     """
     kind, argument = configured()
-    model = os.environ.get("E2E_LLM_JUDGE_MODEL", DEFAULT_MODEL)
+    model = pinned_model()
     if kind == "replay":
         return _replay(argument, criterion, answer, model)
     if kind == "record":
@@ -459,4 +466,33 @@ def verdict(criterion, answer):
             return parse_verdict(_run(["sh", "-c", argument], _fenced(criterion, answer), argument))
         except ValueError as err:
             raise JudgeUnavailable(f"the judge command {argument!r} answered badly: {err}") from err
-    return _live(criterion, answer, model)
+    return voted(lambda: _live(criterion, answer, model))
+
+
+def voted(ask):
+    """The majority of up to _VOTES_ON_NO asks, stopping at the first "yes"."""
+    held, reason = ask()
+    if held:
+        return held, reason
+    votes = [(held, reason)] + [ask() for _ in range(_VOTES_ON_NO - 1)]
+    yes = [why for vote, why in votes if vote]
+    if len(yes) * 2 > len(votes):
+        return True, f"{len(yes)} of {len(votes)} votes yes: {yes[0]}"
+    return False, f"{len(votes) - len(yes)} of {len(votes)} votes no: {reason}"
+
+
+def pinned_model():
+    """The judge model this lane asks: E2E_LLM_JUDGE_MODEL, or the table's."""
+    return os.environ.get("E2E_LLM_JUDGE_MODEL", DEFAULT_MODEL)
+
+
+def family(model):
+    """The vendor family a model id belongs to, or "" for one this table does not know.
+
+    A judge of the candidate's own family grades its own kind, which the page
+    shows as self-judged rather than hiding.
+    """
+    for name in ("claude", "gpt", "gemini", "mistral"):
+        if re.search(rf"(?:^|[/-]){name}(?:[-.]|$)", model):
+            return name
+    return ""

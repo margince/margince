@@ -49,7 +49,7 @@ export function SignatureFields({
     <span
       className={count > SIGNATURE_HTML_MAX_CHARS ? "field-error" : undefined}
     >
-      {plural("settings.signatureHtmlCount", count, {
+      {plural("common.characterCount", count, {
         count: formatNumber(count, locale),
         max,
       })}

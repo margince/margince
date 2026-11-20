@@ -128,9 +128,10 @@ func (t memberTool) StageInfo(ctx context.Context, in json.RawMessage) (StageInf
 	if len(preview.Blockers) > 0 || preview.SurvivorName == nil || preview.SurvivorEmail == nil {
 		return StageInfo{}, apperrors.ErrConflict
 	}
+	source, survivor := systemtext.Inline(fmt.Sprint(preview.SourceName)), systemtext.Inline(*preview.SurvivorName)
 	return StageInfo{
-		TargetType: memberAdminObject, TargetID: args.SourceID, SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.mergeMembers", systemtext.Text(fmt.Sprint(preview.SourceName)), systemtext.Text(fmt.Sprint(preview.SourceEmail)), systemtext.Text(fmt.Sprint(*preview.SurvivorName)), systemtext.Text(fmt.Sprint(*preview.SurvivorEmail)))},
-		Summary: fmt.Sprintf(summaryIn(ctx, t.language).mergeMembers, preview.SourceName, preview.SourceEmail, *preview.SurvivorName, *preview.SurvivorEmail),
+		TargetType: memberAdminObject, TargetID: args.SourceID, SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.mergeMembers", systemtext.Text(source), systemtext.Text(fmt.Sprint(preview.SourceEmail)), systemtext.Text(survivor), systemtext.Text(fmt.Sprint(*preview.SurvivorEmail)))},
+		Summary: fmt.Sprintf(summaryIn(ctx, t.language).mergeMembers, source, preview.SourceEmail, survivor, *preview.SurvivorEmail),
 	}, nil
 }
 

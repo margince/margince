@@ -4,7 +4,7 @@
 
 **Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week, its review and its plan are in [Your week](your-week.md). For overdue invoices on Home, see [Customer payments](customer-payments.md).
 
-The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
+The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; Esc or its **Close** button closes it. It has no sidebar row of its own.
 
 Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task**, at the top right of the open card, opens the one after it. After the last card it goes back to the first. Opening a card changes only which task you see.
 
@@ -17,7 +17,7 @@ Open a task's details and choose **Log what happened** to record the outcome and
 ### How do I open my worklist?
 To open your Worklist in Margince, go to **Home** in the sidebar and press **Show Worklist**. The Worklist opens as a panel headed **Worklist**, with the day's count on the button.
 1. Click **Home** in the sidebar.
-2. Press **Show Worklist**. Press **Hide Worklist** to close it.
+2. Press **Show Worklist**. The panel opens over Home; press Esc or its **Close** button to close it.
 3. Switch **Whose work** to **Unassigned** for open work nobody holds. **Team** and **All** show when your role sees them.
 
 There is no separate Worklist page, Today page or Inbox page. Also called: to-do list, my tasks, work queue, inbox, today list.
@@ -186,7 +186,7 @@ Today names each source it could not read, with **Refresh brief**, and never sho
 - That value is the full deal amount, not the amount you expect to lose. It may not be complete, and it is not a forecast.
 - Meetings count calendar entries still to come. With no calendar connected, they count the meetings Margince knows. Margince does not say you are prepared unless the source says so.
 
-The work counts come from the current Worklist read, and each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old. After you add something, Home shows the old copy at once with an "Updating…" mark, then shows the new copy on its own. After you change or settle an item, Home reads your day again first, so that item is never listed as open. A change to who may see what never shows an old copy. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
+The work counts come from the current Worklist read, and each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old. After you add something, Home shows the old copy with an "Updating…" mark, then the new copy on its own. An item you finish, hide or decide leaves Home at once, with the same mark. After other changes, Home reads your day again first, so that item is never listed as open. A change to who may see what never shows an old copy; other Worklist pages read their own state.
 
 **Since your last brief** leaves out a proposal that already has a card under **Needs you**. When nothing is left, Home does not show it. When the recent changes did not load, only **Done for you** says so, with **Retry**. Its small changes show no **Undo** until they load; the deal cards keep theirs. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the **Undo** its change allows.
 

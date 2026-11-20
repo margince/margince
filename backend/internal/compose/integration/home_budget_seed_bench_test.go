@@ -143,12 +143,13 @@ func seedAgentLog(t *testing.T, e *apptest.AppEnv, owner Seat) int {
 }
 
 // seedAwaitedMail logs mail the owner sent to their own contacts on open
-// deals, through the activities endpoint, with no reply after it.
+// deals, through the activities endpoint, with no reply after it. Own contacts
+// only: a contact a seat can merely see refuses the activity.
 func seedAwaitedMail(t *testing.T, e *apptest.AppEnv, owner Seat) int {
 	t.Helper()
 	rows, err := e.Owner.Query(context.Background(), `SELECT DISTINCT ON (d.id) d.id::text, r.contact_id::text
 	      FROM deal d JOIN relationship r ON r.deal_id = d.id
-	      JOIN contact c ON c.id = r.contact_id AND c.archived_at IS NULL AND (c.owner_id = d.owner_id OR c.visibility <> 'owner')
+	      JOIN contact c ON c.id = r.contact_id AND c.archived_at IS NULL AND c.owner_id = d.owner_id
 	      WHERE d.owner_id = $1 AND d.status = 'open' AND d.archived_at IS NULL
 	      ORDER BY d.id, r.contact_id LIMIT $2`, owner.UserID, homeAwaitedMails)
 	if err != nil {

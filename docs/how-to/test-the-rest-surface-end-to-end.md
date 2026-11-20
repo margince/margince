@@ -47,7 +47,7 @@ The verdicts go to `backend/internal/compose/aicert/records/mcp_e2e_rest/<folder
 
 ## What it costs
 
-A run on Claude over the CLI cost about `$0.16` at API prices. Five scenarios cost `$0.23`, `$0.39`,
-`$0.51`, `$0.15` and `$0.33` for two runs each. The assistant reads the skill first, so a REST run
+A run on Claude over the CLI cost about `$0.16` at API prices. The four committed Claude verdicts cost
+`$0.23`, `$0.51`, `$0.15` and `$0.33` for two runs each. The assistant reads the skill first, so a REST run
 is longer than an MCP run. A sweep of every scenario at two or three runs each would cost about `$11–17`.
-That number is worked out from those five, and it is not a measured sweep. Run one scenario before a sweep.
+That number is worked out from a few cases, and it is not a measured sweep. Run one scenario before a sweep.

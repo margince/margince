@@ -125,7 +125,8 @@ refuses a second one while the first is in flight.
   `*.test.tsx` and `*.stories.tsx` beside it. A screen gets a folder of its own
   only when it is a state machine and not a page, as
   `features/onboarding/onboarding-conversation/` is. An address that no screen
-  answers shows a note that says so (`shell.unknownPage`), never an empty page.
+  answers shows a note that says so (`shell.unknownAddress`) with a way Home,
+  never an empty page.
 - **`src/custom/`**: the screens a fork adds. Margince ships it with only its
   README, so a fork's screens never conflict with a new release.
 - **`src/i18n/`**: three catalogs (`en`, `de`, `vi`), with `en` the default.
@@ -324,8 +325,9 @@ The app shell has a panel rail and a clear top bar over the theme ground, as
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
 
-The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`,
-`--overlayScrim`) is the one dark green field, the same in both themes. It is
+The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`) is the one
+dark green field, the same in both themes. `--overlayScrim` sits beside it but
+has a dark-theme value of its own. The green tint is lighter than the dark ground. The field is
 for what passes over the page, such as the tooltips the folded sidebar shows
 and the bar of the client surface. The sidebar is never on it. A new app panel styled from those tokens
 is styled in error.

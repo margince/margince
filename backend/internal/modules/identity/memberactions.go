@@ -103,9 +103,11 @@ func (s *Service) allowedMemberActions(
 func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, seatLeft bool) []memberAction {
 	status, userID := target.row.Status, ids.UserID{UUID: target.row.ID}
 	admitted := map[memberAction]bool{
-		actionEdit:   !target.row.IsAgent && callerOutranks(actor, target.grants, reachTakeover) == nil,
-		actionMerge:  target.row.Unused && actor.hasRole(roleAdmin) && !target.row.IsAgent && userID != actor.UserID && !target.soleAdmin,
-		actionRemove: actor.hasRole(roleAdmin) && !target.row.IsAgent && userID != actor.UserID && !target.soleAdmin,
+		actionEdit:  !target.row.IsAgent && callerOutranks(actor, target.grants, reachTakeover) == nil,
+		actionMerge: target.row.Unused && actor.hasRole(roleAdmin) && !target.row.IsAgent && userID != actor.UserID && !target.soleAdmin,
+		// Removal asks for a deactivated member, as the retirement preview does.
+		actionRemove: actor.hasRole(roleAdmin) && !target.row.IsAgent && userID != actor.UserID && !target.soleAdmin &&
+			refuseUnlessDeactivated(status) == nil,
 		actionChangeRole: refuseOwnRoleChange(actor, userID) == nil &&
 			callerOutranks(actor, target.grants, reachTakeover) == nil &&
 			refuseRoleForAgentSeat(target.row.IsAgent) == nil &&
@@ -162,7 +164,7 @@ func alreadyDeactivated(status string) bool {
 // suspended member is held for a different reason (a lockout, say), and this
 // path must not quietly clear it.
 func refuseUnlessDeactivated(status string) error {
-	if status != userStatusDeactivated {
+	if !alreadyDeactivated(status) {
 		return errNotDeactivated
 	}
 	return nil

@@ -83,13 +83,9 @@ describe("the address dispatch", () => {
     ],
     ["#/unsubscribe/tok?lang=en", screens.UnsubscribeScreen, { token: "tok" }],
     ["#/confirm/tok", screens.ConfirmDetailsScreen, { token: "tok" }],
-    ["#/reset-password", screens.ResetRoute, {}],
+    ["#/reset-password", screens.ResetAddressSignedIn, {}],
     ["#/x/fork", screens.CustomRoute, { name: "fork" }],
-    [
-      "#/no-such-page",
-      screens.ScreenNotice,
-      { messageKey: "shell.unknownPage" },
-    ],
+    ["#/no-such-page", screens.UnknownAddress, {}],
   ])("%s draws its screen", (address, component, props) => {
     const view = viewOf(address);
     expect(view.type).toBe(component);
@@ -119,14 +115,14 @@ describe("the route parts", () => {
       recordType: "deal",
       recordId: "d1",
     });
-    expect(drawn(screens.ShareRoute({ id: "deal" }))).toEqual({
-      messageKey: "screen.pending",
-    });
+    expect(screens.ShareRoute({ id: "deal" }).type).toBe(
+      screens.UnknownAddress,
+    );
   });
 
   it("answers a fork address the registry does not hold as not found", () => {
-    expect(drawn(screens.CustomRoute({ name: "fork" }))).toEqual({
-      messageKey: "shell.unknownPage",
-    });
+    expect(screens.CustomRoute({ name: "fork" })?.type).toBe(
+      screens.UnknownAddress,
+    );
   });
 });

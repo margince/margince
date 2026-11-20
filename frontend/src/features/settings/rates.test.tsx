@@ -222,6 +222,13 @@ describe("the rate sheets", () => {
     // trimDecimal turns the numeric(20,10) value into a readable 0.92.
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     expect(screen.getByText("0.92")).toBeTruthy();
+    // The day a rate takes effect reads like every other date in Settings,
+    // never as the stored ISO string.
+    const fx = rateCard("Currency rates");
+    expect(
+      within(fx).getByText(formatDate("2026-07-23", "en", browserZone())),
+    ).toBeTruthy();
+    expect(within(fx).queryByText("2026-07-23")).toBeNull();
     expect(screen.getByText("claude-opus-4-8")).toBeTruthy();
     expect(screen.getByText(/\$6\.25$/)).toBeTruthy();
 

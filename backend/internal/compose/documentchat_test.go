@@ -30,12 +30,12 @@ func pngAttachment() crmcontracts.Attachment {
 
 func chatSource(t *testing.T) documentSource {
 	t.Helper()
-	return documentSource{Part: model.Attachment{MIME: "image/png", Bytes: cardPNG(t)}}
+	return documentSource{Part: model.Attachment{MIME: "image/png", Bytes: tallPNG(t)}}
 }
 
 func TestAChatScreenshotIsReadForItsMessagesAndItsHeader(t *testing.T) {
 	store := &fakeReadStore{
-		meta: pngAttachment(), body: string(cardPNG(t)),
+		meta: pngAttachment(), body: string(tallPNG(t)),
 		question: activities.ExtractionQuestionChatCapture,
 	}
 	brain := scriptedBrain{FakeClient: ai.NewFakeClient().Script(chatReply()), carriage: carriesImagesOnly}
@@ -66,7 +66,7 @@ func TestAChatScreenshotIsReadForItsMessagesAndItsHeader(t *testing.T) {
 
 func TestAChatScreenshotShowingNoChatSaysWhyNothingIsOffered(t *testing.T) {
 	store := &fakeReadStore{
-		meta: pngAttachment(), body: string(cardPNG(t)),
+		meta: pngAttachment(), body: string(tallPNG(t)),
 		question: activities.ExtractionQuestionChatCapture,
 	}
 	empty := reply(notStated(chatFieldText), notStated(chatFieldName), notStated(chatFieldPhone))

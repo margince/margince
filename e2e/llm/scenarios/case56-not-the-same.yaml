@@ -60,5 +60,9 @@ must_not_mention:
   # A merge reported: the user said they are different contacts.
   - "(?:I|we)(?:'ve| have)? merged"
 
+# The new card beside the Lucy Vo the seed holds, and no merge of the two.
+must_end_with:
+  - contact "Lucy Vo" records=2
+
 runs: 3
 pass_at: 2

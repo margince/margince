@@ -23,12 +23,13 @@ import { useToast } from "../../design-system/toast";
 import { countryOptions } from "../../format/assignedcountries";
 import { todayIn } from "../../format/calendarday";
 import { typedDecimalText, typedNumberFault } from "../../format/decimalinput";
-import { formatNumber } from "../../format/format";
+import { formatDate, formatNumber, formatPercent } from "../../format/format";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { WithheldRateCard } from "./rates";
 
 type TaxRate = components["schemas"]["TaxRate"];
@@ -36,11 +37,15 @@ type Category = TaxRate["category"];
 
 const TAX_RATES_KEY = ["tax-rates"] as const;
 
+// The server sends a rate in percent with two decimals.
+const TAX_RATE_DIGITS = 2;
+
 // The tax rates offers are charged, by country and category. A rate is added
 // and never changed: a new rate from a later day replaces it from that day.
 export function TaxRatesCard() {
   const t = useT();
   const { locale } = useLocale();
+  const readerZone = useViewerZone();
   const canRead = useCan("tax_rate", "read");
   const canRecord = useCanWrite("tax_rate", "create");
   const [open, setOpen] = useState(false);
@@ -99,12 +104,14 @@ export function TaxRatesCard() {
             {
               key: "rate",
               header: t("taxRates.colRate"),
-              render: (row) => `${row.rate} %`,
+              // A statutory rate keeps its decimals: 7.7 % is not 8 %.
+              render: (row) =>
+                formatPercent(Number(row.rate) / 100, locale, TAX_RATE_DIGITS),
             },
             {
               key: "from",
               header: t("taxRates.colFrom"),
-              render: (row) => row.valid_from,
+              render: (row) => formatDate(row.valid_from, locale, readerZone),
             },
           ]}
         />

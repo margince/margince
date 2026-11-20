@@ -170,11 +170,7 @@ export function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
   return (
     <li className="auto-run">
       <div className="auto-run-head">
-        <time
-          className="t-caption"
-          dateTime={run.occurred_at}
-          title={run.occurred_at}
-        >
+        <time className="t-caption" dateTime={run.occurred_at}>
           {formatDateTime(run.occurred_at, locale, zone)}
         </time>
         <OutcomeBadge outcome={run.outcome} />

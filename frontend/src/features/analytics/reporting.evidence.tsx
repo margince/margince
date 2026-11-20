@@ -6,6 +6,7 @@ import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { scopeName } from "./analytics.context";
 import { cohortOutcomeLabel } from "./reporting.cohort";
 import { EvidenceFrame } from "./reporting.evidenceframe";
 import { EvidenceRecords } from "./reporting.evidencerecords";
@@ -64,7 +65,7 @@ export function ReportingEvidenceDrawer({
       title={heading.title}
       onClose={onClose}
       lines={[
-        evaluation.context.scope.label +
+        (scopeName(evaluation.context.scope, t) ?? "") +
           (point?.label
             ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : breakdownLabel(point.key, point.label, t)}`
             : "") +

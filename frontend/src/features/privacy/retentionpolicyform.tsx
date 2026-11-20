@@ -4,7 +4,7 @@ import { api } from "../../api/client";
 import { Button, Checkbox, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
   actionLabelKey,
@@ -15,6 +15,7 @@ import {
   RETENTION_SCOPES,
   type RetentionAction,
   type RetentionScope,
+  retainDaysFault,
   scopeLabelKey,
 } from "./retention.logic";
 
@@ -32,6 +33,7 @@ export function RetentionPolicyForm({
   onDone,
 }: Readonly<{ onDone: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const formId = useId();
   const [scope, setScope] = useState<RetentionScope>(RETENTION_SCOPES[0]);
@@ -128,11 +130,7 @@ export function RetentionPolicyForm({
 
         <Field
           label={t("retention.window")}
-          hint={
-            days === null && retainDays.trim() !== ""
-              ? t("retention.windowInvalid")
-              : undefined
-          }
+          error={retainDaysFault(retainDays, locale, t("retention.window"))}
         >
           {(control) => (
             <TextInput
@@ -197,6 +195,9 @@ export function RetentionPolicyForm({
         {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
       </form>
       <div className="actions">
+        <Button onClick={onDone} disabled={create.isPending}>
+          {t("create.cancel")}
+        </Button>
         <Button
           type="submit"
           form={formId}

@@ -92,6 +92,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.why.met",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -208,6 +209,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contactCase.intro",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -242,6 +244,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
 
     // The meeting's organizer is a human, not the CRM contact record type.
     "meetingChange.line.details",
+    "worklist.ask.invitation",
     "worklist.ask.changedInvitation",
     "worklist.ask.meeting.updated",
     "worklist.ask.meeting.canceled",
@@ -403,6 +406,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contactCase.intro",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -495,7 +499,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "scheduling.unavailable",
     // Human account holders whose full seats determine the shared allowance.
     "aiAdmin.fixed",
-    "aiAdmin.formula",
+    "aiAdmin.formula_one",
+    "aiAdmin.formula_other",
     "aiAdmin.floor",
     "aiAdmin.perUser",
     "aiAdmin.overrideHint",
@@ -896,3 +901,45 @@ describe.each(Object.keys(CATALOGS))(
     });
   },
 );
+
+// The company record is called a company, and English once called it an
+// account. The word also names a mail, user, channel or provider account, so a
+// sweep of every value cannot tell the two apart. The key can. These keys, and
+// the keys under these prefixes, use "account" for the company record. Their
+// English value must not.
+const COMPANY_SENSE_ACCOUNT_KEYS = [
+  "analytics.sectionAccounts",
+  "analytics.accounts.",
+  "deal.aside.account",
+  "dealSuggestion.accountOwner",
+  "linkedinReach.account",
+  "co.contacts.map.account",
+  "rollup.accounts",
+  "reporting.prepared.accounts",
+  "reporting.account_cohort",
+  "agent.activity.accountScan",
+  "jobs.kind.account_scan",
+  "aiTask.name.account_scan",
+  "worklist.because.account_termination",
+];
+
+describe("en names the company record a company", () => {
+  const underCompanySense = (key: string) =>
+    COMPANY_SENSE_ACCOUNT_KEYS.some((prefix) => key.startsWith(prefix));
+
+  it("no key that names the company with the old word says account", () => {
+    const stale = Object.keys(en).filter(
+      (key) =>
+        underCompanySense(key) &&
+        /\baccounts?\b/i.test(visibleWords((en as Catalog)[key])),
+    );
+    expect(stale).toEqual([]);
+  });
+
+  it("every listed key or prefix still names a key", () => {
+    const spent = COMPANY_SENSE_ACCOUNT_KEYS.filter(
+      (prefix) => !Object.keys(en).some((key) => key.startsWith(prefix)),
+    );
+    expect(spent).toEqual([]);
+  });
+});

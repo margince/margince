@@ -22,7 +22,6 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { browserZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
@@ -31,6 +30,7 @@ import { lineSentence } from "../../lib/magiccopy";
 import { unwrap } from "../../lib/problem";
 import { receiptAuditId } from "../../lib/receiptstate";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { MagicUndoButton } from "./magic.undo";
 import "../brief/brief.css";
 
@@ -158,6 +158,7 @@ function RecordRow({
 }: Readonly<{ record: MagicLineRecord; happened: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useViewerZone();
   const entity = record.entity;
   const label = entity.label ?? t("magic.noRecord");
   const href = isEntityKind(entity.type)
@@ -170,7 +171,7 @@ function RecordRow({
         <RecordActions record={record} />
       </div>
       <time className="t-caption" dateTime={record.occurred_at}>
-        {formatDateTime(record.occurred_at, locale, browserZone())}
+        {formatDateTime(record.occurred_at, locale, zone)}
       </time>
       {record.changes.length > 0 ? (
         <ChangeList changes={record.changes} />

@@ -17,8 +17,8 @@ const minimalContract = `
 tiers: [alpha, beta]
 
 tasks:
-  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, subject_restriction: honour, sites: [only]}
-  bar: {display_name: "Test task bar", summary: "Does a thing.", ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned, subject_restriction: honour}
+  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha, beta], execution_mode: background, status: shipped, subject_restriction: honour, sites: [only]}
+  bar: {display_name: "Test task bar", summary: "Does a thing.", ladder: [beta, alpha], execution_mode: interactive, status: planned, subject_restriction: honour}
 
 degrade_to:
   beta: alpha
@@ -86,7 +86,7 @@ func TestParseContractRejectsUnknownLadderTier(t *testing.T) {
 tiers: [alpha]
 
 tasks:
-  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha, gamma], execution_mode: background, on_budget_exhausted: queue, status: planned, subject_restriction: honour}
+  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha, gamma], execution_mode: background, status: planned, subject_restriction: honour}
 
 degrade_to:
   alpha: alpha
@@ -108,7 +108,7 @@ func TestParseContractRejectsUnknownDegradeToTier(t *testing.T) {
 tiers: [alpha]
 
 tasks:
-  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: planned, subject_restriction: honour}
+  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha], execution_mode: background, status: planned, subject_restriction: honour}
 
 degrade_to:
   alpha: gamma
@@ -122,37 +122,27 @@ degrade_to:
 	}
 }
 
-func TestParseContractRejectsExecutionModeBudgetPolicyMismatch(t *testing.T) {
-	tests := []struct {
-		name       string
-		mode       string
-		policy     string
-		wantDetail string
-	}{
-		{name: "interactive queues", mode: "interactive", policy: "queue", wantDetail: "interactive execution_mode requires"},
-		{name: "background degrades", mode: "background", policy: "degrade", wantDetail: "background execution_mode requires"},
-		{name: "unknown mode", mode: "scheduled", policy: "queue", wantDetail: "execution_mode must be"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			raw := strings.ReplaceAll(`
+// The execution mode alone decides what a spent budget does, so it must be
+// one of the two the router reads. A task naming the old budget-policy field
+// is refused rather than read as if that field still decided anything.
+func TestParseContractRejectsAnUnknownExecutionModeAndTheBudgetPolicyField(t *testing.T) {
+	for name, task := range map[string]string{
+		"execution_mode must be":              "execution_mode: scheduled",
+		"field on_budget_exhausted not found": "execution_mode: background, on_budget_exhausted: queue",
+	} {
+		raw := `
 tiers: [alpha]
 
 tasks:
-  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha], execution_mode: MODE, on_budget_exhausted: POLICY, status: planned, subject_restriction: honour}
+  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha], ` + task + `, status: planned, subject_restriction: honour}
 
 degrade_to:
   alpha: alpha
-`, "MODE", tt.mode)
-			raw = strings.ReplaceAll(raw, "POLICY", tt.policy)
-			_, err := parseContract([]byte(raw))
-			if err == nil {
-				t.Fatal("parseContract accepted an invalid execution-mode and budget-policy pairing")
-			}
-			if !strings.Contains(err.Error(), tt.wantDetail) {
-				t.Fatalf("error %q does not explain the invalid pairing", err)
-			}
-		})
+`
+		_, err := parseContract([]byte(raw))
+		if err == nil || !strings.Contains(err.Error(), name) {
+			t.Errorf("%s: parseContract = %v, want an error naming %q", task, err, name)
+		}
 	}
 }
 
@@ -221,7 +211,6 @@ tasks:
     summary: "Does a thing."
     ladder: [cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
 `
 	for name, tail := range map[string]string{
 		"shipped without sites": "    status: shipped\n",
@@ -250,7 +239,6 @@ tasks:
     summary: "Does a thing."
     ladder: [cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: planned
     subject_restriction: honour
 `
@@ -298,7 +286,6 @@ tasks:
     summary: "Does a thing."
     ladder: [alpha]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [{name: only, kind: one_shot}]
@@ -320,7 +307,6 @@ func TestAITasksRejectsDuplicateKey(t *testing.T) {
 		"a task declared twice": mergeSafetyBase + `  foo:
     ladder: [alpha]
     execution_mode: background
-    on_budget_exhausted: queue
     status: planned
     subject_restriction: honour
 `,
@@ -334,7 +320,6 @@ tasks:
     ladder: [alpha]
     ladder: [alpha]
     execution_mode: background
-    on_budget_exhausted: queue
     status: planned
     subject_restriction: honour
 `,
@@ -346,7 +331,6 @@ tasks:
     summary: "Does a thing."
     ladder: [alpha]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites:
@@ -381,7 +365,6 @@ tasks:
     summary: "Does a thing."
     ladder: [beta]
     execution_mode: background
-    on_budget_exhausted: queue
     status: planned
     subject_restriction: honour
 `
@@ -426,7 +409,6 @@ tasks:
     summary: "Does a thing."
     ladder: [alpha]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [{name: only, kinds: agent_loop}]
@@ -439,7 +421,6 @@ tasks:
     summary: "Does a thing."
     ladder: [alpha]
     execution_mode: background
-    on_budget_exhausted: queue
     status: planned
     subject_restriction: honour
     company_context: {scopes: [identity], token_budget: 300, conditionals: true}
@@ -471,7 +452,6 @@ tasks:
     summary: "Does a thing."
     ladder: [alpha]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [bare]
@@ -501,7 +481,6 @@ tasks:
     summary: "Does a thing."
     ladder: [cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: planned
     subject_restriction: honour
 `
@@ -531,7 +510,6 @@ tasks:
     summary: "Does a thing."
     ladder: [alpha, beta]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites:
@@ -541,7 +519,7 @@ tasks:
       - name: morning_brief
         kind: agent_loop
         tools: [list_records, read_record]
-  bar: {display_name: "Test task bar", summary: "Does a thing.", ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned, subject_restriction: honour}
+  bar: {display_name: "Test task bar", summary: "Does a thing.", ladder: [beta, alpha], execution_mode: interactive, status: planned, subject_restriction: honour}
 
 degrade_to:
   beta: alpha
@@ -668,15 +646,15 @@ tasks:
 // an adapter to answer. Both are refused at generation, by name.
 func TestADecisionTaskMustShipAndRunInTheBackground(t *testing.T) {
 	for name, def := range map[string]string{
-		"interactive": "execution_mode: interactive\n    on_budget_exhausted: degrade\n    status: shipped\n    subject_restriction: honour",
-		"planned":     "execution_mode: background\n    on_budget_exhausted: queue\n    status: planned\n    subject_restriction: honour",
+		"interactive": "execution_mode: interactive\n    status: shipped\n    subject_restriction: honour",
+		"planned":     "execution_mode: background\n    status: planned\n    subject_restriction: honour",
 	} {
 		_, err := parseContract([]byte(contractWith(def + "\n    decision: true")))
 		if err == nil || !strings.Contains(err.Error(), "decision: true needs") {
 			t.Errorf("%s: a decision task must be refused, got %v", name, err)
 		}
 	}
-	shipped := "execution_mode: background\n    on_budget_exhausted: queue\n    status: shipped\n    subject_restriction: honour\n    decision: true"
+	shipped := "execution_mode: background\n    status: shipped\n    subject_restriction: honour\n    decision: true"
 	if _, err := parseContract([]byte(contractWith(shipped))); err != nil {
 		t.Errorf("a shipped background task may declare a decision form, got %v", err)
 	}
@@ -686,9 +664,9 @@ const decisionContract = `
 tiers: [alpha, beta]
 
 tasks:
-  zed: {display_name: "Test task zed", summary: "Does a thing.", ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: shipped, subject_restriction: honour, sites: [only], decision: true}
-  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, subject_restriction: honour, sites: [only]}
-  abe: {display_name: "Test task abe", summary: "Does a thing.", ladder: [beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, subject_restriction: honour, sites: [only], decision: true}
+  zed: {display_name: "Test task zed", summary: "Does a thing.", ladder: [alpha], execution_mode: background, status: shipped, subject_restriction: honour, sites: [only], decision: true}
+  foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha, beta], execution_mode: background, status: shipped, subject_restriction: honour, sites: [only]}
+  abe: {display_name: "Test task abe", summary: "Does a thing.", ladder: [beta], execution_mode: background, status: shipped, subject_restriction: honour, sites: [only], decision: true}
 
 degrade_to:
   beta: alpha

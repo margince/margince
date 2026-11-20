@@ -35,6 +35,7 @@ var literalDirection = regexp.MustCompile(`direction\s*(=|<>|IS DISTINCT FROM|IS
 // messageStateReaders read a direction to answer a question about one message
 // or thread, not which sides of a relationship have written.
 var messageStateReaders = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/employerchange.go":            "asks whether one message is mail the contact sent, from an address of theirs on one domain, to raise an employer question; it never counts which side of a relationship wrote",
 	"internal/platform/database/storekit/sharedmailowner.go": "picks the other party of one message, its sender or its recipient, to route that message's work; it never counts which side of a relationship wrote",
 	"internal/modules/activities/calendarinvitation.go":      "asks whether one inbound message is an invitation the reader may answer; it never counts which side of a relationship wrote",
 	"internal/modules/activities/replysettled.go":            "stamps when one inbound message was settled on its own thread; it never counts which side of a relationship wrote",

@@ -365,7 +365,6 @@ function RecordScalarField({
           multiline={field.type === "textarea"}
           type={inlineTextKind(field)}
           maxLength={field.maxLength}
-          step={field.step ?? (field.type === "number" ? "any" : undefined)}
           canEdit={canEdit}
           readOnlyReason={reason}
           onEditingChange={onEditingChange}

@@ -22,6 +22,7 @@ import (
 	"sync"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -232,7 +233,7 @@ func TestInviteUserHandlerEmailsTheSetPasswordLink(t *testing.T) {
 	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
 	body := `{"email":"invited@acme.test","display_name":"Invited Rep","role":"rep"}`
 	rec := httptest.NewRecorder()
-	h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx))
+	h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx), crmcontracts.InviteUserParams{})
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("invite status = %d, want 201: %s", rec.Code, rec.Body)
 	}

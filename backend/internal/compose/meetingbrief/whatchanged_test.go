@@ -30,7 +30,7 @@ func TestWhatChangedListsOnlyWhatHappenedAfterTheReaderLastSpoke(t *testing.T) {
 		texts = append(texts, line.Text)
 	}
 	joined := strings.Join(texts, " | ")
-	for _, want := range []string{"You last dealt with someone in this meeting 5 days ago", "Since then Ana Roth objected: the cure period", "1 conversation since then, the latest \"Re: redline\""} {
+	for _, want := range []string{"You last dealt with someone in this meeting 5 days ago", "Since then Ana Roth objected: the cure period", "1 conversation since then, the latest “Re: redline”"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("what changed = %q, want it to say %q", joined, want)
 		}

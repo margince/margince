@@ -602,12 +602,12 @@ func TestAssembleFailsRatherThanCachingABriefThatLostItsCompanyHalf(t *testing.T
 		view:    fixedAssembler{view: crmcontracts.Company360{}},
 		profile: failingProfile{err: boom},
 	}
-	if _, _, err := s.assemble(context.Background(), ids.CompanyID{}, true, nil); !errors.Is(err, boom) {
+	if _, _, err := s.assemble(context.Background(), ids.CompanyID{}, true, nil, "en"); !errors.Is(err, boom) {
 		t.Fatalf("assemble err = %v, want the profile read's own failure", err)
 	}
 	// A prepared question never reads it, so a broken profile store must not
 	// take the three answers down with the brief.
-	if _, _, err := s.assemble(context.Background(), ids.CompanyID{}, false, nil); err != nil {
+	if _, _, err := s.assemble(context.Background(), ids.CompanyID{}, false, nil, "en"); err != nil {
 		t.Fatalf("assemble without the profile = %v, want it not to read the store at all", err)
 	}
 }

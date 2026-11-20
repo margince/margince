@@ -77,17 +77,22 @@ export function RequestProof({
               unknown
             ),
         },
-        {
-          key: "counts",
-          term: t("privacy.proofErasureChanges"),
-          value: proof.erased_counts_known
-            ? formatNumber(count, locale)
-            : unknown,
-          note:
-            proof.erased_uncounted.length > 0
-              ? t("privacy.proofPartialCounts")
-              : t("privacy.proofExportCounts"),
-        },
+        // Only an erasure changes records, so only its proof counts them.
+        ...(proof.request_kind === "erasure"
+          ? [
+              {
+                key: "counts",
+                term: t("privacy.proofErasureChanges"),
+                value: proof.erased_counts_known
+                  ? formatNumber(count, locale)
+                  : unknown,
+                note:
+                  proof.erased_uncounted.length > 0
+                    ? t("privacy.proofPartialCounts")
+                    : t("privacy.proofExportCounts"),
+              },
+            ]
+          : []),
       ]}
     />
   );

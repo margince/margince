@@ -31,7 +31,7 @@ import {
 } from "../../design-system/panel";
 import { LoadMoreButton, QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor, UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
@@ -204,6 +204,17 @@ function YouLine({
 
 // The first page carries the counts and the reader's own line; every loaded
 // page adds its rows.
+// The answer has one row per member, but its pages are read at different times,
+// so a member can land on two of them. The later page is the newer reading, so
+// its row wins, in the place the member first appeared.
+function oncePerMember(rows: readonly Member[]): Member[] {
+  const byMember = new Map<string, Member>();
+  for (const row of rows) {
+    byMember.set(row.user_id, row);
+  }
+  return [...byMember.values()];
+}
+
 function AccessBody({
   pages,
   kind,
@@ -221,7 +232,7 @@ function AccessBody({
   const count = (n: number) => ({ count: formatNumber(n, locale) });
   const [answer] = pages;
   if (answer === undefined) return null;
-  const rows = pages.flatMap((page) => page.data);
+  const rows = oncePerMember(pages.flatMap((page) => page.data));
   const byGroup = (group: Group) => rows.filter((m) => m.group === group);
   const everyone = byGroup("everyone");
   return (
@@ -330,7 +341,7 @@ export function WhoCanSeePanel({
 
   const words: ReasonWords = {
     t,
-    date: (iso) => formatDate(iso, locale, zone),
+    date: (iso) => formatDateAbbrev(iso, locale, zone),
   };
   return (
     <Panel title={t("whoCanSee.title")}>

@@ -1239,9 +1239,12 @@ span.error-line {
   justify-content: flex-end;
 }
 
-/* A dialog's own heading, where the content has no SectionHeader of its own. */
+/* A dialog's own heading, where the content has no SectionHeader of its own.
+   A title can be data, such as a role name with no space in it, so it breaks
+   anywhere rather than running under the close control. */
 .modal-title {
   margin-bottom: var(--space-3);
+  overflow-wrap: anywhere;
 }
 
 /* Group divider inside a form (create.form.tsx RecordFormBody): sets custom fields
@@ -1888,8 +1891,13 @@ span.error-line {
   z-index: 35;
   /* The menu anatomy's floor (tokens.css; the note on `.lt-menu` in
      listtable.css is where it is spelled out), not a width of this panel's own:
-     a menu that states its own is the second answer this token replaced. */
-  min-inline-size: var(--menuMinInlineSize, 250px);
+     a menu that states its own is the second answer this token replaced. It
+     gives way to the viewport term of the ceiling below, which it would
+     otherwise win over. */
+  min-inline-size: min(
+    var(--menuMinInlineSize, 250px),
+    calc(100vw - 2 * var(--space-3))
+  );
   /* On a 390px screen, or at high zoom, a menu that only states a minimum
      grows the page instead of itself: the panel goes off the right edge and
      takes its actions with it. The desktop ceiling is the OTHER half of the

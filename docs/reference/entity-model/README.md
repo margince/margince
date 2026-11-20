@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4545 |
-| Foreign keys | 634 |
+| Columns | 4544 |
+| Foreign keys | 635 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -167,7 +167,7 @@ erDiagram
 | [`activity_waiting_horizon`](activities.md#activity_waiting_horizon) | activities | 3 | 0 |
 | [`agent_run`](agents.md#agent_run) | agents | 17 | 1 |
 | [`agent_standing_grant`](agents.md#agent_standing_grant) | agents | 8 | 0 |
-| [`agent_task`](compose.md#agent_task) | compose | 13 | 0 |
+| [`agent_task`](compose.md#agent_task) | compose | 14 | 0 |
 | [`ai_call`](ai.md#ai_call) | ai | 40 | 1 |
 | [`ai_call_config`](ai.md#ai_call_config) | ai | 6 | 1 |
 | [`ai_call_payload`](ai.md#ai_call_payload) | ai | 5 | 0 |
@@ -383,13 +383,13 @@ erDiagram
 | [`notification_preference`](notices.md#notification_preference) | notices | 5 | 0 |
 | [`oauth_authorization_code`](identity.md#oauth_authorization_code) | identity | 13 | 0 |
 | [`oauth_client`](identity.md#oauth_client) | identity | 11 | 1 |
-| [`oauth_grant`](identity.md#oauth_grant) | identity | 10 | 3 |
+| [`oauth_grant`](identity.md#oauth_grant) | identity | 10 | 4 |
 | [`oauth_refresh_token`](identity.md#oauth_refresh_token) | identity | 7 | 0 |
 | [`offer`](deals.md#offer) | deals | 29 | 3 |
 | [`offer_line_item`](deals.md#offer_line_item) | deals | 21 | 1 |
 | [`offer_template`](deals.md#offer_template) | deals | 10 | 1 |
 | [`onboarding_wizard_state`](identity.md#onboarding_wizard_state) | identity | 15 | 0 |
-| [`partner`](contacts.md#partner) | contacts | 29 | 0 |
+| [`partner`](contacts.md#partner) | contacts | 27 | 0 |
 | [`partner_stage`](contacts.md#partner_stage) | contacts | 13 | 1 |
 | [`passport`](identity.md#passport) | identity | 14 | 9 |
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 7 |

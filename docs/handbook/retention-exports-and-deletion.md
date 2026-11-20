@@ -53,7 +53,7 @@ To erase a contact on request, an admin opens **Settings → Privacy and retenti
 2. Set **Due**, then choose **Open request**.
 3. Choose the request in the list to open it. Leave **Resolution** empty: the erasure records its own answer.
 4. Fill **How the identity was checked** and choose **Fulfill**.
-5. Type ERASE in **Type ERASE to confirm** and choose **Erase and suppress**.
+5. Type ERASE in **Type this word to confirm: ERASE** and choose **Erase and suppress**.
 This cannot be undone. A contact that the law says you must still keep is refused with **Blocked by legal hold**.
 Also called: right to be forgotten, Art. 17, delete my data, data subject request, DSR.
 

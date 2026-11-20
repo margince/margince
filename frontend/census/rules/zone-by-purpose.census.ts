@@ -68,6 +68,10 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/worklist/worklist.row.stories.tsx",
+    why: "Draws a task agreed on another zone's clock, so the row shows the reader's time beside the agreed clock and zone.",
+  },
+  {
     file: "app/palettestanding.test.ts",
     why: "Pins the reader's zone so a hit's close and due dates read the same on every runner: the lines under test print a day.",
   },
@@ -134,6 +138,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "components/websiteinquiry.fixtures.ts",
     why: "The inquiry policy fixture pins Berlin so its deadline example covers a change to daylight saving time independently of the reader's zone.",
+  },
+  {
+    file: "features/sign-in/magic.records.test.tsx",
+    why: "Pins a reader zone apart from any runner's, so a done line's records are dated on the reader's stored clock and not the browser's.",
   },
   {
     file: "features/worklist/worklist.happened.test.ts",
@@ -425,6 +433,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The component takes the zone as a required prop and these cases assert which GROUPS render and which badges they carry — no date rendering is asserted. The zone is the shape being satisfied, not a rendering under test.",
   },
   {
+    file: "design-system/pipelineboard.percent.test.tsx",
+    why: "The deal board takes the zone as a required prop. The case asserts how a stage's chance is written, and no date on the card is under test.",
+  },
+  {
     file: "design-system/composed.thread.test.tsx",
     why: "The gutter case asserts that a row's time is drawn in the RECORD's zone rather than the instant's — '14:22' for a 12:22Z instant — which needs a zone whose offset is not zero, and the component takes it as a required prop. The other cases pass UTC as the shape being satisfied and assert who wrote what, not a rendering of the clock.",
   },
@@ -540,6 +552,14 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "format/timezone.test.ts",
     why: "Pins browserZone()'s answer and its UTC fallback by pretending to be in a named zone.",
+  },
+  {
+    file: "format/timezoneoptions.ts",
+    why: "The table of renamed IANA zones names each zone as data, so the list shows today's city and still finds the old name.",
+  },
+  {
+    file: "design-system/timezoneselect.test.tsx",
+    why: "Finds zones in the list by their IANA id and a former name, which needs both names spelled out.",
   },
   {
     file: "features/voice-knowledge/adddocument.test.tsx",

@@ -104,7 +104,7 @@
   min-width: 0;
   margin: 0;
   font: var(--fontHeadingLarge);
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   text-wrap: balance;
 }
 .glance-greeting-lead:empty {
@@ -276,21 +276,21 @@
   justify-self: end;
   padding-top: 0;
 }
-/* The whole row is the door, so the arrow shows where a pointer rests. A
-   thumb has no hover, so it keeps every arrow in view. */
+/* The arrow is what tells a row that opens from one that does not, so it is
+   always drawn: quiet at rest, in the door's ink where a pointer or focus is. */
 @media (hover: hover) {
   .brief-rail .stat-card-narrow-row .stat-card-arrow {
-    opacity: 0;
+    color: var(--textSecondary);
   }
   .brief-rail .stat-card-narrow-row:hover .stat-card-arrow,
   .brief-rail .stat-card-open:focus-visible .stat-card-arrow {
-    opacity: 1;
+    color: var(--accentText);
   }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .brief-rail .stat-card-narrow-row .stat-card-arrow {
     transition:
-      opacity var(--dur-state) var(--ease-out),
+      color var(--dur-state) var(--ease-out),
       transform var(--dur-state) var(--ease-out);
   }
 }
@@ -954,6 +954,7 @@
 /* The name moves to its own line whole rather than breaking after the lead. */
 .glance-greeting-name {
   display: inline-block;
+  max-inline-size: 100%;
   text-wrap: balance;
 }
 

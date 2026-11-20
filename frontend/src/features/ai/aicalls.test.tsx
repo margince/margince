@@ -469,7 +469,7 @@ it("narrows the trace to the feature the address names, and writes a new pick ba
   mount();
   const filter = await screen.findByRole("combobox", { name: "Feature" });
   // No call for it yet, so the server's set lacks it; the select still says it.
-  expect(filter.textContent).toContain("Reading what an account needs");
+  expect(filter.textContent).toContain("Reading what a company needs");
   const asked = vi
     .mocked(fetch)
     .mock.calls.map(([input]) =>

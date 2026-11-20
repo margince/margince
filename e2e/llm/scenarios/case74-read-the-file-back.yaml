@@ -14,6 +14,9 @@ must_call:
 must_call_matching:
   - 'list_documents~"id"'
 
+must_not_call_with:
+  - attach_link~.
+
 may_call:
   - find_records
   - search_records

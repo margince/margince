@@ -4,7 +4,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { KeyCode } from "./keyedname";
 import { NameDialog } from "./namedialog";
 
 // The caller owns the write, so pending and both refusals arrive as props.
@@ -77,14 +76,14 @@ export const RenameTitleIsLabel: Story = {
   },
 };
 
-// The raw key sits under the field, the one place it shows, and describes it.
-export const RenameWithKey: Story = {
+// A rename shows a plain line under the field, never the list's internal key.
+export const RenameWithHint: Story = {
   args: {
     title: "Rename field",
     label: "Field name",
     initial: "Fleet size",
     confirmLabel: "Save",
-    hint: <KeyCode code="deal.cf_fleet_size" />,
+    hint: "Existing records keep the old name until you save.",
   },
   play: async () => {
     const dialog = within(await within(document.body).findByRole("dialog"));
@@ -92,14 +91,15 @@ export const RenameWithKey: Story = {
     const described = document.getElementById(
       field.getAttribute("aria-describedby") ?? "",
     );
-    await expect(described?.querySelector("code")).toHaveTextContent(
-      "deal.cf_fleet_size",
+    await expect(described).toHaveTextContent(
+      "Existing records keep the old name until you save.",
     );
+    await expect(described?.querySelector("code")).toBeNull();
   },
 };
 
-export const RenameWithKeyPhone: Story = {
-  ...RenameWithKey,
+export const RenameWithHintPhone: Story = {
+  ...RenameWithHint,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

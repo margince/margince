@@ -97,7 +97,7 @@ export function MemberVerbs({
     },
     onSuccess: async () => {
       await refresh();
-      toast.show(t("users.reactivated", { name: member.email }));
+      toast.show(t("users.reactivated", { name: member.display_name }));
     },
     // Pressed from the menu or from an Undo toast, so the toast is the one
     // place a refusal can land.
@@ -119,7 +119,7 @@ export function MemberVerbs({
       // must already read the new status.
       await refresh();
       setConfirmOff(false);
-      toast.show(t("users.deactivated", { name: member.email }), {
+      toast.show(t("users.deactivated", { name: member.display_name }), {
         action: undoAction(t("common.undo"), () =>
           reactivate.mutate(member.id),
         ),

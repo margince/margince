@@ -51,7 +51,7 @@ func TestIdentifierDiscoveryKeepsIndexedCompanyCandidates(t *testing.T) {
 			if employer == "" {
 				t.Fatal("the employer arm was not admitted")
 			}
-			branches = append(branches, employer)
+			branches = append(branches, unionBranch{entity: entityContact, sql: employer, fallbackOf: entityContact})
 			statement := rankedShape{limit: 10}.statement(branches, "", arg)
 			rows, err := conn.Query(ctx, "EXPLAIN "+statement, args...)
 			if err != nil {

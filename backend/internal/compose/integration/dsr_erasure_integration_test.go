@@ -69,7 +69,7 @@ func TestFulfillingAnErasureDSRExecutesTheErasure(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
-		"kind": "erasure", "subject_ref": e.contactID, "due_at": "2026-08-01T00:00:00Z",
+		"kind": "erasure", "subject_ref": e.contactID, "received_at": "2026-07-22T00:00:00Z", "due_at": "2026-08-01T00:00:00Z",
 	}, nil, &dsr); status != http.StatusCreated {
 		t.Fatalf("create DSR → %d", status)
 	}

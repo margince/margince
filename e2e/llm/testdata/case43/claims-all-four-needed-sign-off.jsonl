@@ -1,7 +1,12 @@
 {"type": "system", "subtype": "init", "tools": ["mcp__margince__search_records", "mcp__margince__update_record", "mcp__margince__decide_approvals", "mcp__margince__list_approvals"]}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__search_records", "input": {"record_type": "company", "query": "Kieler Pumpenwerk"}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__update_record", "input": {"record_type": "company", "id": "00000000-0000-4000-8000-000000000001", "fields": {"lifecycle": "prospect"}}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__update_record", "input": {"record_type": "company", "id": "00000000-0000-4000-8000-000000000002", "fields": {"lifecycle": "prospect"}}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__update_record", "input": {"record_type": "company", "id": "00000000-0000-4000-8000-000000000003", "fields": {"lifecycle": "prospect"}}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__update_record", "input": {"record_type": "company", "id": "00000000-0000-4000-8000-000000000004", "fields": {"lifecycle": "prospect"}}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__search_records", "input": {"record_type": "company", "query": "Kieler Pumpenwerk"}, "id": "fixture1"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture1", "content": "{}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__update_record", "input": {"record_type": "company", "id": "00000000-0000-4000-8000-000000000001", "fields": {"lifecycle": "prospect"}}, "id": "fixture2"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture2", "content": "{}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__update_record", "input": {"record_type": "company", "id": "00000000-0000-4000-8000-000000000002", "fields": {"lifecycle": "prospect"}}, "id": "fixture3"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture3", "content": "{}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__update_record", "input": {"record_type": "company", "id": "00000000-0000-4000-8000-000000000003", "fields": {"lifecycle": "prospect"}}, "id": "fixture4"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture4", "content": "{}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__update_record", "input": {"record_type": "company", "id": "00000000-0000-4000-8000-000000000004", "fields": {"lifecycle": "prospect"}}, "id": "fixture5"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture5", "content": "{}", "is_error": false}]}}
 {"type": "result", "subtype": "success", "is_error": false, "result": "All four companies needed your sign-off, so Margince held each lifecycle change for approval. As agreed, I approved all four: Kieler Pumpenwerk, Rhön Hydraulik, Altmark Fördertechnik and Emsland Ventilbau are now prospects."}
