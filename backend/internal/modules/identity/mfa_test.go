@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func TestMFAEnrolRoutesAreTheOnlyEscapeFromConfinement(t *testing.T) {
@@ -37,8 +39,8 @@ func TestRequireMFAPolicyCannotConfineWithoutAVault(t *testing.T) {
 	// confined would trap every factorless member on routes that can only
 	// refuse. The composition root reports the misconfiguration at boot;
 	// admission must answer "not required" rather than convert it to a lockout.
-	svc := &Service{requireMFA: func(context.Context) (bool, error) { return true, nil }}
-	mandatory, err := svc.mfaMandatory(context.Background())
+	svc := &Service{requireMFA: func(context.Context, pgx.Tx) (bool, error) { return true, nil }}
+	mandatory, err := svc.mfaMandatory(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("mfaMandatory: %v", err)
 	}
