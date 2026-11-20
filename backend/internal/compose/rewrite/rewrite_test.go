@@ -231,3 +231,15 @@ func TestARewriteIsItsOwnTaskServedPremiumFirst(t *testing.T) {
 		t.Errorf("the rewrite ladder %v has no cheap_cloud fallback", ai.ServableTiers(ai.TaskRewrite))
 	}
 }
+
+func TestAWordingActionStillKeepsTheMessageItIsGiven(t *testing.T) {
+	for _, verb := range []Verb{VerbShorter, VerbWarmer} {
+		req := Request(Input{Envelope: EnvelopeEmail, Verb: verb, Body: "Hello Anna, can we talk about pricing?", Language: textlang.English, Detected: true}, nil, draftvoice.Context{})
+		if !strings.Contains(req.System, draftrules.Revise) || !strings.Contains(req.System, "Keep the meaning and every fact") {
+			t.Errorf("%s: the prompt no longer keeps the message's meaning", verb)
+		}
+		if strings.Contains(req.System, "names a different topic or format") {
+			t.Errorf("%s: a wording action may change the topic", verb)
+		}
+	}
+}
