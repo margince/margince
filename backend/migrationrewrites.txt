@@ -181,3 +181,5 @@
 1795144658_a_lead_link_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795175006_the_company_clock_counts_no_personal_mail.up.sql | * | creates functions and triggers that move clocks when rows change later; no existing row is read or changed
 1795175006_the_company_clock_counts_no_personal_mail.down.sql | * | restores the earlier functions and triggers; no existing row is read or changed
+1795180850_a_mailbox_connected_before_the_scope_names_its_company.up.sql | capture_connection | one row per mailbox or calendar a member ever connected, including disconnected and archived ones; capture_connection holds one row per mailbox, not per message, so a few rows per seat fit the start-up budget, and each gets one column set from the owner's legal entity
+1795180850_a_mailbox_connected_before_the_scope_names_its_company.down.sql | * | the down migration is a single SELECT 1 that changes nothing
