@@ -73,7 +73,7 @@ import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { taskName } from "./brief.taskcard";
-import { shownTeam } from "./brief.teamselect";
+import { shownAddress } from "./brief.teamselect";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
@@ -84,8 +84,7 @@ export function BriefScreen() {
   const me = useMe();
   const [params, setParams] = useUrlParams();
   const query = useHomeDay(Boolean(params.get(FOCUS_PARAM)));
-  const asked = addressFrom(params);
-  const address = { ...asked, team: shownTeam(asked.team, me.data?.team_week) };
+  const address = shownAddress(addressFrom(params), me.data?.team_week);
   const day = briefDay(query.data?.pages);
   const queueOpen = drawerOpen(params);
   const review = useWeeklyReview(address.week, address.view === "weekly");
@@ -98,9 +97,8 @@ export function BriefScreen() {
       onChange={(next) => setParams(paramsFor(next, params))}
     />
   );
-  // The way into the reader's own Today, with that list's count on it. It
-  // always opens Mine, Today, every category, whatever view the drawer was
-  // last left on, so the number is the one the opened list shows.
+  // The way into the reader's own Today: it always opens Mine, Today, every
+  // category, so the number is the one the opened list shows.
   const queueToggle = (
     <PageAsideToggle
       controlled={{
@@ -133,7 +131,6 @@ export function BriefScreen() {
             }
           : undefined
       }
-      // A team's week names itself below; the reader's own week is not its head.
       week={address.team ? undefined : review.data}
       firstName={firstName}
       now={new Date(nowMs)}

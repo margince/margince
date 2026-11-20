@@ -4,6 +4,7 @@
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useMe } from "../../lib/session";
+import type { BriefAddress } from "./brief.view";
 import { useTeams, weekTeamsFor } from "./teams.queries";
 import type { TeamWeekReach } from "./teamweekly.queries";
 
@@ -66,4 +67,12 @@ export function shownTeam(
   reach: TeamWeekReach | undefined,
 ): string | undefined {
   return opensTeamWeeks(reach) ? team : undefined;
+}
+
+// The address Home draws: a team named in it counts only for a reader who may open team weeks.
+export function shownAddress(
+  asked: BriefAddress,
+  reach: TeamWeekReach | undefined,
+): BriefAddress {
+  return { ...asked, team: shownTeam(asked.team, reach) };
 }
