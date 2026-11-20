@@ -138,7 +138,7 @@ func (s *Service) withTail(
 }
 
 // crowdedOut marks every tail row crowded. The tail holds what a bounded lane
-// left out of the ranking, so crowding keeps each one out of the Now band, as it
+// left out of the ranking. Crowding keeps each one out of the Now band, as it
 // does a ranked row past its source's lead group (bandOfRow).
 func crowdedOut(tail []ranked) []ranked {
 	for i := range tail {
