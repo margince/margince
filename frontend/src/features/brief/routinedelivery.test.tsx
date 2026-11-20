@@ -1,9 +1,10 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
-import { en } from "../../i18n/en";
+import { en, type MessageKey } from "../../i18n/en";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { BriefDeliveryPanel } from "./briefdelivery";
@@ -158,9 +159,25 @@ it("gives every summaries control one width and a description of its own", async
   const team = await screen.findByTestId("delivery-team");
   await within(team).findByRole("combobox");
   const controls = screen.getAllByRole("combobox");
-  expect(controls).toHaveLength(8);
+  expect(controls).toHaveLength(SUMMARY_HELP.length);
   for (const control of controls) {
     expect(control.className).toContain("settingrow-measure");
-    expect(control.getAttribute("aria-describedby")).toBeTruthy();
+  }
+  for (const [label, help] of SUMMARY_HELP) {
+    expect(
+      screen.getByRole("combobox", { name: en[label] }),
+    ).toHaveAccessibleDescription(en[help]);
   }
 });
+
+// Each summaries control, by its label, and the help that describes it.
+const SUMMARY_HELP: ReadonlyArray<readonly [MessageKey, MessageKey]> = [
+  ["delivery.morningLabel", "delivery.morningHelp"],
+  ["delivery.weeklyLabel", "delivery.weeklyHelp"],
+  ["delivery.hourLabel", "delivery.scheduleHelp"],
+  ["delivery.weekdayLabel", "delivery.weekdayHelp"],
+  ["delivery.quietLabel", "delivery.quietHelp"],
+  ["delivery.combineLabel", "delivery.combineHelp"],
+  ["delivery.scopeLabel", "delivery.scopeHelp"],
+  ["teamweekly.pickTeam", "delivery.teamHelp"],
+];
