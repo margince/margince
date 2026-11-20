@@ -103,13 +103,9 @@ const KIND_LABELS = new Map<string, MessageKey>([
   ["custom_field", "audit.kind.customField"],
 ]);
 
-export function auditKindKey(entityType: string): MessageKey | undefined {
-  return KIND_LABELS.get(entityType);
-}
-
 // A type newer than this client still reads as words rather than as a key.
 export function entityLabel(entityType: string, t: Translator): string {
-  const key = auditKindKey(entityType);
+  const key = KIND_LABELS.get(entityType);
   return key ? t(key) : humanizeToken(entityType);
 }
 

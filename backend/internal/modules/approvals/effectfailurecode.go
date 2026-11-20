@@ -33,6 +33,15 @@ var effectFailures = []effectFailure{
 	failureLapsed, failureNotRun, failureUnconfirmed, failureFollowUpFailed, failureWindowNotWidened,
 }
 
+// EffectFailureCodes is every code a stored failure can carry.
+func EffectFailureCodes() []string {
+	codes := make([]string, 0, len(effectFailures))
+	for _, failure := range effectFailures {
+		codes = append(codes, failure.code)
+	}
+	return codes
+}
+
 // effectFailureCode reads a stored sentence back as its code.
 func effectFailureCode(sentence *string) *string {
 	if sentence == nil {

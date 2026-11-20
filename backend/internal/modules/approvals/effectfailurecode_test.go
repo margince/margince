@@ -5,7 +5,12 @@ package approvals
 
 import (
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -42,6 +47,62 @@ func TestAFailedEffectIsToldByItsCause(t *testing.T) {
 	} {
 		if got := effectFailureOf(err); got != want {
 			t.Errorf("effectFailureOf(%v) = %s, want %s", err, got.code, want.code)
+		}
+	}
+}
+
+func TestEveryDeclaredFailureIsOneTheReaderKnows(t *testing.T) {
+	declared, listed := map[string]bool{}, map[string]bool{}
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range files {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.VAR {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				value, ok := spec.(*ast.ValueSpec)
+				if !ok {
+					continue
+				}
+				for i, name := range value.Names {
+					if i >= len(value.Values) {
+						continue
+					}
+					lit, isLit := value.Values[i].(*ast.CompositeLit)
+					if !isLit {
+						continue
+					}
+					if ident, isIdent := lit.Type.(*ast.Ident); isIdent && ident.Name == "effectFailure" {
+						declared[name.Name] = true
+					}
+					if name.Name == "effectFailures" {
+						for _, elt := range lit.Elts {
+							if ident, isIdent := elt.(*ast.Ident); isIdent {
+								listed[ident.Name] = true
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if len(declared) == 0 || len(listed) == 0 {
+		t.Fatalf("read %d declared failures and %d listed ones; the reader of this package's source has stopped seeing them", len(declared), len(listed))
+	}
+	for name := range declared {
+		if !listed[name] {
+			t.Errorf("%s is a failure a writer can record, and effectFailures leaves it out, so its sentence reads back with no code", name)
 		}
 	}
 }
