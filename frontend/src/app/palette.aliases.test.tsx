@@ -13,18 +13,26 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { COMPANY_CONTEXT_ON } from "../features/settings/settingspages.fixtures";
 import { settingsSearch } from "../features/settings/settingssearch";
 import { LocaleProvider, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { RbacAction } from "../lib/accessgrants";
+import { analyticsContextOptions } from "../lib/analyticscontext";
 import { companyContextCapabilitiesQueryKey } from "../lib/companycontextreach";
 import {
   type CapabilityExpression,
   SETTINGS_PAGES,
   type SettingsPageId,
 } from "../lib/settingscatalog";
-import { type GrantSpec, meFixture, READS_RECORDS } from "../testing/mefixture";
+import {
+  type GrantSpec,
+  meFixture,
+  READS_DESTINATIONS,
+  READS_RECORDS,
+} from "../testing/mefixture";
+import { analyticsContextFixture } from "../testing/reporting.fixtures";
 import {
   type Command,
   CommandPalette,
@@ -227,6 +235,40 @@ describe("a settings page in the palette", () => {
       expect(window.location.hash).toBe(hash);
     },
   );
+});
+
+describe("the Progress screen in the palette", () => {
+  type AnalyticsContext = components["schemas"]["AnalyticsContext"];
+
+  function progressLabel(frame: AnalyticsContext): string | undefined {
+    const client = new QueryClient();
+    client.setQueryData(["me"], meFixture({ allow: READS_DESTINATIONS }));
+    client.setQueryData(analyticsContextOptions.queryKey, frame);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      </QueryClientProvider>
+    );
+    const view = renderHook(() => useBuiltinCommands(), { wrapper });
+    return view.result.current.find(
+      (command) => command.id === "screen:progress",
+    )?.label;
+  }
+
+  // The row a reader reads in the sidebar is the row they look for here.
+  it("carries the sidebar's name for a manager who reads a team", () => {
+    const team = { kind: "team", id: "t1", label: "Sales DACH" } as const;
+    expect(progressLabel(analyticsContextFixture(team, [team]))).toBe(
+      t("progress.teamTitle"),
+    );
+  });
+
+  it("carries the sidebar's name for a reader of their own figures", () => {
+    const own = { kind: "owner", id: "u1", label: "Alex Brandt" } as const;
+    expect(progressLabel(analyticsContextFixture(own, [own]))).toBe(
+      t("nav.myProgress"),
+    );
+  });
 });
 
 describe("the palette's matcher", () => {
