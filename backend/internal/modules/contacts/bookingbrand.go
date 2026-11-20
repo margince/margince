@@ -159,3 +159,24 @@ func (s *Store) AnchorLogoKey(ctx context.Context) (string, error) {
 	}
 	return *brand.logoKey, nil
 }
+
+// FurtherEntityLetterheadTx is the legal name and logo of the further legal
+// entity a controller mail goes out for. further is false for the default
+// entity and for none, which keep the installation's letterhead.
+func FurtherEntityLetterheadTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (further bool, name, key string, err error) {
+	if entity.IsZero() {
+		return false, "", "", nil
+	}
+	identity, _, err := ResolveLegalEntity(ctx, tx, ids.From[ids.LegalEntityKind](entity))
+	if err != nil || identity.IsDefault {
+		return false, "", "", err
+	}
+	name = identity.DisplayName
+	if identity.LegalName != nil && *identity.LegalName != "" {
+		name = *identity.LegalName
+	}
+	if identity.LogoObjectKey != nil {
+		key = *identity.LogoObjectKey
+	}
+	return true, name, key, nil
+}

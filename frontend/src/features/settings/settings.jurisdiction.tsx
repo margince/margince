@@ -30,9 +30,14 @@ import {
 } from "../../lib/jurisdictiontext";
 import { labelFor } from "../../lib/labelfor";
 import { DSR_KIND_LABEL } from "../../lib/privacy.logic";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
+import {
+  JURISDICTION_QUERY_KEY,
+  JurisdictionEntitiesPanel,
+  useInstallationJurisdiction,
+} from "./jurisdictionentities";
 
 // Settings → Governance → Jurisdiction: which country's pack this installation
 // runs under, what that selection puts in force, and the documents the pack
@@ -46,22 +51,11 @@ type RetentionClass = components["schemas"]["JurisdictionRetentionClass"];
 // chosen", so the explicit choice needs a value of its own; it is sent as "".
 const NO_PACK = "none";
 
-const QUERY_KEY = ["installation-jurisdiction"] as const;
+const QUERY_KEY = JURISDICTION_QUERY_KEY;
 
 export function JurisdictionCard() {
   const t = useT();
-  const query = useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: async () => {
-      const { data, error, response } = await api.GET(
-        "/installation/jurisdiction",
-      );
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const query = useInstallationJurisdiction();
   return (
     <QueryGate query={query} pendingLabel={t("jurisdiction.card.title")}>
       {(jurisdiction) => <JurisdictionReading jurisdiction={jurisdiction} />}
@@ -75,8 +69,27 @@ export function JurisdictionReading({
   return (
     <>
       <SelectionPanel jurisdiction={jurisdiction} />
+      <JurisdictionEntitiesPanel selected={jurisdiction.selected} />
       <EffectsPanel jurisdiction={jurisdiction} />
       <DocumentsPanel jurisdiction={jurisdiction} />
+      <LegalNote />
+    </>
+  );
+}
+
+// The packs' rules and documents are drafts nobody has checked for this
+// company. The asterisk on each panel title points here.
+function LegalNote() {
+  const t = useT();
+  return <p className="t-caption">{t("jurisdiction.legalNote")}</p>;
+}
+
+/** A panel title marked with the asterisk the legal note explains. */
+function Marked({ children }: Readonly<{ children: string }>) {
+  return (
+    <>
+      {children}
+      <span aria-hidden="true"> *</span>
     </>
   );
 }
@@ -299,7 +312,7 @@ function EffectsPanel({
   const floor = jurisdiction.floor;
   const name = selected === null ? "" : jurisdictionName(selected, locale);
   return (
-    <Panel title={t("jurisdiction.effects.title")}>
+    <Panel title={<Marked>{t("jurisdiction.effects.title")}</Marked>}>
       <PanelBody>
         {!floor.known && (
           <Callout
@@ -406,7 +419,7 @@ function DocumentsPanel({
     return null;
   }
   return (
-    <Panel title={t("jurisdiction.documents.title")}>
+    <Panel title={<Marked>{t("jurisdiction.documents.title")}</Marked>}>
       <PanelBody>
         <FactList
           facts={documents.map((document) => ({
@@ -468,7 +481,12 @@ function DocumentReader({ id }: Readonly<{ id: string }>) {
   });
   return (
     <QueryGate query={query} pendingLabel={t("jurisdiction.documents.title")}>
-      {(source) => <Markdown source={source} />}
+      {(source) => (
+        <>
+          <LegalNote />
+          <Markdown source={source} />
+        </>
+      )}
     </QueryGate>
   );
 }

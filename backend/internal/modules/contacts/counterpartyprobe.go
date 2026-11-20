@@ -16,7 +16,7 @@ import (
 // ProbeCounterpartyMatch refuses a sender whose address or domain already
 // belongs to a record the caller may not file onto. Ensuring them files mail
 // onto that contact, publishes it, and employs it at the domain's company.
-// Those are writes, so a read-only share is not enough.
+// Those are writes, so the caller must be allowed to change the record.
 func (s *Store) ProbeCounterpartyMatch(ctx context.Context, email, domain string) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		return s.ProbeCounterpartyMatchTx(ctx, tx, email, domain)

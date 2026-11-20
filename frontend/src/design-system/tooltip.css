@@ -1,11 +1,9 @@
 /* The tooltip that reveals a string its row could not fit.
 
-   Above the select popup (70) in the layering stack declared in atoms.css: a
-   tip explains what a reader is already pointing at, so it can never be the
-   thing another layer covers. */
+   In the top layer (toplayer.ts), raised after the control it explains, so no
+   other layer covers it. */
 .tooltip {
   position: fixed;
-  z-index: 80;
   max-width: 320px;
   padding: var(--space-2) var(--space-3);
   /* Body S: the tip is an aside about the row under the pointer, and at the

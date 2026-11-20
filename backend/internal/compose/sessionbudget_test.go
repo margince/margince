@@ -44,13 +44,6 @@ func TestSessionSlotsAreSharedAndReturned(t *testing.T) {
 	again()
 }
 
-// deferringWorker returns the router's "not now" as the reading workers do.
-type deferringWorker struct{ err error }
-
-func (w deferringWorker) Work(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
-	return jobs.FaultContext(ctx, w.err)
-}
-
 // Every worker is registered through sessionBudgetWorker, so a deferral sleeps
 // until the moment the router named instead of spending one of the job's tries.
 func TestAJobToldNotNowSleepsUntilTheRouterSaysAndSpendsNoTry(t *testing.T) {
@@ -65,7 +58,11 @@ func TestAJobToldNotNowSleepsUntilTheRouterSaysAndSpendsNoTry(t *testing.T) {
 		"moment past":    {&ai.BudgetDeferralError{NextAttemptAt: now.Add(-time.Minute)}, 0},
 		"other fault":    {other, -1},
 	} {
-		worker := sessionBudgetWorker[CloseDateSweepArgs]{work: deferringWorker{err: tc.err}, now: func() time.Time { return now }}
+		// The worker returns the router's "not now" as the reading workers do.
+		work := river.WorkFunc(func(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
+			return jobs.FaultContext(ctx, tc.err)
+		})
+		worker := sessionBudgetWorker[CloseDateSweepArgs]{work: work, now: func() time.Time { return now }}
 		err := worker.Work(t.Context(), &river.Job[CloseDateSweepArgs]{})
 		snooze, snoozed := errors.AsType[*river.JobSnoozeError](err)
 		if tc.want < 0 && (snoozed || !errors.Is(err, other)) || tc.want >= 0 && (!snoozed || snooze.Duration != tc.want) {

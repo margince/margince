@@ -57,6 +57,16 @@ func withMergeAdmission(ctx context.Context, admission mergeAdmission) (context.
 	return context.WithValue(ctx, mergeAdmissionKey{}, admission), nil
 }
 
+// admittedCaseMembers are the rows of table an admission lets this request
+// change, nil when none does.
+func admittedCaseMembers(ctx context.Context, table string) []ids.UUID {
+	admission, ok := ctx.Value(mergeAdmissionKey{}).(mergeAdmission)
+	if !ok || admission.table != table {
+		return nil
+	}
+	return admission.members
+}
+
 func admittedCaseMember(ctx context.Context, table string, id ids.UUID) bool {
 	admission, ok := ctx.Value(mergeAdmissionKey{}).(mergeAdmission)
 	return ok && table == admission.table && slices.Contains(admission.members, id)

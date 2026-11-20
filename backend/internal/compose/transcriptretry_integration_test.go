@@ -5,9 +5,6 @@
 
 package compose
 
-// A transcript reading's failed model call, try by try. It is handed back,
-// closed with a reason on the last try, and asleep when told "not now".
-
 import (
 	"context"
 	"errors"
@@ -21,39 +18,30 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// workTranscriptTry runs the production worker once over a reading, as try
-// attempt of oneOffJobMaxAttempts, and returns the reading after and its error.
-func (e *transcriptEnv) workTranscriptTry(t *testing.T, readID ids.UUID, brain completer, attempt int) (activities.TranscriptRead, error) {
-	t.Helper()
-	now := func() time.Time { return clocktest.Now(t) }
-	worker := &transcriptProposeWorker{
-		language: installationLanguage(e.Pool), activities: e.Activities, log: slog.New(slog.DiscardHandler),
-		proposer: NewTranscriptProposer(e.Pool, brain, e.svc, now, slog.New(slog.DiscardHandler)),
-	}
-	err := worker.Work(context.Background(), &river.Job[TranscriptProposeArgs]{
-		JobRow: &rivertype.JobRow{Attempt: attempt, MaxAttempts: oneOffJobMaxAttempts},
-		Args: TranscriptProposeArgs{
-			Workspace: e.WS, ActivityID: e.activity.UUID, TranscriptReadID: readID,
-			RequestedBy: "human:" + e.Rep1.String(),
-		},
-	})
-	read, readErr := e.Activities.GetTranscriptRead(e.ctx, e.activity, readID)
-	if readErr != nil {
-		t.Fatalf("reading back the run record: %v", readErr)
-	}
-	return read, err
-}
-
-func (e *transcriptEnv) queueReading(t *testing.T) ids.UUID {
+// tryTranscript queues one reading and runs the production worker over it once
+// per brain, from try first on. It returns the reading and each try's error.
+func (e *transcriptEnv) tryTranscript(t *testing.T, first int, brains ...completer) (activities.TranscriptRead, []error) {
 	t.Helper()
 	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
 	if err != nil {
 		t.Fatalf("starting the reading: %v", err)
 	}
-	return started.ID
+	quiet, now := slog.New(slog.DiscardHandler), func() time.Time { return clocktest.Now(t) }
+	args := TranscriptProposeArgs{Workspace: e.WS, ActivityID: e.activity.UUID, TranscriptReadID: started.ID, RequestedBy: "human:" + e.Rep1.String()}
+	var errs []error
+	for i, brain := range brains {
+		worker := &transcriptProposeWorker{language: installationLanguage(e.Pool), activities: e.Activities, log: quiet}
+		worker.proposer = NewTranscriptProposer(e.Pool, brain, e.svc, now, quiet)
+		row := &rivertype.JobRow{Attempt: first + i, MaxAttempts: oneOffJobMaxAttempts}
+		errs = append(errs, worker.Work(context.Background(), &river.Job[TranscriptProposeArgs]{JobRow: row, Args: args}))
+	}
+	read, err := e.Activities.GetTranscriptRead(e.ctx, e.activity, started.ID)
+	if err != nil {
+		t.Fatalf("reading back the run record: %v", err)
+	}
+	return read, errs
 }
 
 // River repeats a failed try a second later, inside the claim's lease. The
@@ -61,13 +49,9 @@ func (e *transcriptEnv) queueReading(t *testing.T) ids.UUID {
 // rep watches "reading…" with no job behind it.
 func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) {
 	e := setupTranscript(t)
-	readID := e.queueReading(t)
-	read, err := e.workTranscriptTry(t, readID, cannedBrain{err: ai.ErrAllTiersFailed}, 1)
-	if err == nil || read.Status != activities.TranscriptReadQueued {
-		t.Fatalf("failed try: err = %v, reading %q; want the fault for River and the reading handed back as queued", err, read.Status)
-	}
-	if read, err = e.workTranscriptTry(t, readID, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)}, 2); err != nil || read.Status != activities.TranscriptReadDone {
-		t.Errorf("second try: err = %v, reading %q; want done", err, read.Status)
+	read, errs := e.tryTranscript(t, 1, cannedBrain{err: ai.ErrAllTiersFailed}, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
+	if errs[0] == nil || errs[1] != nil || read.Status != activities.TranscriptReadDone {
+		t.Errorf("tries = %v, reading %q; want the fault for River, then a reading done on the next try", errs, read.Status)
 	}
 }
 
@@ -75,10 +59,10 @@ func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) 
 // reading with a sentence, and the rep can press Read again.
 func TestATranscriptReadingWhoseLastTryFailedSaysSo(t *testing.T) {
 	e := setupTranscript(t)
-	read, err := e.workTranscriptTry(t, e.queueReading(t), cannedBrain{err: ai.ErrAllTiersFailed}, oneOffJobMaxAttempts)
-	if err == nil || read.Status != activities.TranscriptReadFailed || read.StatusDetail == nil || *read.StatusDetail == "" {
+	read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, cannedBrain{err: ai.ErrAllTiersFailed})
+	if errs[0] == nil || read.Status != activities.TranscriptReadFailed || read.StatusDetail == nil || *read.StatusDetail == "" {
 		t.Errorf("err = %v, reading %q with detail %v; want the fault on the job and the reading failed with a sentence",
-			err, read.Status, read.StatusDetail)
+			errs[0], read.Status, read.StatusDetail)
 	}
 }
 
@@ -87,8 +71,8 @@ func TestATranscriptReadingWhoseLastTryFailedSaysSo(t *testing.T) {
 func TestATranscriptReadingToldNotNowSleepsInsteadOfFailing(t *testing.T) {
 	e := setupTranscript(t)
 	deferral := &ai.BudgetDeferralError{Task: ai.TaskTranscriptPropose, NextAttemptAt: clocktest.Now(t).Add(240 * time.Hour)}
-	read, err := e.workTranscriptTry(t, e.queueReading(t), cannedBrain{err: deferral}, oneOffJobMaxAttempts)
-	if _, snoozed := errors.AsType[*river.JobSnoozeError](err); !snoozed || read.Status != activities.TranscriptReadQueued {
-		t.Errorf("err = %v, reading %q; want a snooze, which spends no try, and the reading queued", err, read.Status)
+	read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, cannedBrain{err: deferral})
+	if _, snoozed := errors.AsType[*river.JobSnoozeError](errs[0]); !snoozed || read.Status != activities.TranscriptReadQueued {
+		t.Errorf("err = %v, reading %q; want a snooze, which spends no try, and the reading queued", errs[0], read.Status)
 	}
 }

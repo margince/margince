@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -21,14 +22,9 @@ import (
 type invitationAttention struct{ pool *pgxpool.Pool }
 
 var invitationAttentionCopy = map[string]struct{ subject, body string }{
-	string(crmcontracts.MeetingInvitationAttentionReasonCalendarDisconnected): {
-		systemtext.Literal("invitation.calendar_disconnected.subject"),
-		systemtext.Literal("invitation.calendar_disconnected.body"),
-	},
-	string(crmcontracts.MeetingInvitationAttentionReasonDeliveryFailed): {
-		systemtext.Literal("invitation.delivery_failed.subject"),
-		systemtext.Literal("invitation.delivery_failed.body"),
-	},
+	string(crmcontracts.MeetingInvitationAttentionReasonCalendarDisconnected): {systemtext.Literal("invitation.calendar_disconnected.subject"), systemtext.Literal("invitation.calendar_disconnected.body")},
+	string(crmcontracts.MeetingInvitationAttentionReasonDeliveryFailed):       {systemtext.Literal("invitation.delivery_failed.subject"), systemtext.Literal("invitation.delivery_failed.body")},
+	activities.AttentionReminderRefused:                                       {systemtext.Literal("invitation.reminder_refused.subject"), systemtext.Literal("invitation.reminder_refused.body")},
 }
 
 func (a invitationAttention) InvitationAttentionTx(ctx context.Context, tx pgx.Tx, host ids.UserID, activity, episode ids.UUID, reason string) error {

@@ -246,7 +246,7 @@ function NewEntityDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             maxLength={TEXT_LIMITS.line}
             {...field("legal_name")}
           />
-          <CountryField required {...field("country")} />
+          <CountryField {...field("country")} />
           {refused.rest !== null && <ErrorLine>{refused.rest}</ErrorLine>}
         </form>
       }

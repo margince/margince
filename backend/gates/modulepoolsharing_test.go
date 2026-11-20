@@ -101,6 +101,9 @@ var ownPools = gatekit.Waive(map[string]string{
 	"internal/modules/activities/activitycontentonce_integration_test.go": "it captures the Get, per-deal and " +
 		"page statements the store sends, which only a tracer on ConnConfig can see, and the shared pool must " +
 		"not carry one. Bounded by testdb.OwnPoolFromConfig, per-test and closed with the test.",
+	"internal/modules/identity/authcost_integration_test.go": "it counts the protocol round trips of one " +
+		"sign-in, which only a connection hook on the pool config can see, and the shared pool must not carry one. " +
+		"Bounded by testdb.OwnPoolFromConfig, per-test and closed with the test.",
 	"internal/modules/migration/sliceflush_integration_test.go": "it counts the import_run updates a slice " +
 		"sends, which only a tracer on ConnConfig can see, and the shared pool must not carry one. Bounded " +
 		"by testdb.OwnPoolFromConfig, per-test and closed with the test.",
