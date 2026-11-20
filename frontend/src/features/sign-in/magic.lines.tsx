@@ -80,6 +80,13 @@ export function MagicLaneSection({
   );
 }
 
+// A sentence that is a whole clause sets its record off after it as a label.
+// Other lines read as one phrase that runs into their record.
+const SUBJECT_AS_LABEL: ReadonlySet<string> = new Set([
+  "magic.action.automation_troubled",
+  "magic.action.approval_capture_counterparty",
+]);
+
 function MagicLineRow({
   line,
   since,
@@ -116,7 +123,13 @@ function MagicLineRow({
         </div>
       ) : (
         <p className="magic-line-text">
-          {lineSentence(line, t)} <LineSubject line={line} since={since} />{" "}
+          {lineSentence(line, t)}{" "}
+          {SUBJECT_AS_LABEL.has(line.summary.key) && subjectLabel(line) && (
+            <span className="magic-line-sep" aria-hidden="true">
+              ·
+            </span>
+          )}
+          <LineSubject line={line} since={since} />{" "}
           {detail.length > 0 && (
             <span className="t-caption">
               {detail.map((part) => (

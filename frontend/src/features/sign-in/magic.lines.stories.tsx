@@ -188,8 +188,8 @@ export const FailingSincePhone: Story = {
   },
 };
 
-// A rule that could not finish: the sentence says what went wrong and the
-// subject after it names the rule, once.
+// A rule that could not finish: the sentence says what went wrong, and the rule
+// follows it once, set off as a label.
 const TROUBLED: MagicLine[] = [
   {
     id: "00000000-0000-7000-8000-0000000c0005",
@@ -234,8 +234,11 @@ function troubledLane() {
 export const RuleCouldNotFinish: Story = {
   render: troubledLane,
   play: async ({ canvasElement }) => {
-    const text = canvasElement.querySelector(".magic-line")?.textContent ?? "";
+    const line = canvasElement.querySelector(".magic-line");
+    const text = line?.textContent ?? "";
     await expect(text.split("Route new lead to a task")).toHaveLength(2);
+    await expect(text).not.toMatch(/:\s*Route/);
+    await expect(line?.querySelector(".magic-line-sep")).not.toBeNull();
   },
 };
 

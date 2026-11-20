@@ -22553,7 +22553,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.schedule": "Ein Termin wurde gebucht",
   "magic.action.disqualify": "Ein Lead wurde disqualifiziert",
   "magic.action.automation_troubled":
-    "Eine Automatisierung konnte nicht abgeschlossen werden ({outcome}), denn {reason}:",
+    "Konnte nicht abgeschlossen werden ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Erstansprache prüfen",
   "magic.action.approval_send_email": "Nachricht prüfen",
   "magic.action.approval_advance_deal": "Phasenwechsel prüfen",
@@ -22578,7 +22578,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{party} (nicht bestätigt): {summary}",
   "magic.action.approval_commitment_task": "Vorgeschlagene Aufgabe prüfen",
   "magic.action.approval_capture_counterparty":
-    "Dir hat jemand Neues geschrieben. Als Kontakt behalten:",
+    "Dir hat jemand Neues geschrieben. Als Kontakt behalten?",
   "magic.action.approval_summary": "Vorschlag: {summary}",
   "magic.action.approval_pending": "{kind}",
   "magic.action.decided_summary": "{summary}",

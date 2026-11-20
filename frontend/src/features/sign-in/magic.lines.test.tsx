@@ -325,10 +325,19 @@ describe("a line names its record once", () => {
   ])("names a failed rule once, %s", async (_, row) => {
     stub(receipt({ could_not_complete: [row] }));
     renderMagic();
-    const text = (await onlyLine("Could not be finished")).textContent ?? "";
+    const item = await onlyLine("Could not be finished");
+    const text = item.textContent ?? "";
     expect(occurrences(text, "Route new lead to a task")).toBe(1);
-    expect(text).toContain(
-      "An automation could not finish (Failed) because the record it acts on no longer exists: Route new lead to a task",
+    expect(rowOf(item).sentence).toBe(
+      "Could not finish (Failed): the record it acts on no longer exists",
+    );
+    expect(rowOf(item).subject).toBe("Route new lead to a task");
+    // The subject reads as a label set off after the sentence, not as its end.
+    const separator = item.querySelector(".magic-line-sep");
+    expect(separator?.textContent).toBe("·");
+    expect(separator?.getAttribute("aria-hidden")).toBe("true");
+    expect(separator?.nextElementSibling).toBe(
+      item.querySelector(".magic-line-subject"),
     );
   });
 
@@ -347,7 +356,11 @@ describe("a line names its record once", () => {
       }),
     );
     renderMagic();
-    const text = (await onlyLine("Waiting on you")).textContent ?? "";
-    expect(occurrences(text, "Ines Kraft")).toBe(1);
+    const item = await onlyLine("Waiting on you");
+    expect(occurrences(item.textContent ?? "", "Ines Kraft")).toBe(1);
+    expect(rowOf(item).sentence).toBe(
+      "Someone new wrote to you. Keep as a contact?",
+    );
+    expect(item.querySelector(".magic-line-sep")).not.toBeNull();
   });
 });

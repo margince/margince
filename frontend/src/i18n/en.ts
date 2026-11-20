@@ -22243,8 +22243,7 @@ export const en = {
   "magic.action.send_email": "A message was sent",
   "magic.action.schedule": "A meeting was booked",
   "magic.action.disqualify": "A lead was disqualified",
-  "magic.action.automation_troubled":
-    "An automation could not finish ({outcome}) because {reason}:",
+  "magic.action.automation_troubled": "Could not finish ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Review first approach",
   "magic.action.approval_send_email": "Review message",
   "magic.action.approval_advance_deal": "Review stage change",
@@ -22269,7 +22268,7 @@ export const en = {
     "{party} (unverified): {summary}",
   "magic.action.approval_commitment_task": "Review proposed task",
   "magic.action.approval_capture_counterparty":
-    "Someone new wrote to you. Keep as a contact:",
+    "Someone new wrote to you. Keep as a contact?",
   "magic.action.approval_summary": "Proposed: {summary}",
   "magic.action.approval_pending": "{kind}",
   "magic.action.decided_summary": "{summary}",

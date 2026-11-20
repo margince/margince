@@ -102,7 +102,7 @@ describe("the receipt draws every lane it promises", () => {
     ).toBeTruthy();
     expect(
       within(await lane("Could not be finished")).getByText(
-        "An automation could not finish (Failed) because the record it acts on no longer exists:",
+        "Could not finish (Failed): the record it acts on no longer exists",
       ),
     ).toBeTruthy();
     expect(
@@ -771,7 +771,7 @@ describe("a rule that could not finish says why in the reader's language", () =>
     renderMagic("de");
     expect(
       within(await lane("Konnte nicht abgeschlossen werden")).getByText(
-        "Eine Automatisierung konnte nicht abgeschlossen werden (Fehlgeschlagen), denn der Datensatz, auf den sie wirkt, existiert nicht mehr:",
+        "Konnte nicht abgeschlossen werden (Fehlgeschlagen): der Datensatz, auf den sie wirkt, existiert nicht mehr",
       ),
     ).toBeTruthy();
   });

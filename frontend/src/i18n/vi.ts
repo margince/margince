@@ -21950,7 +21950,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.schedule": "Đã đặt một cuộc họp",
   "magic.action.disqualify": "Một lead đã bị loại",
   "magic.action.automation_troubled":
-    "Một tự động hóa không thể hoàn tất ({outcome}) vì {reason}:",
+    "Không thể hoàn tất ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Xem xét tiếp cận ban đầu",
   "magic.action.approval_send_email": "Xem xét tin nhắn",
   "magic.action.approval_advance_deal": "Xem xét chuyển giai đoạn",
@@ -21974,7 +21974,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{party} (chưa xác minh): {summary}",
   "magic.action.approval_commitment_task": "Xem xét công việc được đề xuất",
   "magic.action.approval_capture_counterparty":
-    "Có ai đó mới viết cho bạn. Lưu thành liên hệ:",
+    "Có ai đó mới viết cho bạn. Lưu thành liên hệ?",
   "magic.action.approval_summary": "Đề xuất: {summary}",
   "magic.action.approval_pending": "{kind}",
   "magic.action.decided_summary": "{summary}",
