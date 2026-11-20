@@ -113,7 +113,7 @@ func (s *Service) retirementPreviewTx(ctx context.Context, tx pgx.Tx, actor Iden
 		if err != nil {
 			return out, err
 		}
-		if survivor.Status == userStatusDeactivated {
+		if alreadyDeactivated(survivor.Status) {
 			out.Consequences = append(out.Consequences, "survivor_inactive")
 		}
 		out.SurvivorName = &survivor.Name
@@ -157,13 +157,13 @@ func applyRetirementWork(out *crmcontracts.MemberRetirementPreview, work MemberW
 			work.Owned.MailDraft > work.Transferable.MailDraft)) {
 		out.Blockers = append(out.Blockers, "work_not_transferable")
 	}
-	if merge || member.Status == userStatusDeactivated {
+	if merge || alreadyDeactivated(member.Status) {
 		out.SignalCount = work.Signals
 	}
 	if merge {
 		applyMergeEligibility(out, member, actor, target)
 	}
-	if !merge && member.Status != userStatusDeactivated {
+	if !merge && refuseUnlessDeactivated(member.Status) != nil {
 		out.Blockers = append(out.Blockers, "deactivate_first")
 	}
 	if merge && target == nil {

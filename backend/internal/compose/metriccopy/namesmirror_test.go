@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendReportingFixture = "../../../../frontend/src/testing/reporting.fixtures.ts"
@@ -24,6 +25,9 @@ const frontendReportingFixture = "../../../../frontend/src/testing/reporting.fix
 var fixtureMetricName = regexp.MustCompile(`^["']?([a-z][a-z0-9_]*)["']?\s*:\s*"([^"]*)",?$`)
 
 func TestTheFrontendFixtureNamesEveryMetricAsTheCatalogDoes(t *testing.T) {
+	if err := gatekit.DeclareInputs(os.Getenv, frontendReportingFixture); err != nil {
+		t.Fatal(err)
+	}
 	source, err := os.ReadFile(frontendReportingFixture)
 	if err != nil {
 		t.Fatalf("reading the frontend reporting fixture: %v", err)

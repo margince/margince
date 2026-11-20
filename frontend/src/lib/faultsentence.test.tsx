@@ -10,6 +10,7 @@ import {
   problemFieldSentencesOf,
   problemMessageOf,
 } from "./problem";
+import { wholeNumberFault } from "./wholenumber";
 
 const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
 
@@ -388,5 +389,33 @@ describe("a field fault worded from the screen's label and limit", () => {
         win_probability: "Win probability",
       }).get("win_probability"),
     ).toBe("Enter a whole number for Win probability.");
+  });
+});
+
+describe("a whole number typed in a box", () => {
+  const label = "Tokens per full user per month";
+  const bounds = { min: 1, max: 1e12 };
+  const fault = (typed: string) => wholeNumberFault(typed, "en", label, bounds);
+
+  it("takes a whole number in range, with spaces around it", () => {
+    expect(fault("1")).toBeUndefined();
+    expect(fault(" 5 ")).toBeUndefined();
+    expect(fault("1000000000000")).toBeUndefined();
+  });
+
+  it("says a fraction, a word or a comma is not a whole number", () => {
+    for (const typed of ["1.5", "12,5", "abc", ""]) {
+      expect(fault(typed)).toBe(
+        "Enter a whole number for Tokens per full user per month.",
+      );
+    }
+  });
+
+  it("names the range a whole number falls outside", () => {
+    for (const typed of ["0", "-1", "1000000000001"]) {
+      expect(fault(typed)).toBe(
+        "Tokens per full user per month must be from 1 to 1,000,000,000,000.",
+      );
+    }
   });
 });
