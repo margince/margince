@@ -282,6 +282,12 @@ func (s *Store) flipSystemTasks(
 	return completed, nil
 }
 
+// systemCapturedSQL is the stamp half of "system-minted", which is decided by
+// the stamp together with source = systemSource.
+func systemCapturedSQL(alias, exact, pattern string) string {
+	return storekit.SQLf("(%[1]s.captured_by = %[2]s OR %[1]s.captured_by LIKE %[3]s)", alias, exact, pattern)
+}
+
 // systemTask is one system-minted task a selection found, at the version read.
 type systemTask struct {
 	id      ids.ActivityID
@@ -298,12 +304,12 @@ func selectSystemTasks(
 	query := storekit.SQLf(`
 		SELECT a.id, a.version FROM activity a
 		WHERE %s AND a.kind = $%d AND a.source = $%d
-		  AND (a.captured_by = $%d OR a.captured_by LIKE $%d)
+		  AND %s
 		  AND a.is_done = $%d AND a.archived_at IS NULL
 		ORDER BY a.id FOR UPDATE OF a`,
 		where,
 		arg(string(crmcontracts.ActivityKindTask)), arg(systemSource),
-		arg(systemCapturedBy), arg(systemCapturedByPattern), arg(done))
+		systemCapturedSQL("a", fmt.Sprintf("$%d", arg(systemCapturedBy)), fmt.Sprintf("$%d", arg(systemCapturedByPattern))), arg(done))
 	rows, err := tx.Query(ctx, query, (*args)...)
 	if err != nil {
 		return nil, err

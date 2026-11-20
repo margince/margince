@@ -114,7 +114,7 @@ func TestABookingThroughThePageClosesTheOpenTasksOnTheBookedLead(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := f.store.tx(f.systemCtx(), func(tx pgx.Tx) error {
-		n, err := f.store.CloseTasksAnsweredByBookingTx(f.systemCtx(), tx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), ids.From[ids.UserKind](f.env.rep))
+		n, err := f.store.CloseTasksAnsweredByBookingTx(f.systemCtx(), tx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), ids.From[ids.UserKind](f.env.rep), []ActivityLinkInput{{EntityType: "lead", EntityID: lead}})
 		if n != 0 {
 			t.Fatalf("a second pass over the same booking closed %d tasks", n)
 		}
@@ -132,7 +132,18 @@ func TestABookingThroughThePageClosesTheOpenTasksOnTheBookedContactOnly(t *testi
 	contact := ids.UUID(f.request.ContactId)
 	mine := f.handTask(t, "Call the guest", "contact", contact)
 	colleagues := f.colleagueTask(t, contact)
+	minted := ids.NewV7()
+	if _, err := f.env.owner.Exec(f.ctx, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, captured_by, assignee_id)
+ VALUES ($1,'task','Review qualification',now(),now()+interval '1 day','system','system',$2)`, minted, f.env.rep); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.env.owner.Exec(f.ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1,'contact',$2)`, minted, contact); err != nil {
+		t.Fatal(err)
+	}
 	f.bookThroughThePage(t, invitationIntent{})
+	if f.taskIsDone(t, minted) {
+		t.Fatal("a task Margince made was closed by the user-made-task rule")
+	}
 	if !f.taskIsDone(t, mine) {
 		t.Fatal("the user's own task on the booked contact stayed open")
 	}
@@ -152,7 +163,7 @@ func TestABookingMadeByTheUserClosesNoTask(t *testing.T) {
 	}
 }
 
-func TestACalledOffBookingReopensTheTasksItClosedUnlessTheUserTouchedThem(t *testing.T) {
+func TestACanceledBookingReopensTheTasksItClosedUnlessTheUserTouchedThem(t *testing.T) {
 	f := newInvitationFixture(t)
 	contact := ids.UUID(f.request.ContactId)
 	untouched := f.handTask(t, "Call the guest", "contact", contact)
@@ -183,5 +194,39 @@ func TestACalledOffBookingReopensTheTasksItClosedUnlessTheUserTouchedThem(t *tes
 	}
 	if f.taskIsDone(t, untouched) || !f.taskIsDone(t, touched) {
 		t.Fatal("the cancel must reopen the untouched task and leave the one the user finished")
+	}
+}
+
+type readOnlyHost struct{ *invitationCalendar }
+
+func (readOnlyHost) HostMayWrite(context.Context, pgx.Tx, ids.UserID, string, ids.UUID) (bool, error) {
+	return false, nil
+}
+
+func TestABookingOnARecordTheHostCannotWriteClosesNothing(t *testing.T) {
+	f := newInvitationFixture(t)
+	mine := f.handTask(t, "Call the guest", "contact", ids.UUID(f.request.ContactId))
+	f.store = f.store.WithSchedulingCalendar(readOnlyHost{f.calendar})
+	f.bookThroughThePage(t, invitationIntent{})
+	if f.taskIsDone(t, mine) {
+		t.Fatal("a booking closed the host's task on a record the host may not write")
+	}
+}
+
+func TestACanceledBookingLeavesATaskTheHostWroteToSince(t *testing.T) {
+	f := newInvitationFixture(t)
+	mine := f.handTask(t, "Call the guest", "contact", ids.UUID(f.request.ContactId))
+	meeting := f.bookThroughThePage(t, invitationIntent{})
+	if _, err := f.store.UpdateActivity(f.ctx, ids.From[ids.ActivityKind](mine), UpdateActivityInput{Subject: new("Call the guest tomorrow")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.env.owner.Exec(f.ctx, `UPDATE activity SET meeting_status='canceled' WHERE id=$1`, ids.UUID(meeting.Id)); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := f.store.ReopenTasksAnsweredByMeeting(f.systemCtx(), ids.From[ids.ActivityKind](ids.UUID(meeting.Id))); err != nil || n != 0 {
+		t.Fatalf("reopened %d tasks the host edited: %v", n, err)
+	}
+	if !f.taskIsDone(t, mine) {
+		t.Fatal("the cancel reopened a task the host had edited")
 	}
 }

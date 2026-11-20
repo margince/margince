@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/hostauthority"
@@ -199,6 +200,10 @@ func (c schedulingCalendar) checkAppointmentRecipient(ctx context.Context, host 
 		return nil
 	}
 	return &activities.SchedulingArgumentError{Field: "attendee_email", Code: "recipient_mismatch", Message: "Use the lead's email before sending an invitation"}
+}
+
+func (c schedulingCalendar) HostMayWrite(ctx context.Context, tx pgx.Tx, host ids.UserID, table string, id ids.UUID) (bool, error) {
+	return hostauthority.WritableLiveBy(ctx, c.identity, tx, host, table, id)
 }
 
 func (c schedulingCalendar) recipientContext(ctx context.Context, host ids.UserID) (context.Context, error) {
