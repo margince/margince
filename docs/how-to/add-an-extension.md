@@ -1318,11 +1318,11 @@ Declare each group of reads your unit makes:
 SystemReads: []extension.SystemRead{
 	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
 	extension.SystemReadAuthority, // Authority().CanRead and CanWrite
-	extension.SystemReadDirectory, // Directory().Emails and ByRole
+	extension.SystemReadDirectory, // Directory().Emails and ByRole (as actAs)
 	extension.SystemReadActivities, // Activities().Mail
 	extension.SystemReadSetAside, // SetAside().Contact and Contacts
-	extension.SystemReadCompanies, // Companies().Get and List
-	extension.SystemReadMailContent, // MailContent().Get
+	extension.SystemReadCompanies, // Companies().Get and List (as actAs)
+	extension.SystemReadMailContent, // MailContent().Get (as actAs)
 },
 ```
 
@@ -1346,12 +1346,15 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   teams on it. It leaves out agents, members who cannot sign in, users taken off the deal, and archived teams. It stops at
   `extension.MaxResponsible` colleagues.
 - **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
-- **`ByRole` names who holds a role.** `Directory().ByRole(ctx, []string{"reviewer"})` answers the ids of the
+- **`ByRole` names who holds a role.** `Directory().ByRole(ctx, actAs, []string{"reviewer"})` answers the ids of the
   human members who hold at least one of the roles, named by role key. A unit uses it to file a task for each
   reviewer.
 
-  It leaves out agents and members who cannot sign in. The ids come in id order and stop at
-  `extension.MaxResponsible`. A key that names no role answers `ErrInvalid`.
+  It runs as `actAs`, the unit's service member (see the `actAs` item below). It answers only if
+  that seat may read the roster the way an administrator does. Another seat answers `ErrForbidden`. It leaves
+  out agents and members who cannot sign in. The ids come in id order and stop at `extension.MaxResponsible`,
+  and nothing says the list was cut. A key that names no role adds nobody and is no error, so the answer does
+  not tell whether the role exists. The core logs which keys you asked for.
 - **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
   `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
   deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and
@@ -1371,17 +1374,31 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   name, lifecycle and owner. It also holds the source system and source id, the time of the last change, and
   whether the company is archived.
 
-  `List` gives pages in id order, at most `extension.MaxReadPage` each. It leaves out archived companies unless
-  you set `IncludeArchived`. A company only its owner may see is left out of both. `Get` answers `ErrNotFound`
-  for it, so an id cannot be used to probe.
-- **`MailContent` reads what one mail says.** `MailContent().Get(ctx, mailID)` answers the subject, body,
+  Both run as `actAs`, the unit's service member, and show what that seat's grants, row scope and field masks
+  show in the app. A field the seat's mask withholds is empty. `List` gives pages in the order the app lists
+  companies, at most `extension.MaxReadPage` each. It leaves out archived companies unless you set
+  `IncludeArchived`. A company outside the seat's scope is left out of both. `Get` answers `ErrNotFound` for
+  it, so an id cannot be used to probe.
+- **`MailContent` reads what one mail says.** `MailContent().Get(ctx, actAs, mailID)` answers the subject, body,
   audience, content state, capture label, source id and time. Its `BulkMail` flag is true for a mail the sender sent to a list.
   
 
-  It answers only mail that the whole workspace may read. A mail that is private to its senders and receivers,
-  archived, held back from reading, or not an email answers `ErrNotFound`. A mail whose subject or body was
-  taken out answers the content state `withheld` and gives neither. Ask `Authority().CanRead` before you show a
+  It runs as `actAs`, the unit's service member, under the rule the app applies to mail content: the seat's
+  grants and row scope, the audience and the hold. It answers only mail the whole workspace may read. A mail
+  that is private to its senders and receivers, archived, held back from reading, under a restriction of
+  processing (Art. 18), outside the seat's scope, or not an email answers `ErrNotFound`. A mail whose subject
+  or body was taken out answers the content state `withheld` and gives neither. The body stops at
+  `extension.MaxMailBody` characters, and `BodyTruncated` says so. Ask `Authority().CanRead` before you show a
   colleague what you kept from it.
+- **Name the seat: `actAs`.** `Companies`, `MailContent().Get` and `ByRole` take `actAs` right after `ctx`.
+  It must be the unit's own service member, the one the core made for it (see
+  [declare-a-service-member.md](declare-a-service-member.md)). That member must have filed one of the unit's
+  user secrets. The core makes that member at boot for a unit that lands companies or deals. For any other unit
+  an admin declares it. A call with no `actAs`, a colleague, or the service member of another unit answers
+  `ErrForbidden`, or `ErrInvalid` for an empty or malformed id. A read is never bound to a person, so it does not
+  stop when a colleague leaves. Each read writes one `system_log` row that names the unit, the read, the record
+  and `actAs`. `Deals().Get`, `Authority` and `Directory().Emails` keep their old shape until seat-bound
+  variants replace them.
 - **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply
   yet" is a reminder for a colleague to check, not a fact. Never act on it alone, for example by sending a
   message.

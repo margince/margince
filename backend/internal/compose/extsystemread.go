@@ -123,15 +123,19 @@ func (r *callRuntime) traceSystemRead(ctx context.Context, read extension.System
 		return nil
 	}
 	err := database.WithWorkspaceTx(ctx, r.deps.pool, func(tx pgx.Tx) error {
-		_, err := storekit.LogSystem(ctx, tx, systemReadTraced, map[string]any{
+		return logSystemRead(ctx, tx, map[string]any{
 			"extension": r.unit, traceReadKey: string(read), traceTypeKey: recordType, traceRecordKey: recordID,
 		})
-		return err
 	})
 	if err != nil {
 		return r.systemReadFault(ctx, err)
 	}
 	return nil
+}
+
+func logSystemRead(ctx context.Context, tx pgx.Tx, detail map[string]any) error {
+	_, err := storekit.LogSystem(ctx, tx, systemReadTraced, detail)
+	return err
 }
 
 // errSystemReadFailed is what a unit sees of a failed system read. The core's
@@ -388,6 +392,12 @@ func asColleague(ctx context.Context, pool *pgxpool.Pool, colleague ids.UUID) (c
 	if err != nil || len(human) == 0 {
 		return nil, principal.Principal{}, false, err
 	}
+	return workerSeat(ctx, pool, colleague)
+}
+
+// workerSeat binds the member's own principal, as they stand now. It answers
+// false for a member who is gone, archived or suspended.
+func workerSeat(ctx context.Context, pool *pgxpool.Pool, colleague ids.UUID) (context.Context, principal.Principal, bool, error) {
 	correlation, bound := principal.CorrelationID(ctx)
 	if !bound {
 		correlation = ids.NewV7()
