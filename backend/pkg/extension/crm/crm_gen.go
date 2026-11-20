@@ -390,6 +390,27 @@ func (e ActivityEmailTargetRefusal) Valid() bool {
 	}
 }
 
+// Defines values for ActivityLinkDealRelevance.
+const (
+	LinkDealRelevanceRelevant  ActivityLinkDealRelevance = "relevant"
+	LinkDealRelevanceUncertain ActivityLinkDealRelevance = "uncertain"
+	LinkDealRelevanceUnrelated ActivityLinkDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkDealRelevance enum.
+func (e ActivityLinkDealRelevance) Valid() bool {
+	switch e {
+	case LinkDealRelevanceRelevant:
+		return true
+	case LinkDealRelevanceUncertain:
+		return true
+	case LinkDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -411,6 +432,24 @@ func (e ActivityLinkEntityType) Valid() bool {
 	case ActivityLinkEntityTypeLead:
 		return true
 	case ActivityLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityLinkRelevanceSource.
+const (
+	LinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
+	LinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkRelevanceSource enum.
+func (e ActivityLinkRelevanceSource) Valid() bool {
+	switch e {
+	case LinkRelevanceSourceClassifier:
+		return true
+	case LinkRelevanceSourceHuman:
 		return true
 	default:
 		return false
@@ -2126,14 +2165,30 @@ type ActivityFollowUpTask struct {
 
 // ActivityLink defines model for ActivityLink.
 type ActivityLink struct {
-	ActivityId *string                `json:"activity_id,omitempty"`
-	EntityId   string                 `json:"entity_id"`
-	EntityType ActivityLinkEntityType `json:"entity_type"`
-	Id         *string                `json:"id,omitempty"`
+	ActivityId *string `json:"activity_id,omitempty"`
+
+	// DealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+	// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+	// it; only `unrelated` also leaves it out of the silent close.
+	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
+	EntityId      string                     `json:"entity_id"`
+	EntityType    ActivityLinkEntityType     `json:"entity_type"`
+	Id            *string                    `json:"id,omitempty"`
+
+	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
 }
+
+// ActivityLinkDealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+// it; only `unrelated` also leaves it out of the silent close.
+type ActivityLinkDealRelevance string
 
 // ActivityLinkEntityType defines model for ActivityLink.EntityType.
 type ActivityLinkEntityType string
+
+// ActivityLinkRelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+type ActivityLinkRelevanceSource string
 
 // ActivityReference One activity a derived number was computed from, named well enough to be
 // recognised and opened.

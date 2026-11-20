@@ -7,9 +7,11 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { ErrorLine } from "../../design-system/errorline";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { AutonomyDot } from "../../design-system/trust";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import {
   apiKey,
   CF_TYPES,
@@ -18,6 +20,7 @@ import {
   ddlPreview,
   looksStructural,
 } from "../../lib/customfields.logic";
+import { fieldCheckSentence, refusalSentences } from "../../lib/problem";
 import { useRecordKindDirectory } from "../../lib/recordkinds";
 import { ActivityKindsSelect } from "./customfields.kinds";
 import { typeLabels } from "./customfields.labels";
@@ -43,18 +46,38 @@ export type NewFieldDraft = {
 export function FieldBuilder({
   object,
   pending,
+  error,
   onSubmit,
   onCancel,
 }: Readonly<{
   object: CfObject;
   pending: boolean;
-  onSubmit: (draft: NewFieldDraft) => void;
+  // The refused create, for what no field of the form can show.
+  error: unknown;
+  // `refused` hears a refusal of this draft, to put it on its fields.
+  onSubmit: (draft: NewFieldDraft, refused: (error: unknown) => void) => void;
   // Leaving the form without adding a field. The builder lives in a dialog, so
   // its secondary verb closes that dialog. A form discarded on close has
   // nothing to reset to.
   onCancel: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const labels = {
+    label: t("cf.label"),
+    type: t("cf.typeLabel"),
+    currency: t("cf.currencyCode"),
+    activity_kinds: t("cf.activityKinds"),
+  };
+  const refusal = (refused: unknown) =>
+    refusalSentences(refused, t, labels, {
+      conflict: {
+        field: "label",
+        code: "custom_field_label_taken",
+        sentence: t("cf.labelTaken"),
+      },
+    });
   const [label, setLabel] = useState("");
   const [type, setType] = useState<CfType>("text");
   const [currency, setCurrency] = useState("EUR");
@@ -69,46 +92,66 @@ export function FieldBuilder({
   );
   const [activityKinds, setActivityKinds] = useState<string[]>([]);
   const structural = looksStructural(label);
-  // A picklist needs a non-blank option and a currency field a 3-letter
-  // ISO-4217 code. Confirm stays disabled until that shape is valid too.
-  const typeShapeValid =
-    ((type !== "picklist" && type !== "multiselect") ||
-      options.some((opt) => opt.trim().length > 0)) &&
-    (type !== "record" || kinds.some((kind) => kind.name === options[0])) &&
-    (type !== "currency" || /^[A-Za-z]{3}$/.test(currency.trim()));
-  const canConfirm =
-    !pending && label.trim().length > 0 && !structural && typeShapeValid;
+
+  // What the draft needs before it is sent, each on the field that lacks it.
+  const checks = () => {
+    const found = new Map<string, string>();
+    if (label.trim() === "") {
+      found.set("label", fieldCheckSentence("required", locale, labels.label));
+    }
+    const listed = type === "picklist" || type === "multiselect";
+    if (listed && !options.some((opt) => opt.trim().length > 0)) {
+      found.set("options", t("cf.lastOptionBlocked"));
+    }
+    if (type === "record" && !kinds.some((kind) => kind.name === options[0])) {
+      found.set(
+        "options",
+        fieldCheckSentence("required", locale, t("cf.recordKind")),
+      );
+    }
+    if (type === "currency" && !/^[A-Za-z]{3}$/.test(currency.trim())) {
+      found.set("currency", t("cf.currencyNotCode"));
+    }
+    return found;
+  };
 
   const confirm = () => {
-    if (!canConfirm) {
+    if (pending || structural || faults.show(checks())) {
       return;
     }
-    onSubmit({
-      object,
-      label: label.trim(),
-      type,
-      currency,
-      options,
-      showInCreate,
-      activityKinds: object === "activity" ? activityKinds : [],
-    });
+    onSubmit(
+      {
+        object,
+        label: label.trim(),
+        type,
+        currency,
+        options,
+        showInCreate,
+        activityKinds: object === "activity" ? activityKinds : [],
+      },
+      (refused) => faults.show(refusal(refused).byField),
+    );
   };
+  const rest = refusal(error).rest;
 
   return (
     <>
-      <div className="form-stack">
+      <div className="form-stack" ref={faultsRoot}>
         <div className="cf-builder-head">
           <p className="cf-hint">{t("cf.builder.intro")}</p>
           <Badge>{t("cf.builder.noCode")}</Badge>
         </div>
 
         <div className="cf-grid">
-          <Field label={t("cf.label")}>
+          <Field label={labels.label} required error={faults.of("label")}>
             {(control) => (
               <TextInput
                 {...control}
                 value={label}
-                onChange={(event) => setLabel(event.target.value)}
+                onChange={(event) => {
+                  setLabel(event.target.value);
+                  faults.edited("label");
+                }}
               />
             )}
           </Field>
@@ -124,7 +167,7 @@ export function FieldBuilder({
           </Field>
         </div>
 
-        <Field label={t("cf.typeLabel")}>
+        <Field label={labels.type} error={faults.of("type")}>
           {(control) => (
             <Select
               {...control}
@@ -133,30 +176,44 @@ export function FieldBuilder({
                 label: typeLabels(t)[one],
               }))}
               value={type}
-              onChange={(next) =>
-                setType(offeredTypes.find((one) => one === next) ?? type)
-              }
+              onChange={(next) => {
+                setType(offeredTypes.find((one) => one === next) ?? type);
+                faults.edited("type");
+                faults.edited("options");
+                faults.edited("currency");
+              }}
             />
           )}
         </Field>
 
         {type === "currency" && (
-          <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>
+          <Field
+            label={labels.currency}
+            hint={t("cf.currencyHint")}
+            required
+            error={faults.of("currency")}
+          >
             {(control) => (
               <TextInput
                 {...control}
                 value={currency}
                 maxLength={3}
-                onChange={(event) =>
-                  setCurrency(event.target.value.toUpperCase())
-                }
+                onChange={(event) => {
+                  setCurrency(event.target.value.toUpperCase());
+                  faults.edited("currency");
+                }}
               />
             )}
           </Field>
         )}
 
         {type === "record" && (
-          <Field label={t("cf.recordKind")} hint={t("cf.recordKindHint")}>
+          <Field
+            label={t("cf.recordKind")}
+            hint={t("cf.recordKindHint")}
+            required
+            error={faults.of("options")}
+          >
             {(control) => (
               <Select
                 {...control}
@@ -166,14 +223,24 @@ export function FieldBuilder({
                 }))}
                 value={options[0] ?? ""}
                 placeholder={t("cf.recordKindPlaceholder")}
-                onChange={(kind) => setOptions([kind])}
+                onChange={(kind) => {
+                  setOptions([kind]);
+                  faults.edited("options");
+                }}
               />
             )}
           </Field>
         )}
 
         {(type === "picklist" || type === "multiselect") && (
-          <OptionRows options={options} onChange={setOptions} />
+          <OptionRows
+            options={options}
+            onChange={(next) => {
+              setOptions(next);
+              faults.edited("options");
+            }}
+            error={faults.of("options")}
+          />
         )}
 
         <div className="field">
@@ -189,12 +256,19 @@ export function FieldBuilder({
         </div>
 
         {object === "activity" && (
-          <Field label={t("cf.activityKinds")} hint={t("cf.activityKindsHint")}>
+          <Field
+            label={labels.activity_kinds}
+            hint={t("cf.activityKindsHint")}
+            error={faults.of("activity_kinds")}
+          >
             {(control) => (
               <ActivityKindsSelect
                 {...control}
                 values={activityKinds}
-                onChange={setActivityKinds}
+                onChange={(next) => {
+                  setActivityKinds(next);
+                  faults.edited("activity_kinds");
+                }}
               />
             )}
           </Field>
@@ -222,6 +296,7 @@ export function FieldBuilder({
             {ddlPreview(object, label, type, currency)}
           </code>
         </Callout>
+        {rest !== null && <ErrorLine>{rest}</ErrorLine>}
       </div>
 
       {/* Cancel first, then the verb that writes: the order every dialog in
@@ -231,7 +306,12 @@ export function FieldBuilder({
         <Button variant="ghost" onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
-        <Button variant="primary" disabled={!canConfirm} onClick={confirm}>
+        <Button
+          variant="primary"
+          disabled={structural}
+          pending={pending}
+          onClick={confirm}
+        >
           {t("cf.confirm")}
         </Button>
       </div>

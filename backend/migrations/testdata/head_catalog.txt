@@ -288,6 +288,8 @@ public.activity_link.activity_link_ceiling CREATE TRIGGER activity_link_ceiling 
 public.activity_link.activity_link_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.activity_link.activity_link_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.activity_link.activity_link_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.activity_link.activity_link_deal_relevance_check CHECK ((deal_relevance = ANY (ARRAY['relevant'::text, 'unrelated'::text, 'uncertain'::text])))
+public.activity_link.activity_link_deal_relevance_shape CHECK ((((deal_relevance IS NULL) = (relevance_source IS NULL)) AND ((deal_relevance IS NULL) OR (entity_type = 'deal'::text))))
 public.activity_link.activity_link_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.activity_link.activity_link_last_activity CREATE TRIGGER activity_link_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION trg_activity_link_last_activity()
 public.activity_link.activity_link_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
@@ -295,11 +297,13 @@ public.activity_link.activity_link_no_company_meeting CREATE TRIGGER activity_li
 public.activity_link.activity_link_pkey PRIMARY KEY (id)
 public.activity_link.activity_link_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
 public.activity_link.activity_link_project_last_activity CREATE TRIGGER activity_link_project_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION trg_activity_link_project_last_activity()
+public.activity_link.activity_link_relevance_source_check CHECK ((relevance_source = ANY (ARRAY['human'::text, 'classifier'::text])))
 public.activity_link.activity_link_shape CHECK ((((entity_type = 'contact'::text) AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company'::text) AND (company_id IS NOT NULL) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal'::text) AND (deal_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead'::text) AND (lead_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project'::text) AND (project_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL))))
 public.activity_link.company_id uuid gen=- def=-
 public.activity_link.contact_id uuid gen=- def=-
 public.activity_link.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_link.deal_id uuid gen=- def=-
+public.activity_link.deal_relevance text gen=- def=-
 public.activity_link.entity_type text NOT NULL gen=- def=-
 public.activity_link.home_read_fence_first_link CREATE TRIGGER home_read_fence_first_link AFTER INSERT ON public.activity_link REFERENCING NEW TABLE AS added_links FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence_on_first_link()
 public.activity_link.home_read_fence_link_change CREATE TRIGGER home_read_fence_link_change AFTER UPDATE ON public.activity_link FOR EACH ROW WHEN (((old.activity_id IS DISTINCT FROM new.activity_id) OR (old.contact_id IS DISTINCT FROM new.contact_id) OR (old.company_id IS DISTINCT FROM new.company_id) OR (old.deal_id IS DISTINCT FROM new.deal_id) OR (old.lead_id IS DISTINCT FROM new.lead_id) OR (old.project_id IS DISTINCT FROM new.project_id))) EXECUTE FUNCTION advance_home_read_fence()
@@ -307,9 +311,10 @@ public.activity_link.home_read_fence_link_removed CREATE TRIGGER home_read_fence
 public.activity_link.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_link.lead_id uuid gen=- def=-
 public.activity_link.project_id uuid gen=- def=-
+public.activity_link.relevance_source text gen=- def=-
 public.activity_link.settlement_evidence_share CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_link()
-public.activity_link.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"entity_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000}')
-public.activity_link.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000}')
+public.activity_link.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"entity_type": 20000, "deal_relevance": 20000, "relevance_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"deal_relevance":20000,"entity_type":20000,"relevance_source":20000}')
+public.activity_link.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000, "deal_relevance": 20000, "relevance_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"deal_relevance":20000,"entity_type":20000,"relevance_source":20000}')
 public.activity_link_pkey CREATE UNIQUE INDEX activity_link_pkey ON public.activity_link USING btree (id)
 public.activity_link_refuses_a_company_meeting() secdef=false cfg=- acl=- 
 DECLARE
@@ -6946,27 +6951,27 @@ public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=-
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience IN ('workspace', 'participants')
-     AND (coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
+     AND ((coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
  SELECT 1 FROM capture_import thread_hold_import
  JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
  AND thread_hold.thread_key=a.thread_key
- WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure'))) AND NOT EXISTS (SELECT 1 FROM activity_link judged WHERE judged.activity_id = a.id AND judged.deal_id = l.deal_id AND judged.deal_relevance IN ('unrelated', 'uncertain')))
      AND a.origin NOT IN ('system_remediation', 'system_notice')
      AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
    WHERE l.deal_id = did
 
-public.last_activity_of_deal_activity(aid uuid) secdef=false cfg=- acl=- SELECT max(a.occurred_at)
+public.last_activity_of_deal_activity(aid uuid, did uuid) secdef=false cfg=- acl=- SELECT max(a.occurred_at)
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience IN ('workspace', 'participants')
-     AND (coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
+     AND ((coalesce(a.audience_reason, '') <> 'personal' AND NOT EXISTS (
  SELECT 1 FROM capture_import thread_hold_import
  JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
  AND thread_hold.thread_key=a.thread_key
- WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.kind = 'personal' AND thread_hold.status IN ('held', 'held_by_owner', 'unsure'))) AND NOT EXISTS (SELECT 1 FROM activity_link judged WHERE judged.activity_id = a.id AND judged.deal_id = l.deal_id AND judged.deal_relevance IN ('unrelated', 'uncertain')))
      AND a.origin NOT IN ('system_remediation', 'system_notice')
      AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
-   WHERE l.activity_id = aid
+   WHERE l.activity_id = aid AND l.deal_id = did
 
 public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=- 
   SELECT max(a.occurred_at)
@@ -10558,7 +10563,7 @@ BEGIN
     END IF;
     at := last_activity_of_activity(NEW.activity_id);
     IF NEW.deal_id IS NOT NULL THEN
-      deal_at := last_activity_of_deal_activity(NEW.activity_id);
+      deal_at := last_activity_of_deal_activity(NEW.activity_id, NEW.deal_id);
     END IF;
     IF at IS NOT NULL OR deal_at IS NOT NULL THEN
       FOR reached IN

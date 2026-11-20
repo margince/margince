@@ -5,11 +5,13 @@ import { Field, PendingBody } from "../../design-system/atoms";
 import { DateInput, type ISODate } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { FactList } from "../../design-system/factlist";
+import { todayIn } from "../../format/calendarday";
+import { isoOrBlank } from "../../format/datepattern";
 import { formatDate } from "../../format/format";
 import { ruleText } from "../../format/jurisdiction";
 import { endOfDayInZone, startOfDayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { throwProblem } from "../../lib/problem";
+import { refusalSentences, throwProblem } from "../../lib/problem";
 
 // The deadline a manual subject request gets. The server computes it from the
 // installation's jurisdiction and the day the request arrived. The form shows
@@ -119,12 +121,22 @@ export function DsrDeadlineFields({
   const { locale } = useLocale();
   const computed = query.data;
   const tooLate = refused || earlierDueTooLate(draft, computed, zone);
+  const today = isoOrBlank(todayIn(zone)) || undefined;
+  const preview = refusalSentences(query.error, t, {
+    received_at: t("privacy.receivedAt"),
+  });
   return (
     <>
-      <Field label={t("privacy.receivedAt")} hint={t("privacy.receivedAtHint")}>
+      <Field
+        label={t("privacy.receivedAt")}
+        hint={t("privacy.receivedAtHint")}
+        error={preview.byField.get("received_at")}
+      >
         {(control) => (
           <DateInput
             {...control}
+            max={today}
+            today={today}
             value={draft.receivedOn}
             onChange={(event) => onChange({ receivedOn: event.target.value })}
           />
@@ -146,7 +158,7 @@ export function DsrDeadlineFields({
       ) : query.isPending ? (
         <PendingBody label={t("privacy.deadline.loading")} lines={1} visible />
       ) : (
-        <ErrorLine error={query.error} />
+        preview.rest && <ErrorLine>{preview.rest}</ErrorLine>
       )}
       <Field
         label={t("privacy.earlierDue")}

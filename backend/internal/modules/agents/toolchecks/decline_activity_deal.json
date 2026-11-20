@@ -2,7 +2,8 @@
   "verb": "decline_activity_deal",
   "checks": [
     "activity.update",
-    "deal.read"
+    "deal.read",
+    "deal.update"
   ],
   "takes": [
     "activity",

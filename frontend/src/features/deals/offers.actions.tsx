@@ -57,7 +57,10 @@ export function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       </Button>
       <ConfirmModal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          mutation.reset();
+          setOpen(false);
+        }}
         title={t("offer.sendConfirm")}
         tier="confirm"
         // The confirm names its write: send, accept and reject sit one press
@@ -123,7 +126,10 @@ export function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       </Button>
       <ConfirmModal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          mutation.reset();
+          setOpen(false);
+        }}
         title={t("offer.acceptConfirm")}
         confirmLabel={t("offer.accept")}
         onConfirm={() => mutation.mutate()}
@@ -187,7 +193,10 @@ export function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       </Button>
       <ConfirmModal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          mutation.reset();
+          setOpen(false);
+        }}
         title={t("offer.rejectConfirm")}
         confirmLabel={t("offer.reject")}
         confirmVariant="danger"

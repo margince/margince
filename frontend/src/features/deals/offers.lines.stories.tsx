@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   emptyPage,
@@ -80,5 +81,14 @@ export const CategoryAndTypedRates: Story = {
         <OfferLineEditor offer={draftOffer} />
       </StoryProviders>
     );
+  },
+};
+
+/** A discount over 100 % refused on its field, in percent, before sending. */
+export const DiscountOutOfRange: Story = {
+  ...CategoryAndTypedRates,
+  play: async () => {
+    await userEvent.type(await screen.findByTestId("new-line-discount"), "150");
+    await screen.findByText("Discount % must be from 0% to 100%.");
   },
 };

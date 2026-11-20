@@ -41,6 +41,19 @@ func TestRefusalsRenderTheirOwnCauseOnly(t *testing.T) {
 	}
 }
 
+// A member edit names a taken email as an invite does, and leaves its other
+// refusals as they were.
+func TestAMemberEditNamesATakenEmailAsAnInviteDoes(t *testing.T) {
+	var refusal *httperr.DetailedError
+	if !errors.As(memberEditRefusal(errEmailTaken), &refusal) ||
+		refusal.Code != "email_taken" || refusal.Status != http.StatusConflict {
+		t.Fatalf("a taken email on edit rendered %+v, want 409 email_taken", refusal)
+	}
+	if got := memberEditRefusal(apperrors.ErrVersionSkew); !errors.Is(got, apperrors.ErrVersionSkew) {
+		t.Errorf("memberEditRefusal rewrote a stale edit into %v", got)
+	}
+}
+
 // The pass-through is what keeps one endpoint's wording from swallowing every
 // other failure it can hit: a permission denial rendered as somebody else's 409
 // would be both the wrong status and a lie about what happened.
