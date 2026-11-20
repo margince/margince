@@ -123,20 +123,11 @@ func (g *GraphEdgeGen) onActivity(ctx context.Context, env events.Envelope, acti
 }
 
 // refoldsActivity names the activity events that change what the projection
-// folds. An activity.updated that names only fields the folds never read, such
-// as a classifier stamping its verdict, changes no edge.
+// folds. An update naming only fields the folds never read changes no edge.
 func refoldsActivity(env events.Envelope) bool {
 	switch env.Type {
-	// The catalog's activity types, in full. Naming one that does not exist
-	// is a branch that never runs and a projection that silently never
-	// updates — which is exactly how the erasure hole above survived review.
-	//
-	// `retention.applied` is here because the time-based sweep archives and
-	// erases activities under ITS name rather than the activity's own verbs.
-	// Handling it here is what lets the retention path reuse this ONE fold:
-	// the alternative was a second statement inside privacy, which duplicated
-	// the arithmetic and — being written as a delete — left a surviving pair's
-	// counts stale whenever the activity was not its last evidence.
+	// The retention sweep archives and erases activities under its own event
+	// name, so it reaches this one fold instead of a second statement in privacy.
 	case "activity.captured", "activity.archived", "retention.applied":
 		return true
 	case "activity.updated":

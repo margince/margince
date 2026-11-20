@@ -70,8 +70,7 @@ func TestAnUpdateTheFoldCannotSeeLeavesTheEdgeAlone(t *testing.T) {
 		t.Fatalf("setup edge=%+v found=%t", settled, ok)
 	}
 
-	// Make the stored edge wrong on purpose: a refold would repair it, so a
-	// repaired edge proves the event refolded.
+	// A wrong stored edge shows whether an event refolded: only a refold repairs it.
 	v.e.WsExec(t, `UPDATE graph_interaction_edge SET count_total = 99 WHERE contact_id = $1`, contact)
 	stale, _ := v.storedEdge(t, v.e.Rep1, contact)
 

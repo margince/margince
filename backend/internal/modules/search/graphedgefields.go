@@ -11,17 +11,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
-// unchangedEdgeGuard turns the upsert into a no-op for a row whose folded
-// facts are already what the fold produced, so computed_at and the tuple stay
-// as they were.
+// unchangedEdgeGuard makes the upsert a no-op for a row whose folded facts
+// already match, so computed_at and the tuple stay as they were.
 //
-// read_snapshot is the one reader of a rewrite: uncoveredGraphSourceSQL asks
-// whether an edge's snapshot saw a history import's source transaction, and
-// answers "not covered" for an older one. A kept snapshot can only make that
-// answer more cautious, which costs one more fold and never a stale edge. The
-// folds that exist to cover a source (the queue's prepare step and the drain)
-// pass advanceSnapshot and always write, so coverage is still established
-// there. Nothing else reads computed_at.
+// Only read_snapshot has a reader: uncoveredGraphSourceSQL treats an older
+// snapshot as not covering a history import's source. A kept snapshot costs
+// one more fold and never a stale edge. The prepare step and the drain pass
+// advanceSnapshot and always write, because they establish that coverage.
 func unchangedEdgeGuard(advanceSnapshot bool, facts []string) string {
 	if advanceSnapshot {
 		return ""
@@ -44,8 +40,8 @@ const participantRows = "participant rows"
 var activityColumnRef = regexp.MustCompile(`(?:^|[^\w."])"?a"?\.([a-z_]+)`)
 
 // foldReadsActivityColumns is every activity column the edge folds name in
-// their SQL, taken from the statements themselves so a column a fold starts
-// to read is covered without anyone editing a list.
+// their SQL. It comes from the statements, so a column a fold starts to read
+// is covered without editing a list.
 var foldReadsActivityColumns = columnsNamedBy(
 	foldPairsSQL(false), pruneInteractionEdgesSQL(),
 	foldContactPairsSQL(false), pruneContactEdgesSQL(), countingActivitiesSQL,
@@ -71,11 +67,10 @@ const (
 	colSourceActivity = "source_activity_id"
 )
 
-// updatedFieldWrites says which activity columns each key of an
-// activity.updated event's changed_fields is written from. An empty list is a
-// key whose write lands outside every column the folds read. A key missing
-// from this map is unknown, and unknown refolds.
-// A test holds this map to the event's schema, so a new key must be placed here.
+// updatedFieldWrites says which activity columns each changed_fields key of an
+// activity.updated event is written to. An empty list is a write outside every
+// column the folds read. A key missing here is unknown, and unknown refolds.
+// A test holds the map to the event schema, so a new key must be placed here.
 var updatedFieldWrites = map[string][]string{
 	"agenda_changed":                {},
 	"assignee_id":                   {"assignee_id"},
@@ -111,9 +106,8 @@ var updatedFieldWrites = map[string][]string{
 }
 
 // activityUpdateCanChangeEdges is false only when the event names its changed
-// fields and every one of them is a write the folds do not read. An event with
-// no field list, a malformed payload or a key this file has not placed folds
-// as before.
+// fields and each one is a write the folds do not read. No field list, a
+// malformed payload or an unplaced key refolds as before.
 func activityUpdateCanChangeEdges(env events.Envelope) bool {
 	var payload struct {
 		ChangedFields map[string]json.RawMessage `json:"changed_fields"`
