@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -95,6 +96,51 @@ describe("Sign-out (AS-1)", () => {
 
     await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
     expect(loggedOut).toBe(false);
+  });
+
+  it("shows a refused sign-out once the reader discarded the edit for it", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/auth/logout")) {
+          return new Response(
+            JSON.stringify({ status: 503, code: "service_unavailable" }),
+            {
+              status: 503,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          );
+        }
+        return new Response(null, { status: 404 });
+      }),
+    );
+    const client = newClient();
+    client.setQueryData(["me"], { user: { id: "u1", email: "ada@acme.test" } });
+    window.location.hash = "#/settings/account";
+    renderWith(
+      client,
+      <UnsavedExits>
+        <Shell onOpenSearch={ignoreSearch}>
+          <UnsavedGuard address="account" onKeep={() => undefined}>
+            {() => <GreetingDraft />}
+          </UnsavedGuard>
+        </Shell>
+      </UnsavedExits>,
+    );
+    await user.type(screen.getByRole("textbox", { name: "Greeting" }), "Ada");
+    await user.click(screen.getByRole("button", { name: /account$/i }));
+    await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    await user.click(
+      within(question).getByRole("button", { name: "Discard changes" }),
+    );
+
+    expect(await screen.findByText("Sign-out failed")).toBeVisible();
+    expect(client.getQueryData(["me"])).toBeTruthy();
   });
 
   // queryClient.clear() alone empties the cache but does NOT force a mounted
