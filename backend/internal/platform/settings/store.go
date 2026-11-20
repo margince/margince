@@ -86,12 +86,29 @@ func (s *Store) RawStored(ctx context.Context, key string) (json.RawMessage, boo
 	// transaction helper across both keeps the store honest about needing a
 	// resolved principal — a settings read with no workspace bound is a caller
 	// that has not authenticated, which the gate above should be judging.
+
+	// A hit opens no transaction, so the workspace check of WithWorkspaceTx is
+	// made here. A hit and a miss then refuse alike.
+	if _, ok := principal.WorkspaceID(ctx); !ok {
+		return nil, false, fmt.Errorf("settings: reading %s: %w", key, database.ErrNoWorkspace)
+	}
+	read := func() (json.RawMessage, bool, error) {
+		var raw json.RawMessage
+		var found bool
+		err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			var err error
+			raw, found, err = storedValue(ctx, tx, key, "")
+			return err
+		})
+		return raw, found, err
+	}
 	var raw json.RawMessage
 	var found bool
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		raw, found, err = storedValue(ctx, tx, key, "")
-		return err
-	})
+	if c := cacheFor(s.pool); c != nil && def.Cacheable() {
+		raw, found, err = c.read(key, read)
+	} else {
+		raw, found, err = read()
+	}
 	if err == nil && !found {
 		err = pgx.ErrNoRows
 	}
@@ -213,6 +230,7 @@ func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next
 			return WriteReceipt{}, fmt.Errorf("settings: writing %s: %w", key, err)
 		}
 		database.Forget(tx, ValueMemoKey(key))
+		forgetCachedWith(tx, key)
 		// Through the entry's own image, so a setting holding the address of a
 		// secret is redacted here rather than at each writer — there is only one
 		// writer today, and the next one would not know to.
