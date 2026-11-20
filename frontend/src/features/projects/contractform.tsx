@@ -130,10 +130,8 @@ export function ContractForm({
 
   // The scale the amount field reads and writes in. A recorded agreement keeps
   // its OWN currency (draftOf preserves it); a new one takes the installation's
-  // declared code once that read lands. The empty-string fallback is not a
-  // guessed currency — it reaches only minorUnitDigits, whose unusable-code
-  // answer is ISO's own default of two, which is what this field assumed
-  // unconditionally before.
+  // declared code once that read lands. Until then the money boxes take no
+  // amount, so nothing is committed at a guessed scale.
   const contractCurrency = draft.currency || baseCurrency || "";
 
   // Re-seed when the modal opens on a DIFFERENT agreement. Without this the

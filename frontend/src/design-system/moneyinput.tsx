@@ -125,8 +125,13 @@ export function MoneyInput({
 
   // The refusal the text on screen earns now, before any blur shows it. It is
   // the box's custom validity, so refuseUnreadableField stops a save past it.
+  // No currency, no scale: the box takes nothing until one arrives, so a
+  // keystroke is never committed at a guessed scale and redrawn at the real one.
+  const noCurrency = currency.trim() === "";
   const typedNow =
-    text.trim() === "" ? null : typedMinorUnits(text, currency, locale);
+    text.trim() === "" || noCurrency
+      ? null
+      : typedMinorUnits(text, currency, locale);
   const pending = typedNow && "refused" in typedNow ? typedNow.refused : null;
   const pendingMessage = pending ? t(pending.key, pending.params) : "";
   const input = useRef<HTMLInputElement | null>(null);
@@ -163,6 +168,20 @@ export function MoneyInput({
       commit(before.minor);
     }
   };
+  if (noCurrency) {
+    return (
+      <TextInput
+        {...rest}
+        ref={input}
+        type="text"
+        inputMode="decimal"
+        value=""
+        readOnly
+        disabled
+        placeholder={t("amount.waitsForCurrency")}
+      />
+    );
+  }
   if (display && !editing && text !== "" && refusal === null) {
     return (
       <TextInput

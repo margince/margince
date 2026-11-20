@@ -3196,6 +3196,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gib den Betrag ohne Tausendertrennzeichen ein, etwa {example}.",
   "amount.refused.notNumber": "Gib den Betrag in Ziffern ein, etwa {example}.",
   "amount.refused.tooLarge": "Dieser Betrag ist zu groß zum Speichern.",
+  "amount.refused.noCurrency":
+    "Gib den Betrag ein, sobald seine Währung feststeht.",
+  "amount.waitsForCurrency": "Eingabe möglich, sobald die Währung geladen ist.",
   "amount.refused.negative": "Gib einen Betrag von null oder mehr ein.",
   "number.refused.ambiguous": "Gib die Zahl als {whole} oder {fraction} ein.",
   "number.refused.grouping":
@@ -6241,8 +6244,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.dealName": "Deal-Name",
   "lead.qualify.amount": "Betrag ({currency})",
   "lead.qualify.amountHint": "Optional. In der Basiswährung der Installation.",
-  "lead.qualify.amountNoCurrency":
-    "Eingabe möglich, sobald die Basiswährung der Installation geladen ist.",
   "lead.qualify.why": "Warum",
   "lead.qualify.reasonReplied": "Grund: Der Lead hat am {at} geantwortet.",
   "lead.qualify.reasonMeetingBooked":

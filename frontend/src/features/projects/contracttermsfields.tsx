@@ -198,12 +198,8 @@ export function ContractTermsFields({
           // three-decimal currency lost its tail when every keystroke was
           // scaled and echoed back.
           //
-          // And it re-seeds when the CURRENCY changes, which this form needs
-          // more than any other: the installation read that supplies the code
-          // may land after the reader has already typed. Scaling on each
-          // keystroke against a currency still in flight recorded the amount at
-          // the two-digit fallback and then reinterpreted the same integer at
-          // the real scale, with nothing on screen to say it had moved.
+          // And it takes no amount until the installation read that supplies
+          // the code has landed, so no keystroke is scaled at a guessed one.
           <MoneyInput
             {...props}
             min={0}

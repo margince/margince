@@ -3103,6 +3103,8 @@ export const en = {
     "Enter the amount without thousands separators, such as {example}.",
   "amount.refused.notNumber": "Enter the amount in digits, such as {example}.",
   "amount.refused.tooLarge": "This amount is too large to store.",
+  "amount.refused.noCurrency": "Enter the amount once its currency is known.",
+  "amount.waitsForCurrency": "Opens once the currency has loaded.",
   "amount.refused.negative": "Enter an amount of zero or more.",
   "number.refused.ambiguous": "Enter the number as {whole} or {fraction}.",
   "number.refused.grouping":
@@ -6160,8 +6162,6 @@ export const en = {
   "lead.qualify.dealName": "Deal name",
   "lead.qualify.amount": "Amount ({currency})",
   "lead.qualify.amountHint": "Optional. In the installation’s base currency.",
-  "lead.qualify.amountNoCurrency":
-    "Opens once the installation’s base currency has loaded.",
   "lead.qualify.why": "Why",
   "lead.qualify.reasonReplied": "Reason: the lead replied on {at}.",
   "lead.qualify.reasonMeetingBooked": "Reason: a meeting was booked for {at}.",

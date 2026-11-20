@@ -3098,6 +3098,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhập số tiền không có dấu phân cách hàng nghìn, ví dụ {example}.",
   "amount.refused.notNumber": "Nhập số tiền bằng chữ số, ví dụ {example}.",
   "amount.refused.tooLarge": "Số tiền này quá lớn để lưu.",
+  "amount.refused.noCurrency": "Nhập số tiền khi đã biết loại tiền.",
+  "amount.waitsForCurrency": "Mở khi loại tiền đã tải xong.",
   "amount.refused.negative": "Nhập số tiền từ 0 trở lên.",
   "number.refused.ambiguous": "Nhập số dưới dạng {whole} hoặc {fraction}.",
   "number.refused.grouping":
@@ -6078,8 +6080,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.amount": "Số tiền ({currency})",
   "lead.qualify.amountHint":
     "Không bắt buộc. Theo loại tiền cơ sở của bản cài đặt.",
-  "lead.qualify.amountNoCurrency":
-    "Mở khi loại tiền cơ sở của bản cài đặt đã tải xong.",
   "lead.qualify.why": "Lý do",
   "lead.qualify.reasonReplied": "Lý do: lead đã trả lời vào {at}.",
   "lead.qualify.reasonMeetingBooked": "Lý do: đã đặt cuộc họp vào {at}.",

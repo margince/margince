@@ -369,19 +369,12 @@ function QualificationForm({
           </Field>
           <Field
             label={t("lead.qualify.amount", { currency: currency ?? "" })}
-            hint={t(
-              currency
-                ? "lead.qualify.amountHint"
-                : "lead.qualify.amountNoCurrency",
-            )}
+            hint={t("lead.qualify.amountHint")}
             error={amountError.sentence}
           >
             {(control) => (
               <MoneyInput
                 {...control}
-                // The scale is the currency's, so a figure typed before it is
-                // known would be stored at the two-digit fallback.
-                disabled={!currency}
                 valueMinor={amountMinor ?? 0}
                 blankWhenZero={amountMinor === null}
                 currency={currency ?? ""}
