@@ -16,6 +16,9 @@ import {
 } from "../../testing/story-utils";
 import { CompanyScreen } from "./companies";
 
+// What a reader sees: a hidden description is not a second copy on screen.
+const SEEN = "script, style, [hidden]";
+
 afterEach(() => {
   cleanup();
   window.location.hash = "";
@@ -96,7 +99,9 @@ describe("CompanyScreen — an archived account", () => {
 
     expect(await screen.findByText(en["record.archived"])).toBeTruthy();
     await waitFor(() => expect(asked).toContain("/companies/o-1/360"));
-    expect(await screen.findByText(en["record.archivedReadOnly"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["record.archivedReadOnly"], { ignore: SEEN }),
+    ).toBeTruthy();
     for (const failure of [
       en["co.partial"],
       en["co.section.unavailable"],
@@ -187,7 +192,9 @@ describe("CompanyScreen — an archived account", () => {
     client.setQueryData(["company", "o-1"], archived);
     const asked = mountArchived({ client });
 
-    expect(await screen.findByText(en["record.archivedReadOnly"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["record.archivedReadOnly"], { ignore: SEEN }),
+    ).toBeTruthy();
     expect(asked).not.toContain("/companies/o-1/360");
   });
 

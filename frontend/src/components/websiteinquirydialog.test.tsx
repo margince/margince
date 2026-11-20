@@ -198,3 +198,31 @@ it("keeps activation unavailable when the current deadline preview fails", async
     INQUIRY_POLICY.task_title,
   );
 });
+
+it("names what is missing on the review press instead of a dead button", async () => {
+  installFetchStub({
+    "GET /me": meRoute(INQUIRY_GRANTS),
+    "GET /custom-fields": () => jsonResponse({ data: [] }),
+    "GET /users": () => jsonResponse({ data: INQUIRY_MEMBERS }),
+    "GET /users/names": () => jsonResponse({ data: INQUIRY_MEMBERS }),
+    [`GET /automations/${INQUIRY_AUTOMATION.id}`]: () =>
+      jsonResponse(INQUIRY_AUTOMATION),
+    [`POST /web-forms/${INQUIRY_FORM.id}/handling/preview`]: () =>
+      jsonResponse(INQUIRY_DEADLINE_PREVIEW),
+  });
+  const user = userEvent.setup();
+  renderWithQueryClient(
+    <WebsiteInquiryDialog form={INQUIRY_FORM} onClose={() => {}} />,
+  );
+  const title = await screen.findByRole("textbox", { name: "Task title" });
+  await user.clear(title);
+  await user.type(title, "   ");
+  const review = screen.getByRole("button", { name: "Review handling" });
+  expect(review).toBeEnabled();
+  await user.click(review);
+  expect(await screen.findByText("Required: Task title")).toBeVisible();
+  expect(screen.queryByText("Authorized by")).not.toBeInTheDocument();
+  await user.type(title, "Answer the inquiry");
+  await user.click(review);
+  expect(await screen.findByText("Authorized by")).toBeVisible();
+});
