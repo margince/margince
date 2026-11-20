@@ -38697,6 +38697,7 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+        can_archive: {type: boolean, readOnly: true, description: 'List reads only. Whether the caller may archive this edge, answered by the rule the archive itself applies.'}
     CreateRelationshipRequest:
       type: object
       required: [kind, source]

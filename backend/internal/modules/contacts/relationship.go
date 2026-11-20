@@ -196,6 +196,9 @@ const relationshipColumns = `id, kind, contact_id, company_id, counterparty_comp
 	role, is_current_primary, started_at, ended_at, employment_status, started_precision, ended_precision, source, captured_by, version, created_at, updated_at, archived_at`
 
 type relationshipRow struct {
+	// CanArchive is set only by the list reads: whether the caller may archive
+	// this edge, as requireRelationshipArchive answers it.
+	CanArchive            *bool
 	EmploymentStatus      *string
 	StartedPrecision      *string
 	EndedPrecision        *string
@@ -343,7 +346,7 @@ func (s *Store) updateRelationshipInTx(
 // authority is two questions: the edge must be visible through its endpoints,
 // and removing it is editing its anchor.
 func (s *Store) RefuseArchiveRelationship(ctx context.Context, id ids.UUID) error {
-	if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
@@ -351,14 +354,7 @@ func (s *Store) RefuseArchiveRelationship(ctx context.Context, id ids.UUID) erro
 		if err != nil {
 			return err
 		}
-		if err := refuseGenericProjectCompany(current.Kind); err != nil {
-			return err
-		}
-		anchorObject, _ := relationshipAnchor(current.Kind)
-		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
-			return err
-		}
-		return ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints())
+		return requireRelationshipArchive(ctx, tx, current)
 	})
 }
 
