@@ -10,11 +10,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { RosterSubject } from "../../components/share.parts";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { ShareScreen } from "./share";
+import { pickedToGrant } from "./share.roster";
 
 // AS-3/4/5 — the record-share screen (A52/ADR-0039): list who has manual
 // access to this one record, grant a new user/team subject, revoke an
@@ -813,5 +815,33 @@ describe("ShareScreen for a reader who may not share", () => {
     expect(await screen.findByText(en["share.missingRecord"])).toBeTruthy();
     expect(screen.queryByText("c-9")).toBeNull();
     expect(screen.queryByTestId("share-grant-submit")).toBeNull();
+  });
+});
+
+describe("the subject a Grant press sends", () => {
+  const priya: RosterSubject = {
+    id: "u-1",
+    name: "Priya Shah",
+    note: "",
+    kind: "user",
+  };
+  const desk: RosterSubject = {
+    id: "t-1",
+    name: "Deal Desk",
+    note: "",
+    kind: "team",
+  };
+
+  it("is dropped once the access answer names the picked colleague as owner", () => {
+    expect(pickedToGrant(priya, "u-1")).toBeNull();
+  });
+
+  it("is no colleague while the owner is not known yet", () => {
+    expect(pickedToGrant(priya, undefined)).toBeNull();
+  });
+
+  it("keeps a team, and a colleague on a record with no owner", () => {
+    expect(pickedToGrant(desk, undefined)).toBe(desk);
+    expect(pickedToGrant(priya, null)).toBe(priya);
   });
 });
