@@ -222,3 +222,43 @@ describe("a glyph verb refused by a sentence elsewhere on the page", () => {
     expect(screen.getByRole("tooltip").textContent).toBe("Write");
   });
 });
+
+// A speech user names a control by the word they see under its glyph. So the
+// name holds that word, even where the full verb is another one.
+describe("a verb whose tile word is not in its name", () => {
+  it("keeps a name that already holds the word", () => {
+    render(
+      <IconAction
+        label="Email Dana"
+        word="Email"
+        icon={<span aria-hidden="true">*</span>}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Email Dana" })).toBeTruthy();
+  });
+
+  it("counts only whole words, so a longer word does not hold it", () => {
+    render(
+      <IconAction
+        label="Meetings"
+        word="Meet"
+        icon={<span aria-hidden="true">*</span>}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Meet, Meetings" })).toBeTruthy();
+  });
+
+  it("starts the name with the word it shows", () => {
+    render(
+      <IconAction
+        label="Write"
+        word="Email"
+        icon={<span aria-hidden="true">*</span>}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Email, Write" })).toBeTruthy();
+  });
+});

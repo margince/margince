@@ -22,6 +22,7 @@ import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { industryOptions } from "../format/industry";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ADDRESS_COLUMN_LABELS } from "../lib/addresscolumns";
 import { labelFor } from "../lib/labelfor";
 import { unwrap } from "../lib/problem";
 import { TEXT_LIMITS } from "../lib/textlimits_gen";
@@ -204,18 +205,12 @@ export function mapCompanyUpdate(
 // one nested object; the form channel is flat string values, so the two are
 // mapped at the boundary (addressFrom / addressPatch) rather than teaching the
 // form about nesting for one record type.
-export const ADDRESS_FIELDS: CreateField[] = [
-  { key: "address_line1", label: "create.addressLine1" },
-  { key: "address_line2", label: "create.addressLine2" },
-  { key: "address_postal_code", label: "create.postalCode" },
-  { key: "address_city", label: "create.city" },
-  { key: "address_region", label: "create.region" },
-  {
-    key: "address_country",
-    label: "create.country",
-    wireField: "address.country",
-  },
-];
+export const ADDRESS_FIELDS: CreateField[] = ADDRESS_COLUMN_LABELS.map(
+  ([key, label]) =>
+    key === "address_country"
+      ? { key, label, wireField: "address.country" }
+      : { key, label },
+);
 
 // addressFrom prefills the six flat fields from the record's nested address.
 export function addressFrom(

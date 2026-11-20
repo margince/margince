@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -28,16 +29,24 @@ import (
 // automationRunWire is the contract AutomationRun shape as this suite
 // reads it; pointers make absent-vs-present assertable.
 type automationRunWire struct {
-	ID               string  `json:"id"`
-	AutomationID     string  `json:"automation_id"`
-	Outcome          string  `json:"outcome"`
-	Tier             string  `json:"tier"`
-	OccurredAt       string  `json:"occurred_at"`
-	Reason           *string `json:"reason"`
-	ApprovalRequired *bool   `json:"approval_required"`
-	TriggerEvidence  *string `json:"trigger_evidence"`
-	TargetRef        *string `json:"target_ref"`
-	ActionResult     *string `json:"action_result"`
+	ID               string   `json:"id"`
+	AutomationID     string   `json:"automation_id"`
+	Outcome          string   `json:"outcome"`
+	Tier             string   `json:"tier"`
+	OccurredAt       string   `json:"occurred_at"`
+	Reason           *string  `json:"reason"`
+	ApprovalRequired *bool    `json:"approval_required"`
+	TriggerEvidence  *string  `json:"trigger_evidence"`
+	TargetRef        *string  `json:"target_ref"`
+	ActionResult     *string  `json:"action_result"`
+	EventID          string   `json:"event_id"`
+	TriggerEventType *string  `json:"trigger_event_type"`
+	ActionKinds      []string `json:"action_kinds"`
+	Target           *struct {
+		Type  string  `json:"type"`
+		ID    string  `json:"id"`
+		Label *string `json:"label"`
+	} `json:"target"`
 }
 
 type automationRunsPage struct {
@@ -132,7 +141,8 @@ func assertRunsRenderEveryOutcomeWithItsTrace(t *testing.T, e *apptest.AppEnv, a
 	base := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 	reason := func(s string) []byte { return runDetailReason(t, s) }
 
-	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "applied", Trigger: ids.NewV7(), Planned: &actionTrace, Applied: &actionTrace, At: base})
+	firedBy := ids.NewV7()
+	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "applied", Trigger: firedBy, Planned: &actionTrace, Applied: &actionTrace, At: base})
 	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "failed", Trigger: ids.NewV7(), Detail: reason("provider error"), At: base.Add(time.Minute)})
 	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{
 		Automation: autoID, Status: "requires_approval", Trigger: ids.NewV7(), Planned: &actionTrace,
@@ -163,17 +173,27 @@ func assertRunsRenderEveryOutcomeWithItsTrace(t *testing.T, e *apptest.AppEnv, a
 
 	requireStr(t, "fired action_result", fired.ActionResult, "applied assign_owner")
 	requireStr(t, "fired target_ref", fired.TargetRef, "lead:"+targetLead)
+	requireStr(t, "fired trigger_event_type", fired.TriggerEventType, "lead.created")
+	if fired.EventID != firedBy.String() || !slices.Equal(fired.ActionKinds, []string{"assign_owner"}) {
+		t.Fatalf("fired event_id=%s action_kinds=%v, want %s and [assign_owner]", fired.EventID, fired.ActionKinds, firedBy)
+	}
+	if fired.Target == nil || fired.Target.Type != "lead" || fired.Target.ID != targetLead || fired.Target.Label != nil {
+		t.Fatalf("fired target = %+v, want the lead with no name: no lead by that id exists", fired.Target)
+	}
 	if fired.Reason != nil || fired.ApprovalRequired != nil {
 		t.Fatalf("a fired run carries reason=%v approval_required=%v, want neither", fired.Reason, fired.ApprovalRequired)
 	}
 
 	requireStr(t, "failed reason", failed.Reason, "provider error")
-	if failed.ActionResult != nil || failed.TargetRef != nil {
-		t.Fatalf("a pre-plan failure carries action_result=%v target_ref=%v, want neither (its plan is honestly empty)",
-			failed.ActionResult, failed.TargetRef)
+	if failed.ActionResult != nil || failed.TargetRef != nil || failed.Target != nil || len(failed.ActionKinds) != 0 {
+		t.Fatalf("a pre-plan failure carries action_result=%v target_ref=%v target=%v action_kinds=%v, want none (its plan is honestly empty)",
+			failed.ActionResult, failed.TargetRef, failed.Target, failed.ActionKinds)
 	}
 
 	requireStr(t, "parked action_result", parked.ActionResult, "queued to approval inbox")
+	if !slices.Equal(parked.ActionKinds, []string{"assign_owner"}) {
+		t.Fatalf("parked action_kinds = %v, want the queued [assign_owner]", parked.ActionKinds)
+	}
 	if parked.ApprovalRequired == nil || !*parked.ApprovalRequired {
 		t.Fatalf("a parked run reads approval_required=%v, want true", parked.ApprovalRequired)
 	}

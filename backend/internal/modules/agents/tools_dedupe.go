@@ -62,9 +62,10 @@ type decideDuplicate struct{ queue DuplicateQueue }
 func (t decideDuplicate) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "decide_duplicate", Title: "Decide a flagged duplicate pair", Version: toolVersionV1,
-		Description:   decideDuplicateCopy.render(),
-		Instead:       decideDuplicateCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       decideDuplicateCopy.render(),
+		Instead:           decideDuplicateCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "disposeDedupeCandidate/undoDedupeDisposition",
 		InputSchema: schema(`{"type":"object","required":["candidate_id","decision"],"properties":{
 			"candidate_id":{"type":"string","format":"uuid","description":"The pair's candidate_id, from the duplicate_candidates a create answered with"},

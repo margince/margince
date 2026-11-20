@@ -9,10 +9,13 @@ import { ifMatch, requireVersion } from "../../api/version";
 import { ArchiveAction } from "../../components/archive";
 import { MergeAction } from "../../components/merge";
 import type { RecordPickerCandidate } from "../../design-system/recordpicker";
+import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { unwrap } from "../../lib/problem";
+import { restoreLatestArchive } from "../../lib/recordrestore";
 import { invalidateRecord } from "../../lib/recordwritekeys";
+import { navigate } from "../../lib/router";
 
 // The contact header's merge and archive commands.
 
@@ -70,6 +73,7 @@ export function ContactRecordActions({
   // ContactPageV2 closes the form over a page still showing what the reader
   // just corrected.
   const queryClient = useQueryClient();
+  const toast = useToast();
   return (
     <>
       <MergeAction
@@ -139,6 +143,20 @@ export function ContactRecordActions({
         invalidate="contacts"
         recordKey="contact"
         onArchived={(from) => from.closeOnto({ screen: "contacts" })}
+        undo={async (archived) => {
+          const restored = await restoreLatestArchive(
+            "contact",
+            archived.id,
+            requireVersion(archived.version),
+          );
+          await invalidateRecord(queryClient, "contact", archived.id);
+          await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+          if (restored) {
+            navigate({ screen: "contacts", id: archived.id });
+          } else {
+            toast.show(t("contact.undoArchiveNothing"), { tone: "danger" });
+          }
+        }}
       />
     </>
   );

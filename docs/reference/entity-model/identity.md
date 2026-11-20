@@ -353,6 +353,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `idx_oauth_client_self_registered`: `btree (created_at, id) WHERE (created_via = ANY (ARRAY['dcr', 'cimd']))`
 - `oauth_client_client_id_key`: `unique, btree (client_id)`
 - `oauth_client_pkey`: `unique, btree (id)`
 
@@ -388,6 +389,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `idx_oauth_grant_client`: `btree (client_id)`
 - `idx_oauth_grant_user`: `btree (user_id)`
 - `oauth_grant_lent_passport_ix`: `btree (lent_passport_id)`
 - `oauth_grant_pkey`: `unique, btree (id)`

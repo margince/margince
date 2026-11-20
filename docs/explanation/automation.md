@@ -65,7 +65,7 @@ stages for a human approval. `dynamic` picks 🟢 or 🟡 from the size of the f
 |---|---|---|
 | `create_task` | 🟢 | make a follow up task on the record's timeline |
 | `set_field` | 🟢 | update a field on the record that fired |
-| `draft_email` | 🟢 | write a draft email (records the draft; **never sends**) |
+| `draft_email` | 🟢 | write a draft email (records the draft; **never sends**). The draft waits for approval, so a rule with this action shows `confirmation_required` (`RuleTier`) |
 | `notify` | 🟢 | send a notice to a user through the store for notices in the app |
 | `assign_owner` | `dynamic` | set or change the owner: 🟢 for a single record, 🟡 at scale |
 | `request_approval` | 🟡 | stage a human approval (confirm first by design) |

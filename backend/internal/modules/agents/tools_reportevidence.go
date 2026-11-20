@@ -88,10 +88,11 @@ type searchReportEvidence struct {
 func (t searchReportEvidence) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "search_report_evidence", Title: "Search the evidence behind a saved run",
-		Version:       toolVersionV1,
-		Description:   searchReportEvidenceCopy.render(),
-		Instead:       searchReportEvidenceCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Version:           toolVersionV1,
+		Description:       searchReportEvidenceCopy.render(),
+		Instead:           searchReportEvidenceCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "searchReportEvidence",
 		InputSchema: schema(`{"type":"object","required":["run_id","query"],"properties":{

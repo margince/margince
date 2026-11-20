@@ -93,8 +93,7 @@ func routeThrough(door *viewDoor) agents.RouteRunner {
 			return nil, fmt.Errorf("the %s verb acts for a user, and this work has none: %w", call.Verb.Verb, apperrors.ErrPermissionDenied)
 		}
 		in := inProcessCall{Method: call.Verb.Method, Pattern: call.Verb.Pattern, Path: call.Path, Query: call.Query, Version: call.Version, FileLimit: agents.MaxInlineFileBytes}
-		// The caller's key where its route claims one. A route that requires a key
-		// gets a fresh one otherwise, so a keyless retry is a new call.
+		// The caller's key where its route claims one, else a fresh one if required.
 		in.IdempotencyKey = agents.RouteRetryKey(ctx)
 		if in.IdempotencyKey == "" && call.Verb.IdempotencyKey {
 			in.IdempotencyKey = ids.NewV7().String()

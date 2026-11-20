@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AutomationsAdmin } from "./automations";
 import { ConfiguredAutomations } from "./automations.instances";
@@ -237,7 +238,9 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(within(dialog).getAllByRole("textbox")).toHaveLength(1);
     expect(within(dialog).getAllByRole("spinbutton")).toHaveLength(1);
     expect(
-      within(dialog).getByRole("spinbutton", { name: "due_in_days" }),
+      within(dialog).getByRole("spinbutton", {
+        name: en["auto.param.dueInDays"],
+      }),
     ).toBeTruthy();
     // No free-form rule body, no user-defined trigger, anywhere on the page —
     // the DOCUMENT, not the render container: the dialog is portalled to the
@@ -246,14 +249,23 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(document.querySelectorAll("textarea")).toHaveLength(0);
     expect(screen.queryByRole("textbox", { name: /trigger/i })).toBeNull();
     // the schema bounds reach the input verbatim
-    const param = screen.getByRole("spinbutton", { name: "due_in_days" });
+    const param = screen.getByRole("spinbutton", {
+      name: en["auto.param.dueInDays"],
+    });
     expect(param.getAttribute("min")).toBe("1");
     expect(param.getAttribute("max")).toBe("30");
   });
 
   it("paramFields reads only typed schema properties", () => {
     expect(paramFields(dueInDaysSchema(3))).toEqual([
-      { key: "due_in_days", kind: "integer", min: 1, max: 30, initial: "3" },
+      {
+        key: "due_in_days",
+        kind: "integer",
+        min: 1,
+        max: 30,
+        required: true,
+        initial: "3",
+      },
     ]);
     expect(paramFields({})).toEqual([]);
   });
@@ -541,7 +553,9 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
       }),
     ).toBeTruthy();
     expect(
-      within(dialog).getByRole("spinbutton", { name: "due_in_days" }),
+      within(dialog).getByRole("spinbutton", {
+        name: en["auto.param.dueInDays"],
+      }),
     ).toBeTruthy();
     expect(within(dialog).getByRole("button", { name: "Save" })).toBeTruthy();
   });
@@ -556,7 +570,9 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
 
     const dialog = await openRowEditor();
     await userEvent.type(
-      within(dialog).getByRole("spinbutton", { name: "due_in_days" }),
+      within(dialog).getByRole("spinbutton", {
+        name: en["auto.param.dueInDays"],
+      }),
       "4",
     );
     await userEvent.keyboard("{Escape}");
@@ -639,7 +655,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
 // automation:update grant as pause and edit; the panels mount lazily and
 // independently (opening one never closes the other).
 describe("ConfiguredAutomations — Runs/Preview toggles", () => {
-  const previewTitle = "Dry-run impact";
+  const previewTitle = en["auto.preview.title"];
   // A benign stub for the lazily-mounted panels' first fetch: these tests are
   // about mount and independence, so runs answer empty and preview zero.
   function panelBackend() {
@@ -745,6 +761,7 @@ describe("ConfiguredAutomations — Runs/Preview toggles", () => {
     );
     await openRowMenu();
     await userEvent.click(screen.getByRole("button", { name: "Runs" }));
+    await openRowMenu();
     await userEvent.click(screen.getByRole("button", { name: "Preview" }));
     expect(screen.getByRole("heading", { name: "Run history" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: previewTitle })).toBeTruthy();

@@ -213,11 +213,12 @@ func newJobRunner(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, 
 		return nil, err
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
-		Paused:               workPause(ctx),
-		ModelBound:           modelPath.Bound,
-		ListsEnabled:         cfg.listsEnabled,
-		DisabledCoreFeatures: config.Val(cfg.settings, ps.CoreFeaturesDisabled),
-		DataTasksPace:        cfg.dataTasksPace,
+		Paused:                workPause(ctx),
+		ModelBound:            modelPath.Bound,
+		ListsEnabled:          cfg.listsEnabled,
+		DisabledCoreFeatures:  config.Val(cfg.settings, ps.CoreFeaturesDisabled),
+		DataTasksPace:         cfg.dataTasksPace,
+		UnusedClientRetention: config.Val(cfg.settings, ps.MCPUnusedClientRetention),
 		// Every setting-driven schedule, read once here and kept current by
 		// the watch startJobRunner starts.
 		Schedules: schedules,

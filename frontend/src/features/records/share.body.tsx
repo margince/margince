@@ -33,7 +33,6 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { holdsEveryWord, searchWords } from "../../format/collate";
 import {
   formatDate,
   formatNumber,
@@ -44,8 +43,13 @@ import { throwProblem } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
-import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
+import {
+  isAccessKind,
+  useRecordOwnerId,
+  WhoCanSeePanel,
+} from "./recordaccesspanel";
 import { ShareConfirmation } from "./share.confirmation";
+import { draftToGrant, pickedToGrant, shareCandidates } from "./share.roster";
 import {
   ApprovalRequiredError,
   RevokeGrantDialog,
@@ -109,13 +113,9 @@ export function ShareScreenBody({
     skipped: number;
   } | null>(null);
 
-  const filteredRoster = useMemo(() => {
-    const words = searchWords(term);
-    if (words.length === 0) {
-      return roster;
-    }
-    return roster.filter((r) => holdsEveryWord(words, [r.name, r.note]));
-  }, [roster, term]);
+  const ownerId = useRecordOwnerId(recordType, recordId, !contactsOnly);
+  const filteredRoster = shareCandidates(roster, term, ownerId);
+  const offered = pickedToGrant(subject, ownerId);
 
   function resetForm() {
     setTerm("");
@@ -263,9 +263,9 @@ export function ShareScreenBody({
           actions={
             <Button
               variant="primary"
-              disabled={!subject}
+              disabled={!offered}
               pending={grant.isPending}
-              onClick={() => subject && submit(subject)}
+              onClick={() => offered && submit(offered)}
               data-testid="share-grant-submit"
             >
               {subject &&
@@ -481,7 +481,7 @@ export function ShareScreenBody({
       )}
 
       <ShareConfirmation
-        draft={confirmationDraft}
+        draft={draftToGrant(confirmationDraft, ownerId)}
         bulk={contactsOnly}
         open={askingConfirmation}
         onClose={() => {

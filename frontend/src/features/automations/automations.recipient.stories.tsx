@@ -32,14 +32,31 @@ export const RecordOwner: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText("Tasks go to", { exact: false }),
-    ).toBeVisible();
-    await expect(
-      within(canvasElement).getByText("The record owner", { exact: false }),
+      within(canvasElement).getByText("Tasks go to the record owner"),
     ).toBeVisible();
   },
 };
 export const RecordOwnerDark: Story = {
   ...RecordOwner,
   globals: { theme: "dark" },
+};
+
+/** A rule whose tasks go to its authorizer, before anyone authorizes it. */
+export const NoAuthorizerYet: Story = {
+  args: {
+    action: "create_task",
+    automation: {
+      ...configuredAutomation("au-2", Date.parse("2026-12-01T10:00:00Z")),
+      key: "renewal_reminder",
+      params: { recipient: "authorizer" },
+      owner_id: undefined,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(
+        "Tasks go to whoever authorizes this automation",
+      ),
+    ).toBeVisible();
+  },
 };

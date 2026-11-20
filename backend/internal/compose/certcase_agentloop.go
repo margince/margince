@@ -319,7 +319,6 @@ func (agentLoopToolSurface) Specs() []mcp.ToolSpec { return agentLoopRegistry() 
 
 func (agentLoopToolSurface) Runnable(context.Context) []mcp.ToolSpec { return agentLoopRegistry() }
 
-// Explain answers the refusal the surface never makes: every call stages.
 func (agentLoopToolSurface) Explain(_ string, err error) string { return err.Error() }
 
 func (agentLoopToolSurface) Invoke(context.Context, string, json.RawMessage) (json.RawMessage, error) {

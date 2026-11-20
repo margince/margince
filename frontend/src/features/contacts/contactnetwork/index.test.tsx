@@ -39,15 +39,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// The contact alone in its graph; `over` is what a case changes.
+function alone(over: Partial<ContactGraph> = {}): ContactGraph {
+  return {
+    contact_id: CONTACT,
+    nodes: [anchor],
+    edges: [],
+    routes: [],
+    groups_omitted: [],
+    ...over,
+  };
+}
+
 describe("a contact nobody here reaches", () => {
   it("says so once, not twice", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [],
-      groups_omitted: [],
-    });
+    renderTab(alone());
 
     // The strip is this page's answer-first surface, so the reading belongs
     // there. A paragraph under it repeating the same words made one finding
@@ -60,19 +66,81 @@ describe("a contact nobody here reaches", () => {
   });
 
   it("draws no card offering a choice of nothing", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [],
-      groups_omitted: [],
-    });
+    renderTab(alone());
 
     await screen.findByText(NO_ROUTE);
     // "Ways in — best first, pick the one you can actually use" over an empty
     // list. The card's own comment says a heading with nothing under it is
     // worse than no card, and the condition that drew it disagreed.
     expect(routesPanel()).toBeNull();
+  });
+
+  it("draws no map of the contact alone and no handoff to start", async () => {
+    renderTab(alone());
+
+    await screen.findByText(NO_ROUTE);
+    expect(
+      screen.queryByRole("group", { name: en["contact.intro.mapRegion"] }),
+    ).toBeNull();
+    expect(screen.queryByText(en["contact.intro.stepRoute"])).toBeNull();
+    // Recording an introduction made elsewhere is still the way to start.
+    expect(
+      screen.getByRole("button", { name: en["contact.intro.recordAction"] }),
+    ).toBeTruthy();
+    // With nothing to hold, a chapter frames no empty card.
+    expect(document.querySelector(".chapter-card")).toBeNull();
+  });
+
+  it("draws the map when who corresponds is withheld from the reader", async () => {
+    renderTab(alone({ groups_omitted: ["direct"] }));
+
+    expect(
+      await screen.findByRole("group", { name: en["contact.intro.mapRegion"] }),
+    ).toBeTruthy();
+  });
+
+  const GAPS_FAILED = en["contact.network.captureGapsFailed"];
+  const RETRY = en["common.retry"];
+  const isMailboxRead = (input: RequestInfo | URL) =>
+    String(input instanceof Request ? input.url : input).endsWith("/network");
+  const reads = () =>
+    vi.mocked(fetch).mock.calls.filter(([input]) => isMailboxRead(input))
+      .length;
+
+  it("keeps a failed mailbox read with its Retry, and does not read it again on its own", async () => {
+    renderTab(alone(), "en", {}, { captureGaps: "fail" });
+
+    expect(await screen.findByText(GAPS_FAILED)).toBeTruthy();
+    await waitFor(() => expect(reads()).toBeGreaterThanOrEqual(2));
+    await act(async () => {});
+    expect(screen.getByText(GAPS_FAILED)).toBeTruthy();
+    expect(screen.getByRole("button", { name: RETRY })).toBeTruthy();
+    expect(reads()).toBeLessThanOrEqual(2);
+  });
+
+  it("keeps a failed mailbox read and its Retry on screen while the read runs again", async () => {
+    renderTab(alone(), "en", {}, { captureGaps: "fail" });
+    const answer = vi.mocked(fetch).getMockImplementation();
+    vi.mocked(fetch).mockImplementation((input, init) =>
+      (isMailboxRead(input) && reads() > 1) || !answer
+        ? new Promise<Response>(() => {})
+        : answer(input, init),
+    );
+
+    await waitFor(() => expect(reads()).toBe(2));
+    expect(screen.getByText(GAPS_FAILED)).toBeTruthy();
+    expect(screen.getByRole("button", { name: RETRY })).toBeTruthy();
+  });
+
+  it("keeps the Retry of an introduction list that could not be read", async () => {
+    renderTab(alone(), "en", {}, { asksFail: true });
+
+    expect(
+      await screen.findByText(en["contact.intro.asksFailed"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: en["common.retry"] }),
+    ).toBeTruthy();
   });
 });
 
@@ -158,13 +226,7 @@ describe("a route that cannot be asked for", () => {
   });
 
   it("offers no button that would answer 409", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [taken],
-      groups_omitted: [],
-    });
+    renderTab(alone({ routes: [taken] }));
 
     await screen.findByText(en["contact.intro.unavailable"]);
     expect(
@@ -238,13 +300,7 @@ describe("several ways in", () => {
 
   it("opens the ask drawer from an alternative's own button", async () => {
     const user = userEvent.setup();
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [direct, viaContact],
-      groups_omitted: [],
-    });
+    renderTab(alone({ routes: [direct, viaContact] }));
 
     await user.click(
       await screen.findByRole("button", {
@@ -298,13 +354,7 @@ describe("the verdict and its evidence", () => {
 
   it("cites the receipts and splits the count by who sent it", async () => {
     const user = userEvent.setup();
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [sofia],
-      groups_omitted: [],
-    });
+    renderTab(alone({ routes: [sofia] }));
 
     await screen.findByText(en["contact.intro.bestWayIn"]);
     expect(screen.getByText(en["contact.intro.lastYesterday"])).toBeTruthy();

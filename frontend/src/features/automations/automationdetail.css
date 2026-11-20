@@ -60,6 +60,8 @@
 }
 
 /* One labelled fact of a run, stepped off the line above it. */
-.auto-detail-line {
+.auto-detail-line,
+.auto-run-sentence,
+.auto-run-technical {
   margin-top: var(--space-1);
 }

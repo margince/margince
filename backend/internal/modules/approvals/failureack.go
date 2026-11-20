@@ -125,7 +125,7 @@ func (s *Service) AcknowledgeEffectFailure(ctx context.Context, id ids.ApprovalI
 		if _, err := tx.Exec(ctx, `UPDATE approval
 			   SET effect_failed_at = decided_at + make_interval(secs => $5), effect_failure = $3
 			 WHERE id = $1 AND decided_by = $2 AND `+lapsedUnmarkedSQL("$4"),
-			id, p.UserID, lapsedRedemptionSentence, s.now().UTC().Add(-redemptionTTL), redemptionTTL.Seconds()); err != nil {
+			id, p.UserID, failureLapsed.sentence, s.now().UTC().Add(-redemptionTTL), redemptionTTL.Seconds()); err != nil {
 			return err
 		}
 		var decidedBy *ids.UUID

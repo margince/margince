@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -37,8 +38,9 @@ type attentionNames struct {
 }
 
 var (
-	_ attention.Names       = attentionNames{}
-	_ privacy.RecordLabeler = attentionNames{}
+	_ attention.Names        = attentionNames{}
+	_ privacy.RecordLabeler  = attentionNames{}
+	_ automation.RecordNames = attentionNames{}
 )
 
 // newAttentionNames is the one assembly every naming surface shares, so a record

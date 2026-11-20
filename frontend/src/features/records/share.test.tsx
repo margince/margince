@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -10,11 +11,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { RosterSubject } from "../../components/share.parts";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { ShareScreen } from "./share";
+import { pickedToGrant } from "./share.roster";
 
 // AS-3/4/5 — the record-share screen (A52/ADR-0039): list who has manual
 // access to this one record, grant a new user/team subject, revoke an
@@ -154,6 +157,27 @@ function installBaseFetch(
       return jsonResponse({}, 404);
     }),
   );
+}
+
+// The access answer of a contact owned by `ownerId`.
+function ownedAccess(ownerId: string): Response {
+  return jsonResponse({
+    visibility: "owner",
+    owner_id: ownerId,
+    archived: false,
+    detail: false,
+    you: {
+      can_change: true,
+      read_reasons: [{ code: "owner" }],
+      change_reasons: [{ code: "owner" }],
+    },
+    data: [],
+    page: { has_more: false, total: 0 },
+    group_counts: { owner: 0, shared: 0, team_shared: 0, everyone: 0 },
+    can_change_count: 0,
+    team_access_count: 0,
+    refresh_at: null,
+  });
 }
 
 describe("ShareScreen", () => {
@@ -360,6 +384,56 @@ describe("ShareScreen", () => {
     expect(screen.queryByText("SDR Bot")).toBeNull();
   });
 
+  it("leaves a contact's owner out of the colleagues to share it with", async () => {
+    installBaseFetch({ "/contacts/c-1/access": () => ownedAccess("u-1") });
+    render(<ShareScreen recordType="contact" recordId="c-1" />);
+
+    await screen.findByRole("button", { name: /Mor Adler/ });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull(),
+    );
+  });
+
+  it("offers no colleague until the contact's owner is known", async () => {
+    let answerAccess: (response: Response) => void = () => {};
+    installBaseFetch({
+      "/contacts/c-1/access": () =>
+        new Promise<Response>((resolve) => {
+          answerAccess = resolve;
+        }),
+    });
+    render(<ShareScreen recordType="contact" recordId="c-1" />);
+
+    await screen.findByRole("button", { name: /Deal Desk/ });
+    expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Mor Adler/ })).toBeNull();
+
+    answerAccess(ownedAccess("u-1"));
+    await screen.findByRole("button", { name: /Mor Adler/ });
+    expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull();
+  });
+
+  it("offers no colleague after the owner lookup failed, until its Retry answers", async () => {
+    let reads = 0;
+    installBaseFetch({
+      "/contacts/c-1/access": () => {
+        reads += 1;
+        return reads === 1
+          ? jsonResponse({ code: "internal", status: 500 }, 500)
+          : ownedAccess("u-1");
+      },
+    });
+    render(<ShareScreen recordType="contact" recordId="c-1" />);
+    const user = userEvent.setup();
+
+    const retry = await screen.findByRole("button", { name: "Retry" });
+    await screen.findByRole("button", { name: /Deal Desk/ });
+    expect(screen.queryByRole("button", { name: /Mor Adler/ })).toBeNull();
+    await user.click(retry);
+    await screen.findByRole("button", { name: /Mor Adler/ });
+    expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull();
+  });
+
   // POST /record-grants is idempotent on
   // (record_type, record_id, subject_type, subject_id) and a re-assert
   // RESTATES the grant, so an already-granted subject is offered rather than
@@ -425,6 +499,31 @@ describe("ShareScreen", () => {
 
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0]).toMatchObject({ subject_id: "u-2", access: "read" });
+  });
+
+  it("drops an open reduction once a refreshed access read names its colleague as owner", async () => {
+    const posts: Record<string, unknown>[] = [];
+    let accessReads = 0;
+    installBaseFetch({
+      "/record-grants": grantEndpoint(posts, writeGrant),
+      "/contacts/c-1/access": () => {
+        accessReads += 1;
+        return ownedAccess(accessReads === 1 ? "u-1" : "u-2");
+      },
+    });
+    render(<ShareScreen recordType="contact" recordId="c-1" />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(screen.getByRole("button", { name: "Read" }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+    await screen.findByRole("dialog");
+    act(() => {
+      globalThis.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(posts).toEqual([]);
   });
 
   it("returns focus to the subject field after a reduction, whose trigger is gone", async () => {
@@ -763,5 +862,33 @@ describe("ShareScreen for a reader who may not share", () => {
     expect(await screen.findByText(en["share.missingRecord"])).toBeTruthy();
     expect(screen.queryByText("c-9")).toBeNull();
     expect(screen.queryByTestId("share-grant-submit")).toBeNull();
+  });
+});
+
+describe("the subject a Grant press sends", () => {
+  const priya: RosterSubject = {
+    id: "u-1",
+    name: "Priya Shah",
+    note: "",
+    kind: "user",
+  };
+  const desk: RosterSubject = {
+    id: "t-1",
+    name: "Deal Desk",
+    note: "",
+    kind: "team",
+  };
+
+  it("is dropped once the access answer names the picked colleague as owner", () => {
+    expect(pickedToGrant(priya, "u-1")).toBeNull();
+  });
+
+  it("is no colleague while the owner is not known yet", () => {
+    expect(pickedToGrant(priya, undefined)).toBeNull();
+  });
+
+  it("keeps a team, and a colleague on a record with no owner", () => {
+    expect(pickedToGrant(desk, undefined)).toBe(desk);
+    expect(pickedToGrant(priya, null)).toBe(priya);
   });
 });

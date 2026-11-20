@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -355,8 +356,8 @@ func (s *Store) RotateSecret(ctx context.Context, id ids.UUID) (Form, string, er
 	return out, secret, nil
 }
 
-// ArchiveForm retires a form: its address answers 404 from then on, and its
-// secret is destroyed, since nothing can verify against it again.
+// ArchiveForm retires a form: its address answers 404 and its handling plan is
+// switched off. Its secret is destroyed, since nothing can verify against it again.
 func (s *Store) ArchiveForm(ctx context.Context, id ids.UUID) (Form, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionDelete); err != nil {
 		return Form{}, err
@@ -378,17 +379,23 @@ func (s *Store) retireForm(ctx context.Context, id ids.UUID) (Form, error) {
 		return Form{}, err
 	}
 	var out Form
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = scanForm(tx.QueryRow(ctx,
-			"UPDATE web_form SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+formColumns, id))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		} else if err != nil {
+	err := database.WithWorkspaceWriteTx(ctx, s.db.Pool(), func(bound context.Context) error {
+		err := s.db.Tx(bound, func(tx pgx.Tx) error {
+			var err error
+			out, err = scanForm(tx.QueryRow(bound,
+				"UPDATE web_form SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+formColumns, id))
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apperrors.ErrNotFound
+			} else if err != nil {
+				return err
+			}
+			_, err = storekit.Audit(bound, tx, "archive", auditEntity, id, nil, nil)
+			return err
+		})
+		if err != nil || out.HandlingAutomationID == nil || s.settings == nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "archive", auditEntity, id, nil, nil)
-		return err
+		return s.settings.SwitchOff(bound, *out.HandlingAutomationID)
 	})
 	if err != nil {
 		return Form{}, err

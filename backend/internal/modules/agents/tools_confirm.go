@@ -105,10 +105,11 @@ type archiveRecord struct {
 func (t archiveRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "archive_record", Title: "Archive a record", Version: toolVersionV1,
-		AskUserFirst:  true,
-		Description:   archiveRecordCopy.render(),
-		Instead:       archiveRecordCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		AskUserFirst:      true,
+		Description:       archiveRecordCopy.render(),
+		Instead:           archiveRecordCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "archiveContact/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity/archiveProduct/archiveOfferTemplate/archiveOffer",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","project","relationship","activity","product","offer_template","offer"]},
@@ -226,9 +227,10 @@ type promoteLead struct {
 func (t promoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "promote_lead", Title: "Promote a lead to a contact", Version: toolVersionV1,
-		Description:   promoteLeadCopy.render(),
-		Instead:       promoteLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       promoteLeadCopy.render(),
+		Instead:           promoteLeadCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "promoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","trigger"],"properties":{
 			"lead_id":{"type":"string","format":"uuid"},

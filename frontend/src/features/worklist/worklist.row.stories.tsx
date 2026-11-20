@@ -496,6 +496,33 @@ export const AnApprovedThingThatDidNotRun: Story = {
   },
 };
 
+// An approval that ran out before its change ran. The server's code puts its
+// English sentence into the reader's words.
+export const AnApprovalThatLapsed: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      occurred_precision: "instant",
+      id: "fa2",
+      source: "failed_approval",
+      category: "system",
+      level: 3,
+      consequence: "task_slips",
+      because: [],
+      actions: ["open"],
+      subject: { type: "deal", id: "deal-nordwind", label: "Nordwind renewal" },
+      title: "Move deal to Won",
+      detail:
+        "Approval expired before execution. Nothing changed. Request a new proposal to try again.",
+      effect_failure_code: "approval_lapsed",
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
 // A source that stopped answering. No verb: restoring a mailbox is an
 // administrator's job on another screen, and a button here would promise a
 // repair this queue cannot make.

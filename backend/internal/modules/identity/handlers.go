@@ -196,6 +196,9 @@ type Handlers struct {
 	// client registration methods are on (oauth_registrationsettings.go).
 	registrationDeployment *RegistrationMethods
 	registrationSwitches   AdminRegistrationSwitches
+	// unusedDynamicClientCap bounds the self-registered clients no consent used
+	// (oauth_dcrbounds.go); zero holds the default.
+	unusedDynamicClientCap int
 	// capabilitiesPerIP bounds the ANONYMOUS capabilities probe, which reaches
 	// the database once the provider policy is wired: a pool connection, a
 	// transaction and a row per request, for a caller with no cookie and no

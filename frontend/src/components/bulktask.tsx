@@ -91,7 +91,7 @@ export function TaskVerb({
             <Select
               {...control}
               value={assigneeId}
-              placeholder={t("bulk.taskAssigneeMe")}
+              placeholder={t("log.assigneeMe")}
               onChange={setAssigneeId}
               options={options}
             />

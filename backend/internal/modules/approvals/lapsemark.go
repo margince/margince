@@ -40,13 +40,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// lapsedRedemptionSentence is what the approver is shown. Written for them, in
-// the "approved, but …" shape decide.go uses and for the same reason a failed
-// effect's sentence has it: a human told only that something expired would
-// reasonably decide again, and the row would refuse them as already decided. So
-// it says what did not happen, and what to do instead.
-const lapsedRedemptionSentence = "Approval expired before execution. Nothing changed. Request a new proposal to try again."
-
 // lapseSweepBatch bounds one pass, for the reason expirySweepBatch does: an
 // unbounded UPDATE over a backlog holds every row it touches until it commits,
 // and the inbox reads the same table. A backlog drains across ticks instead —
@@ -135,7 +128,7 @@ func (s *Service) MarkLapsedRedemptions(ctx context.Context) (int64, error) {
 		tag, err := tx.Exec(ctx, `
 			UPDATE approval
 			   SET effect_failed_at = decided_at + make_interval(secs => $3), effect_failure = $1
-			 WHERE id = ANY($2)`, lapsedRedemptionSentence, lapsed, redemptionTTL.Seconds())
+			 WHERE id = ANY($2)`, failureLapsed.sentence, lapsed, redemptionTTL.Seconds())
 		if err != nil {
 			return fmt.Errorf("crmapprovals: marking the approvals nobody came back for: %w", err)
 		}

@@ -47,15 +47,13 @@ func toolTasks(pool *pgxpool.Pool) agentTasks { return agentTasks{pool: pool} }
 const taskColumns = `id, approval_id, tool, status, COALESCE(status_message, ''), result, error,
 	served_records, expires_at, created_at, updated_at`
 
-// taskOwnedBy scopes every query to the agent: $2 is its passport and $3 its
-// connection, which a token refresh keeps while it retires the passport.
+// taskOwnedBy scopes a query to the agent's passport ($2) or connection ($3).
 const taskOwnedBy = `(passport_id = $2 OR connection_id = $3)`
 
 // taskOwnerOf answers the caller's passport and connection; a nil one is NULL.
 //
-// A zero passport is refused as hard as a missing principal. principal.Actor
-// answers ok for a zero-value Principal. A passport-less task row would be one
-// row every such caller shares. A task id is useless to all but its owner.
+// A zero passport is refused like a missing principal: a passport-less task
+// row would be one row every such caller shares.
 func taskOwnerOf(ctx context.Context, verb string) (ids.UUID, *ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.PassportID.IsZero() {
@@ -101,12 +99,9 @@ func (t agentTasks) Create(ctx context.Context, in agents.NewTask) (agents.Task,
 		// makes RETURNING fire; approval_id is the conflict key, so the write is a
 		// no-op by construction.
 		//
-		// The WHERE carries both conditions on answering an existing row. The
-		// owner half is here rather than trusted upstream, so a handle is answered
-		// only to the agent that holds it (taskOwnerOf). Another agent's row fails
-		// the predicate, RETURNING yields nothing, and the caller gets the plain
-		// refusal. The status half keeps a terminal row from standing in for a
-		// live decision (see above). Either way the no-row path is the fallback.
+		// The WHERE answers an existing row only to the agent that holds it, and
+		// only while it is live (see above). Any other row returns nothing, and
+		// the caller gets the plain refusal.
 		row := tx.QueryRow(ctx, `
 			INSERT INTO agent_task (approval_id, passport_id, connection_id, tool, status_message, expires_at)
 			VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6)

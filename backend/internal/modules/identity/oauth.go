@@ -106,11 +106,7 @@ func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	err = h.svc.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO oauth_client (client_id, client_name, redirect_uris)
-			VALUES ($1, $2, $3)`,
-			clientID, req.ClientName, req.RedirectURIs)
-		return err
+		return insertDynamicClient(ctx, tx, h.unusedDynamicClientLimit(), clientID, req)
 	})
 	if errors.Is(err, database.ErrNoWorkspace) {
 		// Registration is per tenant; the request's host resolved to none.
@@ -208,7 +204,7 @@ func (h Handlers) validateAuthorize(r *http.Request, q url.Values) (authorizeReq
 	if !methods.MetadataDocument && cimdClientID(req.ClientID) == nil {
 		return authorizeRequest{}, oauthErrUnauthorizedClient, refusedMethodDescription
 	}
-	if err := h.svc.resolveCIMDClient(ctx, req.ClientID); err != nil && !errors.Is(err, errNotCIMD) {
+	if err := h.svc.resolveCIMDClient(ctx, req.ClientID, h.unusedDynamicClientLimit()); err != nil && !errors.Is(err, errNotCIMD) {
 		return authorizeRequest{}, oauthErrInvalidClient, "unknown client_id"
 	}
 	err = h.svc.db.Tx(ctx, func(tx pgx.Tx) error {

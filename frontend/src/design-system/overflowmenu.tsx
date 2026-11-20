@@ -21,6 +21,7 @@ import {
   useDialogFocus,
   useDialogLayer,
 } from "./dialogfocus";
+import { verbName } from "./iconaction";
 
 // Whether an item sets something rather than doing something (a toggle, or a
 // control that draws a region open). That is the one shape of item a menu must
@@ -255,7 +256,7 @@ export function OverflowMenu({
     ref: trigger,
     "aria-expanded": open,
     "aria-controls": panelId,
-    "aria-label": label,
+    "aria-label": verbName(word, label),
     title: label,
     pending,
     onClick: () => {

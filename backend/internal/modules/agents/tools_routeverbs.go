@@ -178,10 +178,13 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 		Name: v.Verb, Title: v.Summary, Version: toolVersionV1,
 		Description:   v.Summary + " (" + v.Method + " " + v.Pattern + ", as the app does it.)",
 		RequiredScope: v.Scope, Tier: mcp.TierAutoExecute, Egress: v.Egress, AskUserFirst: v.AskUserFirst,
-		Unlisted:         true,
-		OpenAPIOp:        v.Op,
-		UnkeyedArguments: unkeyed,
-		MaxArgsBytes:     maxArgs,
+		Unlisted: true,
+		// The route's own answer schema decides: one that names only ids, numbers,
+		// dates and closed sets of words holds nothing someone wrote.
+		ProductMadeAnswer: !CarriesFreeText(v.AnswerSchema),
+		OpenAPIOp:         v.Op,
+		UnkeyedArguments:  unkeyed,
+		MaxArgsBytes:      maxArgs,
 		InputSchema: schema(`{"type":"object","required":` + mustJSON(required) + `,"properties":{` +
 			strings.Join(members, ",") + `},"additionalProperties":false}`),
 		OutputSchema: answer,
@@ -418,6 +421,7 @@ func (d describeRouterActions) routers() []string {
 func (d describeRouterActions) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: describeRouterActionsName, Title: "Describe a router's actions", Version: toolVersionV1,
+		ProductMadeAnswer: true,
 		Description: "Lists what each action of one router takes: its path ids, if_version, and the " +
 			"JSON schema of its body, as the app's own route defines them. Name action to read one; a large " +
 			"router's whole list is long.",
