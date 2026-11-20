@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
+import { steppedClock } from "../testing/steppedclock";
 import { QuickCaptureAction } from "./quickcapture";
 
 const emptyPage = { data: [], page: { next_cursor: null, has_more: false } };
@@ -85,7 +86,7 @@ describe("Quick capture", () => {
 
   it("puts the cursor back in Full name once a contact is saved", async () => {
     // The saved toast dismisses itself on a timer, so the clock is the test's.
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = steppedClock();
     stubApi();
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -100,7 +101,6 @@ describe("Quick capture", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
     await user.click(screen.getByTestId("quick-capture"));
     const fullName = await screen.findByLabelText("Full name *");

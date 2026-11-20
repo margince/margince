@@ -5,9 +5,9 @@
 import "@testing-library/jest-dom/vitest";
 import { useQuery } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { loadLocale } from "../i18n/catalogs";
 import { contactQuery } from "../lib/contact.queries";
 import { routeHash } from "../lib/router";
 import {
@@ -16,6 +16,7 @@ import {
   contactCase,
   previewOutcome,
 } from "../testing/contactcase.fixtures";
+import { steppedClock } from "../testing/steppedclock";
 import {
   jsonResponse,
   StoryProviders,
@@ -79,7 +80,10 @@ describe("the door to a contact's duplicate case", () => {
   // The case read answers first and removes the door. The merge still lands
   // while the record read it also refreshes has not answered yet.
   it("opens the contact that remained, and says the merge happened", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    // The form and the complete catalog load before the clock stops, since a
+    // stopped clock lets a wait run out before a real import answers.
+    await Promise.all([loadLocale("en"), import("./contactcase.form")]);
+    const user = steppedClock();
     let merged = false;
     let answerContact: (response: Response) => void = () => {};
     const outcome = previewOutcome({
@@ -106,7 +110,6 @@ describe("the door to a contact's duplicate case", () => {
       },
       {},
     );
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     mount(true);
     await user.click(await screen.findByTestId("contact-case-entry"));
     await user.click(

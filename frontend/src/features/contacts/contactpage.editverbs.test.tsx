@@ -11,6 +11,7 @@ import {
   pressRecordVerb,
   view,
 } from "../../testing/contactpage.testkit";
+import { steppedClock } from "../../testing/steppedclock";
 import { jsonResponse } from "../../testing/story-utils";
 
 // The verb shows "Meet", so its name starts with the word a speech user says.
@@ -143,9 +144,6 @@ describe("the header's core record verbs — edit, merge, archive", () => {
   });
 
   it("says so when the Undo of an archive finds no archive to put back", async () => {
-    // The confirmation and its Undo leave on a timer, so the clock is the test's.
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     mount(
       "overview",
       view,
@@ -169,11 +167,11 @@ describe("the header's core record verbs — edit, merge, archive", () => {
     );
 
     await pressRecordVerb("archive-record");
-    await user.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: /^Archive/,
-      }),
-    );
+    const dialog = await screen.findByRole("dialog");
+    // The confirmation and its Undo leave on a timer, so from the archive on
+    // the clock is the test's. The page has loaded by now on the real one.
+    const user = steppedClock();
+    await user.click(within(dialog).getByRole("button", { name: /^Archive/ }));
     await user.click(
       await screen.findByRole("button", { name: en["common.undo"] }),
     );
