@@ -2,11 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { InlineMarkdown } from "../../design-system/markdown";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
+import { routeHash } from "../../lib/router";
+import { settingsHref } from "../../lib/settingsrouting";
 
 // What an ANSWER looks like once there is one, including every way there is not
 // one. Its own file because the dialog around it is a different concern: that
@@ -226,6 +230,8 @@ function Refusal({ answer }: Readonly<{ answer: Answer }>) {
   // Counts, so they are MAGNITUDES and take the reader's own notation: a German
   // reader seeing 1234 beside a formatted 1.234 is one screen written in two.
   const { locale } = useLocale();
+  // The search model is chosen where the AI routing is written.
+  const mayChooseModel = useCanWrite("ai_routing", "update");
   if (answer.outcome === "not_ready") {
     return (
       // The same plate the not_covered branch below draws: all three refusals
@@ -245,6 +251,13 @@ function Refusal({ answer }: Readonly<{ answer: Answer }>) {
     return (
       <EmptyState title={t("corpusAsk.retrievalUnavailableTitle")}>
         <p>{t("corpusAsk.retrievalUnavailable")}</p>
+        {mayChooseModel ? (
+          <AppLink href={routeHash(settingsHref("models", "tiers"))}>
+            {t("health.setup.search.action")}
+          </AppLink>
+        ) : (
+          <p>{t("corpusAsk.retrievalUnavailableAskAdmin")}</p>
+        )}
       </EmptyState>
     );
   }

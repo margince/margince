@@ -7,7 +7,6 @@ import type { EntityKind } from "../lib/entity";
 import {
   companyReferenceQuery,
   entityNameQuery,
-  fetchEntityName,
   fetchEntityReference,
   useEntityName,
 } from "./entityref.queries";
@@ -141,7 +140,7 @@ it("separates kinds sharing an id and preserves rich company versus string cache
     expect(value).toEqual(
       kind === "company"
         ? { name: "company same-id", archived: false, logo: undefined }
-        : `${kind} same-id`,
+        : { name: `${kind} same-id`, archived: false },
     );
   }
 });
@@ -166,6 +165,7 @@ it.each(KINDS)(
       null,
       null,
     ]);
+    expect(view.result.current.every((value) => value.absent)).toBe(true);
     const key =
       kind === "company"
         ? companyReferenceQuery("hidden").queryKey
@@ -284,7 +284,7 @@ it("checks a direct helper's abort before queuing and after awaiting without abo
   const aborted = new AbortController();
   aborted.abort();
   await expect(
-    fetchEntityName("contact", "unsent", aborted.signal),
+    fetchEntityReference("contact", "unsent", aborted.signal),
   ).rejects.toMatchObject({ name: "AbortError" });
   expect(fetchMock).not.toHaveBeenCalled();
   const controller = new AbortController();
@@ -395,5 +395,13 @@ it("returns archived nameless records through the direct helper without inventin
     await fetchEntityReference("lead", "blank", new AbortController().signal),
   ).toEqual({ name: null, archived: true });
   const { client } = session();
-  expect(await client.fetchQuery(entityNameQuery("lead", "blank"))).toBeNull();
+  expect(await client.fetchQuery(entityNameQuery("lead", "blank"))).toEqual({
+    name: null,
+    archived: true,
+  });
+  const named = renderHook(() => useEntityName("lead", "blank"), {
+    wrapper: session().wrapper,
+  });
+  await waitFor(() => expect(named.result.current.reading).toBe("unnamed"));
+  expect(named.result.current).toMatchObject({ name: null, absent: false });
 });

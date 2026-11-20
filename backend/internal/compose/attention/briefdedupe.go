@@ -154,8 +154,9 @@ func stampOpportunity(rows []ranked, scores map[ids.UUID]float64) []ranked {
 // when the rows were written would call every one of them old — hiding exactly
 // the reply a rep opens the page to find.
 //
-// The row's own material moment is what is compared: `occurredAt`, which each
-// producer already set to the instant the thing it reports actually happened.
+// The row's own material moment is what is compared: `item.OccurredAt`, which
+// each producer sets to the instant the thing it reports happened. Never
+// `occurredAt`, which falls back to the read instant so an undated row sorts.
 // The alternative — the browser comparing some timestamp on the wire — is a
 // second answer to "is this new", in a place that cannot see which of a row's
 // several instants is the material one.
@@ -169,13 +170,14 @@ func markChangedSinceBrief(rows []ranked, cutoff time.Time) []ranked {
 		return rows
 	}
 	for at := range rows {
-		if rows[at].occurredAt.IsZero() {
+		occurred := rows[at].item.OccurredAt
+		if occurred == nil {
 			// A row with no material moment cannot answer this question. Absent
 			// rather than false: false would claim the night saw something the
 			// row cannot date.
 			continue
 		}
-		changed := rows[at].occurredAt.After(cutoff)
+		changed := occurred.After(cutoff)
 		rows[at].item.ChangedSinceBrief = &changed
 	}
 	return rows

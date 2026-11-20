@@ -27,6 +27,31 @@ const LEAD: WorklistItem = {
   contact: { id: "c-1", label: "Alice Brandt" },
 };
 
+function stubReader() {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
+  });
+}
+
+/** The day's cards with the one at `at` in hand. */
+function triageOf(
+  rows: WorklistItem[],
+  at: number,
+  onChoose: (item: WorklistItem) => void = () => {},
+) {
+  return (
+    <StoryProviders>
+      <Triage
+        rows={rows}
+        at={at}
+        lead={rows[at]}
+        onChoose={onChoose}
+        onOpenEmail={() => {}}
+      />
+    </StoryProviders>
+  );
+}
+
 function showLead(
   lead: WorklistItem,
   taskType: TaskType,
@@ -156,9 +181,10 @@ it("reach out drafts the mail first, then the number and an outlined Call", asyn
   // One filled button to a card: beside the draft, Done is outlined.
   const done = card.getByRole("button", { name: en["tasks.complete"] });
   expect(done.classList.contains("btn-primary")).toBe(false);
+  // The way to read more starts the line, so it comes first in the page too.
   const details = card.getByRole("button", { name: en["brief.focus.context"] });
   expect(
-    draft.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING,
+    details.compareDocumentPosition(draft) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(
     card.queryByRole("button", { name: en["record.verb.email"] }),
@@ -295,21 +321,10 @@ it("a task lead holds its verbs' room until the task and its contact are read", 
 
 it("Next task opens the following card, wraps past the last, and is absent alone", async () => {
   const second = taskRow("task-2", "Send the sheet");
-  installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
-  });
+  stubReader();
   const chosen = vi.fn();
-  const triage = (rows: WorklistItem[], at: number) => (
-    <StoryProviders>
-      <Triage
-        rows={rows}
-        at={at}
-        lead={rows[at]}
-        onChoose={chosen}
-        onOpenEmail={() => {}}
-      />
-    </StoryProviders>
-  );
+  const triage = (rows: WorklistItem[], at: number) =>
+    triageOf(rows, at, chosen);
   const user = userEvent.setup();
   const view = render(triage([LEAD, second], 0));
   const next = () =>
@@ -354,4 +369,50 @@ it("a promise carrying its email is named once and drawn as a task", async () =>
   const meta = article.querySelector(".brief-triage-lead-head");
   expect(meta?.textContent).not.toContain(en["timeline.kind.email"]);
   expect(article.querySelector(".brief-task-status")).toBeNull();
+});
+
+it("a card done from its own tick hands focus to the card that takes its place", () => {
+  stubReader();
+  const second = taskRow("task-2", "Send the sheet");
+  const third = taskRow("task-3", "Book the venue");
+  const triage = (rows: WorklistItem[]) => triageOf(rows, 0);
+  const view = render(triage([LEAD, second, third]));
+  screen.getByRole("button", { name: /^Mark done: Send the sheet/ }).focus();
+
+  view.rerender(triage([LEAD, third]));
+
+  const [, next] = document.querySelectorAll(
+    ".brief-task-open, .brief-triage-frame",
+  );
+  expect(next?.textContent).toContain("Book the venue");
+  expect(document.activeElement).toBe(next);
+});
+
+it("a card that leaves while focus is elsewhere moves no focus", () => {
+  stubReader();
+  const second = taskRow("task-2", "Send the sheet");
+  const triage = (rows: WorklistItem[]) => triageOf(rows, 0);
+  const view = render(triage([LEAD, second]));
+
+  view.rerender(triage([LEAD]));
+
+  expect(document.activeElement).toBe(document.body);
+});
+
+it("the card in hand reaches its controls in the order it draws them", async () => {
+  showLead(LEAD, "do");
+  const article = await screen.findByRole("article");
+  const done = await within(article).findByRole("button", { name: "Done" });
+  const stops = [...article.querySelectorAll<HTMLElement>("a[href], button")];
+  const at = (stop: HTMLElement) => stops.indexOf(stop);
+  const card = within(article);
+  const title = card.getByRole("button", { name: LEAD.title });
+  const chip = card.getByRole("link", { name: /Alice Brandt/ });
+  const details = card.getByRole("button", {
+    name: en["brief.focus.context"],
+  });
+
+  expect(at(title)).toBeLessThan(at(chip));
+  expect(at(chip)).toBeLessThan(at(details));
+  expect(at(details)).toBeLessThan(at(done));
 });

@@ -2,7 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowDown, ArrowUp, ChevronRight, Sparkles } from "lucide-react";
-import { Badge, Kbd, SegmentedControl } from "../design-system/atoms";
+import {
+  Badge,
+  EmptyState,
+  Kbd,
+  SegmentedControl,
+} from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import type { Translator } from "../i18n";
 import { useT } from "../i18n";
@@ -126,4 +131,25 @@ export function PaletteKeys() {
       </span>
     </div>
   );
+}
+
+// Words the search answered with no record are named. A list with nothing in
+// it says so only once no search is still out or has failed.
+export function PaletteEmpty({
+  query,
+  nothingFound,
+  listed,
+  search,
+}: Readonly<{
+  query: string;
+  nothingFound: boolean;
+  listed: number;
+  search: Readonly<{ pending: boolean; failed: boolean }>;
+}>) {
+  const t = useT();
+  if (nothingFound) {
+    return <EmptyState>{t("search.empty", { q: query })}</EmptyState>;
+  }
+  if (listed > 0 || search.pending || search.failed) return null;
+  return <EmptyState>{t("palette.empty")}</EmptyState>;
 }

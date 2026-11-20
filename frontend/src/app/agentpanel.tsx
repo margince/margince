@@ -1,7 +1,8 @@
-import { type ReactNode, type RefObject, useId } from "react";
+import { type ReactNode, type RefObject, useEffect, useId } from "react";
 import { AppLink } from "../design-system/applink";
 import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
+import { stopsIn } from "../design-system/portalfocus";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -16,15 +17,8 @@ import { Recap, RuntimeFacts } from "./agentrecap";
 import { PANEL_HEADING } from "./ai-activity-lines";
 import { type SpokenLine, speak } from "./ai-activity-speak";
 
-/**
- * Where the whole trace lives, and where a model gets bound. Same page.
- *
- * The catalog splits that page into four, and this link belongs on
- * `model-calls`, because the rail's "full log" is the call list. It moves there
- * in the change that splits the cards. Pointing at it now would land a reader
- * on Account, because the screen still renders the combined entry.
- */
-const AI_SETTINGS_HREF = routeHash(settingsHref("usage"));
+// The rail's "full log" is the call list, on its own Settings page.
+const AI_CALL_LOG_HREF = routeHash(settingsHref("model-calls"));
 
 /**
  * The state in a word, under the agent's name.
@@ -193,6 +187,7 @@ export function AgentPanel({
   model,
   spend,
   panel,
+  focusMovedOn,
   frame,
 }: Readonly<{
   state: MarginceCoreState;
@@ -207,14 +202,24 @@ export function AgentPanel({
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
   spend: Spend;
   panel: RefObject<HTMLElement | null>;
+  /** Set once focus lands outside the panel after the press that opened it. */
+  focusMovedOn: RefObject<boolean>;
   frame: PanelFrame;
 }>) {
   const { locale } = useLocale();
   const t = useT();
-  // The log opens Settings, which serves the AI usage page only to a seat that
+  // The log opens Settings, which serves the AI call log only to a seat that
   // may read diagnostics. A link a rep cannot follow is a dead end, so it is
   // not offered.
   const mayOpenLog = useCan("ai_diagnostics", "read");
+  // Only a press opens the panel. It mounts after its frame is measured and its
+  // code has loaded, so focus moves in here rather than at the press. A reader
+  // who moved focus elsewhere meanwhile keeps it there.
+  useEffect(() => {
+    if (!focusMovedOn.current) {
+      stopsIn(panel.current)[0]?.focus();
+    }
+  }, [panel, focusMovedOn]);
   return (
     <section
       className="arpanel"
@@ -284,7 +289,7 @@ export function AgentPanel({
           // A verb, beside the title rather than inside it. Inside the heading,
           // it took the heading's weight and read as a second title.
           mayOpenLog ? (
-            <AppLink className="link-button" href={AI_SETTINGS_HREF}>
+            <AppLink className="link-button" href={AI_CALL_LOG_HREF}>
               {t("agent.panel.fullLog")}
             </AppLink>
           ) : undefined

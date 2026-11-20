@@ -2850,6 +2850,8 @@ export const en = {
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.unavailableForRole": "Not available for your role.",
+  "shell.unknownAddress": "This address does not lead anywhere in Margince.",
+  "shell.unknownAddress.goTo": "Go to {name}",
   "shell.closeMenu": "Close",
   // The agent panel's one promise, as opposed to its readings: what the agent
   // can REACH. Row scope bounds it on the server, and a guarantee nobody is
@@ -2935,6 +2937,7 @@ export const en = {
   "palette.placeholder": "Search or ask Margince",
   "palette.empty": "No matches.",
   "palette.recent": "Recent",
+  "palette.recentSearch": "Search",
   "palette.clearRecent": "Clear",
   "palette.filter": "Show only",
   "palette.filterAll": "All",
@@ -2952,7 +2955,8 @@ export const en = {
   "palette.seeAll": "See all results for “{query}”",
   "palette.searching": "Searching records…",
   "palette.searchFailedTitle": "Search failed",
-  "palette.searchFailed": "The commands above still work.",
+  "palette.searchFailed":
+    "Records could not be searched. Screens and actions still work.",
   "palette.askDataRow": "Ask CRM data: “{query}”",
   "palette.openAnalytics": "Open in Analytics",
   "palette.dataUnsupportedOnly":
@@ -3023,6 +3027,8 @@ export const en = {
   "common.dateInFuture": "This date cannot be in the future.",
   "common.fieldDecimalPlaces": "Decimal places allowed in {field}: {max}.",
   "common.valueDecimalPlaces": "Decimal places allowed: {max}.",
+  "common.characterCount_one": "{count} of {max} character",
+  "common.characterCount_other": "{count} of {max} characters",
   "common.valueTooLong": "This value is too long.",
   "common.undo": "Undo",
   "common.close": "Close",
@@ -9608,8 +9614,6 @@ export const en = {
     "Your mail carries this instead of the company template. Leave it empty to use the company template again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
   "settings.signatureHtmlHintPlain":
     "Leave this empty to use your plain text again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
-  "settings.signatureHtmlCount_one": "{count} of {max} character",
-  "settings.signatureHtmlCount_other": "{count} of {max} characters",
   "settings.signatureOwnHtml": "Your HTML signature",
   "settings.signatureReviewTitle": "Review {name}’s retained signature",
   "settings.signatureReviewIntro":
@@ -15289,13 +15293,15 @@ export const en = {
   "corpusAsk.notReady":
     "This set is still being read: {embedded} of {total} passages are searchable. Retry shortly. The question is not the problem.",
   "corpusAsk.retrievalUnavailable":
-    "Nothing was searched. This installation has no search index configured.",
+    "No embedding model is chosen for search, so nothing was searched. The question is not the problem.",
+  "corpusAsk.retrievalUnavailableAskAdmin":
+    "An administrator can choose one under AI models, Model tiers.",
   "corpusAsk.unreviewed":
     "These passages are closest to your question. They have not been reviewed for whether they answer it.",
   "corpusAsk.failed": "Question not answered",
   "corpusAsk.unreviewedTitle": "Passages not reviewed",
   "corpusAsk.notReadyTitle": "This set is still being read",
-  "corpusAsk.retrievalUnavailableTitle": "No search index is configured",
+  "corpusAsk.retrievalUnavailableTitle": "Documents cannot be searched yet",
   "corpusAsk.noGrantTitle": "You cannot open this company’s documents",
   "corpusAsk.noGrant":
     "You do not have access to this document set. An administrator can grant access.",
@@ -20314,6 +20320,15 @@ export const en = {
   "lists.restore": "Restore",
   "lists.unavailable": "Lists are switched off for this installation.",
   "lists.gone": "This list is not there, or it is not shared with you.",
+  "record.gone.contact":
+    "This contact is not there, or it is not shared with you.",
+  "record.gone.company":
+    "This company is not there, or it is not shared with you.",
+  "record.gone.lead": "This lead is not there, or it is not shared with you.",
+  "record.gone.deal": "This deal is not there, or it is not shared with you.",
+  "record.gone.project":
+    "This project is not there, or it is not shared with you.",
+  "record.gone.offer": "This offer is not there, or it is not shared with you.",
   "lists.unnamed": "Unnamed",
   "lists.filterLine": "Filter: {sentence}",
   "lists.head.exported_one": "{count} time, last on {when}",
@@ -21620,7 +21635,7 @@ export const en = {
   "worklist.filter.linked.except_decisions":
     "Showing everything except approvals already in your Morning brief.",
   "worklist.filter.linked.changed_since_brief":
-    "Showing only changes since last night’s Morning brief.",
+    "Showing only changes since your last Morning brief.",
   "worklist.filter.linked.clear": "Show full Worklist",
   "worklist.category.customer_waiting": "Customer waiting",
   "worklist.category.leads": "Lead",
