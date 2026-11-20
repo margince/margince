@@ -39,6 +39,9 @@ const whichAIDescribes = "backend/internal/compose/aicert/whichaipage_test.go ba
 var (
 	whichAIReference = filepath.Join("..", "..", "..", "..", "docs", "reference")
 	whichAIHandbook  = filepath.Join("..", "..", "..", "..", "docs", "handbook")
+	// The program embeds its own copy of the handbook, and this page says it
+	// is generated, so the generator writes that copy as well.
+	whichAIEmbedded = filepath.Join("..", "..", "modules", "knowledge", "handbook")
 )
 
 // whichAIAssistants is the part of mcp-tool-coverage.json this page reads.
@@ -85,9 +88,11 @@ func TestTheWhichAIPageIsPublished(t *testing.T) {
 	if len(cert.Presets) == 0 || len(assistants.Cases) == 0 {
 		t.Fatal("a result payload names no model setup or no job; the page would answer from nothing")
 	}
+	handbook := renderWhichAIPage(cert, assistants, true)
 	pages := map[string][]byte{
 		filepath.Join(whichAIReference, whichAIDocsFile): renderWhichAIPage(cert, assistants, false),
-		filepath.Join(whichAIHandbook, whichAIDocsFile):  renderWhichAIPage(cert, assistants, true),
+		filepath.Join(whichAIHandbook, whichAIDocsFile):  handbook,
+		filepath.Join(whichAIEmbedded, whichAIDocsFile):  handbook,
 	}
 	for path, want := range pages {
 		if *updateWhichAI {
