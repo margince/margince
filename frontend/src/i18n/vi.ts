@@ -3222,7 +3222,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "merge.searchPlaceholder": "Tìm kiếm…",
   "merge.pickTarget": "Chọn hồ sơ giữ lại",
   "merge.confirm":
-    "Gộp {source} vào {target}? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
+    "Gộp {source} vào {target}? Hồ sơ được giữ lại sẽ nhận lịch sử, việc cần làm, thẻ và liên kết của hồ sơ kia, đồng thời điền các trường chuẩn còn trống từ đó. Hồ sơ kia sẽ được chuyển vào kho lưu trữ và giữ giá trị trường tùy chỉnh của nó. Không thể hoàn tác việc gộp.",
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "Đã gộp {source} vào {target}.",
   "merge.targetReadOnly":
@@ -5666,6 +5666,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tags.catalogTruncated":
     "Có thể thiếu một thẻ. Tìm theo tên trước khi yêu cầu thẻ mới.",
   "tags.noMatchYouCanCreate": "Không có thẻ nào tên như vậy.",
+  "tags.noneYouCanCreate": "Chưa có thẻ nào. Nhập tên để tạo thẻ.",
+  "tags.noneAskForOne":
+    "Chưa có thẻ nào. Quản trị viên hoặc thành viên Vận hành có thể thêm thẻ.",
   "tags.createNamed": "Tạo thẻ {name}",
   "tags.shortlistInstead": "Thay vào đó, thêm vào danh sách chọn tay",
   "tags.manage": "Quản lý thẻ",
@@ -6528,6 +6531,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ chủ deal hoặc quản lý mới có thể lưu trữ deal này.",
   "contact.archiveRefused":
     "Chỉ chủ sở hữu liên hệ hoặc quản lý mới có thể lưu trữ liên hệ này.",
+  "contact.undoArchiveNothing":
+    "Không thể hoàn tác việc lưu trữ vì lịch sử của liên hệ không có lần lưu trữ nào để khôi phục. Hãy mở liên hệ để xem liên hệ còn được lưu trữ hay không.",
   "company.archiveRefused":
     "Chỉ chủ sở hữu công ty hoặc quản lý mới có thể lưu trữ công ty này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",
@@ -6726,10 +6731,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.taskSubject": "Việc cần làm",
   "bulk.taskDue": "Hạn hoàn thành",
   "bulk.taskAssignee": "Giao cho",
-  "bulk.taskAssigneeMe": "Tôi",
   "bulk.taskNext": "Xem trước",
-  "bulk.titleCreateTask":
-    "Tạo một việc cần làm cho mỗi hồ sơ đã chọn trong {unit}?",
+  "bulk.titleCreateTask": "Tạo một việc cần làm cho mỗi {unit} đã chọn?",
   "bulk.confirmCreateTask": "Tạo việc",
   "bulk.stateNewTask": "Việc cần làm mới",
   "bulk.stateNoTask": "Không có việc cần làm mới",
@@ -7847,6 +7850,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.dateHint":
     "Ngày việc này đã diễn ra; để lên kế hoạch cho ngày sau, hãy thêm việc cần làm.",
   "log.assignee": "Giao cho",
+  "log.assigneeMe": "Tôi",
   "log.unassigned": "Chưa giao",
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",
@@ -19110,6 +19114,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dims": "Mối quan hệ đang thế nào",
   "contact.standing.dim.promises": "Cam kết của bạn",
   "contact.standing.dim.promisesNone": "Không có cam kết mở",
+  "contact.standing.dim.promisesUncounted": "Quá nhiều việc để đếm",
   "standing.overdue_one": "{count} quá hạn",
   "standing.overdue_other": "{count} quá hạn",
   "standing.ofOpen_one": "trong {count} đang mở",
@@ -22609,6 +22614,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.details.hideEmpty": "Ẩn trường trống",
   "record.details.editSection": "Sửa {section}",
   "record.verb.email": "Thư",
+  "record.verb.message": "Nhắn",
   "record.verb.call": "Gọi",
   "record.verb.meet": "Họp",
   "record.verb.log": "Ghi",

@@ -3220,7 +3220,8 @@ export const en = {
   "merge.company": "Merge company",
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
-  "merge.confirm": "Merge {source} into {target}? This archives {source}.",
+  "merge.confirm":
+    "Merge {source} into {target}? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty standard fields from it. The other is archived and keeps its custom field values. A merge cannot be undone.",
   // A record's name with its detail line, so two look-alike names stay apart.
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "{source} was merged into {target}.",
@@ -5751,6 +5752,9 @@ export const en = {
   "tags.catalogTruncated":
     "A tag may be missing. Search by name before requesting a new one.",
   "tags.noMatchYouCanCreate": "No tag with that name.",
+  "tags.noneYouCanCreate": "No tags yet. Type a name to create one.",
+  "tags.noneAskForOne":
+    "No tags yet. An administrator or operations user can add one.",
   "tags.createNamed": "Create tag {name}",
   "tags.shortlistInstead": "Add to a Shortlist instead",
   "tags.manage": "Manage tags",
@@ -6665,6 +6669,8 @@ export const en = {
     "Only the deal’s owner or a manager can archive this deal.",
   "contact.archiveRefused":
     "Only the contact’s owner or a manager can archive this contact.",
+  "contact.undoArchiveNothing":
+    "This archive could not be undone, because the contact’s history holds no archive to put back. Open the contact to see whether it is still archived.",
   "company.archiveRefused":
     "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
@@ -6861,9 +6867,8 @@ export const en = {
   "bulk.taskSubject": "What has to be done",
   "bulk.taskDue": "Due date",
   "bulk.taskAssignee": "Assignee",
-  "bulk.taskAssigneeMe": "Me",
   "bulk.taskNext": "Preview",
-  "bulk.titleCreateTask": "Create a task for each selected record in {unit}?",
+  "bulk.titleCreateTask": "Create a task for each of the selected {unit}?",
   "bulk.confirmCreateTask": "Create tasks",
   "bulk.stateNewTask": "New task",
   "bulk.stateNoTask": "No new task",
@@ -8042,6 +8047,7 @@ export const en = {
   "log.date": "Date",
   "log.dateHint": "The day it happened; for a later day, add a task.",
   "log.assignee": "Assignee",
+  "log.assigneeMe": "Me",
   "log.unassigned": "Unassigned",
   "log.save": "Log",
   "log.saving": "Logging…",
@@ -19417,6 +19423,7 @@ export const en = {
   "contact.standing.dims": "How the relationship stands",
   "contact.standing.dim.promises": "Your commitments",
   "contact.standing.dim.promisesNone": "None open",
+  "contact.standing.dim.promisesUncounted": "Too many tasks to count",
   "standing.overdue_one": "{count} overdue",
   "standing.overdue_other": "{count} overdue",
   "standing.ofOpen_one": "of {count} open",
@@ -22897,6 +22904,7 @@ export const en = {
   "record.details.hideEmpty": "Hide empty fields",
   "record.details.editSection": "Edit {section}",
   "record.verb.email": "Email",
+  "record.verb.message": "Message",
   "record.verb.call": "Call",
   "record.verb.meet": "Meet",
   "record.verb.log": "Log",

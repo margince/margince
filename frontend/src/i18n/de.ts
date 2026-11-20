@@ -3321,7 +3321,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "merge.searchPlaceholder": "Suchen…",
   "merge.pickTarget": "Datensatz auswählen, der bleibt",
   "merge.confirm":
-    "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
+    "{source} mit {target} zusammenführen? Der Datensatz, der bleibt, übernimmt Verlauf, Aufgaben, Tags und Verknüpfungen des anderen und füllt seine leeren Standardfelder daraus. Der andere wird archiviert und behält die Werte seiner eigenen Felder. Das Zusammenführen lässt sich nicht rückgängig machen.",
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "{source} wurde in {target} zusammengeführt.",
   "merge.targetReadOnly":
@@ -5823,6 +5823,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.catalogTruncated":
     "Möglicherweise fehlt ein Tag. Suche nach dem Namen, bevor du ein neues anfragst.",
   "tags.noMatchYouCanCreate": "Kein Tag mit diesem Namen.",
+  "tags.noneYouCanCreate":
+    "Noch keine Tags. Gib einen Namen ein, um eines zu erstellen.",
+  "tags.noneAskForOne":
+    "Noch keine Tags. Admins und Operations können eines erstellen.",
   "tags.createNamed": "Tag {name} erstellen",
   "tags.shortlistInstead": "Stattdessen zu einer Shortlist hinzufügen",
   "tags.manage": "Tags verwalten",
@@ -6706,6 +6710,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
   "contact.archiveRefused":
     "Nur der Verantwortliche des Kontakts oder eine Führungskraft kann diesen Kontakt archivieren.",
+  "contact.undoArchiveNothing":
+    "Das Archivieren ließ sich nicht rückgängig machen, weil der Verlauf des Kontakts kein Archivieren zum Zurücknehmen enthält. Öffne den Kontakt, um zu sehen, ob er noch archiviert ist.",
   "company.archiveRefused":
     "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
@@ -6903,10 +6909,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.taskSubject": "Was zu tun ist",
   "bulk.taskDue": "Fällig am",
   "bulk.taskAssignee": "Zuständig",
-  "bulk.taskAssigneeMe": "Du selbst",
   "bulk.taskNext": "Vorschau",
   "bulk.titleCreateTask":
-    "Für jeden ausgewählten Datensatz in {unit} eine Aufgabe erstellen?",
+    "Für alle ausgewählten {unit} je eine Aufgabe erstellen?",
   "bulk.confirmCreateTask": "Aufgaben erstellen",
   "bulk.stateNewTask": "Neue Aufgabe",
   "bulk.stateNoTask": "Keine neue Aufgabe",
@@ -8044,6 +8049,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.dateHint":
     "Der Tag, an dem es stattfand. Für einen späteren Tag erstelle eine Aufgabe.",
   "log.assignee": "Zugewiesen an",
+  "log.assigneeMe": "Du selbst",
   "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
@@ -19634,6 +19640,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dims": "Wie die Beziehung steht",
   "contact.standing.dim.promises": "Deine Zusagen",
   "contact.standing.dim.promisesNone": "Keine offen",
+  "contact.standing.dim.promisesUncounted": "Zu viele Aufgaben zum Zählen",
   "standing.overdue_one": "{count} überfällig",
   "standing.overdue_other": "{count} überfällig",
   "standing.ofOpen_one": "von {count} offenen",
@@ -23222,6 +23229,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.details.hideEmpty": "Leere Felder ausblenden",
   "record.details.editSection": "{section} bearbeiten",
   "record.verb.email": "E-Mail",
+  "record.verb.message": "Nachricht",
   "record.verb.call": "Anruf",
   "record.verb.meet": "Termin",
   "record.verb.log": "Notiz",

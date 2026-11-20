@@ -1,8 +1,9 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import {
   mount,
@@ -10,7 +11,11 @@ import {
   pressRecordVerb,
   view,
 } from "../../testing/contactpage.testkit";
+import { steppedClock } from "../../testing/steppedclock";
 import { jsonResponse } from "../../testing/story-utils";
+
+// The verb shows "Meet", so its name starts with the word a speech user says.
+const MEET_NAME = `${en["record.verb.meet"]}, ${en["contact.action.meetings"]}`;
 
 // The header's edit/merge/archive verbs, restored to the record page every
 // contact actually opens to — now rows of its overflow menu rather than
@@ -21,6 +26,7 @@ type Contact360 = components["schemas"]["Contact360"];
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
 });
 
 describe("a live contact that is not the viewer's to change refuses its core write verbs", () => {
@@ -137,6 +143,44 @@ describe("the header's core record verbs — edit, merge, archive", () => {
     await waitFor(() => expect(archived).toBe(true));
   });
 
+  it("says so when the Undo of an archive finds no archive to put back", async () => {
+    mount(
+      "overview",
+      view,
+      [],
+      {
+        "DELETE /contacts/p-1": () =>
+          jsonResponse({
+            ...view.contact,
+            archived_at: "2026-08-14T00:00:00Z",
+          }),
+        "GET /records/contact/p-1/history": () =>
+          jsonResponse({ data: [], page: { has_more: false } }),
+      },
+      undefined,
+      (page) => (
+        <ToastProvider>
+          {page}
+          <ToastRegion />
+        </ToastProvider>
+      ),
+    );
+
+    await pressRecordVerb("archive-record");
+    const dialog = await screen.findByRole("dialog");
+    // The confirmation and its Undo leave on a timer, so from the archive on
+    // the clock is the test's. The page has loaded by now on the real one.
+    const user = steppedClock();
+    await user.click(within(dialog).getByRole("button", { name: /^Archive/ }));
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+
+    expect(
+      await screen.findByText(en["contact.undoArchiveNothing"]),
+    ).toBeTruthy();
+  });
+
   it("offers merge from the header", async () => {
     mount("overview");
 
@@ -211,7 +255,7 @@ describe("every secondary verb is a row of the header's one menu", () => {
     }
     // The other direction: the verbs a reader came to do must not cost them
     // an opening press.
-    for (const daily of [en["log.title"], en["contact.action.meetings"]]) {
+    for (const daily of [en["log.title"], MEET_NAME]) {
       expect(within(actions).getByRole("button", { name: daily })).toBeTruthy();
     }
   });

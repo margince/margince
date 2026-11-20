@@ -408,6 +408,25 @@ describe("ListPopover on a desktop", () => {
     expect(screen.getByText("Ask an admin to add one.")).toBeTruthy();
   });
 
+  it("says an empty vocabulary has nothing yet until a term is typed", async () => {
+    const user = userEvent.setup();
+    render(
+      <ListPopover
+        label="Add tag"
+        title="Tags"
+        searchLabel="Search tags"
+        options={[]}
+        empty="No tag with that name."
+        none="No tags yet."
+        onPick={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Add tag" }));
+    expect(liveRegion()?.textContent).toBe("No tags yet.");
+    await user.type(screen.getByRole("combobox"), "vip");
+    expect(liveRegion()?.textContent).toBe("No tag with that name.");
+  });
+
   it("follows a caller that holds the open state", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
