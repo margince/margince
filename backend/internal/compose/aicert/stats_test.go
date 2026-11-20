@@ -85,3 +85,14 @@ func TestAPrintedIntervalAtTheEdgeIsTheEdgeExactly(t *testing.T) {
 		}
 	}
 }
+
+// A printed bound carries six decimals, so the last digits that differ
+// between CPUs never reach the committed report.
+func TestAPrintedIntervalCarriesSixDecimals(t *testing.T) {
+	got := ReliabilityIntervalOf(7, 9)
+	for _, bound := range []float64{got.Lower, got.Upper} {
+		if bound != math.Round(bound*1e6)/1e6 {
+			t.Errorf("bound %v carries more than six decimals", bound)
+		}
+	}
+}
