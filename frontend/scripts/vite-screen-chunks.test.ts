@@ -106,3 +106,32 @@ it("refuses a file with no SCREEN_CODE to read", async () => {
     screenCodeSpecifiers("export const OTHER = {};"),
   ).rejects.toThrow("no SCREEN_CODE entry was read");
 });
+
+it("leaves another page of a build alone, as Storybook's iframe.html", async () => {
+  await writeFile(
+    join(dir, "screencode.js"),
+    'export const SCREEN_CODE = { deals: () => import("./deals.js") };',
+  );
+  await writeFile(join(dir, "deals.js"), "export const deals = 1;");
+  await writeFile(
+    join(dir, "iframe.html"),
+    '<script type="module" src="/story.js"></script>',
+  );
+  await writeFile(join(dir, "story.js"), "console.log(1);");
+  const result = await build({
+    root: dir,
+    configFile: false,
+    logLevel: "silent",
+    plugins: [screenChunks(join(dir, "screencode.js"))],
+    build: {
+      write: false,
+      rolldownOptions: { input: join(dir, "iframe.html") },
+    },
+  });
+  const page = (Array.isArray(result) ? result : [result])
+    .flatMap((output) => ("output" in output ? output.output : []))
+    .find((file) => file.fileName === "iframe.html");
+  expect(page?.type === "asset" && String(page.source)).not.toContain(
+    SCREEN_CHUNKS_ID,
+  );
+});

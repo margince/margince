@@ -81,3 +81,34 @@ it("writes a level-9 .gz beside every text file of the build worth compressing",
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+it("writes nothing for a build with no app shell, as Storybook's", async () => {
+  const dir = await realpath(await mkdtemp(join(tmpdir(), "precompress-")));
+  try {
+    await writeFile(
+      join(dir, "iframe.html"),
+      `<!doctype html><title>${words(300)}</title><script type="module" src="./story.js"></script>`,
+    );
+    await writeFile(
+      join(dir, "story.js"),
+      `console.log(${JSON.stringify(words(400))});`,
+    );
+    await build({
+      root: dir,
+      configFile: false,
+      logLevel: "silent",
+      plugins: [precompress()],
+      build: {
+        outDir: join(dir, "dist"),
+        rolldownOptions: { input: join(dir, "iframe.html") },
+      },
+    });
+    const files = (await readdir(join(dir, "dist"), { recursive: true })).map(
+      String,
+    );
+    expect(files).toContain("iframe.html");
+    expect(files.filter((name) => name.endsWith(".gz"))).toEqual([]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

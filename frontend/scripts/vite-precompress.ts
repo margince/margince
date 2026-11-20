@@ -63,7 +63,9 @@ export function precompress(): Plugin {
     writeBundle: {
       order: "post",
       sequential: true,
-      async handler() {
+      async handler(_options, bundle) {
+        // Storybook builds through the same config; only the app's build ships to nginx.
+        if (!("index.html" in bundle)) return;
         const files = await precompressedFiles(outDir);
         await Promise.all(
           files.map(({ path, bytes }) => writeFile(path, bytes)),

@@ -5,6 +5,9 @@ import type { HtmlTagDescriptor, Plugin, Rolldown } from "vite";
 
 type Bundle = Rolldown.OutputBundle;
 
+// The app's shell. Storybook builds through the same config, for iframe.html.
+export const SHELL = "/index.html";
+
 /** A chunk and every chunk it imports statically, imports first: what loading it fetches. */
 export function staticChunks(
   bundle: Bundle,
@@ -89,7 +92,7 @@ export function startupStyles(
       order: "post",
       handler(_html, context): HtmlTagDescriptor[] | undefined {
         const { bundle } = context;
-        if (!bundle) return;
+        if (!bundle || context.path !== SHELL) return;
         const sheets = startupSheets(bundle, entries);
         const fonts = preloadFonts.map((name) =>
           fontFile(bundle, sheets, name),

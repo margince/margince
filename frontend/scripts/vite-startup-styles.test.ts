@@ -118,4 +118,40 @@ describe("the startup stylesheets and fonts in the shell", () => {
       "the build emitted no font gone.woff2 to preload",
     );
   });
+
+  it("leaves another page of a build alone, as Storybook's iframe.html", async () => {
+    await writeFile(
+      join(dir, "iframe.html"),
+      '<script type="module" src="/story.js"></script>',
+    );
+    await writeFile(join(dir, "story.js"), "console.log(1);");
+    const result = await build({
+      root: dir,
+      configFile: false,
+      logLevel: "silent",
+      plugins: [startupStyles([join(dir, "main.js")], ["face.woff2"])],
+      build: {
+        write: false,
+        rolldownOptions: { input: join(dir, "iframe.html") },
+      },
+    });
+    const page = (Array.isArray(result) ? result : [result])
+      .flatMap((output) => ("output" in output ? output.output : []))
+      .find((file) => file.fileName === "iframe.html");
+    expect(page?.type === "asset" && String(page.source)).not.toMatch(
+      /rel="(?:stylesheet|preload)"/,
+    );
+  });
+
+  it("refuses an app shell whose startup entries no chunk holds", async () => {
+    await expect(
+      build({
+        root: dir,
+        configFile: false,
+        logLevel: "silent",
+        plugins: [startupStyles([join(dir, "absent.js")], [])],
+        build: { write: false },
+      }),
+    ).rejects.toThrow("no chunk holds the startup entries");
+  });
 });

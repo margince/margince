@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import type * as TS from "typescript";
 import type { HtmlTagDescriptor, Plugin, Rolldown } from "vite";
 import { SCREEN_CHUNKS_ID, type ScreenChunks } from "../src/lib/screenchunks";
-import { staticChunks, stylesheetsOf } from "./vite-startup-styles";
+import { SHELL, staticChunks, stylesheetsOf } from "./vite-startup-styles";
 
 function objectLiteral(
   ts: typeof TS,
@@ -70,12 +70,12 @@ export function importMapEntries(
 export async function screenCodeSpecifiers(
   source: string,
 ): Promise<Map<string, string>> {
-  const { default: ts } = await import("typescript");
-  const file = ts.createSourceFile(
-    "screencode.ts",
-    source,
-    ts.ScriptTarget.Latest,
-  );
+  // Loaded here, so vite.config.ts does not load the compiler on every dev start.
+  const [{ default: ts }, { parseSource }] = await Promise.all([
+    import("typescript"),
+    import("./lib/source-tree"),
+  ]);
+  const file = parseSource("screencode.ts", source);
   const specifiers = new Map<string, string>();
   for (const [key, specifier] of importMapEntries(ts, file, "SCREEN_CODE") ??
     []) {
@@ -126,7 +126,7 @@ export function screenChunks(screenCodeFile: string): Plugin {
       order: "post",
       handler(_html, context) {
         const { bundle } = context;
-        if (!bundle) return;
+        if (!bundle || context.path !== SHELL) return;
         const chunks = Object.values(bundle).filter(
           (output): output is Rolldown.OutputChunk => output.type === "chunk",
         );
