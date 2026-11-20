@@ -389,7 +389,10 @@ function useModelRead(acts: ReadonlySet<SettingsPageId>) {
   };
 }
 
-export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
+export function useSetupChecklist(
+  reach: SettingsReach,
+  withPersonal = true,
+): SetupChecklist {
   const acts = new Set(reach.acts.map((page) => page.id));
   // Each read waits for a page that could show its step.
   const connectors = useConnectors({ enabled: acts.has("connections") });
@@ -416,7 +419,7 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     acts.has("agents") && connector,
     aiConnects && passports,
     model.asked,
-    me,
+    withPersonal && me,
   ];
   // A refused or failed read drops the steps it feeds rather than claiming
   // them open. The voice step stays as unknown instead: dropping it could
@@ -430,14 +433,15 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     passports: aiConnects ? (passports.data?.data ?? null) : null,
     now: passports.dataUpdatedAt,
     modelReady: model.ready,
-    personal: me.data
-      ? {
-          timezoneChosen: me.data.user.timezone_chosen === true,
-          zone: me.data.user.timezone ?? null,
-          languageChosen: me.data.user.locale !== undefined,
-          permissionsSeen: permissions.seen,
-        }
-      : null,
+    personal:
+      withPersonal && me.data
+        ? {
+            timezoneChosen: me.data.user.timezone_chosen === true,
+            zone: me.data.user.timezone ?? null,
+            languageChosen: me.data.user.locale !== undefined,
+            permissionsSeen: permissions.seen,
+          }
+        : null,
   });
   const done = steps.filter((step) => step.state === "done").length;
   return {

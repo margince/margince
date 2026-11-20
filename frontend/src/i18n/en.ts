@@ -16854,11 +16854,12 @@ export const en = {
   "setup.caption.permissions": "What it reads, what it writes and how to undo.",
   "setup.action.permissions": "Read",
   "setup.step.permissionsDone": "You have read what Margince may do.",
+  "account.keepChoice": "Keep {value}",
   "setup.permissions.title": "What Margince reads and writes",
   "setup.permissions.reads":
-    "It reads only the mail and calendar you connect. You can disconnect them in Settings, under Connections.",
+    "Margince reads the mail and calendar you connect, files you upload and public company websites. You can disconnect mail and calendar in Settings, under Connections.",
   "setup.permissions.writes":
-    "It files what it reads on contacts, companies and deals, adds tasks and notes, and drafts replies. Nothing is sent from the app until you press Send.",
+    "It files what it reads on contacts, companies and deals, adds tasks and notes, and drafts replies. A reply you write goes out when you press Send, or when a message you scheduled is due. Invitations and password resets are sent by Margince itself.",
   "setup.permissions.undo":
     "What it changes shows under Done for you in the Worklist, and most changes can be undone there.",
   "setup.permissions.confirm": "Got it",

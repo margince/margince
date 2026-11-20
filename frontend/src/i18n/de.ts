@@ -16995,11 +16995,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Was es liest, was es schreibt und wie du es rückgängig machst.",
   "setup.action.permissions": "Lesen",
   "setup.step.permissionsDone": "Du hast gelesen, was Margince darf.",
+  "account.keepChoice": "{value} behalten",
   "setup.permissions.title": "Was Margince liest und schreibt",
   "setup.permissions.reads":
-    "Es liest nur die E-Mails und den Kalender, die du verbindest. Du trennst sie jederzeit in den Einstellungen unter Verbindungen.",
+    "Margince liest die E-Mails und den Kalender, die du verbindest, Dateien, die du hochlädst, und öffentliche Unternehmenswebsites. Du trennst E-Mail und Kalender jederzeit in den Einstellungen unter Verbindungen.",
   "setup.permissions.writes":
-    "Es legt Gelesenes bei Kontakten, Unternehmen und Deals ab, erstellt Aufgaben und Notizen und entwirft Antworten. Aus der App geht nichts raus, bis du auf Senden drückst.",
+    "Es legt Gelesenes bei Kontakten, Unternehmen und Deals ab, erstellt Aufgaben und Notizen und entwirft Antworten. Eine Antwort von dir geht raus, wenn du auf Senden drückst oder eine geplante Nachricht fällig ist. Einladungen und Passwort-Zurücksetzen verschickt Margince selbst.",
   "setup.permissions.undo":
     "Was es ändert, steht in der Worklist unter Für dich erledigt. Die meisten Änderungen machst du dort rückgängig.",
   "setup.permissions.confirm": "Verstanden",

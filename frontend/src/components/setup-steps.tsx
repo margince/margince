@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "../design-system/atoms";
 import { Checklist, ChecklistStep } from "../design-system/checklist";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -228,6 +228,15 @@ export function SetupSteps({
 
 function StepAction({ step }: Readonly<{ step: SetupStep }>) {
   const t = useT();
+  // Kept mounted once done, so the dialog can close and hand focus back.
+  if (step.id === "permissions") {
+    return (
+      <PermissionsAction
+        primary={step.state === "current"}
+        done={step.state === "done"}
+      />
+    );
+  }
   if (step.state === "done") {
     // The step title already carries the state as a word for a screen reader.
     return (
@@ -254,9 +263,6 @@ function StepAction({ step }: Readonly<{ step: SetupStep }>) {
       </Button>
     );
   }
-  if (step.id === "permissions") {
-    return <PermissionsAction primary={step.state === "current"} />;
-  }
   return (
     <Button
       variant={step.state === "current" ? "primary" : undefined}
@@ -273,20 +279,33 @@ function StepAction({ step }: Readonly<{ step: SetupStep }>) {
 
 // What Margince reads and writes, said in a dialog over wherever the checklist
 // is drawn. Pressing "Got it" is what marks the step done.
-function PermissionsAction({ primary }: Readonly<{ primary: boolean }>) {
+function PermissionsAction({
+  primary,
+  done,
+}: Readonly<{ primary: boolean; done: boolean }>) {
   const t = useT();
   const { markSeen } = usePermissionsSeen();
   const [open, setOpen] = useState(false);
+  // The button is replaced by the done badge on "Got it", so focus returns to
+  // this wrapper, which stays.
+  const holder = useRef<HTMLSpanElement>(null);
   return (
-    <>
-      <Button
-        variant={primary ? "primary" : undefined}
-        aria-haspopup="dialog"
-        onClick={() => setOpen(true)}
-      >
-        {t("setup.action.permissions")}
-      </Button>
+    <span ref={holder} tabIndex={-1}>
+      {done ? (
+        <span aria-hidden="true">
+          <StatusBadge kind="done" label={t("checklist.stepDone")} />
+        </span>
+      ) : (
+        <Button
+          variant={primary ? "primary" : undefined}
+          aria-haspopup="dialog"
+          onClick={() => setOpen(true)}
+        >
+          {t("setup.action.permissions")}
+        </Button>
+      )}
       <ConfirmModal
+        returnFocusTo={() => holder.current}
         open={open}
         onClose={() => setOpen(false)}
         title={t("setup.permissions.title")}
@@ -303,6 +322,6 @@ function PermissionsAction({ primary }: Readonly<{ primary: boolean }>) {
           <li>{t("setup.permissions.undo")}</li>
         </ul>
       </ConfirmModal>
-    </>
+    </span>
   );
 }

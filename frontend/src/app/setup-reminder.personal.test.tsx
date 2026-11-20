@@ -151,6 +151,27 @@ describe("the personal setup steps", () => {
       }),
     ).toBe("1");
     expect((await trigger()).textContent).toContain("1 of 3");
+    // The button became a badge; focus must stay inside the checklist.
+    expect(document.activeElement).not.toBe(document.body);
+    expect(panel.contains(document.activeElement)).toBe(true);
+  });
+
+  it("states no absolute the product breaks", async () => {
+    const { user, panel } = await openPanel(seat());
+    await user.click(within(panel).getByRole("button", { name: "Read" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).not.toMatch(/\bonly\b|nothing is sent/i);
+    expect(dialog.textContent).toContain("password resets");
+  });
+
+  it("adds no setup row to the wide account menu", async () => {
+    mount(seat());
+    await trigger();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: /account$/i }));
+    await screen.findByRole("menu", { name: "Account" });
+    expect(screen.queryByRole("menuitem", { name: /Finish setup/ })).toBeNull();
   });
 
   it("stands down once the member chose a zone and a language and read the permissions", async () => {

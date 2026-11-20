@@ -24,7 +24,13 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { type Toast, useToast } from "../../design-system/toast";
-import { LOCALES, type Locale, useLocale, useT } from "../../i18n";
+import {
+  LOCALES,
+  type Locale,
+  localeNameKey,
+  useLocale,
+  useT,
+} from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallState } from "../../lib/pwa";
 import { useLogout, useMe } from "../../lib/session";
@@ -220,6 +226,9 @@ function LanguageSettingRow() {
   });
   const refusalId = useId();
   const shown = draft ?? locale;
+  // Absent means the account never chose, so the language on screen is only a
+  // guess that needs a one-click keep: choosing it again makes no draft.
+  const unchosen = useMe().data?.user.locale === undefined;
   useSaveDraft({
     dirty: shown !== locale,
     save: () => remember.mutateAsync(shown),
@@ -245,6 +254,15 @@ function LanguageSettingRow() {
             value={shown}
             onChange={setDraft}
           />
+          {unchosen && draft === null && (
+            <Button
+              variant="ghost"
+              disabled={remember.isPending}
+              onClick={() => remember.mutate(locale)}
+            >
+              {t("account.keepChoice", { value: t(localeNameKey(locale)) })}
+            </Button>
+          )}
           {/* The bar carries the summary; this names the field it is about. */}
           <ErrorLine id={refusalId}>
             {remember.isError ? problemMessageOf(remember.error, t) : null}
@@ -266,6 +284,7 @@ function TimeZoneSettingRow() {
   return (
     <TimeZoneSettingControl
       stored={me.data.user.timezone ?? readerZone}
+      chosen={me.data.user.timezone_chosen === true}
       setByAgent={Boolean(me.data.user.timezone_set_by)}
     />
   );
@@ -273,8 +292,9 @@ function TimeZoneSettingRow() {
 
 function TimeZoneSettingControl({
   stored,
+  chosen,
   setByAgent,
-}: Readonly<{ stored: string; setByAgent: boolean }>) {
+}: Readonly<{ stored: string; chosen: boolean; setByAgent: boolean }>) {
   const t = useT();
   const save = useSaveMyTimezone();
   const [draft, setDraft] = useState<string | null>(null);
@@ -307,6 +327,17 @@ function TimeZoneSettingControl({
             value={shown}
             onChange={setDraft}
           />
+          {!chosen && draft === null && (
+            <Button
+              variant="ghost"
+              disabled={save.isPending}
+              onClick={() =>
+                save.mutate({ timezone: stored, source: "chosen" })
+              }
+            >
+              {t("account.keepChoice", { value: stored })}
+            </Button>
+          )}
           {setByAgent && (
             <Badge tone="ai">{t("account.timezoneSetByAgent")}</Badge>
           )}
