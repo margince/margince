@@ -66,7 +66,7 @@ function declaresADate(declaration: ts.Declaration): boolean {
 
 // The names of the fields the contract declares as a date or a moment, judged
 // by the same test the checker's answer goes through. A property access under
-// any other name cannot be one, so the checker is asked only about these, which
+// any other name cannot be one. So the checker is asked only about these, which
 // keeps the rule within the suite's budget.
 const WIRE_DATE_NAMES = (() => {
   const contract = new URL("../../src/api/schema.d.ts", import.meta.url);
