@@ -31,33 +31,20 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-<<<<<<< HEAD
 import { useToast } from "../../design-system/toast";
-import { holdsEveryWord, searchWords } from "../../format/collate";
+import { searchWords } from "../../format/collate";
 import { formatNumber, identifierNumber } from "../../format/format";
-=======
-import {
-  formatDate,
-  formatNumber,
-  identifierNumber,
-} from "../../format/format";
->>>>>>> origin/develop
 import { useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useViewerId } from "../../lib/session";
-<<<<<<< HEAD
-import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
-import { ShareAccessRow, useShareRecordName } from "./share.accessrow";
-import { ShareBack } from "./share.back";
-=======
-import { useViewerZone } from "../../lib/viewerzone";
 import {
   isAccessKind,
   useRecordOwnerId,
   WhoCanSeePanel,
 } from "./recordaccesspanel";
->>>>>>> origin/develop
+import { ShareAccessRow, useShareRecordName } from "./share.accessrow";
+import { ShareBack } from "./share.back";
 import { ShareConfirmation } from "./share.confirmation";
 import { draftToGrant, pickedToGrant, shareCandidates } from "./share.roster";
 import {

@@ -3258,17 +3258,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "share.bulkConfirmTitle": "Diese Kontakte teilen?",
   "share.bulkConfirmBody":
-<<<<<<< HEAD
-    "Was bisher mit {name} geteilt war, wird durch {access} und die gewählte Laufzeit ersetzt. Dadurch kann der Zugriff eingeschränkt werden oder enden.",
-  "share.companyContacts": "Kontakte teilen",
-  "share.companyContactsNote":
-    "Teile aktuelle Kontakte, die du lesen und teilen darfst. Andere lesbare Kontakte werden übersprungen. Verborgene Kontakte werden nicht gezählt.",
-=======
     "Der bisher geteilte Zugriff von {name} wird durch {access} und die gewählte Laufzeit ersetzt. Dadurch kann der Zugriff eingeschränkt werden oder enden.",
   "share.companyContacts": "Kontakte teilen",
   "share.companyContactsNote":
     "Teile die aktuellen Kontakte, die du lesen und teilen darfst. Andere lesbare Kontakte werden übersprungen. Verborgene Kontakte werden nicht gezählt.",
->>>>>>> origin/develop
   "share.companyContactsResult": "{shared} geteilt · {skipped} übersprungen",
   "share.title": "Diesen Datensatz teilen",
   "share.ceiling.pre": "Das Teilen ändert die Sichtbarkeit für ",
