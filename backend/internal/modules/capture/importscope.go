@@ -10,20 +10,26 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // connectionEntitySQL is the sending company of the mailbox an import came
-// from: its own connection for a shared mailbox, else the seat's connection.
-// An owner-less connection has none, so its imports stay unscoped.
-const connectionEntitySQL = `coalesce(
+// from: its own connection for a shared mailbox. For a seat, the live
+// connections whose mailbox is named in delivered_by (the mark recordImportTx
+// wrote), counted only when they agree on one company. Anything unclear, or an
+// owner-less connection, leaves the import unscoped.
+var connectionEntitySQL = `coalesce(
 	(SELECT c.legal_entity_id FROM capture_connection c WHERE c.id = i.connection_id),
-	(SELECT c.legal_entity_id FROM capture_connection c
-	  WHERE c.user_id = i.user_id AND c.legal_entity_id IS NOT NULL ORDER BY c.created_at, c.id LIMIT 1))`
+	(SELECT CASE WHEN count(DISTINCT c.legal_entity_id) = 1 AND count(*) = count(c.legal_entity_id)
+	              THEN (array_agg(c.legal_entity_id))[1] END
+	   FROM capture_connection c
+	  WHERE c.user_id = i.user_id AND c.archived_at IS NULL
+	    AND ` + storekit.MailboxSQL("c") + ` IN (SELECT split_part(mark, ':', 1) FROM unnest(i.delivered_by) mark)))`
 
 // unscopedImportsSQL selects imports with no sending company whose mailbox has one.
-const unscopedImportsSQL = `FROM capture_import i WHERE i.legal_entity_id IS NULL AND ` + connectionEntitySQL + ` IS NOT NULL`
+var unscopedImportsSQL = `FROM capture_import i WHERE i.legal_entity_id IS NULL AND ` + connectionEntitySQL + ` IS NOT NULL`
 
 // ScopeImportsTx gives the next page of unscoped imports the company of the
 // mailbox they came from. The write is the one recordImportTx makes for a new
