@@ -234,3 +234,26 @@ describe("a list's create the seat may not take", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("a save that answers after its form closed", () => {
+  it("leaves a form opened since then open", async () => {
+    let finish: (created: { id: string }) => void = () => undefined;
+    const created = new Promise<{ id: string }>((resolve) => {
+      finish = resolve;
+    });
+    mount({ create: () => created });
+
+    fireEvent.click(await screen.findByRole("button", { name: /New contact/ }));
+    fireEvent.change(await screen.findByRole("textbox", { name: /Name/ }), {
+      target: { value: "Ada" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: /New contact/ }));
+    await screen.findByRole("dialog");
+
+    await act(async () => finish({ id: "c1" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+});

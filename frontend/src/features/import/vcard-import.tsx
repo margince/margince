@@ -231,11 +231,8 @@ export function VCardImportPage() {
       >
         {t("vcardImport.title")}
       </Heading>
-      {/* Reached by its address, a refused import shows why and no file field. */}
       {!settled ? (
         <PendingBody label={t("vcardImport.title")} />
-      ) : refusal !== undefined ? (
-        <EmptyState>{refusal}</EmptyState>
       ) : (
         <Panel>
           <PanelBody className="form-stack">
@@ -244,8 +241,12 @@ export function VCardImportPage() {
                 flight would start a second write, and this page holds ONE
                 report — so one set of contact changes would land with nothing
                 on screen saying what happened to it. */}
+              {/* A refusal takes the file field's place only: an import already
+                  sent keeps its report, whatever /me says since. */}
               {importer.isPending ? (
                 <p className="t-sub">{t("vcardImport.working")}</p>
+              ) : refusal !== undefined ? (
+                <EmptyState>{refusal}</EmptyState>
               ) : (
                 <FileDropzone
                   label={t("vcardImport.fileLabel")}
@@ -272,13 +273,14 @@ export function VCardImportPage() {
               </div>
             )}
             {importer.isSuccess && <ImportReport report={importer.data} />}
-            {(importer.isSuccess || importer.isError) && (
-              <div>
-                <Button data-testid="vcard-import-next" onClick={startNext}>
-                  {t("vcardImport.next")}
-                </Button>
-              </div>
-            )}
+            {(importer.isSuccess || importer.isError) &&
+              refusal === undefined && (
+                <div>
+                  <Button data-testid="vcard-import-next" onClick={startNext}>
+                    {t("vcardImport.next")}
+                  </Button>
+                </div>
+              )}
           </PanelBody>
         </Panel>
       )}

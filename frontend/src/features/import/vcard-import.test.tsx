@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -42,11 +43,14 @@ function render(ui: ReactNode, seeded = true) {
   if (seeded) {
     seedWriter(client);
   }
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return {
+    client,
+    ...rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{ui}</LocaleProvider>
+      </QueryClientProvider>,
+    ),
+  };
 }
 
 function vcardFile() {
@@ -349,6 +353,27 @@ describe("VCardImport", () => {
     expect(screen.queryByTestId("vcard-import-file")).toBeNull();
   });
 
+  // An import already sent keeps its report when /me later refuses the seat:
+  // only the file field gives way to the refusal.
+  it("keeps the report of a sent import when the seat loses the right", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ results: [] })),
+    );
+    const { client } = render(<VCardImportPage />);
+    await upload(user);
+    expect(
+      await screen.findByText("The file contains no cards."),
+    ).toBeVisible();
+
+    act(() => {
+      client.setQueryData(["me"], meFixture({ allow: { contact: ["read"] } }));
+    });
+    expect(await screen.findByText(en["record.actionRefused"])).toBeVisible();
+    expect(screen.getByText("The file contains no cards.")).toBeVisible();
+  });
+
   // Reached by its address, a seat that may not add contacts sees why and no
   // file field. The import would be refused after the file was chosen.
   it("shows a refused seat why, and no file field", async () => {
@@ -361,7 +386,7 @@ describe("VCardImport", () => {
     render(<VCardImportPage />, false);
 
     expect(await screen.findByText(en["record.actionRefused"])).toBeVisible();
-    expect(screen.queryByTestId("vcard-import-file")).toBeNull();
+    expect(document.querySelector("input[type=file]")).toBeNull();
   });
 
   it("sends the file as the part the endpoint takes", async () => {

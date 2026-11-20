@@ -5,7 +5,7 @@ export {
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
@@ -84,7 +84,9 @@ export function useCreateRecord<Created extends { id: string }>({
   create: CreateTransport<Created>;
   invalidate: string;
   screen: Screen;
-  onDone: () => void;
+  // `session` is the form opening the save came from, so a caller can tell a
+  // late answer for a form already closed.
+  onDone: (session: number) => void;
   // The created record, for a caller that reports what landed. Runs before
   // onDone, so a caller can name the record in a toast while the form it came
   // from is still the thing on screen.
@@ -110,15 +112,16 @@ export function useCreateRecord<Created extends { id: string }>({
       values: Record<string, string>;
       rows: FormRows;
       idempotencyKey: string;
+      session: number;
       extra?: Record<string, unknown>;
     }) => create(values, rows, idempotencyKey, extra),
     onMutate: fromHere,
-    onSuccess: (created, _vars, from) => {
+    onSuccess: (created, { session }, from) => {
       // Asked before onDone, which may close the form's own address.
       const opens = !stay && from.stillHere();
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       onCreated?.(created);
-      onDone();
+      onDone(session);
       if (opens) {
         navigate({ screen, id: created.id });
       }
@@ -230,13 +233,19 @@ export function CreateAction<Created extends { id: string }>({
   // boolean: two saves in a row must read as two distinct clears.
   const [saved, setSaved] = useState(0);
   const { key: idempotencyKey, renew } = useIdempotencyKey();
+  // Which opening of the form is on screen. A save that answers after its
+  // form was closed, or closed and opened again, must not close the new one.
+  const opening = useRef(0);
   const mutation = useCreateRecord({
     create,
     invalidate,
     screen,
     stay: stay || keepOpen,
     aboutId,
-    onDone: () => {
+    onDone: (session) => {
+      if (session !== opening.current) {
+        return;
+      }
       renew();
       if (keepOpen) {
         setSaved((n) => n + 1);
@@ -247,6 +256,7 @@ export function CreateAction<Created extends { id: string }>({
     onCreated,
   });
   function close() {
+    opening.current += 1;
     setCreating(false);
     if (listCreate) {
       leaveCreateForm(screen, writers);
@@ -279,6 +289,7 @@ export function CreateAction<Created extends { id: string }>({
         label={label}
         onClick={() => {
           renew();
+          opening.current += 1;
           // A refusal from an earlier opening is about words no longer there.
           mutation.reset();
           setCreating(true);
@@ -309,7 +320,12 @@ export function CreateAction<Created extends { id: string }>({
         resetToken={saved}
         onValuesChange={onValuesChange}
         onSubmit={(values, rows) =>
-          mutation.mutate({ values, rows: rows ?? {}, idempotencyKey })
+          mutation.mutate({
+            values,
+            rows: rows ?? {},
+            idempotencyKey,
+            session: opening.current,
+          })
         }
       />
     </>
