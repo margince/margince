@@ -77,9 +77,8 @@ const EDITABLE_FACTS = [
   "forecast_likely_threshold",
 ] as const;
 
-// Which fact the reader pressed Edit on. The dialog always edits all of them —
-// one record, one sparse PATCH, one Save — so this decides nothing about what
-// is written, only where focus lands when the dialog opens.
+// Which fact the reader pressed Edit on. The dialog edits every fact of its
+// tab in one sparse PATCH, so this decides only where focus lands.
 export type EditedFact = (typeof EDITABLE_FACTS)[number];
 
 // The server's bounds on the Likely threshold, in percent.
@@ -415,10 +414,15 @@ function InstallationSettingsForm({
               label={t("installationSettings.baseCurrency")}
               description={currencyNote(settings)}
               value={settings.base_currency}
-              control={editVerb(
-                "base_currency",
-                t("installationSettings.baseCurrency"),
-              )}
+              // A frozen currency has nothing to edit; the note says why.
+              control={
+                settings.base_currency_locked
+                  ? undefined
+                  : editVerb(
+                      "base_currency",
+                      t("installationSettings.baseCurrency"),
+                    )
+              }
             />
             <RegionalSettingsRows settings={settings} editVerb={editVerb} />
             <SettingRow
@@ -458,6 +462,7 @@ function InstallationSettingsForm({
       )}
       {editing !== null && (
         <InstallationProfileDialog
+          part={part}
           settings={settings}
           draft={draft}
           focus={editing}
