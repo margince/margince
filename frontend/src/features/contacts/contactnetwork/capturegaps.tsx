@@ -25,7 +25,7 @@ function useContactCaptureGaps(id: string) {
   });
 }
 
-// The last answer was a failure, also while a retry runs: the notice's own
+// The last answer was a failure, also while a retry runs. The notice's own
 // mount starts one, and hiding the failure then would drop its Retry.
 function readFailed(network: ReturnType<typeof useContactCaptureGaps>) {
   return network.errorUpdatedAt > network.dataUpdatedAt;
