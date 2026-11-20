@@ -8,11 +8,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"regexp"
 	"strings"
 )
 
-var catalogGuardBounds = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*\.text_bound_(?:insert|update)) .*'(\{[^']*\})'::jsonb`)
+var catalogGuardBounds = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*\.text_bound_(?:insert|update)) .* EXECUTE FUNCTION refuse_oversized_text\('(\{[^']*\})'\)$`)
 
 // Retarget builds the migration that moves the named tables' guards from the
 // bounds the catalog holds now to the bounds columns.txt states. Its rollback
@@ -31,21 +32,18 @@ func Retarget(catalog io.Reader, tables []string) (Migration, error) {
 	if err != nil {
 		return Migration{}, err
 	}
+	columns, err := Columns(strings.NewReader(string(raw)))
+	if err != nil {
+		return Migration{}, err
+	}
 	var up, down strings.Builder
 	for _, table := range tables {
-		before, err := compact(current[table+".text_bound_insert"])
-		if err != nil {
-			return Migration{}, err
-		}
-		after, err := compact(wanted[table])
-		if err != nil {
-			return Migration{}, err
-		}
-		if before == after {
+		before, after := current[table+".text_bound_insert"], wanted[table]
+		if maps.Equal(before, after) {
 			return Migration{}, fmt.Errorf("the guards of %s already match columns.txt", table)
 		}
-		replaceGuards(&up, table, after)
-		replaceGuards(&down, table, before)
+		replaceGuards(&up, table, TableBounds(table, after, columns))
+		replaceGuards(&down, table, TableBounds(table, before, columns))
 	}
 	return Migration{
 		Up:   unwrappedHeader + up.String() + "RESET lock_timeout;\n",
@@ -55,21 +53,32 @@ func Retarget(catalog io.Reader, tables []string) (Migration, error) {
 
 // replaceGuards sets a table's guards to bounds, or removes them when no
 // column of the table is bounded.
-func replaceGuards(out *strings.Builder, table, bounds string) {
+func replaceGuards(out *strings.Builder, table string, bounds []Bound) {
 	var unused strings.Builder
-	if bounds == "" {
-		writeGuardPair(&unused, out, table, "{}")
+	if len(bounds) == 0 {
+		writeGuardPair(&unused, out, table, nil)
 		return
 	}
 	writeGuardPair(out, &unused, table, bounds)
 }
 
-func compact(bounds map[string]int) (string, error) {
-	if len(bounds) == 0 {
-		return "", nil
+// TableBounds gives each limit the shape of its column in the catalog. A limit
+// is stale when the catalog no longer holds its column as text. A rename or a
+// new type left it in the old guard, and the rollback restores it as it was.
+func TableBounds(table string, limits map[string]int, columns []Column) []Bound {
+	shapes := map[string]Column{}
+	for _, column := range columns {
+		if column.Table == table {
+			shapes[column.Name] = column
+		}
 	}
-	encoded, err := json.Marshal(bounds)
-	return string(encoded), err
+	bounds := make([]Bound, 0, len(limits))
+	for name, limit := range limits {
+		shape, known := shapes[name]
+		bounds = append(bounds, Bound{Column: name, Limit: limit, Array: shape.Array, Stale: !known})
+	}
+	sortBounds(bounds)
+	return bounds
 }
 
 // GuardBounds reads the bounds of every text guard in a catalog, keyed by

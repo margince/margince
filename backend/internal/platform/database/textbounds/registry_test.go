@@ -83,6 +83,53 @@ func TestChangedTextGuardsPreserveExistingValues(t *testing.T) {
 	}
 }
 
+// A whole-row condition would copy the mail body to jsonb on every write to activity.
+func TestTheActivityGuardsNameTheirColumnsAndPreserveExistingValues(t *testing.T) {
+	guards, err := SQL(strings.NewReader("public.activity.body text gen=- def=-\npublic.activity.owed_ask text gen=- def=-\npublic.activity.redacted_fields text[] gen=- def=-\n"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fragment := range []string{
+		`AFTER INSERT ON "public"."activity" FOR EACH ROW` + "\n" + `WHEN (char_length(NEW."owed_ask") > 2000` + "\n OR " + `public.text_values_exceed_bound(NEW."redacted_fields", NULL, 20000))`,
+		`(char_length(NEW."owed_ask") > 2000 AND NEW."owed_ask" COLLATE "C" IS DISTINCT FROM OLD."owed_ask" COLLATE "C")`,
+		`(NEW."redacted_fields" IS DISTINCT FROM OLD."redacted_fields" AND public.text_values_exceed_bound(NEW."redacted_fields", OLD."redacted_fields", 20000))`,
+		`refuse_oversized_text('{"owed_ask":2000,"redacted_fields":20000}')`,
+	} {
+		if !strings.Contains(guards.Tables.Up, fragment) {
+			t.Errorf("missing changed-value guard %q in:\n%s", fragment, guards.Tables.Up)
+		}
+	}
+	if strings.Contains(guards.Tables.Up, "to_jsonb") || strings.Contains(guards.Tables.Up, `"body"`) {
+		t.Fatal("the activity condition copies the row, or checks the exempt body")
+	}
+}
+
+func TestAnActivityRetargetRestoresOnlyColumnsTheTableStillHas(t *testing.T) {
+	// owed_ask_was left the table after the old guard was made, so the restored
+	// condition cannot name it. The refusal still lists it, as it did before.
+	catalog := "public.activity.owed_ask text gen=- def=-\n" +
+		`public.activity.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity FOR EACH ROW WHEN ((char_length(new.owed_ask) > 120)) EXECUTE FUNCTION refuse_oversized_text('{"owed_ask":120,"owed_ask_was":120}')` + "\n"
+	migration, err := Retarget(strings.NewReader(catalog), []string{"activity"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(migration.Up, `WHEN (char_length(NEW."owed_ask") > 2000) EXECUTE FUNCTION public.refuse_oversized_text('{"owed_ask":2000}')`) {
+		t.Errorf("the pair does not move activity to the registry:\n%s", migration.Up)
+	}
+	if !strings.Contains(migration.Down, `WHEN (char_length(NEW."owed_ask") > 120) EXECUTE FUNCTION public.refuse_oversized_text('{"owed_ask":120,"owed_ask_was":120}')`) {
+		t.Errorf("the rollback names a column the table no longer has, or drops it from the refusal:\n%s", migration.Down)
+	}
+	// A migration that dropped a bounded column took the guards off first.
+	unguarded, err := Retarget(strings.NewReader("public.activity.owed_ask text gen=- def=-\n"), []string{"activity"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(unguarded.Up, `WHEN (char_length(NEW."owed_ask") > 2000)`) || strings.Contains(unguarded.Down, "CREATE") ||
+		!strings.Contains(unguarded.Down, `DROP TRIGGER IF EXISTS "text_bound_insert" ON "public"."activity"`) {
+		t.Errorf("a table without guards does not get them, or its rollback leaves them:\nup:\n%s\ndown:\n%s", unguarded.Up, unguarded.Down)
+	}
+}
+
 // One transaction would close every guarded table to writers until the last guard is
 // made. A database that already has the guards must also take them again.
 func TestEachTableGuardCommitsOnItsOwnAndRunsTwice(t *testing.T) {
