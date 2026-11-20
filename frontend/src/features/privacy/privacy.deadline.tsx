@@ -135,7 +135,8 @@ export function DsrDeadlineFields({
   const computed = query.data;
   // A refusal the form did not foresee names the bound it already shows.
   const fault =
-    earlierDueFault(draft, computed, zone) ?? (refused ? "too_late" : undefined);
+    earlierDueFault(draft, computed, zone) ??
+    (refused ? "too_late" : undefined);
   const today = isoOrBlank(todayIn(zone)) || undefined;
   const preview = refusalSentences(query.error, t, {
     received_at: t("privacy.receivedAt"),
