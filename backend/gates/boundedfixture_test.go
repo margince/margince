@@ -81,8 +81,6 @@ var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
 	"stagenotices": "which notice a deal's stage move makes, and the repair migration that " +
 		"links old notices to their move; the mover and reader are workspace-wide admins, " +
 		"because the cases are about the move and the repair, not about who may read a notice",
-	"cachecontrol": "the Cache-Control census over every /v1 read, driven over HTTP as the admin and as a " +
-		"signed-in rep; the rep's row scope is the seeded role's, which this scan cannot see",
 	"humanonlyext": "the human-only door, which refuses an agent before any row is reached — " +
 		"the refusal is the subject and a bounded seat would not change it",
 	"jobfanout": "fan-out from the scheduler, whose actor is a system principal by construction; " +

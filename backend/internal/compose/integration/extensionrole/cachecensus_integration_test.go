@@ -3,14 +3,12 @@
 
 //go:build integration
 
-package cachecontrol
+package extensionrole
 
 // Every read the running application serves under /v1 tells caches not to keep
 // it. The census drives the composed handler. So it also covers the session
-// middleware's own answers and the extension routes.
-//
-// This is its own package because compose.RegisterExtensions is process-wide.
-// The synthetic unit would otherwise show up in the parent package's censuses.
+// middleware's own answers and the extension routes. It lives beside the role
+// sweep because that binary already composes a synthetic unit to read.
 
 import (
 	"context"
@@ -18,7 +16,6 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
-	"sync"
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -31,42 +28,28 @@ import (
 
 const wantCache = "private, no-store"
 
-// readVerb is a synthetic extension read, served on GET like a unit's list verb.
-var readVerb = extension.Verb{
-	Unit:           "cacheext",
+// cacheReadVerb is the unit's one REST read, served on GET like a unit's list
+// verb, so the census below has an extension route to request.
+var cacheReadVerb = extension.Verb{
+	Unit:           unitName,
 	Contract:       "crm.yaml",
-	OperationID:    "cacheextList",
-	Route:          "/ext/cacheext/items",
+	OperationID:    "roleextItems",
+	Route:          "/ext/roleext/items",
 	Method:         http.MethodGet,
-	Tool:           "cacheext_list",
+	Tool:           "roleext_items",
 	Description:    "A synthetic read, composed only for this suite's own test binary.",
 	Version:        "1.0.0",
 	Tier:           extension.TierAutoExecute,
 	RequestedScope: extension.ScopeRead,
 }
 
-func listItems(context.Context, extension.Runtime, json.RawMessage) (json.RawMessage, error) {
+func listNothing(context.Context, extension.Runtime, json.RawMessage) (json.RawMessage, error) {
 	return json.RawMessage(`{"items":[]}`), nil
 }
 
-var (
-	registerOnce sync.Once
-	registerErr  error
-)
-
 func boot(t *testing.T) *apptest.AppEnv {
 	t.Helper()
-	registerOnce.Do(func() {
-		registerErr = compose.RegisterExtensions([]extension.Extension{{
-			Name:        "cacheext",
-			Version:     "1.0.0",
-			Description: "A synthetic read unit for the Cache-Control census.",
-			Tools:       []extension.Tool{{Name: "cacheext_list", Handle: listItems}},
-		}}, []extension.Verb{readVerb}, nil)
-	})
-	if registerErr != nil {
-		t.Fatalf("registering the synthetic extension: %v", registerErr)
-	}
+	registerUnit(t)
 	e := apptest.SetupApp(t)
 	compose.BindExtensionRuntime(e.Pool, e.Vault)
 	apptest.BootstrapWorkspaceSession(t, e, "Cache Census", "cache@census.test", "Admin")
@@ -151,7 +134,7 @@ func TestEveryReadUnderV1AnswersPrivateAndUnstored(t *testing.T) {
 			}
 		}
 	}
-	status, got := cacheControlOf(t, e.Client, e.TS.URL+readVerb.ServedPath())
+	status, got := cacheControlOf(t, e.Client, e.TS.URL+cacheReadVerb.ServedPath())
 	if status != http.StatusOK || got != wantCache {
 		t.Errorf("the extension read answered %d with Cache-Control %q, want 200 and %q", status, got, wantCache)
 	}
