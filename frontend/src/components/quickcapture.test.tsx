@@ -42,6 +42,7 @@ function stubApi() {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -83,6 +84,8 @@ describe("Quick capture", () => {
   });
 
   it("puts the cursor back in Full name once a contact is saved", async () => {
+    // The saved toast dismisses itself on a timer, so the clock is the test's.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     stubApi();
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -97,7 +100,7 @@ describe("Quick capture", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
     await user.click(screen.getByTestId("quick-capture"));
     const fullName = await screen.findByLabelText("Full name *");

@@ -15,6 +15,7 @@ import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../lib/problem";
 import { meFixture } from "../testing/mefixture";
 import { Field } from "./atoms";
+import { SEARCH_DEBOUNCE_MS } from "./debouncedsearch";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
 // RecordPicker is the debounced search→candidate-list→pick pattern that
@@ -68,12 +69,19 @@ describe("RecordPicker", () => {
         onPick={vi.fn()}
       />,
     );
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("searchbox"));
-    await waitFor(() => expect(searchTargets).toHaveBeenCalledWith(""));
-    expect(screen.queryByText("No match")).toBeNull();
-    await user.type(screen.getByRole("searchbox"), "acme");
-    expect(await screen.findByText("No match")).toBeTruthy();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await user.click(screen.getByRole("searchbox"));
+      await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
+      expect(searchTargets).toHaveBeenCalledWith("");
+      expect(screen.queryByText("No match")).toBeNull();
+      await user.type(screen.getByRole("searchbox"), "acme");
+      await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
+      expect(screen.getByText("No match")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("ignores a late default answer after the reader types a search", async () => {
