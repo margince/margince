@@ -44,8 +44,8 @@ func TestEveryMutatingToolIsAdvertisedWithTheRetryKey(t *testing.T) {
 	// provenance marker is on the TOOL (mcp.UnitScopedTool) — and this is the
 	// question that map already answers for the contract sweeps.
 	fromExtension := composedToolNames()
-	// A route verb takes the key exactly when the idempotency middleware claims
-	// one on its route, which is the contract's declaration mirrored.
+	// A route verb takes the key when the idempotency middleware claims one on
+	// its route, which mirrors the contract's declaration.
 	runsARoute, routeReplays := map[string]bool{}, map[string]bool{}
 	for _, v := range declaredRouteVerbs(agentPolicies) {
 		runsARoute[v.Verb] = true

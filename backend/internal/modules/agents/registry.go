@@ -69,8 +69,7 @@ type Registry struct {
 	// route claims no retry key. Their answers carry no replay evidence, so
 	// withRetryKey and refuseUnkeyableCall both read this one set.
 	routeServed map[string]bool
-	// routeKeyed names the route-backed verbs whose route claims a caller's
-	// Idempotency-Key and replays its recorded answer (WithRouteRetryKeys).
+	// routeKeyed names the route verbs whose route claims a retry key.
 	routeKeyed map[string]bool
 	// routeActions are the contract's route-backed actions per router name,
 	// added to that router's own targets when it registers.

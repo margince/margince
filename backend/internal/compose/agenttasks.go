@@ -13,7 +13,7 @@ package compose
 // The effect a task performs is executed through Registry.Invoke and carries
 // the full write shape there.
 //
-// EVERY QUERY IS SCOPED TO THE CALLING AGENT, in the SQL rather than by a
+// Every query is scoped to the calling agent, in the SQL rather than by a
 // caller remembering to filter. A task belonging to another agent is absent,
 // not forbidden: distinguishing the two would tell a caller which ids exist.
 
@@ -53,10 +53,9 @@ const taskOwnedBy = `(passport_id = $2 OR connection_id = $3)`
 
 // taskOwnerOf answers the caller's passport and connection; a nil one is NULL.
 //
-// A ZERO passport is refused as hard as a missing principal. principal.Actor
-// answers ok for a zero-value Principal, and a passport-less task row would be
-// one row every such caller in the workspace shares — which is precisely the
-// binding that makes a task id worthless to anyone but its owner.
+// A zero passport is refused as hard as a missing principal. principal.Actor
+// answers ok for a zero-value Principal. A passport-less task row would be one
+// row every such caller shares. A task id is useless to all but its owner.
 func taskOwnerOf(ctx context.Context, verb string) (ids.UUID, *ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.PassportID.IsZero() {
@@ -103,13 +102,11 @@ func (t agentTasks) Create(ctx context.Context, in agents.NewTask) (agents.Task,
 		// no-op by construction.
 		//
 		// The WHERE carries both conditions on answering an existing row. The
-		// credential half is here rather than trusted upstream: a task id is
-		// worthless to anyone but its owner (taskOwnerOf), so a handle is only
-		// ever answered to the agent that holds it — a row belonging to another
-		// agent fails the predicate, RETURNING yields nothing, and the caller
-		// gets the plain refusal instead of somebody else's handle. The status half
-		// keeps a terminal row from standing in for a live decision (see above).
-		// Either way the no-row path is the pre-existing fallback, not a new one.
+		// owner half is here rather than trusted upstream, so a handle is answered
+		// only to the agent that holds it (taskOwnerOf). Another agent's row fails
+		// the predicate, RETURNING yields nothing, and the caller gets the plain
+		// refusal. The status half keeps a terminal row from standing in for a
+		// live decision (see above). Either way the no-row path is the fallback.
 		row := tx.QueryRow(ctx, `
 			INSERT INTO agent_task (approval_id, passport_id, connection_id, tool, status_message, expires_at)
 			VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6)
@@ -125,9 +122,8 @@ func (t agentTasks) Create(ctx context.Context, in agents.NewTask) (agents.Task,
 	return task, nil
 }
 
-// Load answers this agent's live task. An expired one is already gone as far
-// as this server is concerned — the specification permits discarding it — so it
-// reads as absent rather than as a task nobody can use.
+// Load answers this agent's live task. The specification permits discarding an
+// expired one, so it reads as absent rather than as a task nobody can use.
 func (t agentTasks) Load(ctx context.Context, id ids.UUID) (agents.Task, error) {
 	passport, connection, err := taskOwnerOf(ctx, "reading")
 	if err != nil {

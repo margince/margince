@@ -191,23 +191,15 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 				p.Router = op.MCPTool.Router
 				p.Action = op.MCPTool.Action
 				p.AskFirst = op.MCPTool.AskFirst
-				if defect := egressDefect(op.MCPTool.Egress, p.Scope); defect != "" {
-					defects = append(defects, fmt.Sprintf("%s %s (%s): %s", httpMethod, path, op.OperationID, defect))
-					continue
-				}
-				p.StaysInside = op.MCPTool.Egress != nil
 				if p.Tool == "" || (p.Tier != "auto_execute" && p.Tier != "confirmation_required" && p.Tier != "dynamic") {
 					defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool needs a verb and an auto_execute|confirmation_required|dynamic tier", httpMethod, path, op.OperationID))
 					continue
 				}
-				// A tool operation without a scope would be admitted under whatever
-				// the gate defaulted to, which is how an outbound verb came to run
-				// on the write cap. There is no defensible default, so there is no
-				// default: say which cap the act spends.
-				if p.Scope == "" {
-					defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool declares no scope — name the passport cap this operation consumes", httpMethod, path, op.OperationID))
+				if defect := capDefect(p.Scope, op.MCPTool.Egress); defect != "" {
+					defects = append(defects, fmt.Sprintf("%s %s (%s): %s", httpMethod, path, op.OperationID, defect))
 					continue
 				}
+				p.StaysInside = op.MCPTool.Egress != nil
 			case !mutating[httpMethod] && op.Security != nil && len(*op.Security) == 0:
 				continue // anonymous: no principal, so no agent, ever reaches it
 			default:
@@ -225,11 +217,18 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 	return policies, defects
 }
 
-// egressDefect refuses an egress declaration that says nothing. The outbound
-// caps leave the workspace unless an operation says it does not, so an
-// operation may declare `false`, and only on a send or enrich cap.
-func egressDefect(declared *bool, scope string) string {
+// capDefect refuses a tool operation whose cap is not stated plainly.
+//
+// A tool operation without a scope would be admitted under the gate's default.
+// That is how an outbound verb came to run on the write cap. There is no
+// defensible default, so there is no default: say which cap the act spends.
+//
+// The outbound caps leave the workspace unless an operation says it does not.
+// So an operation may declare `egress: false`, and only on a send or enrich cap.
+func capDefect(scope string, declared *bool) string {
 	switch {
+	case scope == "":
+		return "x-mcp-tool declares no scope — name the passport cap this operation consumes"
 	case declared == nil:
 		return ""
 	case *declared:

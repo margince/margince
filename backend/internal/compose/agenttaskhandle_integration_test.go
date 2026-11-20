@@ -32,8 +32,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// asPassport binds an agent principal presenting one passport — what taskOwnerOf
-// reads to decide whose handle this is.
+// asPassport binds an agent principal presenting one passport, which
+// taskOwnerOf reads to decide whose handle this is.
 func asPassport(e *integration.Env, passport ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())

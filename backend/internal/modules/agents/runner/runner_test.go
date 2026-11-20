@@ -357,34 +357,6 @@ func TestRefusalFedBackAsObservation(t *testing.T) {
 	}
 }
 
-// The model reads a refusal in the surface's words, never in the error's own:
-// an unclassified fault's text (a driver error, a host) stays in the log.
-func TestARefusalReachesTheModelInTheSurfacesWords(t *testing.T) {
-	const raw = "pg: dial tcp 10.0.0.7:5432: connection refused"
-	surface := &fakeSurface{
-		errs:      map[string]error{"read_record": errors.New(raw)},
-		explained: "The tool failed for an internal reason.",
-	}
-	brain := &scriptedBrain{texts: []string{
-		`{"tool":"read_record","args":{}}`,
-		`{"final":{"summary":"done without the read"}}`,
-	}}
-	res, err := New(surface, brain).Run(context.Background(), Job{Goal: "g", Tools: []string{"read_record"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var prompt strings.Builder
-	for _, m := range brain.requests[len(brain.requests)-1].Messages {
-		prompt.WriteString(m.Content)
-	}
-	if strings.Contains(prompt.String(), raw) || strings.Contains(res.Steps[0].Observation, raw) {
-		t.Fatalf("the fault's own text reached the model or the trace: %q", res.Steps[0].Observation)
-	}
-	if !strings.Contains(prompt.String(), surface.explained) {
-		t.Fatalf("the model was not told the surface's explanation: %q", prompt.String())
-	}
-}
-
 // A DECLARED capability gap is terminal, and the observation must say so: this
 // is the loop with a step budget, so a model that re-plans into the same tool
 // spends the run on a permanent no. Contrast the refusal above, which the

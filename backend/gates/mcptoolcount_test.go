@@ -123,16 +123,12 @@ const clientToolCeiling = 100
 const publishedToolCeiling = 48
 
 // publishedCatalogByteCeiling is the most bytes the all-scope tools/list may
-// hold. A client reads the whole list before its first call, and a host that
-// loads every tool pays it again in each new conversation, so the count above
-// does not bound what the surface costs: a router keeps the count low and still
-// carries the text of every action it fronts.
+// hold. A client reads the whole list before its first call. A router keeps the
+// count above low and still carries the text of every action it fronts.
 //
-// Set a little above the 282 KB (about 70,000 tokens at four bytes a token) the
-// list held when the ceiling was set, so a copy fix fits and a new action that
-// brings its text does not. Raising it is a decision about what every assistant
-// reads before it acts, made in the pull request that needs it. A smaller list
-// by default is the lever that brings it down.
+// It sits a little above the 282 KB the list held when it was set, about 70,000
+// tokens. A copy fix fits; a new action's text does not. Raising it is a decision
+// made in the pull request that needs it.
 const publishedCatalogByteCeiling = 288_000
 
 type mcpInfoFile struct {

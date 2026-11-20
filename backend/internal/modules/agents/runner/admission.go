@@ -16,8 +16,8 @@ import (
 const AdmissionRefused = "refused"
 
 // refusalText is what the model reads about a refused call. The allowlist
-// refusal is the runner's own words; whatever the surface answered is told as
-// the MCP door tells it, so an unclassified fault's text never reaches a model.
+// refusal is the runner's own words. Anything else is told as the MCP door
+// tells it, so an unclassified fault's text never reaches a model.
 func (r *Runner) refusalText(tool string, err error) string {
 	if errors.Is(err, errOutsideAgentSpec) {
 		return err.Error()

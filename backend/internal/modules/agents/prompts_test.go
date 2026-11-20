@@ -113,8 +113,8 @@ func TestAPromptRefusesAMissingArgumentAndAnUnknownName(t *testing.T) {
 	}
 }
 
-// An unknown name is quoted back bounded and escaped, as tools/call quotes one,
-// so a caller cannot make the answer as long as its request or forge a line.
+// An unknown name is quoted back bounded and escaped, as tools/call quotes one.
+// So a caller cannot make the answer as long as its request, or forge a line.
 func TestAnUnknownPromptNameIsQuotedBackBounded(t *testing.T) {
 	s := promptDispatcher(t)
 	name := strings.Repeat("x", 20000) + "\nforged line"

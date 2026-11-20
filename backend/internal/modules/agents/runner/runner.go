@@ -40,8 +40,8 @@ type Invoker interface {
 	// tools an observation may be attributed to, which is about what already
 	// happened rather than what may be chosen next — see sourceVocabulary.
 	Specs() []mcp.ToolSpec
-	// Explain is what a caller of tool is told about err, in the words the MCP
-	// door uses: a fault no taxonomy recognises is one fixed sentence.
+	// Explain is what a caller of tool is told about err, in the MCP door's
+	// words. A fault no taxonomy recognises is one fixed sentence.
 	Explain(tool string, err error) string
 }
 

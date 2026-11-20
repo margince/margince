@@ -260,7 +260,7 @@ func TestExplainSendsAMissingModelToTheSettings(t *testing.T) {
 	}
 }
 
-// The registry answers the scheduled runner in the MCP door's words: a fault the
+// The registry answers the scheduled runner in the MCP door's words. A fault the
 // taxonomy does not know is withheld, and a governed refusal keeps its detail.
 func TestTheRegistryExplainsARefusalAsTheMCPDoorDoes(t *testing.T) {
 	r := NewRegistry(nil, nil)

@@ -9,8 +9,7 @@ package gates
 
 // The outgoing allowance counts what its name says: a call that sends something
 // out of the workspace. AI work that stays inside spends a change instead, even
-// on the enrich cap, and the agent guide's Egress column says what the served
-// list says.
+// on the enrich cap. The agent guide's Egress column says what the served list says.
 
 import (
 	"regexp"
