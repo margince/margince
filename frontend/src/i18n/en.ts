@@ -17856,10 +17856,9 @@ export const en = {
   "aiTasks.embeddingsEdit":
     "Search and retrieval has no thinking level or timeouts to set. Change its provider and model on the Embedding model row under Model tiers.",
   "workingHours.unsetTitle": "Not set yet",
-  "workingHours.unset":
-    "Customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.",
+  "workingHours.unset": "Guests are offered 09:00 to 17:00, Monday to Friday.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
-  "workingHours.narrowed": "Customers have fewer times to choose from.",
+  "workingHours.narrowed": "Guests have fewer times to choose from.",
   "workingHours.day.1": "Monday",
   "workingHours.day.2": "Tuesday",
   "workingHours.day.3": "Wednesday",
@@ -22857,6 +22856,7 @@ export const en = {
   "saveBar.save": "Save",
   "saveBar.discard": "Discard",
   "saveBar.unsaved": "Unsaved changes",
+  "saveBar.offered": "Save to make these yours.",
   "saveBar.invalid": "Fix the marked fields to save.",
   "privacy.typeErasePrompt": "Type this word to confirm:",
   "aiFigures.window.24h": "24 h",

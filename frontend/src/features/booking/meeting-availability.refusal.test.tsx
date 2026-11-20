@@ -99,12 +99,61 @@ describe("a refused save of the working hours", () => {
   });
 
   it("keeps a refusal no field here can hold on the bar", async () => {
-    await saveRefused("days", "choose at least one day you work");
+    await saveRefused("days", "choose at least one day");
 
-    expect(
-      await screen.findByText("choose at least one day you work"),
-    ).not.toBeNull();
+    expect(await screen.findByText("Choose at least one day.")).not.toBeNull();
     expect(screen.queryByText("Fix the marked fields to save.")).toBeNull();
     expect(screen.getByLabelText("Until")).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("retires the refusal once the hours are edited", async () => {
+    await saveRefused("end_time", "the working day must end after it starts");
+    await screen.findByText("The working day must end after it starts.");
+
+    await userEvent.setup().click(screen.getByLabelText("Sunday"));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Until")).not.toHaveAttribute(
+        "aria-invalid",
+      ),
+    );
+    expect(
+      screen.queryByText("The working day must end after it starts."),
+    ).toBeNull();
+  });
+});
+
+describe("hours the user never chose", () => {
+  it("offers them to be saved instead of calling them unsaved changes", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) return jsonResponse(meFixture({}));
+        return jsonResponse({ ...HOURS, chosen: false });
+      }),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <SavePageProvider>
+            <AvailabilityCard hoursOnly />
+            <PageSaveBar />
+          </SavePageProvider>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findAllByText("Save to make these yours."),
+    ).not.toHaveLength(0);
+    expect(screen.queryByText("Unsaved changes")).toBeNull();
+    expect(screen.queryByText(/installation timezone/i)).toBeNull();
+
+    await userEvent.setup().click(screen.getByLabelText("Saturday"));
+    expect(
+      (await screen.findAllByText("Unsaved changes")).length,
+    ).toBeGreaterThan(0);
   });
 });

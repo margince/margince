@@ -17550,7 +17550,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm kiếm và truy xuất không có mức suy nghĩ hay thời gian chờ để thiết lập. Đổi nhà cung cấp và mô hình ở dòng Mô hình embedding trong Cấp mô hình.",
   "workingHours.unsetTitle": "Chưa thiết lập",
   "workingHours.unset":
-    "Khách hàng được đề xuất khung 09:00 đến 17:00, thứ Hai đến thứ Sáu, theo múi giờ của bản cài đặt.",
+    "Khách hàng được đề xuất khung 09:00 đến 17:00, thứ Hai đến thứ Sáu.",
   "workingHours.narrowedTitle": "Ít giờ nhận đặt lịch hơn",
   "workingHours.narrowed": "Khách hàng có ít khung giờ để chọn hơn.",
   "workingHours.day.1": "Thứ Hai",
@@ -22565,6 +22565,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "saveBar.save": "Lưu",
   "saveBar.discard": "Hủy thay đổi",
   "saveBar.unsaved": "Thay đổi chưa lưu",
+  "saveBar.offered": "Lưu để giữ các giá trị này.",
   "saveBar.invalid": "Sửa các ô được đánh dấu để lưu.",
   "privacy.typeErasePrompt": "Nhập từ này để xác nhận:",
   "aiFigures.window.24h": "24 giờ",

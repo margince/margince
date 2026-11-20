@@ -13,7 +13,7 @@ import {
   useState,
 } from "react";
 import { translate, useLocale, useT } from "../i18n";
-import { problemFieldErrorsOf } from "../lib/problem";
+import { problemFieldErrorsOf, problemFieldSentencesOf } from "../lib/problem";
 import { ActionRow } from "./actionrow";
 import { Button } from "./atoms";
 import { ErrorLine } from "./errorline";
@@ -287,6 +287,18 @@ export function useFieldFaults<
   return [fieldFaults, setRoot];
 }
 
+// A refusal naming fields reads as sentences of its own, opening in capitals,
+// not as the server's lower-case fragment.
+function RefusedLine({ error }: Readonly<{ error: unknown }>) {
+  const { locale } = useLocale();
+  const sentences = [...problemFieldSentencesOf(error, locale).values()];
+  return sentences.length > 0 ? (
+    <ErrorLine>{sentences.join(" ")}</ErrorLine>
+  ) : (
+    <ErrorLine error={error} />
+  );
+}
+
 /**
  * The one Save of a settings page, pinned to the foot of the view. It is drawn
  * only while some card on the page holds a draft.
@@ -295,8 +307,10 @@ export function PageSaveBar() {
   const t = useT();
   const page = useSavePage();
   if (!page?.open) return null;
+  // A default shown as the answer is not an edit: it asks to be kept.
+  const caption = page.dirty ? t("saveBar.unsaved") : t("saveBar.offered");
   return (
-    <SaveBar label={t("saveBar.unsaved")}>
+    <SaveBar label={caption}>
       <ActionRow
         primary={
           <Button
@@ -317,7 +331,7 @@ export function PageSaveBar() {
           </Button>
         }
       >
-        <p className="t-caption save-bar-caption">{t("saveBar.unsaved")}</p>
+        <p className="t-caption save-bar-caption">{caption}</p>
         {/* A discard that lands while the save runs would race it. */}
         <Button variant="ghost" disabled={page.pending} onClick={page.discard}>
           {t("saveBar.discard")}
@@ -326,7 +340,7 @@ export function PageSaveBar() {
       {page.errorPlaced ? (
         <ErrorLine>{t("saveBar.invalid")}</ErrorLine>
       ) : (
-        <ErrorLine error={page.error} />
+        <RefusedLine error={page.error} />
       )}
     </SaveBar>
   );

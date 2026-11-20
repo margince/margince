@@ -156,9 +156,14 @@ function useAvailabilityDraft(
     setOther(kept);
     if (next) setDraftRules({ ...next, [field]: value });
   };
+  // A refusal describes the value it refused, so the next edit retires it.
+  const editHours = (value: WorkingHours) => {
+    save.reset();
+    setDraftHours(value);
+  };
   return {
     draftHours,
-    setDraftHours,
+    setDraftHours: editHours,
     next,
     other,
     setOther,

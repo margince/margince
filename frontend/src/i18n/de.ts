@@ -18026,7 +18026,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Suche und Abruf haben keine Denkstufe und keine Zeitlimits. Anbieter und Modell änderst du in der Zeile „Embedding-Modell“ unter Modellstufen.",
   "workingHours.unsetTitle": "Noch nicht festgelegt",
   "workingHours.unset":
-    "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, in der Zeitzone der Installation angeboten.",
+    "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, angeboten.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
   "workingHours.narrowed": "Für Buchungen stehen weniger Zeiten zur Auswahl.",
   "workingHours.day.1": "Montag",
@@ -23186,6 +23186,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "saveBar.save": "Speichern",
   "saveBar.discard": "Verwerfen",
   "saveBar.unsaved": "Ungespeicherte Änderungen",
+  "saveBar.offered": "Speichere, damit diese Werte deine werden.",
   "saveBar.invalid": "Korrigiere die markierten Felder, um zu speichern.",
   "privacy.typeErasePrompt": "Gib zur Bestätigung dieses Wort ein:",
   "aiFigures.window": "Zeitraum",
