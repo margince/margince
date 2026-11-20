@@ -3,7 +3,11 @@
 
 package owndomain
 
-import "testing"
+import (
+	"testing"
+
+	"golang.org/x/net/idna"
+)
 
 // CAP-AC1.3c: a registered domain covers its subdomains and no lookalike, and
 // both spellings of an internationalized domain are one value. Exact equality
@@ -165,5 +169,24 @@ func TestParseDomainRefusesWhatIsNotAHost(t *testing.T) {
 	}
 	if _, err := ParseDomain("日本語ひらがな.jp"); err != nil {
 		t.Errorf("Han and kana in one label are one script group: %v", err)
+	}
+}
+
+func TestParseDomainChecksTheDecodedLabel(t *testing.T) {
+	cyrillicA, err := idna.Lookup.ToASCII("аpple.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, in := range map[string]string{
+		"mixed script written as punycode": cyrillicA,
+		"right-to-left override":           "ac‮me.com",
+		"zero-width joiner":                "ac‍me.com",
+		"zero-width space":                 "ac​me.com",
+		"unreadable punycode":              "xn--acme-ik2d.com",
+		"punycode of a bidi control":       "xn--acme-yd7a.com",
+	} {
+		if got, err := ParseDomain(in); err == nil {
+			t.Errorf("%s: ParseDomain(%q) = %q, want a refusal", name, in, got)
+		}
 	}
 }

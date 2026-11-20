@@ -22,15 +22,28 @@ func ParseDomain(raw string) (values.Domain, error) {
 	if err != nil {
 		return values.Domain{}, err
 	}
-	host := parsed.String()
-	if mixedScript(host) {
-		return values.Domain{}, malformedDomain()
-	}
-	ascii, err := idna.Lookup.ToASCII(host)
+	ascii, err := idna.Lookup.ToASCII(parsed.String())
 	if err != nil {
 		return values.Domain{}, malformedDomain()
 	}
+	// Checked on the decoded form, so a punycode spelling cannot hide a
+	// look-alike label or an invisible character.
+	decoded, err := idna.Lookup.ToUnicode(ascii)
+	if err != nil || !plainLetters(decoded) || mixedScript(decoded) {
+		return values.Domain{}, malformedDomain()
+	}
 	return values.ParseDomain(ascii)
+}
+
+// plainLetters admits only letters, marks, digits, hyphens and dots, which
+// leaves out bidi controls, zero-width characters and other format characters.
+func plainLetters(host string) bool {
+	for _, r := range host {
+		if r != '-' && r != '.' && !unicode.IsLetter(r) && !unicode.IsMark(r) && !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
 }
 
 func malformedDomain() error {

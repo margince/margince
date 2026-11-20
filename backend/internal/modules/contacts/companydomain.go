@@ -128,7 +128,11 @@ func companyHost(website string) (string, error) {
 	if host == "" {
 		return "", fmt.Errorf("contacts: company website %q has no host", website)
 	}
-	return owndomain.Fold(host), nil
+	domain, err := owndomain.ParseDomain(host)
+	if err != nil {
+		return "", fmt.Errorf("contacts: company website %q has no valid host: %w", website, err)
+	}
+	return domain.String(), nil
 }
 
 // companyDomainWouldChange reports whether host differs from the anchor's

@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -403,7 +402,11 @@ func coldStartHost(rawURL string) (string, error) {
 	if err != nil || parsed.Host == "" {
 		return "", fmt.Errorf("contacts: coldstart source url %q has no host", rawURL)
 	}
-	return owndomain.Fold(strings.TrimPrefix(strings.ToLower(parsed.Hostname()), "www.")), nil
+	host, err := owndomain.ParseDomain(parsed.Hostname())
+	if err != nil {
+		return "", fmt.Errorf("contacts: coldstart source url %q has no valid host: %w", rawURL, err)
+	}
+	return host.String(), nil
 }
 
 // UnmarshalColdStartFields decodes the staged proposal's field array —
