@@ -65,7 +65,7 @@ func TestADealHookCanKeepAMailOffTheOnlyOpenDeal(t *testing.T) {
 
 // A deal hook names a deal. The link lands and its audit evidence names the
 // unit and the reason. A colleague then declines it: the hook cannot bring the
-// deal back, and the next capture files the other deal by core's own rule.
+// deal back, and the next capture leaves the mark as it was.
 func TestADealHookDealDoesNotSurviveAColleaguesDecline(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -91,12 +91,12 @@ func TestADealHookDealDoesNotSurviveAColleaguesDecline(t *testing.T) {
 	}
 	// The decline keeps the link and marks it unrelated.
 	wantMark(t, e, "hook2@acme.example", chosen, "unrelated/human")
-	// Core's own rule files the other deal. The declined one stays marked.
+	// The next capture does not bring the hook's deal back.
 	env.sync(t, raw)
-	if !slices.Contains(dealsOf(t, e, "hook2@acme.example"), operations) {
-		t.Fatal("the mail was not filed on the other deal")
-	}
 	wantMark(t, e, "hook2@acme.example", chosen, "unrelated/human")
+	if slices.Contains(dealsOf(t, e, "hook2@acme.example"), operations) {
+		t.Fatal("the hook's declined deal moved the mail onto the other one")
+	}
 }
 
 // A parties hook that names a company core did not derive moves the rule to
