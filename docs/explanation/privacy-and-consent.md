@@ -404,8 +404,8 @@ reason that stands alone. A waiver with no reason, or an out-of-date one, fails 
 
 ## What an erasure reaches in the AI telemetry, and what it does not
 
-With payload capture turned on (`ai.capture_payloads`, opt-in), `ai_call_payload` holds the request
-and response of each model call, except a task or the embed lane that the contract marks `no_payload`. For a reading of a meeting transcript, that request **is** the
+With payload capture on (`ai.capture_payloads`, opt-in), `ai_call_payload` holds each model call's
+request and response. A task or embed call that the contract marks `no_payload` keeps none. For a reading of a meeting transcript, that request **is** the
 transcript. That makes it the longest copy of someone's words this product holds.
 
 An erasure reaches that table two ways, and they cover different calls.

@@ -16,10 +16,11 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // aiModuleDir is the one package that builds a traced Call: its callStore is
@@ -56,7 +57,7 @@ func TestEveryTracedPayloadIsGatedByTheContract(t *testing.T) {
 
 func parseAIModule(t *testing.T) (*token.FileSet, []*ast.File) {
 	t.Helper()
-	entries, err := os.ReadDir(aiModuleDir)
+	entries, err := gatekit.ReadDir(aiModuleDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", aiModuleDir, err)
 	}
@@ -67,7 +68,12 @@ func parseAIModule(t *testing.T) (*token.FileSet, []*ast.File) {
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(aiModuleDir, name), nil, 0)
+		path := filepath.Join(aiModuleDir, name)
+		src, err := gatekit.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		file, err := parser.ParseFile(fset, path, src, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", name, err)
 		}

@@ -10,8 +10,8 @@ uploads, `security.txt`, rates and sales reporting. Which settings turn on which
 `ai.capture_payloads` is off by default. To turn it on stores the whole request and response of the
 model in `ai_call_payload`. For a reading of a meeting transcript, that request *is* the transcript:
 the most complete copy of the words of someone that this product holds. A task that declares
-`no_payload` in `backend/api/ai-tasks.yaml` keeps nothing there, and neither does the embed lane,
-which sends the subject and body of a mail to be indexed for search.
+`no_payload` in `backend/api/ai-tasks.yaml` keeps nothing there. Nor does the embed lane, which
+sends the subject and body of a mail to be indexed for search.
 
 The `ai_call_payload` / `content` row in `retention_policy` limits that. Bootstrap sets it to 365
 days and `enabled`, so the retention engine erases what is older from the first sweep. The number is

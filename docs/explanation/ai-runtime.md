@@ -357,8 +357,8 @@ Every attempt writes one `ai_call` row (migration `0100`), not one row per final
   fingerprint and size that shaped the prompt. So "what did the model know about us" can be answered per
   attempt.
 - Embedding calls are traced too. The privacy retention check removes their rows after 90 days. They
-  keep no payload, whatever `ai.capture_payloads` says: the contract declares the `embed` workload
-  `no_payload`, because an input is record text, such as the subject and body of a mail.
+  keep no payload, whatever `ai.capture_payloads` says. The contract marks `embed` as `no_payload`,
+  because an input is record text, such as the subject and body of a mail.
 
 The write path is the standard one (`ai_call` + `ai_call_payload` in one `WithWorkspaceTx`). So a trace
 is written and audited like any domain row. See [write-backbone.md](write-backbone.md).
