@@ -15,7 +15,7 @@ Also called: who knows this client, warm path, relationship map, colleague conne
 
 ## Who here knows a contact
 
-A contact's **Relationships** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact." The tab then leaves out **Who knows {name}** and the introduction steps, and keeps **Record an introduction**.
+A contact's **Relationships** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact." The tab then leaves out the introduction steps and keeps **Record an introduction**. It also leaves out **Who knows {name}** when the contact would stand alone on its map. That part stays, and says so, when the colleagues who wrote with them are hidden from you.
 
 The tab reads in three parts, each with a one-line answer: **Way in**, **Who knows {name}** and **Progress**. Way in shows the best route with the other routes under it, and the links at the top take you to each part. Progress holds the introduction steps and one dated list of recent changes and earlier asks, then your open asks. The **Research** tab has three parts too: **To check**, **Sources** and **Record keeping**. To check holds what Margince read from mail and pages, for you to confirm, correct or dismiss. Sources has **Research public sources**, and Record keeping holds the details, permissions and lists.
 

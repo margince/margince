@@ -271,7 +271,7 @@ Also called: publish a contact, make public, make private.
 
 ## Who can see this record
 
-A contact and a company each show the answer under their own name, as one chip. It reads **All users in the company** or **Only the owner**, as the choice behind it does. Pressing it opens one sentence that says who can see the record, the choice that changes it, and **Manage access**:
+A contact and a company each show the answer under their own name, as one chip. It reads **All users in the company** or **Only the owner**, as the choice behind it does. Pressing it opens one sentence that says who can see the record, and **Manage access**. If you may change the record, the choice that changes it is there too. The sentence reads:
 
 - **Only the owner**, read by its owner: "Only you and the users or teams it was shared with can see this contact."
 - **Only the owner**, read by anyone else who can open it, naming the owner: "Private to Mira Voss. You can see this contact because it was shared with you or your team." A private record reaches nobody else, an admin included; a share is the only way in.
