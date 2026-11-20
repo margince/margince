@@ -5,9 +5,9 @@ import {
 } from "../format/activitywhen";
 import { middayInstant, sameCalendarDay } from "../format/calendarday";
 import {
+  formatAgreedClock,
   formatDate,
   formatDateTime,
-  formatDue,
   formatMoney,
   formatNumber,
 } from "../format/format";
@@ -312,9 +312,8 @@ export function whenText(
 
 // A task with an agreed time reads like any other moment: the time alone
 // today, and the date and time otherwise. When the agreed zone is not the
-// reader's, its clock shows too, as `formatDue` prints it in the task's details.
-// A task due by its day has no hour to print. Due today, the "due today" reason
-// says it.
+// reader's, the agreed clock and its zone follow the reader's time. A task due
+// by its day has no hour to print. Due today, the "due today" reason says it.
 function taskWhen(
   item: WorklistItem,
   dueAt: string,
@@ -327,11 +326,13 @@ function taskWhen(
 ): string | null {
   if (item.due_has_time === true) {
     const intent = item.due_intent;
-    const when =
-      intent && intent.timezone !== viewer
-        ? formatDue(dueAt, true, locale, viewer, intent)
-        : momentText(dueAt, "instant", locale, viewer, now);
-    return t(key, { when });
+    const when = momentText(dueAt, "instant", locale, viewer, now);
+    return t(key, {
+      when:
+        intent && intent.timezone !== viewer
+          ? `${when} (${formatAgreedClock(dueAt, intent, locale, viewer)})`
+          : when,
+    });
   }
   return sameCalendarDay(new Date(dueAt), now, record)
     ? null

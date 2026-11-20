@@ -290,6 +290,36 @@ export const ATaskNobodyOwnsBeingPutDown: Story = {
   play: openTheRowMenu,
 };
 
+// A task with a time agreed on another zone's clock. The row reads the time on
+// the reader's clock, then the agreed clock and its zone.
+export const ATaskAgreedInAnotherZone: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      occurred_precision: "instant",
+      id: "01a05500-0000-7000-8000-0000000000a2",
+      source: "task",
+      category: "tasks",
+      level: 3,
+      consequence: "task_slips",
+      title: "Call Turbinenbau about the retrofit",
+      due_at: "2026-09-02T15:00:00Z",
+      due_has_time: true,
+      due_intent: {
+        wall_clock: "2026-09-02T11:00",
+        timezone: "America/New_York",
+      },
+      because: [{ kind: "due_today" }],
+      actions: [],
+      dispositions: ["snooze"],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
 // The same row on a phone.
 //
 // The state the old mobile test could not see: above this breakpoint the row is
