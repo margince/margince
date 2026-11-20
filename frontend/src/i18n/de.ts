@@ -2749,6 +2749,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
   "history.field.first_name": "Vorname",
+  "history.field.greeting_register": "Anrede",
   "history.field.full_name": "Name",
   "history.field.win_probability": "Abschlusschance",
   "history.field.stage_id": "Phase",
@@ -3828,6 +3829,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ob sich das senden lässt, ist noch nicht bekannt. Ein Neuladen der Seite prüft es erneut.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
+  "consent.confirmationPending":
+    "Wartet auf die Bestätigung per E-Mail. Der Link gilt bis {date}.",
   "consent.noPurposes":
     "Dieses Unternehmen erfasst noch keine Einwilligungszwecke.",
   "consent.defaultDeny":
@@ -6685,6 +6688,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Pipeline dieses Deals ist stillgelegt, daher sind ihre Phasen schreibgeschützt. Stelle die Pipeline in den Einstellungen wieder her, um den Deal zu verschieben.",
   "deal.stageOtherPipeline":
     "Diese Phase gehört zu einer anderen Pipeline. Wähle eine Phase der Pipeline dieses Deals.",
+  "deal.movePipeline": "In Pipeline verschieben",
+  "deal.movePipelinePick": "Pipeline wählen",
+  "deal.movePipelineDone": "Nach {pipeline} verschoben.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
@@ -7462,6 +7468,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.firstName": "Vorname",
   "create.lastName": "Nachname",
   "create.contactTitle": "Jobtitel",
+  "create.greetingRegister": "Anrede in Nachrichten",
+  "create.greetingRegisterHint": "Entwürfe an diesen Kontakt beginnen so.",
+  "create.greetingRegister.unset": "Margince entscheiden lassen",
+  "create.greetingRegister.formal": "Förmlich, mit Nachnamen",
+  "create.greetingRegister.familiar": "Vertraut, mit Vornamen",
   "create.acquisitionSource": "Herkunft des Kontakts",
   "create.acquisitionSourceHint":
     "Diese Angabe erscheint auf der Datenschutzseite des Kontakts.",
@@ -18798,6 +18809,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "embedreindex.unbound":
     "Es gibt keinen Suchindex zum Neuaufbauen, da kein Embedding-Modell zugeordnet ist.",
   "embedreindex.unboundLink": "KI-Einstellungen öffnen",
+  "connectAi.first": "Zuerst eine KI verbinden",
+  "connectAi.link": "KI-Einstellungen öffnen",
   "embedreindex.statusLabel": "Indexstatus",
   "embedreindex.reindexLabel": "Änderungen neu indexieren",
   "embedreindex.reindexHelp":

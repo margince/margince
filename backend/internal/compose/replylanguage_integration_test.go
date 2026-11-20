@@ -220,7 +220,7 @@ func TestTheAddresseesMailTheDrafterMayNotReadDoesNotDecideTheLanguage(t *testin
 	}
 }
 
-func TestAnOutboundReplyFollowsTheContactItIsDeliveredToNotTheGreetedSender(t *testing.T) {
+func TestAnOutboundReplyFollowsTheContactItIsDeliveredToAndGreetsThem(t *testing.T) {
 	o := setupOwed(t)
 	e := o.e
 	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
@@ -232,9 +232,9 @@ func TestAnOutboundReplyFollowsTheContactItIsDeliveredToNotTheGreetedSender(t *t
 	// such a seat's participant row with both the user and the contact.
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, user_id, contact_id) VALUES ($1, 'from', $2, $3)`,
 		anchor, e.Rep1, seat)
-	recipient, err := e.Activities.ReplyRecipientFor(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), ids.From[ids.ActivityKind](anchor))
-	if err != nil || recipient.FullName != "Sofia Meier" {
-		t.Fatalf("precondition: the greeting names %+v (err %v), want the seat's contact", recipient, err)
+	recipient, err := e.Activities.ReplyRecipientFor(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), ids.From[ids.ActivityKind](anchor), nil)
+	if err != nil || recipient.FullName != "Dietmar Kunde" {
+		t.Fatalf("the greeting names %+v (err %v), want the buyer the reply is delivered to and never the seat's own contact", recipient, err)
 	}
 	if got := replyLangDraft(t, e, anchor); got != "de" {
 		t.Fatalf("output language = %q, want the German of the buyer the reply is delivered to", got)

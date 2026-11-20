@@ -71,3 +71,28 @@ func TestTheSurvivorshipPatchFollowsThePreference(t *testing.T) {
 		t.Errorf("an empty title was not filled: %v", after)
 	}
 }
+
+func TestTheSurvivorshipPatchKeepsOrFillsTheGreetingRegister(t *testing.T) {
+	t.Parallel()
+	source := ids.From[ids.ContactKind](ids.NewV7())
+	formal, familiar := crmcontracts.ContactGreetingRegisterFormal, crmcontracts.ContactGreetingRegisterFamiliar
+	contact := func(register *crmcontracts.ContactGreetingRegister) crmcontracts.Contact {
+		return crmcontracts.Contact{FullName: "Ann Lee", GreetingRegister: register}
+	}
+	for name, tc := range map[string]struct {
+		survivor, merged *crmcontracts.ContactGreetingRegister
+		want             any
+	}{
+		"an empty register takes the duplicate's":    {nil, &formal, "formal"},
+		"a set register stands over the duplicate's": {&familiar, &formal, nil},
+		"nothing set on either changes nothing":      {nil, nil, nil},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := buildSurvivorshipPatch(contact(tc.survivor), contact(tc.merged), source, nil).After()[fieldGreetingRegister]
+			if got != tc.want {
+				t.Errorf("greeting_register after the merge = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

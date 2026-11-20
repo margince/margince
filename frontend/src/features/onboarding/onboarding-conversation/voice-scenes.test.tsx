@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode, RefObject } from "react";
@@ -89,8 +90,21 @@ function summaryOf(totalWords: number): CorpusSummary {
 // half: the percentage has to move on its own, honestly, and stop moving for
 // readers who asked it to.
 
+// One client for the test, so a rerender keeps the tree it replaces.
+const client = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+function providers(ui: ReactNode) {
+  return (
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>
+  );
+}
+
 function withLocale(ui: ReactNode) {
-  return render(<LocaleProvider initial="en">{ui}</LocaleProvider>);
+  return render(providers(ui));
 }
 
 // jsdom's own matchMedia always answers false; the reduced-motion arm needs
@@ -109,6 +123,7 @@ function stubReducedMotion(reduce: boolean) {
 }
 
 afterEach(() => {
+  client.clear();
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -291,7 +306,7 @@ describe("the collect scene's corpus floor meter", () => {
     expect(document.querySelector('[role="status"]')?.textContent).toBe("");
 
     rerender(
-      <LocaleProvider initial="en">
+      providers(
         <VoiceCollectScene
           summary={summaryOf(VOICE_MIN_WORDS)}
           manifest={[]}
@@ -303,8 +318,8 @@ describe("the collect scene's corpus floor meter", () => {
           canBuild
           startPending={false}
           startError={null}
-        />
-      </LocaleProvider>,
+        />,
+      ),
     );
 
     const ready = `${VOICE_MIN_WORDS} words: enough to build. More words improve it.`;
@@ -376,9 +391,7 @@ describe("VoiceBuildScene", () => {
     const beforeStage = pct();
 
     rerender(
-      <LocaleProvider initial="en">
-        <VoiceBuildScene stage="extract" summary={null} sources={1} />
-      </LocaleProvider>,
+      providers(<VoiceBuildScene stage="extract" summary={null} sources={1} />),
     );
     // extract's ceiling is 2/5 = 40%; the very next frame must not already
     // read 40 — the display keeps closing the gap, it does not teleport.
@@ -481,5 +494,37 @@ describe("VoiceResultScene", () => {
     expect(onRevise).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole("button", { name: "That is me" }));
     expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("VoiceCollectScene with no AI connected", () => {
+  it("says Connect an AI first with the settings link and holds the build press", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              complete: false,
+              steps: [
+                { step: "ai_models", configured: false, blocking: false },
+              ],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+      ),
+    );
+    const onBuild = vi.fn();
+    collectScene({ canBuild: true, onBuild });
+
+    expect(
+      await screen.findByRole("link", { name: "Open AI settings" }),
+    ).toBeTruthy();
+    await userEvent
+      .setup()
+      .click(
+        screen.getByRole("button", { name: en["ob.conv.voice.buildChip"] }),
+      );
+    expect(onBuild).not.toHaveBeenCalled();
   });
 });

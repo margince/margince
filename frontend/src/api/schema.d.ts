@@ -4593,6 +4593,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/move-pipeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move an open deal to another pipeline, onto its first open stage.
+         * @description Puts the deal on the first open stage of a live pipeline other than its own. A caller
+         *     cannot choose the stage. It is a stage advance in every other way: it writes one
+         *     `deal_stage_history` row and one `advance_stage` audit row, emits `deal.stage_changed`,
+         *     sets the probability from the new stage, and the legal review gate and the object and row
+         *     permissions of an advance hold. The stage the deal leaves keeps its exit criteria; only a
+         *     required legal review blocks a move, and the first open stage has no gated stage before
+         *     it. The history row keeps no stage positions, because the positions of two pipelines do
+         *     not compare. The pipeline row is locked shared, so a retirement or a reorder waits for
+         *     the move.
+         *
+         *     A stale `If-Match` answers 409. A won or lost deal answers 422 `deal_closed`, the
+         *     pipeline the deal is in answers 422 `same_pipeline`, a retired pipeline answers 422
+         *     `pipeline_retired`, and a pipeline with no open stage answers 422
+         *     `pipeline_has_no_open_stage`.
+         */
+        post: operations["moveDealPipeline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/move-pipeline/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put a deal back on the pipeline and stage its last move left.
+         * @description Undoes the deal's latest stage move when it was a move to another pipeline. The source
+         *     pipeline and stage come from that move's `deal_stage_history` row, and the undo writes its
+         *     own row with `reversal_of` naming it. Anything that moved the deal since, an earlier undo
+         *     included, answers 422 `move_not_undoable`. A source pipeline retired since answers 422
+         *     `pipeline_retired`. A stale `If-Match` answers 409.
+         */
+        post: operations["undoDealPipelineMove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/close-day": {
         parameters: {
             query?: never;
@@ -34367,6 +34430,11 @@ export interface components {
              */
             readonly created_from_activity_id?: string | null;
             /**
+             * @description How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+             * @enum {string|null}
+             */
+            greeting_register?: "formal" | "familiar" | null;
+            /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
              */
@@ -34791,6 +34859,11 @@ export interface components {
         };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdateContactRequest: {
+            /**
+             * @description Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+             * @enum {string|null}
+             */
+            greeting_register?: "formal" | "familiar" | null;
             /**
              * @description Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
              * @enum {string|null}
@@ -36168,6 +36241,11 @@ export interface components {
             /** @description Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write. */
             attachable: boolean;
             title?: string | null;
+            /**
+             * @description The register a rep set for opening a message to this contact; null when none is set.
+             * @enum {string|null}
+             */
+            greeting_register?: "formal" | "familiar" | null;
             /** @description A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed. */
             provider_title?: string | null;
             /**
@@ -41245,6 +41323,13 @@ export interface components {
              * @description The calendar day the deal closed, in the installation's zone. Not after today.
              */
             closed_on: string;
+        };
+        MoveDealPipelineRequest: {
+            /**
+             * Format: uuid
+             * @description The live pipeline to move the deal to. It must differ from the deal's own.
+             */
+            pipeline_id: string;
         };
         AdvanceDealRequest: {
             /**
@@ -55213,6 +55298,11 @@ export interface components {
             lawful_basis?: string | null;
             /** Format: date-time */
             double_opt_in_confirmed_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
+             */
+            confirmation_pending_until?: string | null;
             /** Format: date-time */
             updated_at?: string | null;
         };
@@ -68356,6 +68446,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description A scan would have to be queued and no AI model is connected (`code: ai_not_configured`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -68847,6 +68946,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            /** @description No AI model is connected (`code: ai_not_configured`). Nothing was queued. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description No URL to read (no override, company has no domain). */
             422: {
                 headers: {
@@ -70865,6 +70973,84 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    moveDealPipeline: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveDealPipelineRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal on its new stage, and the probability the move set. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealAdvanced"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    undoDealPipelineMove: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal back on its earlier stage. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealAdvanced"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -74980,6 +75166,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            /** @description No AI model is connected (`code: ai_not_configured`). Nothing was queued. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description This activity carries no transcript, or its transcript is blank or too long for one reading. */
             422: {
                 headers: {
@@ -76867,11 +77062,11 @@ export interface operations {
                         booking: "pending" | "confirmed" | "rescheduling" | "canceling" | "canceled" | "needs_attention";
                         invitation?: components["schemas"]["MeetingInvitation"];
                         /**
-                         * @description `not_requested` — the form carried no tick. `pending_confirmation` — the question
-                         *     was queued for delivery and the grant waits on the subject answering it; queued
-                         *     is not delivered. `not_asked` — the question could not be put, or this
-                         *     installation has no lane to put it on; the booking stands and no subscription
-                         *     mail follows.
+                         * @description `not_requested` — the form carried no tick. `pending_confirmation` — the tick was
+                         *     accepted. If this address can receive our mail, a confirmation link is on its way,
+                         *     and nothing is subscribed until it is opened. The answer is the same whatever the
+                         *     address's state, so it reveals nothing about it. `not_asked` — this installation
+                         *     has no mail lane, so no subscription mail follows. The booking stands in every case.
                          * @enum {string}
                          */
                         marketing: "not_requested" | "pending_confirmation" | "not_asked";
@@ -102690,6 +102885,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description No AI model is connected (`code: ai_not_configured`). Nothing was queued. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
             /** @description The process role wired no model path or no job runner — declared absent, never a silent no-op. */
             501: {

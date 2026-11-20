@@ -5932,6 +5932,24 @@ func (e Company360ContactConsent) Valid() bool {
 	}
 }
 
+// Defines values for Company360ContactGreetingRegister.
+const (
+	Company360ContactGreetingRegisterFamiliar Company360ContactGreetingRegister = "familiar"
+	Company360ContactGreetingRegisterFormal   Company360ContactGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the Company360ContactGreetingRegister enum.
+func (e Company360ContactGreetingRegister) Valid() bool {
+	switch e {
+	case Company360ContactGreetingRegisterFamiliar:
+		return true
+	case Company360ContactGreetingRegisterFormal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Company360ContactTitleSource.
 const (
 	Company360ContactTitleSourceCanonical Company360ContactTitleSource = "canonical"
@@ -7990,6 +8008,24 @@ func (e ConsumerMailDomainKind) Valid() bool {
 	case ConsumerMailDomainKindExtra:
 		return true
 	case ConsumerMailDomainKindNever:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactGreetingRegister.
+const (
+	ContactGreetingRegisterFamiliar ContactGreetingRegister = "familiar"
+	ContactGreetingRegisterFormal   ContactGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the ContactGreetingRegister enum.
+func (e ContactGreetingRegister) Valid() bool {
+	switch e {
+	case ContactGreetingRegisterFamiliar:
+		return true
+	case ContactGreetingRegisterFormal:
 		return true
 	default:
 		return false
@@ -25657,6 +25693,24 @@ func (e UpdateCompanyRequestVisibility) Valid() bool {
 	}
 }
 
+// Defines values for UpdateContactRequestGreetingRegister.
+const (
+	UpdateContactRequestGreetingRegisterFamiliar UpdateContactRequestGreetingRegister = "familiar"
+	UpdateContactRequestGreetingRegisterFormal   UpdateContactRequestGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the UpdateContactRequestGreetingRegister enum.
+func (e UpdateContactRequestGreetingRegister) Valid() bool {
+	switch e {
+	case UpdateContactRequestGreetingRegisterFamiliar:
+		return true
+	case UpdateContactRequestGreetingRegisterFormal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateContactRequestRelationshipMark.
 const (
 	UpdateContactRequestRelationshipMarkVendorMarketing UpdateContactRequestRelationshipMark = "vendor_marketing"
@@ -41172,9 +41226,12 @@ type Company360Contact struct {
 	ContactId openapi_types.UUID                  `json:"contact_id"`
 
 	// DealRoles This contact's stakeholder roles on the account's deals (champion, economic_buyer, …).
-	DealRoles    []Company360DealRole `json:"deal_roles"`
-	FullName     string               `json:"full_name"`
-	PrimaryEmail *string              `json:"primary_email,omitempty"`
+	DealRoles []Company360DealRole `json:"deal_roles"`
+	FullName  string               `json:"full_name"`
+
+	// GreetingRegister The register a rep set for opening a message to this contact; null when none is set.
+	GreetingRegister *Company360ContactGreetingRegister `json:"greeting_register,omitempty"`
+	PrimaryEmail     *string                            `json:"primary_email,omitempty"`
 
 	// ProviderTitle A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed.
 	ProviderTitle *string `json:"provider_title,omitempty"`
@@ -41205,6 +41262,9 @@ type Company360Contact struct {
 
 // Company360ContactConsent defines model for Company360Contact.Consent.
 type Company360ContactConsent string
+
+// Company360ContactGreetingRegister The register a rep set for opening a message to this contact; null when none is set.
+type Company360ContactGreetingRegister string
 
 // Company360ContactTitleSource Which title the roster is showing — the installation's own record, or the provider fallback. Null when there is no title at all.
 type Company360ContactTitleSource string
@@ -44252,8 +44312,11 @@ type Contact struct {
 	FirstName *string          `json:"first_name,omitempty"`
 
 	// FullName Always present (display name).
-	FullName string             `json:"full_name"`
-	Id       openapi_types.UUID `json:"id"`
+	FullName string `json:"full_name"`
+
+	// GreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+	GreetingRegister *ContactGreetingRegister `json:"greeting_register,omitempty"`
+	Id               openapi_types.UUID       `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -44314,6 +44377,9 @@ type Contact struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ContactGreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+type ContactGreetingRegister string
 
 // ContactRelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 type ContactRelationshipMark string
@@ -44932,12 +44998,14 @@ type ContactConsentGuardEntryVerdict string
 
 // ContactConsentState A contact's current consent for one purpose.
 type ContactConsentState struct {
-	DoubleOptInConfirmedAt *time.Time               `json:"double_opt_in_confirmed_at,omitempty"`
-	LawfulBasis            *string                  `json:"lawful_basis,omitempty"`
-	PurposeId              openapi_types.UUID       `json:"purpose_id"`
-	PurposeKey             *string                  `json:"purpose_key,omitempty"`
-	State                  ContactConsentStateState `json:"state"`
-	UpdatedAt              *time.Time               `json:"updated_at,omitempty"`
+	// ConfirmationPendingUntil When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
+	ConfirmationPendingUntil *time.Time               `json:"confirmation_pending_until,omitempty"`
+	DoubleOptInConfirmedAt   *time.Time               `json:"double_opt_in_confirmed_at,omitempty"`
+	LawfulBasis              *string                  `json:"lawful_basis,omitempty"`
+	PurposeId                openapi_types.UUID       `json:"purpose_id"`
+	PurposeKey               *string                  `json:"purpose_key,omitempty"`
+	State                    ContactConsentStateState `json:"state"`
+	UpdatedAt                *time.Time               `json:"updated_at,omitempty"`
 }
 
 // ContactConsentStateState defines model for ContactConsentState.State.
@@ -58373,6 +58441,12 @@ type MorningDigestConnectorsProvider string
 // MorningDigestConnectorsStatus defines model for MorningDigest.Connectors.Status.
 type MorningDigestConnectorsStatus string
 
+// MoveDealPipelineRequest defines model for MoveDealPipelineRequest.
+type MoveDealPipelineRequest struct {
+	// PipelineId The live pipeline to move the deal to. It must differ from the deal's own.
+	PipelineId openapi_types.UUID `json:"pipeline_id"`
+}
+
 // MyAgentGrant One rep's standing answer for one scheduled agent.
 type MyAgentGrant struct {
 	// CredentialFundsAgent Whether that passport still covers what this agent does. Read at request time
@@ -69570,7 +69644,10 @@ type UpdateContactRequest struct {
 	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
 	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
 	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
-	LastName  *string              `json:"last_name,omitempty" singleline:"true"`
+
+	// GreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+	GreetingRegister *UpdateContactRequestGreetingRegister `json:"greeting_register,omitempty"`
+	LastName         *string                               `json:"last_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
 	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
@@ -69620,6 +69697,9 @@ type UpdateContactRequest struct {
 	Visibility           *UpdateContactRequestVisibility `json:"visibility,omitempty"`
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
+
+// UpdateContactRequestGreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+type UpdateContactRequestGreetingRegister string
 
 // UpdateContactRequestRelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 type UpdateContactRequestRelationshipMark string
@@ -78997,6 +79077,26 @@ type ListDealMarginceChangesParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// MoveDealPipelineParams defines parameters for MoveDealPipeline.
+type MoveDealPipelineParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// UndoDealPipelineMoveParams defines parameters for UndoDealPipelineMove.
+type UndoDealPipelineMoveParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // RestoreDealMoveParams defines parameters for RestoreDealMove.
 type RestoreDealMoveParams struct {
 	// Fingerprint The `fingerprint` of the move that was set aside, unchanged.
@@ -84221,6 +84321,9 @@ type UseDealEstimateJSONRequestBody = DealRevisionRequest
 // UpdateDealLineJSONRequestBody defines body for UpdateDealLine for application/json ContentType.
 type UpdateDealLineJSONRequestBody = UpdateDealLineRequest
 
+// MoveDealPipelineJSONRequestBody defines body for MoveDealPipeline for application/json ContentType.
+type MoveDealPipelineJSONRequestBody = MoveDealPipelineRequest
+
 // DismissDealMoveJSONRequestBody defines body for DismissDealMove for application/json ContentType.
 type DismissDealMoveJSONRequestBody = DismissDealMoveRequest
 
@@ -87072,6 +87175,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "full_name")
 	}
 
+	if raw, found := object["greeting_register"]; found {
+		err = json.Unmarshal(raw, &a.GreetingRegister)
+		if err != nil {
+			return fmt.Errorf("error reading 'greeting_register': %w", err)
+		}
+		delete(object, "greeting_register")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -87385,6 +87496,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	object["full_name"], err = json.Marshal(a.FullName)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
+	}
+
+	if a.GreetingRegister != nil {
+		object["greeting_register"], err = json.Marshal(a.GreetingRegister)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'greeting_register': %w", err)
+		}
 	}
 
 	object["id"], err = json.Marshal(a.Id)
@@ -96609,6 +96727,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "full_name")
 	}
 
+	if raw, found := object["greeting_register"]; found {
+		err = json.Unmarshal(raw, &a.GreetingRegister)
+		if err != nil {
+			return fmt.Errorf("error reading 'greeting_register': %w", err)
+		}
+		delete(object, "greeting_register")
+	}
+
 	if raw, found := object["last_name"]; found {
 		err = json.Unmarshal(raw, &a.LastName)
 		if err != nil {
@@ -96724,6 +96850,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["full_name"], err = json.Marshal(a.FullName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
+		}
+	}
+
+	if a.GreetingRegister != nil {
+		object["greeting_register"], err = json.Marshal(a.GreetingRegister)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'greeting_register': %w", err)
 		}
 	}
 
@@ -100051,6 +100184,12 @@ type ServerInterface interface {
 	// Every change Margince made to this deal, newest first.
 	// (GET /deals/{id}/margince-changes)
 	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
+	// Move an open deal to another pipeline, onto its first open stage.
+	// (POST /deals/{id}/move-pipeline)
+	MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams)
+	// Put a deal back on the pipeline and stage its last move left.
+	// (POST /deals/{id}/move-pipeline/undo)
+	UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id Id, params UndoDealPipelineMoveParams)
 	// Put a set-aside move back on the deal card, the undo behind "Not now".
 	// (DELETE /deals/{id}/move/dismiss)
 	RestoreDealMove(w http.ResponseWriter, r *http.Request, id Id, params RestoreDealMoveParams)
@@ -104938,6 +105077,18 @@ func (_ Unimplemented) UpdateDealLine(w http.ResponseWriter, r *http.Request, id
 // Every change Margince made to this deal, newest first.
 // (GET /deals/{id}/margince-changes)
 func (_ Unimplemented) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Move an open deal to another pipeline, onto its first open stage.
+// (POST /deals/{id}/move-pipeline)
+func (_ Unimplemented) MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a deal back on the pipeline and stage its last move left.
+// (POST /deals/{id}/move-pipeline/undo)
+func (_ Unimplemented) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id Id, params UndoDealPipelineMoveParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -132899,6 +133050,120 @@ func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// MoveDealPipeline operation middleware
+func (siw *ServerInterfaceWrapper) MoveDealPipeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MoveDealPipelineParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MoveDealPipeline(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoDealPipelineMove operation middleware
+func (siw *ServerInterfaceWrapper) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoDealPipelineMoveParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoDealPipelineMove(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RestoreDealMove operation middleware
 func (siw *ServerInterfaceWrapper) RestoreDealMove(w http.ResponseWriter, r *http.Request) {
 
@@ -159225,6 +159490,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move-pipeline", wrapper.MoveDealPipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move-pipeline/undo", wrapper.UndoDealPipelineMove)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/deals/{id}/move/dismiss", wrapper.RestoreDealMove)

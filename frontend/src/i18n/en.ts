@@ -2640,6 +2640,7 @@ export const en = {
   "history.field.ended_at": "Ended",
   "history.field.expected_close_date": "Expected close",
   "history.field.first_name": "First name",
+  "history.field.greeting_register": "Greeting",
   "history.field.full_name": "Name",
   "history.field.win_probability": "Probability",
   "history.field.stage_id": "Stage",
@@ -3760,6 +3761,8 @@ export const en = {
     "Whether this can be sent is not known yet. Reload the page to check again.",
   "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
+  "consent.confirmationPending":
+    "Waiting for them to confirm by email. The link works until {date}.",
   "consent.noPurposes": "This company tracks no consent purposes yet.",
   "consent.defaultDeny":
     "This history records consent for each purpose. Communication permission may also depend on other recorded grounds; the message is checked again before sending.",
@@ -6645,6 +6648,9 @@ export const en = {
     "This deal’s pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
   "deal.stageOtherPipeline":
     "That stage belongs to another pipeline. Pick a stage of the pipeline the deal is in.",
+  "deal.movePipeline": "Move to pipeline",
+  "deal.movePipelinePick": "Pick a pipeline",
+  "deal.movePipelineDone": "Moved to {pipeline}.",
   "deal.reopen": "Reopen",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
@@ -7479,6 +7485,11 @@ export const en = {
   "create.firstName": "First name",
   "create.lastName": "Last name",
   "create.contactTitle": "Title",
+  "create.greetingRegister": "How to greet them",
+  "create.greetingRegisterHint": "Drafts to this contact open this way.",
+  "create.greetingRegister.unset": "Let Margince decide",
+  "create.greetingRegister.formal": "Formal, by surname",
+  "create.greetingRegister.familiar": "Familiar, by first name",
   "create.acquisitionSource": "Where this contact came from",
   "create.acquisitionSourceHint":
     "The contact sees this on their privacy page.",
@@ -18580,6 +18591,8 @@ export const en = {
   "embedreindex.unbound":
     "No embedding model is bound, so there is no search index to rebuild.",
   "embedreindex.unboundLink": "Open AI settings",
+  "connectAi.first": "Connect an AI first",
+  "connectAi.link": "Open AI settings",
   "embedreindex.statusLabel": "Index status",
   "embedreindex.reindexLabel": "Reindex changes",
   "embedreindex.reindexHelp":

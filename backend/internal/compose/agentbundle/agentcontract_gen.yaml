@@ -2749,6 +2749,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: 'A scan would have to be queued and no AI model is connected (`code: ai_not_configured`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/growth-fit:
     parameters:
@@ -3159,6 +3164,11 @@ paths:
               schema: {$ref: '#/components/schemas/SiteReadStarted'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422':
           description: No URL to read (no override, company has no domain).
           content:
@@ -4677,6 +4687,43 @@ paths:
                     code: approval_required
                     detail: Advancing to a closed-won stage is confirm-first; supply an approval token.
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/{id}/move-pipeline:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: moveDealPipeline
+      security: [{bearerAuth: []}]
+      summary: Move an open deal to another pipeline, onto its first open stage.
+      description: |-
+        Puts the deal on the first open stage of a live pipeline other than its own. A caller
+        cannot choose the stage. The stage the deal leaves keeps its exit criteria; only a
+        required legal review blocks a move, and the first open stage has no gated stage before
+        it. The history row keeps no stage positions, because the positions of two pipelines do
+        not compare. The pipeline row is locked shared, so a retirement or a reorder waits for
+        the move.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MoveDealPipelineRequest'}
+      responses:
+        '200':
+          description: The deal on its new stage, and the probability the move set.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealAdvanced'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/close-day:
     parameters:
@@ -7336,6 +7383,11 @@ paths:
               schema: {$ref: '#/components/schemas/TranscriptReadStarted'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422':
           description: This activity carries no transcript, or its transcript is blank or too long for one reading.
           content:
@@ -25279,6 +25331,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The process role wired no model path or no job runner — declared absent, never a silent no-op.
@@ -31983,6 +32040,11 @@ components:
           readOnly: true
           description: >-
             The note, mail or quick capture this contact was read out of, where one was named at creation. Absent on a contact a member typed, and absent to a reader who may not open that record, so the contact still reads rather than being refused.
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          description: >-
+            How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -32364,6 +32426,11 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          description: >-
+            Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -33745,6 +33812,10 @@ components:
           description: >-
             Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write.
         title: {type: [string, 'null']}
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          description: The register a rep set for opening a message to this contact; null when none is set.
         provider_title:
           type: [string, 'null']
           description: >-
@@ -38772,6 +38843,11 @@ components:
           type: string
           format: date
           description: The calendar day the deal closed, in the installation's zone. Not after today.
+    MoveDealPipelineRequest:
+      type: object
+      required: [pipeline_id]
+      properties:
+        pipeline_id: {type: string, format: uuid, description: The live pipeline to move the deal to. It must differ from the deal's own.}
     AdvanceDealRequest:
       type: object
       required: [to_stage_id]
@@ -52415,6 +52491,10 @@ components:
         state: {type: string, enum: [unknown, granted, withdrawn]}
         lawful_basis: {type: [string, 'null']}
         double_opt_in_confirmed_at: {type: [string, 'null'], format: date-time}
+        confirmation_pending_until:
+          type: [string, 'null']
+          format: date-time
+          description: When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
         updated_at: {type: [string, 'null'], format: date-time}
     ConsentEvent:
       type: object
