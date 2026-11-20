@@ -3,8 +3,10 @@
 
 package extension
 
-// System reads for a job tick or a bus delivery. No caller's grants narrow
-// them, so each answers ErrAttendedRead wherever a user gets the result.
+// System reads for a job tick or a bus delivery. Deals, Authority and the
+// directory's Emails have no caller's grants to narrow them, so each answers
+// ErrAttendedRead wherever a user gets the result. The newer reads (Companies,
+// MailContent, ByRole) take actAs and run as the unit's service member.
 // That guards the call, not a unit that stores what it read and serves it
 // later. A unit asks Authority().CanRead before it shows a colleague anything,
 // and CanRead answers a signed-in human about themselves on any call.
@@ -142,8 +144,15 @@ type Directory interface {
 	// ByRole answers the active human members who hold at least one of roles,
 	// named by role key. Agent seats and members who cannot sign in are left
 	// out. The ids come in id order and stop at MaxResponsible. More than
-	// MaxResponsible roles, or a key that names no role, answers ErrInvalid.
-	ByRole(ctx context.Context, roles []string) ([]UserID, error)
+	// MaxResponsible roles answers ErrInvalid.
+	//
+	// It answers as actAs, the unit's service member, and only when that seat
+	// may read the roster the way an administrator does. Another seat answers
+	// ErrForbidden. A key that names no role adds nobody and is not an error,
+	// so the answer does not tell whether the role exists. The core logs the
+	// keys asked for. The list is cut at MaxResponsible with no sign of the cut,
+	// so a unit that asks for a large role must not take the list as complete.
+	ByRole(ctx context.Context, actAs UserID, roles []string) ([]UserID, error)
 }
 
 // MailSummary is one email on a deal as a background reader sees it.
@@ -250,16 +259,19 @@ type CompanyPageQuery struct {
 }
 
 // Companies reads the installation's companies for a job tick or a bus
-// delivery. A company only some colleagues may see is left out.
+// delivery. It answers as actAs, the unit's service member, and shows only
+// what that seat's own grants, row scope and field masks show in the app.
+// Any other member, or none, answers ErrForbidden or ErrInvalid.
 type Companies interface {
 	// Get reads one company. A company that does not exist, was erased or is
-	// not visible to the whole workspace answers ErrNotFound. An id that is not
-	// a canonical UUID answers ErrInvalid.
-	Get(ctx context.Context, companyID string) (CompanySummary, error)
+	// outside the seat's scope answers ErrNotFound. An id that is not a
+	// canonical UUID answers ErrInvalid. A field the seat's mask withholds is
+	// empty.
+	Get(ctx context.Context, actAs UserID, companyID string) (CompanySummary, error)
 
-	// List answers a page of companies in id order. A page holds at most
-	// MaxReadPage companies.
-	List(ctx context.Context, q CompanyPageQuery) (Page[CompanySummary], error)
+	// List answers a page of the companies the seat may open, in the order the
+	// product lists them. A page holds at most MaxReadPage companies.
+	List(ctx context.Context, actAs UserID, q CompanyPageQuery) (Page[CompanySummary], error)
 }
 
 // MailContentState says whether the words of a mail are in a MailContent.
@@ -284,6 +296,9 @@ type MailContent struct {
 	// is never read here.
 	Audience     string
 	ContentState MailContentState
+	// BodyTruncated is true when Body is the first MaxMailBody characters of a
+	// longer text.
+	BodyTruncated bool
 	// CaptureLabel is commitment, meeting or noise; empty when none was set.
 	CaptureLabel string
 	// BulkMail is true when the mail was attested as bulk mail.
@@ -294,15 +309,22 @@ type MailContent struct {
 	OccurredAt time.Time
 }
 
-// MailContents reads one email's words for a job tick or a bus delivery. No
-// caller's grants narrow it, so it answers only mail the whole workspace may
-// read. A unit that keeps what it read asks Authority().CanRead first. It does
-// that before it shows the mail to a colleague.
+// MaxMailBody is the most characters of a mail's body that MailContents.Get
+// gives.
+const MaxMailBody = 8000
+
+// MailContents reads one email's words for a job tick or a bus delivery. It
+// answers as actAs, the unit's service member, under the same content rule the
+// product applies to that seat. A unit that keeps what it read asks
+// Authority().CanRead first. It does that before it shows the mail to a
+// colleague.
 type MailContents interface {
 	// Get reads one mail by id. No such mail answers ErrNotFound. So do a mail
-	// that is not an email, one private to its participants or a chosen few, an
-	// archived one, and one held back. An id cannot be used to probe. An id that
-	// is not a canonical UUID answers ErrInvalid. A mail whose subject or
-	// body was redacted answers ContentState withheld with neither.
-	Get(ctx context.Context, mailID string) (MailContent, error)
+	// that is not an email, one the seat may not read, one private to its
+	// participants or a chosen few, an archived one, one held back, and one
+	// under a restriction of processing. An id cannot be used to probe. An id
+	// that is not a canonical UUID answers ErrInvalid. A mail whose subject or
+	// body was redacted answers ContentState withheld with neither. The body is
+	// cut at MaxMailBody characters.
+	Get(ctx context.Context, actAs UserID, mailID string) (MailContent, error)
 }
