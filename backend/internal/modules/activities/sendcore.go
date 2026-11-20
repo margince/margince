@@ -44,25 +44,24 @@ func (s *Store) SendEmail(ctx context.Context, origin SendOrigin, in SendEmailIn
 		sent, err = s.SendPreparedTx(ctx, tx, origin, prepared, stager)
 		return err
 	}); err != nil {
-		return crmcontracts.Activity{}, s.holdRefusal(ctx, origin, in, stager, err)
+		// AFTER the transaction has unwound, so a refusal that must be recorded
+		// is recorded on a connection this call is no longer holding. See
+		// RefusalRecorder for why the moment matters.
+		//
+		// The hold runs first because the review binds to it. Both writes
+		// happen after the unwind, and in this order: a review naming an intent
+		// that does not exist yet would violate its own foreign key.
+		held := s.holdRefusedSend(ctx, origin, in, err)
+		if held.erased {
+			return crmcontracts.Activity{}, err
+		}
+		refusal := recordRefusal(ctx, stager, err, held.id)
+		if held.reused {
+			refusal = &repeatedSendError{refusal: refusal}
+		}
+		return crmcontracts.Activity{}, refusal
 	}
 	return sent, nil
-}
-
-// holdRefusal holds a message the send check refused and records its review,
-// so the author can see why and send it once the cause is fixed. It runs AFTER
-// the refusing transaction unwound; RefusalRecorder says why the moment matters.
-// The hold runs first because the review's foreign key names the held row.
-func (s *Store) holdRefusal(ctx context.Context, origin SendOrigin, in SendEmailInput, stager DeliveryStager, err error) error {
-	held := s.holdRefusedSend(ctx, origin, in, err)
-	if held.erased {
-		return err
-	}
-	refusal := recordRefusal(ctx, stager, err, held.id)
-	if held.reused {
-		refusal = &repeatedSendError{refusal: refusal}
-	}
-	return refusal
 }
 
 // PreparedSend is one message with every live read already done and every gate

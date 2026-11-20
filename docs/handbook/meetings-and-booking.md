@@ -107,7 +107,7 @@ Also called: meeting reminder, remind the guest, notification before a call.
 
 Queued means Margince asked your mailbox to send it, not that it reached the guest. Margince sends a reminder only within 15 minutes of its time, so one it missed shows as not sent. A cancelled meeting gets no reminder. The reminder follows the same email rules as any mail you send: a contact who may not get email gets none.
 
-If those rules hold a reminder back, it waits in Scheduled messages with the reason, like any held email. One such reason is a footer with no company address. You can send it from there once the details are filled in.
+If those rules stop a reminder, Margince does not send it later, because the meeting may change before then. You get a notification that says why. Most often the footer has no company address. An admin adds it under **Settings → Company profile**. You can send it from there once the details are filled in.
 
 ## What counts as busy
 

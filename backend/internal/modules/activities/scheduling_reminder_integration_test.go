@@ -112,29 +112,32 @@ func TestMeetingReminderRecordsARefusalWithoutSending(t *testing.T) {
 	}
 }
 
-// A reminder the send check refuses, such as one whose footer lacks the
-// company's details, is held with a review for its host, never dropped.
+// A reminder the send rules refuse at staging, such as one whose footer lacks
+// the company's address, tells its host why. It is not held for later: a held
+// copy could go out after the meeting moved. The job run counts it as handled.
 //
-// Mutation: return the refusal without holdRefusal and this fails.
-func TestARefusedMeetingReminderIsHeldForItsHost(t *testing.T) {
+// Mutation: return the refusal from meetingReminderNotSent and this fails.
+func TestARefusedMeetingReminderTellsItsHost(t *testing.T) {
 	f, meeting, _ := reminderFixture(t)
-	stager := &reviewRecordingStager{recordingStager: recordingStager{err: apperrors.ErrConsentNotGranted}}
+	told := &attentionRecorder{}
+	f.store = f.store.WithInvitationAttention(told)
+	stager := &recordingStager{err: apperrors.ErrConsentNotGranted}
 	if err := f.store.SendMeetingReminder(f.ctx, ids.UUID(meeting.Id), stubConsentGate{}, stager); err != nil {
-		t.Fatalf("a held reminder failed the job run: %v", err)
+		t.Fatalf("a refused reminder failed the job run: %v", err)
+	}
+	if len(told.reasons) != 1 || told.reasons[0] != AttentionReminderRefused {
+		t.Errorf("the host was told %v, want one %s notice", told.reasons, AttentionReminderRefused)
 	}
 	var held int
 	if err := f.env.owner.QueryRow(f.ctx, `SELECT count(*) FROM scheduled_send WHERE status = 'held'`).Scan(&held); err != nil {
 		t.Fatal(err)
 	}
-	if held != 1 || len(stager.intents) != 1 || stager.intents[0].IsZero() {
-		t.Errorf("the refusal held %d message(s) and asked for reviews %v, want one review naming the held reminder", held, stager.intents)
-	}
 	current, err := f.store.Invitation(f.ctx, ids.UUID(meeting.Id))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if current.ReminderStatus == nil || *current.ReminderStatus != "unavailable" {
-		t.Errorf("the meeting shows reminder %v, want unavailable", current.ReminderStatus)
+	if held != 0 || current.ReminderStatus == nil || *current.ReminderStatus != "unavailable" {
+		t.Errorf("held %d message(s), reminder %v; want none held and the reminder unavailable", held, current.ReminderStatus)
 	}
 }
 
