@@ -193,6 +193,67 @@ describe("the record's History", () => {
     expect(screen.queryByText("Fleet renewal")).toBeNull();
   });
 
+  // A task further out than the Worklist's horizon shows its day nowhere else
+  // on the record. Its History row says when it is due and who holds it.
+  it("says when a task is due and who holds it", () => {
+    const view = viewWith(false);
+    withProviders(
+      <ContactTimelineTab
+        contactId="p-1"
+        view={{
+          ...view,
+          activities: {
+            data: [
+              activity({
+                id: "t-1",
+                kind: "task",
+                subject: "Call back about pricing",
+                occurred_at: "2026-08-11T12:00:00Z",
+                due_at: "2026-09-02T10:00:00Z",
+                due_has_time: false,
+                assignee_id: null,
+              }),
+            ],
+            page: { has_more: false },
+          },
+        }}
+      />,
+    );
+
+    const row = screen.getByText("Call back about pricing").closest("li");
+    expect(row?.textContent).toMatch(/Unassigned · Due \S/);
+  });
+
+  it("says neither on a completed task", () => {
+    const view = viewWith(false);
+    withProviders(
+      <ContactTimelineTab
+        contactId="p-1"
+        view={{
+          ...view,
+          activities: {
+            data: [
+              activity({
+                id: "t-2",
+                kind: "task",
+                subject: "Sent the price list",
+                occurred_at: "2026-08-11T12:00:00Z",
+                due_at: "2026-08-02T10:00:00Z",
+                is_done: true,
+                assignee_id: null,
+              }),
+            ],
+            page: { has_more: false },
+          },
+        }}
+      />,
+    );
+
+    const row = screen.getByText("Sent the price list").closest("li");
+    expect(row?.textContent).toContain("Completed");
+    expect(row?.textContent).not.toMatch(/Due |Unassigned/);
+  });
+
   it("states that a capped page is not the whole ledger", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={viewWith(true)} />);
 

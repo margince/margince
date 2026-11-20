@@ -8462,6 +8462,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.log.action": "Ghi lại kết quả",
   "tasks.log.record": "Hoạt động này thuộc bản ghi nào?",
   "tasks.log.chooseRecord": "Chọn bản ghi khác",
+  "tasks.log.noRecord": "Ghi lại không gắn bản ghi",
+  "tasks.log.pickRecord": "Chọn bản ghi",
+  "tasks.log.back": "Quay lại",
   "tasks.log.leftOpen":
     "Đã ghi hoạt động. Công việc vẫn mở cho đến khi đính kèm đủ tệp; hãy thử lại để hoàn tất.",
   "tasks.log.completeFailed":
@@ -20601,6 +20604,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.band.build_pipeline": "Tìm khách hàng mới",
   "worklist.band.keep_momentum": "Giữ đà",
   "worklist.band.review": "Xem lại",
+  "worklist.band.more": "Thêm trong danh sách của bạn",
   "worklist.disposition.verb.snooze": "Tạm hoãn",
   "worklist.disposition.snoozeForDays_one": "Tạm hoãn {value} ngày",
   "worklist.disposition.snoozeForDays_other": "Tạm hoãn {value} ngày",

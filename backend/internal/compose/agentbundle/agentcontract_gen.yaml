@@ -56697,7 +56697,7 @@ components:
         in the order it draws them.
       required: [band, shown]
       properties:
-        band: {type: string, enum: [now, build_pipeline, keep_momentum, review]}
+        band: {type: string, enum: [now, build_pipeline, keep_momentum, review, more]}
         shown: {type: integer, description: 'How many rows of this band are on the page.'}
     WorklistCount:
       type: object
@@ -57305,7 +57305,7 @@ components:
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string
-          enum: [now, build_pipeline, keep_momentum, review]
+          enum: [now, build_pipeline, keep_momentum, review, more]
           description: |-
             The heading this row sits under, as an OUTCOME rather than a priority number.
         dispositions:

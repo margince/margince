@@ -170,3 +170,15 @@ export const GuestViewDark: Story = {
   ...GuestView,
   globals: { theme: "dark" },
 };
+
+const longTitle = "M".repeat(200);
+export const BookingLinksLongName: Story = {
+  render: bookingFrame(() => (
+    <BookingLinksCard profile={{ ...bookingProfile, title: longTitle }} />
+  )),
+};
+export const GuestViewLongName: Story = {
+  render: bookingFrame(() => (
+    <GuestViewCard profile={{ ...bookingProfile, title: longTitle }} />
+  )),
+};

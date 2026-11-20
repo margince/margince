@@ -2,8 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { useT } from "../i18n";
+import type { components } from "../api/schema";
+import { formatDue } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { useMe } from "../lib/session";
+import { useViewerZone } from "../lib/viewerzone";
 import { EntityRef } from "./entityref";
 
 /**
@@ -59,4 +62,31 @@ export function taskLine(parts: readonly ReactNode[]): ReactNode {
     ),
     said[0],
   );
+}
+
+type TaskFacts = Pick<
+  components["schemas"]["Activity"],
+  "assignee_id" | "due_at" | "due_has_time" | "due_intent"
+>;
+
+/** Who holds a task and when it is due, as one line. */
+export function TaskTerms({ task }: Readonly<{ task: TaskFacts }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const holder = useTaskHolder(task.assignee_id);
+  return taskLine([
+    holder,
+    task.due_at
+      ? t("co.next.due", {
+          when: formatDue(
+            task.due_at,
+            task.due_has_time,
+            locale,
+            zone,
+            task.due_intent,
+          ),
+        })
+      : t("co.next.undated"),
+  ]);
 }
