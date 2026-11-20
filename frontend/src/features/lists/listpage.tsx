@@ -6,7 +6,10 @@
 // there, and what changed. The members are the record list's own rows, narrowed by
 // list_id, so the page is never one request per member (listmembers.tsx).
 
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
+import { catalogOfRecord } from "../../components/create.dialog";
+import { customFieldLabel } from "../../components/customfields.form";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -16,6 +19,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { customFieldsQuery } from "../../lib/customfields.query";
 import { ENTITY } from "../../lib/entity";
 import { customColumnLabel, useFilterVocabulary } from "../../lib/filterdata";
 import {
@@ -324,13 +328,42 @@ function noticeOf(list: List): ListNotice | null {
 }
 
 /**
+ * The fields a list filters on that an admin retired, named by the labels the
+ * catalog still holds for them. One the catalog cannot name reads as its column.
+ */
+function RetiredFieldNotice({ list }: Readonly<{ list: List }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const catalog = useQuery(customFieldsQuery(catalogOfRecord(list.entity_type)))
+    .data?.data;
+  const fields = list.retired_fields ?? [];
+  const labelOf = (column: string) => {
+    const field = catalog?.find((entry) => entry.column_name === column);
+    return field ? customFieldLabel(field, locale) : customColumnLabel(column);
+  };
+  return (
+    <Callout
+      tone="warning"
+      title={t("lists.retiredField.title")}
+      actions={
+        mayEditFilter(list) ? <EditFilterAction list={list} /> : undefined
+      }
+    >
+      {plural("lists.retiredField.body", fields.length, {
+        fields: fields.map(labelOf).join(", "),
+      })}
+    </Callout>
+  );
+}
+
+/**
  * What the list says about itself: archived, broken, looked after by nobody,
  * or filtering on a field that was retired. Every reader reads why; only those
  * allowed to act see the verb that fixes it.
  */
 function ListNotices({ list }: Readonly<{ list: List }>) {
   const t = useT();
-  const plural = usePlural();
   const me = useMe();
   const update = useUpdateList();
   const archive = useArchiveList();
@@ -370,20 +403,7 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
     );
   }
   if (notice === "retired_field") {
-    const fields = list.retired_fields ?? [];
-    return (
-      <Callout
-        tone="warning"
-        title={t("lists.retiredField.title")}
-        actions={
-          mayEditFilter(list) ? <EditFilterAction list={list} /> : undefined
-        }
-      >
-        {plural("lists.retiredField.body", fields.length, {
-          fields: fields.map(customColumnLabel).join(", "),
-        })}
-      </Callout>
-    );
+    return <RetiredFieldNotice list={list} />;
   }
   if (notice !== "ownerless") {
     return null;

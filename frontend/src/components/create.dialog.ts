@@ -4,6 +4,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { CF_OBJECTS, type CfObject } from "../lib/customfields.logic";
+import { customFieldsQuery } from "../lib/customfields.query";
 import type { Screen } from "../lib/router";
 
 // Past this a catalog read that has not answered stops holding the dialog.
@@ -32,7 +33,7 @@ export function catalogOfRecord(recordKey: string): CfObject | undefined {
 export function useSettledOpen(open: boolean, catalog?: CfObject): boolean {
   const client = useQueryClient();
   const catalogHash = client.defaultQueryOptions({
-    queryKey: ["custom-fields", catalog],
+    queryKey: customFieldsQuery(catalog).queryKey,
   }).queryHash;
   const cache = client.getQueryCache();
   const subscribe = useCallback(

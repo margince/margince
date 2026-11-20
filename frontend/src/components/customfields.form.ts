@@ -8,7 +8,6 @@
 // live catalog and this workspace's i18n Yes/No labels.
 
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   typedDecimalText,
@@ -25,6 +24,7 @@ import { browserZone } from "../format/timezone";
 import { webUrl } from "../format/weburl";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
+import { customFieldsQuery } from "../lib/customfields.query";
 import { translatedLabel } from "../lib/labeltranslation";
 import {
   readKindRecord,
@@ -434,18 +434,7 @@ export function useObjectCustomFields(
 ): ObjectCustomFields {
   const t = useT();
   const { locale } = useLocale();
-  const query = useQuery({
-    queryKey: ["custom-fields", object],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/custom-fields", {
-        params: { query: { object } },
-      });
-      if (error) {
-        throw error;
-      }
-      return data;
-    },
-  });
+  const query = useQuery(customFieldsQuery(object));
 
   const fields = fieldsForSurface(
     query.data?.data ?? EMPTY_CUSTOM_FIELDS,

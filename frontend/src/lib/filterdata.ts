@@ -9,13 +9,14 @@
 // are about when not to ask — a tree mid-edit is not worth a round trip, and a
 // vocabulary is worth exactly one per record type.
 
-import { skipToken, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CF_OBJECTS } from "./customfields.logic";
+import { customFieldsQuery } from "./customfields.query";
 import { previousOfScope, useHealthScope } from "./healthscope";
 import { historyFieldLabelKey } from "./historyfieldlabels";
 import { translatedLabel } from "./labeltranslation";
@@ -70,7 +71,12 @@ export function vocabularyQueryKey(resource: FilterResource) {
  */
 export function useFilterVocabulary(resource: FilterResource, enabled = true) {
   const { locale } = useLocale();
-  const catalog = useCustomFieldCatalog(resource, enabled).data?.data;
+  const catalog = useQuery(
+    customFieldsQuery(
+      CF_OBJECTS.find((object) => object === resource),
+      enabled,
+    ),
+  ).data?.data;
   const labelled = useCallback(
     (vocabulary: FilterVocabulary) =>
       withCatalogLabels(vocabulary, catalog, locale),
@@ -87,26 +93,6 @@ export function useFilterVocabulary(resource: FilterResource, enabled = true) {
       );
     },
     select: labelled,
-  });
-}
-
-/**
- * A core record type's custom-field catalog, under the key its admin screen
- * refreshes: a renamed field reads by its new label on the next answer.
- */
-function useCustomFieldCatalog(resource: FilterResource, enabled: boolean) {
-  const object = CF_OBJECTS.find((candidate) => candidate === resource);
-  return useQuery({
-    queryKey: ["custom-fields", object],
-    queryFn:
-      enabled && object !== undefined
-        ? async () =>
-            unwrap(
-              await api.GET("/custom-fields", {
-                params: { query: { object } },
-              }),
-            )
-        : skipToken,
   });
 }
 
