@@ -93,7 +93,7 @@ func (s *Store) SendMeetingReminder(ctx context.Context, id ids.UUID, gate Conse
 		return writeMeetingReminder(ctx, tx, current, "queued")
 	})
 	if err != nil {
-		return errors.Join(err, s.markMeetingReminderUnavailable(ctx, row))
+		return errors.Join(s.holdRefusal(ctx, origin, input, stager, err), s.markMeetingReminderUnavailable(ctx, row))
 	}
 	return nil
 }

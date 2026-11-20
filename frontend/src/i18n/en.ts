@@ -1784,7 +1784,7 @@ export const en = {
   "scheduling.reminder.pending": "Email reminder scheduled.",
   "scheduling.reminder.queued": "Email reminder queued for delivery.",
   "scheduling.reminder.unavailable":
-    "The reminder could not be sent. Check your email connection and email the guest directly.",
+    "The reminder could not be sent. If the send check held it, it waits in Scheduled messages with the reason. Otherwise, check your email connection and email the guest directly.",
   "history.field.reminder_status": "Reminder status",
   "scheduling.myLink": "My booking link",
   "scheduling.linkIntro":

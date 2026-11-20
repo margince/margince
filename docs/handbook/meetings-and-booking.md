@@ -105,7 +105,7 @@ To send your guest a reminder in Margince, open **Settings → Meetings**, then 
 The reminder goes from your connected mailbox, an hour before each future meeting. It gives the time in your time zone and names that zone. The meeting page shows "Email reminder scheduled.", "Email reminder queued for delivery." or "The reminder could not be sent."
 Also called: meeting reminder, remind the guest, notification before a call.
 
-Queued means Margince asked your mailbox to send it, not that it reached the guest. Margince sends a reminder only within 15 minutes of its time, so one it missed shows as not sent. A cancelled meeting gets no reminder. The reminder follows the same email rules as any mail you send: a contact who may not get email gets none.
+Queued means Margince asked your mailbox to send it, not that it reached the guest. Margince sends a reminder only within 15 minutes of its time, so one it missed shows as not sent. A cancelled meeting gets no reminder. The reminder follows the same email rules as any mail you send: a contact who may not get email gets none. If those rules hold a reminder back, for example because the email footer lacks your company's address, it waits in Scheduled messages with the reason, like any held email. You can send it from there once the details are filled in.
 
 ## What counts as busy
 

@@ -1862,7 +1862,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.reminder.pending": "E-Mail-Erinnerung geplant.",
   "scheduling.reminder.queued": "E-Mail-Erinnerung zum Versand vorgemerkt.",
   "scheduling.reminder.unavailable":
-    "Die Erinnerung konnte nicht gesendet werden. Prüfe deine E-Mail-Verbindung und schreibe dem Gast direkt.",
+    "Die Erinnerung konnte nicht gesendet werden. Hat die Versandprüfung sie zurückgehalten, liegt sie mit dem Grund unter Geplante Nachrichten. Sonst prüfe deine E-Mail-Verbindung und schreibe dem Gast direkt.",
   "history.field.reminder_status": "Erinnerungsstatus",
   "scheduling.myLink": "Dein Buchungslink",
   "scheduling.linkIntro":

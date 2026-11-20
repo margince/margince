@@ -112,6 +112,33 @@ func TestMeetingReminderRecordsARefusalWithoutSending(t *testing.T) {
 	}
 }
 
+// A reminder the send check refuses, such as one whose footer lacks the
+// company's details, is held with a review for its host, never dropped.
+//
+// Mutation: return the refusal without holdRefusal and this fails.
+func TestARefusedMeetingReminderIsHeldForItsHost(t *testing.T) {
+	f, meeting, _ := reminderFixture(t)
+	stager := &reviewRecordingStager{recordingStager: recordingStager{err: apperrors.ErrConsentNotGranted}}
+	err := f.store.SendMeetingReminder(f.ctx, ids.UUID(meeting.Id), stubConsentGate{}, stager)
+	if !errors.Is(err, apperrors.ErrConsentNotGranted) {
+		t.Fatalf("the reminder answered %v, want the consent refusal", err)
+	}
+	var held int
+	if err := f.env.owner.QueryRow(f.ctx, `SELECT count(*) FROM scheduled_send WHERE status = 'held'`).Scan(&held); err != nil {
+		t.Fatal(err)
+	}
+	if held != 1 || len(stager.intents) != 1 || stager.intents[0].IsZero() {
+		t.Errorf("the refusal held %d message(s) and asked for reviews %v, want one review naming the held reminder", held, stager.intents)
+	}
+	current, err := f.store.Invitation(f.ctx, ids.UUID(meeting.Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.ReminderStatus == nil || *current.ReminderStatus != "unavailable" {
+		t.Errorf("the meeting shows reminder %v, want unavailable", current.ReminderStatus)
+	}
+}
+
 func TestMeetingReminderSkipsAMissedWindow(t *testing.T) {
 	f, meeting, _ := reminderFixture(t)
 	f.now = monday(12)

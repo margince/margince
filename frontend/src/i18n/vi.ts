@@ -1817,7 +1817,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.reminder.pending": "Đã lên lịch email nhắc.",
   "scheduling.reminder.queued": "Đang chờ gửi email nhắc.",
   "scheduling.reminder.unavailable":
-    "Không thể gửi lời nhắc. Kiểm tra kết nối email và gửi email trực tiếp cho khách.",
+    "Không thể gửi lời nhắc. Nếu bước kiểm tra gửi đã giữ lại, lời nhắc nằm trong Tin nhắn đã hẹn giờ kèm lý do. Nếu không, hãy kiểm tra kết nối email và gửi email trực tiếp cho khách.",
   "history.field.reminder_status": "Trạng thái lời nhắc",
   "scheduling.myLink": "Liên kết đặt lịch của tôi",
   "scheduling.linkIntro":
