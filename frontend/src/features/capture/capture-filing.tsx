@@ -40,7 +40,9 @@ export function unitCopyPrefix(unit: string): string {
     .split("-")
     .filter((part) => part !== "")
     .map((part) =>
-      /^\d/.test(part) ? `_${part}` : part[0].toUpperCase() + part.slice(1),
+      /^\d/.test(part)
+        ? `_${part}`
+        : part.charAt(0).toUpperCase() + part.slice(1),
     )
     .join("");
   return `ext${camel}.`;

@@ -35,7 +35,7 @@ describe("the filing line", () => {
   it("names the rung when core filed the mail", () => {
     expect(
       show({ actor: "core", result: "linked", reason: "project" }),
-    ).toHaveTextContent("Filed on its deal by the CRM: the mail's project");
+    ).toHaveTextContent("Filed on its deal by the CRM: the mail’s project");
   });
 
   it("names the unit and falls back to its reason key without its copy", () => {

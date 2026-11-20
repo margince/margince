@@ -148,10 +148,10 @@ type Directory interface {
 	//
 	// It answers as actAs, the unit's service member, and only when that seat
 	// may read the roster the way an administrator does. Another seat answers
-	// ErrForbidden. A key that names no role adds nobody and is not an error,
-	// so the answer does not tell whether the role exists. The core logs the
-	// keys asked for. The list is cut at MaxResponsible with no sign of the cut,
-	// so a unit that asks for a large role must not take the list as complete.
+	// ErrForbidden. A key that names no role adds nobody and is not an error.
+	// So the answer does not tell whether the role exists. The core logs the
+	// keys asked for. The list is cut at MaxResponsible with no sign of the cut.
+	// A unit that asks for a large role must not take the list as complete.
 	ByRole(ctx context.Context, actAs UserID, roles []string) ([]UserID, error)
 }
 
@@ -316,13 +316,12 @@ const MaxMailBody = 8000
 // MailContents reads one email's words for a job tick or a bus delivery. It
 // answers as actAs, the unit's service member, under the same content rule the
 // product applies to that seat. A unit that keeps what it read asks
-// Authority().CanRead first. It does that before it shows the mail to a
-// colleague.
+// Authority().CanRead first. It asks before it shows the mail to a colleague.
 type MailContents interface {
-	// Get reads one mail by id. No such mail answers ErrNotFound. So do a mail
-	// that is not an email, one the seat may not read, one private to its
-	// participants or a chosen few, an archived one, one held back, and one
-	// under a restriction of processing. An id cannot be used to probe. An id
+	// Get reads one mail by id. No such mail answers ErrNotFound. So does a mail
+	// that is not an email or one the seat may not read. So does one private to
+	// its participants or a chosen few. So do an archived one, one held back,
+	// and one under a restriction of processing. An id cannot be used to probe. An id
 	// that is not a canonical UUID answers ErrInvalid. A mail whose subject or
 	// body was redacted answers ContentState withheld with neither. The body is
 	// cut at MaxMailBody characters.

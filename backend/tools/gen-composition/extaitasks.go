@@ -4,17 +4,16 @@
 package main
 
 // The ai-tasks.yaml half of the contract to declaration direction, beside
-// extjobs.go and on the same terms. Every AI task an extension declares is read
-// back out of the merged ai-tasks.yaml, not out of the fragment, so what the boot
-// registers and what the file says cannot disagree. The result goes into
-// extensions_gen.go as Go literals.
+// extjobs.go. Every AI task an extension declares is read back out of the merged
+// file, not the fragment. What the boot registers and what the file says cannot
+// disagree. The result goes into extensions_gen.go as Go literals.
 //
-// The rules mirror gen-aitasks, which holds the core tasks to them: the key
-// prefix, known tiers, background tasks queue and interactive tasks degrade, the
-// subject restriction is honoured, and no payload is kept. `make gen` also runs
-// gen-aitasks over the merged file for the rest of its rules.
+// The rules mirror gen-aitasks: the key prefix, known tiers, queueing and
+// degrading modes, the honoured subject restriction, and no payload. `make gen`
+// also runs gen-aitasks over the merged file for the rest.
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -31,10 +30,9 @@ const aiTasksContractBase = "ai-tasks.yaml"
 // extAITask is one tasks.<key> entry an extension fragment writes. Strictly
 // decoded, so a typo in a key is an error and not a dropped policy.
 //
-// It is narrower than a core task on purpose. An extension writes the whole
-// prompt, so the core adds no company context, keeps no payload and honours a
-// restriction of processing: those three are fixed, and the fragment must state
-// them so a reviewer reads them.
+// It is narrower than a core task. An extension writes the whole prompt. So the
+// core adds no company context, keeps no payload and honours a restriction of
+// processing. Those three are fixed, and the fragment states them for a reviewer.
 type extAITask struct {
 	DisplayName       string   `yaml:"display_name"`
 	Summary           string   `yaml:"summary"`
@@ -124,10 +122,10 @@ func readExtAITask(key string, node *yaml.Node, owners map[string]string, tiers 
 // checkExtAITask holds a task to the gen-aitasks rules an extension can meet.
 func checkExtAITask(def extAITask, tiers []string) error {
 	if strings.TrimSpace(def.DisplayName) == "" || strings.TrimSpace(def.Summary) == "" {
-		return fmt.Errorf("it needs a display_name and a summary, which Settings shows")
+		return errors.New("it needs a display_name and a summary, which Settings shows")
 	}
 	if len(def.Ladder) == 0 {
-		return fmt.Errorf("its ladder is empty")
+		return errors.New("its ladder is empty")
 	}
 	for _, tier := range def.Ladder {
 		if !slices.Contains(tiers, tier) {
@@ -144,16 +142,16 @@ func checkExtAITask(def extAITask, tiers []string) error {
 			def.ExecutionMode, map[string]string{"interactive": "degrade", "background": "queue"}[def.ExecutionMode], def.OnBudgetExhausted)
 	}
 	if def.Status != "shipped" || len(def.Sites) == 0 {
-		return fmt.Errorf("it must be status shipped with at least one site")
+		return errors.New("it must be status shipped with at least one site")
 	}
 	if def.SubjectRestrict != "honour" {
-		return fmt.Errorf("subject_restriction must be honour: the core cannot see inside a prompt the unit wrote")
+		return errors.New("subject_restriction must be honour: the core cannot see inside a prompt the unit wrote")
 	}
 	if !def.NoPayload {
-		return fmt.Errorf("no_payload must be true: the core keeps no payload of a prompt the unit wrote")
+		return errors.New("no_payload must be true: the core keeps no payload of a prompt the unit wrote")
 	}
 	if def.CompanyContext != "none" {
-		return fmt.Errorf("company_context must be none: the unit writes the whole prompt")
+		return errors.New("company_context must be none: the unit writes the whole prompt")
 	}
 	return nil
 }

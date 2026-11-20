@@ -4,8 +4,8 @@
 package extension
 
 // AITaskDeclaration is one AI task a unit's api/ai-tasks.yaml fragment declares,
-// read back out of the merged contract by gen-composition and re-emitted into the
-// generated composition as a literal. It is the same path a JobDeclaration takes.
+// read back out of the merged contract by gen-composition. It is re-emitted into
+// the generated composition as a literal, the same path a JobDeclaration takes.
 //
 // The core registers it at boot, so Settings, AI shows the task by name with its
 // own budget, call log and overrides. A unit calls it by Task, through

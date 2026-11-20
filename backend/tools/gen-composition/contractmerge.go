@@ -296,7 +296,7 @@ func checkOwnership(unit string, steps []string, owners map[string]string) error
 	return nil
 }
 
-// checkTaskNamespace holds the AI task half of the same wall: a task a unit adds
+// checkTaskNamespace holds the AI task half of the same wall. A task a unit adds
 // is named ext_<unit>_<task>, so the call log and Settings show whose it is.
 func checkTaskNamespace(unit, task string) error {
 	ns, err := extension.Name(unit).Namespace()

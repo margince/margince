@@ -255,10 +255,7 @@ func registerComposedExtensions() ([]extension.Extension, error) {
 	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
 		return nil, err
 	}
-	if err := compose.RegisterExtensionAITasks(extensions, composition.AITasks()); err != nil {
-		return nil, err
-	}
-	return extensions, nil
+	return extensions, compose.RegisterExtensionAITasks(extensions, composition.AITasks())
 }
 
 // workerBoot is everything decided before this process touches a network.

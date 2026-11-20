@@ -30,6 +30,7 @@ import (
 // point of the list is that adding to it costs an explanation.
 var laneExemptions = gatekit.Waive(map[string]string{
 	"Embedder":        "the retrieval embed lane — the router itself under no task label, typed search.Embedder",
+	"ExtensionTask":   "a factory that binds one lane per task a unit declares, so its name is no single task constant",
 	"InvalidateCache": "the data reset's per-workspace cache-drop hook — the router's own Invalidate method, not a task lane",
 })
 

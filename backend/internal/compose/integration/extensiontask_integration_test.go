@@ -6,8 +6,8 @@
 package integration
 
 // An extension's AI task is a task like any other once the boot registers it.
-// AI Usage lists it on its own line under the name the unit declared, and a
-// call about one record names that record, so an erasure finds the payload.
+// AI Usage lists it on its own line under the name the unit declared. A call
+// about one record names that record, so an erasure finds the payload.
 
 import (
 	"context"

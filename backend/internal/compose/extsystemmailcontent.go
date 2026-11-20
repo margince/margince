@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -73,8 +74,8 @@ func (m systemMailContent) Get(ctx context.Context, actAs extension.UserID, mail
 		}
 		out.Subject = derefString(subject)
 		out.Body = derefString(body)
-		if runes := []rune(out.Body); len(runes) > extension.MaxMailBody {
-			out.Body, out.BodyTruncated = string(runes[:extension.MaxMailBody]), true
+		if cut := textcut.Runes(out.Body, extension.MaxMailBody); cut != out.Body {
+			out.Body, out.BodyTruncated = cut, true
 		}
 		return nil
 	})

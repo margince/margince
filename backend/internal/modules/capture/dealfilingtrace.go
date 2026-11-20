@@ -6,7 +6,7 @@ package capture
 // Who filed a mail on its deal, kept on the mail's capture trace so Settings >
 // Capture can show it. A hook may file mail by a rule of the installation, such
 // as a purchase order number looked up in a customer table. That rule has to be
-// visible to the people whose mail it files.
+// visible to the colleagues whose mail it files.
 
 import (
 	"context"

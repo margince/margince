@@ -184,8 +184,8 @@ func TestADealHookReadsTheBodyAndLooksARefUpInTheUnitsOwnData(t *testing.T) {
 	}
 }
 
-// A hook that fails decides nothing. Core does not fall back to its own answer:
-// the mail stays unfiled, the trace says which unit failed, and the next capture
+// A hook that fails decides nothing. Core does not fall back to its own answer.
+// The mail stays unfiled and the trace says which unit failed. The next capture
 // files it once the hook works again.
 func TestAFailedHookLeavesTheMailUndecidedAndItIsFiledOnceTheHookWorks(t *testing.T) {
 	env := newCaptureEnv(t)
@@ -235,7 +235,7 @@ func TestAPartiesHookCannotNameACompanyTheMailboxOwnerCannotSee(t *testing.T) {
 	hiddenDeal := hidden.deal(t, "Hidden rollout")
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE company SET visibility = 'owner', owner_id = $2 WHERE id = $1`, hidden.customer, e.Rep2)
+			`UPDATE company SET visibility = 'owner', owner_id = $2 WHERE id = $1`, hidden.customer, e.Rep3)
 		return err
 	}); err != nil {
 		t.Fatalf("hiding the company: %v", err)

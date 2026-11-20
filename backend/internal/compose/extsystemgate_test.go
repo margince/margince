@@ -20,6 +20,7 @@ import (
 // E7 adds seat-bound variants of the ones without actAs. SetAside answers about
 // the member's own choice, so it names that member as user. Mail takes actAs
 // already and binds any member who connected the unit, under the earlier rule.
+// gatekit:fixture the frozen reads, each with the follow-up that will change it
 var seatExempt = map[string]string{
 	"Deals.Get": "E7", "Deals.Responsible": "E7", "Authority.CanRead": "E7", "Authority.CanWrite": "E7",
 	"Directory.Emails": "E7", "SetAside.Contact": "own choice", "SetAside.Contacts": "own choice", "Activities.Mail": "connected member",

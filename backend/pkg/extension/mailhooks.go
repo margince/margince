@@ -10,6 +10,7 @@ package extension
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 )
@@ -94,11 +95,11 @@ const MailReasonLimit = 16
 var mailReasonGrammar = regexp.MustCompile(`^[a-z][a-z0-9_]{0,39}$`)
 
 // Validate holds the declared reasons to the key grammar. A key is lower snake
-// case of at most 40 characters, declared once, and a unit with a hook declares
+// case of at most 40 characters and unique, and a unit with a hook declares
 // at least one.
 func (h MailHooks) Validate() error {
 	if (h.Parties != nil || h.Deal != nil) && len(h.Reasons) == 0 {
-		return fmt.Errorf("a mail hook needs at least one declared reason, or every change it makes is ignored")
+		return errors.New("a mail hook needs at least one declared reason, or every change it makes is ignored")
 	}
 	if len(h.Reasons) > MailReasonLimit {
 		return fmt.Errorf("a unit may declare at most %d mail hook reasons, not %d", MailReasonLimit, len(h.Reasons))

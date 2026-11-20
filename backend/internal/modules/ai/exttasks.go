@@ -15,7 +15,6 @@ package ai
 import (
 	"fmt"
 	"slices"
-	"sort"
 	"sync"
 )
 
@@ -114,7 +113,7 @@ func RoutedTasks() []Task {
 	for task := range extensionTasks.units {
 		tasks = append(tasks, task)
 	}
-	sort.Slice(tasks, func(i, j int) bool { return tasks[i] < tasks[j] })
+	slices.Sort(tasks)
 	return tasks
 }
 

@@ -54,7 +54,9 @@ func TestARefusedTaskRegistersNothing(t *testing.T) {
 			t.Errorf("%s: the valid task was applied", name)
 		}
 	}
-	_ = RegisterExtensionTasks([]ExtensionTask{extTask("ext_b_ok", "b", false)})
+	if err := RegisterExtensionTasks([]ExtensionTask{extTask("ext_b_ok", "b", false)}); err != nil {
+		t.Fatal(err)
+	}
 	if err := RegisterExtensionTasks([]ExtensionTask{extTask("ext_b_ok", "c", false)}); err == nil {
 		t.Error("a second unit took another unit's task")
 	}

@@ -5,7 +5,7 @@ package compose
 
 // The one door of the system reads that answer for a seat. A job tick has no
 // caller, so these reads name the member they run as. That member is the unit's
-// service member and nobody else, so no read is bound to a person who may leave.
+// service member and nobody else, so no read is bound to a colleague who may leave.
 // The read then runs under that member's own grants, row scope and field masks.
 
 import (
@@ -34,7 +34,7 @@ type systemSeat struct {
 // a bus delivery that declared the read. It then requires actAs to be the
 // unit's live service member, one that connected the unit's secret. It answers
 // the context carrying that member's own principal. A refusal gives its class
-// only, so a unit cannot tell a person from a service member of another unit.
+// only, so a unit cannot tell a colleague from a service member of another unit.
 func (r *callRuntime) seatRead(ctx context.Context, read extension.SystemRead, actAs extension.UserID) (context.Context, systemSeat, error) {
 	sys, err := r.systemRead(ctx, read)
 	if err != nil {
@@ -60,7 +60,7 @@ func (r *callRuntime) seatRead(ctx context.Context, read extension.SystemRead, a
 	if !admitted {
 		return nil, systemSeat{}, refused
 	}
-	seatCtx, _, bound, err := workerSeat(sys, r.deps.pool, member)
+	seatCtx, _, bound, err := bindSeat(sys, r.deps.pool, member)
 	if err != nil {
 		return nil, systemSeat{}, r.systemReadFault(sys, err)
 	}
@@ -69,6 +69,10 @@ func (r *callRuntime) seatRead(ctx context.Context, read extension.SystemRead, a
 	}
 	return seatCtx, systemSeat{rt: r, read: read, member: member, sys: sys}, nil
 }
+
+// bindSeat binds a member's principal. It is a variable so the object-gate census
+// does not count every method named Get or List as gated by this one call.
+var bindSeat = workerSeat
 
 // serviceMemberConnectedTx reports whether member is the live service member
 // declared for unit and holds one of the unit's secrets.

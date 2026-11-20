@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func main() {
@@ -81,12 +82,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// snapshot serves registration and the boot inventory below, so both
 	// observe the same declarations.
 	extensions := composition.Extensions()
-	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
-		return err
-	}
-	// The tasks the units declare join the router's tables here, before the
-	// model path is resolved, so Settings lists them and the budget counts them.
-	if err := compose.RegisterExtensionAITasks(extensions, composition.AITasks()); err != nil {
+	if err := registerExtensions(extensions); err != nil {
 		return err
 	}
 
@@ -467,4 +463,14 @@ func schemaPoolOptions(ctx context.Context, schemaDSN string, stdout io.Writer) 
 	}
 	_, _ = fmt.Fprintln(stdout, "api custom-field schema changes enabled (schema pool configured)")
 	return []compose.Option{compose.WithSchemaPool(pool)}, pool, pool.Close, nil
+}
+
+// registerExtensions registers the units' verbs and jobs, then their AI tasks.
+// The tasks join the router's tables before the model path is resolved, so
+// Settings lists them and the budget counts them.
+func registerExtensions(extensions []extension.Extension) error {
+	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
+		return err
+	}
+	return compose.RegisterExtensionAITasks(extensions, composition.AITasks())
 }

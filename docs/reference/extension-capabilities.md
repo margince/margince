@@ -56,7 +56,7 @@ actions:
 |---|---|
 | The name starts with the unit's `ext_<unit>_` | The call log and Settings show whose task it is |
 | Every tier in `ladder` is a tier the contract declares | A task with an unknown tier could not be routed |
-| `interactive` pairs with `degrade` and `background` with `queue` | Interactive work answers a person, and background work waits for the next budget period |
+| `interactive` pairs with `degrade` and `background` with `queue` | An `interactive` task answers someone who waits, and a `background` task waits for the next budget period |
 | `subject_restriction` is `honour`, `no_payload` is `true`, `company_context` is `none` | The core cannot see inside a prompt the unit wrote, so it keeps none of it and adds none |
 | `display_name`, `summary` and at least one site are set | Settings shows them |
 
@@ -68,7 +68,7 @@ A unit that declares a task must also declare the `models` need, or the boot ref
 | Removes secrets from the request before it leaves | the secret stripper of the AI service |
 | Counts the call against the budget and writes the call record | the AI service |
 | Names the unit and the task beside the call's correlation id in the audit trail | `system_log`, action `extension_model_call` |
-| Records the record a request is about, when `About` names exactly one | the call record's subject, which erasure reads |
+| Records the record a request is about, when `About` names one | the call record's subject, which erasure reads |
 | Refuses a contact under a restriction of processing | the request's `About` list |
 
 `Tier` pins a request to the cheap or the premium model. The installation still decides which model that is. A tier with no model bound fails the call.
@@ -82,17 +82,17 @@ A request names the core records its text was built from in `About`, or says in 
 | Call | Answer |
 |---|---|
 | The unit did not declare `models` or `objects`, or the task is not one it declared | `ErrNotDeclared` |
-| A job tick or a bus delivery calls an interactive task | `ErrForbidden` |
+| A scheduled job or a bus delivery calls an `interactive` task | `ErrForbidden` |
 | The request or the name is wrong in form, or an object is over the size cap | `ErrInvalid` |
 | The request names a contact under a restriction of processing | `ErrForbidden` |
 | `Get` of an object that is not there | `ErrNotFound` |
 | The model or the store fails, or this process has none bound | an error with no detail, so no provider or path shows |
 
-A job tick or a bus delivery has nobody waiting, so it may call background tasks only. A background task queues when the budget runs out, and an interactive task degrades. When `NoContactData` is set, the core writes its reason to the log.
+A scheduled job or a bus delivery has nobody waiting, so it may call `background` tasks only. A `background` task queues when the budget runs out, and an `interactive` task degrades. When `NoContactData` is set, the core writes its reason to the log.
 
 A failed model call is not answered from the unit's own facts: the unit gets the error at once.
 
-The core keeps no payload of an extension's call, because it cannot know what the unit put in its own prompt. The workspace budget serves all units and there is no cap for each one yet. Each task has its own line in AI Usage, so the spend of each unit shows.
+The core keeps no payload of an extension's call, because it cannot know what the unit put in its own prompt. The workspace budget serves all units and there is no cap for each one yet. Each task has its own line in `AI Usage`, so the spend of each unit shows.
 
 ## Use the file store
 
