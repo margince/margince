@@ -3,10 +3,12 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { useQuery } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { contactQuery } from "../lib/contact.queries";
 import { routeHash } from "../lib/router";
 import {
   ANA,
@@ -23,16 +25,24 @@ import { ContactCaseEntry } from "./contactcase.entry";
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   globalThis.location.hash = "";
 });
 
 const CASE_PATH = `/dedupe/contact-cases/${ANA}`;
 
+// The contact page reads the record beside the door, and a merge refreshes it.
+function ContactRead() {
+  useQuery(contactQuery(ANA));
+  return null;
+}
+
 function mount(followSurvivor = false) {
   return render(
     <StoryProviders>
       <ToastProvider>
+        <ContactRead />
         <ContactCaseEntry contactId={ANA} followSurvivor={followSurvivor} />
         <ToastRegion />
       </ToastProvider>
@@ -66,8 +76,12 @@ describe("the door to a contact's duplicate case", () => {
     ).toBeVisible();
   });
 
+  // The case read answers first and removes the door. The merge still lands
+  // while the record read it also refreshes has not answered yet.
   it("opens the contact that remained, and says the merge happened", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     let merged = false;
+    let answerContact: (response: Response) => void = () => {};
     const outcome = previewOutcome({
       survivor_id: BEN,
       merged_ids: [ANA],
@@ -83,10 +97,16 @@ describe("the door to a contact's duplicate case", () => {
           merged = true;
           return jsonResponse(outcome);
         },
+        [`GET /contacts/${ANA}`]: () =>
+          merged
+            ? new Promise<Response>((resolve) => {
+                answerContact = resolve;
+              })
+            : jsonResponse({ id: ANA }),
       },
       {},
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     mount(true);
     await user.click(await screen.findByTestId("contact-case-entry"));
     await user.click(
@@ -99,6 +119,10 @@ describe("the door to a contact's duplicate case", () => {
     await user.click(
       await screen.findByRole("button", { name: "Merge 2 contacts" }),
     );
+    await waitFor(() =>
+      expect(screen.queryByTestId("contact-case-entry")).toBeNull(),
+    );
+    answerContact(jsonResponse({ id: BEN }));
     await waitFor(() =>
       expect(globalThis.location.hash).toBe(
         routeHash({ screen: "contacts", id: BEN }),
