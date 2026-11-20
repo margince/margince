@@ -117,8 +117,7 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         as: "text",
       },
     ],
-    // Is this address a contact worth keeping? The address and who it belongs to
-    // are the question; the disposition, owner and activity ids are plumbing.
+    // Is this address a contact worth keeping? Address and owner are the question.
     capture_counterparty: [
       { field: "display_name", label: "approval.field.name", as: "text" },
       { field: "email", label: "approval.field.email", as: "text" },
