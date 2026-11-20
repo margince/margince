@@ -19,8 +19,8 @@ import (
 // their owners.
 type Postponement interface {
 	error
-	// RetryAt is when to ask again, and false when the error is a call that
-	// was made and failed, which is a failure however it is typed.
+	// RetryAt is when to ask again. It answers false for a call that was
+	// made and failed, which is a failure however it is typed.
 	RetryAt() (time.Time, bool)
 }
 

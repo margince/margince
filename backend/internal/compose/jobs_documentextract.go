@@ -114,7 +114,7 @@ func (w *documentExtractWorker) Work(ctx context.Context, job *river.Job[Documen
 		closed, closeErr := w.closeUnread(closeCtx, args, detail)
 		if wait := waitToClose(wsCtx, w.log, args.ExtractionReadID, closed, closeErr,
 			activities.ExtractionReadLease); wait != nil {
-			return wait
+			return jobs.FaultContext(ctx, wait)
 		}
 	}
 	return jobs.FaultContext(ctx, err)

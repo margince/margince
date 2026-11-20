@@ -133,7 +133,7 @@ func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[Trans
 		closed, closeErr := w.closeUnread(closeCtx, args, code)
 		if wait := waitToClose(wsCtx, w.log, args.TranscriptReadID, closed, closeErr,
 			activities.TranscriptReadLease); wait != nil {
-			return wait
+			return jobs.FaultContext(ctx, wait)
 		}
 	}
 	return jobs.FaultContext(ctx, err)
@@ -162,8 +162,8 @@ func (w *transcriptProposeWorker) closeUnread(ctx context.Context, args Transcri
 			activities.TranscriptFailure{Code: code}))
 }
 
-// waitToClose keeps a live job behind a reading its last try could not close:
-// the release failed and a claim still holds it, or the close did not write.
+// waitToClose keeps a live job behind a reading its last try could not close.
+// The release failed and a claim still holds it, or the close did not write.
 // The job then sleeps one lease, which River does not count as a try, and the
 // next run reclaims the reading or finds it settled. It answers nil once the
 // reading is closed.
