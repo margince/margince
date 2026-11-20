@@ -3212,7 +3212,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "merge.searchPlaceholder": "Tìm kiếm…",
   "merge.pickTarget": "Chọn hồ sơ giữ lại",
   "merge.confirm":
-    "Gộp {source} vào {target}? Hồ sơ được giữ lại sẽ nhận lịch sử, việc cần làm, thẻ và liên kết của hồ sơ kia, đồng thời điền các trường còn trống từ đó. Hồ sơ kia sẽ được chuyển vào kho lưu trữ. Không thể hoàn tác việc gộp.",
+    "Gộp {source} vào {target}? Hồ sơ được giữ lại sẽ nhận lịch sử, việc cần làm, thẻ và liên kết của hồ sơ kia, đồng thời điền các trường chuẩn còn trống từ đó. Hồ sơ kia sẽ được chuyển vào kho lưu trữ và giữ giá trị trường tùy chỉnh của nó. Không thể hoàn tác việc gộp.",
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "Đã gộp {source} vào {target}.",
   "merge.targetReadOnly":
@@ -6508,7 +6508,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.archiveRefused":
     "Chỉ chủ sở hữu liên hệ hoặc quản lý mới có thể lưu trữ liên hệ này.",
   "contact.undoArchiveNothing":
-    "Không thể hoàn tác việc lưu trữ. Hãy mở liên hệ và khôi phục từ lịch sử đầy đủ.",
+    "Không thể hoàn tác việc lưu trữ vì lịch sử của liên hệ không có lần lưu trữ nào để khôi phục. Hãy mở liên hệ để xem liên hệ còn được lưu trữ hay không.",
   "company.archiveRefused":
     "Chỉ chủ sở hữu công ty hoặc quản lý mới có thể lưu trữ công ty này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",

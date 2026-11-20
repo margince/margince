@@ -1747,7 +1747,7 @@
   "record.moreActions": "Weitere Aktionen",
   "share.access.read": "Lesezugriff",
   "share.access.write": "Schreibzugriff",
-  "merge.confirm": "{source} mit {target} zusammenführen? Der Datensatz, der bleibt, übernimmt Verlauf, Aufgaben, Tags und Verknüpfungen des anderen und füllt seine leeren Felder daraus. Der andere wird archiviert. Das Zusammenführen lässt sich nicht rückgängig machen.",
+  "merge.confirm": "{source} mit {target} zusammenführen? Der Datensatz, der bleibt, übernimmt Verlauf, Aufgaben, Tags und Verknüpfungen des anderen und füllt seine leeren Standardfelder daraus. Der andere wird archiviert und behält die Werte seiner eigenen Felder. Das Zusammenführen lässt sich nicht rückgängig machen.",
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "{source} wurde in {target} zusammengeführt.",
   "merge.submit": "Zusammenführen",

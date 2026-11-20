@@ -3212,7 +3212,7 @@ export const en = {
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
   "merge.confirm":
-    "Merge {source} into {target}? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty fields from it. The other is archived. A merge cannot be undone.",
+    "Merge {source} into {target}? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty standard fields from it. The other is archived and keeps its custom field values. A merge cannot be undone.",
   // A record's name with its detail line, so two look-alike names stay apart.
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "{source} was merged into {target}.",
@@ -6647,7 +6647,7 @@ export const en = {
   "contact.archiveRefused":
     "Only the contact’s owner or a manager can archive this contact.",
   "contact.undoArchiveNothing":
-    "This archive could not be undone. Open the contact and restore it from its full history.",
+    "This archive could not be undone, because the contact’s history holds no archive to put back. Open the contact to see whether it is still archived.",
   "company.archiveRefused":
     "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",

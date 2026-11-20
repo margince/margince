@@ -504,7 +504,7 @@ describe("merging an account into another", () => {
 
     expect(
       screen.getByText(
-        "Merge Brandt Automotive GmbH (brandt-dup.example) into Brandt Automotive GmbH (brandt.example)? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty fields from it. The other is archived. A merge cannot be undone.",
+        "Merge Brandt Automotive GmbH (brandt-dup.example) into Brandt Automotive GmbH (brandt.example)? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty standard fields from it. The other is archived and keeps its custom field values. A merge cannot be undone.",
       ),
     ).toBeTruthy();
     await user.click(screen.getByTestId("merge-confirm"));

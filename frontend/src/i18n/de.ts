@@ -3310,7 +3310,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "merge.searchPlaceholder": "Suchen…",
   "merge.pickTarget": "Datensatz auswählen, der bleibt",
   "merge.confirm":
-    "{source} mit {target} zusammenführen? Der Datensatz, der bleibt, übernimmt Verlauf, Aufgaben, Tags und Verknüpfungen des anderen und füllt seine leeren Felder daraus. Der andere wird archiviert. Das Zusammenführen lässt sich nicht rückgängig machen.",
+    "{source} mit {target} zusammenführen? Der Datensatz, der bleibt, übernimmt Verlauf, Aufgaben, Tags und Verknüpfungen des anderen und füllt seine leeren Standardfelder daraus. Der andere wird archiviert und behält die Werte seiner eigenen Felder. Das Zusammenführen lässt sich nicht rückgängig machen.",
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "{source} wurde in {target} zusammengeführt.",
   "merge.targetReadOnly":
@@ -6686,7 +6686,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.archiveRefused":
     "Nur der Verantwortliche des Kontakts oder eine Führungskraft kann diesen Kontakt archivieren.",
   "contact.undoArchiveNothing":
-    "Das Archivieren ließ sich nicht rückgängig machen. Öffne den Kontakt und stelle ihn im vollständigen Verlauf wieder her.",
+    "Das Archivieren ließ sich nicht rückgängig machen, weil der Verlauf des Kontakts kein Archivieren zum Zurücknehmen enthält. Öffne den Kontakt, um zu sehen, ob er noch archiviert ist.",
   "company.archiveRefused":
     "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
