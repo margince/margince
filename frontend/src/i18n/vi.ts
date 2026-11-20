@@ -14,6 +14,7 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "systemJob.legal_review_desk": "Rà soát pháp lý",
   "systemJob.import_identity_links": "Liên kết email đã nhập",
   "systemJob.promise_kept": "Đóng cam kết mà cuộc họp cho thấy đã thực hiện",
   "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
@@ -4726,6 +4727,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
   "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
+  "approval.kind.legal_review_request": "Yêu cầu rà soát pháp lý",
   "approval.kind.task_due_date": "Kiểm tra hạn",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
@@ -18160,6 +18162,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quyết định của bên mua về tài liệu",
   "webhooks.event.deal_room.decision_recorded.when":
     "Hiện không còn gửi. Giữ lại cho hệ thống nhận vẫn đọc sự kiện cũ.",
+  "webhooks.eventGroup.legal_reviews": "Rà soát pháp lý",
+  "webhooks.event.legal_review.requested.label": "Đã yêu cầu rà soát pháp lý",
+  "webhooks.event.legal_review.requested.when":
+    "Một deal được gửi cho bộ phận pháp lý rà soát.",
+  "webhooks.event.legal_review.decided.label": "Đã trả lời rà soát pháp lý",
+  "webhooks.event.legal_review.decided.when":
+    "Bộ phận pháp lý duyệt một deal hoặc yêu cầu chỉnh sửa.",
+  "webhooks.event.legal_review.withdrawn.label":
+    "Đã rút yêu cầu rà soát pháp lý",
+  "webhooks.event.legal_review.withdrawn.when":
+    "Một yêu cầu gửi bộ phận pháp lý được rút lại.",
   "webhooks.eventGroup.introductions": "Giới thiệu",
   "webhooks.event.intro_request.created.label": "Đã yêu cầu giới thiệu",
   "webhooks.event.intro_request.created.when":
@@ -22288,6 +22301,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalReview.status.approved": "Đã duyệt",
   "legalReview.status.changes_needed": "Cần thay đổi",
   "legalReview.status.withdrawn": "Đã rút",
+  "legalReview.openQueue": "Mở Rà soát pháp lý",
+  "legalReview.dismissRequest": "Ẩn",
   "legalReview.queueTitle": "Rà soát pháp lý",
   "legalReview.queueOpen": "Đang chờ",
   "legalReview.queueDecided": "Đã trả lời",

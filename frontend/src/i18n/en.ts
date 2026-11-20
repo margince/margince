@@ -3,6 +3,7 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
   "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
   "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
@@ -4799,6 +4800,7 @@ export const en = {
   "approval.kind.capture_counterparty": "Add contact from mail",
   "approval.kind.ownership_transfer": "Hand over a record",
   "approval.kind.contact_share": "Share a contact",
+  "approval.kind.legal_review_request": "Legal review requested",
   "approval.kind.task_due_date": "Check a due date",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
@@ -18450,6 +18452,16 @@ export const en = {
     "Buyer decision on a document",
   "webhooks.event.deal_room.decision_recorded.when":
     "Never sent today. Kept for receivers that still read older events.",
+  "webhooks.eventGroup.legal_reviews": "Legal reviews",
+  "webhooks.event.legal_review.requested.label": "Legal review requested",
+  "webhooks.event.legal_review.requested.when":
+    "A deal is sent to legal for review.",
+  "webhooks.event.legal_review.decided.label": "Legal review answered",
+  "webhooks.event.legal_review.decided.when":
+    "Legal approves a deal or asks for changes.",
+  "webhooks.event.legal_review.withdrawn.label": "Legal review withdrawn",
+  "webhooks.event.legal_review.withdrawn.when":
+    "A request to legal is taken back.",
   "webhooks.eventGroup.introductions": "Introductions",
   "webhooks.event.intro_request.created.label": "Introduction requested",
   "webhooks.event.intro_request.created.when":
@@ -22580,6 +22592,8 @@ export const en = {
   "legalReview.status.approved": "Approved",
   "legalReview.status.changes_needed": "Changes needed",
   "legalReview.status.withdrawn": "Withdrawn",
+  "legalReview.openQueue": "Open Legal reviews",
+  "legalReview.dismissRequest": "Dismiss",
   "legalReview.queueTitle": "Legal reviews",
   "legalReview.queueOpen": "Waiting",
   "legalReview.queueDecided": "Answered",

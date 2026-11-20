@@ -5,6 +5,7 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
   "systemJob.promise_kept":
     "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
@@ -4852,6 +4853,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
   "approval.kind.contact_share": "Kontakt teilen",
+  "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
@@ -18655,6 +18657,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Entscheidung der Käuferseite zu einem Dokument",
   "webhooks.event.deal_room.decision_recorded.when":
     "Wird derzeit nicht gesendet. Bleibt für Empfangssysteme erhalten, die noch ältere Ereignisse lesen.",
+  "webhooks.eventGroup.legal_reviews": "Rechtsprüfungen",
+  "webhooks.event.legal_review.requested.label": "Rechtsprüfung angefragt",
+  "webhooks.event.legal_review.requested.when":
+    "Ein Deal wird zur Prüfung an die Rechtsabteilung geschickt.",
+  "webhooks.event.legal_review.decided.label": "Rechtsprüfung beantwortet",
+  "webhooks.event.legal_review.decided.when":
+    "Die Rechtsabteilung gibt einen Deal frei oder verlangt Änderungen.",
+  "webhooks.event.legal_review.withdrawn.label": "Rechtsprüfung zurückgezogen",
+  "webhooks.event.legal_review.withdrawn.when":
+    "Eine Anfrage an die Rechtsabteilung wird zurückgenommen.",
   "webhooks.eventGroup.introductions": "Vorstellungen",
   "webhooks.event.intro_request.created.label": "Vorstellung angefragt",
   "webhooks.event.intro_request.created.when":
@@ -22904,6 +22916,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.status.approved": "Freigegeben",
   "legalReview.status.changes_needed": "Änderungen nötig",
   "legalReview.status.withdrawn": "Zurückgezogen",
+  "legalReview.openQueue": "Rechtsprüfungen öffnen",
+  "legalReview.dismissRequest": "Ausblenden",
   "legalReview.queueTitle": "Rechtsprüfungen",
   "legalReview.queueOpen": "Offen",
   "legalReview.queueDecided": "Beantwortet",

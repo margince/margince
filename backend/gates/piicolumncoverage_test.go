@@ -57,8 +57,8 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
-	// Raw originals are deleted in full after their positive subject match is recorded.
-	// The preparatory metadata write leaves these columns for that deletion.
+	"legal_review": {"captured_by", "packet", "status"},
+	// Raw originals are deleted in full after their positive subject match is recorded; the preparatory metadata write leaves these columns for that deletion.
 	"raw_capture": {"parts_slim_outcome", "payload", "source_id", "source_system"},
 	// Audit identity and authority remain immutable when retained payloads are removed.
 	"audit_log": {"action", "actor_id", "actor_type", "authorization_rule", "entity_type"},

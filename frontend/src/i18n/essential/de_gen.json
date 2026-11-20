@@ -1,4 +1,5 @@
 {
+  "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
   "systemJob.promise_kept": "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
   "systemJob.transcript_audience": "Terminnotizen erhalten die Lesenden des Termins",
@@ -2036,6 +2037,7 @@
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
   "approval.kind.contact_share": "Kontakt teilen",
+  "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
@@ -5403,6 +5405,8 @@
   "aiOutcome.gaveUp.deferred": "wegen des Kontingents zurückgestellt",
   "aiOutcome.gaveUp.budgetUnavailable": "Kontingentprüfung fehlgeschlagen",
   "aiOutcome.gaveUp.meteringFailed": "beantwortet, Verbrauch nicht erfasst",
+  "legalReview.openQueue": "Rechtsprüfungen öffnen",
+  "legalReview.dismissRequest": "Ausblenden",
   "legalReview.queueTitle": "Rechtsprüfungen",
   "legalReview.advanceRefused": "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Frage eine Rechtsprüfung an und verschiebe den Deal danach.",
   "aiTask.name.account_scan": "Analyse des Kundenbedarfs",
