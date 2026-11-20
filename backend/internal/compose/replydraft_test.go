@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/draftcheck"
+	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -558,5 +559,15 @@ func TestTheReplyPromptHasOnlySelectedContentAndDeclaredSteering(t *testing.T) {
 	slices.Sort(got)
 	if !slices.Equal(got, want) {
 		t.Fatalf("reply payload fields = %v, want the reviewed content/steering boundary %v", got, want)
+	}
+}
+
+func TestAReplyToASelectedMessageStaysAnchoredOnThatMessage(t *testing.T) {
+	system := replyDraftSystemFor(promptfence.New(), false)
+	if !strings.Contains(system, "Answer that exact message") {
+		t.Error("a reply is no longer told to answer the selected message")
+	}
+	if strings.Contains(system, draftrules.Purpose) {
+		t.Error("the new-email purpose rule leaked into a reply, which answers its selected message by design")
 	}
 }
