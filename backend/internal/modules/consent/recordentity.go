@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
-// recordEntityTx is the legal entity that answers for a contact or lead when
-// nobody is acting on it: the entity its owner works for, else the default.
+// recordEntityTx is the legal entity that answers for a contact or lead
+// nobody is acting on. That is the entity its owner works for, else the default.
 // Data-protection law follows the company that controls the data. The owner's
 // company is the one that holds this record.
 func recordEntityTx(ctx context.Context, tx pgx.Tx, who ruleSubject) (ids.UUID, error) {
