@@ -50123,7 +50123,7 @@ export interface components {
             /** @enum {string} */
             row_scope: "own" | "team" | "all";
             /**
-             * @description Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+             * @description Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
              * @enum {string}
              */
             identity_read?: "workspace";

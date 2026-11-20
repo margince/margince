@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { throwProblem } from "../lib/problem";
+import { seedWriter } from "../testing/mefixture";
 import { CreateAction } from "./create";
 import type { CreateField } from "./create.fields";
 
@@ -26,6 +27,7 @@ function render(ui: ReactNode, locale: "en" | "de" = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  seedWriter(client);
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>{ui}</LocaleProvider>
@@ -56,6 +58,7 @@ function refusal(field: string, code: string) {
 async function submitWith(problem: unknown, locale: "en" | "de" = "en") {
   render(
     <CreateAction
+      requires={{ object: "deal", action: "create" }}
       label="New deal"
       fields={fields}
       create={() => throwProblem(problem)}
@@ -75,6 +78,7 @@ describe("CreateAction field refusals", () => {
   it("declares the lowest amount the browser accepts", async () => {
     render(
       <CreateAction
+        requires={{ object: "deal", action: "create" }}
         label="New deal"
         fields={fields}
         create={() => Promise.resolve({ id: "1" })}
@@ -124,6 +128,7 @@ describe("CreateAction field refusals", () => {
     const user = userEvent.setup();
     render(
       <CreateAction
+        requires={{ object: "deal", action: "create" }}
         label="New deal"
         fields={fields}
         conflict={{ field: "name", sentence: "A deal already has this name." }}
@@ -153,6 +158,7 @@ describe("CreateAction field refusals", () => {
     const user = userEvent.setup();
     render(
       <CreateAction
+        requires={{ object: "deal", action: "create" }}
         label="New deal"
         fields={[
           { key: "name", label: "create.dealName", required: true },
@@ -194,6 +200,7 @@ describe("CreateAction field refusals", () => {
     const user = userEvent.setup();
     render(
       <CreateAction
+        requires={{ object: "deal", action: "create" }}
         label="New deal"
         fields={fields}
         create={() => Promise.resolve({ id: "1" })}

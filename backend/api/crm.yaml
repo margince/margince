@@ -68369,8 +68369,9 @@ components:
           enum: [workspace]
           x-extensible-enum: true
           description: >-
-            Customer identity (contact, company, lead, deal) is readable by every seat that
-            holds the object grant; row scope governs projects and writes.
+            Customer identity and the work done for it (contact, company, lead, deal,
+            project) is readable by every seat that holds the object grant; row scope
+            governs writes.
         objects:
           type: object
           additionalProperties:

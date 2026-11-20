@@ -26,12 +26,7 @@ import {
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { fileListKeys } from "../../lib/attachmentkeys";
-import {
-  useCan,
-  useCanWrite,
-  useCanWriteRecord,
-  useRecordWriteRefusal,
-} from "../../lib/capability";
+import { useCan, useCanWrite, useCanWriteRecord } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
 import { useMemberName } from "../../lib/membernames";
 import { fromHere } from "../../lib/navigatefrom";
@@ -39,6 +34,7 @@ import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { unwrap } from "../../lib/problem";
 import { useMe, useViewerId } from "../../lib/session";
 import { useShortcut } from "../../lib/shortcuts";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
 
@@ -254,11 +250,7 @@ function useOwnerSave(
 // An unowned record is refused too: its way in is the claim door, which
 // useCompanyOwnerFlow keeps on its own predicate.
 export function useCompanyVerbRefusal(company: Company): string | undefined {
-  const t = useT();
-  return useRecordWriteRefusal("company", company, {
-    archived: t("record.archivedReadOnly"),
-    notYours: t("record.notYoursToChange"),
-  });
+  return useKindWriteRefusal("company", company);
 }
 
 export function CompanyActionBadges({
