@@ -925,6 +925,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /records/{entity_type}/{id}/history` | getRecordHistory | Full audit history for one record, rendered as plain-language lines. | Read records | at once |
 | `GET /field-history` | getFieldHistory | One entry per field change, newest first, for the given `entity_type` + `entity_id`. | Read records | at once |
 | `GET /consent-purposes` | listConsentPurposes | List the workspace's consent purposes (e.g. transactional, marketing_email, profiling). | Read records | at once |
+| `GET /consent-purposes/send-counts` | listConsentPurposeSendCounts | How many messages went out under each declared consent purpose. | Read records | at once |
 | `GET /retention/settings` | getRetentionSettings | The installation's retention posture (admin/ops). | Read records | at once |
 | `GET /retention/restrictions` | listRestrictedActivities | List the records a statutory retention obligation is holding, and why. | Read records | at once |
 | `POST /retention/restrictions/{activityId}/pin` | pinActivityToFloor | Pin an activity to the retention floor, restricting it. Requires a stated reason; audited. | Change records | at once |

@@ -11559,6 +11559,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeDoiBadge": "Xác nhận kép",
   "privacy.purposesLoading": "Đang tải mục đích…",
   "privacy.purposesEmpty": "Chưa có mục đích nào.",
+  "privacy.purposeClass": "Loại",
+  "privacy.purposeClass.businessCorrespondence": "Thư từ công việc",
+  "privacy.purposeClass.transactional": "Giao dịch",
+  "privacy.purposeClass.marketing": "Tiếp thị",
+  "privacy.purposeClass.phoneOutreach": "Liên hệ qua điện thoại",
+  "privacy.purposeClass.undefined": "Chưa định nghĩa",
+  "privacy.purposeSends": "Đã gửi trong {days} ngày",
+  "privacy.purposeSendsSub":
+    "Mỗi thư ghi rõ mục đích của nó, và loại của mục đích quyết định thư có cần sự đồng ý hay không. Margince gửi thư theo loại mà thư ghi. Hãy kiểm tra số liệu {days} ngày qua: bản tin không nên xuất hiện dưới dạng thư từ công việc.",
+  "privacy.purposeSendsLoading": "Đang đếm thư đã gửi…",
+  "privacy.purposeSendsEmpty":
+    "Không có thư nào ghi mục đích trong {days} ngày qua.",
+  "privacy.purposeSendsTable": "Thư đã gửi theo mục đích",
   "privacy.customerNotices": "Khách hàng hiện có",
   "privacy.customerNoticesSub":
     "Ở Đức, bạn có thể gửi quảng cáo về sản phẩm tương tự cho khách hàng mà không cần đồng ý, nếu khi thu thập địa chỉ bạn đã báo cho họ rằng họ có thể từ chối. Hãy ghi ở đây bạn đã báo ở đâu và khi nào. Khách hàng đã mua của pháp nhân đó trong khoảng thời gian này sẽ nhận bản tin của bạn kèm liên kết hủy đăng ký.",

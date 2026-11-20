@@ -11881,6 +11881,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
   "privacy.purposesEmpty": "Noch keine Zwecke registriert.",
+  "privacy.purposeClass": "Art",
+  "privacy.purposeClass.businessCorrespondence": "Korrespondenz",
+  "privacy.purposeClass.transactional": "Transaktional",
+  "privacy.purposeClass.marketing": "Werbung",
+  "privacy.purposeClass.phoneOutreach": "Telefonische Ansprache",
+  "privacy.purposeClass.undefined": "Nicht definiert",
+  "privacy.purposeSends": "Gesendet in {days} Tagen",
+  "privacy.purposeSendsSub":
+    "Jede Mail nennt ihren Zweck, und die Art des Zwecks entscheidet, ob sie eine Einwilligung braucht. Margince sendet sie unter der Art, die sie nennt. Prüfe diese Zahlen der letzten {days} Tage: Ein Newsletter sollte nicht als Korrespondenz erscheinen.",
+  "privacy.purposeSendsLoading": "Gesendete Mails werden gezählt …",
+  "privacy.purposeSendsEmpty":
+    "In den letzten {days} Tagen hat keine Mail einen Zweck genannt.",
+  "privacy.purposeSendsTable": "Gesendete Mails je Zweck",
   "privacy.customerNotices": "Bestandskunden",
   "privacy.customerNoticesSub":
     "In Deutschland darfst du Kunden ohne Einwilligung Werbung für ähnliche Produkte schicken, wenn du sie beim Erheben der Adresse auf ihr Widerspruchsrecht hingewiesen hast. Trage hier ein, wo und wann du den Hinweis gegeben hast. Kunden, die in diesem Zeitraum bei dieser Gesellschaft gekauft haben, erhalten dann deine Newsletter mit Abmeldelink.",

@@ -431,6 +431,7 @@ func (m outboundChannelMessage) activity() LogActivityInput {
 	direction := "outbound"
 	return SentRecord(LogActivityInput{
 		SystemText: &systemtext.Message{Body: systemtext.Prose(systemtext.Quote, "")},
+		declared:   declaredPurposeOf(m.in.ConsentPurpose, m.in.MarketingPurpose),
 		// The two axes, stated separately (ADR-0107/A158). The reply IS a
 		// message; what carries it is the anchor's own transport. Capture's
 		// reply-match reads the PAIR — kind to separate mail from channel,

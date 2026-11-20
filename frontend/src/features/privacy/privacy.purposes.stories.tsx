@@ -179,3 +179,53 @@ export const KeyTaken: Story = {
     ).toBeVisible();
   },
 };
+
+// A compliance reader also sees how much mail went out under each purpose, so
+// a newsletter sent as correspondence shows. A key no purpose defines keeps its
+// raw key and says its class is not defined.
+const MAY_READ_SENDS: GrantSpec = { consent_config: ["read", "create"] };
+
+const SEND_COUNTS = {
+  days: 30,
+  data: [
+    { purpose_key: "transactional", class: "transactional", sends: 1240 },
+    {
+      purpose_key: "business_correspondence",
+      class: "business_correspondence",
+      sends: 318,
+    },
+    { purpose_key: "marketing", class: "marketing", sends: 52 },
+    { purpose_key: "old_campaign", sends: 3 },
+  ],
+};
+
+export const SendCounts: Story = {
+  render: purposes(MAY_READ_SENDS, PURPOSES, {
+    "GET /consent-purposes/send-counts": () => jsonResponse(SEND_COUNTS),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const table = await canvas.findByRole("table", {
+      name: "Mail sent per purpose",
+    });
+    await expect(within(table).getByText("1,240")).toBeVisible();
+  },
+};
+
+export const SendCountsDark: Story = {
+  ...SendCounts,
+  globals: { theme: "dark" },
+};
+
+export const SendCountsPhone: Story = {
+  ...SendCounts,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const SendCountsEmpty: Story = {
+  render: purposes(MAY_READ_SENDS, PURPOSES, {
+    "GET /consent-purposes/send-counts": () =>
+      jsonResponse({ days: 30, data: [] }),
+  }),
+};

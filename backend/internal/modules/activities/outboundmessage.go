@@ -94,6 +94,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 	return SentRecord(LogActivityInput{
 		correspondenceEntity: m.in.SendingEntity,
 		statedCountries:      m.statedCountries(),
+		declared:             declaredPurposeOf(m.in.ConsentPurpose, m.in.MarketingPurpose),
 		SystemText:           outboundMessageText(m.recordedBody, m.htmlBody != ""),
 		Kind:                 "email",
 		Subject:              &m.in.Subject,

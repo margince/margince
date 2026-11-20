@@ -18633,6 +18633,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/consent-purposes/send-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many messages went out under each declared consent purpose.
+         * @description Needs `consent_config:read`. A send names its consent purpose, and the purpose's class
+         *     decides which consent rules apply to it. The send is allowed under the class it declares,
+         *     so this count is where a misclassified send shows afterwards: for example a marketing
+         *     campaign that went out as `business_correspondence`.
+         *
+         *     One entry per purpose and class, counting every outbound mail or channel message that named
+         *     that purpose in the window, most sent first. A send that named no purpose is not counted.
+         *     `class` is absent for a key no purpose defines.
+         */
+        get: operations["listConsentPurposeSendCounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/existing-customer-notices": {
         parameters: {
             query?: never;
@@ -55194,14 +55221,24 @@ export interface components {
              * @default false
              */
             requires_double_opt_in: boolean;
-            /**
-             * @description What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
-             * @enum {string}
-             */
-            class?: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+            /** @description What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration. */
+            class?: components["schemas"]["ConsentPurposeClass"];
             frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /** Format: date-time */
             created_at: string;
+        };
+        /**
+         * @description Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
+         * @enum {string}
+         */
+        ConsentPurposeClass: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+        ConsentPurposeSendCount: {
+            /** @description The purpose key the sends named. */
+            purpose_key: string;
+            /** @description The purpose's class when the message was sent. Absent for a key no purpose defines. */
+            class?: components["schemas"]["ConsentPurposeClass"];
+            /** @description Outbound messages that named this purpose in the window. */
+            sends: number;
         };
         /**
          * @description How often the purpose's mail goes out, roughly. The subscription question states it.
@@ -92821,6 +92858,36 @@ export interface operations {
                     "application/json": components["schemas"]["ConsentPurpose"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listConsentPurposeSendCounts: {
+        parameters: {
+            query?: {
+                /** @description How many days back the window reaches from now. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The send counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ConsentPurposeSendCount"][];
+                        /** @description The window the counts cover. */
+                        days: number;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

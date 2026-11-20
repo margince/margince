@@ -187,3 +187,74 @@ describe("Add purpose", () => {
     expect(screen.queryByText(/pick weekly/)).toBeNull();
   });
 });
+
+function stubCounts(allow: Record<string, string[]>): string[] {
+  const asked: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      if (url.pathname.endsWith("/me")) {
+        return json(meFixture({ roles: ["admin"], allow }));
+      }
+      if (url.pathname.endsWith("/consent-purposes/send-counts")) {
+        asked.push(url.search);
+        return json({
+          days: 30,
+          data: [
+            {
+              purpose_key: "transactional",
+              class: "transactional",
+              sends: 1200,
+            },
+            { purpose_key: "retired_key", sends: 2 },
+          ],
+        });
+      }
+      return json({ data: [TRANSACTIONAL] });
+    }),
+  );
+  return asked;
+}
+
+function renderCard() {
+  rtlRender(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <ConsentPurposesCard />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe("Mail sent per purpose", () => {
+  it("shows a compliance reader each purpose with its class and count", async () => {
+    const asked = stubCounts({ consent_config: ["read"], contact: ["read"] });
+    renderCard();
+
+    const table = await screen.findByRole("table", {
+      name: en["privacy.purposeSendsTable"],
+    });
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows.map((row) => row.textContent)).toEqual([
+      `${TRANSACTIONAL.label}${en["privacy.purposeClass.transactional"]}1,200`,
+      `retired_key${en["privacy.purposeClass.undefined"]}2`,
+    ]);
+    expect(asked).toEqual(["?days=30"]);
+  });
+
+  it("asks nothing for a seat without the compliance read grant", async () => {
+    const asked = stubCounts({ contact: ["read"] });
+    renderCard();
+
+    await screen.findByText(TRANSACTIONAL.label);
+    expect(
+      screen.queryByRole("table", { name: en["privacy.purposeSendsTable"] }),
+    ).toBeNull();
+    expect(asked).toEqual([]);
+  });
+});

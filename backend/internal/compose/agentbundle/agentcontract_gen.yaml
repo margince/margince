@@ -18432,6 +18432,36 @@ paths:
                 properties:
                   data: {type: array, items: {$ref: '#/components/schemas/ConsentPurpose'}}
                   page: {$ref: '#/components/schemas/PageInfo'}
+  /consent-purposes/send-counts:
+    get:
+      tags: [Compliance]
+      operationId: listConsentPurposeSendCounts
+      summary: How many messages went out under each declared consent purpose.
+      description: |-
+        Needs `consent_config:read`. A send names its consent purpose, and the purpose's class
+        decides which consent rules apply to it. The send is allowed under the class it declares,
+        so this count is where a misclassified send shows afterwards: for example a marketing
+        campaign that went out as `business_correspondence`.
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 366, default: 30}
+          description: How many days back the window reaches from now.
+      responses:
+        '200':
+          description: The send counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, days]
+                properties:
+                  data: {type: array, items: {$ref: '#/components/schemas/ConsentPurposeSendCount'}}
+                  days: {type: integer, description: 'The window the counts cover.'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /retention/settings:
     get:
       tags: [Compliance]
@@ -52475,11 +52505,23 @@ components:
         label: {type: string}
         requires_double_opt_in: {type: boolean, default: false, description: 'When true, a grant is only effective after a confirmed DOI event (German email norm).'}
         class:
-          type: string
-          enum: [business_correspondence, transactional, marketing, phone_outreach]
+          allOf: [{$ref: '#/components/schemas/ConsentPurposeClass'}]
           description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
         frequency: {$ref: '#/components/schemas/ConsentPurposeFrequency'}
         created_at: {type: string, format: date-time}
+    ConsentPurposeClass:
+      type: string
+      enum: [business_correspondence, transactional, marketing, phone_outreach]
+      description: Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
+    ConsentPurposeSendCount:
+      type: object
+      required: [purpose_key, sends]
+      properties:
+        purpose_key: {type: string, description: 'The purpose key the sends named.'}
+        class:
+          allOf: [{$ref: '#/components/schemas/ConsentPurposeClass'}]
+          description: The purpose's class when the message was sent. Absent for a key no purpose defines.
+        sends: {type: integer, description: 'Outbound messages that named this purpose in the window.'}
     ConsentPurposeFrequency:
       type: string
       enum: [weekly, monthly, quarterly]
