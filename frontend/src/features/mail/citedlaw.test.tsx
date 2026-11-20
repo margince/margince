@@ -108,6 +108,34 @@ describe("the inline send review", () => {
     );
   });
 
+  it("cites the recipient's law and then the sender's, and names the country used", () => {
+    const gdpr = {
+      instrument: "Regulation (EU) 2016/679 (GDPR)",
+      provision: "Art. 6(1)",
+      source_url: "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+    };
+    const pdpl = {
+      instrument: "Law 91/2025/QH15",
+      provision: "Art. 9",
+      source_url: "https://example.org/pdpl",
+    };
+    renderRows([
+      objected({
+        reason_code: "no_compatible_evidence",
+        provision: gdpr,
+        provisions: [gdpr, pdpl],
+        country: "de",
+        country_source: "employer_address",
+      }),
+    ]);
+
+    expect(document.querySelector(".callout-title")).toHaveTextContent(
+      "No reason to contact anna@example.de is on record (GDPR Art. 6(1); Law 91/2025/QH15 Art. 9).",
+    );
+    expectLawLink("Law 91/2025/QH15 Art. 9", pdpl.source_url);
+    expect(screen.getByText(/Germany/)).toHaveTextContent(/employer/i);
+  });
+
   it("keeps the factual sentence and links nothing without a provision", () => {
     renderRows([objected()]);
 

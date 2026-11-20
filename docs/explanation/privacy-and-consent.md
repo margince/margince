@@ -455,15 +455,15 @@ it down.
 
 `consent/ruleselectors.go` holds two selectors. Each recipient of a message is put to them on their own.
 
-- **Marketing rules follow the recipient's jurisdiction.** They set the advertising cap, the
-  advertising label on the subject, how to object, the receipt for an opt-out, and the follow-up
-  windows. The jurisdiction is the first `address_country` the record states: the contact's own, then
-  that of their current primary employer. A lead takes the one of the company it is filed under. A
-  free-text value that is not a two-letter code is skipped.
+- **Marketing rules follow the recipient's jurisdiction**: the advertising cap and label, how to
+  object, the opt-out receipt and the marketing exception. It is the first two-letter
+  `address_country` of the contact, then their current primary employer; a lead takes its company's.
 - **Data protection follows the sending legal entity's jurisdiction.** This covers the controller
   identity and privacy contact at the foot of the mail. `storekit.LegalEntityOf` reads the sending
   user's membership; none, or an archived entity, gives `installation.country`. A further entity
   puts its own legal name and address in the foot. Staging stores the entity.
+- **The lawful basis follows both, the stricter winning**, and its warning cites both laws (see
+  [messaging-policy-packs.md](messaging-policy-packs.md#which-country-judges-a-recipient)).
 
 A recipient whose record states no jurisdiction, or one no pack covers, gets the baseline: no pack
 duties. Marketing still needs consent, because the verdict asks for it everywhere, and the send path
