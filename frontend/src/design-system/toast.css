@@ -14,7 +14,7 @@
    * The shell publishes where the bottom edge actually is, and this reads it
    * rather than holding an opinion. It used to say `bottom: 20px`, which on a
    * phone put the confirmation ON TOP of the fixed navigation bar — the toast
-   * sits at z-index 60 and the bar at 30, so it covered the bar rather than
+   * sits above the bar, so it covered the bar rather than
    * being covered by it, and the reader lost their way out of the screen for as
    * long as the message was up. `--stickyBottomInset` is `--space-2` wherever
    * no bar is drawn, so the desktop ledge is unchanged.
@@ -34,10 +34,8 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
-  /* Above the modal overlay (50, atoms.css) so a confirmation raised by a
-     dialog's own action is visible, and below the select popup (70) and the
-     tooltip (80), which are attached to controls a reader is actively driving. */
-  z-index: 60;
+  /* In the top layer (toplayer.ts), so a confirmation raised by a dialog's own
+     action shows above that dialog. */
   /* The region spans the viewport so its contents can be centred in it; only
      the message itself is a target. Without this the invisible full-width strip
      would swallow clicks aimed at whatever is under it. */

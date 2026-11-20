@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Field } from "./atoms";
 import { MultiSelect, Select, type SelectOption } from "./select";
 import { SelectPopup } from "./selectpopup";
@@ -223,9 +223,12 @@ export const FilteredLongList: Story = {
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.keyboard("buda");
     await expect(page.getAllByRole("option")).toHaveLength(1);
-    await expect(
-      page.getByRole("option", { name: "Europe/Budapest" }),
-    ).toBeVisible();
+    // The list fades in over --dur-state; a check in its first frame reads 0.
+    await waitFor(() =>
+      expect(
+        page.getByRole("option", { name: "Europe/Budapest" }),
+      ).toBeVisible(),
+    );
   },
 };
 
