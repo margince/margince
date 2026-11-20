@@ -15,8 +15,8 @@ import (
 // value cannot close the marks a sentence put around it.
 var quoteLookalikes = strings.NewReplacer("“", "‘", "”", "’", "„", "‚", `"`, "'")
 
-// Inline is a value someone else typed, made safe to quote inside a sentence a
-// person approves. Its own quotation marks become single ones and its line
+// Inline is a value someone else typed, made safe to quote inside a sentence an
+// approver reads. Its own quotation marks become single ones and its line
 // breaks spaces, so a reader always sees where it ends. The result is already
 // in the shape an approval summary is stored in, so its descriptor still binds.
 func Inline(value string) string {
