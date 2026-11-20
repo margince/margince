@@ -18,9 +18,10 @@ import (
 // defaultSendCountDays is the window the consent purposes card shows.
 const defaultSendCountDays = 30
 
-// PurposeSendCounts counts the outbound messages that named each consent
-// purpose in the last `days` days. It reads every send in the installation, so
-// it asks for the compliance read grant rather than any record's row scope.
+// PurposeSendCounts counts the messages that named each consent purpose in the
+// last `days` days. Only a send stores a declared purpose. It reads every send
+// in the installation, so it asks for the compliance read grant rather than any
+// record's row scope.
 func (s *Store) PurposeSendCounts(ctx context.Context, days int) ([]crmcontracts.ConsentPurposeSendCount, error) {
 	if err := auth.Require(ctx, "consent_config", principal.ActionRead); err != nil {
 		return nil, err
@@ -31,8 +32,7 @@ func (s *Store) PurposeSendCounts(ctx context.Context, days int) ([]crmcontracts
 			SELECT consent_purpose, consent_class, count(*)
 			FROM activity
 			WHERE consent_purpose IS NOT NULL
-			  AND direction = 'outbound'
-			  AND occurred_at >= now() - make_interval(days => $1)
+			  AND occurred_at >= now() - make_interval(days => $1) -- occurred_at raw: a send is stamped at its instant
 			GROUP BY consent_purpose, consent_class
 			ORDER BY count(*) DESC, consent_purpose, consent_class`, days)
 		if err != nil {

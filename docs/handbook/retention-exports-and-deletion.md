@@ -369,6 +369,12 @@ Your team cannot record a purpose that needs **double opt-in** at all. Only the 
 
 The default is **deny**. A purpose with no record for a contact is not consent.
 
+### How do I check which purpose mail went out under?
+
+Every mail or chat message you send names a purpose, and the purpose's class decides whether it needs consent. Correspondence and transactional mail do not need consent; marketing does. Margince sends a message under the class its purpose has, and keeps the purpose and its class on the sent message.
+
+So a newsletter sent under the **Business correspondence** purpose goes out without consent. You find it afterwards: open **Settings → Privacy and retention → Consent purposes**. Below the list, a table counts the mail sent in the last 30 days for each purpose, with its class. If a purpose shows more mail than you expect, look at what was sent under it. The table needs the permission to read the consent settings.
+
 Every consent change is written to a **Proof log**. It records who made the change and how: a Human, an Agent, the System, or a Connector. Where Margince has no record of it, it says "actor not recorded" and "source not recorded". You may one day have to prove consent, so Margince keeps the proof, not only the current state.
 
 An agent can record consent for its user, and it asks them first. It cannot record a purpose that needs double opt-in; only the contact can confirm that. The Proof log names it as an Agent, so the entry never reads as the user's own. See [What the AI does](what-the-ai-does.md).

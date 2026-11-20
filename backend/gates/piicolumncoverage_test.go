@@ -171,6 +171,9 @@ var erasureColumnBaseline = map[string][]string{
 		"owed_verdict",
 		// instant or day: how to read occurred_at, which the redaction keeps.
 		"occurred_precision",
+		// A consent purpose key the sender named and its class: workspace
+		// configuration, never anything the subject wrote or was told.
+		"consent_class", "consent_purpose",
 		// One of the eight iCalendar method words RFC 5546 defines, enforced by
 		// a CHECK. Nothing the subject wrote beyond which scheduling act it was.
 		"calendar_method",
