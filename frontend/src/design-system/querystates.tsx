@@ -4,6 +4,7 @@ import type { MessageKey } from "../i18n/en";
 import { type FieldLabels, isGone, problemMessageOf } from "../lib/problem";
 import { Button, EmptyState, PendingBody } from "./atoms";
 import { Callout } from "./callout";
+import { ErrorLine } from "./errorline";
 import "./querystates.css";
 
 // The minimal read surface QueryGate/QueryStates need. A real react-query
@@ -63,7 +64,7 @@ export function QueryStates({
   if (goneKey && query.isError && isGone(query.error)) {
     return (
       <EmptyState>
-        <p role="alert">{t(goneKey)}</p>
+        <ErrorLine>{t(goneKey)}</ErrorLine>
         {goneAction}
       </EmptyState>
     );

@@ -3603,13 +3603,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.retry": "Erneut versuchen",
   "common.goneBackToAnalytics": "Zurück zu Analytics",
   "reporting.sharedForecastGone":
-    "Dieser Link funktioniert nicht mehr. Frag bei der Absenderin oder dem Absender nach einem neuen.",
+    "Dieser Link funktioniert nicht mehr. Frage nach einem neuen Link.",
   "reporting.reportGone":
     "Diesen Bericht gibt es nicht, oder er ist nicht mit dir geteilt.",
   "analytics.q.gone":
     "Diese Frage gibt es nicht, oder sie ist nicht mit dir geteilt.",
   "book.linkGone":
-    "Diese Buchungsseite ist nicht verfügbar. Frag nach, wer dir den Link geschickt hat, und lass dir einen neuen geben.",
+    "Diese Buchungsseite ist nicht verfügbar. Frage nach einem neuen Link.",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
   "common.loading": "Wird geladen…",

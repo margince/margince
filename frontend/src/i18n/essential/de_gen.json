@@ -1810,7 +1810,7 @@
   "common.duplicate.linkedinUrl": "Das LinkedIn-Profil wurde hier nicht gespeichert, da ein anderer Lead es schon hat.",
   "common.duplicate.slotTaken": "Dieser Zeitpunkt ist nicht mehr verfügbar. Wähle einen anderen Zeitpunkt.",
   "common.retry": "Erneut versuchen",
-  "reporting.sharedForecastGone": "Dieser Link funktioniert nicht mehr. Frag bei der Absenderin oder dem Absender nach einem neuen.",
+  "reporting.sharedForecastGone": "Dieser Link funktioniert nicht mehr. Frage nach einem neuen Link.",
   "reporting.reportGone": "Diesen Bericht gibt es nicht, oder er ist nicht mit dir geteilt.",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",

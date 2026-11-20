@@ -8,6 +8,7 @@ import { EntityRef } from "../../components/entityref";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
+import { ErrorLine } from "../../design-system/errorline";
 import { FactList } from "../../design-system/factlist";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
@@ -337,7 +338,7 @@ function SavedQuestion({
     return (
       <Stack gap="3">
         {isGone(run.error) ? (
-          <p role="alert">{t("analytics.q.gone")}</p>
+          <ErrorLine>{t("analytics.q.gone")}</ErrorLine>
         ) : (
           <QuestionFailure error={run.error} />
         )}
