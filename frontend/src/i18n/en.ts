@@ -3646,6 +3646,7 @@ export const en = {
   "table.sortBy": "Sort by {column}",
   "table.noMatches": "No {unit} match these filters.",
   "table.clearFilters": "Clear filters",
+  "table.dialsRefused": "This list cannot be shown with these filters.",
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",

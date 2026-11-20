@@ -3717,6 +3717,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.sortBy": "Nach {column} sortieren",
   "table.noMatches": "Keine {unit} entsprechen diesen Filtern.",
   "table.clearFilters": "Filter zurücksetzen",
+  "table.dialsRefused":
+    "Mit diesen Filtern lässt sich die Liste nicht anzeigen.",
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
   "table.rangeLoaded": "Geladene {unit} {first} bis {last} von {count}",
