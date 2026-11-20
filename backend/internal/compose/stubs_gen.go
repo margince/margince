@@ -183,6 +183,10 @@ func (stubs) ListActivityReviewTemplates(w nethttp.ResponseWriter, r *nethttp.Re
 	httperr.NotImplemented(w, r, "ListActivityReviewTemplates")
 }
 
+func (stubs) CreateActivityReviewTemplate(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateActivityReviewTemplateParams) {
+	httperr.NotImplemented(w, r, "CreateActivityReviewTemplate")
+}
+
 func (stubs) UpdateActivityReviewTemplate(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "UpdateActivityReviewTemplate")
 }

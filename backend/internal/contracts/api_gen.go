@@ -9997,6 +9997,24 @@ func (e CreateActivityRequestMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for CreateActivityReviewTemplateRequestOutcome.
+const (
+	CreateActivityReviewTemplateRequestOutcomeLost CreateActivityReviewTemplateRequestOutcome = "lost"
+	CreateActivityReviewTemplateRequestOutcomeWon  CreateActivityReviewTemplateRequestOutcome = "won"
+)
+
+// Valid indicates whether the value is a known member of the CreateActivityReviewTemplateRequestOutcome enum.
+func (e CreateActivityReviewTemplateRequestOutcome) Valid() bool {
+	switch e {
+	case CreateActivityReviewTemplateRequestOutcomeLost:
+		return true
+	case CreateActivityReviewTemplateRequestOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateCaptureCounterpartyHoldRequestKind.
 const (
 	CreateCaptureCounterpartyHoldRequestKindAddress CreateCaptureCounterpartyHoldRequestKind = "address"
@@ -46631,6 +46649,20 @@ type CreateActivityRequestLinksEntityType string
 // CreateActivityRequestMeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 type CreateActivityRequestMeetingStatus string
 
+// CreateActivityReviewTemplateRequest defines model for CreateActivityReviewTemplateRequest.
+type CreateActivityReviewTemplateRequest struct {
+	// Key Derived from the label when omitted.
+	Key   *string `json:"key,omitempty"`
+	Label string  `json:"label"`
+
+	// Outcome Which outcome the template is asked for.
+	Outcome   CreateActivityReviewTemplateRequestOutcome `json:"outcome"`
+	Questions []ReviewQuestion                           `json:"questions"`
+}
+
+// CreateActivityReviewTemplateRequestOutcome Which outcome the template is asked for.
+type CreateActivityReviewTemplateRequestOutcome string
+
 // CreateAutomationRequest defines model for CreateAutomationRequest.
 type CreateAutomationRequest struct {
 	Key    string                 `json:"key"`
@@ -47325,6 +47357,14 @@ type CreateOutcomeReviewRequest struct {
 
 	// SubmissionId The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
 	SubmissionId openapi_types.UUID `json:"submission_id"`
+
+	// TemplateKey Key of the template shown when the form opened. A template added or restored since then
+	// is a different template, possibly at the same version, so a key that is not the live
+	// template's returns 409. Optional: a client that omits it keeps the version-only check, so
+	// a client built before this field keeps working. That client cannot tell a swap to another
+	// template at the same version; its answers are still checked against the live questions,
+	// and an answer to a question the live template does not ask is refused 422.
+	TemplateKey *string `json:"template_key,omitempty"`
 
 	// TemplateVersion Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
 	TemplateVersion *int64 `json:"template_version,omitempty"`
@@ -69613,9 +69653,11 @@ type UpdateActivityRequestCallOutcome string
 // refuses it like any status other than `held` or `no_show`.
 type UpdateActivityRequestMeetingStatus string
 
-// UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
+// UpdateActivityReviewTemplateRequest Every field but `version` is optional; an omitted one is left alone.
 type UpdateActivityReviewTemplateRequest struct {
-	Questions []ReviewQuestion `json:"questions"`
+	// Active false retires the template; true makes it the one its outcome asks.
+	Active    *bool             `json:"active,omitempty"`
+	Questions *[]ReviewQuestion `json:"questions,omitempty"`
 
 	// Version Last read template version.
 	Version int64 `json:"version" minimum:"1"`
@@ -75372,6 +75414,33 @@ type SendMessageParams struct {
 	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// CreateActivityReviewTemplateParams defines parameters for CreateActivityReviewTemplate.
+type CreateActivityReviewTemplateParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // GetAutomaticWorkHealthParams defines parameters for GetAutomaticWorkHealth.
@@ -83958,6 +84027,9 @@ type PreviewSendAuthorizationJSONRequestBody = PreviewSendRequest
 
 // SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
 type SendMessageJSONRequestBody = SendMessageRequest
+
+// CreateActivityReviewTemplateJSONRequestBody defines body for CreateActivityReviewTemplate for application/json ContentType.
+type CreateActivityReviewTemplateJSONRequestBody = CreateActivityReviewTemplateRequest
 
 // UpdateActivityReviewTemplateJSONRequestBody defines body for UpdateActivityReviewTemplate for application/json ContentType.
 type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateRequest
@@ -98958,7 +99030,10 @@ type ServerInterface interface {
 	// The question sets an outcome review can ask.
 	// (GET /activity-review-templates)
 	ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request)
-	// Edit the questions for future outcome reviews.
+	// Add the question set an outcome's reviews ask from now on.
+	// (POST /activity-review-templates)
+	CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, params CreateActivityReviewTemplateParams)
+	// Edit the questions for future outcome reviews, or retire or restore a template.
 	// (PATCH /activity-review-templates/{id})
 	UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id)
 	// Per colleague and day, how much work automation handed out and what became of it.
@@ -102441,7 +102516,13 @@ func (_ Unimplemented) ListActivityReviewTemplates(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Edit the questions for future outcome reviews.
+// Add the question set an outcome's reviews ask from now on.
+// (POST /activity-review-templates)
+func (_ Unimplemented) CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, params CreateActivityReviewTemplateParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Edit the questions for future outcome reviews, or retire or restore a template.
 // (PATCH /activity-review-templates/{id})
 func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110919,6 +111000,55 @@ func (siw *ServerInterfaceWrapper) ListActivityReviewTemplates(w http.ResponseWr
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListActivityReviewTemplates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateActivityReviewTemplate operation middleware
+func (siw *ServerInterfaceWrapper) CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateActivityReviewTemplateParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateActivityReviewTemplate(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -158391,6 +158521,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activity-review-templates", wrapper.ListActivityReviewTemplates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activity-review-templates", wrapper.CreateActivityReviewTemplate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activity-review-templates/{id}", wrapper.UpdateActivityReviewTemplate)
