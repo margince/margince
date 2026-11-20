@@ -55135,6 +55135,17 @@ export interface components {
             readonly partner_fit_override_reason?: string | null;
             /**
              * @deprecated
+             * @description Never set; always null. Kept so existing clients keep compiling.
+             */
+            relationship_health?: string | null;
+            /**
+             * Format: date-time
+             * @deprecated
+             * @description Never set; always null. Kept so existing clients keep compiling.
+             */
+            last_contact_at?: string | null;
+            /**
+             * @deprecated
              * @description Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
              */
             next_step?: string | null;

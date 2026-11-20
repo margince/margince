@@ -18924,6 +18924,10 @@
             "type": "object",
             "additionalProperties": true
           },
+          "last_contact_at": {
+            "type": "string",
+            "format": "date-time"
+          },
           "margin_tier": {
             "type": "string"
           },
@@ -18959,6 +18963,9 @@
             }
           },
           "partner_role": {
+            "type": "string"
+          },
+          "relationship_health": {
             "type": "string"
           },
           "relationship_stage": {
