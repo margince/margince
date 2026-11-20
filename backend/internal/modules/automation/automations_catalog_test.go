@@ -112,7 +112,7 @@ func TestValidateRenewalReminderParamsRejectsUnknownKey(t *testing.T) {
 	}
 }
 
-func TestARuleWhoseEveryRunWaitsForAPersonReadsConfirmationRequired(t *testing.T) {
+func TestARuleWhoseEveryRunWaitsForApprovalReadsConfirmationRequired(t *testing.T) {
 	want := map[string]string{
 		postMeetingRecapName:      tierConfirmationRequired,
 		assignLeadOwnerName:       tierAutoExecute,

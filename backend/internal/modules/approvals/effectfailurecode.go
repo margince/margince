@@ -14,26 +14,40 @@ type effectFailure struct {
 var (
 	// It says what to do, because a reader told only "expired" decides again
 	// and the row refuses them as already decided.
-	failureLapsed = effectFailure{code: "approval_lapsed",
-		sentence: "Approval expired before execution. Nothing changed. Request a new proposal to try again."}
-	failureNotRun = effectFailure{code: "effect_not_run",
-		sentence: "this was approved, but the work it released did not run"}
-	failureUnconfirmed = effectFailure{code: "effect_unconfirmed",
+	failureLapsed = effectFailure{
+		code:     "approval_lapsed",
+		sentence: "Approval expired before execution. Nothing changed. Request a new proposal to try again.",
+	}
+	failureNotRun = effectFailure{
+		code:     "effect_not_run",
+		sentence: "this was approved, but the work it released did not run",
+	}
+	failureUnconfirmed = effectFailure{
+		code: "effect_unconfirmed",
 		sentence: "this was approved and sent on, but the system it went to never confirmed it, " +
-			"so it may have happened. Check the record before you ask for it again"}
-	failureFollowUpFailed = effectFailure{code: "follow_up_failed",
+			"so it may have happened. Check the record before you ask for it again",
+	}
+	failureFollowUpFailed = effectFailure{
+		code: "follow_up_failed",
 		sentence: "this was approved and the change was made, but the automation that asked for it " +
-			"could not be marked finished"}
-	failureWindowNotWidened = effectFailure{code: "window_not_widened",
-		sentence: "the agent's window could not be widened, so the approval has not taken effect"}
+			"could not be marked finished",
+	}
+	failureWindowNotWidened = effectFailure{
+		code:     "window_not_widened",
+		sentence: "the agent's window could not be widened, so the approval has not taken effect",
+	}
 )
 
-// effectFailures is every failure a row can store, for reading one back.
+// effectFailures lists the failures a row can store, for reading one back.
+//
+// Held by: TestEveryDeclaredFailureIsOneTheReaderKnows (backend/internal/modules/approvals/effectfailurecode_test.go)
 var effectFailures = []effectFailure{
 	failureLapsed, failureNotRun, failureUnconfirmed, failureFollowUpFailed, failureWindowNotWidened,
 }
 
-// EffectFailureCodes is every code a stored failure can carry.
+// EffectFailureCodes lists the codes a stored failure can carry.
+//
+// Held by: TestEveryDeclaredFailureIsOneTheReaderKnows (backend/internal/modules/approvals/effectfailurecode_test.go)
 func EffectFailureCodes() []string {
 	codes := make([]string, 0, len(effectFailures))
 	for _, failure := range effectFailures {

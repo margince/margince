@@ -195,7 +195,7 @@ func (c *auditCensus) load() string {
 // inDefaultBuild reports whether a plain build compiles the file. One behind a
 // test tag, such as the integration harness, is test code as a _test file is.
 func inDefaultBuild(source []byte) bool {
-	for _, line := range strings.Split(string(source), "\n") {
+	for line := range strings.SplitSeq(string(source), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "package ") {
 			return true

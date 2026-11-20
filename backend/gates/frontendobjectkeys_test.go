@@ -51,9 +51,10 @@ func tsWithoutComments(text string) string {
 		c := out[i]
 		switch {
 		case quote != 0:
-			if c == '\\' {
+			switch c {
+			case '\\':
 				i++
-			} else if c == quote {
+			case quote:
 				quote = 0
 			}
 		case c == '"' || c == '\'' || c == '`':
@@ -86,9 +87,10 @@ func tsBalanced(text string) (string, bool) {
 		c := text[i]
 		switch {
 		case quote != 0:
-			if c == '\\' {
+			switch c {
+			case '\\':
 				i++
-			} else if c == quote {
+			case quote:
 				quote = 0
 			}
 		case c == '"' || c == '\'' || c == '`':
@@ -135,9 +137,10 @@ func tsTopLevel(text string) []string {
 		c := text[i]
 		switch {
 		case quote != 0:
-			if c == '\\' {
+			switch c {
+			case '\\':
 				i++
-			} else if c == quote {
+			case quote:
 				quote = 0
 			}
 		case c == '"' || c == '\'' || c == '`':

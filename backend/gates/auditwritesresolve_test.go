@@ -485,8 +485,3 @@ func auditAssignedValue(rhs []ast.Expr, lhs, i int) ast.Expr {
 	}
 	return rhs[i]
 }
-
-func assignedIn(fn *ast.FuncDecl, name string) bool {
-	_, found := localValues(fn, name)
-	return found
-}

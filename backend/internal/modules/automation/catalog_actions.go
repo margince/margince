@@ -189,7 +189,7 @@ func AllActionTypes() []ActionType {
 }
 
 // RuleTier is the mode a rule with this action shows, in its list row and on
-// its runs. It is confirmation_required when every firing waits for a person.
+// its runs. It is confirmation_required when every firing waits for approval.
 func RuleTier(action string) string {
 	def, ok := ActionDefFor(ActionType(action))
 	if !ok {

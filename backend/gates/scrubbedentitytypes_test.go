@@ -154,7 +154,7 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 	found := map[string]bool{}
 	var opaque []string
 	for _, site := range auditWriteSites(t) {
-		if !(site.src.dir == privacyDir && carriesScrubVerb(site.call)) && !callsPrivacyWrapper(site, privacyDir, wrappers) {
+		if (site.src.dir != privacyDir || !carriesScrubVerb(site.call)) && !callsPrivacyWrapper(site, privacyDir, wrappers) {
 			continue
 		}
 		switch {

@@ -57218,7 +57218,7 @@ export interface components {
              */
             outcome: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
             /**
-             * @description The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for a person.
+             * @description The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for approval.
              * @enum {string}
              */
             tier: "auto_execute" | "confirmation_required";

@@ -67,7 +67,7 @@ func auditMigrationTypes(t *testing.T) (types map[string]string, opaque []string
 
 func columnNames(list string) []string {
 	var names []string
-	for _, name := range strings.Split(list, ",") {
+	for name := range strings.SplitSeq(list, ",") {
 		names = append(names, strings.Trim(strings.TrimSpace(name), `"`))
 	}
 	return names

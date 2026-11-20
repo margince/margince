@@ -53689,7 +53689,7 @@ components:
         automation_id: {type: string, format: uuid}
         occurred_at: {type: string, format: date-time, description: 'Maps to automation_run.ran_at.'}
         outcome: {type: string, enum: [fired, failed, blocked, skipped, queued_for_approval]}
-        tier: {type: string, enum: [auto_execute, confirmation_required], description: 'The rule''s mode, as its catalog entry reads it: confirmation_required when every run waits for a person.'}
+        tier: {type: string, enum: [auto_execute, confirmation_required], description: 'The rule''s mode, as its catalog entry reads it: confirmation_required when every run waits for approval.'}
         approval_required: {type: boolean}
         trigger_evidence: {type: [string, 'null'], description: 'What matched (e.g. "no activity 14d on deal BÄR Pharma") — the "why did this fire?" line.'}
         target_ref: {type: [string, 'null'], description: 'Record the run acted on (type + id or label).'}

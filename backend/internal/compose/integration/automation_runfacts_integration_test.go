@@ -13,11 +13,11 @@ import (
 	"slices"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -166,7 +166,7 @@ func TestARunOnARecordOutsideTheReadersScopeCarriesNoNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	trace := fmt.Sprintf(`[{"Kind":"create_task","Target":{"Type":"contact","ID":"%s"},"Args":{"subject":"Call Pat back"}}]`, contact)
-	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: rule, Status: "applied", Trigger: trigger, Planned: &trace, Applied: &trace, At: time.Now().UTC()})
+	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: rule, Status: "applied", Trigger: trigger, Planned: &trace, Applied: &trace, At: clocktest.Now(t)})
 
 	admin := onlyRun(t, e, rule)
 	if admin.Target == nil || admin.Target.Label == nil || admin.Created == nil || admin.Created.Label == nil || admin.TriggerStageName == nil {

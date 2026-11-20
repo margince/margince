@@ -38686,7 +38686,7 @@ type AutomationRun struct {
 	// TargetRef Record the run acted on (type + id or label).
 	TargetRef *string `json:"target_ref,omitempty"`
 
-	// Tier The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for a person.
+	// Tier The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for approval.
 	Tier AutomationRunTier `json:"tier"`
 
 	// TriggerEventType What fires the rule, in the catalog's trigger vocabulary, e.g. deal.stage_changed or clock:renewal_scan.
@@ -38702,7 +38702,7 @@ type AutomationRun struct {
 // AutomationRunOutcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 type AutomationRunOutcome string
 
-// AutomationRunTier The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for a person.
+// AutomationRunTier The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for approval.
 type AutomationRunTier string
 
 // AutomationRunCreatedRecord A record a fired run created, as the run's trace names it: a task by its subject. Its label is absent when the reader may not see the record the run acted on.
