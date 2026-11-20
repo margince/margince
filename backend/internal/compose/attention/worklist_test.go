@@ -678,7 +678,8 @@ func TestAPileOfAlikeDecisionsBecomesOneRow(t *testing.T) {
 	for i := range 40 {
 		staged = append(staged, item(
 			"c"+string(rune('a'+i%26))+string(rune('0'+i/26)),
-			"approval", withKind("capture_counterparty")))
+			"approval", withKind("capture_counterparty"),
+		))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
 

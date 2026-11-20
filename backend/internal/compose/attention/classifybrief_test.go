@@ -133,7 +133,8 @@ func TestABriefItemsConsequenceComesFromItsSignal(t *testing.T) {
 	}
 	for _, c := range cases {
 		row := classifyBriefItem(
-			item("b1", "brief_item", withKind(c.signal)), rankInstant, dayMoney{})
+			item("b1", "brief_item", withKind(c.signal)), rankInstant, dayMoney{},
+		)
 		if row.item.Consequence != c.want {
 			t.Errorf("signal %q: consequence = %q, want %q",
 				c.signal, row.item.Consequence, c.want)

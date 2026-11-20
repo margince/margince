@@ -44,7 +44,8 @@ func TestTheChangedFilterReachesThePageThroughWorklist(t *testing.T) {
 			{ID: ids.NewV7(), Subject: "after the night", BouncedAt: cutoff.Add(time.Hour)},
 			{ID: ids.NewV7(), Subject: "before the night", BouncedAt: cutoff.Add(-time.Hour)},
 		}},
-		nil, nil, nil, fixedClock)
+		nil, nil, nil, fixedClock,
+	)
 
 	// The control first: unfiltered, the page holds both. Without it a filter
 	// that answered nothing at all would pass the assertion below.
@@ -59,7 +60,8 @@ func TestTheChangedFilterReachesThePageThroughWorklist(t *testing.T) {
 	}
 
 	narrowed, err := svc.Worklist(
-		pageReader(), "", string(filterChangedSinceBrief), ids.UUID{}, 25, "")
+		pageReader(), "", string(filterChangedSinceBrief), ids.UUID{}, 25, "",
+	)
 	if err != nil {
 		t.Fatalf("narrowed worklist: %v", err)
 	}
@@ -95,7 +97,8 @@ func TestExceptDecisionsKeepsEveryKindButDecisions(t *testing.T) {
 	}
 
 	kept := keepFiltered(
-		classifyDay(day, rankInstant, dayMoney{}), filterExceptDecisions)
+		classifyDay(day, rankInstant, dayMoney{}), filterExceptDecisions,
+	)
 
 	if ids := rankedIDs(kept); len(ids) != 2 {
 		t.Fatalf("kept %v, wanted the deal and the task and not the decision", ids)
@@ -266,7 +269,8 @@ func TestChangedSinceBriefKeepsNothingWithoutARun(t *testing.T) {
 	}
 
 	rows := markChangedSinceBrief(
-		classifyDay(day, rankInstant, dayMoney{}), time.Time{})
+		classifyDay(day, rankInstant, dayMoney{}), time.Time{},
+	)
 	if kept := keepFiltered(rows, filterChangedSinceBrief); len(kept) != 0 {
 		t.Fatalf("kept %v with no run to compare against, wanted nothing",
 			rankedIDs(kept))
@@ -377,7 +381,8 @@ func TestAFoldedGroupReachesTheChangedPageThroughWorklist(t *testing.T) {
 		stubBriefing{ran: true, asOf: cutoff},
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		&stubAutomations{rows: runs},
-		nil, nil, fixedClock)
+		nil, nil, fixedClock,
+	)
 
 	// The premise: unfiltered, these three really did fold into one row. Without
 	// it the assertion below would pass over three unfolded rows and prove
@@ -393,7 +398,8 @@ func TestAFoldedGroupReachesTheChangedPageThroughWorklist(t *testing.T) {
 	}
 
 	narrowed, err := svc.Worklist(
-		pageReader(), scopeUnassigned, string(filterChangedSinceBrief), ids.UUID{}, 25, "")
+		pageReader(), scopeUnassigned, string(filterChangedSinceBrief), ids.UUID{}, 25, "",
+	)
 	if err != nil {
 		t.Fatalf("narrowed worklist: %v", err)
 	}

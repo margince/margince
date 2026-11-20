@@ -97,7 +97,8 @@ func TestTheNoticeCaseLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 	}
 
 	refused, err := noticeCaseLaneService(
-		&stubNoticeCases{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
+		&stubNoticeCases{err: apperrors.ErrPermissionDenied},
+	).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling with a refused read: %v", err)
 	}

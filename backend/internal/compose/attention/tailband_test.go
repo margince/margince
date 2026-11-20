@@ -41,8 +41,10 @@ func TestTheTailHeadsItsOwnLastBandAfterAMixedRanking(t *testing.T) {
 		ranked = append(ranked, Task{ID: ids.NewV7(), Subject: fmt.Sprintf("Overdue %d", i), DueAt: new(readInstant.Add(-time.Duration(i+1) * time.Hour))})
 	}
 	for i := range plannedCap - 3 {
-		ranked = append(ranked, Task{ID: ids.NewV7(), Subject: fmt.Sprintf("Lead %d", i), LinkType: "lead", LinkID: ids.NewV7(),
-			DueAt: new(readInstant.Add(time.Duration(i+1) * time.Minute))})
+		ranked = append(ranked, Task{
+			ID: ids.NewV7(), Subject: fmt.Sprintf("Lead %d", i), LinkType: "lead", LinkID: ids.NewV7(),
+			DueAt: new(readInstant.Add(time.Duration(i+1) * time.Minute)),
+		})
 	}
 	for i := range 8 {
 		tail = append(tail, Task{ID: ids.NewV7(), Subject: fmt.Sprintf("Tail %d", i), DueAt: new(readInstant.Add(-time.Duration(30+i) * time.Hour))})

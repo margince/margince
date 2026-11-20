@@ -323,7 +323,8 @@ func aDayReordered(n int) crmcontracts.Attention {
 	for i := range n {
 		tasks = append(tasks, item(
 			"task-"+string(rune('0'+i)), "task",
-			withDue(rankInstant.Add(time.Duration(n-i)*time.Hour))))
+			withDue(rankInstant.Add(time.Duration(n-i)*time.Hour)),
+		))
 	}
 	return crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
 }
@@ -335,7 +336,8 @@ func aDayOfTasks(n int) crmcontracts.Attention {
 	for i := range n {
 		tasks = append(tasks, item(
 			"task-"+string(rune('0'+i)), "task",
-			withDue(rankInstant.Add(time.Duration(i)*time.Hour))))
+			withDue(rankInstant.Add(time.Duration(i)*time.Hour)),
+		))
 	}
 	return crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
 }

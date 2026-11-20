@@ -207,7 +207,8 @@ func TestACursorFromOneQueueCannotOpenAnothers(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+	)
 	// Three waits each, so a page of two leaves a third behind and the read
 	// actually mints a cursor.
 	waits := []WaitingCustomer{}
@@ -264,7 +265,8 @@ func TestFoldingIsDeterministicAcrossReads(t *testing.T) {
 	needs := make([]crmcontracts.AttentionItem, 0, 12)
 	for i := range 12 {
 		needs = append(needs, item(
-			"d"+string(rune('a'+i)), "approval", withKind("capture_counterparty")))
+			"d"+string(rune('a'+i)), "approval", withKind("capture_counterparty"),
+		))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: needs}
 
@@ -320,7 +322,8 @@ func TestEquivalentSpellingsOfOneQuestionShareACursor(t *testing.T) {
 		svc := NewService(
 			stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 			stubBriefing{}, nil, nil, nil, nil,
-			nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+			nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+		)
 		waits := []WaitingCustomer{}
 		for i := range 3 {
 			waits = append(waits, WaitingCustomer{
@@ -371,7 +374,8 @@ func TestNamingYourselfAnswersTheSamePageAsOmittingTheOwner(t *testing.T) {
 		svc := NewService(
 			stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 			stubBriefing{}, nil, nil, nil, nil,
-			nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+			nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+		)
 		svc.waiting = waitingOwnedBy{
 			{
 				ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000b1"),
@@ -461,7 +465,8 @@ func TestACursorNamingAPositionThisEndpointNeverMintsIsRefused(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			forged := base64.RawURLEncoding.EncodeToString(
-				fmt.Appendf(nil, `{"n":%d,"p":%q}`, tc.at, valid))
+				fmt.Appendf(nil, `{"n":%d,"p":%q}`, tc.at, valid),
+			)
 
 			cursor, err := decodeCursor(forged, scopeMine, "", ids.UUID{})
 			if err == nil {
@@ -697,7 +702,8 @@ func TestTheOffsetIsWhereTheCutLandedInThisRanking(t *testing.T) {
 	// with between reads, so the clamp pulls the read back to the end.
 	out, more, reached := pageFrom(
 		[]ranked{{item: crmcontracts.WorklistItem{Source: "task", Id: "only"}}},
-		25, worklistCursor{At: 10, Params: "x"})
+		25, worklistCursor{At: 10, Params: "x"},
+	)
 	if reached != 1 {
 		t.Errorf("the cut landed at %d over a single row; it must be a position in THIS "+
 			"ranking, so it can never point past the rows that exist", reached)

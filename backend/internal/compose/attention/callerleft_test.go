@@ -32,7 +32,8 @@ func TestACallerWhoLeavesGetsNoPageAndFreezesNoWalk(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).WithWalks(walks)
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+	).WithWalks(walks)
 	svc.waiting = waitingThenLeave{
 		waitingOwnedBy: waitingOwnedBy{{
 			ActivityID: ids.NewV7(), Subject: "a customer", OwnerID: theManager,

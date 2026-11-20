@@ -287,7 +287,8 @@ func aPileOfAlikeDecisions() []ranked {
 	rows := make([]ranked, 0, batchFloor+1)
 	for i := 0; i <= batchFloor; i++ {
 		rows = append(rows, classifyDecision(
-			item(fmt.Sprintf("pair-%d", i), "dedupe_candidate"), rankInstant))
+			item(fmt.Sprintf("pair-%d", i), "dedupe_candidate"), rankInstant,
+		))
 	}
 	return rows
 }

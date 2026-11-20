@@ -336,7 +336,8 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		WithNoticeCases(&stubNoticeCases{rows: []NoticeCase{{
 			ID: ids.NewV7(), ContactID: ids.NewV7(), Rule: "art14", DueAt: readInstant,
 		}}}),
-		WithContactCases(&stubContactCases{cases: []ContactCase{aContactCase(ids.NewV7())}})).
+		WithContactCases(&stubContactCases{cases: []ContactCase{aContactCase(ids.NewV7())}}),
+	).
 		WithUndelivered(&stubUndelivered{rows: []ParkedSend{{
 			ID: ids.NewV7(), Subject: "a send that never left",
 			Reason: "the address bounced twice", ParkedAt: readInstant,

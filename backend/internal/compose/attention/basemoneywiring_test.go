@@ -25,7 +25,8 @@ func worklistOverDeals(fx BaseMoney, rows []RiskyDeal) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, stubAtRisk{rows: rows}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+	).
 		WithBaseMoney(fx)
 }
 
@@ -62,7 +63,8 @@ func TestTheEndpointRanksOnConvertedFigures(t *testing.T) {
 		[]RiskyDeal{
 			riskyDeal("yen", nineMillionYen, ids.MustParse("01a05500-0000-7000-8000-000000000001")),
 			riskyDeal("euro", eur(8_000_000), ids.MustParse("01a05500-0000-7000-8000-000000000001")),
-		})
+		},
+	)
 
 	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")
 	if err != nil {
@@ -93,7 +95,8 @@ func TestOpeningANamedRepsQueueReachesTheProjection(t *testing.T) {
 		[]RiskyDeal{
 			riskyDeal("lenas", eur(900_000), lena),
 			riskyDeal("somebody elses", eur(900_000), ids.MustParse("01a05500-0000-7000-8000-0000000000cc")),
-		})
+		},
+	)
 
 	day, err := svc.Worklist(meetingPrepReader(), "", "", lena, 25, "")
 	if err != nil {
