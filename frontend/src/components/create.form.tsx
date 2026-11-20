@@ -176,12 +176,14 @@ export function RecordFormBody({
       : [];
   });
   const refusals = new Map(checked.map((c) => [c.key, c.refusal] as const));
-  // A field's own validate holds Save from the first render. It is said on the
-  // field only after the reader changed something or tried to save. A rule
-  // across fields, such as "email or phone", appears once any field is filled.
+  // A field's own validate holds Save from the first render. An empty field
+  // keeps quiet until the reader changes something or tries to save. A value
+  // already there, or a rule across fields, is said at once or once any field
+  // is filled.
   const said = (key: string) => {
     const entry = checked.find((c) => c.key === key);
-    const hidden = entry?.fromValidate === true && !edited;
+    const empty = !(values[key] ?? "").trim();
+    const hidden = entry?.fromValidate === true && !edited && empty;
     return (hidden ? undefined : refusals.get(key)) ?? faults.of(key);
   };
   // A refusal lands at the foot of a long stack, out of sight of a pinned Save.

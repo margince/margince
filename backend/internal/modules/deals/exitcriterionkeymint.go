@@ -8,12 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode"
 
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/text/unicode/norm"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -30,13 +29,13 @@ const mintInsertAttempts = 5
 
 const liveCriterionKeyIndex = "stage_exit_criterion_stage_key_live_ux"
 
-// criterionKeyFromLabel turns a label into the stem of its key. Accents fold
-// away and anything but a-z and digits becomes one underscore. A leading digit
+// criterionKeyFromLabel turns a label into the stem of its key. Accents and
+// case fold away through namematch.Fold, and anything but a-z and digits becomes one underscore. A leading digit
 // gets the fallback in front, because a key starts with a letter.
 func criterionKeyFromLabel(label string) string {
 	var out strings.Builder
 	pendingGap := false
-	for _, r := range norm.NFD.String(strings.ToLower(label)) {
+	for _, r := range namematch.Fold(label) {
 		switch {
 		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
 			if pendingGap && out.Len() > 0 {
@@ -44,7 +43,6 @@ func criterionKeyFromLabel(label string) string {
 			}
 			pendingGap = false
 			out.WriteRune(r)
-		case unicode.Is(unicode.Mn, r):
 		default:
 			pendingGap = true
 		}
