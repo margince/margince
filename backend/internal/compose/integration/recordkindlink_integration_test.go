@@ -65,7 +65,7 @@ func TestALinkToAnExtensionRecordNeedsALiveRowAndTheKindsReadRight(t *testing.T)
 		"link":   auth.EnsureLinkTarget,
 		"attach": auth.EnsureAttachTarget,
 	} {
-		if err := probe(reader, e, live, probeFn); err != nil {
+		if err := probe(reader, e, live, probeFn); name == "link" && err != nil {
 			t.Errorf("%s: a live row of a kind the caller may read was refused: %v", name, err)
 		}
 		if err := probe(reader, e, archived, probeFn); !errors.Is(err, apperrors.ErrNotFound) {
@@ -77,6 +77,22 @@ func TestALinkToAnExtensionRecordNeedsALiveRowAndTheKindsReadRight(t *testing.T)
 		if err := probe(denied, e, live, probeFn); !errors.Is(err, apperrors.ErrNotFound) {
 			t.Errorf("%s: a caller with no read right on the kind = %v, want ErrNotFound so existence stays hidden", name, err)
 		}
+	}
+}
+
+// An extension record has no owner, so its kind's update right is the whole of
+// the write authority an attach asks. The tag writer asks the same right.
+func TestAnAttachToAnExtensionRecordNeedsTheKindsUpdateRight(t *testing.T) {
+	e := Setup(t)
+	live, _ := kindFixture(t)
+	reader := kindWorker(e, principal.ObjectGrant{Read: true})
+	writer := kindWorker(e, principal.ObjectGrant{Read: true, Update: true})
+
+	if err := probe(reader, e, live, auth.EnsureAttachTarget); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an attach by a reader of the kind = %v, want ErrPermissionDenied", err)
+	}
+	if err := probe(writer, e, live, auth.EnsureAttachTarget); err != nil {
+		t.Errorf("an attach by a holder of the kind's update right was refused: %v", err)
 	}
 }
 
