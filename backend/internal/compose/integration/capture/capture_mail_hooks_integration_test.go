@@ -60,7 +60,7 @@ func TestADealHookCanKeepAMailOffTheOnlyOpenDeal(t *testing.T) {
 	if calls.Load() == 0 {
 		t.Fatal("the hook was never called")
 	}
-	wantFiling(t, e, activityOf(t, e, "hook1@acme.example"), "deal-rules", "none", "credit_hold")
+	wantFiling(t, e, activityOf(t, e, "hook1@acme.example"), "none", "credit_hold")
 }
 
 // A deal hook names a deal. The link lands and its audit evidence names the
@@ -80,7 +80,7 @@ func TestADealHookDealDoesNotSurviveAColleaguesDecline(t *testing.T) {
 	env.sync(t, raw)
 	wantDeals(t, e, "hook2@acme.example", chosen)
 	mail := activityOf(t, e, "hook2@acme.example")
-	wantFiling(t, e, mail, "deal-rules", "linked", "names_reporting")
+	wantFiling(t, e, mail, "linked", "names_reporting")
 	if n := countRows(t, e, `SELECT count(*) FROM audit_log WHERE action = 'activity_relink' AND entity_id = '`+mail.String()+`'
 		AND evidence::text LIKE '%deal-rules%' AND evidence::text LIKE '%names_reporting%'`); n != 1 {
 		t.Fatalf("%d audit rows name the unit and its reason, want 1", n)
@@ -162,7 +162,7 @@ func TestADealHookCanNameAnyOpenDealOfTheCompanyNotOnlyTheFirstTwo(t *testing.T)
 	if got := dealsOf(t, e, "hook9@acme.example"); len(got) != 1 || got[0] != last {
 		t.Fatalf("the mail is filed on %v, want the deal %v", got, last)
 	}
-	wantFiling(t, e, activityOf(t, e, "hook9@acme.example"), "deal-rules", "linked", "purchase_order")
+	wantFiling(t, e, activityOf(t, e, "hook9@acme.example"), "linked", "purchase_order")
 }
 
 // A deal hook reads the mail's text, looks the reference in it up in the
@@ -223,7 +223,7 @@ func TestAFailedHookLeavesTheMailUndecidedAndItIsFiledOnceTheHookWorks(t *testin
 	raw := mailFrom("alice@acme.example", "hook7@acme.example", "", "invoice")
 	env.sync(t, raw)
 	wantDeals(t, e, "hook7@acme.example")
-	wantFiling(t, e, activityOf(t, e, "hook7@acme.example"), "deal-rules", "failed", "")
+	wantFiling(t, e, activityOf(t, e, "hook7@acme.example"), "failed", "")
 
 	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
 		return d, nil
@@ -244,7 +244,7 @@ func TestADealHookChangeWithoutADeclaredReasonIsIgnored(t *testing.T) {
 	}})
 	env.sync(t, mailFrom("alice@acme.example", "hook8@acme.example", "", "invoice"))
 	wantDeals(t, e, "hook8@acme.example", only)
-	wantFiling(t, e, activityOf(t, e, "hook8@acme.example"), "deal-rules", "ignored", "not declared")
+	wantFiling(t, e, activityOf(t, e, "hook8@acme.example"), "ignored", "not declared")
 }
 
 // A parties hook cannot name a company the mailbox owner may not see. The
@@ -274,15 +274,15 @@ func TestAPartiesHookCannotNameACompanyTheMailboxOwnerCannotSee(t *testing.T) {
 	if slices.Contains(dealsOf(t, e, "hook9@acme.example"), hiddenDeal) {
 		t.Fatal("the mail was filed on a deal of a company its mailbox owner cannot see")
 	}
-	wantFiling(t, e, activityOf(t, e, "hook9@acme.example"), "deal-rules", "ignored", "other_account")
+	wantFiling(t, e, activityOf(t, e, "hook9@acme.example"), "ignored", "other_account")
 }
 
-// wantFiling asserts what the mail's capture trace says about who filed it.
-func wantFiling(t *testing.T, e *integration.SearchEnv, mail ids.UUID, actor, result, reason string) {
+// wantFiling asserts what the mail's capture trace says the deal-rules unit did.
+func wantFiling(t *testing.T, e *integration.SearchEnv, mail ids.UUID, result, reason string) {
 	t.Helper()
 	if n := countRows(t, e, `SELECT count(*) FROM capture_trace WHERE activity_id = '`+mail.String()+`'
-		AND filing->>'actor' = '`+actor+`' AND filing->>'result' = '`+result+`'
+		AND filing->>'actor' = 'deal-rules' AND filing->>'result' = '`+result+`'
 		AND coalesce(filing->>'reason', '') = '`+reason+`'`); n < 1 {
-		t.Fatalf("the trace does not say %s %s the mail (reason %q)", actor, result, reason)
+		t.Fatalf("the trace does not say deal-rules %s the mail (reason %q)", result, reason)
 	}
 }
