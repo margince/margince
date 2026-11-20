@@ -5,7 +5,7 @@
 
 package consent
 
-// The legal entity that answers for a record no person is acting on: the one
+// The legal entity that answers for a record nobody is acting on: the one
 // its owner works for. A branch entity with a test country and its own
 // request deadlines stands in for a second company.
 
