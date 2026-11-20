@@ -3511,6 +3511,15 @@ export const en = {
   "common.duplicate.slotTaken":
     "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
+  "common.goneBackToAnalytics": "Back to Analytics",
+  "reporting.sharedForecastGone":
+    "This link no longer works. Ask the sender for a new one.",
+  "reporting.reportGone":
+    "This report does not exist, or it is not shared with you.",
+  "analytics.q.gone":
+    "This question does not exist, or it is not shared with you.",
+  "book.linkGone":
+    "This booking page is not available. Ask the sender for a new link.",
   "common.empty": "Nothing here yet.",
   "common.saving": "Saving…",
   "common.loading": "Loading…",
