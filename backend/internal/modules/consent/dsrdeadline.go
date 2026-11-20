@@ -30,12 +30,13 @@ type requestDeadlineFunc func(ctx context.Context, tx pgx.Tx, who ruleSubject, k
 
 // requestDeadlineTx is the one resolver both request writers use. A failed
 // country read is returned, never treated as "no jurisdiction": the GDPR month
-// can be later than the selected pack's deadline. A zero subject is a request
-// no record names yet, which the installation's country decides.
+// can be later than the selected pack's deadline. Otherwise the country of the
+// entity that answers for the record decides (recordEntityTx). A zero subject
+// is a request no record names yet, which the default entity's country decides.
 func (s *Store) requestDeadlineTx(ctx context.Context, tx pgx.Tx, who ruleSubject, kind string, received time.Time) (time.Time, string, error) {
 	code, err := subjectDataProtectionTx(ctx, tx, who)
 	if err == nil && code == "" {
-		code, err = s.defaultEntityCountry(ctx, tx)
+		code, err = s.recordCountryTx(ctx, tx, who)
 	}
 	if err != nil {
 		return time.Time{}, "", fmt.Errorf("consent: reading the jurisdiction a request deadline comes from: %w", err)

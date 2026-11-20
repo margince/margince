@@ -85,6 +85,8 @@ type SettingSpec struct {
 	AuditVerb  string
 	DefaultErr error
 	HasFreeze  bool
+	// Cacheable is the declaration that lets the entry's reads be cached.
+	Cacheable bool
 	// Admits is the entry's own validator, so a gate can hold a bound some
 	// other document states to the code that actually refuses past it.
 	Admits func(json.RawMessage) error
@@ -99,7 +101,7 @@ func SettingsCatalogForTest() []SettingSpec {
 		_, err := d.DefaultJSON()
 		out = append(out, SettingSpec{
 			Key: d.Key(), Object: d.Object(), AuditVerb: d.AuditVerb(), DefaultErr: err,
-			HasFreeze: d.HasFreezeProbe(), Admits: d.ValidateJSON,
+			HasFreeze: d.HasFreezeProbe(), Admits: d.ValidateJSON, Cacheable: d.Cacheable(),
 		})
 	}
 	return out

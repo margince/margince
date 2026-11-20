@@ -179,5 +179,5 @@
 1795139172_a_deal_link_judgement_checks_its_length.down.sql | * | restores the two earlier text guards on activity_link; it changes no existing row
 1795144657_a_lead_link_may_ask_the_consent_question.down.sql | confirm_token | only the consent links a booking mailed to leads are deleted, and the per-address budget caps those at three per address per 90 days, so the set is a handful of rows
 1795144658_a_lead_link_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795157896_the_company_clock_counts_no_personal_mail.up.sql | * | creates functions and triggers that move clocks when rows change later; no existing row is read or changed
-1795157896_the_company_clock_counts_no_personal_mail.down.sql | * | restores the earlier functions and triggers; no existing row is read or changed
+1795175006_the_company_clock_counts_no_personal_mail.up.sql | * | creates functions and triggers that move clocks when rows change later; no existing row is read or changed
+1795175006_the_company_clock_counts_no_personal_mail.down.sql | * | restores the earlier functions and triggers; no existing row is read or changed

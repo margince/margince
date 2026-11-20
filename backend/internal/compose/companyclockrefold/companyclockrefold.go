@@ -42,9 +42,9 @@ func DataTask() datatask.Task {
 // stopped counting (relstrength.NotPersonalSQL).
 func PersonalMailTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795157896_company_clock_counts_no_personal_mail", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795157896_company_clock_counts_no_personal_mail"),
-		Requires: []string{"core/1795157896"},
+		ID: "core/1795175006_company_clock_counts_no_personal_mail", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795175006_company_clock_counts_no_personal_mail"),
+		Requires: []string{"core/1795175006"},
 		Steps:    []datatask.Step{refoldStep()},
 	}
 }

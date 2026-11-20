@@ -13,6 +13,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -45,11 +46,7 @@ type seatGrants struct {
 // resolves the same way whichever door asks. A seat with no role assignment
 // gets the zero grants: absent from the reads, it holds nothing.
 func loadGrantsFor(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]seatGrants, error) {
-	docs, roles, err := loadRoleDocuments(ctx, tx, users)
-	if err != nil {
-		return nil, err
-	}
-	teams, err := loadLiveTeams(ctx, tx, users)
+	docs, roles, teams, err := loadRolesAndTeams(ctx, tx, users)
 	if err != nil {
 		return nil, err
 	}
@@ -72,17 +69,49 @@ func loadGrantsFor(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UU
 	return out, nil
 }
 
-// loadRoleDocuments reads live roles only: an archived role grants nothing.
+// loadRolesAndTeams sends the role and team reads in one exchange: neither
+// needs the other's answer, so a seat's grants cost one round trip, not two.
+func loadRolesAndTeams(ctx context.Context, tx pgx.Tx, users []ids.UUID) (docs map[ids.UUID]map[string]policy.Document, roles map[ids.UUID][]string, teams map[ids.UUID][]ids.TeamID, err error) {
+	var batch pgx.Batch
+	batch.Queue(roleDocumentsSQL, users)
+	batch.Queue(liveTeamsSQL, users)
+	results := tx.SendBatch(ctx, &batch)
+	defer func() { err = errors.Join(err, results.Close()) }()
+	roleRows, err := results.Query()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	docs, roles, err = scanRoleDocuments(roleRows)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	teamRows, err := results.Query()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	teams, err = scanLiveTeams(teamRows)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return docs, roles, teams, nil
+}
+
+// roleDocumentsSQL reads live roles only: an archived role grants nothing.
 // Archiving refuses while anybody who can sign in holds the role, so what this
 // drops is the role a deactivated member still carries, and reactivating them
 // does not bring an archived role's grants back with them.
+const roleDocumentsSQL = `SELECT ra.user_id, r.key, r.permissions FROM role_assignment ra JOIN role r ON r.id = ra.role_id
+  WHERE ra.user_id = ANY($1) AND r.archived_at IS NULL`
+
 func loadRoleDocuments(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]map[string]policy.Document, map[ids.UUID][]string, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT ra.user_id, r.key, r.permissions FROM role_assignment ra JOIN role r ON r.id = ra.role_id
-		  WHERE ra.user_id = ANY($1) AND r.archived_at IS NULL`, users)
+	rows, err := tx.Query(ctx, roleDocumentsSQL, users)
 	if err != nil {
 		return nil, nil, err
 	}
+	return scanRoleDocuments(rows)
+}
+
+func scanRoleDocuments(rows pgx.Rows) (map[ids.UUID]map[string]policy.Document, map[ids.UUID][]string, error) {
 	defer rows.Close()
 	docs := map[ids.UUID]map[string]policy.Document{}
 	roles := map[ids.UUID][]string{}
@@ -115,16 +144,21 @@ func loadRoleDocuments(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[id
 	return docs, roles, rows.Err()
 }
 
-// loadLiveTeams reads live teams only: an archived team keeps its membership
-// rows so a restore brings them back, but while archived it resolves neither
+// liveTeamsSQL reads live teams only. An archived team keeps its membership
+// rows so a restore brings them back. While archived it resolves neither
 // row scope nor a team share.
+const liveTeamsSQL = `SELECT tm.user_id, tm.team_id FROM team_membership tm JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
+  WHERE tm.user_id = ANY($1)`
+
 func loadLiveTeams(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID][]ids.TeamID, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT tm.user_id, tm.team_id FROM team_membership tm JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
-		  WHERE tm.user_id = ANY($1)`, users)
+	rows, err := tx.Query(ctx, liveTeamsSQL, users)
 	if err != nil {
 		return nil, err
 	}
+	return scanLiveTeams(rows)
+}
+
+func scanLiveTeams(rows pgx.Rows) (map[ids.UUID][]ids.TeamID, error) {
 	defer rows.Close()
 	out := map[ids.UUID][]ids.TeamID{}
 	for rows.Next() {

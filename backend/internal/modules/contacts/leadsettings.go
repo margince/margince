@@ -59,6 +59,7 @@ var FirstResponseTargetMinutes = config.DefineStored(config.Spec[int]{
 	Max:     config.Some(firstResponseMaxMinutes),
 	Doc:     "Minutes a lead may wait for its first real response once its clock starts.",
 }, config.Store{
+	Cacheable:  true,
 	RBACObject: leadVocabularyObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the band it produces rides lead rows the caller is separately gated for
 })

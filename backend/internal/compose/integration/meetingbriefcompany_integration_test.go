@@ -63,6 +63,7 @@ func TestMeetingBriefTellsWhatTheCompanyAlreadyReceivedFromOtherContacts(t *test
 		VALUES ($1, 'email', 'Booking confirmed', 'inbound', $2, 'manual', 'human:x', true, 'REQUEST')`, roomAgo(10*24*time.Hour))
 	LinkActivity(t, owner, booking, "contact", earlier)
 
+	shareContactForWriting(t, e, earlier)
 	when := roomAgo(6 * 24 * time.Hour)
 	hidden, _, err := e.Activities.LogActivity(
 		e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms),

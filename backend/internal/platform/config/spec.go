@@ -64,6 +64,9 @@ type Store struct {
 	// SurvivesDataReset keeps the row through a data reset: the installation's
 	// own identity, which a reset of its records must not take with them.
 	SurvivesDataReset bool
+	// Cacheable lets a read of the row be up to settings.CacheLifetime late:
+	// for a cadence, a display format or a threshold, never a control.
+	Cacheable bool
 }
 
 // Setting is a declared setting, read through Val or StoredVal.
@@ -98,6 +101,9 @@ func DefineStored[T any](s Spec[T], st Store) *Setting[T] {
 	}
 	if st.SurvivesDataReset {
 		row = row.AsInstallationIdentity()
+	}
+	if st.Cacheable {
+		row = row.AsCacheable()
 	}
 	setting.row = row
 	return setting

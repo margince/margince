@@ -11578,6 +11578,10 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "mail_draft": {
+                "type": "integer",
+                "minimum": 0
+              },
               "project": {
                 "type": "integer",
                 "minimum": 0
@@ -11605,6 +11609,7 @@
               "deal",
               "lead",
               "list",
+              "mail_draft",
               "project",
               "record_assignment",
               "sdr_handoff",

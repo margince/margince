@@ -454,7 +454,11 @@ function TaskDetailActions({
       )}
       {!logging && <TaskWriteFailure taskId={task.id} update={update} />}
       {logging && (
-        <TaskOutcomeForm task={task} onLogged={() => setLogging(false)} />
+        <TaskOutcomeForm
+          task={task}
+          onLogged={() => setLogging(false)}
+          onBack={() => setLogging(false)}
+        />
       )}
     </>
   );

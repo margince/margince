@@ -28,7 +28,7 @@ import { useOwnerChips } from "../../components/ownerdials";
 import {
   createdColumn,
   lastActivityColumn,
-  mineEmptyNote,
+  mineEmptyLine,
   ownerColumn,
   standardViews,
   tagsColumn,
@@ -181,7 +181,7 @@ export function CompaniesScreen({
         state={state}
         unit="unit.companies"
         unitOne="unit.company"
-        emptyNote={mineEmptyNote({
+        emptyLine={mineEmptyLine({
           t,
           state,
           viewerId,

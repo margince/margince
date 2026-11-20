@@ -4,12 +4,11 @@ import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import { interactionIcon } from "../../components/interactionchrome";
 import { RecordNextBar } from "../../components/latestinbound";
-import { taskLine, useTaskHolder } from "../../components/taskassignee";
+import { TaskTerms } from "../../components/taskassignee";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { SourceLink } from "../../design-system/sourcelink";
-import { formatDue } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { latePromise } from "../../lib/latepromise";
@@ -278,7 +277,6 @@ function TaskBar({
 }: Readonly<{ task: Activity; view: Contact360; more: More }>) {
   const t = useT();
   const plural = usePlural();
-  const holder = useTaskHolder(task.assignee_id);
   const { locale } = useLocale();
   const zone = useViewerZone();
   const late =
@@ -289,20 +287,7 @@ function TaskBar({
       title={displayedSubject(task) ?? t("task.untitled")}
       late={late ? { label: late.badge, tone: "danger" } : undefined}
       detail={taskDetail(task)}
-      sub={taskLine([
-        holder,
-        task.due_at
-          ? t("co.next.due", {
-              when: formatDue(
-                task.due_at,
-                task.due_has_time,
-                locale,
-                zone,
-                task.due_intent,
-              ),
-            })
-          : t("co.next.undated"),
-      ])}
+      sub={<TaskTerms task={task} />}
       action={
         <>
           <TaskCallAction task={task} pageContact={view.contact} />

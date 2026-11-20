@@ -1,6 +1,6 @@
 import { CalendarDays, Check, FileText, Phone } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
-import { useActivityGate } from "../../components/activitygate";
+import { useActivityGate, writableTarget } from "../../components/activitygate";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { EntityRef } from "../../components/entityref";
 import { LogActivityAction } from "../../components/logactivity.action";
@@ -88,7 +88,7 @@ export function LeadActions({
   const t = useT();
   // Independent of the terminal check: a live lead a seat may not log against
   // is refused for this reason, not that one.
-  const activity = useActivityGate();
+  const activity = useActivityGate(writableTarget(lead));
   const archived = lead.archived_at ? terminalReasonId : undefined;
   const logRefused = archived ?? activity.refusedId;
   // An archive is the page's sentence, so only its id reaches here.

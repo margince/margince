@@ -1,12 +1,24 @@
+/** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
-import type { ListQuery, ListState } from "./listquery";
+import { cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
+import { useT } from "../i18n";
+import { emptyPage, type Row, render } from "../testing/listquery.testkit";
+import {
+  type ListQuery,
+  type ListState,
+  ListTable,
+  useListQuery,
+} from "./listquery";
 import {
   createdColumn,
-  mineEmptyNote,
+  mineEmptyLine,
   ownerColumn,
+  sharedEmptyLine,
   sharedWithMeView,
   standardViews,
 } from "./recordlist";
@@ -77,7 +89,7 @@ describe("the Shared with me view", () => {
 });
 
 describe("the Mine empty note", () => {
-  const t = ((key: string) => key) as Parameters<typeof mineEmptyNote>[0]["t"];
+  const t = ((key: string) => key) as Parameters<typeof mineEmptyLine>[0]["t"];
   const listOn = (query: Partial<ListQuery>): ListState<{ id: string }> => ({
     rows: [],
     query: {
@@ -97,7 +109,7 @@ describe("the Mine empty note", () => {
     loadMore: () => {},
   });
   const note = (query: Partial<ListQuery>) =>
-    mineEmptyNote({
+    mineEmptyLine({
       t,
       state: listOn(query),
       viewerId: "u-1",
@@ -113,5 +125,81 @@ describe("the Mine empty note", () => {
     expect(
       note({ filters: { owner_id: "u-1", stage_id: "s-1" } }),
     ).toBeUndefined();
+  });
+});
+
+// Wired the way the contacts screen wires its tabs.
+function ContactsList() {
+  const t = useT();
+  const state = useListQuery<Row>({
+    key: "recordlist-empty-views",
+    initialSort: "-created_at",
+    fetchPage: async () => emptyPage(),
+  });
+  return (
+    <ListTable
+      title="Contacts"
+      state={state}
+      unit="unit.contacts"
+      columns={[{ key: "name", header: "Name", cell: (row: Row) => row.name }]}
+      rowKey={(row) => row.id}
+      views={[...standardViews("u-1"), sharedWithMeView()]}
+      emptyLine={
+        mineEmptyLine({ t, state, viewerId: "u-1", unit: "unit.contacts" }) ??
+        sharedEmptyLine({ t, state, unit: "unit.contacts" })
+      }
+    />
+  );
+}
+
+describe("an empty list narrowed by its view alone", () => {
+  afterEach(() => {
+    cleanup();
+    window.location.hash = "";
+  });
+
+  it("says only the Shared with me sentence, with Show all as its one way out", async () => {
+    window.location.hash = "#/contacts?shared_with_me=true";
+    render(<ContactsList />);
+    expect(
+      await screen.findByText("No contacts shared with you."),
+    ).toBeVisible();
+    expect(screen.queryByText(/match these filters/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Show all" })).toHaveLength(1);
+  });
+
+  it("says only the Mine sentence, with Show all as its one way out", async () => {
+    window.location.hash = "#/contacts?owner_id=u-1";
+    render(<ContactsList />);
+    expect(await screen.findByText("No contacts owned by you.")).toBeVisible();
+    expect(screen.queryByText(/match these filters/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+  });
+
+  it("gives a search typed over the view the filters sentence and Clear filters", async () => {
+    window.location.hash = "#/contacts?shared_with_me=true&q=zzz";
+    render(<ContactsList />);
+    expect(
+      await screen.findByRole("button", { name: "Clear filters" }),
+    ).toBeVisible();
+    expect(screen.getByText("No contacts match these filters.")).toBeVisible();
+    expect(screen.queryByText("No contacts shared with you.")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Show all" })).toBeNull();
+  });
+
+  it("reaches Show all by Tab", async () => {
+    window.location.hash = "#/contacts?shared_with_me=true";
+    render(<ContactsList />);
+    const showAll = await screen.findByRole("button", { name: "Show all" });
+    const user = userEvent.setup();
+    for (
+      let press = 0;
+      press < 30 && document.activeElement !== showAll;
+      press++
+    ) {
+      await user.tab();
+    }
+    expect(showAll).toHaveFocus();
   });
 });

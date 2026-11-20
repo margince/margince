@@ -83,6 +83,7 @@ export function ListTable<Row>({
   saveView,
   notice,
   emptyNote,
+  emptyLine,
   scopeKey,
   body,
   bodyOwnsPaging = false,
@@ -167,10 +168,14 @@ export function ListTable<Row>({
   notice?: ReactNode;
   /**
    * What the empty table says under its generic line, when this screen knows
-   * why it is empty. Example: a "Mine" view for a reader who owns nothing,
-   * with the way back to everything.
+   * why it is empty. Example: a filter the reader's role cannot apply.
    */
   emptyNote?: ReactNode;
+  /**
+   * What the empty table says in place of its generic line and Clear filters.
+   * Example: a "Mine" view for a reader who owns nothing, with the way back.
+   */
+  emptyLine?: ReactNode;
   /**
    * What this list is reading, when the screen narrows it by something that
    * is neither a chip nor a filter. Passed to the surface, which resets the
@@ -393,6 +398,7 @@ export function ListTable<Row>({
       unit={t(unit)}
       unitOne={unitOne && t(unitOne)}
       emptyNote={emptyNote}
+      emptyLine={emptyLine}
       action={action}
       caption={caption ? t(caption) : undefined}
       footer={footer}
