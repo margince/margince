@@ -400,7 +400,7 @@ it("a card that leaves while focus is elsewhere moves no focus", () => {
 });
 
 it("the card in hand reaches its controls in the order it draws them", async () => {
-  showLead(LEAD, "todo");
+  showLead(LEAD, "do");
   const article = await screen.findByRole("article");
   const done = await within(article).findByRole("button", { name: "Done" });
   const stops = [...article.querySelectorAll<HTMLElement>("a[href], button")];
