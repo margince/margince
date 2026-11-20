@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -34,11 +35,27 @@ func TestTheAccountReachWalkNeverScansEveryActivity(t *testing.T) {
 	busy := ids.NewV7()
 	seedBusyAccount(ctx, t, tx, busy)
 
-	walks := map[string]string{
-		"filed":  "SELECT reach.activity_id FROM (" + companyLinkReach("$1") + ") reach",
-		"walked": "SELECT reach.activity_id FROM (" + companyReach("$1") + ") reach",
+	// Some account mail reaches it only through an employee on the message.
+	if _, err := tx.Exec(ctx, `ALTER TABLE activity_participant DISABLE TRIGGER USER;
+		INSERT INTO activity_participant (activity_id, contact_id, role)
+		SELECT id, contact_id, 'cc' FROM seeded_mail WHERE g % 2 = 0;
+		DELETE FROM activity_link l USING seeded_mail m
+		WHERE l.activity_id = m.id AND m.g % 10 = 2;
+		ANALYZE activity_participant; ANALYZE activity_link`); err != nil {
+		t.Fatal(err)
 	}
-	for name, statement := range walks {
+
+	walks := []struct {
+		name string
+		sql  string
+		rows float64
+	}{
+		{"filed", storekit.CompanyFiledActivityReach("$1"), 4500},
+		{"walked", storekit.CompanyActivityReach("$1"), 5000},
+	}
+	for _, walk := range walks {
+		name := walk.name
+		statement := "SELECT reach.activity_id FROM (" + walk.sql + ") reach"
 		var raw string
 		if err := tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+statement, busy).Scan(&raw); err != nil {
 			t.Fatalf("planning the %s walk: %v", name, err)
@@ -50,8 +67,8 @@ func TestTheAccountReachWalkNeverScansEveryActivity(t *testing.T) {
 		if err := json.Unmarshal([]byte(raw), &plans); err != nil || len(plans) != 1 {
 			t.Fatalf("reading the plan: %v (%d plans)", err, len(plans))
 		}
-		if plans[0].Plan.ActualRows == 0 {
-			t.Fatalf("the %s walk returned no activity of the seeded account, so its plan proves nothing", name)
+		if got := plans[0].Plan.ActualRows; got != walk.rows {
+			t.Fatalf("the %s walk returned %.0f activities, want %.0f", name, got, walk.rows)
 		}
 		var activityScans int
 		plans[0].Plan.walk(func(n planNode) {

@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -244,11 +245,10 @@ func anchorTimelineSQL(ctx context.Context, linkCol string, anchorPos int, withi
 		return "", err
 	}
 	narrowing := conjunction("a.archived_at IS NULL", scope, within.clause("a", arg))
-	// An ACCOUNT reaches its activities by three arms rather than one, so it
-	// takes a predicate where every other anchor takes its link column.
+	// Account reach includes indirect links and participant employment.
 	reach := fmt.Sprintf("EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.%s = $%d)", linkCol, anchorPos)
 	if linkCol == anchorLinkColumn[string(datasource.EntityCompany)] {
-		reach = activityReachesCompany(anchorPos)
+		reach = storekit.CompanyActivityExists(fmt.Sprintf("$%d", anchorPos))
 	}
 	elsewhere := `a.kind = 'email' AND a.thread_key IN (SELECT r.thread_key FROM activity r WHERE r.id IN (SELECT id FROM reached))
 		AND ` + connector.SharedMailKeySQL("a") + ` IN (SELECT ` + connector.SharedMailKeySQL("r") + ` FROM activity r WHERE r.id IN (SELECT id FROM reached))`

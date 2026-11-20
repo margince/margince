@@ -198,27 +198,10 @@ func openChildReminderHoldsAccount() string {
 		           AND coalesce(cd.company_id, ce.company_id) = q.entity_id`
 }
 
-// contactCollapsesIntoAccount is the contact arm's collapse test: a stakeholder
-// currently employed by an ABSORBING account is already covered by that
-// account's own reminder, because CompanyReachSet folds a contact's touches
-// into their employer (companyscope.go's companyArms). Reminding them
-// separately asks one rep about one silence twice.
-//
-// Absorbing, not merely live: an account only absorbs a record when it is
-// ITSELF being drawn. A contact who has gone quiet while their employer is
-// worked regularly folds into an account no reminder is ever written for, and
-// the silence would be reported by nobody — five reminders turned into none,
-// which is worse than the duplication this collapse exists to end.
-//
-// Employment, not the stakeholder seat: the seat is what makes the contact a
-// candidate at all, while employment is what makes the account's anchor include
-// this contact's mail. A seat on a live account's deal does not fold the touch,
-// so collapsing on the seat would silence a contact nobody else covers.
-//
-// Its own statement rather than a clause on the arm above, so the employment
-// currency test stands alone: gates/employmentcurrency_test.go matches per
-// STATEMENT, and mixing this with the seat's own `ended_at IS NULL` would read
-// as an employment arm that skips the helper.
+// contactCollapsesIntoAccount avoids a second reminder when the employer's
+// reminder already covers this contact. A deal seat does not file the touch.
+// Keep this separate from stakeholder filtering so the employment test can
+// distinguish the two end dates.
 func contactCollapsesIntoAccount() string {
 	return `SELECT 1 FROM relationship e
 		         JOIN absorbing_accounts aa ON aa.id = e.company_id
