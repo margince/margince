@@ -47,11 +47,15 @@ var Default = Ladder{Cooling: 30, Dormant: 60, Stale: 90}
 // DefaultDays is Default in the form the installation setting stores.
 func DefaultDays() []int { return Default.Days() }
 
-var errLadderShape = errors.New("name three whole days, each larger than the one before it, such as 30, 60 and 90")
+// maxDay bounds each day of the ladder at ten years. A larger day is a typo,
+// and the list filter subtracts it from today's date.
+const maxDay = 3650
+
+var errLadderShape = errors.New("name three whole days from 1 to 3650, each larger than the one before it, such as 30, 60 and 90")
 
 // FromDays reads the stored setting: three positive days that ascend.
 func FromDays(days []int) (Ladder, error) {
-	if len(days) != 3 || days[0] < 1 || days[0] >= days[1] || days[1] >= days[2] {
+	if len(days) != 3 || days[0] < 1 || days[0] >= days[1] || days[1] >= days[2] || days[2] > maxDay {
 		return Ladder{}, errLadderShape
 	}
 	return Ladder{Cooling: days[0], Dormant: days[1], Stale: days[2]}, nil
@@ -139,20 +143,6 @@ func (l Ladder) WindowOf(r Rung) Window {
 		out.FromDaysBack = new(l.firstDay(after) - 1)
 	}
 	return out
-}
-
-// Bounds is the window as instants at now, the form a Go reader compares.
-func (w Window) Bounds(now time.Time, zone *time.Location) (from, before *time.Time) {
-	today := elapsed.CalendarDay(now, zone)
-	dayStart := func(daysBack *int) *time.Time {
-		if daysBack == nil {
-			return nil
-		}
-		day := today.AddDate(0, 0, -*daysBack)
-		at := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, zone)
-		return &at
-	}
-	return dayStart(w.FromDaysBack), dayStart(w.BeforeDaysBack)
 }
 
 // SQL is the window as a predicate on column at asOf, cut in the installation

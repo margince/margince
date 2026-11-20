@@ -80,10 +80,10 @@ func TestALaterActivityReadsAsActive(t *testing.T) {
 
 func TestTheLadderTakesOnlyThreeAscendingDays(t *testing.T) {
 	t.Parallel()
-	if got, err := FromDays([]int{14, 45, 120}); err != nil || got != (Ladder{14, 45, 120}) {
-		t.Errorf("FromDays(14, 45, 120) = %+v, %v", got, err)
+	if got, err := FromDays([]int{14, 45, 3650}); err != nil || got != (Ladder{14, 45, 3650}) {
+		t.Errorf("FromDays(14, 45, 3650) = %+v, %v", got, err)
 	}
-	for _, days := range [][]int{nil, {30, 60}, {30, 60, 90, 120}, {0, 60, 90}, {30, 30, 90}, {60, 30, 90}, {30, 90, 60}} {
+	for _, days := range [][]int{nil, {30, 60}, {30, 60, 90, 120}, {0, 60, 90}, {30, 30, 90}, {60, 30, 90}, {30, 90, 60}, {30, 60, 3651}} {
 		if _, err := FromDays(days); err == nil {
 			t.Errorf("FromDays(%v) was accepted, want refused", days)
 		}
@@ -93,40 +93,31 @@ func TestTheLadderTakesOnlyThreeAscendingDays(t *testing.T) {
 	}
 }
 
-// The list filter and the page must put an account on the same rung. Each
-// day back is checked at both ends of the day, across a DST change.
+// The list filter and the page must put an account on the same rung. The
+// window's days back are read here as the SQL reads them. A last activity d
+// days back is inside when d is at most FromDaysBack and more than
+// BeforeDaysBack. The SQL itself is checked against Read on the boundary days
+// by the company list's integration test.
 func TestTheFilterWindowAgreesWithTheReading(t *testing.T) {
 	t.Parallel()
 	ladders := []Ladder{Default, {Cooling: 1, Dormant: 2, Stale: 3}, {Cooling: 7, Dormant: 8, Stale: 200}}
 	for _, ladder := range ladders {
-		for days := -2; days <= 220; days++ {
-			day := now.AddDate(0, 0, -days)
-			for _, at := range []time.Time{
-				time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, berlin),
-				time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 59, 0, berlin),
-			} {
-				want := ladder.Read(&at, now, berlin).Rung
-				for _, rung := range Rungs() {
-					if got := ladder.WindowOf(rung).admits(&at); got != (rung == want) {
-						t.Fatalf("ladder %v, %s: the %s window admits=%v, but the reading is %s", ladder, at, rung, got, want)
-					}
+		for days := 0; days <= 220; days++ {
+			want := ladder.Read(daysAgo(days), now, berlin).Rung
+			for _, rung := range Rungs() {
+				w := ladder.WindowOf(rung)
+				got := (w.FromDaysBack == nil || days <= *w.FromDaysBack) && (w.BeforeDaysBack == nil || days > *w.BeforeDaysBack)
+				if got != (rung == want) {
+					t.Fatalf("ladder %v, %d days back: the %s window admits=%v, but the reading is %s", ladder, days, rung, got, want)
 				}
 			}
 		}
 		for _, rung := range Rungs() {
-			if got := ladder.WindowOf(rung).admits(nil); got != (rung == Stale) {
+			if got := ladder.WindowOf(rung).IncludesNone; got != (rung == Stale) {
 				t.Errorf("ladder %v: the %s window admits no activity = %v", ladder, rung, got)
 			}
 		}
 	}
-}
-
-func (w Window) admits(last *time.Time) bool {
-	if last == nil {
-		return w.IncludesNone
-	}
-	from, before := w.Bounds(now, berlin)
-	return (from == nil || !last.Before(*from)) && (before == nil || last.Before(*before))
 }
 
 func TestOnlyDormantAndStaleAreCold(t *testing.T) {

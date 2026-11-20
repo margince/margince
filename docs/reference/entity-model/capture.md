@@ -490,6 +490,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `capture_import_clocks`: `AFTER INSERT OR DELETE FOR EACH ROW EXECUTE FUNCTION trg_capture_import_clocks()`
 - `home_read_fence_capture_import`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR (old.connection_id IS DISTINCT FROM new.connection_id))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_capture_import_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"delivered_by": 20000, "verdict_reason": 2000, "verdict_status": 20000, "verdict_reasons": 2000, "posture_at_import": 20000, "provider_message_ids": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"delivered_by":20000,"posture_at_import":20000,"provider_message_ids":20000,"verdict_reason":2000,"verdict_reasons":2000,"verdict_status":20000}')`

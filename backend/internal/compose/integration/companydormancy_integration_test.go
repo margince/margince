@@ -235,3 +235,116 @@ func TestAnUnownedDormantAccountRaisesNoFollowUp(t *testing.T) {
 		t.Errorf("an unowned account offers %+v, want no follow-up", follow)
 	}
 }
+
+// Accepting the follow-up files the task for the owner, and the card then
+// offers it no more, so a second press files no second task.
+func TestAcceptingTheFollowUpRetiresIt(t *testing.T) {
+	a := newDormantAccount(t)
+	follow := goneDormant(a.page(t))
+	if follow == nil || follow.Action == nil || follow.Action.Task == nil {
+		t.Fatalf("the page offers %+v, want a follow-up with a task", follow)
+	}
+	in, err := activities.TaskInputFrom(*follow.Action.Task)
+	if err != nil {
+		t.Fatalf("reading the prepared task: %v", err)
+	}
+	if _, _, err := a.e.Activities.LogActivity(a.e.Admin(), in); err != nil {
+		t.Fatalf("filing the prepared task: %v", err)
+	}
+	if again := goneDormant(a.page(t)); again != nil {
+		t.Errorf("after the task was filed the page still offers %+v", again)
+	}
+}
+
+// An owner who cannot be handed a task gets no follow-up, and nobody else
+// gets it instead.
+func TestAnOwnerWhoCannotTakeATaskRaisesNoFollowUp(t *testing.T) {
+	for name, change := range map[string]string{
+		"deactivated": `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,
+		"agent":       `UPDATE app_user SET is_agent = true WHERE id = $1`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			a := newDormantAccount(t)
+			a.e.WsExec(t, change, a.e.Rep1)
+			if follow := goneDormant(a.page(t)); follow != nil {
+				t.Errorf("a %s owner is offered %+v, want no follow-up", name, follow)
+			}
+		})
+	}
+}
+
+// The stored clock leaves out mail only its participants see. A reader who
+// sees such mail from yesterday is not told the account is dormant.
+func TestTheStripIsNotDormantBesideMailTheReaderSawYesterday(t *testing.T) {
+	a := newDormantAccount(t)
+	yesterday := a.now.AddDate(0, 0, -1).Truncate(time.Second)
+	direction, subject := "inbound", "Quick question"
+	logged, _, err := a.e.Activities.LogActivity(a.e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: &direction, OccurredAt: &yesterday, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "company", EntityID: a.company.UUID}},
+	})
+	if err != nil {
+		t.Fatalf("logging the mail: %v", err)
+	}
+	a.e.WsExec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, ids.UUID(logged.Id))
+	page := a.page(t)
+	if page.StateStrip.Dormancy.Rung != crmcontracts.DormancyRungDormant {
+		t.Fatalf("the stored clock reads %+v, want dormant from the older mail", page.StateStrip.Dormancy)
+	}
+	if page.StateStrip.Engagement == nil {
+		t.Fatal("the admin reads no engagement")
+	}
+	if got := page.StateStrip.Engagement.State; got == "dormant" {
+		t.Errorf("the strip says dormant beside a mail its reader sees from yesterday")
+	}
+}
+
+// heldThreadWithLaterMail is a deal whose thread the first rep holds as
+// personal. It also has a mail logged on the deal yesterday. That mail is on
+// no thread and nobody imported it, so it still moves the deal clock.
+func heldThreadWithLaterMail(t *testing.T) (dealEvidenceWorld, string, ids.UUID, time.Time) {
+	t.Helper()
+	w := newDealEvidenceWorld(t)
+	thread := "thread-" + ids.NewV7().String()
+	w.mail(t, thread, w.now.AddDate(0, 0, -3))
+	w.judgeThread(t, thread, threadverdict.KindPersonal)
+	at := w.now.AddDate(0, 0, -1).Truncate(time.Second)
+	direction, subject := "inbound", "Re: Dinner on Friday?"
+	logged, _, err := w.e.Activities.LogActivity(w.e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: &direction, OccurredAt: &at, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: w.deal.UUID}},
+	})
+	if err != nil {
+		t.Fatalf("logging the later mail: %v", err)
+	}
+	if clock := w.dealClock(t); clock == nil || !clock.Equal(at) {
+		t.Fatalf("deal last_activity_at = %v, want the later mail at %v", clock, at)
+	}
+	return w, thread, ids.UUID(logged.Id), at
+}
+
+// The seat's import arrives after the message is filed on the thread it holds.
+// The import puts the message under the hold, and removing it takes it out.
+func TestAnImportUnderAnExistingHoldTakesTheMailOffTheDealClock(t *testing.T) {
+	w, thread, mail, at := heldThreadWithLaterMail(t)
+	w.e.WsExec(t, `UPDATE activity SET thread_key = $2 WHERE id = $1`, mail, thread)
+	w.e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, mail, w.e.Rep1)
+	if clock := w.dealClock(t); clock != nil && !clock.Before(at) {
+		t.Errorf("deal last_activity_at = %v after the held seat imported the mail, want it off the clock", clock)
+	}
+	w.e.WsExec(t, `DELETE FROM capture_import WHERE activity_id = $1 AND user_id = $2`, mail, w.e.Rep1)
+	if clock := w.dealClock(t); clock == nil || !clock.Equal(at) {
+		t.Errorf("deal last_activity_at = %v after the import was removed, want the mail at %v", clock, at)
+	}
+}
+
+// The seat imported the message first and it then joins the held thread. The
+// change of thread moves the clock.
+func TestAMailMovedOntoAHeldThreadLeavesTheDealClock(t *testing.T) {
+	w, thread, mail, at := heldThreadWithLaterMail(t)
+	w.e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, mail, w.e.Rep1)
+	w.e.WsExec(t, `UPDATE activity SET thread_key = $2 WHERE id = $1`, mail, thread)
+	if clock := w.dealClock(t); clock != nil && !clock.Before(at) {
+		t.Errorf("deal last_activity_at = %v after the mail joined the held thread, want it off the clock", clock)
+	}
+}

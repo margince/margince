@@ -13,8 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// onRung is an account on rung whose stored clock is set.
 func onRung(rung dormancy.Rung) dormancyInputs {
-	return dormancyInputs{reading: dormancy.Reading{Rung: rung}}
+	last := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
+	return dormancyInputs{reading: dormancy.Reading{Rung: rung}, ladder: dormancy.Default, lastActivity: &last}
 }
 
 // PO-F-4's five states, in the order that keeps them mutually exclusive. The
@@ -59,6 +61,15 @@ func TestEngagementStateAnswersWhoseMoveItIs(t *testing.T) {
 		{"cooling on the ladder", suggestionInputs{
 			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(59 * day)}, dormancy: onRung(dormancy.Cooling),
 		}, "waiting_on_us"},
+		// The stored clock leaves out mail only its participants see. A reader
+		// shown such mail yesterday is not told the account is dormant.
+		{"dormant on the ladder, a mail the reader sees yesterday", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(day)}, dormancy: onRung(dormancy.Dormant),
+		}, "active"},
+		{"dormant on the ladder with no stored clock", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(120 * day)},
+			dormancy: dormancyInputs{reading: dormancy.Reading{Rung: dormancy.Stale, NoActivity: true}, ladder: dormancy.Default},
+		}, "waiting_on_us"},
 		// A message with no recorded direction cannot say whose move it is. It
 		// still proves contact happened, so the account is not "never contacted".
 		{"newest message has no direction", suggestionInputs{
@@ -81,6 +92,7 @@ func TestEngagementStateAnswersWhoseMoveItIs(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.in.loc = time.UTC
 			if got := string(engagementState(tc.in, now)); got != tc.want {
 				t.Errorf("engagementState = %q, want %q", got, tc.want)
 			}

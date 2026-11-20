@@ -36293,7 +36293,7 @@ export interface components {
             silent_days: number;
             /** @description True when the account has no activity recorded at all, which is why it reads as `stale`. */
             no_activity: boolean;
-            /** @description The silent days on which `cooling`, `dormant` and `stale` begin, each at least 1 and in rising order, so a reader can see the rule. */
+            /** @description The silent days on which `cooling`, `dormant` and `stale` begin, each from 1 to 3650 and in rising order, so a reader can see the rule. */
             ladder_days: number[];
         };
         /**

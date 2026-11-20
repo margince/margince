@@ -6,6 +6,26 @@
 -- write.
 SET LOCAL lock_timeout = '3s';
 
+DROP TRIGGER capture_import_clocks ON capture_import;
+DROP FUNCTION trg_capture_import_clocks();
+DROP FUNCTION refresh_clocks_of_activity(uuid);
+
+DROP TRIGGER activity_last_activity ON activity;
+CREATE TRIGGER activity_last_activity
+	AFTER UPDATE OF occurred_at, archived_at, audience, audience_reason, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON activity
+	FOR EACH ROW
+	WHEN (old.occurred_at IS DISTINCT FROM new.occurred_at
+	   OR old.archived_at IS DISTINCT FROM new.archived_at
+	   OR old.audience IS DISTINCT FROM new.audience
+	   OR old.audience_reason IS DISTINCT FROM new.audience_reason
+	   OR old.origin IS DISTINCT FROM new.origin
+	   OR old.kind IS DISTINCT FROM new.kind
+	   OR old.meeting_status IS DISTINCT FROM new.meeting_status
+	   OR old.occurred_precision IS DISTINCT FROM new.occurred_precision
+	   OR old.call_outcome IS DISTINCT FROM new.call_outcome
+	   OR old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested)
+	EXECUTE FUNCTION trg_activity_last_activity();
+
 CREATE OR REPLACE FUNCTION last_activity_of_company(cid uuid) RETURNS timestamptz
     LANGUAGE sql STABLE
     AS $$

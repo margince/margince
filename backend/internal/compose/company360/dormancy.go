@@ -16,9 +16,13 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 var suggestGoneDormant = crmcontracts.Company360SuggestionKindGoneDormant
@@ -31,24 +35,76 @@ type dormancyInputs struct {
 	// followUp is the installation's switch for the suggestion.
 	followUp bool
 	// owner is who the follow-up is prepared for. Nil raises no suggestion:
-	// automatic work never falls to somebody else.
+	// automatic work never falls to somebody else. An owner who cannot be
+	// handed a task, such as a departed or read-only seat, reads as nil.
 	owner *ids.UUID
+	// ownerHasTask is an open task on the company already held by the owner,
+	// such as the one an earlier press of the suggestion filed.
+	ownerHasTask bool
 }
 
 func readDormancyInputs(
-	ctx context.Context, tx pgx.Tx, heading companyHeading, now time.Time, loc *time.Location,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, heading companyHeading, now time.Time, loc *time.Location,
 ) (dormancyInputs, error) {
 	policy, err := contacts.DormancyPolicyTx(ctx, tx)
 	if err != nil {
 		return dormancyInputs{}, err
 	}
-	return dormancyInputs{
+	out := dormancyInputs{
 		reading:      policy.Ladder.Read(heading.lastActivity, now, loc),
 		ladder:       policy.Ladder,
 		lastActivity: heading.lastActivity,
 		followUp:     policy.FollowUp,
-		owner:        heading.owner,
-	}, nil
+	}
+	if heading.owner == nil || !policy.FollowUp {
+		return out, nil
+	}
+	eligible, err := auth.EligibleAssignees(ctx, tx, []ids.UUID{*heading.owner})
+	if err != nil {
+		return dormancyInputs{}, fmt.Errorf("read whether the account's owner can take a task: %w", err)
+	}
+	if !eligible[*heading.owner] {
+		return out, nil
+	}
+	out.owner = heading.owner
+	out.ownerHasTask, err = ownerHoldsOpenTask(ctx, tx, companyID, *heading.owner, now)
+	return out, err
+}
+
+// ownerHoldsOpenTask answers whether the owner already holds an open task
+// filed on the company. It asks about the owner's queue, not the reader's, so
+// it takes no reader scope; it decides only whether a duplicate is offered.
+func ownerHoldsOpenTask(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, owner ids.UUID, now time.Time,
+) (bool, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	companyPos, ownerPos := arg(companyID), arg(owner)
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return false, err
+	}
+	var held bool
+	err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT EXISTS (
+		SELECT 1 FROM activity a
+		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND a.assignee_id = $%d
+		   AND %s AND %s)`, ownerPos, activities.CompanyLinkedActivityExists(companyPos),
+		activities.CurrentTaskClause("a", now, identities, arg)), args...).Scan(&held)
+	if err != nil {
+		return false, fmt.Errorf("read whether the account's owner already holds a task on it: %w", err)
+	}
+	return held, nil
+}
+
+// quietSince reports whether the account is on a cold rung. It also needs
+// newest, the newest message the reader sees, to be the ladder's dormant day old. The
+// stored clock leaves out mail only its participants see, so a reader shown
+// such mail yesterday is never told the account is dormant.
+func (d dormancyInputs) quietSince(newest lastMessage, now time.Time, loc *time.Location) bool {
+	if d.lastActivity == nil || !d.reading.Rung.Cold() {
+		return false
+	}
+	return occurredday.DaysSince(occurredday.Moment{At: newest.At, DateOnly: newest.DateOnly}, now, loc) >= d.ladder.Dormant
 }
 
 // wire is the strip's reading, with the rule beside it.
@@ -64,13 +120,14 @@ func (d dormancyInputs) wire() *crmcontracts.DormancyReading {
 
 // goneDormantSuggestion prepares a follow-up task for the owner of an account
 // on the dormant or stale rung. An account that never had activity entered no
-// rung, so it raises nothing.
+// rung, so it raises nothing. Nor does one whose owner already holds an open
+// task on it, so pressing the suggestion files one task.
 //
 // The fingerprint is the silent stretch: the stored clock it is counted from.
 // A dismissal holds for that stretch, and new activity starts a new one.
 func goneDormantSuggestion(companyID ids.CompanyID, in suggestionInputs) *crmcontracts.Company360Suggestion {
 	d := in.dormancy
-	if !d.followUp || d.owner == nil || d.lastActivity == nil || !d.reading.Rung.Cold() {
+	if !d.followUp || d.owner == nil || d.ownerHasTask || d.lastActivity == nil || !d.reading.Rung.Cold() {
 		return nil
 	}
 	said := suggestionCopyFor(in.language)

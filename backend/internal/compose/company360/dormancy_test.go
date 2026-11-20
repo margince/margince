@@ -81,10 +81,11 @@ func TestTheFollowUpNeedsAColdRungAnOwnerAndTheSwitch(t *testing.T) {
 	t.Parallel()
 	company := ids.From[ids.CompanyKind](ids.NewV7())
 	cases := map[string]func(*suggestionInputs){
-		"no owner":     func(in *suggestionInputs) { in.dormancy.owner = nil },
-		"switched off": func(in *suggestionInputs) { in.dormancy.followUp = false },
-		"cooling":      func(in *suggestionInputs) { in.dormancy.reading.Rung = dormancy.Cooling },
-		"active":       func(in *suggestionInputs) { in.dormancy.reading.Rung = dormancy.Active },
+		"no owner":                   func(in *suggestionInputs) { in.dormancy.owner = nil },
+		"switched off":               func(in *suggestionInputs) { in.dormancy.followUp = false },
+		"owner already holds a task": func(in *suggestionInputs) { in.dormancy.ownerHasTask = true },
+		"cooling":                    func(in *suggestionInputs) { in.dormancy.reading.Rung = dormancy.Cooling },
+		"active":                     func(in *suggestionInputs) { in.dormancy.reading.Rung = dormancy.Active },
 		"no activity ever": func(in *suggestionInputs) {
 			in.dormancy.lastActivity = nil
 			in.dormancy.reading = dormancy.Default.Read(nil, dormancyNow, time.UTC)

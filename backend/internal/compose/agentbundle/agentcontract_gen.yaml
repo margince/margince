@@ -33808,7 +33808,7 @@ components:
           minItems: 3
           maxItems: 3
           items: {type: integer}
-          description: The silent days on which `cooling`, `dormant` and `stale` begin, each at least 1 and in rising order, so a reader can see the rule.
+          description: The silent days on which `cooling`, `dormant` and `stale` begin, each from 1 to 3650 and in rising order, so a reader can see the rule.
     Company360StateStrip:
       type: object
       description: |-

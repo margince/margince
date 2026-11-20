@@ -133,7 +133,7 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 				name, arms, audience)
 		}
 		if slices.Contains(companyClockFunctions, name) {
-			checkCompanyClockEvidence(t, name, body, arms)
+			checkCompanyClockEvidence(t, name, body)
 		}
 	}
 }
@@ -301,21 +301,31 @@ func TestWrittenByHumanCarriesTheOriginRule(t *testing.T) {
 	}
 }
 
-// checkCompanyClockEvidence requires the personal-mail refusal in every arm of
-// a company clock, and the deal evidence rule in each arm through a deal.
-func checkCompanyClockEvidence(t *testing.T, name, body string, arms int) {
+// checkCompanyClockEvidence reads a company clock arm by arm, split at each
+// `UNION ALL`. Each arm that joins an activity refuses personal mail. Each arm
+// through a deal reads the deal evidence rule. A count over the whole body would let one arm
+// carry two clauses and another none.
+func checkCompanyClockEvidence(t *testing.T, name, body string) {
 	t.Helper()
-	if personal := strings.Count(body, relstrength.NotPersonalSQL("a")); personal < arms {
-		t.Errorf("%s: %d activity arm(s) but only %d relstrength.NotPersonalSQL clause(s), so personal mail "+
-			"keeps the account warm. Replace the function in a new migration with %q in every arm",
-			name, arms, personal, relstrength.NotPersonalSQL("a"))
+	dealArms := 0
+	for i, arm := range strings.Split(body, "UNION ALL") {
+		if !strings.Contains(arm, "activity a ON a.id = l.activity_id") {
+			continue
+		}
+		if !strings.Contains(arm, relstrength.NotPersonalSQL("a")) {
+			t.Errorf("%s: arm %d carries no relstrength.NotPersonalSQL clause, so personal mail keeps the account warm. "+
+				"Replace the function in a new migration with %q in every arm", name, i+1, relstrength.NotPersonalSQL("a"))
+		}
+		if !strings.Contains(arm, companyDealArm) {
+			continue
+		}
+		dealArms++
+		if !strings.Contains(arm, relstrength.DealEvidenceSQL("a", "l.deal_id")) {
+			t.Errorf("%s: arm %d goes through a deal and carries no relstrength.DealEvidenceSQL clause, so a link "+
+				"marked not about the deal still warms its company", name, i+1)
+		}
 	}
-	dealArms := strings.Count(body, companyDealArm)
 	if dealArms == 0 {
 		t.Errorf("%s: no arm through a deal found, so the census cannot check its deal evidence", name)
-	}
-	if evidence := strings.Count(body, relstrength.DealEvidenceSQL("a", "l.deal_id")); evidence < dealArms {
-		t.Errorf("%s: %d arm(s) through a deal but only %d relstrength.DealEvidenceSQL clause(s), so a link "+
-			"marked not about the deal still warms its company through the deal", name, dealArms, evidence)
 	}
 }

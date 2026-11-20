@@ -334,7 +334,7 @@ func gatherSuggestionInputs(
 	in.contractEndedSource = facts.ContractEndedSource
 	in.lifecycle = heading.lifecycle
 	in.companyName = heading.name
-	dormant, err := readDormancyInputs(ctx, tx, heading, now, loc)
+	dormant, err := readDormancyInputs(ctx, tx, companyID, heading, now, loc)
 	if err != nil {
 		return suggestionInputs{}, err
 	}
@@ -379,7 +379,8 @@ func readCompanyHeading(
 // The order below IS the spec's evaluation order and the states are mutually
 // exclusive — the first match wins, so a silent account reads as dormant rather
 // than as whichever side happened to write last a year ago.
-// Dormant is the dormancy ladder's cold rungs.
+// Dormant is the dormancy ladder's cold rungs, and only while the newest
+// message this reader sees is as old as the ladder's dormant day.
 //
 // waiting_on_them reuses noReplyDays rather than restating it, which is what
 // makes the strip and the no_reply suggestion beneath it agree by construction
@@ -390,7 +391,7 @@ func engagementState(in suggestionInputs, now time.Time) crmcontracts.Company360
 	}
 	age := now.Sub(in.newest.At)
 	switch {
-	case in.dormancy.reading.Rung.Cold():
+	case in.dormancy.quietSince(in.newest, now, in.loc):
 		return "dormant"
 	case in.newest.awaitsThem() && age >= noReplyDays*24*time.Hour:
 		return "waiting_on_them"

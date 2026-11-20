@@ -10,7 +10,8 @@
 -- backend/gates/remediationnotbuyeractivity_test.go holds the clauses.
 --
 -- A seat's personal hold starting or ending now refreshes the company clocks
--- the thread reaches, not only its deal clocks. The
+-- the thread reaches, not only its deal clocks. So does a seat's import of a
+-- message on a thread it holds, and a row changing thread. The
 -- company_clock_counts_no_personal_mail data task refolds the stored clocks.
 SET LOCAL lock_timeout = '3s';
 
@@ -176,3 +177,69 @@ END;
 $$;
 
 DROP FUNCTION refresh_deal_clocks_of_thread(text, uuid);
+
+-- A row's thread decides which seat's hold applies to it, so a change of
+-- thread refreshes its clocks too.
+DROP TRIGGER activity_last_activity ON activity;
+CREATE TRIGGER activity_last_activity
+	AFTER UPDATE OF occurred_at, archived_at, audience, audience_reason, thread_key, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON activity
+	FOR EACH ROW
+	WHEN (old.occurred_at IS DISTINCT FROM new.occurred_at
+	   OR old.archived_at IS DISTINCT FROM new.archived_at
+	   OR old.audience IS DISTINCT FROM new.audience
+	   OR old.audience_reason IS DISTINCT FROM new.audience_reason
+	   OR old.thread_key IS DISTINCT FROM new.thread_key
+	   OR old.origin IS DISTINCT FROM new.origin
+	   OR old.kind IS DISTINCT FROM new.kind
+	   OR old.meeting_status IS DISTINCT FROM new.meeting_status
+	   OR old.occurred_precision IS DISTINCT FROM new.occurred_precision
+	   OR old.call_outcome IS DISTINCT FROM new.call_outcome
+	   OR old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested)
+	EXECUTE FUNCTION trg_activity_last_activity();
+
+CREATE FUNCTION refresh_clocks_of_activity(aid uuid) RETURNS void
+LANGUAGE plpgsql AS $$
+DECLARE
+  reached record;
+BEGIN
+  FOR reached IN
+     SELECT reach.kind, reach.id FROM last_activity_reach(
+         ARRAY(SELECT contact_id FROM activity_link WHERE activity_id = aid AND contact_id IS NOT NULL),
+         ARRAY(SELECT deal_id FROM activity_link WHERE activity_id = aid AND deal_id IS NOT NULL),
+         ARRAY(SELECT company_id FROM activity_link WHERE activity_id = aid AND company_id IS NOT NULL)) reach
+      WHERE reach.kind IN ('company', 'deal')
+      ORDER BY reach.kind, reach.id
+  LOOP
+    PERFORM move_last_activity(reached.kind::regclass, reached.id);
+  END LOOP;
+END;
+$$;
+
+-- A seat's import of a message on a thread it already holds as personal puts
+-- the message under that hold, and removing the import takes it out again.
+-- Either way the deal and company clocks the message reaches move.
+CREATE FUNCTION trg_capture_import_clocks() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+  imported capture_import;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    imported := OLD;
+  ELSE
+    imported := NEW;
+  END IF;
+  IF imported.user_id IS NOT NULL AND EXISTS (
+       SELECT 1 FROM activity a
+         JOIN capture_thread_verdict hold ON hold.user_id = imported.user_id AND hold.thread_key = a.thread_key
+        WHERE a.id = imported.activity_id AND a.thread_key <> ''
+          AND hold.kind = 'personal' AND hold.status IN ('held', 'held_by_owner', 'unsure')) THEN
+    PERFORM refresh_clocks_of_activity(imported.activity_id);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER capture_import_clocks
+	AFTER INSERT OR DELETE ON capture_import
+	FOR EACH ROW
+	EXECUTE FUNCTION trg_capture_import_clocks();
