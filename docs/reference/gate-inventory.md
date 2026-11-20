@@ -91,6 +91,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendcurrencies_test.go` | H3 | The currency picker must never offer a code the server refuses. |
 | `frontendcustomfieldtypes_test.go` | H3 | The custom-field types are one list on both sides of the wire. |
 | `frontenddatenotation_test.go` | H3 | A server-written brief and the app around it must write one day the same way, or the reader sees 16/11/2026 beside 2026-11-16 on one screen. |
+| `frontenddealroles_test.go` | H3 | A stored deal role is free text, and both sides decide the same question. |
 | `frontenddue_window_test.go` | H3 | The task due-date box offers days inside the window the server accepts. |
 | `frontendeffectfailures_test.go` | H2 | A failed approval's line reads in the reader's language when the browser has words for its code. |
 | `frontendemailtext_test.go` | H3 | The browser and the server split a mail body by the same rules, or a row's preview and the message it opens disagree about where the sender stopped writing. |

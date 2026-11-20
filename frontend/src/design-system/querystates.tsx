@@ -1,11 +1,7 @@
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  type FieldLabels,
-  problemMessageOf,
-  readsNoRecord,
-} from "../lib/problem";
+import { type FieldLabels, isGone, problemMessageOf } from "../lib/problem";
 import { Button, EmptyState, PendingBody } from "./atoms";
 import { Callout } from "./callout";
 import "./querystates.css";
@@ -48,7 +44,8 @@ export function QueryStates({
   // the page down as it arrives.
   pendingLabel: string;
   pendingLines?: number;
-  // What a record page says when its read names no record the reader may see.
+  // What a screen draws when its read finds no record or link (see `isGone`).
+  // Without it such a failure keeps Retry, as its 404 may be a scope refusal.
   gone?: ReactNode;
   children: ReactNode;
 }>) {
@@ -61,7 +58,7 @@ export function QueryStates({
       />
     );
   }
-  if (query.isError && gone && readsNoRecord(query.error)) {
+  if (query.isError && gone && isGone(query.error)) {
     return <>{gone}</>;
   }
   if (query.isError) {

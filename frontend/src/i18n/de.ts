@@ -3605,6 +3605,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.slotTaken":
     "Dieser Zeitpunkt ist nicht mehr verfügbar. Wähle einen anderen Zeitpunkt.",
   "common.retry": "Erneut versuchen",
+  "common.goneBackToAnalytics": "Zurück zu Analytics",
+  "reporting.sharedForecastGone":
+    "Dieser Link funktioniert nicht mehr. Frage nach einem neuen Link.",
+  "reporting.reportGone":
+    "Diesen Bericht gibt es nicht, oder er ist nicht mit dir geteilt.",
+  "analytics.q.gone":
+    "Diese Frage gibt es nicht, oder sie ist nicht mit dir geteilt.",
+  "book.linkGone":
+    "Diese Buchungsseite ist nicht verfügbar. Frage nach einem neuen Link.",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
   "common.loading": "Wird geladen…",
@@ -5642,6 +5651,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.roleLabel.blocker": "Blocker",
   "co.roleLabel.influencer": "Influencer",
   "co.roleLabel.user": "Endnutzende",
+  "co.roleLabel.decision_maker": "Entscheidungstragende",
   "co.evidence.extractedUnconfirmed": "Von KI extrahiert · nicht bestätigt",
   "co.evidence.previous": "Vorherige Aussage",
   "co.evidence.next": "Nächste Aussage",

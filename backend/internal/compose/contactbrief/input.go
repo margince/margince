@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/moneynotation"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -316,7 +317,7 @@ func foldCommercial(in *Input, view crmcontracts.Contact360) {
 		return
 	}
 	if view.Commercial.Role != nil {
-		in.BuyingRole = *view.Commercial.Role
+		in.BuyingRole = dealrole.Recorded(*view.Commercial.Role)
 	}
 	deal := view.Commercial.Deal
 	if deal == nil {
