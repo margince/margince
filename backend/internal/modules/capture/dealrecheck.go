@@ -125,6 +125,9 @@ func (r DealRepair) suggestedLink(f dealFiling, tx pgx.Tx, mail ids.ActivityID, 
 	if err != nil {
 		return false, err
 	}
+	if verdict.Outcome == DealHookFailed {
+		return false, nil
+	}
 	if verdict.Outcome == DealLinked && verdict.Deal == current {
 		return verdict.Basis.NeedsTopicCheck(), nil
 	}

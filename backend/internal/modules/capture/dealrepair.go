@@ -255,13 +255,20 @@ func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 	if err != nil {
 		return "", err
 	}
+	if verdict.Outcome == DealHookFailed {
+		return DealHookFailed, recordFiling(f.writer, tx, mail, verdict, "")
+	}
 	if verdict.Outcome == DealLinked && verdict.Deal == current {
 		return DealMachineConfirmed, nil
 	}
 	if verdict.Basis.NeedsTopicCheck() {
 		return DealNone, nil
 	}
-	return replaceMachineDeal(f, tx, mail, current, verdict, candidates)
+	outcome, err := replaceMachineDeal(f, tx, mail, current, verdict, candidates)
+	if err != nil {
+		return outcome, err
+	}
+	return outcome, recordRepairFiling(f.writer, tx, mail, verdict, outcome)
 }
 
 // replaceMachineDeal takes the rule's old link back and writes the deal the

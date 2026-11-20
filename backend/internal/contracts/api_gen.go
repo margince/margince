@@ -5026,6 +5026,60 @@ func (e CaptureTraceEntryOutcomeNow) Valid() bool {
 	}
 }
 
+// Defines values for CaptureTraceFilingHook.
+const (
+	CaptureTraceFilingHookDeal    CaptureTraceFilingHook = "deal"
+	CaptureTraceFilingHookParties CaptureTraceFilingHook = "parties"
+)
+
+// Valid indicates whether the value is a known member of the CaptureTraceFilingHook enum.
+func (e CaptureTraceFilingHook) Valid() bool {
+	switch e {
+	case CaptureTraceFilingHookDeal:
+		return true
+	case CaptureTraceFilingHookParties:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureTraceFilingResult.
+const (
+	CaptureTraceFilingResultAmbiguous      CaptureTraceFilingResult = "ambiguous"
+	CaptureTraceFilingResultFailed         CaptureTraceFilingResult = "failed"
+	CaptureTraceFilingResultIgnored        CaptureTraceFilingResult = "ignored"
+	CaptureTraceFilingResultLinked         CaptureTraceFilingResult = "linked"
+	CaptureTraceFilingResultMoved          CaptureTraceFilingResult = "moved"
+	CaptureTraceFilingResultNone           CaptureTraceFilingResult = "none"
+	CaptureTraceFilingResultPartiesChanged CaptureTraceFilingResult = "parties_changed"
+	CaptureTraceFilingResultRetracted      CaptureTraceFilingResult = "retracted"
+)
+
+// Valid indicates whether the value is a known member of the CaptureTraceFilingResult enum.
+func (e CaptureTraceFilingResult) Valid() bool {
+	switch e {
+	case CaptureTraceFilingResultAmbiguous:
+		return true
+	case CaptureTraceFilingResultFailed:
+		return true
+	case CaptureTraceFilingResultIgnored:
+		return true
+	case CaptureTraceFilingResultLinked:
+		return true
+	case CaptureTraceFilingResultMoved:
+		return true
+	case CaptureTraceFilingResultNone:
+		return true
+	case CaptureTraceFilingResultPartiesChanged:
+		return true
+	case CaptureTraceFilingResultRetracted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureTraceResolutionStatus.
 const (
 	CaptureTraceResolutionStatusNoise      CaptureTraceResolutionStatus = "noise"
@@ -39916,9 +39970,12 @@ type CaptureTraceEntry struct {
 	Connector string `json:"connector"`
 
 	// Counterparty Only when payload_capture_enabled, and never for an erased subject.
-	Counterparty *string            `json:"counterparty,omitempty"`
-	Id           openapi_types.UUID `json:"id"`
-	OccurredAt   time.Time          `json:"occurred_at"`
+	Counterparty *string `json:"counterparty,omitempty"`
+
+	// Filing Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
+	Filing     *CaptureTraceFiling `json:"filing,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
+	OccurredAt time.Time           `json:"occurred_at"`
 
 	// Outcome What the pipeline did with this message AT THE TIME. It never changes; `outcome_now` is what to count and to filter on.
 	Outcome CaptureTraceEntryOutcome `json:"outcome"`
@@ -39941,6 +39998,24 @@ type CaptureTraceEntryOutcome string
 
 // CaptureTraceEntryOutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
 type CaptureTraceEntryOutcomeNow string
+
+// CaptureTraceFiling Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
+type CaptureTraceFiling struct {
+	Actor string `json:"actor"`
+
+	// Hook Which hook point, for an extension actor. Absent for `core`.
+	Hook *CaptureTraceFilingHook `json:"hook,omitempty"`
+
+	// Reason For `core`, the rung that decided (`project`, `thread`, `sole_open_deal` and the rest). For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations.
+	Reason *string                  `json:"reason,omitempty"`
+	Result CaptureTraceFilingResult `json:"result"`
+}
+
+// CaptureTraceFilingHook Which hook point, for an extension actor. Absent for `core`.
+type CaptureTraceFilingHook string
+
+// CaptureTraceFilingResult defines model for CaptureTraceFiling.Result.
+type CaptureTraceFilingResult string
 
 // CaptureTraceResolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
 type CaptureTraceResolution struct {

@@ -48,7 +48,7 @@ func New() extension.Extension {
 			{Name: "note_deal_change", Events: []string{"deal.updated"}, Handle: noteDealChange},
 		},
 		SystemReads: []extension.SystemRead{extension.SystemReadDeals},
-		MailHooks:   extension.MailHooks{Deal: keepDealAnswer},
+		MailHooks:   extension.MailHooks{Deal: keepDealAnswer, Reasons: []string{"kept_core_answer"}},
 		Needs: []extension.Need{
 			{Capability: extension.CapabilityModels, Reason: "Summarises a deal's changes in one sentence."},
 			{Capability: extension.CapabilityObjects, Reason: "Keeps the summaries it writes."},
@@ -76,7 +76,7 @@ func New() extension.Extension {
 
 // keepDealAnswer is the smallest deal hook: it hands core's answer back as it
 // came, so the fixture walks the declaration and changes no mail.
-func keepDealAnswer(_ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+func keepDealAnswer(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
 	return d, nil
 }
 

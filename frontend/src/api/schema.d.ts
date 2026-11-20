@@ -28122,9 +28122,23 @@ export interface components {
             counterparty?: string | null;
             /** @description Only when payload_capture_enabled, and never for an erased subject. */
             subject?: string | null;
+            filing?: components["schemas"]["CaptureTraceFiling"];
             /** Format: date-time */
             occurred_at: string;
         };
+        /** @description Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later. */
+        CaptureTraceFiling: {
+            actor: string;
+            /**
+             * @description Which hook point, for an extension actor. Absent for `core`.
+             * @enum {string|null}
+             */
+            hook?: "parties" | "deal" | null;
+            /** @enum {string} */
+            result: "linked" | "none" | "ambiguous" | "parties_changed" | "failed" | "ignored" | "moved" | "retracted";
+            /** @description For `core`, the rung that decided (`project`, `thread`, `sole_open_deal` and the rest). For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. */
+            reason?: string | null;
+        } | null;
         /** @description What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages. */
         CaptureTraceResolution: {
             /** @enum {string} */

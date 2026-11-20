@@ -14804,6 +14804,30 @@ export const en = {
     "The sender is mail infrastructure, not a company you work with",
   "captureActivity.reason.transactional_prefix":
     "The sender looks like an automated mailer, not a person",
+  "captureActivity.filing.core": "Filed on its deal by the CRM: {reason}",
+  "captureActivity.filing.core.moved": "The CRM moved its deal link: {reason}",
+  "captureActivity.filing.core.retracted":
+    "The CRM took its deal link back: {reason}",
+  "captureActivity.filing.basis.project": "the mail's project",
+  "captureActivity.filing.basis.thread": "an earlier mail in the thread",
+  "captureActivity.filing.basis.sole_open_deal": "the company's only open deal",
+  "captureActivity.filing.basis.stakeholder": "a stakeholder on the deal",
+  "captureActivity.filing.basis.named_stakeholder":
+    "a stakeholder named in the mail",
+  "captureActivity.filing.basis.ambiguous":
+    "several deals fit, a colleague was asked",
+  "captureActivity.filing.ext.linked": "{unit} filed it on a deal: {reason}",
+  "captureActivity.filing.ext.none": "{unit} kept it off every deal: {reason}",
+  "captureActivity.filing.ext.ambiguous":
+    "{unit} narrowed the deals it could belong to: {reason}",
+  "captureActivity.filing.ext.parties_changed":
+    "{unit} changed the contacts and companies it was read for: {reason}",
+  "captureActivity.filing.ext.failed":
+    "{unit} failed, so the mail is left unfiled and tried again later",
+  "captureActivity.filing.ext.ignored": "{unit}'s answer was ignored: {reason}",
+  "captureActivity.filing.ext.moved": "{unit} moved its deal link: {reason}",
+  "captureActivity.filing.ext.retracted":
+    "{unit} took its deal link back: {reason}",
   "captureActivity.outcome.deferred_capped": "Not queued",
   "captureActivity.outcome.deferred_sent": "Sent for a sender check",
   "captureActivity.resolution.pending": "Still waiting",

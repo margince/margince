@@ -11,6 +11,7 @@ package capture
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"slices"
 	"sync/atomic"
@@ -24,6 +25,9 @@ import (
 
 func registerMailHooks(t *testing.T, hooks extension.MailHooks) {
 	t.Helper()
+	if hooks.Reasons == nil {
+		hooks.Reasons = []string{"credit_hold", "names_reporting", "other_account", "stale", "pointing_elsewhere", "purchase_order", "kept"}
+	}
 	unit := extension.Extension{Name: "deal-rules", Version: "0.0.1", Description: "A unit composed by a test.", MailHooks: hooks}
 	if err := compose.RegisterExtensions([]extension.Extension{unit}, nil, nil); err != nil {
 		t.Fatalf("registering the unit: %v", err)
@@ -43,15 +47,16 @@ func TestADealHookCanKeepAMailOffTheOnlyOpenDeal(t *testing.T) {
 	w.employee(t, "alice@acme.example", w.customer)
 	w.deal(t, "Acme rollout")
 	var calls atomic.Int32
-	registerMailHooks(t, extension.MailHooks{Deal: func(_ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
 		calls.Add(1)
-		return extension.MailDeal{Outcome: "none", Reason: "Acme is on a credit hold"}, nil
+		return extension.MailDeal{Outcome: "none", Reason: "credit_hold"}, nil
 	}})
 	env.sync(t, mailFrom("alice@acme.example", "hook1@acme.example", "", "invoice"))
 	wantDeals(t, e, "hook1@acme.example")
 	if calls.Load() == 0 {
 		t.Fatal("the hook was never called")
 	}
+	wantFiling(t, e, activityOf(t, e, "hook1@acme.example"), "deal-rules", "none", "credit_hold")
 }
 
 // A deal hook names a deal. The link lands and its audit evidence names the
@@ -64,15 +69,16 @@ func TestADealHookDealDoesNotSurviveAColleaguesDecline(t *testing.T) {
 	w.employee(t, "alice@acme.example", w.customer)
 	operations := w.deal(t, "Acme operations")
 	chosen := w.deal(t, "Acme reporting")
-	registerMailHooks(t, extension.MailHooks{Deal: func(_ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
-		return extension.MailDeal{Outcome: "linked", Deal: chosen.String(), Reason: "the subject names reporting"}, nil
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+		return extension.MailDeal{Outcome: "linked", Deal: chosen.String(), Reason: "names_reporting"}, nil
 	}})
 	raw := mailFrom("alice@acme.example", "hook2@acme.example", "", "reporting question")
 	env.sync(t, raw)
 	wantDeals(t, e, "hook2@acme.example", chosen)
 	mail := activityOf(t, e, "hook2@acme.example")
+	wantFiling(t, e, mail, "deal-rules", "linked", "names_reporting")
 	if n := countRows(t, e, `SELECT count(*) FROM audit_log WHERE action = 'activity_relink' AND entity_id = '`+mail.String()+`'
-		AND evidence::text LIKE '%deal-rules%' AND evidence::text LIKE '%the subject names reporting%'`); n != 1 {
+		AND evidence::text LIKE '%deal-rules%' AND evidence::text LIKE '%names_reporting%'`); n != 1 {
 		t.Fatalf("%d audit rows name the unit and its reason, want 1", n)
 	}
 
@@ -95,17 +101,17 @@ func TestAPartiesHookAdjustsTheCompaniesTheRuleReads(t *testing.T) {
 	w.deal(t, "Acme rollout")
 	other := w.at(t, "Elsewhere")
 	elsewhere := other.deal(t, "Elsewhere rollout")
-	registerMailHooks(t, extension.MailHooks{Parties: func(_ extension.MailView, p extension.MailParties) (extension.MailParties, error) {
+	registerMailHooks(t, extension.MailHooks{Parties: func(_ context.Context, _ extension.MailView, p extension.MailParties) (extension.MailParties, error) {
 		p.Companies = []string{other.customer.String()}
-		p.Reason = "the sender works for Elsewhere on this account"
+		p.Reason = "other_account"
 		return p, nil
 	}})
 	env.sync(t, mailFrom("alice@acme.example", "hook3@acme.example", "", "hello"))
 	wantDeals(t, e, "hook3@acme.example", elsewhere)
 
-	registerMailHooks(t, extension.MailHooks{Parties: func(_ extension.MailView, p extension.MailParties) (extension.MailParties, error) {
+	registerMailHooks(t, extension.MailHooks{Parties: func(_ context.Context, _ extension.MailView, p extension.MailParties) (extension.MailParties, error) {
 		p.Companies = []string{ids.NewV7().String()}
-		p.Reason = "a company that does not exist"
+		p.Reason = "stale"
 		return p, nil
 	}})
 	beta := w.at(t, "Beta")
@@ -123,8 +129,8 @@ func TestADealHookCannotReachADealOfAnotherCompany(t *testing.T) {
 	w.employee(t, "alice@acme.example", w.customer)
 	w.deal(t, "Acme rollout")
 	foreign := w.at(t, "Elsewhere").deal(t, "Elsewhere rollout")
-	registerMailHooks(t, extension.MailHooks{Deal: func(_ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
-		return extension.MailDeal{Outcome: "linked", Deal: foreign.String(), Reason: "pointing elsewhere"}, nil
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+		return extension.MailDeal{Outcome: "linked", Deal: foreign.String(), Reason: "pointing_elsewhere"}, nil
 	}})
 	env.sync(t, mailFrom("alice@acme.example", "hook5@acme.example", "", "hello"))
 	if slices.Contains(dealsOf(t, e, "hook5@acme.example"), foreign) {
@@ -158,7 +164,7 @@ func TestADealHookReadsTheBodyAndLooksARefUpInTheUnitsOwnData(t *testing.T) {
 		}
 	})
 	var writeErr atomic.Value
-	registerMailHooks(t, extension.MailHooks{Deal: func(m extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, m extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
 		var deal string
 		if err := m.Lookup(`SELECT deal::text FROM ext.ext_deal_rules_ref WHERE $1 LIKE '%' || ref || '%'`, m.Body).Scan(&deal); err != nil {
 			return d, err
@@ -166,11 +172,60 @@ func TestADealHookReadsTheBodyAndLooksARefUpInTheUnitsOwnData(t *testing.T) {
 		if err := m.Lookup(`INSERT INTO ext.ext_deal_rules_ref VALUES ('X', $1) RETURNING ref`, deal).Scan(new(string)); err != nil {
 			writeErr.Store(err.Error())
 		}
-		return extension.MailDeal{Outcome: "linked", Deal: deal, Reason: "the purchase order in the text"}, nil
+		return extension.MailDeal{Outcome: "linked", Deal: deal, Reason: "purchase_order"}, nil
 	}})
 	env.sync(t, bytes.Replace(mailFrom("alice@acme.example", "hook6@acme.example", "", "an order"), []byte("hello"), []byte("our order PO-7731 please"), 1))
 	wantDeals(t, e, "hook6@acme.example", chosen)
 	if writeErr.Load() == nil {
 		t.Fatal("the lookup accepted a write")
+	}
+}
+
+// A hook that fails decides nothing. Core does not fall back to its own answer:
+// the mail stays unfiled, the trace says which unit failed, and the next capture
+// files it once the hook works again.
+func TestAFailedHookLeavesTheMailUndecidedAndItIsFiledOnceTheHookWorks(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	only := w.deal(t, "Acme rollout")
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+		return d, errors.New("the ledger is down")
+	}})
+	raw := mailFrom("alice@acme.example", "hook7@acme.example", "", "invoice")
+	env.sync(t, raw)
+	wantDeals(t, e, "hook7@acme.example")
+	wantFiling(t, e, activityOf(t, e, "hook7@acme.example"), "deal-rules", "failed", "")
+
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+		return d, nil
+	}})
+	env.sync(t, raw)
+	wantDeals(t, e, "hook7@acme.example", only)
+}
+
+// A change that names no reason the unit declared is ignored, and says so.
+func TestADealHookChangeWithoutADeclaredReasonIsIgnored(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	only := w.deal(t, "Acme rollout")
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+		return extension.MailDeal{Outcome: "none", Reason: "not declared"}, nil
+	}})
+	env.sync(t, mailFrom("alice@acme.example", "hook8@acme.example", "", "invoice"))
+	wantDeals(t, e, "hook8@acme.example", only)
+	wantFiling(t, e, activityOf(t, e, "hook8@acme.example"), "deal-rules", "ignored", "not declared")
+}
+
+// wantFiling asserts what the mail's capture trace says about who filed it.
+func wantFiling(t *testing.T, e *integration.SearchEnv, mail ids.UUID, actor, result, reason string) {
+	t.Helper()
+	if n := countRows(t, e, `SELECT count(*) FROM capture_trace WHERE activity_id = '`+mail.String()+`'
+		AND filing->>'actor' = '`+actor+`' AND filing->>'result' = '`+result+`'
+		AND coalesce(filing->>'reason', '') = '`+reason+`'`); n < 1 {
+		t.Fatalf("the trace does not say %s %s the mail (reason %q)", actor, result, reason)
 	}
 }

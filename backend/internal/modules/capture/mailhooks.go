@@ -28,11 +28,38 @@ const mailBodyLimit = "8000"
 // check follows it, because the extension decided on its own rules.
 const DealBasisExtension DealBasis = "extension"
 
-// HookChange is one extension's change to a result, and its reason.
+// HookResult is what became of one hook's answer.
+type HookResult string
+
+// The results. A change that is neither failed nor ignored took effect.
+const (
+	HookChanged HookResult = "changed"
+	HookFailed  HookResult = "failed"
+	// HookIgnored is an answer core refused: it named no declared reason, or it
+	// was not a result core could have reached.
+	HookIgnored HookResult = "ignored"
+)
+
+// HookChange is one extension's change to a result, and its reason. Reason is
+// the key the unit declared for it, or empty when the hook failed.
 type HookChange struct {
 	Unit   string
 	Hook   string
 	Reason string
+	Result HookResult
+}
+
+// hookFailed is whether any hook failed. A failed hook decided nothing.
+func hookFailed(changes []HookChange) bool {
+	return slices.ContainsFunc(changes, func(c HookChange) bool { return c.Result == HookFailed })
+}
+
+// hookChanges are the changes that took effect, so a failed or ignored answer
+// never reaches the audit evidence as if it had.
+func hookChanges(changes []HookChange) []HookChange {
+	return slices.DeleteFunc(slices.Clone(changes), func(c HookChange) bool {
+		return c.Result == HookFailed || c.Result == HookIgnored
+	})
 }
 
 // MailView is what a hook may read about one mail.
@@ -98,16 +125,35 @@ func (h MailHooks) adjustParties(ctx context.Context, tx pgx.Tx, facts *dealFact
 		return err
 	}
 	out, changes := h.Parties(ctx, view, MailParties{Contacts: facts.contacts, Companies: facts.companies})
-	if len(changes) == 0 || (slices.Equal(out.Contacts, facts.contacts) && slices.Equal(out.Companies, facts.companies)) {
+	if hookFailed(changes) {
+		facts.hooks = append(facts.hooks, changes...)
+		facts.outcome = DealHookFailed
+		return nil
+	}
+	if len(hookChanges(changes)) == 0 {
+		facts.hooks = append(facts.hooks, changes...)
 		return nil
 	}
 	valid, err := partiesAreLive(ctx, tx, out)
-	if err != nil || !valid {
+	if err != nil {
 		return err
+	}
+	if !valid {
+		facts.hooks = append(facts.hooks, asIgnored(changes)...)
+		return nil
 	}
 	facts.contacts, facts.companies = out.Contacts, out.Companies
 	facts.hooks = append(facts.hooks, changes...)
 	return nil
+}
+
+// asIgnored marks changes core refused.
+func asIgnored(changes []HookChange) []HookChange {
+	out := slices.Clone(changes)
+	for i := range out {
+		out[i].Result = HookIgnored
+	}
+	return out
 }
 
 // partiesAreLive holds a hook to the shape core derives. Contacts are unique
@@ -150,12 +196,20 @@ func (h MailHooks) adjustVerdict(ctx context.Context, tx pgx.Tx, facts dealFacts
 		return verdict, err
 	}
 	out, changes := h.Verdict(ctx, view, verdict)
-	if len(changes) == 0 {
+	if hookFailed(changes) {
+		return DealVerdict{Outcome: DealHookFailed, Basis: verdict.Basis, Hooks: slices.Concat(verdict.Hooks, changes)}, nil
+	}
+	if len(hookChanges(changes)) == 0 {
+		verdict.Hooks = slices.Concat(verdict.Hooks, changes)
 		return verdict, nil
 	}
 	accepted, ok, err := acceptHookVerdict(ctx, tx, facts, candidates, verdict, out)
-	if err != nil || !ok {
+	if err != nil {
 		return verdict, err
+	}
+	if !ok {
+		verdict.Hooks = slices.Concat(verdict.Hooks, asIgnored(changes))
+		return verdict, nil
 	}
 	accepted.Hooks = slices.Concat(verdict.Hooks, changes)
 	return accepted, nil
@@ -228,7 +282,7 @@ func dealReachable(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates D
 // withHookEvidence adds the extensions that shaped a verdict to the link's
 // evidence, so the audit row names each unit and why it changed the result.
 func withHookEvidence(evidence map[string]any, changes []HookChange) map[string]any {
-	if len(changes) == 0 {
+	if changes = hookChanges(changes); len(changes) == 0 {
 		return evidence
 	}
 	recorded := make([]map[string]string, len(changes))

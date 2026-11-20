@@ -17,8 +17,7 @@ import (
 
 // lookupFor is the read-only Lookup a hook gets. Each read opens a transaction
 // of its own, so a hook abandoned at its time limit never touches the
-// transaction capture runs in. The read outlives a cancelled capture, and the
-// time limit bounds it.
+// transaction capture runs in. ctx is the hook's own, so the read ends with it.
 func lookupFor(ctx context.Context, pool *pgxpool.Pool) func(string, ...any) extension.Row {
 	return func(sql string, args ...any) extension.Row {
 		return lookupRow{ctx: ctx, pool: pool, sql: sql, args: args}
@@ -37,7 +36,7 @@ type lookupRow struct {
 // Scan reads the row. The statement after the two below cannot undo read-only,
 // because Postgres refuses read-write once a query has run in the transaction.
 func (r lookupRow) Scan(dest ...any) error {
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.ctx), mailHookLimit)
+	ctx, cancel := context.WithTimeout(r.ctx, mailHookLimit)
 	defer cancel()
 	ctx = database.Detached(ctx)
 	return database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {

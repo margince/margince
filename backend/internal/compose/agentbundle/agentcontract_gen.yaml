@@ -27367,7 +27367,27 @@ components:
         subject:
           type: [string, 'null']
           description: 'Only when payload_capture_enabled, and never for an erased subject.'
+        filing:
+          $ref: '#/components/schemas/CaptureTraceFiling'
         occurred_at: {type: string, format: date-time}
+    CaptureTraceFiling:
+      type: [object, 'null']
+      description: >-
+        Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
+      required: [actor, result]
+      properties:
+        actor: {type: string}
+        hook:
+          type: [string, 'null']
+          enum: [parties, deal, null]
+          description: 'Which hook point, for an extension actor. Absent for `core`.'
+        result:
+          type: string
+          enum: [linked, none, ambiguous, parties_changed, failed, ignored, moved, retracted]
+        reason:
+          type: [string, 'null']
+          description: >-
+            For `core`, the rung that decided (`project`, `thread`, `sole_open_deal` and the rest). For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations.
     CaptureTraceResolution:
       type: [object, 'null']
       description: >-

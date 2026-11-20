@@ -6,8 +6,9 @@ package mailhooks
 
 // The mail-capture hooks of the registered units. This adapter owns the order:
 // unit name, each hook seeing the previous result. An error, a panic or a slow
-// call leaves the previous result as it was. The checks that keep a colleague's
-// decision whole are in capture/mailhooks.go.
+// call is a failure: the chain stops and core decides nothing for the mail. A
+// change that names no declared reason is ignored. The checks that keep a
+// colleague's decision whole are in capture/mailhooks.go.
 
 import (
 	"cmp"
@@ -24,8 +25,8 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// mailHookLimit is how long one hook may run. A hook has no context to cancel,
-// so a call past the limit is abandoned and its answer dropped.
+// mailHookLimit is how long one hook may run. The hook's context ends then. A
+// hook that ignores it is abandoned and its answer dropped.
 const mailHookLimit = 250 * time.Millisecond
 
 const (
@@ -58,12 +59,16 @@ func (u units) withHook(has func(extension.MailHooks) bool) []extension.Extensio
 	return found
 }
 
-// callMailHook runs fn with the limit and turns a panic or a slow call into an error.
-func callMailHook[T any](fn func() (T, error)) (T, error) {
+// callMailHook runs fn with the limit and turns a panic or a slow call into an
+// error. fn gets a context that ends at the limit, detached from capture's own
+// so a cancelled capture does not leave a half-read hook behind.
+func callMailHook[T any](ctx context.Context, fn func(context.Context) (T, error)) (T, error) {
 	type answer struct {
 		value T
 		err   error
 	}
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), mailHookLimit)
+	defer cancel()
 	done := make(chan answer, 1)
 	go func() {
 		defer func() {
@@ -71,37 +76,52 @@ func callMailHook[T any](fn func() (T, error)) (T, error) {
 				done <- answer{err: fmt.Errorf("the hook panicked: %v", r)}
 			}
 		}()
-		value, err := fn()
+		value, err := fn(ctx)
 		done <- answer{value, err}
 	}()
-	timer := time.NewTimer(mailHookLimit)
-	defer timer.Stop()
 	select {
 	case a := <-done:
 		return a.value, a.err
-	case <-timer.C:
+	case <-ctx.Done():
 		var zero T
 		return zero, fmt.Errorf("the hook ran longer than %s", mailHookLimit)
 	}
+}
+
+// failedChange is what a failed hook leaves in the record. It decided nothing.
+func failedChange(unit extension.Extension, hook string) capture.HookChange {
+	return capture.HookChange{Unit: string(unit.Name), Hook: hook, Result: capture.HookFailed}
+}
+
+// change is one hook's change. A reason the unit did not declare makes it ignored.
+func change(unit extension.Extension, hook, reason string) capture.HookChange {
+	c := capture.HookChange{Unit: string(unit.Name), Hook: hook, Reason: reason, Result: capture.HookChanged}
+	if !slices.Contains(unit.MailHooks.Reasons, reason) {
+		c.Result = capture.HookIgnored
+	}
+	return c
 }
 
 func (u units) runParties(ctx context.Context, view capture.MailView, parties capture.MailParties) (capture.MailParties, []capture.HookChange) {
 	var changes []capture.HookChange
 	for _, unit := range u.withHook(func(h extension.MailHooks) bool { return h.Parties != nil }) {
 		in := extension.MailParties{Contacts: uuidStrings(parties.Contacts), Companies: uuidStrings(parties.Companies)}
-		out, err := callMailHook(func() (extension.MailParties, error) {
-			return unit.MailHooks.Parties(u.extensionMailView(ctx, view), in)
+		out, err := callMailHook(ctx, func(c context.Context) (extension.MailParties, error) {
+			return unit.MailHooks.Parties(c, u.extensionMailView(c, view), in)
 		})
 		if err != nil {
-			slog.Warn("compose: a mail hook failed and its result was ignored", "unit", unit.Name, "hook", mailHookParties, "err", err)
-			continue
+			slog.Warn("compose: a mail hook failed, so the mail is left undecided", "unit", unit.Name, "hook", mailHookParties, "err", err)
+			return parties, append(changes, failedChange(unit, mailHookParties))
 		}
 		next, ok := partiesFromHook(out)
 		if !ok || (slices.Equal(next.Contacts, parties.Contacts) && slices.Equal(next.Companies, parties.Companies)) {
 			continue
 		}
-		parties = next
-		changes = append(changes, capture.HookChange{Unit: string(unit.Name), Hook: mailHookParties, Reason: out.Reason})
+		changed := change(unit, mailHookParties, out.Reason)
+		changes = append(changes, changed)
+		if changed.Result == capture.HookChanged {
+			parties = next
+		}
 	}
 	return parties, changes
 }
@@ -110,17 +130,22 @@ func (u units) runDeal(ctx context.Context, view capture.MailView, verdict captu
 	var changes []capture.HookChange
 	for _, unit := range u.withHook(func(h extension.MailHooks) bool { return h.Deal != nil }) {
 		in := dealForHook(verdict)
-		out, err := callMailHook(func() (extension.MailDeal, error) { return unit.MailHooks.Deal(u.extensionMailView(ctx, view), in) })
+		out, err := callMailHook(ctx, func(c context.Context) (extension.MailDeal, error) {
+			return unit.MailHooks.Deal(c, u.extensionMailView(c, view), in)
+		})
 		if err != nil {
-			slog.Warn("compose: a mail hook failed and its result was ignored", "unit", unit.Name, "hook", mailHookDeal, "err", err)
-			continue
+			slog.Warn("compose: a mail hook failed, so the mail is left undecided", "unit", unit.Name, "hook", mailHookDeal, "err", err)
+			return verdict, append(changes, failedChange(unit, mailHookDeal))
 		}
 		next, ok := dealFromHook(verdict, out)
 		if !ok {
 			continue
 		}
-		verdict = next
-		changes = append(changes, capture.HookChange{Unit: string(unit.Name), Hook: mailHookDeal, Reason: out.Reason})
+		changed := change(unit, mailHookDeal, out.Reason)
+		changes = append(changes, changed)
+		if changed.Result == capture.HookChanged {
+			verdict = next
+		}
 	}
 	return verdict, changes
 }
