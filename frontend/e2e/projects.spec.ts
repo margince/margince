@@ -92,7 +92,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await page.goto("/#/deals/d-fleet");
   await page.getByRole("button", { name: "Weitere Aktionen" }).click();
   await page.getByRole("button", { name: "Details bearbeiten" }).click();
-  await page.getByRole("button", { name: /^Unternehmen ändern/ }).click();
+  await page
+    .getByRole("button", { name: /^Feld „Unternehmen“ ändern/ })
+    .click();
   const group = page.getByRole("dialog", { name: "Unternehmen", exact: true });
   await choose(
     page,
