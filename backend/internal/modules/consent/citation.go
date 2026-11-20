@@ -123,9 +123,12 @@ func (g *Gate) citationsFor(ctx context.Context, tx pgx.Tx, country RecipientCou
 	if len(citedCodes(country.dataProtectionCodes()...)) == 0 {
 		return nil, nil //nolint:nilnil // no citation is the answer for packs that cite nothing
 	}
-	sender, err := g.store.senderCountryOf(ctx, tx, entity)
-	if err != nil {
-		return nil, err
+	sender := country.Sender
+	if sender == "" {
+		var err error
+		if sender, err = g.store.senderCountryOf(ctx, tx, entity); err != nil {
+			return nil, err
+		}
 	}
 	return provisionsShown(citationContext{Recipient: country, Sender: sender, At: g.store.now()}), nil
 }

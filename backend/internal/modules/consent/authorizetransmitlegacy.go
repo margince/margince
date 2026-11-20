@@ -63,6 +63,13 @@ func (g *Gate) transmitCountries(ctx context.Context, req commsauthz.TransmitReq
 		out, err = g.store.recipientCountries(ctx, tx, req.Recipients, func(r connector.Recipient) commsauthz.Request {
 			return stagedRequestFor(req, r, claims, "", nil)
 		})
+		// An entity edited while the message waits does not change the law it
+		// was staged under.
+		for i, r := range req.Recipients {
+			if staged := claims[decisionRecipientKey(r)].sender; staged != "" && i < len(out) {
+				out[i].Sender = staged
+			}
+		}
 		return err
 	})
 	return out, err

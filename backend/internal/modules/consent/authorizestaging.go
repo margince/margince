@@ -204,7 +204,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 		// is absent here rather than being handed to a phase that runs as the
 		// system principal. See authorizeevidencecarry.go, and decideOne's own
 		// note on why the two differ.
-		evidence, err := evidenceJSON(d.Evidence)
+		evidence, err := evidenceJSON(d.Evidence, countries[i].Sender)
 		if err != nil {
 			return err
 		}

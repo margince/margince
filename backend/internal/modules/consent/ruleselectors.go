@@ -105,20 +105,14 @@ type RecipientCountry struct {
 
 // dataProtectionCodes are the countries whose data-protection rules bind a
 // message to this recipient: their own, then the sender's when it differs.
+// applicableRules folds them into the stricter answer for the lawful basis and
+// the evidence windows.
 func (c RecipientCountry) dataProtectionCodes() []jurisdiction.Code {
 	codes := []jurisdiction.Code{c.Code}
 	if c.Sender != "" && c.Sender != c.Code {
 		codes = append(codes, c.Sender)
 	}
 	return codes
-}
-
-// dataProtectionRules folds the recipient's pack and the sender's into the
-// stricter answer for the lawful basis and the evidence windows. ok is false
-// when neither country has a pack.
-func (c RecipientCountry) dataProtectionRules() (messagingrules.Rules, bool) {
-	rules, _, ok := applicableRules(c.dataProtectionCodes()...)
-	return rules, ok
 }
 
 // Known reports whether the record stated a country.

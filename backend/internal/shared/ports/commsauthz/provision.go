@@ -25,7 +25,7 @@ func (d Decision) ProvisionFor(code string) Provision {
 	return Provision{}
 }
 
-// ProvisionsFor is every provision this decision cites for code: the
+// ProvisionsFor lists the provisions this decision cites for code: the
 // recipient's pack's first, then the sending entity's.
 func (d Decision) ProvisionsFor(code string) []Provision {
 	return d.Citations[code]

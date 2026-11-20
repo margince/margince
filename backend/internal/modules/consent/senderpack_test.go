@@ -59,7 +59,7 @@ func TestTheSendersPackBindsTheLawfulBasisBesideTheRecipients(t *testing.T) {
 		{"the same country is one pack", RecipientCountry{Code: recipient, Sender: recipient}, false},
 	}
 	for _, tc := range cases {
-		rules, found := tc.country.dataProtectionRules()
+		rules, _, found := applicableRules(tc.country.dataProtectionCodes()...)
 		if !found || rules.NoLegitimateInterests != tc.noLI {
 			t.Errorf("%s: found=%v NoLegitimateInterests=%v, want found and %v", tc.name, found, rules.NoLegitimateInterests, tc.noLI)
 		}

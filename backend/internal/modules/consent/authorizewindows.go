@@ -64,7 +64,7 @@ func packRulesFor(country RecipientCountry) packRules {
 	out := packRules{reply: defaultReplyWindow, dealFollow: defaultDealFollowUpWindow}
 	// The windows bound a legitimate interest, so the sender's pack shortens
 	// them too. The marketing exception stays the recipient's pack's alone.
-	if windows, found := country.dataProtectionRules(); found {
+	if windows, _, found := applicableRules(country.dataProtectionCodes()...); found {
 		out.reply, out.dealFollow = shorterOf(out.reply, windows.ReplyWindow), shorterOf(out.dealFollow, windows.DealFollowUpWindow)
 	}
 	rules, _, applicable := applicableRules(country.Code)

@@ -47,8 +47,8 @@ it in `RecipientCountry.Sender`. It picks the recipient's country from:
 A record that states no usable code resolves to no marketing pack, and marketing to that recipient
 needs their consent. The lawful basis is then judged under the sending entity's pack alone.
 
-`RecipientCountry.dataProtectionRules` in `ruleselectors.go` folds the recipient's pack and the
-sender's with `Strictest`. `settlePackBasisTx` in `backend/internal/modules/consent/recipientpack.go`
+`RecipientCountry.dataProtectionCodes` in `ruleselectors.go` names the recipient's pack and the
+sender's, and `applicableRules` folds them with `Strictest`. `settlePackBasisTx` in `backend/internal/modules/consent/recipientpack.go`
 reads it: when either pack sets `no-legitimate-interests`, a legitimate-interest basis becomes the
 recipient's consent, or no basis. So a sender in Vietnam writing to a recipient in Germany needs
 consent or a case Vietnamese law names, although GDPR alone would accept a legitimate interest.

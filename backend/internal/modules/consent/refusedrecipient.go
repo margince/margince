@@ -43,7 +43,7 @@ type RefusedRecipient struct {
 	// Provision is the law cited for ReasonCode at assessment, zero when none
 	// was shown. Stored, so a later pack never puts new law beside it.
 	Provision commsauthz.Provision `json:"provision,omitzero"`
-	// Provisions is every law cited for ReasonCode at assessment, Provision
+	// Provisions holds each law cited for ReasonCode at assessment, Provision
 	// first. Empty on a snapshot from before it, which then shows Provision.
 	Provisions []commsauthz.Provision `json:"provisions,omitempty"`
 	// CanBeOverruled is the preview's own answer for this refusal. It is told

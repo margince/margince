@@ -113,11 +113,8 @@ func (s *Store) confirmOneTx(ctx context.Context, tx pgx.Tx, user ids.UUID, subj
 	if err != nil {
 		return false, err
 	}
-	if country.Sender, err = s.senderCountryTx(ctx, tx); err != nil {
+	if applies, err := s.warningMayApplyTx(ctx, tx, country); err != nil || !applies {
 		return false, err
-	}
-	if rules, found := country.dataProtectionRules(); !found || !rules.NoLegitimateInterests {
-		return false, nil
 	}
 	column := confirmationColumn(subject.Kind)
 	var open bool
@@ -143,6 +140,45 @@ func (s *Store) confirmOneTx(ctx context.Context, tx pgx.Tx, user ids.UUID, subj
 		"country_source": string(country.Source),
 	})
 	return err == nil, err
+}
+
+// warningMayApplyTx reports whether the warning can apply to this recipient
+// for any legal entity a message may go out for. The request names no entity,
+// so a confirmation is kept wherever staging may ask for one; staging spends it
+// only on a send its own decision flags.
+func (s *Store) warningMayApplyTx(ctx context.Context, tx pgx.Tx, country RecipientCountry) (bool, error) {
+	senders, err := s.entityCountriesTx(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	for _, sender := range senders {
+		country.Sender = sender
+		if rules, _, found := applicableRules(country.dataProtectionCodes()...); found && rules.NoLegitimateInterests {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// entityCountriesTx is the data-protection country of every live legal
+// entity: the default entity's through senderCountryOf, then each further one
+// that states its own.
+func (s *Store) entityCountriesTx(ctx context.Context, tx pgx.Tx) ([]jurisdiction.Code, error) {
+	home, err := s.senderCountryOf(ctx, tx, ids.UUID{})
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT lower(country) FROM legal_entity
+		 WHERE NOT is_default AND archived_at IS NULL AND country IS NOT NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("consent: reading the legal entities' countries: %w", err)
+	}
+	further, err := pgx.CollectRows(rows, pgx.RowTo[jurisdiction.Code])
+	if err != nil {
+		return nil, fmt.Errorf("consent: reading the legal entities' countries: %w", err)
+	}
+	return append([]jurisdiction.Code{home}, further...), nil
 }
 
 // confirmedCountryTx is the country the warning was shown under: the one the

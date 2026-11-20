@@ -101,7 +101,7 @@ func keptUnderPack(basis commsauthz.Basis) bool {
 // privacy page through settleUsesTx. A basis the law does not name becomes the
 // subject's consent to a purpose covering this use, or no basis at all.
 func settlePackBasisTx(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolution) (resolution, error) {
-	rules, found := subject.Country.dataProtectionRules()
+	rules, _, found := applicableRules(subject.Country.dataProtectionCodes()...)
 	if !found || !rules.NoLegitimateInterests || keptUnderPack(res.Basis) {
 		return res, nil
 	}
