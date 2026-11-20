@@ -152,7 +152,7 @@ func TestASettledDomainAsksABoundedNumberAtOnce(t *testing.T) {
 	for i := range domainEmployerChangeCap + 1 {
 		address := fmt.Sprintf("p%d@crowd.test", i)
 		created, err := e.store.CreateContact(ctx, CreateContactInput{
-			FullName: fmt.Sprintf("Person %d", i), Source: "manual",
+			FullName: fmt.Sprintf("Contact %d", i), Source: "manual",
 			Emails: []ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
 		})
 		if err != nil {
