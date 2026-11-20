@@ -38,13 +38,51 @@ import {
 import { ReviewTemplateSummary } from "./reviewtemplatesummary";
 import "./reviewtemplates.css";
 
+type Outcome = ReviewTemplate["outcome"];
+
+type Submitted =
+  | { id: string; version: number; questions: ReviewQuestion[] }
+  | { label: string; outcome: Outcome; questions: ReviewQuestion[] };
+
+// The question a new template starts with, so the drawer never opens empty.
+function blankQuestion(): ReviewQuestion {
+  return {
+    key: `question_${crypto.randomUUID()}`,
+    label: "",
+    type: "text",
+    required: false,
+  };
+}
+
+async function submit(submitted: Submitted) {
+  if ("id" in submitted) {
+    const { data, error, response } = await api.PATCH(
+      "/activity-review-templates/{id}",
+      {
+        params: { path: { id: submitted.id } },
+        body: { version: submitted.version, questions: submitted.questions },
+      },
+    );
+    if (error || !response.ok) throwProblem(error);
+    return data;
+  }
+  const { data, error, response } = await api.POST(
+    "/activity-review-templates",
+    { body: submitted },
+  );
+  if (error || !response.ok) throwProblem(error);
+  return data;
+}
+
 // A template edit affects future submissions. The server versions the change;
 // saved reviews keep their questions, options and answers as they were asked.
+// With no template the drawer adds one, which the server makes the one its
+// outcome asks from then on.
 export function ReviewTemplateEditor({
   template,
   onClose,
 }: Readonly<{
-  template: ReviewTemplate;
+  template?: ReviewTemplate;
   onClose: () => void;
 }>) {
   const t = useT();
@@ -53,28 +91,18 @@ export function ReviewTemplateEditor({
   // The editor shows a built-in question in the reader's language, as it was
   // when the drawer opened. A language switch then neither edits nor rewords it.
   const [shown] = useState(() =>
-    template.questions.map((question) => ({
-      ...question,
-      label: shippedLabel(question, t),
-    })),
+    template
+      ? template.questions.map((question) => ({
+          ...question,
+          label: shippedLabel(question, t),
+        }))
+      : [blankQuestion()],
   );
   const [questions, setQuestions] = useState<ReviewQuestion[]>(shown);
+  const [label, setLabel] = useState("");
+  const [outcome, setOutcome] = useState<Outcome>("won");
   const save = useMutation({
-    mutationFn: async (submitted: {
-      id: string;
-      version: number;
-      questions: ReviewQuestion[];
-    }) => {
-      const { data, error, response } = await api.PATCH(
-        "/activity-review-templates/{id}",
-        {
-          params: { path: { id: submitted.id } },
-          body: { version: submitted.version, questions: submitted.questions },
-        },
-      );
-      if (error || !response.ok) throwProblem(error);
-      return data;
-    },
+    mutationFn: submit,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: REVIEW_TEMPLATES_KEY });
       onClose();
@@ -97,6 +125,7 @@ export function ReviewTemplateEditor({
     });
   }
   const invalid =
+    (!template && !label.trim()) ||
     questions.length === 0 ||
     questions.some(
       (q) =>
@@ -109,17 +138,54 @@ export function ReviewTemplateEditor({
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {shippedLabel(template, t)}
+          {template ? shippedLabel(template, t) : t("reviewTemplates.newTitle")}
         </Heading>
         <p className="t-caption">
           {t(
-            template.outcome === "won"
+            (template?.outcome ?? outcome) === "won"
               ? "reviewTemplates.drawer.won"
               : "reviewTemplates.drawer.lost",
           )}
         </p>
       </DrawerHead>
       <DrawerBody>
+        {!template && (
+          <div className="form-stack">
+            <Field label={t("reviewTemplates.name")} required>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={label}
+                  maxLength={120}
+                  disabled={save.isPending}
+                  onChange={(event) => setLabel(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label={t("reviewTemplates.askedFor")}>
+              {(control) => (
+                <Select
+                  {...control}
+                  value={outcome}
+                  disabled={save.isPending}
+                  options={[
+                    {
+                      value: "won",
+                      label: t("reviewTemplates.askedFor.won"),
+                    },
+                    {
+                      value: "lost",
+                      label: t("reviewTemplates.askedFor.lost"),
+                    },
+                  ]}
+                  onChange={(value) =>
+                    setOutcome(value === "lost" ? "lost" : "won")
+                  }
+                />
+              )}
+            </Field>
+          </div>
+        )}
         <Callout tone="info" title={t("reviewTemplates.prefillCallout.title")}>
           {t("reviewTemplates.prefillCallout.body")}
         </Callout>
@@ -145,15 +211,7 @@ export function ReviewTemplateEditor({
           variant="ghost"
           disabled={save.isPending}
           onClick={() =>
-            setQuestions((current) => [
-              ...current,
-              {
-                key: `question_${crypto.randomUUID()}`,
-                label: "",
-                type: "text",
-                required: false,
-              },
-            ])
+            setQuestions((current) => [...current, blankQuestion()])
           }
         >
           {t("reviewTemplates.addQuestion")}
@@ -166,14 +224,25 @@ export function ReviewTemplateEditor({
         invalid={invalid}
         pending={save.isPending}
         onCancel={onClose}
+        saveLabel={t(
+          template ? "reviewTemplates.saveQuestions" : "reviewTemplates.add",
+        )}
         onSave={() =>
-          save.mutate({
-            id: template.id,
-            version: template.version,
-            questions: questions
-              .map((question) => storedWording(question, shown, template))
-              .map(trimmedChoices),
-          })
+          save.mutate(
+            template
+              ? {
+                  id: template.id,
+                  version: template.version,
+                  questions: questions
+                    .map((question) => storedWording(question, shown, template))
+                    .map(trimmedChoices),
+                }
+              : {
+                  label: label.trim(),
+                  outcome,
+                  questions: questions.map(trimmedChoices),
+                },
+          )
         }
       />
     </Modal>
@@ -212,6 +281,7 @@ function EditorFoot({
   dirty,
   invalid,
   pending,
+  saveLabel,
   onCancel,
   onSave,
 }: Readonly<{
@@ -219,6 +289,7 @@ function EditorFoot({
   dirty: boolean;
   invalid: boolean;
   pending: boolean;
+  saveLabel: string;
   onCancel: () => void;
   onSave: () => void;
 }>) {
@@ -234,7 +305,7 @@ function EditorFoot({
             disabled={invalid}
             onClick={onSave}
           >
-            {t("reviewTemplates.saveQuestions")}
+            {saveLabel}
           </Button>
         }
       >

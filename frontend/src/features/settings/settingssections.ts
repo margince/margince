@@ -174,7 +174,7 @@ export const SETTINGS_SECTIONS = {
       "lossReasons.title",
       "lossReasons.legacyTitle",
     ],
-    reviews: ["settings.part.deals.reviews"],
+    reviews: ["settings.part.deals.reviews", "reviewTemplates.title"],
     legal: [
       "settings.part.deals.legal",
       "legalReview.settingsTitle",

@@ -111,7 +111,7 @@ func (s *Store) CreatePartnerStage(ctx context.Context, in CreatePartnerStageInp
 	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
-		key = deriveSourceKey(label)
+		key = values.CatalogKey(label)
 	}
 	if !partnerStageKeyShape.MatchString(key) {
 		return crmcontracts.PartnerStage{}, &values.ParseError{

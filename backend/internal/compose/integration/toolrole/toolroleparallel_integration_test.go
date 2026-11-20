@@ -122,7 +122,7 @@ func sweepSeat(t *testing.T, seat roleSeat, recorded *toolCheckRecorder, calls [
 // be another's answer.
 var aloneVerbs = map[string]bool{
 	"start_forecast_assurance_run": true, "confirm_anchor_company_site_read": true,
-	"put_anchor_company": true, "update_activity_review_template": true,
+	"put_anchor_company": true, "update_activity_review_template": true, "create_activity_review_template": true,
 	"delete_anchor_company_logo": true, "delete_anchor_company_logo_icon": true, "delete_legal_entity_logo": true,
 	"update_contact_case_settings": true, "update_follow_up_settings": true, "update_lead_settings": true,
 	"update_legal_review_settings": true, "upload_company_logo": true, "upload_company_logo_icon": true,

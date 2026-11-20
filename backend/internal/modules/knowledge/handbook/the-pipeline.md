@@ -215,21 +215,15 @@ Margince also offers you the review the moment you close, in a dialog that opens
 with the close dialog's own reason already filled in. If you say no there, the
 panel keeps waiting on the deal.
 
-An administrator writes the questions at **Settings → Deals → Outcome reviews**: one
-set for won, one for lost. Each question has its answer type, whether an answer
-must be given, and its choices if it offers any. Writing a review is logging an
-activity, so it needs the same permission as logging one.
+An administrator writes the questions at **Settings → Deals → Outcome reviews**. Each set of questions is a template, for won deals or for lost deals. Each question has its answer type, whether an answer must be given, and its choices if it offers any. Writing a review is logging an activity, so it needs the same permission as logging one.
+
+A closed deal is asked the active template for its outcome. **Add template** writes a new one, asked from the next close on. Adding a template, or turning one on with its switch, turns off the one asked before. With no active template, that outcome asks no review.
 
 Rules worth knowing:
 
-- Editing the questions changes later reviews only. A review already written
-  keeps the questions it was asked and the answers given.
-- A review is for one closing of the deal. Close, reopen and close again,
-  and there is a new outcome to review. The older review still reads well,
-  marked "From an earlier close", so nobody takes a deal lost in March for a
-  deal won in June.
-- A deal closed before Margince recorded closings takes no new review. The
-  reviews it already has still read well.
+- Editing the questions changes later reviews only. A review already written keeps the questions it was asked and the answers given. A template turned off stays listed as **Retired**, so its reviews still read well. There is no delete.
+- A review is for one closing of the deal. Close, reopen and close again, and there is a new outcome to review. The older review still reads well, marked "From an earlier close", so nobody takes a deal lost in March for a deal won in June.
+- A deal closed before Margince recorded closings takes no new review. The reviews it already has still read well.
 
 The outcome review is separate from the "How was it won?" answer. That one is
 asked in the close dialog, and only when there is no signed contract.

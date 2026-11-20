@@ -5,7 +5,30 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, within } from "storybook/test";
 import { translate } from "../../i18n";
 import { StoryProviders } from "../../testing/story-utils";
+import type { ReviewTemplate } from "./outcomereview.queries";
 import { ReviewTemplateEditor } from "./reviewtemplateeditor";
+
+const WIN_REVIEW: ReviewTemplate = {
+  id: "11111111-1111-4111-8111-111111111111",
+  key: "win_review",
+  label: "Win review",
+  outcome: "won",
+  version: 1,
+  active: true,
+  system: true,
+  created_at: "2026-09-01T10:00:00Z",
+  updated_at: "2026-09-01T10:00:00Z",
+  questions: [
+    { key: "why", label: "Why did we win?", type: "text", required: true },
+    {
+      key: "reasons",
+      label: "Reasons",
+      type: "multiselect",
+      required: false,
+      options: ["Fit, scope", "Trust", "Other"],
+    },
+  ],
+};
 
 const meta: Meta<typeof ReviewTemplateEditor> = {
   title: "Settings/Sales/Deals/Edit questions",
@@ -19,27 +42,7 @@ const meta: Meta<typeof ReviewTemplateEditor> = {
   ],
   args: {
     onClose: () => {},
-    template: {
-      id: "11111111-1111-4111-8111-111111111111",
-      key: "win_review",
-      label: "Win review",
-      outcome: "won",
-      version: 1,
-      active: true,
-      system: true,
-      created_at: "2026-09-01T10:00:00Z",
-      updated_at: "2026-09-01T10:00:00Z",
-      questions: [
-        { key: "why", label: "Why did we win?", type: "text", required: true },
-        {
-          key: "reasons",
-          label: "Reasons",
-          type: "multiselect",
-          required: false,
-          options: ["Fit, scope", "Trust", "Other"],
-        },
-      ],
-    },
+    template: WIN_REVIEW,
   },
 };
 export default meta;
@@ -59,7 +62,7 @@ export const Vietnamese: Story = {
       <ReviewTemplateEditor
         {...args}
         template={{
-          ...args.template,
+          ...WIN_REVIEW,
           label_key: "reviewTemplates.builtin.win_review",
           questions: [
             {
@@ -69,7 +72,7 @@ export const Vietnamese: Story = {
               type: "text",
               required: true,
             },
-            ...args.template.questions.slice(1),
+            ...WIN_REVIEW.questions.slice(1),
           ],
         }}
       />
@@ -87,3 +90,6 @@ export const Vietnamese: Story = {
     ).toBeInTheDocument();
   },
 };
+
+/** Add template opens the same drawer with a name, the outcome and one blank question. */
+export const NewTemplate: Story = { args: { template: undefined } };
