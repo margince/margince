@@ -18,7 +18,8 @@ GO ?= go
 # the same lines in backend/Makefile. CI and release builds keep the paths.
 ifeq ($(CI),)
 ifeq (,$(findstring -trimpath,$(GOFLAGS)))
-export GOFLAGS += -trimpath
+override GOFLAGS += -trimpath
+export GOFLAGS
 endif
 endif
 
@@ -1582,7 +1583,8 @@ test-input-census-judge:
 	@set -e; logs="$(TESTLOG_DIR)"; \
 	[ -d "$$logs" ] || { echo "test-input-census-judge: TESTLOG_DIR must name the logs a testlog-exec.sh pass wrote" >&2; exit 2; }; \
 	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
-	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv" -minimum "$(TESTLOG_MINIMUM)"
+	git -c core.quotepath=off ls-files > "$$logs/tracked.txt"; \
+	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv" -tracked "$$logs/tracked.txt" -minimum "$(TESTLOG_MINIMUM)"
 
 ## test-test-budget — the budget gate's own test, run by check-backend because
 ## the gate itself runs only on CI, where a refusal that stopped firing reads green.

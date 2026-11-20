@@ -20,6 +20,7 @@
 # $GITHUB_ENV each top-level entry's digest is exported as TREE_DIGEST_<NAME>,
 # and a test reading outside its module reads that variable instead
 # (gatekit.DeclareInputs); the cache keys on every variable a test reads.
+# A digest covers each file's content, its executable bit and each link's target.
 # --names prints each entry and its variable name, and touches nothing.
 # --export prints NAME=digest for every entry and stamps nothing, for a local
 # run, where no GITHUB_ENV exists and a tracked file's mtime must stay its own.
@@ -31,10 +32,16 @@ git ls-files -s -z | perl -0 -MDigest::SHA=sha1_hex -MTime::HiRes=utime -ne '
 	chomp;
 	my ($meta, $path) = split /\t/, $_, 2;
 	my ($mode) = split / /, $meta;
-	next if $mode eq "120000" || $mode eq "160000";
+	next if $mode eq "160000";
 	my ($top) = split m{/}, $path, 2;
 	if ($ENV{MODE} eq "--names") {
 		$tops{$top} = 1;
+		next;
+	}
+	if ($mode eq "120000") {
+		# A link has no content to stamp; its target text is what a reader follows.
+		my $target = readlink("./$path");
+		$tops{$top} .= "$path link " . sha1_hex($target // "") . "\n";
 		next;
 	}
 	next if $ENV{MODE} eq "--export" && !-e "./$path"; # tracked, deleted in the working tree
@@ -42,7 +49,7 @@ git ls-files -s -z | perl -0 -MDigest::SHA=sha1_hex -MTime::HiRes=utime -ne '
 	$content->addfile("./$path", "b"); # "./" so a file named "-" is not read as stdin
 	my $blob = $content->hexdigest;
 	stamp($path, $blob) unless $ENV{MODE} eq "--export";
-	$tops{$top} .= "$path $blob\n";
+	$tops{$top} .= "$path " . (-x "./$path" ? "100755" : "100644") . " $blob\n";
 	my $dir = $path;
 	while ($dir =~ s{/[^/]+$}{}) {
 		$entries{$dir} .= "$path $blob\n";
