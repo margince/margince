@@ -376,6 +376,27 @@ export function formatDueCompact(
   return shown + clock.suffix;
 }
 
+/**
+ * The clock a time was agreed on, named by its zone, to stand beside the
+ * reader's own reading of that instant. Its day shows only where it is not the
+ * reader's day.
+ */
+export function formatAgreedClock(
+  at: string,
+  intent: components["schemas"]["IntentTime"],
+  locale: Locale,
+  zone: string,
+): string {
+  const clock = dueDisplayClock(at, zone, intent);
+  const time = formatTimeOfDay(clock.at, locale, clock.zone);
+  const sameDay =
+    intent.wall_clock.slice(0, 10) === calendarDay(new Date(at), zone);
+  const shown = sameDay
+    ? time
+    : `${formatDayMonth(clock.at, locale, clock.zone)}, ${time}`;
+  return `${shown} ${intent.timezone}`;
+}
+
 function dueDisplayClock(
   dueAt: string,
   zone: string,

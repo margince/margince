@@ -248,7 +248,6 @@ condition
 confidence
 confidential
 configuration
-configure
 confirm
 confirmation
 conflict

@@ -198,7 +198,7 @@ func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmco
 // evidence only because the data subject completed it from their own mailbox,
 // and an endpoint that handed the token back would let one operator close both
 // halves of that round trip — which is what this one used to do.
-func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.IssueDoubleOptInParams) {
 	var req crmcontracts.IssueDoubleOptInJSONRequestBody
 	if !httperr.Decode(w, r, &req) {
 		return

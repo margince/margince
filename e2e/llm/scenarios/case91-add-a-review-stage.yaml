@@ -17,6 +17,8 @@ must_call_matching:
   - 'change_settings~Security review'
 
 must_not_call_with:
+  - move_deal_pipeline~.
+  - create_activity_review_template~.
   - change_state~.
   - progress_deal~.
 

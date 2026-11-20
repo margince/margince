@@ -92,7 +92,7 @@ sits on its own at the top. Under it the screens are in three groups:
 
 - **Records**: **Contacts**, **Companies**, **Leads**, **Deals**
 - **Work**: **Projects**, **Filters and views**
-- **Insights**: **Analytics**, **Progress**, **Sales goals**
+- **Insights**: **Analytics**, **My progress** (**Team progress** for a manager), **Sales goals**
 
 Settings is not in the sidebar: it is in the account menu at the top right. The
 **Deals** row is the pipeline board; there is no separate Pipeline row. The
@@ -114,7 +114,7 @@ Each Margince screen sits in one place in the sidebar, and you reach a few anoth
 - Contacts, companies, leads and deals: the **Records** group.
 - Projects, and saved filters and exports: the **Work** group, under **Projects** and **Filters and views**.
 - Reports and the forecast: **Analytics**, under **Insights**.
-- Results against your sales goal, and the goals: **Progress** and **Sales goals**, under **Insights**.
+- Results against your sales goal, and the goals: **My progress** (**Team progress** for a manager) and **Sales goals**, under **Insights**.
 - The Worklist, tasks and approvals: **Home**.
 - The pipeline: the **Deals** row, which is the board.
 - Settings: the account menu at the top right, not the sidebar.
@@ -135,7 +135,7 @@ To search Margince, click the search field **Search or ask Margince** in the top
 2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page.
 3. On that page, **Show all** beside a kind, or **Show only**, lists every match of that kind.
 
-With the search box empty, **Recent** lists up to eight searches you ran and records you opened from the box, newest first. Choose a search to put its words back in the box, or choose a record to open it. The list stays in this browser until you sign out. **Clear** erases it. A record appears only while you can still read it, under its current name.
+With the search box empty, **Recent** lists up to eight searches you ran and records you opened from the box, newest first. A record you opened from a search is saved as the record alone. Choose a search to put its words back in the box, or choose a record to open it. The list stays in this browser until you sign out. **Clear** erases it. A record appears only while you can still read it, under its current name.
 
 With an empty box, Enter opens the newest recent item once the list has been checked.
 
@@ -143,11 +143,12 @@ For a typed search, Enter opens the row you moved to with the arrow keys. If you
 
 At the end of the list, **Ask your documents** puts your words to your documents instead.
 
-If nothing matches, the palette says **No matches.** If record search fails, it says **Search failed**, and the screen commands still work.
+If no screen, action or record matches, the palette says **No matches for “…”.** and offers no results page. If record search fails, it says **Search failed**, and the screen commands still work.
 Also called: find, look up, global search.
 
 **Search results** are in groups by kind: Contacts, Companies, Deals, Leads,
-Projects, Products, Offer templates, Emails, Activities and Tags. Each kind
+Projects, Products, Offer templates, Emails, Activities and Tags. Emails and
+activities share one **Show only** choice, **Emails and activities**. Each kind
 shows its best few matches, so a company stays on the page, whatever the number of emails that
 name it. A company's name also finds the contacts who work there now, each with
 the line **Works at** and the company's name. They come after the contacts whose
@@ -160,18 +161,18 @@ names that are written close to what you typed. It lists only names you may open
 ### What is the command palette?
 The command palette is the Margince box that finds any screen, action, setting or record from one place. It opens over the page you are on, and its empty field reads **Search or ask Margince**.
 
-Each row carries a badge. **Screen** marks a sidebar screen, and **Action** marks something it does (**New deal**, **Booking page**). **Record** marks a record that matches what you typed.
-It also lists every settings page you may open, and **Scheduled messages**. It knows other words for a page: "price" finds **Products and offers**, and "password" finds **Account**.
-Its first row is always **Ask your documents**.
+A badge marks each screen and action. **Screen** marks a sidebar screen, and **Action** marks something it does (**New deal**, **Booking page**, **Keyboard shortcuts**). A record that matches what you typed sits under the heading of its kind, such as **Contacts**, and carries no badge.
+
+It also lists every settings page you may open, and **Scheduled messages**. It knows other words for a page: "price" finds **Products and offers**, "password" or "dark mode" finds **Account**, and "reports" or "forecast" finds **Analytics**.
 
 ### How do I open the command palette?
-To open the Margince command palette, press ⌘K on a Mac or Ctrl+K on Windows and Linux. It works from any screen while no dialog is open.
+To open the Margince command palette, press ⌘K on a Mac or Ctrl+K on Windows and Linux. It works from any screen while no dialog or menu is open.
 You can also click the search field **Search or ask Margince** in the top bar, or press /.
-Press ⌘K again, or Esc, to close it.
+Press ⌘K again, or Esc, to close it. Back, or a move to another page, closes it too.
 Also called: quick search, command menu, Cmd K, Ctrl K, keyboard shortcut.
 
 ### What keyboard shortcuts does Margince have?
-Margince has keyboard shortcuts for search, for moving between pages and for work on a record. Press `?` to see the full list, while single-key shortcuts are on and you are not typing in a field. The account menu always opens it, under **Help and feedback** → **Keyboard shortcuts**.
+Margince has keyboard shortcuts for search, for moving between pages and for work on a record. Press `?` to see the full list, while single-key shortcuts are on and you are not typing in a field. The account menu always opens it, under **Help and feedback** → **Keyboard shortcuts**, and so does **Keyboard shortcuts** in the command palette.
 
 On Windows and Linux, press Ctrl where this list says ⌘.
 
@@ -217,7 +218,7 @@ To ask about one company, open the company and use its **Ask about this company*
 Also called: company summary, meeting prep, what's going on with this account.
 
 ### Where is the Ask box?
-The Margince Ask box is the search field **Search or ask Margince** in the top bar: type a question and press Enter. **Ask your documents**, the first row of the command palette (⌘K), opens a dialog where you pick the document set yourself.
+The Margince Ask box is the search field **Search or ask Margince** in the top bar: type a question and press Enter. **Ask your documents**, the last row of the command palette (⌘K), opens a dialog where you pick the document set yourself.
 That dialog answers from the one set you pick. It is the **Margince handbook** that comes with every installation, or a set filed under Settings → **Knowledge**.
 On a company page there is a second, separate panel, **Ask about this company**, with its own **Ask Margince** questions about that one company.
 If the dialog says **No document sets**, there is nothing filed to search yet.

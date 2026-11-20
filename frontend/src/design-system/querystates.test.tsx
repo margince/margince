@@ -55,6 +55,43 @@ describe("QueryStates", () => {
     expect(screen.getByText("no seat")).toBeTruthy();
   });
 
+  // A record page's read that names no record: a retry cannot help, so the
+  // page's own statement stands in for the failure card.
+  for (const status of [404, 422]) {
+    it(`draws the record page's gone state, with no retry, for a ${status}`, () => {
+      render(
+        <QueryStates
+          query={failing(new ProblemError({ status, detail: "not found" }))}
+          pendingLabel="Loading the deal"
+          gone={<p>The deal is gone</p>}
+        >
+          {null}
+        </QueryStates>,
+      );
+      expect(screen.getByText("The deal is gone")).toBeTruthy();
+      expect(screen.queryByText(t("common.error"))).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: t("common.retry") }),
+      ).toBeNull();
+    });
+  }
+
+  it("keeps the failure card and its retry for an outage, gone state or not", () => {
+    render(
+      <QueryStates
+        query={failing(new ProblemError({ status: 500, detail: "boom" }))}
+        pendingLabel="Loading the deal"
+        gone={<p>The deal is gone</p>}
+      >
+        {null}
+      </QueryStates>,
+    );
+    expect(screen.queryByText("The deal is gone")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: t("common.retry") }),
+    ).toBeTruthy();
+  });
+
   it("prints the shared line, not the message, when the failure is not a problem", () => {
     render(
       <QueryStates

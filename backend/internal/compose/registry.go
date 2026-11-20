@@ -79,13 +79,11 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, 
 	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 }
 
-// registryWithGate composes the tool surface. The volume budget charger arrives as
-// an option rather than a parameter because only the API server — the one role
-// that serves agent principals through the MCP and REST doors — has a meter to
-// charge. The Surface-B runner and the workflow paths run as the human or the
-// system that started them, and the volume meter governs agents only, so a registry
-// built without one is not an unmetered agent surface; it is a surface no agent
-// reaches.
+// registryWithGate composes the tool surface. The volume charger is an option,
+// because only the API server has a meter. It is the one role that serves agent
+// principals through the MCP and REST doors. The workflow paths run as the human
+// or the system that started them. The Surface-B runner acts on a passport and
+// is not metered; a scheduled run is held to its step budget and tool allowlist.
 //
 // embedder is the RETRIEVAL embed lane, and it is a parameter rather than a
 // construction detail because it is the composition root's to choose: a role
@@ -99,7 +97,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	provider = withServerSeams(provider, pool, features)
 	// Every mutating tool shares retry claims and replay authorization on every host role.
 	opts = append(opts, agents.WithCallAvailability(coreCallAvailability(features.coreFeatures)), withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
-		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
+		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider), agents.WithRouteRetryKeys(routeRetryKeyVerbs(agentPolicies)),
 		agents.WithBaseLanguage(installationLanguage(pool)),
 		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
 		agents.WithChangeWords(agentChangeWords(db)),

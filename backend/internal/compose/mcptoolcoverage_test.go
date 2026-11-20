@@ -33,6 +33,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/compose/mcpe2e"
 )
 
 var updateMCPToolCoverage = flag.Bool("update-mcp-tool-coverage", false,
@@ -81,14 +83,14 @@ type toolCoverageRow struct {
 	// OneOfASet is the third state as a flag, so a reader of the JSON does not
 	// have to infer it from two empty lists.
 	OneOfASet bool `json:"required_only_as_one_of_a_set"`
-	// GradedBy are the certification tasks whose corpus names this tool. That
-	// lane grades tool SELECTION — which tool a goal should reach for, and
-	// which plausible neighbour it must avoid — and the use-case lane cannot
-	// express it: check.py sees that a name appeared, never whether it was the
-	// right first reach. So a tool no case REQUIRES may still be graded, and a
-	// page that reported the two as one silence would name work undone that is
-	// done, on a different question.
-	GradedBy []string `json:"graded_by_certification_tasks"`
+	// GradedBy are the certification tasks whose corpus expects this tool as the
+	// answer, and NearMissIn those that name it only as a wrong reach. That
+	// lane grades tool selection: which tool a goal should reach for. The
+	// use-case lane cannot express it, because check.py sees that a name
+	// appeared, never whether it was the right first reach. So a tool no case
+	// requires may still be graded elsewhere, on a different question.
+	GradedBy   []string `json:"graded_by_certification_tasks"`
+	NearMissIn []string `json:"near_miss_in_certification_tasks"`
 	// MeasuredByModel is what the lane saw across the cases that require this
 	// tool, PER MODEL. Empty when nothing requires it, or when no run has been
 	// committed. Keyed by model because reliability is a property of the pair:
@@ -155,6 +157,9 @@ type coverageTotals struct {
 	// corpus nevertheless names. It is the difference between "untried" and
 	// "untried by this lane".
 	UndrivenButGraded int `json:"never_driven_but_graded_elsewhere"`
+	// UndrivenNearMissOnly are the never-driven tools that lane names only as
+	// a wrong reach: it checks a model avoids them, never that one can use them.
+	UndrivenNearMissOnly int `json:"never_driven_near_miss_only"`
 }
 
 type caseRow struct {
@@ -198,6 +203,8 @@ type caseModelRun struct {
 	// empty on a verdict filed before the lane recorded them.
 	Driver string `json:"driver,omitempty"`
 	Search string `json:"search,omitempty"`
+	// SelfJudged is a judge of the model's own family decided its criteria.
+	SelfJudged bool `json:"self_judged,omitempty"`
 }
 
 // modelCoverage is the whole lane as ONE model ran it. Driven/never-driven is
@@ -224,6 +231,8 @@ type modelCoverage struct {
 	// of its runs had search degraded to word overlap.
 	Route  string `json:"route"`
 	Search string `json:"search,omitempty"`
+	// SelfJudged is true when a judge of its own family decided any of them.
+	SelfJudged bool `json:"self_judged"`
 }
 
 type mcpToolCoverage struct {
@@ -383,7 +392,7 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	for _, spec := range specs {
 		names = append(names, spec.Name)
 	}
-	graded, err := corpusGradedTools(corpusDir, names)
+	graded, err := corpusGradedTools(corpusDir, names, routes)
 	if err != nil {
 		t.Fatalf("reading the certification corpus at %s: %v", corpusDir, err)
 	}
@@ -461,7 +470,8 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 		row.MustCallOneOf = sortedCopy(row.MustCallOneOf)
 		row.Driven = len(row.MustCall) > 0
 		row.OneOfASet = !row.Driven && len(row.MustCallOneOf) > 0
-		row.GradedBy = graded[spec.Name]
+		row.GradedBy = sortedCopy(graded.expected[spec.Name])
+		row.NearMissIn = sortedCopy(graded.nearMiss[spec.Name])
 		row.MeasuredByModel = map[string]*toolMeasurement{}
 		for _, model := range ran {
 			if m := measureCases(cases, row.MustCall, model); m != nil {
@@ -491,8 +501,11 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 		}
 		report.Totals.NeverDriven++
 		report.Totals.UndrivenCost += row.Tokens
-		if len(row.GradedBy) > 0 {
+		switch {
+		case len(row.GradedBy) > 0:
 			report.Totals.UndrivenButGraded++
+		case len(row.NearMissIn) > 0:
+			report.Totals.UndrivenNearMissOnly++
 		}
 		if len(row.MayCall) > 0 {
 			report.Totals.PermittedNotDriven++
@@ -587,26 +600,6 @@ var (
 	e2eScenarioTitle    = regexp.MustCompile(`(?m)^title:[ \t]*(.*?)[ \t]*$`)
 )
 
-// verdictKey is what a committed verdict is filed under. The model is half of
-// it: a pass rate belongs to the model that produced it, and two models that
-// ran the same case have two answers, not one.
-type verdictKey struct {
-	model    string
-	scenario string
-}
-
-type e2eVerdict struct {
-	Scenario string `json:"scenario"`
-	Passed   int    `json:"passed"`
-	Runs     int    `json:"runs"`
-	PassAt   int    `json:"pass_at"`
-	Driver   string `json:"driver"`
-	Search   string `json:"search"`
-	// Model is the folder the verdict was filed under, not a field in it: the
-	// lane names the directory for the model it pinned.
-	Model string `json:"-"`
-}
-
 // readE2ELLMCases reads every use-case scenario and joins it to the verdict the
 // lane committed for it, if one has been.
 //
@@ -655,54 +648,6 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 	return cases, nil
 }
 
-// readE2ELLMVerdicts reads the committed verdicts. A missing directory is not
-// an error: it means the paid lane has not been run on this checkout, which the
-// page says outright.
-func readE2ELLMVerdicts(dir string) (map[verdictKey]e2eVerdict, error) {
-	out := map[verdictKey]e2eVerdict{}
-	entries, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	for _, model := range entries {
-		if !model.IsDir() {
-			continue
-		}
-		files, readErr := os.ReadDir(filepath.Join(dir, model.Name()))
-		if readErr != nil {
-			return nil, readErr
-		}
-		for _, entry := range files {
-			if entry.IsDir() {
-				return nil, fmt.Errorf("%s/%s: a verdict folder may not nest — the model id carried a '/'; "+
-					"file it under E2E_LLM_FOLDER", model.Name(), entry.Name())
-			}
-			if !strings.HasSuffix(entry.Name(), ".json") {
-				continue
-			}
-			body, fileErr := os.ReadFile(filepath.Join(dir, model.Name(), entry.Name()))
-			if fileErr != nil {
-				return nil, fileErr
-			}
-			var v e2eVerdict
-			if decodeErr := json.Unmarshal(body, &v); decodeErr != nil {
-				return nil, fmt.Errorf("%s/%s: %w", model.Name(), entry.Name(), decodeErr)
-			}
-			v.Model = model.Name()
-			// Keyed by MODEL AND SCENARIO. Keying on the scenario alone let the
-			// last model directory read win, so a page could show one model's
-			// pass rate beside another's on the next row and say nothing about
-			// it. Today one model has run; the bug would appear silently on the
-			// day a second one does, which is the worst time to find it.
-			out[verdictKey{model: model.Name(), scenario: v.Scenario}] = v
-		}
-	}
-	return out, nil
-}
-
 // readCriteria returns the catalog keyed by number.
 //
 // Parsed with the YAML decoder this module already depends on, not by hand: a
@@ -735,32 +680,6 @@ func readCriteria(path string) (map[string]map[int]criterionRow, error) {
 		}
 	}
 	return out, nil
-}
-
-// runsFor collects each model's result on one scenario, ordered by model name.
-//
-// It replaced a chooser that returned ONE verdict per scenario, picking the
-// lowest model name. That was correct while one model had run and silently
-// wrong the moment a second did: the page would have shown one model's pass
-// rate under a heading that named the case, not the model.
-func runsFor(verdicts map[verdictKey]e2eVerdict, scenario string) []caseModelRun {
-	var out []caseModelRun
-	for key, v := range verdicts {
-		if key.scenario != scenario {
-			continue
-		}
-		out = append(out, caseModelRun{
-			Model:  v.Model,
-			Runs:   v.Runs,
-			Passed: v.Passed,
-			PassAt: v.PassAt,
-			Held:   v.PassAt > 0 && v.Passed >= v.PassAt,
-			Driver: v.Driver,
-			Search: v.Search,
-		})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
-	return out
 }
 
 // toolEntriesInBlock reads one tool key in EITHER shape the lane accepts — the
@@ -926,6 +845,7 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 			if run.Search == "lexical" {
 				summary.Search = "lexical"
 			}
+			summary.SelfJudged = summary.SelfJudged || run.SelfJudged
 			summary.Runs += run.Runs
 			summary.Passed += run.Passed
 			if run.Held {
@@ -997,4 +917,42 @@ func syncMCPToolCoverage(t *testing.T, path string, want []byte, command string)
 	t.Errorf("%s is stale — it no longer matches the served surface and the use-case lane.\n"+
 		"Regenerate with: %s\nand commit the result with the change that moved it.\n%s",
 		path, command, firstMCPInfoDifference(string(got), string(want)))
+}
+
+// verdictKey files a verdict by model too: a pass rate belongs to its model.
+type verdictKey struct {
+	model    string
+	scenario string
+}
+
+// readE2ELLMVerdicts reads the committed verdicts of one tree, keyed by model
+// and scenario. Keyed on the scenario alone, the last model folder read would
+// win, and one model's pass rate would print beside another's.
+func readE2ELLMVerdicts(dir string) (map[verdictKey]mcpe2e.Verdict, error) {
+	verdicts, err := mcpe2e.ReadTree(dir)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[verdictKey]mcpe2e.Verdict, len(verdicts))
+	for _, v := range verdicts {
+		out[verdictKey{model: v.Folder, scenario: v.Scenario}] = v
+	}
+	return out, nil
+}
+
+// runsFor collects each model's result on one scenario, ordered by model name.
+// Staleness is `make e2e-llm-report`'s: on this page it would fail every copy edit.
+func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string) []caseModelRun {
+	var out []caseModelRun
+	for key, v := range verdicts {
+		if key.scenario != scenario {
+			continue
+		}
+		out = append(out, caseModelRun{
+			Model: v.Folder, Runs: v.Runs, Passed: v.Passed, PassAt: v.PassAt,
+			Held: v.PassAt > 0 && v.Passed >= v.PassAt, Driver: v.Driver, Search: v.Search, SelfJudged: v.SelfJudged,
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
+	return out
 }

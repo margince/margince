@@ -649,7 +649,7 @@ func TestTheChangedCountMatchesWhatTheLaneOpens(t *testing.T) {
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: lane(lanes...)}
 
 	considered := markChangedSinceBrief(classifyDay(day, rankInstant, dayMoney{}), cutoff)
-	readings := readingsOf(considered, considered, nil, nil)
+	readings := readingsOf(considered, considered, "", nil, nil)
 	opened := keepFiltered(considered, filterChangedSinceBrief)
 
 	if got, want := int(readings.ChangedSinceBrief), len(opened); got != want {
@@ -681,10 +681,46 @@ func TestTheChangedCountLeavesOutWhatTheDeckAlreadyDrew(t *testing.T) {
 	}
 
 	considered := markChangedSinceBrief(classifyDay(day, rankInstant, dayMoney{}), cutoff)
-	readings := readingsOf(considered, considered, nil, nil)
+	readings := readingsOf(considered, considered, "", nil, nil)
 
 	if readings.ChangedSinceBrief != 1 {
 		t.Fatalf("counted %d, want 1 — the approval is already a card and the strip does not name it twice",
 			readings.ChangedSinceBrief)
+	}
+}
+
+// A task carries no moment of its own, and the read instant it sorts by is not
+// news. Upcoming work is not on the page the count opens, so it is not counted
+// either: the figure and the door hold the same rows.
+func TestTheChangedCountHoldsOnlyDatedNewsTheDoorDraws(t *testing.T) {
+	t.Parallel()
+
+	cutoff := rankInstant.Add(-time.Hour)
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		Planned: []crmcontracts.AttentionItem{
+			item("due-today", "task", withDue(rankInstant.Add(time.Hour)),
+				withDueGroup(crmcontracts.AttentionItemDueGroupToday)),
+			item("due-next-week", "task", withDue(rankInstant.Add(7*24*time.Hour)),
+				withDueGroup(crmcontracts.AttentionItemDueGroupLater)),
+		},
+		AtRisk: lane(item("fresh", "deal_at_risk", withOccurred(cutoff.Add(time.Minute)))),
+	}
+	svc := &Service{view: viewToday, briefCutoff: cutoff}
+
+	home := svc.worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
+	opened := svc.worklistFrom(t.Context(), day, scopeAll, string(filterChangedSinceBrief), 25,
+		waitingRead{}, worklistCursor{}, nil)
+
+	if home.Readings.ChangedSinceBrief != 1 {
+		t.Errorf("counted %d changed rows, want 1: only the deal moved after the brief", home.Readings.ChangedSinceBrief)
+	}
+	if got := queueIDs(opened); len(got) != 1 || got[0] != "fresh" {
+		t.Errorf("the changed page holds %v, want only the deal", got)
+	}
+	for _, row := range home.Queue {
+		if row.Id == "due-today" && row.ChangedSinceBrief != nil {
+			t.Errorf("a task with no moment of its own says changed = %v", *row.ChangedSinceBrief)
+		}
 	}
 }

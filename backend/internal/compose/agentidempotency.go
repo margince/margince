@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -58,10 +59,6 @@ func toolIdempotency(pool *pgxpool.Pool) agentClaims { return agentClaims{pool: 
 
 // claimHolder answers who a key belongs to.
 //
-// The ACTOR, which for a passport call is "agent:<passport_id>" — so a key is
-// scoped to the passport that spent it. Two agents acting for one human cannot
-// collide on a key, and neither can an agent and the human themselves.
-//
 // An EMPTY id is refused as hard as a missing principal, because it is the same
 // failure wearing a valid-looking value: principal.Actor answers ok for a
 // zero-value Principal, and an id-less claim would write `principal_id = ”` —
@@ -72,7 +69,15 @@ func claimHolder(ctx context.Context, verb string) (string, error) {
 	if !ok || actor.ID == "" {
 		return "", fmt.Errorf("compose: no principal %s a tools/call idempotency claim", verb)
 	}
-	return actor.ID, nil
+	return retryHolder(actor), nil
+}
+
+// retryHolder owns a retry key: a connection, which a token refresh keeps, else the actor.
+func retryHolder(actor principal.Principal) string {
+	if subject := agentvolume.SubjectOf(actor.PassportID, actor.ConnectionID); actor.Type == principal.PrincipalAgent && subject != "" {
+		return "agent:" + subject
+	}
+	return actor.ID
 }
 
 // Claim takes the key for this call inside the caller's workspace transaction.

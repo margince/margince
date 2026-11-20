@@ -109,6 +109,7 @@ def _transcript(scenario, answer):
     handle.close()
     with transcript.Transcript(handle.name) as out:
         out.assistant("", calls)
+        out.tool_results([(call_id, "{}", False) for call_id, _, _ in calls])
         out.assistant(answer)
         out.finish(False, answer, 1)
     return handle.name

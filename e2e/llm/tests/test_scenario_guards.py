@@ -209,35 +209,39 @@ class ToolGuardCase(unittest.TestCase):
         self.addCleanup(os.unlink, path)
         with transcript.Transcript(path) as out:
             out.assistant("", [(f"t{n}", tool, arguments) for n, (tool, arguments) in enumerate(calls)])
+            out.tool_results([(f"t{n}", "{}", False) for n in range(len(calls))])
             out.assistant(answer)
             out.finish(False, answer, 1)
         return check.check(guards(self.scenario), path)
 
 
 class MyHoursAndMyLanguageTest(ToolGuardCase):
-    scenario = "case115-my-hours-and-my-language.yaml"
+    scenario = "case109-my-hours-zone-and-language.yaml"
+    zone = ("change_my_settings", {"action": "save_timezone", "request_body": {
+        "timezone": "Europe/Lisbon", "source": "agent"}})
     hours = ("change_my_settings", {"action": "save_working_hours", "request_body": {
         "days": [1, 2, 3, 4], "start_time": "09:00", "end_time": "17:00"}})
     german = ("change_my_settings", {"action": "save_locale", "request_body": {"locale": "de"}})
 
     def test_saving_both_for_this_user_passes(self):
-        self.assertEqual(self.problems([self.hours, self.german]), [])
+        self.assertEqual(self.problems([self.zone, self.hours, self.german]), [])
 
     def test_another_language_fails(self):
         french = ("change_my_settings", {"action": "save_locale", "request_body": {"locale": "fr"}})
-        self.assertTrue(self.problems([self.hours, french]))
+        self.assertTrue(self.problems([self.zone, self.hours, french]))
 
     def test_friday_left_in_fails(self):
         five = ("change_my_settings", {"action": "save_working_hours", "request_body": {
             "days": [1, 2, 3, 4, 5], "start_time": "09:00", "end_time": "17:00"}})
-        self.assertTrue(self.problems([five, self.german]))
+        self.assertTrue(self.problems([self.zone, five, self.german]))
 
-    def test_only_one_of_the_two_fails(self):
-        self.assertTrue(self.problems([self.german]))
-        self.assertTrue(self.problems([self.hours]))
+    def test_leaving_one_of_the_three_out_fails(self):
+        self.assertTrue(self.problems([self.zone, self.german]))
+        self.assertTrue(self.problems([self.zone, self.hours]))
+        self.assertTrue(self.problems([self.hours, self.german]))
 
     def test_the_whole_company_setting_fails(self):
-        self.assertTrue(self.problems([self.hours, self.german, ("change_settings", {"action": "x"})]))
+        self.assertTrue(self.problems([self.zone, self.hours, self.german, ("change_settings", {"action": "x"})]))
 
 
 class CountThatStageAsWonTest(ToolGuardCase):

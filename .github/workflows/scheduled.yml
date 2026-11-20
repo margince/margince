@@ -97,7 +97,7 @@ on:
         type: boolean
         default: false
       llm:
-        description: "Also run and record the use cases against a real model (COSTS TOKENS; needs CLAUDE_CODE_OAUTH_TOKEN)"
+        description: "Also run and record the MCP use cases against a real model (COSTS TOKENS; needs CLAUDE_CODE_OAUTH_TOKEN)"
         type: boolean
         default: false
       trend:
@@ -105,7 +105,7 @@ on:
         type: boolean
         default: false
       roles:
-        description: "Also run the MCP role sweep (`make test-roles`, about an hour on a runner)"
+        description: "Also run the MCP role sweep (`make test-roles`, about ten minutes on a runner)"
         type: boolean
         default: false
       growth:
@@ -433,89 +433,100 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
-  # The six deck use cases, driven by a REAL assistant.
+  # The MCP use cases (e2e/llm/scenarios), driven by a REAL assistant.
   #
-  # WEEKLY, and gated on a secret that may not exist. This is the half the Go
-  # suite in integration/e2e/usecases/ cannot answer: those tests pin the
-  # payloads, the refusals and the legibility fields, and they would all stay
-  # green while the product became unusable to a model. The only way to learn
-  # whether an assistant can drive this surface and say something TRUE is to
-  # have one try.
+  # WEEKLY, and gated on a secret that may not exist. The Go suite pins the
+  # payloads, the refusals and the legibility fields; only a model trying can
+  # say whether an assistant can drive this surface and say something TRUE. It
+  # costs real tokens, so it is weekly, on the Monday cron with perf-budgets.
   #
-  # It costs real tokens, which is why it is weekly and not per-merge, and why
-  # it shares the Monday cron with perf-budgets rather than the daily one.
+  # It runs the way a maintainer runs it by hand: scripts/e2e-llm-sweep.sh in
+  # lanes, on a stack whose search ranks by meaning (E2E_LLM_STACK_PRESET and its
+  # key). The folder is dealt into shards, each with its own time limit, and the
+  # verdicts are published only when every scenario has a fresh one. Without the
+  # search key the run is an alarm: its verdicts go outside the records tree, so
+  # a degraded run never replaces one made by meaning.
   #
-  # NOT DETERMINISTIC, by construction. Each scenario runs three times and
-  # passes at two, because one bad run out of three is the weather and two is a
-  # defect. A job that demanded 3/3 would be red most weeks and would teach
-  # everyone to ignore it.
-  #
-  # The secret is CLAUDE_CODE_OAUTH_TOKEN — a subscription token minted by
-  # `claude setup-token`, which is the credential the Claude CLI accepts for a
-  # subscription outside an interactive login. Know what that means before
-  # re-pointing it: the lane bills one human's subscription, and anybody with
-  # write access can spend it by dispatching this workflow. The runner also
-  # accepts ANTHROPIC_API_KEY, and a Console key billed to the project is the
-  # better answer the day there is one — but this job supplies exactly one
-  # credential either way, for the reason given at the step. If the secret is
-  # absent the job SKIPS rather than fails: a lane nobody has funded yet must
-  # not turn main red every Monday, and a skipped job says "not configured"
-  # where a red one says "broken".
-  llm-use-cases:
-    name: use cases, driven by a model (weekly)
-    outputs:
-      outcome: ${{ steps.lane.outputs.outcome }}
-    # Same Monday cron as perf-budgets. A dispatch runs it only when asked, so
-    # somebody re-checking govulncheck by hand does not spend tokens.
+  # The secrets: CLAUDE_CODE_OAUTH_TOKEN (a subscription token from `claude
+  # setup-token`; it bills the account that minted it, and anybody with write
+  # access can spend it by dispatching this workflow) drives the CLI and the
+  # judge. OPENAI_COMPATIBLE_API_KEY funds the embedding model of the preset.
+  # An absent token SKIPS the lane, because an unfunded lane must not turn main
+  # red every Monday.
+  llm-plan:
+    name: use cases, driven by a model (plan)
     if: >-
       (github.event.schedule == '0 2 * * 1'
         || (github.event_name == 'workflow_dispatch' && inputs.llm))
     runs-on: ubuntu-latest
-    # Eighteen model calls, plus a database rebuild between the runs of each
-    # write scenario. Locally the sweep takes about 25 minutes; 60 leaves room
-    # for a slow runner and a slow model without letting a hung one sit until
-    # the six-hour default.
-    timeout-minutes: 60
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      funded: ${{ steps.funded.outputs.funded }}
+      search: ${{ steps.funded.outputs.search }}
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # A step, not a job condition: a job-level `if` cannot read `secrets`.
+      - name: Is the model lane funded, and can its search rank by meaning?
+        id: funded
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          SEARCH_KEY: ${{ secrets.OPENAI_COMPATIBLE_API_KEY }}
+        run: |
+          if [ -z "${TOKEN:-}" ]; then
+            echo "funded=no" >> "$GITHUB_OUTPUT"
+            {
+              echo "### The model-driven use cases did not run"
+              echo
+              echo "\`CLAUDE_CODE_OAUTH_TOKEN\` is not set for this repository. This is a SKIP, not a"
+              echo "failure: the lane costs real tokens and nobody has funded it yet."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "funded=yes" >> "$GITHUB_OUTPUT"
+          if [ -n "${SEARCH_KEY:-}" ]; then
+            echo "search=semantic" >> "$GITHUB_OUTPUT"
+          else
+            echo "search=lexical" >> "$GITHUB_OUTPUT"
+            {
+              echo "### The use cases run as an alarm only"
+              echo
+              echo "\`OPENAI_COMPATIBLE_API_KEY\` is not set, so search ranks by word overlap. The run"
+              echo "files its verdicts outside the records tree and proposes none of them."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      # Eight shards of about nine cases each. A case takes about five minutes
+      # by hand and a shard's stack about fifteen to boot, seed and reindex,
+      # so a shard fits its 100-minute step with room for a slow model.
+      - name: Deal the scenario folder into shards
+        id: plan
+        if: steps.funded.outputs.funded == 'yes'
+        run: echo "shards=$(python3 e2e/llm/shards.py plan 8)" >> "$GITHUB_OUTPUT"
+
+  llm-use-cases:
+    name: use cases, driven by a model (shard ${{ matrix.shard }})
+    needs: llm-plan
+    if: needs.llm-plan.outputs.funded == 'yes'
+    strategy:
+      fail-fast: false
+      # One subscription drives every shard and the judge; four at once stays
+      # under its rate limit, and the sweep waits out a limit it still meets.
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.llm-plan.outputs.shards) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # The lane reaches the app through the FRONTEND port — dev_app_base_url
-      # returns Vite's, and its /v1 and /mcp proxy is what the assistant talks
-      # to. So a job that only exercises the API still needs the frontend
-      # installed and running. Worth knowing before anyone tries to trim it:
-      # the saving is not available without changing what the lane connects to.
-      # The secret gate, and it is a STEP rather than a job-level `if` because a
-      # job condition cannot read `secrets` — GitHub does not expose that context
-      # to `jobs.<id>.if`, so a job guarded on it would evaluate the secret to an
-      # empty string and skip forever, including after somebody adds it.
-      # Checked here, where the context exists, and reported as a skip rather
-      # than a failure: an unfunded lane must not turn main red every Monday.
-      - name: Is the model lane funded?
-        id: funded
-        env:
-          KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          if [ -z "${KEY:-}" ]; then
-            echo "configured=no" >> "$GITHUB_OUTPUT"
-            {
-              echo "### The model-driven use cases did not run"
-              echo
-              echo "\`CLAUDE_CODE_OAUTH_TOKEN\` is not set for this repository, so there"
-              echo "is nothing to drive the assistant with. This is a SKIP, not a failure:"
-              echo "the lane costs real tokens and nobody has funded it yet."
-              echo
-              echo "To turn it on, add the secret: a subscription token from"
-              echo "\`claude setup-token\`. It bills the account that minted it, and"
-              echo "anybody with write access can spend it by dispatching this workflow."
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "configured=yes" >> "$GITHUB_OUTPUT"
-          fi
-      # No version input: the pin is package.json's "packageManager", which pnpm
-      # and corepack read too. A second one here is refused as a mismatch.
+      # The lane reaches the app through Vite's port, whose /v1 and /mcp proxy is
+      # what the assistant talks to, so the frontend is installed and running.
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -531,92 +542,158 @@ jobs:
         with:
           flavor: plain
       - name: Install the frontend
-        if: steps.funded.outputs.configured == 'yes'
-        working-directory: .
         # --ignore-scripts (githubactions:S6505): no lifecycle scripts run at
         # install; esbuild ships prebuilt platform binaries as optional deps.
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Install the Claude CLI
-        if: steps.funded.outputs.configured == 'yes'
         uses: ./.github/actions/install-claude-cli
         with:
           version: 2.1.236
       - name: Start the dev infra stack (compose + app role)
-        if: steps.funded.outputs.configured == 'yes'
-        working-directory: .
         run: make db-up
-      # The step separates "the model answered badly" from "the lane could not
-      # run", because the job result cannot: a missing CLI, a stack that will
-      # not boot, a seed that fails, or a credential the MCP endpoint rejects
-      # all reach the reporter as `failure`. Filing "the assistant is answering
-      # wrongly" for any of those sends somebody reading transcripts for a
-      # defect that is not there — which is exactly what happened on this lane's
-      # first local run, where a passport destroyed by a database rebuild
-      # presented itself as six scenarios of unhelpful model behaviour.
+      # The stack reads its environment from .env.local, not from the step, so
+      # the preset's key is written there for the run by meaning.
+      - name: Give the stack its embedding key
+        if: needs.llm-plan.outputs.search == 'semantic'
+        env:
+          SEARCH_KEY: ${{ secrets.OPENAI_COMPATIBLE_API_KEY }}
+        run: printf 'OPENAI_COMPATIBLE_API_KEY=%s\n' "$SEARCH_KEY" >> .env.local
+      # The step's own limit is shorter than the job's, so a cut-off ends this
+      # step as a failure and the steps after it still say what happened.
       #
-      # The distinction is taken from the runner's own words: it prints
-      # "scenarios: N passed, M failed" only once every scenario has actually
-      # been driven. No such line means the lane never got that far.
-      #
-      # Exactly ONE credential reaches the CLI. Adding ANTHROPIC_API_KEY beside
-      # the token would not be a fallback: the CLI ranks the key above the
-      # token, so the token would go unused, and a stale key would then fail
-      # every run while the summary above named the token as what funds it.
-      - name: The six use cases (MARGINCE_E2E_LLM=1 make e2e-llm)
+      # Exactly ONE credential reaches the CLI: it ranks ANTHROPIC_API_KEY above
+      # the token, so a stale key beside it would fail every run while the
+      # summary named the token as what funds it.
+      - name: Sweep this shard (scripts/e2e-llm-sweep.sh)
         id: lane
-        if: steps.funded.outputs.configured == 'yes'
-        working-directory: .
+        timeout-minutes: 100
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           MARGINCE_E2E_LLM: "1"
-          E2E_LLM_SLUG: ci
-          # The subscription token above is the only credential this job holds,
-          # and only the claude CLI can spend it.
           E2E_LLM_CANDIDATE: claude
           E2E_LLM_VIA: cli
-          # No embedding key reaches this runner, so search_context ranks by
-          # word overlap; the verdicts it writes say `search: lexical`.
-          E2E_LLM_ALLOW_LEXICAL: "1"
+          E2E_SWEEP_WORKTREES: ${{ github.workspace }}
+          SEARCH: ${{ needs.llm-plan.outputs.search }}
+          CASES: ${{ matrix.cases }}
+          SHARD: ${{ matrix.shard }}
         run: |
           set -o pipefail
-          if make e2e-llm 2>&1 | tee llm.log; then
-            echo "outcome=ok" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if grep -q "^scenarios: " llm.log; then
-            echo "outcome=scenario-failed" >> "$GITHUB_OUTPUT"
+          # A fresh folder per shard holds exactly what this run wrote; the
+          # records job files it in the records tree once every shard is in.
+          E2E_SWEEP_SINCE="$(date +%s)"
+          export E2E_SWEEP_SINCE E2E_LLM_VERDICTS="$RUNNER_TEMP/verdicts"
+          if [ "$SEARCH" = semantic ]; then
+            export E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml
           else
-            echo "outcome=lane-failed" >> "$GITHUB_OUTPUT"
+            export E2E_LLM_ALLOW_LEXICAL=1
           fi
-          exit 1
-      # The transcripts are the finding. A verdict line says case 6 failed; only
-      # the transcript says the assistant quoted the record correctly and then
-      # repeated a note's wrong month in its own voice. Kept for 30 days, which
-      # outlives the next two runs — long enough to compare a regression against
-      # the week it appeared.
-      - name: Keep the run transcripts
-        if: always() && steps.funded.outputs.configured == 'yes'
+          # shellcheck disable=SC2086 # CASES is a list of case numbers
+          scripts/e2e-llm-sweep.sh "ci$SHARD" $CASES 2>&1 | tee "$RUNNER_TEMP/sweep.log"
+      # What this shard did, read from the sweep's own lines: LANE DONE only once
+      # every case has a verdict, and a FAIL line for a case below its bar. No
+      # LANE DONE is a lane that was stopped or cut off, and it publishes nothing.
+      - name: File this shard's outcome and fresh verdicts
+        if: always()
+        env:
+          SHARD: ${{ matrix.shard }}
+          STEP: ${{ steps.lane.outcome }}
+        run: |
+          out="$RUNNER_TEMP/shard"
+          mkdir -p "$out/verdicts"
+          log="$RUNNER_TEMP/sweep.log"
+          if grep -q '^LANE DONE' "$log" 2>/dev/null; then
+            if grep -qE '^ci[0-9]+ +case[0-9]+_[a-z0-9_]+: FAIL' "$log"; then outcome=scenario-failed; else outcome=ok; fi
+            cp "$RUNNER_TEMP"/verdicts/*.json "$out/verdicts/"
+          elif [ "$STEP" = failure ] && ! grep -q '^LANE STOPPED' "$log" 2>/dev/null; then
+            outcome=cut-off
+          else
+            outcome=lane-failed
+          fi
+          echo "$outcome" > "$out/outcome-$SHARD"
+          echo "shard $SHARD: $outcome, $(find "$out/verdicts" -name '*.json' | wc -l) fresh verdicts"
+      - name: Keep the shard's outcome and verdicts
+        if: always()
         uses: ./.github/actions/upload-artifact-retried
         with:
-          name: e2e-llm-transcripts
-          path: e2e/llm/records/
+          name: e2e-llm-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/shard/
           retention-days: 30
-          # ERROR, not warn. An empty records/ means the lane never drove a
-          # scenario, and the first CI run passed this step while uploading
-          # nothing — a green step on top of a job that had already failed 30
-          # seconds in. The absence of transcripts is itself the finding.
           if-no-files-found: error
-      # The verdicts land in the committed records tree, in the folder the route
-      # names, and each says how it was measured (route, search mode). The whole
-      # tree goes up; records keeps only the verdicts this run rewrote.
-      - name: Keep the run verdicts
-        if: always() && steps.funded.outputs.configured == 'yes'
+      # The transcripts are the finding: a verdict says a case failed, only the
+      # transcript says what the assistant did. Kept 30 days.
+      - name: Keep the run transcripts
+        if: always()
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: e2e-llm-transcripts-${{ matrix.shard }}
+          path: |
+            e2e/llm/records/
+            .tmp/sweep/
+          retention-days: 30
+          if-no-files-found: warn
+
+  # Publishes the verdicts only when every scenario has a fresh one from a run
+  # by meaning. A shard that was cut off or stopped makes the whole run "could
+  # not finish", which the reporter files as an issue, and nothing is proposed.
+  llm-collect:
+    name: use cases, driven by a model (collect)
+    needs: [llm-plan, llm-use-cases]
+    if: always() && needs.llm-plan.outputs.funded == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      outcome: ${{ steps.collect.outputs.outcome }}
+      publish: ${{ steps.collect.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: e2e-llm-shard-*
+          path: ${{ runner.temp }}/shards
+          merge-multiple: true
+      - name: Count what came back
+        id: collect
+        env:
+          SHARDS: ${{ needs.llm-plan.outputs.shards }}
+          SEARCH: ${{ needs.llm-plan.outputs.search }}
+        run: |
+          got="$RUNNER_TEMP/shards"
+          mkdir -p "$got/verdicts"
+          planned="$(echo "$SHARDS" | jq '.include | length')"
+          outcomes="$(cat "$got"/outcome-* 2>/dev/null | sort | uniq -c | xargs || true)"
+          echo "planned $planned shards; outcomes: ${outcomes:-none}"
+          reported="$(find "$got" -maxdepth 1 -name 'outcome-*' | wc -l)"
+          if [ "$reported" -lt "$planned" ] || grep -qx cut-off "$got"/outcome-* 2>/dev/null; then
+            outcome=cut-off
+          elif grep -qx lane-failed "$got"/outcome-*; then
+            outcome=lane-failed
+          elif ! python3 e2e/llm/shards.py collect "$got/verdicts"; then
+            outcome=lane-failed
+          elif grep -qx scenario-failed "$got"/outcome-*; then
+            outcome=scenario-failed
+          else
+            outcome=ok
+          fi
+          echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
+          publish=no
+          if [ "$SEARCH" = semantic ] && { [ "$outcome" = ok ] || [ "$outcome" = scenario-failed ]; }; then
+            publish=yes
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "### Use cases driven by a model: $outcome, search $SEARCH, published: $publish" >> "$GITHUB_STEP_SUMMARY"
+          [ "$outcome" = ok ]
+      - name: Hand the complete verdicts to the records job
+        if: always() && steps.collect.outputs.publish == 'yes'
         uses: ./.github/actions/upload-artifact-retried
         with:
           name: e2e-llm-verdicts
-          path: backend/internal/compose/aicert/records/mcp_e2e/
+          path: ${{ runner.temp }}/shards/verdicts/
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: error
 
   # PERF-1's PERCEIVED budget (MOBILE-AC-2), the browser half of what
   # perf-budgets measures over HTTP.
@@ -914,7 +991,7 @@ jobs:
         with:
           persist-credentials: false
       # A step, not a job `if`, because `jobs.<id>.if` cannot read `secrets`
-      # (see llm-use-cases). No key is "not checked", which is no verdict.
+      # (see llm-plan). No key is "not checked", which is no verdict.
       - name: Is there a Surfe key?
         id: funded
         env:
@@ -983,19 +1060,19 @@ jobs:
           esac
           exit "$status"
 
-  # Lays what the three weekly measurements recorded over the run's own tree
-  # and renders the pages those records feed. It runs the tree's generators, so
-  # it holds no write token; records-pr pushes the patch it hands over.
+  # Lays what the weekly measurements recorded over the run's own tree and
+  # renders the pages those records feed. It runs the tree's generators, so it
+  # holds no write token; records-pr pushes the patches it hands over.
   records:
     name: render the weekly records
-    needs: [perf-budgets, perf-mobile, llm-use-cases]
+    needs: [perf-budgets, perf-mobile, llm-collect]
     # !cancelled(), because a measurement that failed may still have recorded:
     # a breach is recorded before its gate fails.
     if: >-
       !cancelled()
       && (needs.perf-budgets.result != 'skipped'
         || needs['perf-mobile'].result != 'skipped'
-        || needs['llm-use-cases'].result != 'skipped')
+        || needs['llm-collect'].outputs.publish == 'yes')
     outputs:
       parts: ${{ steps.render.outputs.parts }}
     runs-on: ubuntu-latest
@@ -1022,62 +1099,82 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: bench-*-record
-          path: docs/reference/perfbench
+          path: ${{ runner.temp }}/perfbench
           merge-multiple: true
+      # Uploaded by llm-collect only when every scenario has a fresh verdict.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: e2e-llm-verdicts
-          path: backend/internal/compose/aicert/records/mcp_e2e
+          path: ${{ runner.temp }}/verdicts
           merge-multiple: true
-      # A part counts as recorded only when its file differs from the tree, so
-      # the committed file uploaded by a run that measured nothing adds nothing.
-      - name: Render the pages the records feed
+      # ONE PATCH PER PART, each rendered on a clean tree, so a good speed
+      # record never waits on a model verdict a reviewer wants to keep out. The
+      # perf and mobile records are one part: `make perfdoc` renders both into
+      # the same pages. A part counts as recorded only when its files differ.
+      - name: Render the pages each record feeds
         id: render
         env:
-          PATCH: ${{ runner.temp }}/records.patch
+          OUT: ${{ runner.temp }}/records
         run: |
           set -euo pipefail
+          mkdir -p "$OUT"
           perfbench=docs/reference/perfbench
-          verdicts=backend/internal/compose/aicert/records/mcp_e2e
+          folder="$(python3 -c 'import sys; sys.path.insert(0, "e2e/llm"); import candidates; print(candidates.resolve("claude", "cli").folder)')"
+          verdicts="backend/internal/compose/aicert/records/mcp_e2e/$folder"
           parts=""
-          for part in "perf:$perfbench/bench-perf.json" "mobile:$perfbench/bench-mobile.json" "llm:$verdicts"; do
-            if [ -n "$(git status --porcelain -- "${part#*:}")" ]; then
-              parts="$parts ${part%%:*}"
-            fi
+          for part in speed llm; do
+            git reset -q --hard && git clean -qfd -- docs backend e2e
+            case "$part" in
+              speed)
+                for file in bench-perf.json bench-mobile.json; do
+                  [ -f "$RUNNER_TEMP/perfbench/$file" ] && cp "$RUNNER_TEMP/perfbench/$file" "$perfbench/$file"
+                done
+                [ -n "$(git status --porcelain -- "$perfbench")" ] || continue
+                make perfdoc
+                git add -A -- docs/reference
+                ;;
+              llm)
+                compgen -G "$RUNNER_TEMP/verdicts/*.json" >/dev/null || continue
+                mkdir -p "$OUT/llm-before" "$verdicts"
+                cp "$verdicts"/*.json "$OUT/llm-before/" 2>/dev/null || true
+                cp "$RUNNER_TEMP"/verdicts/*.json "$verdicts/"
+                (cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished \
+                  -update-mcp-tool-coverage -count=1)
+                git add -A -- docs/reference "$verdicts"
+                # It opens only the repository or the temp folder, so the runner's temp is named as that.
+                TMPDIR="$RUNNER_TEMP" python3 e2e/llm/verdictdiff.py "$OUT/llm-before" "$verdicts" > "$OUT/llm-table.md"
+                ;;
+            esac
+            git diff --cached --binary > "$OUT/$part.patch"
+            git diff --cached --stat
+            parts="$parts $part"
           done
+          git reset -q --hard
           parts="${parts# }"
           echo "recorded: ${parts:-nothing}"
-          if [ -z "$parts" ]; then
-            exit 0
-          fi
-          case " $parts " in *" perf "* | *" mobile "*) make perfdoc ;; esac
-          case " $parts " in
-          *" llm "*)
-            (cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished \
-              -update-mcp-tool-coverage -count=1)
-            ;;
-          esac
-          git add -A -- docs/reference "$verdicts" e2e/llm
-          git diff --cached --binary >"$PATCH"
-          git diff --cached --stat
           echo "parts=$parts" >> "$GITHUB_OUTPUT"
-      - name: Keep the patch
+      - name: Keep the patches
         if: steps.render.outputs.parts != ''
         uses: ./.github/actions/upload-artifact-retried
         with:
           name: scheduled-records
-          path: ${{ runner.temp }}/records.patch
+          path: ${{ runner.temp }}/records/
           retention-days: 30
 
-  # Opens the pull request that publishes the records. It never pushes to main:
-  # a human publishes a record by reviewing and merging this pull request.
+  # Opens one pull request per recorded part. It never pushes to main: a human
+  # publishes a record by reviewing and merging the pull request.
   #
   # A token minted from the repository's records App opens the pull request,
   # so CI starts on it; the default workflow token stays read-only. Only from
   # main: a dispatch on another branch measures and renders, and proposes nothing.
+  #
+  # Each part has ONE fixed branch, so a new week updates the open pull request
+  # rather than adding a second. Each gets the `records: weekly` label and the
+  # owner the RECORDS_OWNER repository variable names, who looks after the
+  # weekly records and hands the variable on when away.
   records-pr:
     name: propose the weekly records
-    needs: [records, perf-budgets, perf-mobile, llm-use-cases]
+    needs: [records, perf-budgets, perf-mobile, llm-collect]
     if: >-
       !cancelled()
       && needs.records.outputs.parts != ''
@@ -1099,8 +1196,8 @@ jobs:
           private-key: ${{ secrets.RECORDS_APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
-      # The credential persists here and nowhere else in this file: the push
-      # below is the one write this workflow makes to the repository.
+      # The credential persists here and nowhere else in this file: the pushes
+      # below are the only writes this workflow makes to the repository.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ steps.app-token.outputs.token }}
@@ -1108,84 +1205,78 @@ jobs:
         with:
           name: scheduled-records
           path: ${{ runner.temp }}/records
-      - name: Commit the records and open the pull request
+      - name: Commit each part and open its pull request
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PATCH: ${{ runner.temp }}/records/records.patch
-          BODY: ${{ runner.temp }}/records-body.md
+          RECORDS: ${{ runner.temp }}/records
           PARTS: ${{ needs.records.outputs.parts }}
+          OWNER: ${{ vars.RECORDS_OWNER }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          RUN_ID: ${{ github.run_id }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           BASE: ${{ github.event.repository.default_branch }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
           MOBILE_RESULT: ${{ needs['perf-mobile'].result }}
           MOBILE_OUTCOME: ${{ needs['perf-mobile'].outputs.outcome }}
-          LLM_RESULT: ${{ needs['llm-use-cases'].result }}
-          LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
+          LLM_OUTCOME: ${{ needs['llm-collect'].outputs.outcome }}
         run: |
           set -euo pipefail
           day="$(date -u +%F)"
-          branch="bench/scheduled-$day-$RUN_ID"
-          verdicts=backend/internal/compose/aicert/records/mcp_e2e
-          git apply --index "$PATCH"
-
-          # part <label> <key> <result> <outcome> <how it was measured>
-          part() {
-            if [[ " $PARTS " == *" $2 "* ]]; then
-              printf -- "- **%s**: recorded. %s Job result \`%s\`, outcome \`%s\`.\n" "$1" "$5" "$3" "${4:-none}"
-            else
-              printf -- "- **%s**: NOT recorded. Job result \`%s\`, outcome \`%s\`; the run log says why.\n" "$1" "$3" "${4:-none}"
-            fi
-          }
-          # Read from the verdicts themselves, so the body cannot claim a route
-          # or a search mode the records do not carry.
-          routes="$(git diff --cached --name-only -- "$verdicts" | cut -d/ -f7 | sort -u | paste -sd, -)"
-          search="$(git diff --cached --name-only --diff-filter=AM -- "$verdicts" |
-            xargs -r jq -r '.search // "unknown"' | sort -u | paste -sd, -)"
-          {
-            echo "## What"
-            echo
-            echo "What the weekly scheduled run measured on \`$GITHUB_SHA\`, with the pages the"
-            echo "records feed rendered again by their own generators. Run: $RUN_URL"
-            echo
-            part "PERF-3/PERF-7" perf "$PERF_RESULT" "$PERF_OUTCOME" \
-              "\`make bench-perf BENCH_PERF_TIER=smb\`, the SMB tier; a PERF-7 row measured below mid-market renders \`inconclusive\`."
-            part "MOBILE-AC-2" mobile "$MOBILE_RESULT" "$MOBILE_OUTCOME" \
-              "\`make bench-mobile\`, Playwright Chromium on a throttled Fast-3G profile at 390px."
-            part "Use cases driven by a model" llm "$LLM_RESULT" "$LLM_OUTCOME" \
-              "\`make e2e-llm\` over \`${routes:-none}\`, search \`${search:-none}\`."
-            echo
-            echo "Runner: GitHub-hosted \`${ImageOS:-unknown}\`, image \`${ImageVersion:-unknown}\`,"
-            echo "\`$RUNNER_ARCH\`. Each record names the machine it was measured on."
-            echo
-            echo "## Why"
-            echo
-            echo "A record reaches \`main\` only when a maintainer merges it. Compare the numbers with the"
-            echo "record they replace, and close this pull request to keep the old ones."
-            echo
-            echo "## How verified"
-            echo
-            echo "The records App opened this pull request, so CI runs on it. Merge only when it is green."
-            echo
-            echo "Closes: none"
-          } >"$BODY"
-
           bot_id="$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)"
           git config user.name "${APP_SLUG}[bot]"
           git config user.email "${bot_id}+${APP_SLUG}[bot]@users.noreply.github.com"
-          git switch -c "$branch"
-          git commit -q -m "chore(records): weekly measurements of $day"
-          # --force, because a re-run of this job replaces the branch it pushed.
-          git push --force origin "$branch"
-          existing="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
-          if [ -n "$existing" ]; then
-            gh pr edit "$existing" --body-file "$BODY"
-          else
-            gh pr create --base "$BASE" --head "$branch" \
-              --title "chore(records): weekly measurements of $day" --body-file "$BODY"
-          fi
+          for part in $PARTS; do
+            case "$part" in
+              speed) title="speed records"
+                how="PERF-3/PERF-7: \`make bench-perf BENCH_PERF_TIER=smb\`, the SMB tier; a PERF-7 row measured below mid-market renders \`inconclusive\`. Job result \`$PERF_RESULT\`, outcome \`${PERF_OUTCOME:-none}\`. MOBILE-AC-2: \`make bench-mobile\`, Playwright Chromium on a throttled Fast-3G profile at 390px. Job result \`$MOBILE_RESULT\`, outcome \`${MOBILE_OUTCOME:-none}\`." ;;
+              llm) title="MCP use-case verdicts"
+                how="Every scenario under \`e2e/llm/scenarios/\` driven by \`claude-sonnet-5-5\` over the Claude CLI with \`scripts/e2e-llm-sweep.sh\`, search by meaning; outcome \`$LLM_OUTCOME\`." ;;
+            esac
+            body="$RUNNER_TEMP/body-$part.md"
+            {
+              echo "## What"
+              echo
+              echo "The $title the weekly scheduled run measured on \`$GITHUB_SHA\`, with the pages the"
+              echo "record feeds rendered again by their own generators. Run: $RUN_URL"
+              echo
+              echo "$how"
+              if [ "$part" = llm ]; then echo; cat "$RECORDS/llm-table.md"; fi
+              echo
+              echo "## Why"
+              echo
+              echo "A record reaches \`main\` only when a maintainer merges it. Compare it with the record it"
+              echo "replaces, and close this pull request to keep the old one."
+              if [ -z "$OWNER" ]; then
+                echo
+                echo "No owner is set: name one in the \`RECORDS_OWNER\` repository variable."
+              fi
+              echo
+              echo "## How verified"
+              echo
+              echo "The records App opened this pull request, so CI runs on it. Merge only when it is green."
+              echo
+              echo "Closes: none"
+            } > "$body"
+            branch="records/weekly-$part"
+            git switch -q --force-create "$branch" "origin/$BASE"
+            git apply --index "$RECORDS/$part.patch"
+            git commit -q -m "chore(records): weekly $title of $day"
+            # --force: the branch is this part's one standing proposal.
+            git push --force origin "$branch"
+            existing="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+            if [ -n "$existing" ]; then
+              gh pr edit "$existing" --title "chore(records): weekly $title of $day" --body-file "$body"
+            else
+              existing="$(gh pr create --base "$BASE" --head "$branch" \
+                --title "chore(records): weekly $title of $day" --body-file "$body")"
+            fi
+            # Best effort: a label the repository has not synced, or an owner
+            # who cannot be assigned, must not lose the proposal itself.
+            gh pr edit "$existing" --add-label "records: weekly" || echo "::warning::could not label $existing"
+            if [ -n "$OWNER" ]; then
+              gh pr edit "$existing" --add-assignee "$OWNER" || echo "::warning::could not assign $existing to $OWNER"
+            fi
+          done
 
   # The MCP role sweep, weekly. Every tool and action is called as every seeded
   # role, and the answers must equal the committed mcp-tool-roles/ and
@@ -1274,7 +1365,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep, home-growth]
+    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-plan, llm-use-cases, llm-collect, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep, home-growth]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -1324,8 +1415,8 @@ jobs:
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
           MOBILE_RESULT: ${{ needs['perf-mobile'].result }}
           MOBILE_OUTCOME: ${{ needs['perf-mobile'].outputs.outcome }}
-          LLM_RESULT: ${{ needs['llm-use-cases'].result }}
-          LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
+          LLM_RESULT: ${{ needs['llm-collect'].result }}
+          LLM_OUTCOME: ${{ needs['llm-collect'].outputs.outcome }}
           RECORDS_RESULT: ${{ needs.records.result }}
           RECORDS_PR_RESULT: ${{ needs['records-pr'].result }}
           CACHE_RESULT: ${{ needs.reap-caches.result }}
