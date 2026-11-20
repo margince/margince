@@ -2496,6 +2496,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.coldstart": "Erstansprache",
   "agentJob.company_name_promotion": "Aktualisierung des Firmennamens",
   "agentJob.contact_share": "Anfrage zum Teilen eines Kontakts",
+  "agentJob.task_due_date": "Frage zum Fälligkeitsdatum",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website-Analyse",
@@ -4809,6 +4810,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
   "approval.kind.contact_share": "Kontakt teilen",
+  "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
@@ -22168,6 +22170,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
   "approval.commitment.noDueDay": "Kein Tag genannt",
   "approval.commitment.strength": "Wie verbindlich",
+  "approval.commitment.oddDue":
+    "Dieses Datum wirkt weit weg: behalten, ändern oder leeren",
   "approval.commitment.tentative": "Mit Vorbehalt: Es hieß, man versuche es",
   "approval.commitment.promiseStatus": "Stand der Zusage",
   "approval.commitment.notFulfilled":
