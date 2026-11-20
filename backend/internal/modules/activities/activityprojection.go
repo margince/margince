@@ -257,18 +257,23 @@ func renderActivityColumns(ctx context.Context, contentArm string, arg func(any)
 	if err != nil {
 		return "", err
 	}
-	// The reply channel reads the source activity, a different row from the one
-	// the outer query scoped. Gate it by the caller's audience on that source.
-	sourceAudience, err := auth.ActivityAudienceArm(ctx, "s", arg)
-	if err != nil {
-		return "", err
-	}
 	replyChannel := storekit.ReplyChannelSQL("a", "")
+	gatedReplyChannel := replyChannel
+	if gatePayload {
+		// The reply channel reads the source activity, a different row than the
+		// one the outer query scoped. Gate its kind by the caller's audience on
+		// that source. A count reads no column, so it needs no gate there.
+		sourceAudience, err := auth.ActivityAudienceArm(ctx, "s", arg)
+		if err != nil {
+			return "", err
+		}
+		gatedReplyChannel = storekit.ReplyChannelSQL("a", sourceAudience)
+	}
 	out := make([]string, len(activityProjection))
 	for i, c := range activityProjection {
 		out[i] = c.sql
 		if c.sql == replyChannel {
-			out[i] = storekit.ReplyChannelSQL("a", sourceAudience)
+			out[i] = gatedReplyChannel
 			continue
 		}
 		if !gatePayload {
