@@ -2490,6 +2490,8 @@ export const en = {
     "Undoing this change would clear a field that cannot be empty, so it cannot be undone.",
   "history.undo.notWritableByCaller":
     "You do not have permission to write these fields.",
+  "history.undo.restoreArchiverRequired":
+    "Only the colleague who archived this record, or a manager, can restore it.",
   "history.undo.edgeRelinkUnsupported":
     "A removed link cannot be restored by undo. Add the link again on this record.",
   "history.undo.laterCompanyChange":
@@ -17121,6 +17123,15 @@ export const en = {
   "reviewTemplates.removeNumbered": "Remove question {n}",
   "reviewTemplates.unsaved": "Unsaved changes",
   "reviewTemplates.saveQuestions": "Save questions",
+  "reviewTemplates.add": "Add template",
+  "reviewTemplates.intro":
+    "A closed deal is asked the active template for its outcome. Adding a template, or turning one on, retires the one asked before. With no active template, that outcome asks no review. Reviews already written keep their questions.",
+  "reviewTemplates.activeFor": "Ask {label} when a deal closes",
+  "reviewTemplates.newTitle": "New review template",
+  "reviewTemplates.name": "Name",
+  "reviewTemplates.askedFor": "Asked for",
+  "reviewTemplates.askedFor.won": "Won deals",
+  "reviewTemplates.askedFor.lost": "Lost deals",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "oauthApp.saveFailed": "App not saved",
   "firstRun.continue": "Continue",

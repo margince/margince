@@ -2584,6 +2584,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Änderung lässt sich nicht rückgängig machen, da dabei ein Pflichtfeld leer würde.",
   "history.undo.notWritableByCaller":
     "Du hast keine Berechtigung, diese Felder zu ändern.",
+  "history.undo.restoreArchiverRequired":
+    "Nur wer diesen Datensatz archiviert hat oder eine Führungskraft kann ihn wiederherstellen.",
   "history.undo.edgeRelinkUnsupported":
     "Eine entfernte Verknüpfung lässt sich nicht rückgängig machen. Füge die Verknüpfung auf diesem Datensatz erneut hinzu.",
   "history.undo.laterCompanyChange":
@@ -17273,6 +17275,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reviewTemplates.removeNumbered": "Frage {n} entfernen",
   "reviewTemplates.unsaved": "Ungespeicherte Änderungen",
   "reviewTemplates.saveQuestions": "Fragen speichern",
+  "reviewTemplates.add": "Vorlage hinzufügen",
+  "reviewTemplates.intro":
+    "Ein abgeschlossener Deal fragt die aktive Vorlage für sein Ergebnis ab. Fügst du eine Vorlage hinzu oder schaltest eine ein, wird die bisherige stillgelegt. Ohne aktive Vorlage gibt es für dieses Ergebnis keinen Rückblick. Bereits geschriebene Rückblicke behalten ihre Fragen.",
+  "reviewTemplates.activeFor": "{label} beim Abschluss eines Deals abfragen",
+  "reviewTemplates.newTitle": "Neue Vorlage für Rückblicke",
+  "reviewTemplates.name": "Name",
+  "reviewTemplates.askedFor": "Abgefragt bei",
+  "reviewTemplates.askedFor.won": "Gewonnenen Deals",
+  "reviewTemplates.askedFor.lost": "Verlorenen Deals",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "oauthApp.saveFailed": "App nicht gespeichert",
   "firstRun.continue": "Weiter",

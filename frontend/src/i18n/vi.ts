@@ -2511,6 +2511,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.undo.nullUnwritable":
     "Hoàn tác thay đổi này sẽ xóa trống một trường không được để trống, nên không thể hoàn tác.",
   "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
+  "history.undo.restoreArchiverRequired":
+    "Chỉ đồng nghiệp đã lưu trữ hồ sơ này hoặc quản lý mới có thể khôi phục hồ sơ.",
   "history.undo.edgeRelinkUnsupported":
     "Không thể khôi phục liên kết đã gỡ bằng hoàn tác. Thêm lại liên kết trên hồ sơ này.",
   "history.undo.laterCompanyChange":
@@ -16813,6 +16815,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reviewTemplates.removeNumbered": "Xóa câu hỏi {n}",
   "reviewTemplates.unsaved": "Thay đổi chưa lưu",
   "reviewTemplates.saveQuestions": "Lưu câu hỏi",
+  "reviewTemplates.add": "Thêm mẫu",
+  "reviewTemplates.intro":
+    "Khi một giao dịch được đóng, mẫu đang dùng cho kết quả đó sẽ được hỏi. Thêm một mẫu hoặc bật một mẫu sẽ ngừng dùng mẫu trước đó. Nếu không có mẫu nào đang dùng, kết quả đó sẽ không có đánh giá. Các đánh giá đã viết giữ nguyên câu hỏi.",
+  "reviewTemplates.activeFor": "Hỏi {label} khi đóng giao dịch",
+  "reviewTemplates.newTitle": "Mẫu đánh giá mới",
+  "reviewTemplates.name": "Tên",
+  "reviewTemplates.askedFor": "Hỏi cho",
+  "reviewTemplates.askedFor.won": "Giao dịch thắng",
+  "reviewTemplates.askedFor.lost": "Giao dịch thua",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "oauthApp.saveFailed": "Không thể lưu ứng dụng",
   "firstRun.continue": "Tiếp tục",

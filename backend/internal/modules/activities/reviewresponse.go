@@ -49,6 +49,9 @@ type WriteReviewInput struct {
 	Answers         map[string]string
 	ChoiceAnswers   map[string][]string
 	TemplateVersion *int64
+	// TemplateKey names the template the form showed. A version alone cannot
+	// tell two templates apart, because every new template starts at 1.
+	TemplateKey *string
 	// Body is optional prose for the note itself. The answers are the review;
 	// this is what somebody wanted to say beside them.
 	Body   *string
@@ -86,6 +89,9 @@ func (s *Store) WriteOutcomeReviewTx(ctx context.Context, tx pgx.Tx, in WriteRev
 		return crmcontracts.OutcomeReview{}, errReviewTemplateRetired
 	}
 	if in.TemplateVersion != nil && *in.TemplateVersion != template.Version {
+		return crmcontracts.OutcomeReview{}, apperrors.ErrConflict
+	}
+	if in.TemplateKey != nil && *in.TemplateKey != template.Key {
 		return crmcontracts.OutcomeReview{}, apperrors.ErrConflict
 	}
 	if err := validateReviewAnswers(template.Questions, in.Answers, in.ChoiceAnswers); err != nil {

@@ -34,7 +34,7 @@ setup instead, go to [Can I use this preset?](#can-i-use-this-preset).
 
 | Family | Models we tested | Can I trust it? | In plain words |
 |---|---|---|---|
-| Gemini | `gemini-3.1-flash-lite`, `gemini-3.8-flash` | 🟡 Mostly | Ready for 44 of the 59 features we tested; 14 more work if someone looks over the result; 1 not reliable yet. |
+| Gemini | `gemini-3.1-flash-lite`, `gemini-3.8-flash` | 🟡 Mostly | Ready for 47 of the 60 features we tested; 12 more work if someone looks over the result; 1 not reliable yet. |
 | GPT | `gpt-6-luna`, `gpt-6-sol`, `gpt-oss-120b` | 🟡 Mostly | Ready for 37 of the 54 features we tested; 11 more work if someone looks over the result; 6 not reliable yet. |
 | Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-medium-3-5` | 🟡 Mostly | Ready for 23 of the 50 features we tested; 17 more work if someone looks over the result; 10 not reliable yet. |
 | Gemma | `gemma-4-26b-a4b-it` | ⚪ Not enough tested yet | Tested on only 6 of the 61 features. Ask before relying on it. |
@@ -46,13 +46,13 @@ A family rated **Yes** is ready for every feature we tested. One rated **Mostly*
 A [preset](../../config/presets/README.md) picks which AI model runs each feature, so the same
 feature can be ready under one preset and not under another.
 
-88 of the 167 grades below were measured on an older version of the product and
+74 of the 169 grades below were measured on an older version of the product and
 are waiting to be re-checked; each is marked below.
 
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
-| [`gemini_cloud`](#gemini_cloud) | global cloud | 26 | 9 | 1 | 1 | 26 of 37 features ready (7 re-checks pending) |
-| [`gemini_vertex_eu`](#gemini_vertex_eu) | EU-hosted cloud | 26 | 9 | 1 | 1 | 26 of 37 features ready (7 re-checks pending) |
+| [`gemini_cloud`](#gemini_cloud) | global cloud | 27 | 9 | 1 | 0 | 27 of 37 features ready |
+| [`gemini_vertex_eu`](#gemini_vertex_eu) | EU-hosted cloud | 27 | 9 | 1 | 0 | 27 of 37 features ready |
 | [`openrouter_openai`](#openrouter_openai) | global cloud | 21 | 3 | 4 | 9 | 21 of 37 features ready (24 re-checks pending) |
 | [`openrouter_cloud`](#openrouter_cloud) | global cloud | 13 | 12 | 8 | 4 | 13 of 37 features ready (20 re-checks pending) |
 | [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 1 | 1 | 4 | 31 | 1 of 37 features ready (re-check pending) |
@@ -81,41 +81,41 @@ measured. The grade is the last one we have, and it is shown until the next test
 
 ### `gemini_cloud`
 
-Your data goes to: global cloud. 26 of 37 features ready (7 re-checks pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
+Your data goes to: global cloud. 27 of 37 features ready. Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (18 of 18) |
-| Assessing a sales report <sub>`report_interpret`</sub> | ⚠️ Usable with care<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ⚠️ Usable with care · re-check pending</sub> | Right every time (36 of 36); answer quality below the bar in one test case · re-check pending |
+| Assessing a sales report <sub>`report_interpret`</sub> | ⚠️ Usable with care<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ⚠️ Usable with care</sub> | Right every time (30 of 30); answer quality below the bar in one test case |
 | Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (12 of 12) |
 | Chat channel summary <sub>`chat_summary`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (15 of 15) |
 | Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (21 of 21) |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (27 of 27) |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right in 8 of 9 tries; answer quality below the bar in one test case |
-| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready · re-check pending</sub> | Right every time (27 of 27); answer quality below the bar in one test case · re-check pending |
-| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium</sub> | Right every time (15 of 15) · re-check pending |
+| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right in 23 of 24 tries; answer quality below the bar in one test case |
+| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium</sub> | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium</sub> | Right every time (24 of 24) |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (12 of 12) |
 | First-time sender check <sub>`capture_counterparty_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small</sub> | Right every time (147 of 147) |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium</sub> | Right every time (96 of 96) |
-| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (39 of 39) · re-check pending |
+| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (39 of 39) |
 | Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (9 of 9) |
 | Natural-language search <sub>`nl_search`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (27 of 27) |
 | Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (15 of 15) |
-| Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready · re-check pending</sub> | Right in 40 of 42 tries; answer quality below the bar in one test case · re-check pending |
+| Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right in 43 of 45 tries; answer quality below the bar in one test case |
 | Proposing a report setup or sales goals <sub>`report_setup`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (18 of 18) |
-| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready · re-check pending</sub> | Right every time (9 of 9) |
-| Record summary <sub>`summarize`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready · re-check pending</sub> | Right in 128 of 129 tries; answer quality below the bar in one test case |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ❌ Not reliable yet · re-check pending</sub> | Right every time (126 of 126); answer quality below the bar in 4 test cases · re-check pending |
+| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (9 of 9) |
+| Record summary <sub>`summarize`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right in 128 of 129 tries; answer quality below the bar in one test case |
+| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ❌ Not reliable yet</sub> | Right every time (114 of 114); answer quality below the bar in 6 test cases |
 | Rewriting <sub>`rewrite`</sub> | ⚠️ Usable with care<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ❌ Not reliable yet</sub> | Right every time (24 of 24); answer quality below the bar in one test case |
 | Showing a message in your language <sub>`reader_rendering`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (33 of 33) |
-| Signal extraction <sub>`signal_extract`</sub> | ❔ Not measured<br><sub>gemini-3.8-flash · frontier</sub> | Not measured yet |
+| Signal extraction <sub>`signal_extract`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · frontier</sub> | Right every time (171 of 171) |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (27 of 27) |
 | Tag suggestions <sub>`tag_suggest`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (12 of 12) |
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small</sub> | Right every time (288 of 288) |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (27 of 27) · re-check pending |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (27 of 27) |
 | Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (15 of 15); answer quality below the bar in 2 test cases |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right in 17 of 21 tries |
 | Website research <sub>`site_extract`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium</sub> | Right every time (21 of 21) |
@@ -141,30 +141,30 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `brief_ranking` | `premium` | `gemini-3.8-flash` | ✅ Ready | current |
-| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `cert_judge` | `premium` | `gemini-3.8-flash` | ✅ Ready | current |
 | `chat_summary` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
-| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
-| `corpus_ask` | `premium` | `gemini-3.8-flash` | ✅ Ready | re-check pending |
-| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
+| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
+| `corpus_ask` | `premium` | `gemini-3.8-flash` | ✅ Ready | current |
+| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
 | `deal_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `document_extract` | `premium` | `gemini-3.8-flash` | ✅ Ready | current |
-| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending |
+| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | current |
 | `enrich` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
 | `nl_search` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `offer_draft` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
-| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
+| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `propose_roles` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
 | `rate_extract` | `premium` | `gemini-3.8-flash` | ✅ Ready | current |
 | `reader_rendering` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
-| `report_interpret` | `premium` | `gemini-3.8-flash` | ⚠️ Usable with care | re-check pending |
+| `report_interpret` | `premium` | `gemini-3.8-flash` | ⚠️ Usable with care | current |
 | `report_setup` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `request_settlement` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `rewrite` | `premium` | `gemini-3.8-flash` | ⚠️ Usable with care | current |
-| `signal_extract` | `frontier` | `gemini-3.8-flash` | ❔ Not measured | not measured |
+| `signal_extract` | `frontier` | `gemini-3.8-flash` | ✅ Ready | current |
 | `site_extract` | `premium` | `gemini-3.8-flash` | ✅ Ready | current |
 | `site_fact_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
 | `site_triage` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
@@ -180,41 +180,41 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `gemini_vertex_eu`
 
-Your data goes to: EU-hosted cloud. 26 of 37 features ready (7 re-checks pending). Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
+Your data goes to: EU-hosted cloud. 27 of 37 features ready. Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
 | Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (18 of 18) |
-| Assessing a sales report <sub>`report_interpret`</sub> | ⚠️ Usable with care<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ⚠️ Usable with care · re-check pending, measured on `gemini`</sub> | Right every time (36 of 36); answer quality below the bar in one test case · re-check pending |
+| Assessing a sales report <sub>`report_interpret`</sub> | ⚠️ Usable with care<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ⚠️ Usable with care, measured on `gemini`</sub> | Right every time (30 of 30); answer quality below the bar in one test case |
 | Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
 | Chat channel summary <sub>`chat_summary`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (15 of 15) |
 | Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (21 of 21) |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (27 of 27) |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right in 8 of 9 tries; answer quality below the bar in one test case |
-| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready · re-check pending, measured on `gemini`</sub> | Right every time (27 of 27); answer quality below the bar in one test case · re-check pending |
-| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini`</sub> | Right every time (15 of 15) · re-check pending |
+| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right in 23 of 24 tries; answer quality below the bar in one test case |
+| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini`</sub> | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini`</sub> | Right every time (24 of 24) |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
 | First-time sender check <sub>`capture_counterparty_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini`</sub> | Right every time (147 of 147) |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini`</sub> | Right every time (96 of 96) |
-| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (39 of 39) · re-check pending |
+| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (39 of 39) |
 | Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (9 of 9) |
 | Natural-language search <sub>`nl_search`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (27 of 27) |
 | Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (15 of 15) |
-| Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready · re-check pending, measured on `gemini`</sub> | Right in 40 of 42 tries; answer quality below the bar in one test case · re-check pending |
+| Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right in 43 of 45 tries; answer quality below the bar in one test case |
 | Proposing a report setup or sales goals <sub>`report_setup`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (18 of 18) |
-| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready · re-check pending, measured on `gemini`</sub> | Right every time (9 of 9) |
-| Record summary <sub>`summarize`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready · re-check pending, measured on `gemini`</sub> | Right in 128 of 129 tries; answer quality below the bar in one test case |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ❌ Not reliable yet · re-check pending, measured on `gemini`</sub> | Right every time (126 of 126); answer quality below the bar in 4 test cases · re-check pending |
+| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (9 of 9) |
+| Record summary <sub>`summarize`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right in 128 of 129 tries; answer quality below the bar in one test case |
+| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ❌ Not reliable yet, measured on `gemini`</sub> | Right every time (114 of 114); answer quality below the bar in 6 test cases |
 | Rewriting <sub>`rewrite`</sub> | ⚠️ Usable with care<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ❌ Not reliable yet, measured on `gemini`</sub> | Right every time (24 of 24); answer quality below the bar in one test case |
 | Showing a message in your language <sub>`reader_rendering`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (33 of 33) |
-| Signal extraction <sub>`signal_extract`</sub> | ❔ Not measured<br><sub>gemini-3.8-flash · frontier</sub> | Not measured yet |
+| Signal extraction <sub>`signal_extract`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · frontier, measured on `gemini`</sub> | Right every time (171 of 171) |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (27 of 27) |
 | Tag suggestions <sub>`tag_suggest`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (12 of 12) |
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini`</sub> | Right every time (288 of 288) |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (27 of 27) · re-check pending |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (27 of 27) |
 | Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (15 of 15); answer quality below the bar in 2 test cases |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right in 17 of 21 tries |
 | Website research <sub>`site_extract`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini`</sub> | Right every time (21 of 21) |
@@ -240,30 +240,30 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `brief_ranking` | `premium` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
-| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending; measured on `gemini` |
+| `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `cert_judge` | `premium` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
 | `chat_summary` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
-| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending; measured on `gemini` |
-| `corpus_ask` | `premium` | `gemini-3.8-flash` | ✅ Ready | re-check pending; measured on `gemini` |
-| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending; measured on `gemini` |
+| `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
+| `corpus_ask` | `premium` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
+| `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
 | `deal_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `document_extract` | `premium` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
-| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | re-check pending; measured on `gemini` |
+| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ❌ Not reliable yet | current; measured on `gemini` |
 | `enrich` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
 | `nl_search` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `offer_draft` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
-| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending; measured on `gemini` |
+| `owed_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `propose_roles` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
 | `rate_extract` | `premium` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
 | `reader_rendering` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
-| `report_interpret` | `premium` | `gemini-3.8-flash` | ⚠️ Usable with care | re-check pending; measured on `gemini` |
+| `report_interpret` | `premium` | `gemini-3.8-flash` | ⚠️ Usable with care | current; measured on `gemini` |
 | `report_setup` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `request_settlement` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `rewrite` | `premium` | `gemini-3.8-flash` | ⚠️ Usable with care | current; measured on `gemini` |
-| `signal_extract` | `frontier` | `gemini-3.8-flash` | ❔ Not measured | not measured |
+| `signal_extract` | `frontier` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
 | `site_extract` | `premium` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
 | `site_fact_extract` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
 | `site_triage` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
@@ -979,14 +979,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Gemini
 
-🟡 Mostly: Ready for 44 of the 59 features we tested; 14 more work if someone looks over the result; 1 not reliable yet.
-
-13 of these results were measured on an older version of the product and are re-check pending.
+🟡 Mostly: Ready for 47 of the 60 features we tested; 12 more work if someone looks over the result; 1 not reliable yet.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
-| `gemini-3.1-flash-lite` | `cloud_frontier` | 53 | 31 | 19 | 3 | 0.99 |
-| `gemini-3.8-flash` | `cloud_frontier` | 50 | 35 | 14 | 1 | 1.00 |
+| `gemini-3.1-flash-lite` | `cloud_frontier` | 53 | 32 | 18 | 3 | 0.99 [0.98, 0.99] |
+| `gemini-3.8-flash` | `cloud_frontier` | 51 | 38 | 12 | 1 | 1.00 [1.00, 1.00] |
 
 <details>
 <summary>Best model for each feature</summary>
@@ -997,50 +995,51 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
-| [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready · re-check pending | 30 of 30 tries |
+| [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 30 of 30 tries |
 | [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 288 of 288 tries |
 | [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 147 of 147 tries |
 | [`cert_judge/judge`](#cert_judgejudge) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 12 of 12 tries |
 | [`chat_summary/episode`](#chat_summaryepisode) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 15 of 15 tries |
-| [`cold_start/acts`](#cold_startacts) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready · re-check pending | 18 of 18 tries |
-| [`cold_start/company_message`](#cold_startcompany_message) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ⚠️ Usable with care · re-check pending | 3 of 3 tries |
+| [`cold_start/acts`](#cold_startacts) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 21 of 21 tries |
+| [`cold_start/company_message`](#cold_startcompany_message) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 9 of 9 tries |
 | [`cold_start/field_extract`](#cold_startfield_extract) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
-| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | 12 of 12 tries |
-| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | 15 of 15 tries |
-| [`deal_health/deal_status`](#deal_healthdeal_status) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | 9 of 9 tries |
+| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 12 of 12 tries |
+| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 15 of 15 tries |
+| [`deal_health/deal_status`](#deal_healthdeal_status) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 12 of 12 tries |
 | [`deal_verdict/deal_verdict`](#deal_verdictdeal_verdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 21 of 21 tries |
 | [`document_extract/cards`](#document_extractcards) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ⚠️ Usable with care | 6 of 6 tries |
 | [`document_extract/chat`](#document_extractchat) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ⚠️ Usable with care | 6 of 6 tries |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 12 of 12 tries |
-| [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ❌ Not reliable yet · re-check pending | 39 of 39 tries |
-| [`draft_reply/contact`](#draft_replycontact) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | 18 of 18 tries |
+| [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ❌ Not reliable yet | 33 of 33 tries |
+| [`draft_reply/contact`](#draft_replycontact) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 18 of 18 tries |
 | [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
-| [`draft_reply/reply`](#draft_replyreply) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | 18 of 18 tries |
+| [`draft_reply/reply`](#draft_replyreply) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 21 of 21 tries |
 | [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 12 of 12 tries |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 12 of 12 tries |
 | [`nl_search/filter_propose`](#nl_searchfilter_propose) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 27 of 27 tries |
 | [`offer_draft/draft`](#offer_draftdraft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 15 of 15 tries |
-| [`owed_verdict/owed`](#owed_verdictowed) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready · re-check pending | 27 of 27 tries |
+| [`owed_verdict/owed`](#owed_verdictowed) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 27 of 27 tries |
 | [`propose_roles/committee`](#propose_rolescommittee) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 9 of 9 tries |
 | [`rate_extract/fx`](#rate_extractfx) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 12 of 12 tries |
 | [`reader_rendering/activity_text`](#reader_renderingactivity_text) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 33 of 33 tries |
-| [`report_interpret/progress_summary`](#report_interpretprogress_summary) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ⚠️ Usable with care · re-check pending | 18 of 18 tries |
-| [`report_interpret/sales_assessment`](#report_interpretsales_assessment) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | 18 of 18 tries |
+| [`report_interpret/progress_summary`](#report_interpretprogress_summary) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ⚠️ Usable with care | 18 of 18 tries |
+| [`report_interpret/sales_assessment`](#report_interpretsales_assessment) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 12 of 12 tries |
 | [`report_setup/custom_report_setup`](#report_setupcustom_report_setup) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ⚠️ Usable with care | 6 of 6 tries |
 | [`report_setup/initiative_setup`](#report_setupinitiative_setup) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ⚠️ Usable with care | 6 of 6 tries |
 | [`report_setup/sales_goal_months`](#report_setupsales_goal_months) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ⚠️ Usable with care | 6 of 6 tries |
 | [`request_settlement/request_settle`](#request_settlementrequest_settle) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 27 of 27 tries |
 | [`rewrite/rewrite`](#rewriterewrite) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ⚠️ Usable with care | 24 of 24 tries |
+| [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 171 of 171 tries |
 | [`site_extract/profile`](#site_extractprofile) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 21 of 21 tries |
 | [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 9 of 9 tries |
 | [`site_triage/triage`](#site_triagetriage) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 15 of 15 tries |
 | [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 27 of 27 tries |
 | [`summarize/company_ask`](#summarizecompany_ask) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 27 of 27 tries |
 | [`summarize/company_brief`](#summarizecompany_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 18 of 18 tries |
-| [`summarize/company_dossier`](#summarizecompany_dossier) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
-| [`summarize/contact_brief`](#summarizecontact_brief) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | 21 of 21 tries |
+| [`summarize/company_dossier`](#summarizecompany_dossier) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 9 of 9 tries |
+| [`summarize/contact_brief`](#summarizecontact_brief) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 21 of 21 tries |
 | [`summarize/deal_room_brief`](#summarizedeal_room_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 33 of 33 tries |
 | [`summarize/meeting_brief`](#summarizemeeting_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`summarize/meeting_plan`](#summarizemeeting_plan) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | 12 of 12 tries |
@@ -1063,9 +1062,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
-| `openai/gpt-6-luna` | `cloud_frontier` | 41 | 25 | 12 | 4 | 0.96 |
-| `openai/gpt-6-sol` | `cloud_frontier` | 38 | 25 | 11 | 2 | 0.97 |
-| `openai/gpt-oss-120b` | `cloud_frontier` | 51 | 21 | 21 | 9 | 0.93 |
+| `openai/gpt-6-luna` | `cloud_frontier` | 41 | 25 | 12 | 4 | 0.96 [0.95, 0.97] |
+| `openai/gpt-6-sol` | `cloud_frontier` | 38 | 25 | 11 | 2 | 0.97 [0.96, 0.98] |
+| `openai/gpt-oss-120b` | `cloud_frontier` | 51 | 21 | 21 | 9 | 0.93 [0.93, 0.94] |
 
 <details>
 <summary>Best model for each feature</summary>
@@ -1137,10 +1136,10 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
-| `mistralai/ministral-14b-2512` | `eu_hosted` | 39 | 11 | 10 | 18 | 0.80 |
-| `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 4 | 0 | 2 | 0.90 |
-| `mistralai/mistral-medium-3-5` | `cloud_frontier` | 44 | 18 | 16 | 10 | 0.92 |
-| `mistralai/mistral-medium-3-5` | `eu_hosted` | 38 | 17 | 14 | 7 | 0.94 |
+| `mistralai/ministral-14b-2512` | `eu_hosted` | 39 | 11 | 10 | 18 | 0.80 [0.78, 0.82] |
+| `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 4 | 0 | 2 | 0.90 [0.86, 0.92] |
+| `mistralai/mistral-medium-3-5` | `cloud_frontier` | 44 | 18 | 16 | 10 | 0.92 [0.91, 0.93] |
+| `mistralai/mistral-medium-3-5` | `eu_hosted` | 38 | 17 | 14 | 7 | 0.94 [0.93, 0.96] |
 
 <details>
 <summary>Best model for each feature</summary>
@@ -1208,7 +1207,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
-| `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 1 | 1 | 4 | 0.88 |
+| `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 1 | 1 | 4 | 0.88 [0.84, 0.91] |
 
 <details>
 <summary>Best model for each feature</summary>
@@ -1234,23 +1233,23 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | | |
 |---|---:|
 | Shipped invocation sites | 61 |
-| … best state `current` | 48 |
+| … best state `current` | 60 |
 | … best state `partial` | 0 |
-| … best state `stale` | 12 |
+| … best state `stale` | 0 |
 | … `absent` on every binding | 1 |
 | Scenarios in the corpus | 339 |
 | Committed records | 400 |
-| Bindings measured | 19 |
+| Bindings measured | 18 |
 
 #### Why the stale records went stale
 
-Counted per record (one task and binding pair) over the 254 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 421 `stale_cause` entries are these 254 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
+Counted per record (one task and binding pair) over the 241 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 394 `stale_cause` entries are these 241 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
 | the case | 106 | The test case changed. Re-certify: the old result measured a different case. |
-| **the prompt this build sends** | 254 | The product changed. The band measured the old prompt, so it says nothing about the new one. Re-certify: a drop then is the cost of that change and not the model. |
-| how a run is graded | 191 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
+| **the prompt this build sends** | 241 | The product changed. The band measured the old prompt, so it says nothing about the new one. Re-certify: a drop then is the cost of that change and not the model. |
+| how a run is graded | 179 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -1290,7 +1289,7 @@ today. It says nothing about how well the model did; that is the band.
 |---|---|
 | Quality | Who scores how good a test case's answers are: `judge`, a second model, or `checked mechanically`, where the case's own check sees everything a judge would and no judge is asked. |
 | Runs, Passed | How many times the model was asked, and how often it did what the test case wanted. |
-| Reliability | Passed divided by Runs. 1.00 is every attempt. |
+| Reliability | Passed divided by Runs, then its Wilson interval in brackets, from the formula and z the verdict uses. A band reads the lower end of a site's pooled rate and the upper end of each case alone. A binding or family row is graded by no band. Treat a change as real only when the intervals do not overlap or the band changes. |
 | `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back. This is a different split from pass/fail. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |
 | Scenarios | How many of the site's test cases the saved result still covers, out of how many the site has today. |
 | Record p50, p95 | How long answers took: the middle one, and a slow one (only 1 in 20 was slower). Both belong to the whole test run, not to the single site whose table they appear in, so a run covering several sites shows the same pair on each. |
@@ -1308,67 +1307,67 @@ Which model to run each site on, and what that choice rests on.
 
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
-| [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
-| [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 14 |
-| [`capture_classify/classify`](#capture_classifyclassify) | - | - | - | `stale` | 10 | 9 |
-| [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 5 |
-| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 24 | 8 |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 21 | 8 |
-| [`cert_judge/judge`](#cert_judgejudge) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 14 |
-| [`chat_summary/episode`](#chat_summaryepisode) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 3 |
-| [`cold_start/acts`](#cold_startacts) | - | - | - | `stale` | 5 | 13 |
-| [`cold_start/company_message`](#cold_startcompany_message) | - | - | - | `stale` | 1 | 13 |
-| [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
-| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | - | - | - | `stale` | 4 | 13 |
-| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | - | - | - | `stale` | 5 | 12 |
-| [`deal_health/deal_status`](#deal_healthdeal_status) | - | - | - | `stale` | 3 | 13 |
-| [`deal_verdict/deal_verdict`](#deal_verdictdeal_verdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 7 | 5 |
-| [`document_extract/cards`](#document_extractcards) | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 | `current` | 2 | 2 |
-| [`document_extract/chat`](#document_extractchat) | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 | `current` | 2 | 2 |
-| [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 4 | 3 |
-| [`draft_reply/account`](#draft_replyaccount) | - | - | - | `stale` | 3 | 14 |
-| [`draft_reply/contact`](#draft_replycontact) | - | - | - | `stale` | 2 | 14 |
-| [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 14 |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 14 |
-| [`draft_reply/reply`](#draft_replyreply) | - | - | - | `stale` | 5 | 14 |
-| [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 9 |
-| [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 13 |
-| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 9 | 13 |
+| [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 3 | 13 |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 3 | 13 |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 3 | 13 |
+| [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 1 | 14 |
+| [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.95, 1.00] | `current` | 10 | 9 |
+| [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 3 | 5 |
+| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 [0.99, 1.00] | `current` | 24 | 8 |
+| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.99, 1.00] | `current` | 21 | 8 |
+| [`cert_judge/judge`](#cert_judgejudge) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 2 | 14 |
+| [`chat_summary/episode`](#chat_summaryepisode) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.90, 1.00] | `current` | 3 | 3 |
+| [`cold_start/acts`](#cold_startacts) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.93, 1.00] | `current` | 5 | 13 |
+| [`cold_start/company_message`](#cold_startcompany_message) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.85, 1.00] | `current` | 1 | 13 |
+| [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 [0.65, 1.00] | `current` | 1 | 13 |
+| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.88, 1.00] | `current` | 4 | 13 |
+| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.90, 1.00] | `current` | 5 | 12 |
+| [`deal_health/deal_status`](#deal_healthdeal_status) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.88, 1.00] | `current` | 3 | 13 |
+| [`deal_verdict/deal_verdict`](#deal_verdictdeal_verdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.93, 1.00] | `current` | 7 | 5 |
+| [`document_extract/cards`](#document_extractcards) | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 [0.79, 1.00] | `current` | 2 | 2 |
+| [`document_extract/chat`](#document_extractchat) | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 [0.79, 1.00] | `current` | 2 | 2 |
+| [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.88, 1.00] | `current` | 4 | 3 |
+| [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `not_supported` | 1.00 [0.95, 1.00] | `current` | 3 | 14 |
+| [`draft_reply/contact`](#draft_replycontact) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.92, 1.00] | `current` | 2 | 14 |
+| [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 2 | 14 |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 3 | 14 |
+| [`draft_reply/reply`](#draft_replyreply) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.93, 1.00] | `current` | 5 | 14 |
+| [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 4 | 9 |
+| [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 2 | 13 |
+| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.94, 1.00] | `current` | 9 | 13 |
 | [`nl_search/search_data_plan`](#nl_searchsearch_data_plan) | - | - | - | `absent` | 7 | 0 |
-| [`offer_draft/draft`](#offer_draftdraft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 13 |
-| [`owed_verdict/owed`](#owed_verdictowed) | - | - | - | `stale` | 9 | 9 |
-| [`propose_roles/committee`](#propose_rolescommittee) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
-| [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 14 |
-| [`reader_rendering/activity_text`](#reader_renderingactivity_text) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 9 | 7 |
-| [`report_interpret/progress_summary`](#report_interpretprogress_summary) | - | - | - | `stale` | 2 | 6 |
-| [`report_interpret/sales_assessment`](#report_interpretsales_assessment) | - | - | - | `stale` | 2 | 8 |
-| [`report_setup/custom_report_setup`](#report_setupcustom_report_setup) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 2 | 8 |
-| [`report_setup/initiative_setup`](#report_setupinitiative_setup) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 2 | 8 |
-| [`report_setup/sales_goal_months`](#report_setupsales_goal_months) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 2 | 6 |
-| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 9 | 9 |
-| [`rewrite/rewrite`](#rewriterewrite) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 | `current` | 4 | 4 |
-| [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.8-flash · cloud_frontier` | `certified` | 0.98 | `current` | 57 | 14 |
-| [`site_extract/profile`](#site_extractprofile) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 5 | 11 |
-| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
-| [`site_triage/triage`](#site_triagetriage) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 13 |
-| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 9 | 13 |
-| [`summarize/company_ask`](#summarizecompany_ask) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
-| [`summarize/company_brief`](#summarizecompany_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 13 |
-| [`summarize/company_dossier`](#summarizecompany_dossier) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
-| [`summarize/contact_brief`](#summarizecontact_brief) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
-| [`summarize/deal_room_brief`](#summarizedeal_room_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 8 |
-| [`summarize/meeting_brief`](#summarizemeeting_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 13 |
-| [`summarize/meeting_plan`](#summarizemeeting_plan) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 2 | 13 |
-| [`tag_suggest/interest`](#tag_suggestinterest) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 5 |
-| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 1.00 | `current` | 32 | 13 |
-| [`voice_build/demo_draft`](#voice_builddemo_draft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
-| [`voice_build/derive`](#voice_buildderive) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
-| [`voice_build/eval_draft`](#voice_buildeval_draft) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
-| [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 13 |
-| [`weekly_learnings/learn`](#weekly_learningslearn) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
-| [`weekly_review/narrative`](#weekly_reviewnarrative) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 13 |
+| [`offer_draft/draft`](#offer_draftdraft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.90, 1.00] | `current` | 5 | 13 |
+| [`owed_verdict/owed`](#owed_verdictowed) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.94, 1.00] | `current` | 9 | 9 |
+| [`propose_roles/committee`](#propose_rolescommittee) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 3 | 13 |
+| [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 2 | 14 |
+| [`reader_rendering/activity_text`](#reader_renderingactivity_text) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.95, 1.00] | `current` | 9 | 7 |
+| [`report_interpret/progress_summary`](#report_interpretprogress_summary) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 [0.92, 1.00] | `current` | 2 | 6 |
+| [`report_interpret/sales_assessment`](#report_interpretsales_assessment) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.88, 1.00] | `current` | 2 | 8 |
+| [`report_setup/custom_report_setup`](#report_setupcustom_report_setup) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 [0.79, 1.00] | `current` | 2 | 8 |
+| [`report_setup/initiative_setup`](#report_setupinitiative_setup) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 [0.79, 1.00] | `current` | 2 | 8 |
+| [`report_setup/sales_goal_months`](#report_setupsales_goal_months) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 [0.79, 1.00] | `current` | 2 | 6 |
+| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.94, 1.00] | `current` | 9 | 9 |
+| [`rewrite/rewrite`](#rewriterewrite) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 [0.94, 1.00] | `current` | 4 | 4 |
+| [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.99, 1.00] | `current` | 57 | 14 |
+| [`site_extract/profile`](#site_extractprofile) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.93, 1.00] | `current` | 5 | 11 |
+| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 3 | 13 |
+| [`site_triage/triage`](#site_triagetriage) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 [0.90, 1.00] | `current` | 5 | 13 |
+| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.94, 1.00] | `current` | 9 | 13 |
+| [`summarize/company_ask`](#summarizecompany_ask) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.94, 1.00] | `current` | 3 | 13 |
+| [`summarize/company_brief`](#summarizecompany_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.92, 1.00] | `current` | 2 | 13 |
+| [`summarize/company_dossier`](#summarizecompany_dossier) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.85, 1.00] | `current` | 1 | 13 |
+| [`summarize/contact_brief`](#summarizecontact_brief) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.93, 1.00] | `current` | 3 | 13 |
+| [`summarize/deal_room_brief`](#summarizedeal_room_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.95, 1.00] | `current` | 5 | 8 |
+| [`summarize/meeting_brief`](#summarizemeeting_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 1 | 13 |
+| [`summarize/meeting_plan`](#summarizemeeting_plan) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.88, 1.00] | `current` | 2 | 13 |
+| [`tag_suggest/interest`](#tag_suggestinterest) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 4 | 5 |
+| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 1.00 [0.98, 1.00] | `current` | 32 | 13 |
+| [`voice_build/demo_draft`](#voice_builddemo_draft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 [0.65, 1.00] | `current` | 1 | 13 |
+| [`voice_build/derive`](#voice_buildderive) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 [0.65, 1.00] | `current` | 1 | 13 |
+| [`voice_build/eval_draft`](#voice_buildeval_draft) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 [0.65, 1.00] | `current` | 1 | 13 |
+| [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 1 | 13 |
+| [`weekly_learnings/learn`](#weekly_learningslearn) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.85, 1.00] | `current` | 3 | 13 |
+| [`weekly_review/narrative`](#weekly_reviewnarrative) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.92, 1.00] | `current` | 5 | 13 |
 
 **Best model tested** is the strongest result that still describes what ships.
 Only a `current` or `partial` record is eligible; among those the pick is the
@@ -1395,25 +1394,24 @@ record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 56 | 42 | 0 | 14 | 1410 | 1379 | 0.98 | 24754ms | 32 | 19 | 5 |
-| `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 216 | 207 | 0.96 | 14416ms | 3 | 3 | 0 |
-| `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 40 | 6 | 0 | 34 | 468 | 468 | 1.00 | 16000ms | 31 | 8 | 1 |
-| `gemini` | `gemini-3.5-flash-lite` | `cloud_frontier` | 57 | 21 | 0 | 36 | 1407 | 1336 | 0.95 | 4842ms | 29 | 16 | 12 |
-| `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 9 | 7 | 0 | 2 | 201 | 201 | 1.00 | 10554ms | 6 | 3 | 0 |
-| `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 41 | 19 | 0 | 22 | 699 | 696 | 1.00 | 10104ms | 24 | 16 | 1 |
-| `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 1 | 1 | 0 | 0 | 177 | 174 | 0.98 | 8261ms | 1 | 0 | 0 |
-| `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 50 | 34 | 0 | 16 | 720 | 720 | 1.00 | 30194ms | 35 | 14 | 1 |
-| `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 0 | 0 | 6 | 189 | 166 | 0.88 | 15788ms | 1 | 1 | 4 |
-| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 53 | 19 | 0 | 34 | 1398 | 1373 | 0.98 | 28492ms | 37 | 14 | 2 |
-| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 41 | 7 | 0 | 34 | 615 | 488 | 0.79 | 83052ms | 11 | 10 | 20 |
-| `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 0 | 0 | 6 | 174 | 156 | 0.90 | 5038ms | 4 | 0 | 2 |
-| `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 45 | 7 | 0 | 38 | 711 | 658 | 0.93 | 13541ms | 19 | 16 | 10 |
-| `openai_compatible` | `mistralai/mistral-medium-3-5` | `eu_hosted` | 39 | 7 | 0 | 32 | 561 | 531 | 0.95 | 17751ms | 18 | 14 | 7 |
-| `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 5 | 1 | 0 | 4 | 93 | 77 | 0.83 | 4105ms | 3 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-6-luna` | `cloud_frontier` | 43 | 7 | 0 | 36 | 645 | 616 | 0.96 | 26943ms | 26 | 13 | 4 |
-| `openai_compatible` | `openai/gpt-6-sol` | `cloud_frontier` | 39 | 7 | 0 | 32 | 495 | 474 | 0.96 | 21274ms | 25 | 12 | 2 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 55 | 20 | 0 | 35 | 1713 | 1581 | 0.92 | 9507ms | 24 | 21 | 10 |
-| `openai_compatible` | `qwen/qwen3.8-27b` | `cloud_frontier` | 53 | 19 | 0 | 34 | 1380 | 1370 | 0.99 | 291372ms | 37 | 15 | 1 |
+| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 56 | 53 | 0 | 3 | 1395 | 1361 | 0.98 [0.97, 0.98] | 24754ms | 33 | 18 | 5 |
+| `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 216 | 207 | 0.96 [0.94, 0.97] | 14416ms | 3 | 3 | 0 |
+| `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 40 | 6 | 0 | 34 | 468 | 468 | 1.00 [1.00, 1.00] | 16000ms | 31 | 8 | 1 |
+| `gemini` | `gemini-3.5-flash-lite` | `cloud_frontier` | 57 | 21 | 0 | 36 | 1407 | 1336 | 0.95 [0.94, 0.96] | 4842ms | 29 | 16 | 12 |
+| `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 9 | 7 | 0 | 2 | 201 | 201 | 1.00 [0.99, 1.00] | 10554ms | 6 | 3 | 0 |
+| `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 41 | 19 | 0 | 22 | 699 | 696 | 1.00 [0.99, 1.00] | 10104ms | 24 | 16 | 1 |
+| `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 51 | 51 | 0 | 0 | 900 | 900 | 1.00 [1.00, 1.00] | 30194ms | 38 | 12 | 1 |
+| `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 0 | 0 | 6 | 189 | 166 | 0.88 [0.84, 0.91] | 15788ms | 1 | 1 | 4 |
+| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 53 | 19 | 0 | 34 | 1398 | 1373 | 0.98 [0.98, 0.99] | 28492ms | 37 | 14 | 2 |
+| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 41 | 7 | 0 | 34 | 615 | 488 | 0.79 [0.77, 0.81] | 83052ms | 11 | 10 | 20 |
+| `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 0 | 0 | 6 | 174 | 156 | 0.90 [0.86, 0.92] | 5038ms | 4 | 0 | 2 |
+| `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 45 | 7 | 0 | 38 | 711 | 658 | 0.93 [0.91, 0.94] | 13541ms | 19 | 16 | 10 |
+| `openai_compatible` | `mistralai/mistral-medium-3-5` | `eu_hosted` | 39 | 7 | 0 | 32 | 561 | 531 | 0.95 [0.93, 0.96] | 17751ms | 18 | 14 | 7 |
+| `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 5 | 1 | 0 | 4 | 93 | 77 | 0.83 [0.77, 0.87] | 4105ms | 3 | 1 | 1 |
+| `openai_compatible` | `openai/gpt-6-luna` | `cloud_frontier` | 43 | 7 | 0 | 36 | 645 | 616 | 0.96 [0.94, 0.96] | 26943ms | 26 | 13 | 4 |
+| `openai_compatible` | `openai/gpt-6-sol` | `cloud_frontier` | 39 | 7 | 0 | 32 | 495 | 474 | 0.96 [0.94, 0.97] | 21274ms | 25 | 12 | 2 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 55 | 20 | 0 | 35 | 1713 | 1581 | 0.92 [0.91, 0.93] | 9507ms | 24 | 21 | 10 |
+| `openai_compatible` | `qwen/qwen3.8-27b` | `cloud_frontier` | 53 | 19 | 0 | 34 | 1380 | 1370 | 0.99 [0.99, 1.00] | 291372ms | 37 | 15 | 1 |
 
 </details>
 
@@ -1440,7 +1438,6 @@ model, real network).
 |---|---|---|
 | `account_scan/company_scan` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `account_scan/company_scan` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered, scan_reads_the_thread_past_an_answered_ask |
-| `account_scan/company_scan` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered, scan_reads_the_thread_past_an_answered_ask |
 | `account_scan/company_scan` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered, scan_reads_the_thread_past_an_answered_ask |
 | `account_scan/company_scan` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `account_scan/company_scan` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
@@ -1478,7 +1475,6 @@ model, real network).
 | `brief_ranking/rank` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | the prompt this build sends changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | the prompt this build sends changed under scenario reorder_two_candidates_by_momentum since the record scored it |
 | `brief_ranking/rank` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | the prompt this build sends changed under scenario reorder_two_candidates_by_momentum since the record scored it |
-| `capture_classify/classify` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_plain_refusal_is_negative, a_refusing_subject_over_a_waiting_reply_is_not_a_refusal, a_short_reply_over_a_quoted_refusal_is_not_a_refusal, a_stated_promise_is_a_commitment and 3 more |
 | `capture_classify/classify` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_plain_refusal_is_negative, a_refusing_subject_over_a_waiting_reply_is_not_a_refusal, a_short_reply_over_a_quoted_refusal_is_not_a_refusal, a_stated_promise_is_a_commitment and 3 more |
 | `capture_classify/classify` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_classify/classify` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
@@ -1494,11 +1490,9 @@ model, real network).
 | `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | 15 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, a_trade_offices_city_mailbox_names_a_place_not_a_contact and 9 more (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, courteous_cold_pitch_is_spam, which the corpus no longer holds) |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | 15 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, a_trade_offices_city_mailbox_names_a_place_not_a_contact and 9 more (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, courteous_cold_pitch_is_spam, which the corpus no longer holds) |
 | `chat_summary/episode` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed |
-| `cold_start/acts` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/acts` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/acts` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/acts` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
-| `cold_start/acts` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/acts` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/acts` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/acts` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
@@ -1507,11 +1501,9 @@ model, real network).
 | `cold_start/acts` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/acts` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
 | `cold_start/acts` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope |
-| `cold_start/company_message` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/company_message` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/company_message` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/company_message` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
-| `cold_start/company_message` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/company_message` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/company_message` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/company_message` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
@@ -1520,11 +1512,9 @@ model, real network).
 | `cold_start/company_message` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/company_message` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/company_message` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
-| `cold_start/sitereadmessage` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for |
 | `cold_start/sitereadmessage` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for |
 | `cold_start/sitereadmessage` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for |
 | `cold_start/sitereadmessage` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for |
-| `cold_start/sitereadmessage` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for |
 | `cold_start/sitereadmessage` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for |
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for |
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for |
@@ -1537,7 +1527,6 @@ model, real network).
 | `corpus_ask/corpus_ask` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `corpus_ask/corpus_ask` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
@@ -1545,11 +1534,9 @@ model, real network).
 | `corpus_ask/corpus_ask` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `corpus_ask/corpus_ask` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
-| `deal_health/deal_status` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `deal_health/deal_status` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `deal_health/deal_status` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `deal_health/deal_status` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
-| `deal_health/deal_status` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `deal_health/deal_status` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `deal_health/deal_status` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `deal_health/deal_status` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): deal_status_an_overdue_task_is_not_done_work, deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
@@ -1562,12 +1549,10 @@ model, real network).
 | `deal_verdict/deal_verdict` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 7 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_friendly_check_in_changes_nothing, a_verbal_yes_names_the_price_and_moves_the_chances, an_old_price_in_quoted_history_sets_no_amount, our_own_hunch_does_not_lower_the_chances, the_buyer_asks_for_the_contract_and_the_deal_moves_on, the_buyers_budget_freeze_lowers_the_chances and 1 more |
 | `deal_verdict/deal_verdict` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 7 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_friendly_check_in_changes_nothing, a_verbal_yes_names_the_price_and_moves_the_chances, an_old_price_in_quoted_history_sets_no_amount, our_own_hunch_does_not_lower_the_chances, the_buyer_asks_for_the_contract_and_the_deal_moves_on, the_buyers_budget_freeze_lowers_the_chances and 1 more |
 | `document_extract/fields` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): attached_document_states_none_of_them, order_form_states_all_four, pdf_agreement_read_as_a_document_part, quote_states_money_but_no_close_date |
-| `draft_reply/account` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, an_unsigned_colleagues_mail_stays_out_of_an_account_draft, another_contacts_mail_stays_out_of_an_account_draft |
 | `draft_reply/account` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/account` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/account` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, an_unsigned_colleagues_mail_stays_out_of_an_account_draft, another_contacts_mail_stays_out_of_an_account_draft |
 | `draft_reply/account` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft |
-| `draft_reply/account` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, an_unsigned_colleagues_mail_stays_out_of_an_account_draft, another_contacts_mail_stays_out_of_an_account_draft |
 | `draft_reply/account` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft |
 | `draft_reply/account` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/account` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
@@ -1576,12 +1561,10 @@ model, real network).
 | `draft_reply/account` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario account_first_touch_with_a_deal_in_flight since the record scored it |
 | `draft_reply/account` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft |
 | `draft_reply/account` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft |
-| `draft_reply/contact` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_logged_internal_note_stays_out_of_the_draft, contact_first_touch_in_german |
 | `draft_reply/contact` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
 | `draft_reply/contact` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
 | `draft_reply/contact` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_logged_internal_note_stays_out_of_the_draft, contact_first_touch_in_german |
 | `draft_reply/contact` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_logged_internal_note_stays_out_of_the_draft, contact_first_touch_in_german |
-| `draft_reply/contact` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_logged_internal_note_stays_out_of_the_draft, contact_first_touch_in_german |
 | `draft_reply/contact` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_logged_internal_note_stays_out_of_the_draft, contact_first_touch_in_german |
 | `draft_reply/contact` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
 | `draft_reply/contact` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | the case and the prompt this build sends and how a run is graded changed under scenario contact_first_touch_in_german since the record scored it |
@@ -1599,12 +1582,10 @@ model, real network).
 | `draft_reply/intro_note` | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
 | `draft_reply/intro_note` | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
 | `draft_reply/intro_note` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_instruction_inside_the_stated_reason_is_data_not_a_command, intro_note_claims_no_more_warmth_than_the_record_holds, intro_note_is_written_to_the_customer_not_about_the_request |
-| `draft_reply/reply` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask, selected_old_request_for_materials |
 | `draft_reply/reply` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask, selected_old_request_for_materials |
 | `draft_reply/reply` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask, selected_old_request_for_materials |
-| `draft_reply/reply` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask, selected_old_request_for_materials |
 | `draft_reply/reply` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask, selected_old_request_for_materials |
 | `draft_reply/reply` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
@@ -1644,7 +1625,6 @@ model, real network).
 | `offer_draft/draft` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_prices_every_line_from_its_own_evidence, two_sources_disagree_on_price |
 | `offer_draft/draft` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_prices_every_line_from_its_own_evidence, two_sources_disagree_on_price |
 | `offer_draft/draft` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_prices_every_line_from_its_own_evidence, two_sources_disagree_on_price |
-| `owed_verdict/owed` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more |
 | `owed_verdict/owed` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more |
 | `owed_verdict/owed` | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | 6 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, the_recipient_line_separates_a_request_from_a_copy |
 | `owed_verdict/owed` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more |
@@ -1654,16 +1634,12 @@ model, real network).
 | `owed_verdict/owed` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more |
 | `owed_verdict/owed` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more |
 | `rate_extract/fx` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
-| `report_interpret/progress_summary` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): progress_summary_judges_nothing_against_a_goal_nobody_set, progress_summary_names_what_is_missing_to_the_goal |
 | `report_interpret/progress_summary` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): progress_summary_judges_nothing_against_a_goal_nobody_set, progress_summary_names_what_is_missing_to_the_goal |
 | `report_interpret/progress_summary` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): progress_summary_judges_nothing_against_a_goal_nobody_set, progress_summary_names_what_is_missing_to_the_goal |
-| `report_interpret/progress_summary` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): progress_summary_judges_nothing_against_a_goal_nobody_set, progress_summary_names_what_is_missing_to_the_goal |
 | `report_interpret/progress_summary` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): progress_summary_judges_nothing_against_a_goal_nobody_set, progress_summary_names_what_is_missing_to_the_goal |
 | `report_interpret/progress_summary` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): progress_summary_judges_nothing_against_a_goal_nobody_set, progress_summary_names_what_is_missing_to_the_goal |
-| `report_interpret/sales_assessment` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers |
 | `report_interpret/sales_assessment` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers |
 | `report_interpret/sales_assessment` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers |
-| `report_interpret/sales_assessment` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers |
 | `report_interpret/sales_assessment` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers |
 | `report_interpret/sales_assessment` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers |
 | `report_interpret/sales_assessment` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers |
@@ -1728,7 +1704,6 @@ model, real network).
 | `stage_evidence_extract/criteria` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_conversation_about_something_else, a_correspondent_tries_to_settle_their_own_criteria, a_date_floated_is_not_a_date_agreed, a_settled_fact_no_criterion_asks_about, talking_about_signing_is_not_signing, the_buyer_names_who_signs and 3 more |
 | `summarize/company_ask` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
 | `summarize/company_ask` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history, ask_whats_open_names_the_promise_each_side_owes |
-| `summarize/company_ask` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_whats_open_answers_the_pipeline_not_the_history, ask_whats_open_names_the_promise_each_side_owes |
 | `summarize/company_ask` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history, ask_whats_open_names_the_promise_each_side_owes |
 | `summarize/company_ask` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history |
 | `summarize/company_ask` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history, ask_whats_open_names_the_promise_each_side_owes |
@@ -1739,7 +1714,6 @@ model, real network).
 | `summarize/company_ask` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history, ask_whats_open_names_the_promise_each_side_owes |
 | `summarize/company_brief` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
 | `summarize/company_brief` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
-| `summarize/company_brief` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
 | `summarize/company_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
 | `summarize/company_brief` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
 | `summarize/company_brief` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
@@ -1750,7 +1724,6 @@ model, real network).
 | `summarize/company_brief` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section |
 | `summarize/company_dossier` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
 | `summarize/company_dossier` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
-| `summarize/company_dossier` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
 | `summarize/company_dossier` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
 | `summarize/company_dossier` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
 | `summarize/company_dossier` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
@@ -1761,7 +1734,6 @@ model, real network).
 | `summarize/company_dossier` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it |
 | `summarize/contact_brief` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
 | `summarize/contact_brief` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_states_the_promised_date, contact_brief_stays_silent_about_what_the_reader_may_not_see |
-| `summarize/contact_brief` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_states_the_promised_date, contact_brief_stays_silent_about_what_the_reader_may_not_see |
 | `summarize/contact_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_states_the_promised_date, contact_brief_stays_silent_about_what_the_reader_may_not_see |
 | `summarize/contact_brief` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
 | `summarize/contact_brief` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_states_the_promised_date, contact_brief_stays_silent_about_what_the_reader_may_not_see |
@@ -1771,7 +1743,6 @@ model, real network).
 | `summarize/contact_brief` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_states_the_promised_date, contact_brief_stays_silent_about_what_the_reader_may_not_see |
 | `summarize/contact_brief` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_states_the_promised_date, contact_brief_stays_silent_about_what_the_reader_may_not_see |
 | `summarize/deal_room_brief` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_room_brief_names_the_buyer_who_set_it, deal_room_brief_only_routine_asks, deal_room_brief_reads_the_blocker, deal_room_brief_resolved_condition, deal_room_brief_seller_wrote_the_condition |
-| `summarize/deal_room_brief` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_room_brief_names_the_buyer_who_set_it, deal_room_brief_only_routine_asks, deal_room_brief_reads_the_blocker, deal_room_brief_resolved_condition, deal_room_brief_seller_wrote_the_condition |
 | `summarize/deal_room_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_room_brief_names_the_buyer_who_set_it, deal_room_brief_only_routine_asks, deal_room_brief_reads_the_blocker, deal_room_brief_resolved_condition, deal_room_brief_seller_wrote_the_condition |
 | `summarize/deal_room_brief` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_room_brief_names_the_buyer_who_set_it, deal_room_brief_only_routine_asks, deal_room_brief_reads_the_blocker, deal_room_brief_resolved_condition, deal_room_brief_seller_wrote_the_condition |
 | `summarize/deal_room_brief` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): deal_room_brief_names_the_buyer_who_set_it, deal_room_brief_only_routine_asks, deal_room_brief_reads_the_blocker, deal_room_brief_resolved_condition, deal_room_brief_seller_wrote_the_condition |
@@ -1916,19 +1887,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1088ms | 1332ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 6437ms | 9766ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1262ms | 1471ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 4105ms | 5963ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 4316ms | 8511ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1267ms | 1650ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 15 | 15 | 1.00 | 3400ms | 36507ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 1529ms | 3535ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 1492ms | 3347ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 4366ms | 6215ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 6028ms | 7355ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 15 | 15 | 1.00 | 898ms | 3477ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 94247ms | 191650ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1088ms | 1332ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 6437ms | 9766ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1262ms | 1471ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 4105ms | 5963ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 4316ms | 8511ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1267ms | 1650ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3400ms | 36507ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1529ms | 3535ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1492ms | 3347ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 4366ms | 6215ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 6028ms | 7355ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 15 | 15 | 1.00 [0.90, 1.00] | 898ms | 3477ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 94247ms | 191650ms | 9 | 0 | 0 | 0 |
 
 </details>
 
@@ -1955,19 +1926,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1687ms | 2094ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1569ms | 1751ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2889ms | 30194ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1238ms | 4595ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 955ms | 1708ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1645ms | 2943ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 2047ms | 4446ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1084ms | 1914ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 8039ms | 69567ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1687ms | 2094ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1569ms | 1751ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2889ms | 30194ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1238ms | 4595ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 955ms | 1708ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1645ms | 2943ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2047ms | 4446ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1084ms | 1914ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 8039ms | 69567ms | 9 | 0 | 0 | 0 |
 
 </details>
 
@@ -1990,19 +1961,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1687ms | 2094ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1569ms | 1751ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2889ms | 30194ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1238ms | 4595ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 955ms | 1708ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1645ms | 2943ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 2047ms | 4446ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1084ms | 1914ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 8039ms | 69567ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1687ms | 2094ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1569ms | 1751ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2889ms | 30194ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1238ms | 4595ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 955ms | 1708ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1645ms | 2943ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2047ms | 4446ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1084ms | 1914ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 8039ms | 69567ms | 9 | 0 | 0 | 0 |
 
 </details>
 
@@ -2025,27 +1996,27 @@ Records (14):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 654ms | 782ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 2786ms | 3187ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 917ms | 1541ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 1851ms | 2161ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 3026ms | 3846ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 814ms | 911ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 1702ms | 2976ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 937ms | 4453ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 1011ms | 1747ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 1776ms | 2050ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 2601ms | 3321ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 2498ms | 3278ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 835ms | 1274ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 7561ms | 15996ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 654ms | 782ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2786ms | 3187ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 917ms | 1541ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1851ms | 2161ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3026ms | 3846ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 814ms | 911ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1702ms | 2976ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 937ms | 4453ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1011ms | 1747ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1776ms | 2050ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2601ms | 3321ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2498ms | 3278ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 835ms | 1274ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 7561ms | 15996ms | 9 | 0 | 0 | 0 |
 
 </details>
 
 #### `capture_classify`
 
 <details>
-<summary><code>capture_classify/classify</code>: 10 scenario(s), 9 record(s), best state stale</summary>
+<summary><code>capture_classify/classify</code>: 10 scenario(s), 9 record(s), best state current</summary>
 
 ##### `capture_classify/classify`
 
@@ -2070,15 +2041,15 @@ Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/10 | `certified` | 30 | 30 | 1.00 | 1100ms | 1525ms | 30 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/10 | `not_supported` | 27 | 24 | 0.89 | 1034ms | 1508ms | 24 | 3 | 0 | 0 |
-| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/10 | `supported_degraded` | 27 | 21 | 0.78 | 3029ms | 15788ms | 21 | 0 | 6 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/10 | `certified` | 18 | 18 | 1.00 | 1554ms | 5410ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/10 | `certified` | 15 | 15 | 1.00 | 1469ms | 2917ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/10 | `certified` | 15 | 15 | 1.00 | 2129ms | 3157ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/10 | `not_supported` | 15 | 9 | 0.60 | 3169ms | 4467ms | 9 | 6 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/10 | `not_supported` | 36 | 29 | 0.81 | 737ms | 925ms | 29 | 7 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/10 | `certified` | 15 | 15 | 1.00 | 6709ms | 35670ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 10/10 | `certified` | 30 | 30 | 1.00 [0.95, 1.00] | 1100ms | 1525ms | 30 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/10 | `not_supported` | 27 | 24 | 0.89 [0.79, 0.95] | 1034ms | 1508ms | 24 | 3 | 0 | 0 |
+| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/10 | `supported_degraded` | 27 | 21 | 0.78 [0.66, 0.86] | 3029ms | 15788ms | 21 | 0 | 6 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/10 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 1554ms | 5410ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/10 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1469ms | 2917ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/10 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2129ms | 3157ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/10 | `not_supported` | 15 | 9 | 0.60 [0.44, 0.74] | 3169ms | 4467ms | 9 | 6 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/10 | `not_supported` | 36 | 29 | 0.81 [0.71, 0.88] | 737ms | 925ms | 29 | 7 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/10 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 6709ms | 35670ms | 15 | 0 | 0 | 0 |
 
 </details>
 
@@ -2101,11 +2072,11 @@ Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1100ms | 1525ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1034ms | 1508ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1554ms | 5410ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 737ms | 925ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 15 | 13 | 0.87 | 6709ms | 35670ms | 13 | 2 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1100ms | 1525ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1034ms | 1508ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1554ms | 5410ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 737ms | 925ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 15 | 13 | 0.87 [0.72, 0.94] | 6709ms | 35670ms | 13 | 2 | 0 | 0 |
 
 </details>
 
@@ -2151,14 +2122,14 @@ Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 24/24 | `certified` | 288 | 288 | 1.00 | 746ms | 1072ms | 288 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 24/24 | `certified` | 288 | 288 | 1.00 | 973ms | 1339ms | 288 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/24 | `certified` | 42 | 42 | 1.00 | 1534ms | 2362ms | 42 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 24/24 | `certified` | 288 | 288 | 1.00 | 976ms | 1591ms | 288 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/24 | `certified` | 48 | 45 | 0.94 | 1533ms | 2256ms | 45 | 3 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/24 | `not_supported` | 42 | 36 | 0.86 | 2205ms | 3936ms | 36 | 6 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 24/24 | `certified` | 288 | 288 | 1.00 | 682ms | 1016ms | 288 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 24/24 | `certified` | 288 | 288 | 1.00 | 7272ms | 24274ms | 288 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 24/24 | `certified` | 288 | 288 | 1.00 [0.99, 1.00] | 746ms | 1072ms | 288 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 24/24 | `certified` | 288 | 288 | 1.00 [0.99, 1.00] | 973ms | 1339ms | 288 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/24 | `certified` | 42 | 42 | 1.00 [0.96, 1.00] | 1534ms | 2362ms | 42 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 24/24 | `certified` | 288 | 288 | 1.00 [0.99, 1.00] | 976ms | 1591ms | 288 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/24 | `certified` | 48 | 45 | 0.94 [0.88, 0.97] | 1533ms | 2256ms | 45 | 3 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/24 | `not_supported` | 42 | 36 | 0.86 [0.77, 0.91] | 2205ms | 3936ms | 36 | 6 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 24/24 | `certified` | 288 | 288 | 1.00 [0.99, 1.00] | 682ms | 1016ms | 288 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 24/24 | `certified` | 288 | 288 | 1.00 [0.99, 1.00] | 7272ms | 24274ms | 288 | 0 | 0 | 0 |
 
 </details>
 
@@ -2201,14 +2172,14 @@ Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 21/21 | `certified` | 147 | 147 | 1.00 | 775ms | 1131ms | 147 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 21/21 | `certified` | 153 | 150 | 0.98 | 994ms | 1376ms | 150 | 3 | 0 | 0 |
-| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/21 | `not_supported` | 75 | 68 | 0.91 | 1913ms | 4624ms | 68 | 3 | 4 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 21/21 | `certified` | 147 | 147 | 1.00 | 1354ms | 2133ms | 147 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/21 | `not_supported` | 63 | 51 | 0.81 | 1563ms | 2411ms | 51 | 12 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/21 | `not_supported` | 60 | 56 | 0.93 | 2349ms | 3927ms | 56 | 4 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 21/21 | `not_supported` | 150 | 145 | 0.97 | 851ms | 2462ms | 145 | 5 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 21/21 | `certified` | 147 | 147 | 1.00 | 8515ms | 24950ms | 147 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 21/21 | `certified` | 147 | 147 | 1.00 [0.99, 1.00] | 775ms | 1131ms | 147 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 21/21 | `certified` | 153 | 150 | 0.98 [0.96, 0.99] | 994ms | 1376ms | 150 | 3 | 0 | 0 |
+| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/21 | `not_supported` | 75 | 68 | 0.91 [0.85, 0.94] | 1913ms | 4624ms | 68 | 3 | 4 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 21/21 | `certified` | 147 | 147 | 1.00 [0.99, 1.00] | 1354ms | 2133ms | 147 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/21 | `not_supported` | 63 | 51 | 0.81 [0.74, 0.86] | 1563ms | 2411ms | 51 | 12 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/21 | `not_supported` | 60 | 56 | 0.93 [0.88, 0.96] | 2349ms | 3927ms | 56 | 4 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 21/21 | `not_supported` | 150 | 145 | 0.97 [0.94, 0.98] | 851ms | 2462ms | 145 | 5 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 21/21 | `certified` | 147 | 147 | 1.00 [0.99, 1.00] | 8515ms | 24950ms | 147 | 0 | 0 | 0 |
 
 </details>
 
@@ -2232,20 +2203,20 @@ Records (14):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 857ms | 1067ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1634ms | 1865ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 996ms | 1197ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1437ms | 2901ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 2099ms | 3438ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1057ms | 1534ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1064ms | 1578ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 794ms | 1282ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1206ms | 2158ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 2/2 | `certified` | 18 | 17 | 0.94 | 1373ms | 1865ms | 17 | 1 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 3814ms | 4601ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 2796ms | 5618ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 756ms | 2309ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 2/2 | `certified` | 18 | 17 | 0.94 | 6723ms | 29462ms | 17 | 1 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 857ms | 1067ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1634ms | 1865ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 996ms | 1197ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1437ms | 2901ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 2099ms | 3438ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1057ms | 1534ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1064ms | 1578ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 794ms | 1282ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1206ms | 2158ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 2/2 | `certified` | 18 | 17 | 0.94 [0.83, 0.98] | 1373ms | 1865ms | 17 | 1 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3814ms | 4601ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 2796ms | 5618ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 756ms | 2309ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 2/2 | `certified` | 18 | 17 | 0.94 [0.83, 0.98] | 6723ms | 29462ms | 17 | 1 | 0 | 0 |
 
 </details>
 
@@ -2270,16 +2241,16 @@ Records (3):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 15 | 15 | 1.00 | 1421ms | 1944ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 1230ms | 1544ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 3364ms | 4445ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1421ms | 1944ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1230ms | 1544ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3364ms | 4445ms | 9 | 0 | 0 | 0 |
 
 </details>
 
 #### `cold_start`
 
 <details>
-<summary><code>cold_start/acts</code>: 5 scenario(s), 13 record(s), best state stale</summary>
+<summary><code>cold_start/acts</code>: 5 scenario(s), 13 record(s), best state current</summary>
 
 ##### `cold_start/acts`
 
@@ -2299,24 +2270,24 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 | 1462ms | 3143ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 2930ms | 4263ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1443ms | 2741ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 2695ms | 4617ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 3907ms | 7999ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1246ms | 3317ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 27 | 20 | 0.74 | 2191ms | 6609ms | 20 | 7 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 | 1207ms | 3300ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1310ms | 3022ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 24 | 22 | 0.92 | 3399ms | 5179ms | 22 | 2 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 | 3145ms | 5364ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 21 | 20 | 0.95 | 681ms | 2160ms | 20 | 1 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 6244ms | 59190ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 21 | 21 | 1.00 [0.93, 1.00] | 1249ms | 2798ms | 21 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2930ms | 4263ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1443ms | 2741ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2695ms | 4617ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3907ms | 7999ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1246ms | 3317ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 27 | 20 | 0.74 [0.62, 0.83] | 2191ms | 6609ms | 20 | 7 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 1207ms | 3300ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1310ms | 3022ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 24 | 22 | 0.92 [0.82, 0.96] | 3399ms | 5179ms | 22 | 2 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 3145ms | 5364ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 21 | 20 | 0.95 [0.85, 0.99] | 681ms | 2160ms | 20 | 1 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 6244ms | 59190ms | 15 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>cold_start/company_message</code>: 1 scenario(s), 13 record(s), best state stale</summary>
+<summary><code>cold_start/company_message</code>: 1 scenario(s), 13 record(s), best state current</summary>
 
 ##### `cold_start/company_message`
 
@@ -2332,19 +2303,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1462ms | 3143ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 2930ms | 4263ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1443ms | 2741ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 2695ms | 4617ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 3907ms | 7999ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 6 | 5 | 0.83 | 1246ms | 3317ms | 5 | 0 | 1 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 2191ms | 6609ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 1207ms | 3300ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 1310ms | 3022ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 3399ms | 5179ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 3145ms | 5364ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 681ms | 2160ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 6244ms | 59190ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` (this site: thinking low) | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1249ms | 2798ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 2930ms | 4263ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1443ms | 2741ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 2695ms | 4617ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3907ms | 7999ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 6 | 5 | 0.83 [0.57, 0.95] | 1246ms | 3317ms | 5 | 0 | 1 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 2191ms | 6609ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 1207ms | 3300ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 1310ms | 3022ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 3399ms | 5179ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 3145ms | 5364ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 681ms | 2160ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` (this site: thinking low) | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 6244ms | 59190ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -2365,24 +2336,24 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1462ms | 3143ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 2930ms | 4263ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1443ms | 2741ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 2695ms | 4617ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3907ms | 7999ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1246ms | 3317ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 2191ms | 6609ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1207ms | 3300ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1310ms | 3022ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3399ms | 5179ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3145ms | 5364ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 681ms | 2160ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 6244ms | 59190ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1249ms | 2798ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 2930ms | 4263ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1443ms | 2741ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 2695ms | 4617ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 3907ms | 7999ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1246ms | 3317ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 2191ms | 6609ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1207ms | 3300ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1310ms | 3022ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 3399ms | 5179ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 3145ms | 5364ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 681ms | 2160ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 6244ms | 59190ms | 3 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>cold_start/sitereadmessage</code>: 4 scenario(s), 13 record(s), best state stale</summary>
+<summary><code>cold_start/sitereadmessage</code>: 4 scenario(s), 13 record(s), best state current</summary>
 
 ##### `cold_start/sitereadmessage`
 
@@ -2401,26 +2372,26 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `supported_degraded` | 18 | 16 | 0.89 | 1462ms | 3143ms | 16 | 0 | 2 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 2930ms | 4263ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 1443ms | 2741ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 2695ms | 4617ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 3907ms | 7999ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 1246ms | 3317ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` (this site: thinking low) | `stale` | 0/4 | `supported_degraded` | 18 | 14 | 0.78 | 2191ms | 6609ms | 14 | 0 | 4 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 1207ms | 3300ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 1310ms | 3022ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 3399ms | 5179ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 3145ms | 5364ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `supported_degraded` | 18 | 16 | 0.89 | 681ms | 2160ms | 16 | 2 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 6244ms | 59190ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` (this site: thinking low) | `current` | 4/4 | `supported_degraded` | 18 | 16 | 0.89 [0.76, 0.95] | 1249ms | 2798ms | 16 | 0 | 2 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 2930ms | 4263ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1443ms | 2741ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 2695ms | 4617ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3907ms | 7999ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1246ms | 3317ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` (this site: thinking low) | `stale` | 0/4 | `supported_degraded` | 18 | 14 | 0.78 [0.63, 0.88] | 2191ms | 6609ms | 14 | 0 | 4 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1207ms | 3300ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1310ms | 3022ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3399ms | 5179ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3145ms | 5364ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `supported_degraded` | 18 | 16 | 0.89 [0.76, 0.95] | 681ms | 2160ms | 16 | 2 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` (this site: thinking low) | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 6244ms | 59190ms | 12 | 0 | 0 | 0 |
 
 </details>
 
 #### `corpus_ask`
 
 <details>
-<summary><code>corpus_ask/corpus_ask</code>: 5 scenario(s), 12 record(s), best state stale</summary>
+<summary><code>corpus_ask/corpus_ask</code>: 5 scenario(s), 12 record(s), best state current</summary>
 
 ##### `corpus_ask/corpus_ask`
 
@@ -2440,25 +2411,25 @@ Records (12):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1138ms | 1493ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 | 2718ms | 4704ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1142ms | 1395ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 2733ms | 5265ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 3269ms | 4726ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1552ms | 2035ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1538ms | 2200ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1615ms | 4859ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1982ms | 4105ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 2968ms | 7167ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 17 | 0.94 | 958ms | 2034ms | 17 | 1 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 8518ms | 41771ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1138ms | 1493ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 2718ms | 4704ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1142ms | 1395ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2733ms | 5265ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3269ms | 4726ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1552ms | 2035ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1538ms | 2200ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1615ms | 4859ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1982ms | 4105ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2968ms | 7167ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 17 | 0.94 [0.83, 0.98] | 958ms | 2034ms | 17 | 1 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 8518ms | 41771ms | 15 | 0 | 0 | 0 |
 
 </details>
 
 #### `deal_health`
 
 <details>
-<summary><code>deal_health/deal_status</code>: 3 scenario(s), 13 record(s), best state stale</summary>
+<summary><code>deal_health/deal_status</code>: 3 scenario(s), 13 record(s), best state current</summary>
 
 ##### `deal_health/deal_status`
 
@@ -2476,19 +2447,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 27 | 27 | 1.00 | 1706ms | 2629ms | 27 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 7495ms | 9281ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 9 | 1.00 | 1443ms | 1815ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `supported_degraded` | 27 | 27 | 1.00 | 5659ms | 10104ms | 27 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 3686ms | 4752ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 15 | 15 | 1.00 | 3758ms | 6305ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 24 | 24 | 1.00 | 7601ms | 11327ms | 24 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 15 | 15 | 1.00 | 2613ms | 6122ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 21 | 21 | 1.00 | 2903ms | 3650ms | 21 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 15 | 15 | 1.00 | 17970ms | 26943ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 13705ms | 21274ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 27 | 25 | 0.93 | 1115ms | 1598ms | 25 | 0 | 2 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 66571ms | 71792ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 24 | 23 | 0.96 [0.87, 0.99] | 1706ms | 2629ms | 23 | 0 | 1 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 7495ms | 9281ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 9 | 1.00 [0.85, 1.00] | 1443ms | 1815ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `supported_degraded` | 27 | 27 | 1.00 [0.94, 1.00] | 5659ms | 10104ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3686ms | 4752ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3758ms | 6305ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 24 | 24 | 1.00 [0.94, 1.00] | 7601ms | 11327ms | 24 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 15 | 15 | 1.00 [0.90, 1.00] | 2613ms | 6122ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 21 | 21 | 1.00 [0.93, 1.00] | 2903ms | 3650ms | 21 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 17970ms | 26943ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 13705ms | 21274ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 27 | 25 | 0.93 [0.83, 0.97] | 1115ms | 1598ms | 25 | 0 | 2 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 66571ms | 71792ms | 9 | 0 | 0 | 0 |
 
 </details>
 
@@ -2517,11 +2488,11 @@ Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 7/7 | `certified` | 21 | 21 | 1.00 | 1398ms | 1895ms | 21 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 7/7 | `not_supported` | 63 | 55 | 0.87 | 1095ms | 1696ms | 55 | 7 | 1 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/7 | `supported_degraded` | 27 | 25 | 0.93 | 2143ms | 6417ms | 25 | 2 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/7 | `supported_degraded` | 27 | 26 | 0.96 | 1001ms | 2079ms | 26 | 1 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/7 | `certified` | 21 | 21 | 1.00 | 15699ms | 63612ms | 21 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 7/7 | `certified` | 21 | 21 | 1.00 [0.93, 1.00] | 1398ms | 1895ms | 21 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 7/7 | `not_supported` | 63 | 55 | 0.87 [0.81, 0.92] | 1095ms | 1696ms | 55 | 7 | 1 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/7 | `supported_degraded` | 27 | 25 | 0.93 [0.83, 0.97] | 2143ms | 6417ms | 25 | 2 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/7 | `supported_degraded` | 27 | 26 | 0.96 [0.88, 0.99] | 1001ms | 2079ms | 26 | 1 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/7 | `certified` | 21 | 21 | 1.00 [0.93, 1.00] | 15699ms | 63612ms | 21 | 0 | 0 | 0 |
 
 </details>
 
@@ -2545,8 +2516,8 @@ Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 2335ms | 2993ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 3735ms | 4499ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 2335ms | 2993ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3735ms | 4499ms | 6 | 0 | 0 | 0 |
 
 </details>
 
@@ -2568,8 +2539,8 @@ Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 2335ms | 2993ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 3735ms | 4499ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 2335ms | 2993ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3735ms | 4499ms | 6 | 0 | 0 | 0 |
 
 </details>
 
@@ -2593,9 +2564,9 @@ Records (3):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 4766ms | 5912ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 2335ms | 2993ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 3735ms | 4499ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 4766ms | 5912ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 2335ms | 2993ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3735ms | 4499ms | 12 | 0 | 0 | 0 |
 
 </details>
 
@@ -2604,7 +2575,7 @@ Records (3):
 Certified without the company context production prepends (`positioning`, `sales`, `proof`, `market`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>draft_reply/account</code>: 3 scenario(s), 14 record(s), best state stale</summary>
+<summary><code>draft_reply/account</code>: 3 scenario(s), 14 record(s), best state current</summary>
 
 ##### `draft_reply/account`
 
@@ -2622,25 +2593,25 @@ Records (14):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `not_supported` | 39 | 39 | 1.00 | 1603ms | 3410ms | 39 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 3 | 3 | 1.00 | 8567ms | 12492ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `supported_degraded` | 3 | 3 | 1.00 | 4297ms | 9960ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 39 | 39 | 1.00 | 1374ms | 2936ms | 39 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `not_supported` | 18 | 18 | 1.00 | 4635ms | 7681ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `not_supported` | 39 | 39 | 1.00 | 3919ms | 23387ms | 39 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 18 | 18 | 1.00 | 1932ms | 6353ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 3 | 3 | 1.00 | 5753ms | 30271ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 | 1435ms | 4154ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 | 1556ms | 3315ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 3 | 3 | 1.00 | 4568ms | 12191ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 3 | 3 | 1.00 | 5013ms | 9755ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 21 | 21 | 1.00 | 1083ms | 1834ms | 21 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `not_supported` | 18 | 18 | 1.00 | 51998ms | 89773ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `not_supported` | 33 | 33 | 1.00 [0.95, 1.00] | 1603ms | 3410ms | 33 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 8567ms | 12492ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 4297ms | 9960ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 39 | 39 | 1.00 [0.96, 1.00] | 1374ms | 2936ms | 39 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `not_supported` | 18 | 18 | 1.00 [0.92, 1.00] | 4635ms | 7681ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `not_supported` | 33 | 33 | 1.00 [0.95, 1.00] | 3919ms | 23387ms | 33 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 1932ms | 6353ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 3 | 3 | 1.00 [0.65, 1.00] | 5753ms | 30271ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1435ms | 4154ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1556ms | 3315ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 4568ms | 12191ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 5013ms | 9755ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 21 | 21 | 1.00 [0.93, 1.00] | 1083ms | 1834ms | 21 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `not_supported` | 18 | 18 | 1.00 [0.92, 1.00] | 51998ms | 89773ms | 18 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>draft_reply/contact</code>: 2 scenario(s), 14 record(s), best state stale</summary>
+<summary><code>draft_reply/contact</code>: 2 scenario(s), 14 record(s), best state current</summary>
 
 ##### `draft_reply/contact`
 
@@ -2657,20 +2628,20 @@ Records (14):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 24 | 24 | 1.00 | 1603ms | 3410ms | 24 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 | 8567ms | 12492ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 4297ms | 9960ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 | 1374ms | 2936ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 | 4635ms | 7681ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 | 3919ms | 23387ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 | 1932ms | 6353ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `not_supported` | 3 | 3 | 1.00 | 5753ms | 30271ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 1435ms | 4154ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 1556ms | 3315ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 | 4568ms | 12191ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 | 5013ms | 9755ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 | 1083ms | 1834ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 | 51998ms | 89773ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 1603ms | 3410ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 8567ms | 12492ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 4297ms | 9960ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 1374ms | 2936ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 4635ms | 7681ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 3919ms | 23387ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 1932ms | 6353ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `not_supported` | 3 | 3 | 1.00 [0.65, 1.00] | 5753ms | 30271ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1435ms | 4154ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1556ms | 3315ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 4568ms | 12191ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 5013ms | 9755ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 1083ms | 1834ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 51998ms | 89773ms | 18 | 0 | 0 | 0 |
 
 </details>
 
@@ -2692,20 +2663,20 @@ Records (14):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 9 | 9 | 1.00 | 1603ms | 3410ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 8567ms | 12492ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 4297ms | 9960ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1374ms | 2936ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 4635ms | 7681ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 9 | 9 | 1.00 | 3919ms | 23387ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1932ms | 6353ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 9 | 0 | 0.00 | 5753ms | 30271ms | 0 | 0 | 9 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 15 | 15 | 1.00 | 1435ms | 4154ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 15 | 15 | 1.00 | 1556ms | 3315ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 9 | 8 | 0.89 | 4568ms | 12191ms | 8 | 1 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 12 | 12 | 1.00 | 5013ms | 9755ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1083ms | 1834ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 51998ms | 89773ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1603ms | 3410ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 8567ms | 12492ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 4297ms | 9960ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1374ms | 2936ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 4635ms | 7681ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3919ms | 23387ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1932ms | 6353ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 9 | 0 | 0.00 [-0.00, 0.15] | 5753ms | 30271ms | 0 | 0 | 9 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1435ms | 4154ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 15 | 15 | 1.00 [0.90, 1.00] | 1556ms | 3315ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 9 | 8 | 0.89 [0.69, 0.97] | 4568ms | 12191ms | 8 | 1 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 12 | 12 | 1.00 [0.88, 1.00] | 5013ms | 9755ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1083ms | 1834ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 51998ms | 89773ms | 6 | 0 | 0 | 0 |
 
 </details>
 
@@ -2728,25 +2699,25 @@ Records (14):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1603ms | 3410ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 8567ms | 12492ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 4297ms | 9960ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1374ms | 2936ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 4635ms | 7681ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 3919ms | 23387ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1932ms | 6353ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 12 | 9 | 0.75 | 5753ms | 30271ms | 9 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `not_supported` | 18 | 12 | 0.67 | 1435ms | 4154ms | 12 | 6 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `not_supported` | 18 | 12 | 0.67 | 1556ms | 3315ms | 12 | 6 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 4568ms | 12191ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 5013ms | 9755ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 15 | 12 | 0.80 | 1083ms | 1834ms | 12 | 1 | 2 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 15 | 15 | 1.00 | 51998ms | 89773ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1603ms | 3410ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 8567ms | 12492ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 4297ms | 9960ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1374ms | 2936ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 4635ms | 7681ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3919ms | 23387ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1932ms | 6353ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 12 | 9 | 0.75 [0.57, 0.87] | 5753ms | 30271ms | 9 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `not_supported` | 18 | 12 | 0.67 [0.52, 0.79] | 1435ms | 4154ms | 12 | 6 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `not_supported` | 18 | 12 | 0.67 [0.52, 0.79] | 1556ms | 3315ms | 12 | 6 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 4568ms | 12191ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 5013ms | 9755ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 15 | 12 | 0.80 [0.64, 0.90] | 1083ms | 1834ms | 12 | 1 | 2 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 15 | 15 | 1.00 [0.90, 1.00] | 51998ms | 89773ms | 15 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>draft_reply/reply</code>: 5 scenario(s), 14 record(s), best state stale</summary>
+<summary><code>draft_reply/reply</code>: 5 scenario(s), 14 record(s), best state current</summary>
 
 ##### `draft_reply/reply`
 
@@ -2766,20 +2737,20 @@ Records (14):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 45 | 45 | 1.00 | 1603ms | 3410ms | 45 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 18 | 18 | 1.00 | 8567ms | 12492ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `supported_degraded` | 18 | 18 | 1.00 | 4297ms | 9960ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 33 | 33 | 1.00 | 1374ms | 2936ms | 33 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 30 | 30 | 1.00 | 4635ms | 7681ms | 30 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 | 3919ms | 23387ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 30 | 30 | 1.00 | 1932ms | 6353ms | 30 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `supported_degraded` | 18 | 12 | 0.67 | 5753ms | 30271ms | 12 | 0 | 6 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `certified` | 27 | 27 | 1.00 | 1435ms | 4154ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `certified` | 27 | 27 | 1.00 | 1556ms | 3315ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/5 | `certified` | 12 | 12 | 1.00 | 4568ms | 12191ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 12 | 12 | 1.00 | 5013ms | 9755ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 39 | 39 | 1.00 | 1083ms | 1834ms | 39 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 24 | 24 | 1.00 | 51998ms | 89773ms | 24 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 45 | 45 | 1.00 [0.96, 1.00] | 1603ms | 3410ms | 45 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 18 | 18 | 1.00 [0.92, 1.00] | 8567ms | 12492ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `supported_degraded` | 18 | 18 | 1.00 [0.92, 1.00] | 4297ms | 9960ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 33 | 33 | 1.00 [0.95, 1.00] | 1374ms | 2936ms | 33 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 30 | 30 | 1.00 [0.95, 1.00] | 4635ms | 7681ms | 30 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 21 | 21 | 1.00 [0.93, 1.00] | 3919ms | 23387ms | 21 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 30 | 30 | 1.00 [0.95, 1.00] | 1932ms | 6353ms | 30 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `supported_degraded` | 18 | 12 | 0.67 [0.52, 0.79] | 5753ms | 30271ms | 12 | 0 | 6 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1435ms | 4154ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1556ms | 3315ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/5 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 4568ms | 12191ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 5013ms | 9755ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 39 | 39 | 1.00 [0.96, 1.00] | 1083ms | 1834ms | 39 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 24 | 24 | 1.00 [0.94, 1.00] | 51998ms | 89773ms | 24 | 0 | 0 | 0 |
 
 </details>
 
@@ -2805,15 +2776,15 @@ Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1656ms | 2018ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 1442ms | 2232ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/4 | `not_supported` | 6 | 3 | 0.50 | 1369ms | 4610ms | 3 | 0 | 0 | 3 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 1810ms | 3252ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 11099ms | 16999ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 4122ms | 5038ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 3150ms | 4322ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/4 | `supported_degraded` | 21 | 18 | 0.86 | 1040ms | 1361ms | 18 | 1 | 0 | 2 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 | 17007ms | 50149ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1656ms | 2018ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1442ms | 2232ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/4 | `not_supported` | 6 | 3 | 0.50 [0.27, 0.73] | 1369ms | 4610ms | 3 | 0 | 0 | 3 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1810ms | 3252ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 11099ms | 16999ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 4122ms | 5038ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3150ms | 4322ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/4 | `supported_degraded` | 21 | 18 | 0.86 [0.73, 0.93] | 1040ms | 1361ms | 18 | 1 | 0 | 2 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 17007ms | 50149ms | 12 | 0 | 0 | 0 |
 
 </details>
 
@@ -2837,19 +2808,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 9 | 8 | 0.89 | 2953ms | 3245ms | 8 | 1 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 9110ms | 11736ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 17 | 0.94 | 2505ms | 3408ms | 17 | 1 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 5775ms | 7081ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 8540ms | 10431ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 3852ms | 5491ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 18 | 16 | 0.89 | 18741ms | 24366ms | 16 | 2 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `certified` | 15 | 15 | 1.00 | 9077ms | 13541ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/2 | `certified` | 15 | 15 | 1.00 | 9147ms | 17751ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 14563ms | 24649ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 14875ms | 17564ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 18 | 1.00 | 1652ms | 9507ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 127573ms | 223062ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 9 | 8 | 0.89 [0.69, 0.97] | 2953ms | 3245ms | 8 | 1 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 9110ms | 11736ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 17 | 0.94 [0.83, 0.98] | 2505ms | 3408ms | 17 | 1 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 5775ms | 7081ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 8540ms | 10431ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3852ms | 5491ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 18 | 16 | 0.89 [0.76, 0.95] | 18741ms | 24366ms | 16 | 2 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 9077ms | 13541ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/2 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 9147ms | 17751ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 14563ms | 24649ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 14875ms | 17564ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 18 | 1.00 [0.92, 1.00] | 1652ms | 9507ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 127573ms | 223062ms | 12 | 0 | 0 | 0 |
 
 </details>
 
@@ -2882,19 +2853,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 1266ms | 1495ms | 27 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 | 2621ms | 4359ms | 33 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 1311ms | 1637ms | 27 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 2577ms | 4324ms | 27 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 3455ms | 5186ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 1738ms | 2692ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 6/9 | `not_supported` | 39 | 30 | 0.77 | 2327ms | 4395ms | 30 | 9 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 | 1328ms | 1907ms | 33 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 | 1428ms | 1980ms | 33 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 | 3103ms | 4212ms | 33 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 | 2190ms | 3292ms | 33 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 1030ms | 2086ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 11386ms | 19151ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1266ms | 1495ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 [0.95, 1.00] | 2621ms | 4359ms | 33 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1311ms | 1637ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 2577ms | 4324ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 3455ms | 5186ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1738ms | 2692ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 6/9 | `not_supported` | 39 | 30 | 0.77 [0.67, 0.84] | 2327ms | 4395ms | 30 | 9 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 [0.95, 1.00] | 1328ms | 1907ms | 33 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 [0.95, 1.00] | 1428ms | 1980ms | 33 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 [0.95, 1.00] | 3103ms | 4212ms | 33 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 [0.95, 1.00] | 2190ms | 3292ms | 33 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1030ms | 2086ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 11386ms | 19151ms | 27 | 0 | 0 | 0 |
 
 </details>
 
@@ -2946,26 +2917,26 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1315ms | 1761ms | 12 | 0 | 0 | 3 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 2630ms | 8757ms | 12 | 0 | 0 | 3 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1104ms | 1445ms | 12 | 0 | 0 | 3 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1575ms | 2867ms | 12 | 0 | 0 | 3 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 3509ms | 6143ms | 12 | 0 | 0 | 3 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1897ms | 3640ms | 12 | 0 | 0 | 3 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 21 | 21 | 1.00 | 3835ms | 9410ms | 18 | 0 | 0 | 3 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `certified` | 24 | 24 | 1.00 | 1617ms | 3572ms | 21 | 0 | 0 | 3 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `certified` | 21 | 21 | 1.00 | 1594ms | 3584ms | 18 | 0 | 0 | 3 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 3553ms | 7082ms | 12 | 0 | 0 | 3 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 3224ms | 10548ms | 12 | 0 | 0 | 3 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 17 | 0.94 | 927ms | 6206ms | 14 | 0 | 1 | 3 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 14589ms | 80239ms | 12 | 0 | 0 | 3 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1315ms | 1761ms | 12 | 0 | 0 | 3 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2630ms | 8757ms | 12 | 0 | 0 | 3 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1104ms | 1445ms | 12 | 0 | 0 | 3 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1575ms | 2867ms | 12 | 0 | 0 | 3 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3509ms | 6143ms | 12 | 0 | 0 | 3 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1897ms | 3640ms | 12 | 0 | 0 | 3 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 21 | 21 | 1.00 [0.93, 1.00] | 3835ms | 9410ms | 18 | 0 | 0 | 3 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `certified` | 24 | 24 | 1.00 [0.94, 1.00] | 1617ms | 3572ms | 21 | 0 | 0 | 3 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `certified` | 21 | 21 | 1.00 [0.93, 1.00] | 1594ms | 3584ms | 18 | 0 | 0 | 3 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3553ms | 7082ms | 12 | 0 | 0 | 3 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3224ms | 10548ms | 12 | 0 | 0 | 3 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 17 | 0.94 [0.83, 0.98] | 927ms | 6206ms | 14 | 0 | 1 | 3 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 14589ms | 80239ms | 12 | 0 | 0 | 3 |
 
 </details>
 
 #### `owed_verdict`
 
 <details>
-<summary><code>owed_verdict/owed</code>: 9 scenario(s), 9 record(s), best state stale</summary>
+<summary><code>owed_verdict/owed</code>: 9 scenario(s), 9 record(s), best state current</summary>
 
 ##### `owed_verdict/owed`
 
@@ -2989,15 +2960,15 @@ Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 | 1455ms | 1664ms | 27 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/9 | `not_supported` | 27 | 24 | 0.89 | 1179ms | 1685ms | 24 | 3 | 0 | 0 |
-| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/9 | `not_supported` | 21 | 17 | 0.81 | 2568ms | 3610ms | 17 | 4 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 | 1350ms | 3042ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/9 | `not_supported` | 24 | 15 | 0.62 | 5331ms | 6872ms | 15 | 9 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/9 | `not_supported` | 18 | 15 | 0.83 | 2274ms | 4314ms | 15 | 3 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/9 | `certified` | 18 | 18 | 1.00 | 2743ms | 6547ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 | 940ms | 1574ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 | 9419ms | 16480ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1455ms | 1664ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/9 | `not_supported` | 27 | 24 | 0.89 [0.79, 0.95] | 1179ms | 1685ms | 24 | 3 | 0 | 0 |
+| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/9 | `not_supported` | 21 | 17 | 0.81 [0.68, 0.90] | 2568ms | 3610ms | 17 | 4 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1350ms | 3042ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/9 | `not_supported` | 24 | 15 | 0.62 [0.49, 0.74] | 5331ms | 6872ms | 15 | 9 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/9 | `not_supported` | 18 | 15 | 0.83 [0.69, 0.92] | 2274ms | 4314ms | 15 | 3 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/9 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 2743ms | 6547ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 940ms | 1574ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 9419ms | 16480ms | 27 | 0 | 0 | 0 |
 
 </details>
 
@@ -3022,19 +2993,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 21 | 1.00 | 1292ms | 2158ms | 21 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2657ms | 5282ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1105ms | 1733ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2866ms | 5117ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 3103ms | 4824ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1433ms | 3797ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1908ms | 24808ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1150ms | 2360ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1096ms | 2246ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2247ms | 3531ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2961ms | 3994ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `not_supported` | 27 | 20 | 0.74 | 1111ms | 2638ms | 20 | 7 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 12703ms | 120039ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 21 | 1.00 [0.93, 1.00] | 1292ms | 2158ms | 21 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2657ms | 5282ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1105ms | 1733ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2866ms | 5117ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3103ms | 4824ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1433ms | 3797ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1908ms | 24808ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1150ms | 2360ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1096ms | 2246ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2247ms | 3531ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2961ms | 3994ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `not_supported` | 27 | 20 | 0.74 [0.62, 0.83] | 1111ms | 2638ms | 20 | 7 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 12703ms | 120039ms | 9 | 0 | 0 | 0 |
 
 </details>
 
@@ -3058,20 +3029,20 @@ Records (14):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1204ms | 2248ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 2247ms | 2858ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1180ms | 1415ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1781ms | 2701ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 2361ms | 3381ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1289ms | 2483ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 2103ms | 2763ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1175ms | 2097ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1228ms | 2216ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 1347ms | 2247ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 2756ms | 13124ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1963ms | 3362ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 626ms | 1341ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 4252ms | 6907ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1204ms | 2248ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 2247ms | 2858ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1180ms | 1415ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1781ms | 2701ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 2361ms | 3381ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1289ms | 2483ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 2103ms | 2763ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1175ms | 2097ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1228ms | 2216ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1347ms | 2247ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 2756ms | 13124ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1963ms | 3362ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 626ms | 1341ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 4252ms | 6907ms | 12 | 0 | 0 | 0 |
 
 </details>
 
@@ -3102,20 +3073,20 @@ Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 33 | 33 | 1.00 | 891ms | 1136ms | 33 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 9/9 | `supported_degraded` | 60 | 60 | 1.00 | 1110ms | 1511ms | 60 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 33 | 33 | 1.00 | 1681ms | 2830ms | 33 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 2525ms | 3637ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 9/9 | `certified` | 30 | 30 | 1.00 | 1687ms | 2798ms | 30 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `supported_degraded` | 39 | 37 | 0.95 | 839ms | 1394ms | 37 | 2 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 9/9 | `certified` | 33 | 33 | 1.00 | 12511ms | 34377ms | 33 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 33 | 33 | 1.00 [0.95, 1.00] | 891ms | 1136ms | 33 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 9/9 | `supported_degraded` | 60 | 60 | 1.00 [0.97, 1.00] | 1110ms | 1511ms | 60 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 33 | 33 | 1.00 [0.95, 1.00] | 1681ms | 2830ms | 33 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 2525ms | 3637ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 9/9 | `certified` | 30 | 30 | 1.00 [0.95, 1.00] | 1687ms | 2798ms | 30 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `supported_degraded` | 39 | 37 | 0.95 [0.88, 0.98] | 839ms | 1394ms | 37 | 2 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 9/9 | `certified` | 33 | 33 | 1.00 [0.95, 1.00] | 12511ms | 34377ms | 33 | 0 | 0 | 0 |
 
 </details>
 
 #### `report_interpret`
 
 <details>
-<summary><code>report_interpret/progress_summary</code>: 2 scenario(s), 6 record(s), best state stale</summary>
+<summary><code>report_interpret/progress_summary</code>: 2 scenario(s), 6 record(s), best state current</summary>
 
 ##### `report_interpret/progress_summary`
 
@@ -3132,17 +3103,17 @@ Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 18 | 1.00 | 1676ms | 2441ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 1378ms | 1712ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 12 | 12 | 1.00 | 5636ms | 7423ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 18 | 18 | 1.00 | 4013ms | 6528ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 17 | 0.94 | 2067ms | 3069ms | 17 | 1 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `not_supported` | 18 | 12 | 0.67 | 1183ms | 1809ms | 12 | 4 | 2 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 15 | 14 | 0.93 [0.80, 0.98] | 1676ms | 2441ms | 14 | 1 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1378ms | 1712ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 12 | 12 | 1.00 [0.88, 1.00] | 5636ms | 7423ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 18 | 18 | 1.00 [0.92, 1.00] | 4013ms | 6528ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 17 | 0.94 [0.83, 0.98] | 2067ms | 3069ms | 17 | 1 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `not_supported` | 18 | 12 | 0.67 [0.52, 0.79] | 1183ms | 1809ms | 12 | 4 | 2 | 0 |
 
 </details>
 
 <details>
-<summary><code>report_interpret/sales_assessment</code>: 2 scenario(s), 8 record(s), best state stale</summary>
+<summary><code>report_interpret/sales_assessment</code>: 2 scenario(s), 8 record(s), best state current</summary>
 
 ##### `report_interpret/sales_assessment`
 
@@ -3159,14 +3130,14 @@ Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 15 | 0.83 | 1676ms | 2441ms | 15 | 2 | 1 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `not_supported` | 18 | 8 | 0.44 | 1378ms | 1712ms | 8 | 5 | 5 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 5636ms | 7423ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 | 4013ms | 6528ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 6409ms | 28492ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 | 2067ms | 3069ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `not_supported` | 12 | 7 | 0.58 | 1183ms | 1809ms | 7 | 3 | 2 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 93119ms | 114742ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 14 | 0.78 [0.63, 0.88] | 1676ms | 2441ms | 14 | 2 | 2 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `not_supported` | 18 | 8 | 0.44 [0.31, 0.59] | 1378ms | 1712ms | 8 | 5 | 5 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 5636ms | 7423ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 4013ms | 6528ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 6409ms | 28492ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 2067ms | 3069ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `not_supported` | 12 | 7 | 0.58 [0.40, 0.74] | 1183ms | 1809ms | 7 | 3 | 2 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 93119ms | 114742ms | 12 | 0 | 0 | 0 |
 
 </details>
 
@@ -3190,14 +3161,14 @@ Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1256ms | 1610ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 1152ms | 1847ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 1666ms | 6718ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 3106ms | 20076ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 3792ms | 8740ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `not_supported` | 18 | 11 | 0.61 | 1420ms | 1989ms | 11 | 7 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 1145ms | 1872ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 30147ms | 71016ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1256ms | 1610ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1152ms | 1847ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1666ms | 6718ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3106ms | 20076ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3792ms | 8740ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `not_supported` | 18 | 11 | 0.61 [0.46, 0.74] | 1420ms | 1989ms | 11 | 7 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1145ms | 1872ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 30147ms | 71016ms | 6 | 0 | 0 | 0 |
 
 </details>
 
@@ -3219,14 +3190,14 @@ Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1256ms | 1610ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 1152ms | 1847ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 1666ms | 6718ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 3106ms | 20076ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 3792ms | 8740ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 15 | 0.83 | 1420ms | 1989ms | 15 | 3 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 1145ms | 1872ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 30147ms | 71016ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1256ms | 1610ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1152ms | 1847ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1666ms | 6718ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3106ms | 20076ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3792ms | 8740ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 15 | 0.83 [0.69, 0.92] | 1420ms | 1989ms | 15 | 3 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1145ms | 1872ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 30147ms | 71016ms | 6 | 0 | 0 | 0 |
 
 </details>
 
@@ -3248,12 +3219,12 @@ Records (6):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1256ms | 1610ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `not_supported` | 15 | 14 | 0.93 | 1152ms | 1847ms | 14 | 1 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 18 | 18 | 1.00 | 1666ms | 6718ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 3106ms | 20076ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 14 | 0.78 | 1420ms | 1989ms | 14 | 1 | 3 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 15 | 10 | 0.67 | 1145ms | 1872ms | 10 | 4 | 1 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1256ms | 1610ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `not_supported` | 15 | 14 | 0.93 [0.80, 0.98] | 1152ms | 1847ms | 14 | 1 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 18 | 18 | 1.00 [0.92, 1.00] | 1666ms | 6718ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3106ms | 20076ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 14 | 0.78 [0.63, 0.88] | 1420ms | 1989ms | 14 | 1 | 3 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 15 | 10 | 0.67 [0.50, 0.80] | 1145ms | 1872ms | 10 | 4 | 1 | 0 |
 
 </details>
 
@@ -3284,15 +3255,15 @@ Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 1298ms | 1546ms | 27 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 6/9 | `not_supported` | 42 | 27 | 0.64 | 1198ms | 1604ms | 27 | 15 | 0 | 0 |
-| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/9 | `not_supported` | 18 | 15 | 0.83 | 3898ms | 9221ms | 15 | 0 | 3 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 | 1647ms | 3148ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/9 | `certified` | 18 | 18 | 1.00 | 2234ms | 10541ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/9 | `certified` | 18 | 18 | 1.00 | 1638ms | 3180ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/9 | `certified` | 18 | 18 | 1.00 | 3016ms | 5555ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `supported_degraded` | 81 | 73 | 0.90 | 908ms | 1312ms | 73 | 2 | 6 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 | 15510ms | 53202ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1298ms | 1546ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 6/9 | `not_supported` | 42 | 27 | 0.64 [0.54, 0.73] | 1198ms | 1604ms | 27 | 15 | 0 | 0 |
+| `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `stale` | 0/9 | `not_supported` | 18 | 15 | 0.83 [0.69, 0.92] | 3898ms | 9221ms | 15 | 0 | 3 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1647ms | 3148ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/9 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 2234ms | 10541ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `stale` | 0/9 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 1638ms | 3180ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/9 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 3016ms | 5555ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `supported_degraded` | 81 | 73 | 0.90 [0.85, 0.94] | 908ms | 1312ms | 73 | 2 | 6 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 15510ms | 53202ms | 27 | 0 | 0 | 0 |
 
 </details>
 
@@ -3318,10 +3289,10 @@ Records (4):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `not_supported` | 15 | 12 | 0.80 | 983ms | 1060ms | 12 | 0 | 3 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 4/4 | `supported_degraded` | 30 | 28 | 0.93 | 1022ms | 1469ms | 28 | 0 | 2 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 4/4 | `supported_degraded` | 36 | 35 | 0.97 | 1784ms | 4303ms | 35 | 0 | 1 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `supported_degraded` | 24 | 24 | 1.00 | 2648ms | 3834ms | 24 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `not_supported` | 15 | 12 | 0.80 [0.64, 0.90] | 983ms | 1060ms | 12 | 0 | 3 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 4/4 | `supported_degraded` | 30 | 28 | 0.93 [0.85, 0.97] | 1022ms | 1469ms | 28 | 0 | 2 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 4/4 | `supported_degraded` | 36 | 35 | 0.97 [0.91, 0.99] | 1784ms | 4303ms | 35 | 0 | 1 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `supported_degraded` | 24 | 24 | 1.00 [0.94, 1.00] | 2648ms | 3834ms | 24 | 0 | 0 | 0 |
 
 </details>
 
@@ -3400,20 +3371,20 @@ Records (14):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/57 | `not_supported` | 42 | 35 | 0.83 | 1115ms | 2596ms | 35 | 7 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/57 | `certified` | 171 | 162 | 0.95 | 8714ms | 14416ms | 162 | 0 | 9 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 | 2210ms | 3897ms | 24 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 | 1055ms | 1647ms | 24 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/57 | `certified` | 168 | 168 | 1.00 | 5121ms | 8455ms | 168 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier` | `current` | 57/57 | `certified` | 177 | 174 | 0.98 | 3525ms | 8261ms | 174 | 3 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/57 | `not_supported` | 168 | 164 | 0.98 | 2465ms | 4986ms | 164 | 3 | 1 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/57 | `not_supported` | 24 | 12 | 0.50 | 1825ms | 7662ms | 12 | 12 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 | 1278ms | 2186ms | 24 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 | 1135ms | 2096ms | 24 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/57 | `certified` | 30 | 28 | 0.93 | 2773ms | 4303ms | 28 | 2 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/57 | `supported_degraded` | 33 | 26 | 0.79 | 4454ms | 10075ms | 26 | 5 | 2 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/57 | `not_supported` | 222 | 183 | 0.82 | 1284ms | 2498ms | 183 | 37 | 2 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/57 | `certified` | 174 | 172 | 0.99 | 38643ms | 123510ms | 172 | 0 | 2 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/57 | `not_supported` | 42 | 35 | 0.83 [0.75, 0.89] | 1115ms | 2596ms | 35 | 7 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/57 | `certified` | 171 | 162 | 0.95 [0.92, 0.97] | 8714ms | 14416ms | 162 | 0 | 9 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 [0.94, 1.00] | 2210ms | 3897ms | 24 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 [0.94, 1.00] | 1055ms | 1647ms | 24 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/57 | `certified` | 168 | 168 | 1.00 [0.99, 1.00] | 5121ms | 8455ms | 168 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 57/57 | `certified` | 171 | 171 | 1.00 [0.99, 1.00] | 3617ms | 7408ms | 171 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/57 | `not_supported` | 168 | 164 | 0.98 [0.96, 0.99] | 2465ms | 4986ms | 164 | 3 | 1 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/57 | `not_supported` | 24 | 12 | 0.50 [0.37, 0.63] | 1825ms | 7662ms | 12 | 12 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 [0.94, 1.00] | 1278ms | 2186ms | 24 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 [0.94, 1.00] | 1135ms | 2096ms | 24 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/57 | `certified` | 30 | 28 | 0.93 [0.85, 0.97] | 2773ms | 4303ms | 28 | 2 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/57 | `supported_degraded` | 33 | 26 | 0.79 [0.68, 0.86] | 4454ms | 10075ms | 26 | 5 | 2 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/57 | `not_supported` | 222 | 183 | 0.82 [0.79, 0.85] | 1284ms | 2498ms | 183 | 37 | 2 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/57 | `certified` | 174 | 172 | 0.99 [0.97, 1.00] | 38643ms | 123510ms | 172 | 0 | 2 | 0 |
 
 </details>
 
@@ -3440,17 +3411,17 @@ Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 3437ms | 5635ms | 12 | 0 | 0 | 3 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 | 1445ms | 1985ms | 9 | 1 | 0 | 5 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 2282ms | 3497ms | 12 | 0 | 0 | 3 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 21 | 21 | 1.00 | 3591ms | 5719ms | 18 | 0 | 0 | 3 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `not_supported` | 36 | 27 | 0.75 | 1834ms | 6034ms | 21 | 0 | 0 | 15 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `not_supported` | 30 | 24 | 0.80 | 1714ms | 2429ms | 18 | 6 | 0 | 6 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `not_supported` | 30 | 24 | 0.80 | 1828ms | 2354ms | 18 | 6 | 0 | 6 |
-| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/5 | `not_supported` | 45 | 30 | 0.67 | 2259ms | 3250ms | 21 | 15 | 0 | 9 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 3297ms | 5907ms | 12 | 0 | 0 | 3 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `certified` | 27 | 25 | 0.93 | 862ms | 1196ms | 22 | 2 | 0 | 3 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 27 | 27 | 1.00 | 34423ms | 68520ms | 24 | 0 | 0 | 3 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3437ms | 5635ms | 12 | 0 | 0 | 3 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 [0.64, 0.90] | 1445ms | 1985ms | 9 | 1 | 0 | 5 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2282ms | 3497ms | 12 | 0 | 0 | 3 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 21 | 21 | 1.00 [0.93, 1.00] | 3591ms | 5719ms | 18 | 0 | 0 | 3 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `not_supported` | 36 | 27 | 0.75 [0.65, 0.83] | 1834ms | 6034ms | 21 | 0 | 0 | 15 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `not_supported` | 30 | 24 | 0.80 [0.69, 0.88] | 1714ms | 2429ms | 18 | 6 | 0 | 6 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `not_supported` | 30 | 24 | 0.80 [0.69, 0.88] | 1828ms | 2354ms | 18 | 6 | 0 | 6 |
+| `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/5 | `not_supported` | 45 | 30 | 0.67 [0.57, 0.75] | 2259ms | 3250ms | 21 | 15 | 0 | 9 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3297ms | 5907ms | 12 | 0 | 0 | 3 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `certified` | 27 | 25 | 0.93 [0.83, 0.97] | 862ms | 1196ms | 22 | 2 | 0 | 3 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 34423ms | 68520ms | 24 | 0 | 0 | 3 |
 
 </details>
 
@@ -3475,19 +3446,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 17 | 0.81 | 1154ms | 1333ms | 17 | 4 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 3529ms | 6218ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1281ms | 1764ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2427ms | 3596ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 3299ms | 5995ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2041ms | 2493ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 21 | 14 | 0.67 | 4673ms | 83052ms | 14 | 6 | 1 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 1517ms | 1732ms | 6 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 1850ms | 2365ms | 6 | 3 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 3586ms | 4479ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 3311ms | 3618ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 905ms | 985ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `certified` | 15 | 15 | 1.00 | 33643ms | 96809ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 17 | 0.81 [0.68, 0.90] | 1154ms | 1333ms | 17 | 4 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3529ms | 6218ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1281ms | 1764ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2427ms | 3596ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3299ms | 5995ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2041ms | 2493ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 21 | 14 | 0.67 [0.53, 0.78] | 4673ms | 83052ms | 14 | 6 | 1 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 [0.45, 0.83] | 1517ms | 1732ms | 6 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 [0.45, 0.83] | 1850ms | 2365ms | 6 | 3 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3586ms | 4479ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3311ms | 3618ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 905ms | 985ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 33643ms | 96809ms | 15 | 0 | 0 | 0 |
 
 </details>
 
@@ -3514,19 +3485,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1167ms | 24754ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1771ms | 3727ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 928ms | 1412ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1838ms | 2328ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2688ms | 4417ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1488ms | 5270ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2014ms | 24803ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 956ms | 3043ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1100ms | 2159ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2346ms | 3539ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1666ms | 2613ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1260ms | 4401ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 3753ms | 8970ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1167ms | 24754ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1771ms | 3727ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 928ms | 1412ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1838ms | 2328ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2688ms | 4417ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1488ms | 5270ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2014ms | 24803ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 956ms | 3043ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1100ms | 2159ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2346ms | 3539ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1666ms | 2613ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1260ms | 4401ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3753ms | 8970ms | 15 | 0 | 0 | 0 |
 
 </details>
 
@@ -3557,19 +3528,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 910ms | 1215ms | 15 | 0 | 0 | 12 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 | 3510ms | 6213ms | 15 | 0 | 0 | 12 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 1091ms | 1586ms | 15 | 0 | 0 | 12 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 2756ms | 4668ms | 15 | 0 | 0 | 12 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 3034ms | 6690ms | 15 | 0 | 0 | 12 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 1399ms | 1896ms | 15 | 0 | 0 | 12 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/9 | `not_supported` | 45 | 27 | 0.60 | 2193ms | 4628ms | 18 | 18 | 0 | 9 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/9 | `not_supported` | 27 | 21 | 0.78 | 1267ms | 1864ms | 9 | 2 | 4 | 12 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/9 | `not_supported` | 27 | 21 | 0.78 | 1163ms | 1778ms | 9 | 2 | 4 | 12 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 | 2638ms | 4156ms | 15 | 0 | 0 | 12 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/9 | `supported_degraded` | 33 | 28 | 0.85 | 3658ms | 7200ms | 16 | 4 | 1 | 12 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `not_supported` | 42 | 32 | 0.76 | 869ms | 1297ms | 18 | 10 | 0 | 14 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 9/9 | `certified` | 30 | 29 | 0.97 | 19695ms | 108756ms | 17 | 1 | 0 | 12 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 910ms | 1215ms | 15 | 0 | 0 | 12 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 3510ms | 6213ms | 15 | 0 | 0 | 12 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1091ms | 1586ms | 15 | 0 | 0 | 12 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 2756ms | 4668ms | 15 | 0 | 0 | 12 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 3034ms | 6690ms | 15 | 0 | 0 | 12 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1399ms | 1896ms | 15 | 0 | 0 | 12 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/9 | `not_supported` | 45 | 27 | 0.60 [0.50, 0.69] | 2193ms | 4628ms | 18 | 18 | 0 | 9 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/9 | `not_supported` | 27 | 21 | 0.78 [0.66, 0.86] | 1267ms | 1864ms | 9 | 2 | 4 | 12 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/9 | `not_supported` | 27 | 21 | 0.78 [0.66, 0.86] | 1163ms | 1778ms | 9 | 2 | 4 | 12 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/9 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 2638ms | 4156ms | 15 | 0 | 0 | 12 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/9 | `supported_degraded` | 33 | 28 | 0.85 [0.75, 0.91] | 3658ms | 7200ms | 16 | 4 | 1 | 12 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `not_supported` | 42 | 32 | 0.76 [0.67, 0.84] | 869ms | 1297ms | 18 | 10 | 0 | 14 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 9/9 | `certified` | 30 | 29 | 0.97 [0.89, 0.99] | 19695ms | 108756ms | 17 | 1 | 0 | 12 |
 
 </details>
 
@@ -3596,19 +3567,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 27 | 27 | 1.00 | 1656ms | 2825ms | 27 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 9751ms | 16000ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 27 | 25 | 0.93 | 1381ms | 2353ms | 25 | 1 | 0 | 1 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 3/3 | `certified` | 27 | 27 | 1.00 | 5269ms | 10554ms | 27 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 1/3 | `certified` | 21 | 21 | 1.00 | 3598ms | 9509ms | 21 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 27 | 27 | 1.00 | 3014ms | 7342ms | 27 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 | 8803ms | 20071ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 24 | 21 | 0.88 | 1756ms | 4147ms | 21 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 | 3283ms | 5733ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 15 | 14 | 0.93 | 7653ms | 22625ms | 14 | 0 | 0 | 1 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 6597ms | 19895ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 24 | 24 | 1.00 | 1266ms | 2027ms | 24 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 21 | 21 | 1.00 | 103234ms | 182888ms | 21 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 1656ms | 2825ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 9751ms | 16000ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 27 | 25 | 0.93 [0.83, 0.97] | 1381ms | 2353ms | 25 | 1 | 0 | 1 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 3/3 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 5269ms | 10554ms | 27 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 24 | 24 | 1.00 [0.94, 1.00] | 3598ms | 9509ms | 24 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 27 | 27 | 1.00 [0.94, 1.00] | 3014ms | 7342ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 8803ms | 20071ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 24 | 21 | 0.88 [0.76, 0.94] | 1756ms | 4147ms | 21 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3283ms | 5733ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 15 | 14 | 0.93 [0.80, 0.98] | 7653ms | 22625ms | 14 | 0 | 0 | 1 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 6597ms | 19895ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 24 | 24 | 1.00 [0.94, 1.00] | 1266ms | 2027ms | 24 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 21 | 21 | 1.00 [0.93, 1.00] | 103234ms | 182888ms | 21 | 0 | 0 | 0 |
 
 </details>
 
@@ -3630,19 +3601,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 18 | 18 | 1.00 | 1656ms | 2825ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 9751ms | 16000ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `not_supported` | 18 | 17 | 0.94 | 1381ms | 2353ms | 17 | 1 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 2/2 | `certified` | 18 | 18 | 1.00 | 5269ms | 10554ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 24 | 24 | 1.00 | 3598ms | 9509ms | 24 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 | 3014ms | 7342ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `not_supported` | 9 | 8 | 0.89 | 8803ms | 20071ms | 8 | 1 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 24 | 24 | 1.00 | 1756ms | 4147ms | 24 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 3283ms | 5733ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 17 | 0.94 | 7653ms | 22625ms | 17 | 0 | 0 | 1 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 6597ms | 19895ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 18 | 1.00 | 1266ms | 2027ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 | 103234ms | 182888ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 1656ms | 2825ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 9751ms | 16000ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `not_supported` | 18 | 17 | 0.94 [0.83, 0.98] | 1381ms | 2353ms | 17 | 1 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 2/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 5269ms | 10554ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 24 | 24 | 1.00 [0.94, 1.00] | 3598ms | 9509ms | 24 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 3014ms | 7342ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `not_supported` | 9 | 8 | 0.89 [0.69, 0.97] | 8803ms | 20071ms | 8 | 1 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 24 | 24 | 1.00 [0.94, 1.00] | 1756ms | 4147ms | 24 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3283ms | 5733ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 17 | 0.94 [0.83, 0.98] | 7653ms | 22625ms | 17 | 0 | 0 | 1 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 6597ms | 19895ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 18 | 1.00 [0.92, 1.00] | 1266ms | 2027ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 103234ms | 182888ms | 18 | 0 | 0 | 0 |
 
 </details>
 
@@ -3663,19 +3634,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1656ms | 2825ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 9751ms | 16000ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 6 | 6 | 1.00 | 1381ms | 2353ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 5269ms | 10554ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 3598ms | 9509ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 3014ms | 7342ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 8803ms | 20071ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1756ms | 4147ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 6 | 6 | 1.00 | 3283ms | 5733ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 8 | 0.89 | 7653ms | 22625ms | 8 | 0 | 0 | 1 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 6597ms | 19895ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1266ms | 2027ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 103234ms | 182888ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1656ms | 2825ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 9751ms | 16000ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1381ms | 2353ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 5269ms | 10554ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3598ms | 9509ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 3014ms | 7342ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 8803ms | 20071ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1756ms | 4147ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3283ms | 5733ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 8 | 0.89 [0.69, 0.97] | 7653ms | 22625ms | 8 | 0 | 0 | 1 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 6597ms | 19895ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1266ms | 2027ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 103234ms | 182888ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -3698,19 +3669,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 24 | 24 | 1.00 | 1656ms | 2825ms | 24 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 | 9751ms | 16000ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `not_supported` | 27 | 26 | 0.96 | 1381ms | 2353ms | 26 | 1 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 3/3 | `certified` | 24 | 24 | 1.00 | 5269ms | 10554ms | 24 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 21 | 21 | 1.00 | 3598ms | 9509ms | 21 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 27 | 25 | 0.93 | 3014ms | 7342ms | 25 | 0 | 0 | 2 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 18 | 10 | 0.56 | 8803ms | 20071ms | 10 | 8 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `not_supported` | 21 | 21 | 1.00 | 1756ms | 4147ms | 21 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 3283ms | 5733ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 | 7653ms | 22625ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 | 6597ms | 19895ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 27 | 21 | 0.78 | 1266ms | 2027ms | 21 | 6 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 21 | 21 | 1.00 | 103234ms | 182888ms | 21 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 24 | 24 | 1.00 [0.94, 1.00] | 1656ms | 2825ms | 24 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 9751ms | 16000ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `not_supported` | 27 | 26 | 0.96 [0.88, 0.99] | 1381ms | 2353ms | 26 | 1 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 3/3 | `certified` | 24 | 24 | 1.00 [0.94, 1.00] | 5269ms | 10554ms | 24 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 21 | 21 | 1.00 [0.93, 1.00] | 3598ms | 9509ms | 21 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 27 | 25 | 0.93 [0.83, 0.97] | 3014ms | 7342ms | 25 | 0 | 0 | 2 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 18 | 10 | 0.56 [0.41, 0.69] | 8803ms | 20071ms | 10 | 8 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `not_supported` | 21 | 21 | 1.00 [0.93, 1.00] | 1756ms | 4147ms | 21 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3283ms | 5733ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 7653ms | 22625ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 6597ms | 19895ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `supported_degraded` | 27 | 21 | 0.78 [0.66, 0.86] | 1266ms | 2027ms | 21 | 6 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 21 | 21 | 1.00 [0.93, 1.00] | 103234ms | 182888ms | 21 | 0 | 0 | 0 |
 
 </details>
 
@@ -3735,14 +3706,14 @@ Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 33 | 33 | 1.00 | 1656ms | 2825ms | 33 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 33 | 24 | 0.73 | 1381ms | 2353ms | 24 | 9 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 5269ms | 10554ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 3598ms | 9509ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 | 3014ms | 7342ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 15 | 1.00 | 1756ms | 4147ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 36 | 31 | 0.86 | 1266ms | 2027ms | 31 | 5 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 103234ms | 182888ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 33 | 33 | 1.00 [0.95, 1.00] | 1656ms | 2825ms | 33 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 33 | 24 | 0.73 [0.62, 0.81] | 1381ms | 2353ms | 24 | 9 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 5269ms | 10554ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 3598ms | 9509ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 3014ms | 7342ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `not_supported` | 15 | 15 | 1.00 [0.90, 1.00] | 1756ms | 4147ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 36 | 31 | 0.86 [0.77, 0.92] | 1266ms | 2027ms | 31 | 5 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 103234ms | 182888ms | 15 | 0 | 0 | 0 |
 
 </details>
 
@@ -3763,19 +3734,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 1656ms | 2825ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 9751ms | 16000ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1381ms | 2353ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 5269ms | 10554ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 3598ms | 9509ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 3014ms | 7342ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 9 | 0 | 0.00 | 8803ms | 20071ms | 0 | 9 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1756ms | 4147ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 3283ms | 5733ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 7653ms | 22625ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 6597ms | 19895ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `not_supported` | 9 | 3 | 0.33 | 1266ms | 2027ms | 3 | 6 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 103234ms | 182888ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1656ms | 2825ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 9751ms | 16000ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1381ms | 2353ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 5269ms | 10554ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3598ms | 9509ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 3014ms | 7342ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 9 | 0 | 0.00 [-0.00, 0.15] | 8803ms | 20071ms | 0 | 9 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1756ms | 4147ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 3283ms | 5733ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 7653ms | 22625ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 6597ms | 19895ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `not_supported` | 9 | 3 | 0.33 [0.17, 0.55] | 1266ms | 2027ms | 3 | 6 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 103234ms | 182888ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -3797,19 +3768,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 15 | 14 | 0.93 | 1656ms | 2825ms | 14 | 1 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 9751ms | 16000ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `not_supported` | 18 | 10 | 0.56 | 1381ms | 2353ms | 10 | 7 | 1 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 5269ms | 10554ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 3598ms | 9509ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 3014ms | 7342ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 | 8803ms | 20071ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `not_supported` | 12 | 7 | 0.58 | 1756ms | 4147ms | 7 | 5 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 | 3283ms | 5733ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 | 7653ms | 22625ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 | 6597ms | 19895ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 9 | 8 | 0.89 | 1266ms | 2027ms | 8 | 1 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 12 | 9 | 0.75 | 103234ms | 182888ms | 9 | 0 | 3 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `certified` | 15 | 14 | 0.93 [0.80, 0.98] | 1656ms | 2825ms | 14 | 1 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 9751ms | 16000ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/2 | `not_supported` | 18 | 10 | 0.56 [0.41, 0.69] | 1381ms | 2353ms | 10 | 7 | 1 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 5269ms | 10554ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3598ms | 9509ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 3014ms | 7342ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 8803ms | 20071ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `not_supported` | 12 | 7 | 0.58 [0.40, 0.74] | 1756ms | 4147ms | 7 | 5 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 3283ms | 5733ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 7653ms | 22625ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 6597ms | 19895ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 9 | 8 | 0.89 [0.69, 0.97] | 1266ms | 2027ms | 8 | 1 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 12 | 9 | 0.75 [0.57, 0.87] | 103234ms | 182888ms | 9 | 0 | 3 | 0 |
 
 </details>
 
@@ -3835,11 +3806,11 @@ Records (5):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 947ms | 1365ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 4/4 | `certified` | 24 | 23 | 0.96 | 1033ms | 1569ms | 23 | 1 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 991ms | 1618ms | 12 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 4/4 | `not_supported` | 12 | 9 | 0.75 | 894ms | 1541ms | 9 | 3 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 8605ms | 16797ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 947ms | 1365ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 4/4 | `certified` | 24 | 23 | 0.96 [0.87, 0.99] | 1033ms | 1569ms | 23 | 1 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 991ms | 1618ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 4/4 | `not_supported` | 12 | 9 | 0.75 [0.57, 0.87] | 894ms | 1541ms | 9 | 3 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 8605ms | 16797ms | 12 | 0 | 0 | 0 |
 
 </details>
 
@@ -3893,19 +3864,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/32 | `not_supported` | 102 | 92 | 0.90 | 1088ms | 1667ms | 92 | 3 | 7 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/32 | `certified` | 18 | 18 | 1.00 | 2393ms | 5094ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/32 | `certified` | 18 | 18 | 1.00 | 972ms | 1206ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 32/32 | `certified` | 96 | 96 | 1.00 | 2247ms | 5109ms | 96 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 32/32 | `certified` | 96 | 96 | 1.00 | 3673ms | 5110ms | 96 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/32 | `supported_degraded` | 102 | 95 | 0.93 | 1880ms | 5801ms | 95 | 7 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/32 | `not_supported` | 54 | 47 | 0.87 | 1345ms | 1963ms | 47 | 7 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/32 | `not_supported` | 54 | 45 | 0.83 | 846ms | 1477ms | 45 | 9 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/32 | `not_supported` | 54 | 45 | 0.83 | 1011ms | 1399ms | 45 | 9 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/32 | `supported_degraded` | 39 | 35 | 0.90 | 2271ms | 5366ms | 35 | 4 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/32 | `not_supported` | 54 | 45 | 0.83 | 1889ms | 3593ms | 45 | 9 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/32 | `certified` | 93 | 92 | 0.99 | 877ms | 1260ms | 92 | 1 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/32 | `certified` | 90 | 90 | 1.00 | 54076ms | 216313ms | 90 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/32 | `not_supported` | 102 | 92 | 0.90 [0.86, 0.93] | 1088ms | 1667ms | 92 | 3 | 7 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/32 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 2393ms | 5094ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/32 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 972ms | 1206ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 32/32 | `certified` | 96 | 96 | 1.00 [0.98, 1.00] | 2247ms | 5109ms | 96 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 32/32 | `certified` | 96 | 96 | 1.00 [0.98, 1.00] | 3673ms | 5110ms | 96 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/32 | `supported_degraded` | 102 | 95 | 0.93 [0.89, 0.96] | 1880ms | 5801ms | 95 | 7 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/32 | `not_supported` | 54 | 47 | 0.87 [0.80, 0.92] | 1345ms | 1963ms | 47 | 7 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/32 | `not_supported` | 54 | 45 | 0.83 [0.76, 0.89] | 846ms | 1477ms | 45 | 9 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/32 | `not_supported` | 54 | 45 | 0.83 [0.76, 0.89] | 1011ms | 1399ms | 45 | 9 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/32 | `supported_degraded` | 39 | 35 | 0.90 [0.82, 0.94] | 2271ms | 5366ms | 35 | 4 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/32 | `not_supported` | 54 | 45 | 0.83 [0.76, 0.89] | 1889ms | 3593ms | 45 | 9 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/32 | `certified` | 93 | 92 | 0.99 [0.96, 1.00] | 877ms | 1260ms | 92 | 1 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/32 | `certified` | 90 | 90 | 1.00 [0.98, 1.00] | 54076ms | 216313ms | 90 | 0 | 0 | 0 |
 
 </details>
 
@@ -3928,19 +3899,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1081ms | 3624ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 4130ms | 13904ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1106ms | 4842ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 6 | 6 | 1.00 | 3029ms | 5923ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 2467ms | 9802ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 6 | 6 | 1.00 | 1379ms | 12275ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 1106ms | 6185ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `not_supported` | 9 | 9 | 1.00 | 1826ms | 7150ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 5267ms | 17661ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 905ms | 2219ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 15923ms | 291372ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1081ms | 3624ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 4130ms | 13904ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1106ms | 4842ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3029ms | 5923ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 2467ms | 9802ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1379ms | 12275ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 [0.65, 1.00] | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 1106ms | 6185ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `not_supported` | 9 | 9 | 1.00 [0.85, 1.00] | 1826ms | 7150ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 5267ms | 17661ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 905ms | 2219ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 15923ms | 291372ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -3961,19 +3932,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1081ms | 3624ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 4130ms | 13904ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1106ms | 4842ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 9 | 7 | 0.78 | 3029ms | 5923ms | 7 | 0 | 2 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 2467ms | 9802ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1379ms | 12275ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 9 | 2 | 0.22 | 3188ms | 73472ms | 2 | 0 | 7 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1106ms | 6185ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1826ms | 7150ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 5267ms | 17661ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 | 905ms | 2219ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 8 | 0.89 | 15923ms | 291372ms | 8 | 0 | 1 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1081ms | 3624ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 4130ms | 13904ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1106ms | 4842ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 9 | 7 | 0.78 [0.57, 0.90] | 3029ms | 5923ms | 7 | 0 | 2 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 2467ms | 9802ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1379ms | 12275ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 9 | 2 | 0.22 [0.10, 0.43] | 3188ms | 73472ms | 2 | 0 | 7 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1106ms | 6185ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1826ms | 7150ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 5267ms | 17661ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 [0.85, 1.00] | 905ms | 2219ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 8 | 0.89 [0.69, 0.97] | 15923ms | 291372ms | 8 | 0 | 1 | 0 |
 
 </details>
 
@@ -3994,19 +3965,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `not_supported` | 6 | 6 | 1.00 | 1081ms | 3624ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `not_supported` | 9 | 9 | 1.00 | 4130ms | 13904ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 1106ms | 4842ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 6 | 6 | 1.00 | 3029ms | 5923ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 2467ms | 9802ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 1379ms | 12275ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 1106ms | 6185ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 1826ms | 7150ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `not_supported` | 9 | 8 | 0.89 | 5267ms | 17661ms | 8 | 1 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `not_supported` | 9 | 9 | 1.00 | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 905ms | 2219ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 15923ms | 291372ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `not_supported` | 6 | 6 | 1.00 [0.79, 1.00] | 1081ms | 3624ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `not_supported` | 9 | 9 | 1.00 [0.85, 1.00] | 4130ms | 13904ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 [0.65, 1.00] | 1106ms | 4842ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3029ms | 5923ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 2467ms | 9802ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1379ms | 12275ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 [0.65, 1.00] | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 [0.65, 1.00] | 1106ms | 6185ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 [0.65, 1.00] | 1826ms | 7150ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `not_supported` | 9 | 8 | 0.89 [0.69, 0.97] | 5267ms | 17661ms | 8 | 1 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `not_supported` | 9 | 9 | 1.00 [0.85, 1.00] | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 905ms | 2219ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 15923ms | 291372ms | 9 | 0 | 0 | 0 |
 
 </details>
 
@@ -4027,19 +3998,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1081ms | 3624ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 4130ms | 13904ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1106ms | 4842ms | 3 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 3029ms | 5923ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 2467ms | 9802ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1379ms | 12275ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1106ms | 6185ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1826ms | 7150ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 5267ms | 17661ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 905ms | 2219ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 15923ms | 291372ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1081ms | 3624ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 4130ms | 13904ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1106ms | 4842ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 3029ms | 5923ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 2467ms | 9802ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1379ms | 12275ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1106ms | 6185ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1826ms | 7150ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 5267ms | 17661ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 905ms | 2219ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 15923ms | 291372ms | 3 | 0 | 0 | 0 |
 
 </details>
 
@@ -4064,19 +4035,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 975ms | 1082ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 2707ms | 5533ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 868ms | 1251ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1802ms | 3556ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 3610ms | 5169ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 829ms | 1188ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 12 | 4 | 0.33 | 3207ms | 5498ms | 4 | 8 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 786ms | 1570ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1222ms | 2006ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 2870ms | 3590ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1623ms | 3135ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 756ms | 925ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 8829ms | 41620ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 975ms | 1082ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2707ms | 5533ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 868ms | 1251ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1802ms | 3556ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3610ms | 5169ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 829ms | 1188ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `not_supported` | 12 | 4 | 0.33 [0.19, 0.52] | 3207ms | 5498ms | 4 | 8 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 786ms | 1570ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1222ms | 2006ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 2870ms | 3590ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 1623ms | 3135ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 756ms | 925ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 8829ms | 41620ms | 9 | 0 | 0 | 0 |
 
 </details>
 
@@ -4103,19 +4074,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 18 | 18 | 1.00 | 931ms | 1166ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 4447ms | 7443ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 45 | 45 | 1.00 | 873ms | 1447ms | 45 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 | 3677ms | 6067ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2932ms | 7392ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 | 922ms | 1702ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 24 | 23 | 0.96 | 2603ms | 4656ms | 23 | 0 | 1 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 45 | 45 | 1.00 | 1091ms | 1623ms | 45 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `supported_degraded` | 45 | 45 | 1.00 | 1078ms | 2431ms | 45 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 36 | 36 | 1.00 | 4803ms | 11758ms | 36 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 | 4504ms | 8474ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `certified` | 24 | 24 | 1.00 | 989ms | 1415ms | 24 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 21972ms | 56801ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 5/5 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 931ms | 1166ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 4447ms | 7443ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 45 | 45 | 1.00 [0.96, 1.00] | 873ms | 1447ms | 45 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 3677ms | 6067ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 2932ms | 7392ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 922ms | 1702ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `not_supported` | 24 | 23 | 0.96 [0.87, 0.99] | 2603ms | 4656ms | 23 | 0 | 1 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 45 | 45 | 1.00 [0.96, 1.00] | 1091ms | 1623ms | 45 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/5 | `supported_degraded` | 45 | 45 | 1.00 [0.96, 1.00] | 1078ms | 2431ms | 45 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 36 | 36 | 1.00 [0.96, 1.00] | 4803ms | 11758ms | 36 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/5 | `certified` | 18 | 18 | 1.00 [0.92, 1.00] | 4504ms | 8474ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `certified` | 24 | 24 | 1.00 [0.94, 1.00] | 989ms | 1415ms | 24 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 21972ms | 56801ms | 15 | 0 | 0 | 0 |
 
 </details>
 

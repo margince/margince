@@ -22063,7 +22063,14 @@ export interface paths {
         /** The question sets an outcome review can ask. */
         get: operations["listActivityReviewTemplates"];
         put?: never;
-        post?: never;
+        /**
+         * Add the question set an outcome's reviews ask from now on.
+         * @description Requires custom_field create permission. A closing asks one review, so an outcome has at
+         *     most one active template: the new one is asked from now on, and the template asked before
+         *     is retired in the same write. Reviews already written keep their frozen questions. A key
+         *     another template uses answers 409.
+         */
+        post: operations["createActivityReviewTemplate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22087,8 +22094,12 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Edit the questions for future outcome reviews.
-         * @description Requires custom_field update permission. Version conflicts return 409; submitted reviews retain their frozen questions and answers.
+         * Edit the questions for future outcome reviews, or retire or restore a template.
+         * @description Requires custom_field update permission. Version conflicts return 409; submitted reviews
+         *     retain their frozen questions and answers. `active: false` retires the template: a closing
+         *     with that outcome asks no review until a template for it is active again. There is no
+         *     delete, so an old review always names a template the list still shows. `active: true`
+         *     makes the template the one its outcome asks and retires the one asked before.
          */
         patch: operations["updateActivityReviewTemplate"];
         trace?: never;
@@ -46559,12 +46570,26 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description Every field but `version` is optional; an omitted one is left alone. */
         UpdateActivityReviewTemplateRequest: {
             /**
              * Format: int64
              * @description Last read template version.
              */
             version: number;
+            questions?: components["schemas"]["ReviewQuestion"][];
+            /** @description false retires the template; true makes it the one its outcome asks. */
+            active?: boolean;
+        };
+        CreateActivityReviewTemplateRequest: {
+            /** @description Derived from the label when omitted. */
+            key?: string;
+            label: string;
+            /**
+             * @description Which outcome the template is asked for.
+             * @enum {string}
+             */
+            outcome: "won" | "lost";
             questions: components["schemas"]["ReviewQuestion"][];
         };
         ActivityReviewTemplateListResponse: {
@@ -46617,6 +46642,15 @@ export interface components {
              * @description Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
              */
             template_version?: number;
+            /**
+             * @description Key of the template shown when the form opened. A template added or restored since then
+             *     is a different template, possibly at the same version, so a key that is not the live
+             *     template's returns 409. Optional: a client that omits it keeps the version-only check, so
+             *     a client built before this field keeps working. That client cannot tell a swap to another
+             *     template at the same version; its answers are still checked against the live questions,
+             *     and an answer to a question the live template does not ask is refused 422.
+             */
+            template_key?: string;
             /**
              * Format: uuid
              * @description The closing being reviewed. Must be the one the deal is on now, else 409.
@@ -52797,10 +52831,10 @@ export interface components {
         Undoability: {
             undoable: boolean;
             /**
-             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
+             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
              * @enum {string|null}
              */
-            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | "edge_relink_unsupported" | "later_company_change" | "no_restore_snapshot" | "credential_not_kept" | null;
+            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | "restore_archiver_required" | "edge_relink_unsupported" | "later_company_change" | "no_restore_snapshot" | "credential_not_kept" | null;
             /** @description The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says. */
             detail?: string | null;
         };
@@ -98594,7 +98628,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Every live template. */
+            /** @description Every template, active and retired. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -98603,6 +98637,59 @@ export interface operations {
                     "application/json": components["schemas"]["ActivityReviewTemplateListResponse"];
                 };
             };
+        };
+    };
+    createActivityReviewTemplate: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateActivityReviewTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created template. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityReviewTemplate"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateActivityReviewTemplate: {

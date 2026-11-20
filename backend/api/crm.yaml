@@ -32480,10 +32480,37 @@ paths:
       summary: The question sets an outcome review can ask.
       responses:
         '200':
-          description: Every live template.
+          description: Every template, active and retired.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ActivityReviewTemplateListResponse' }
+    post:
+      tags: [Activities]
+      operationId: createActivityReviewTemplate
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Add the question set an outcome's reviews ask from now on.
+      description: |
+        Requires custom_field create permission. A closing asks one review, so an outcome has at
+        most one active template: the new one is asked from now on, and the template asked before
+        is retired in the same write. Reviews already written keep their frozen questions. A key
+        another template uses answers 409.
+      x-mcp-tool: { verb: create_activity_review_template, router: change_settings, action: create_review_template, tier: auto_execute, scope: write, served_by: route }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateActivityReviewTemplateRequest' }
+      responses:
+        '201':
+          description: Created template.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivityReviewTemplate' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activity-review-templates/{id}:
     parameters:
@@ -32492,8 +32519,13 @@ paths:
       tags: [Activities]
       operationId: updateActivityReviewTemplate
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Edit the questions for future outcome reviews.
-      description: Requires custom_field update permission. Version conflicts return 409; submitted reviews retain their frozen questions and answers.
+      summary: Edit the questions for future outcome reviews, or retire or restore a template.
+      description: |
+        Requires custom_field update permission. Version conflicts return 409; submitted reviews
+        retain their frozen questions and answers. `active: false` retires the template: a closing
+        with that outcome asks no review until a template for it is active again. There is no
+        delete, so an old review always names a template the list still shows. `active: true`
+        makes the template the one its outcome asks and retires the one asked before.
       x-mcp-tool: { verb: update_activity_review_template, router: change_settings, action: update_review_template, tier: auto_execute, scope: write, served_by: route }
       requestBody:
         required: true
@@ -63675,9 +63707,23 @@ components:
 
     UpdateActivityReviewTemplateRequest:
       type: object
-      required: [version, questions]
+      description: Every field but `version` is optional; an omitted one is left alone.
+      required: [version]
       properties:
         version: { type: integer, format: int64, minimum: 1, description: Last read template version. }
+        questions: { type: array, minItems: 1, items: { $ref: '#/components/schemas/ReviewQuestion' } }
+        active: { type: boolean, description: 'false retires the template; true makes it the one its outcome asks.' }
+
+    CreateActivityReviewTemplateRequest:
+      type: object
+      required: [label, outcome, questions]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{0,62}$'
+          description: Derived from the label when omitted.
+        label: { type: string, minLength: 1, maxLength: 120 }
+        outcome: { type: string, enum: [won, lost], description: 'Which outcome the template is asked for.' }
         questions: { type: array, minItems: 1, items: { $ref: '#/components/schemas/ReviewQuestion' } }
 
     ActivityReviewTemplateListResponse:
@@ -63718,6 +63764,15 @@ components:
       required: [closing_occurrence_id, submission_id, answers]
       properties:
         template_version: { type: integer, format: int64, description: 'Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.' }
+        template_key:
+          type: string
+          description: |
+            Key of the template shown when the form opened. A template added or restored since then
+            is a different template, possibly at the same version, so a key that is not the live
+            template's returns 409. Optional: a client that omits it keeps the version-only check, so
+            a client built before this field keeps working. That client cannot tell a swap to another
+            template at the same version; its answers are still checked against the live questions,
+            and an answer to a question the live template does not ask is refused 422.
         closing_occurrence_id: { type: string, format: uuid, description: 'The closing being reviewed. Must be the one the deal is on now, else 409.' }
         submission_id: { type: string, format: uuid, description: 'The client''s own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.' }
         choice_answers: { type: object, additionalProperties: { type: array, items: { type: string } }, description: 'Selected options by question key; values must belong to the frozen question vocabulary.' }
@@ -72465,11 +72520,14 @@ components:
             receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose
             earlier text held a credential: history keeps it masked, and the record keeps the
             text as typed, so putting it back would write the mask over the record.
+            `restore_archiver_required` refuses undoing an archive to a caller who may edit
+            the record but holds no delete grant, when someone else made the archive: only the
+            colleague who archived it, or a delete holder, may bring it back.
           enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
                  behind_erasure_boundary, already_undone, not_restorable_by_this_path,
                  record_archived, null_unwritable_by_module, not_writable_by_caller,
-                 edge_relink_unsupported, later_company_change, no_restore_snapshot,
-                 credential_not_kept, null]
+                 restore_archiver_required, edge_relink_unsupported, later_company_change,
+                 no_restore_snapshot, credential_not_kept, null]
           x-extensible-enum: true
         detail:
           type: [string, 'null']
