@@ -23,7 +23,7 @@ You need the permission to manage users. To pick the legal entity you also need 
 Also called: add a user, add a teammate, create an account, onboard a colleague.
 
 ### What if the invitation email did not arrive?
-You can send a new invitation to any colleague who has not set a password yet. This covers a link that expired after 7 days, an email that went to spam, and a colleague added without an invitation email. If the mail server refuses the invitation email, their row in **Settings → Members** shows **Invitation email failed**.
+You can send a new invitation to any colleague who has not set a password yet. This covers a link that expired after 7 days, an email that went to spam, and a colleague added without an invitation email. If the mail server refuses the invitation email, their row in **Settings → Members** shows **Invitation email failed**. If inviting says "Margince could not confirm the invitation", look for the colleague in the list before you invite again. An address that already waits on an invitation is refused, so use **Resend invitation** on that row.
 1. Check the email address on their row. If it is wrong, deactivate the seat and invite the right address.
 2. Open the **Actions for {name}** menu on their row and choose **Resend invitation**.
 3. The note "Invitation sent again to {name}" confirms it. The new email carries a new link, and any older link stops working.

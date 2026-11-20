@@ -12,6 +12,7 @@ import { Heading } from "../../design-system/heading";
 import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useHoldsAdminRole } from "../../lib/capability";
 import { looksLikeEmail } from "../../lib/emailshape";
 import { nameFromEmail } from "../../lib/namefromemail";
@@ -23,6 +24,7 @@ import {
   type RefusalSentences,
   refusalSentences,
   unwrap,
+  writeMayHaveLanded,
 } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
 import { AccessPreviewPanel } from "./users-access";
@@ -31,6 +33,7 @@ import {
   useEntityChoice,
   useMayAssignEntity,
 } from "./users-entitycell";
+import { useMemberRefresh } from "./users-members";
 import { MemberTeamsField } from "./users-teams";
 import "./users-admin.css";
 
@@ -94,6 +97,7 @@ export function memberChecks(
 export function InviteUserForm({
   titleId,
   askName = true,
+  unconfirmedKey = "users.inviteUnconfirmed",
   onInvited,
 }: Readonly<{
   /**
@@ -108,6 +112,11 @@ export function InviteUserForm({
    * from it (`nameFromEmail`) until somebody changes it.
    */
   askName?: boolean;
+  /**
+   * What the form says when an invite may have landed unseen. The roster's
+   * dialog sits over the member list; the setup journey has none to point at.
+   */
+  unconfirmedKey?: MessageKey;
   onInvited: (member: InvitedMember) => void;
 }>) {
   const t = useT();
@@ -143,6 +152,7 @@ export function InviteUserForm({
   const { entities, fallback } = useEntityChoice(useMayAssignEntity());
   const [entityId, setEntityId] = useState<string | null>(null);
   const placedIn = entityId ?? fallback?.id ?? null;
+  const refreshMembers = useMemberRefresh();
 
   // Choices ride as variables: a closure can hold the previous render's.
   const displayName = askName ? name.trim() : nameFromEmail(email);
@@ -187,9 +197,17 @@ export function InviteUserForm({
       setEntityId(null);
       onInvited({ id: newUserId, name: choice.name });
     },
-    onError: (error) => faults.show(memberRefusal(error, t, labels).byField),
+    onError: (error) => {
+      faults.show(memberRefusal(error, t, labels).byField);
+      if (writeMayHaveLanded(error)) void refreshMembers();
+    },
   });
   const refused = memberRefusal(invite.error, t, labels);
+  // A failure that may still have created the member sends the admin to the
+  // list, refreshed, instead of to a retry. A refusal never may have landed.
+  const foot = writeMayHaveLanded(invite.error)
+    ? t(unconfirmedKey)
+    : refused.rest;
   // An edit answers the refusal, so the foot's sentence goes with it.
   const edited = (field: string) => {
     faults.edited(field);
@@ -343,7 +361,7 @@ export function InviteUserForm({
         {/* ABOVE the submit row, where the sibling dialogs in this family put a
           refusal: under the button it reads as a footnote to the form rather
           than as the answer to the press. */}
-        {refused.rest !== null && <ErrorLine>{refused.rest}</ErrorLine>}
+        {foot !== null && <ErrorLine>{foot}</ErrorLine>}
       </form>
       {/* Outside a dialog (the onboarding team step) `.form-actions` aligns
           the row; inside one `.modal .actions` does. */}

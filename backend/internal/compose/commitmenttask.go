@@ -57,13 +57,16 @@ type CommitmentTaskProposal struct {
 	// reviewer edits a day and acceptance decides when that day ends.
 	DueDate string `json:"due_date,omitempty"`
 	// DueZone is the zone the day ends in; empty is the installation's.
-	DueZone  string                         `json:"due_zone,omitempty"`
-	Links    []activities.ActivityLinkInput `json:"links"`
-	Quote    string                         `json:"quote"`
-	Locator  string                         `json:"locator"`
-	ClaimID  *ids.UUID                      `json:"claim_id,omitempty"`
-	ClaimIDs []ids.UUID                     `json:"claim_ids,omitempty"`
-	Body     string                         `json:"body"`
+	DueZone string `json:"due_zone,omitempty"`
+	// OddDueDate is a stated day outside the due window, kept in DueDate so the
+	// rep answers by keeping it, picking another or clearing it.
+	OddDueDate string                         `json:"odd_due_date,omitempty"`
+	Links      []activities.ActivityLinkInput `json:"links"`
+	Quote      string                         `json:"quote"`
+	Locator    string                         `json:"locator"`
+	ClaimID    *ids.UUID                      `json:"claim_id,omitempty"`
+	ClaimIDs   []ids.UUID                     `json:"claim_ids,omitempty"`
+	Body       string                         `json:"body"`
 	// PrivateTo is the one member the source mail answers to. The task is read
 	// by them and its holder alone. Nil for a shared conversation.
 	PrivateTo *ids.UUID `json:"private_to,omitempty"`
@@ -89,11 +92,13 @@ type commitmentTask struct {
 	DueDate          string
 	DueZone          string
 	// DueAt is a deadline already stated as an instant; DueDate is used when nil.
-	DueAt     *time.Time
-	Assignee  ids.UUID
-	ClaimID   *ids.UUID
-	ClaimIDs  []ids.UUID
-	PrivateTo *ids.UUID
+	DueAt *time.Time
+	// DueConfirmed says a human kept DueDate when it was outside the window.
+	DueConfirmed bool
+	Assignee     ids.UUID
+	ClaimID      *ids.UUID
+	ClaimIDs     []ids.UUID
+	PrivateTo    *ids.UUID
 	// Origin is the taker's when a colleague or their agent took the promise over.
 	Origin string
 }
@@ -132,6 +137,9 @@ func writeCommitmentTask(
 	// The promiser's own task waits for them as a task made by hand would,
 	// also before they first sign in.
 	in.AdmitInvitedAssignee()
+	if t.DueConfirmed {
+		in.AdmitConfirmedDue()
+	}
 	if t.PrivateTo != nil {
 		in.VisibleOnlyTo(slices.Compact([]ids.UUID{t.Assignee, *t.PrivateTo})...)
 	}
@@ -217,7 +225,8 @@ func commitmentTaskEffect(
 				Locator: proposal.Locator,
 				Summary: proposal.Summary, Body: proposal.Body, SystemText: proposal.SystemText,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
-				DueDate: proposal.DueDate, DueZone: proposal.DueZone, Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
+				DueDate: proposal.DueDate, DueZone: proposal.DueZone, DueConfirmed: proposal.DueDate != "" && proposal.DueDate == proposal.OddDueDate,
+				Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
 				PrivateTo: privateTo, Origin: activities.OriginAgent,
 			}
 			if heldByAnotherThanOwner(privateTo, assignee) {

@@ -17,6 +17,7 @@ import {
   refusalSentences,
   throwProblem,
   unwrap,
+  writeMayHaveLanded,
 } from "./problem";
 
 const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
@@ -791,7 +792,7 @@ describe("the refusals a screen words itself", () => {
     new ProblemError({ status: 409, code, detail: "an API sentence" });
   for (const [code, key] of [
     ["email_taken", "users.emailTaken"],
-    ["removed_member_email", "users.emailReserved"],
+    ["removed_member_email", "users.removedEmail"],
     ["deal_room_document_already_present", "room.docs.alreadyPresent"],
   ] as const) {
     for (const locale of ["en", "de", "vi"] as const) {
@@ -834,5 +835,32 @@ describe("the refusals a screen words itself", () => {
       );
     }
     expect(problemMessageOf(lapsed, t)).toContain("Edit header");
+  });
+});
+
+describe("writeMayHaveLanded", () => {
+  const cut = (unsent: boolean) =>
+    new ConnectivityError(
+      "unreachable",
+      new Request("https://test.local/v1/users", { method: "POST" }),
+      new TypeError("Failed to fetch"),
+      unsent,
+    );
+
+  it("counts a server failure, an empty success and a cut connection as maybe saved", () => {
+    expect(writeMayHaveLanded(new ProblemError({ status: 500 }))).toBe(true);
+    expect(writeMayHaveLanded(new ProblemError({ status: 504 }))).toBe(true);
+    expect(writeMayHaveLanded(new EmptySuccessError(201))).toBe(true);
+    expect(writeMayHaveLanded(cut(false))).toBe(true);
+  });
+
+  it("counts a refusal and a write never sent as not saved", () => {
+    expect(
+      writeMayHaveLanded(
+        new ProblemError({ status: 409, code: "email_taken" }),
+      ),
+    ).toBe(false);
+    expect(writeMayHaveLanded(cut(true))).toBe(false);
+    expect(writeMayHaveLanded(new Error("bug"))).toBe(false);
   });
 });

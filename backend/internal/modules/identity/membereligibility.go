@@ -59,6 +59,24 @@ func refuseRemovedEmail(ctx context.Context, tx pgx.Tx, email string) error {
 	return nil
 }
 
+// errAlreadyInvited refuses an invite to a member who is still waiting on one.
+// That member exists, and a resend from the roster reaches them.
+var errAlreadyInvited = fmt.Errorf("%w: this address already has an invitation waiting", apperrors.ErrConflict)
+
+func refuseWaitingInvitation(ctx context.Context, tx pgx.Tx, email string) error {
+	var waiting bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user u
+		 WHERE `+storekit.SeatLoginIsSQL("u", "@"+memberEmailField, "@"+memberDomainField)+`
+		   AND `+ActivatableMemberSQL("u")+` AND u.status = '`+userStatusInvited+`'
+		   AND NOT u.is_agent AND u.removed_at IS NULL)`, memberLoginArgs(email)).Scan(&waiting); err != nil {
+		return err
+	}
+	if waiting {
+		return errAlreadyInvited
+	}
+	return nil
+}
+
 // typedLoginAddress lowercases and trims the address, and leaves its domain
 // un-IDNA-folded.
 //
