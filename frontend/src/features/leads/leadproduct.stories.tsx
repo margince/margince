@@ -9,10 +9,10 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { LeadProductLine } from "./leadproduct";
+import { LeadProductName, LeadProductPicker } from "./leadproduct";
 import { useLeadPatch } from "./leads.patch";
 
-// The product a lead asks about: named, and not yet named.
+// The product a lead asks about, as its row reads it and in the search the details' Edit opens.
 
 const meta: Meta = {
   title: "Records/Lead/Product",
@@ -38,7 +38,17 @@ const LEAD: Lead = {
 
 function Line({ lead }: Readonly<{ lead: Lead }>) {
   const writer = useLeadPatch(lead, lead.id, () => undefined);
-  return <LeadProductLine lead={lead} writer={writer} />;
+  return (
+    <>
+      <LeadProductName lead={lead} />
+      <LeadProductPicker
+        lead={lead}
+        writer={writer}
+        open
+        onClose={() => undefined}
+      />
+    </>
+  );
 }
 
 function line(productId: string | null) {
@@ -59,7 +69,7 @@ function line(productId: string | null) {
   );
 }
 
-/** A lead that names the product it asks about. */
+/** A lead that names the product it asks about: the search offers to clear it. */
 export const Named: Story = { render: () => line("p-suite") };
 
 /** A lead that names no product yet. */

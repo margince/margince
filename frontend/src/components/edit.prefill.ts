@@ -10,7 +10,12 @@
 // controls can render. `toInput` is the one place that converts between them,
 // which is why every path into the form goes through prefillField.
 
-import type { CreateField, FormRow, FormRows } from "./create";
+import {
+  answerless,
+  type CreateField,
+  type FormRow,
+  type FormRows,
+} from "./create";
 
 // One field's initial form string: a divider holds no value; a field with a
 // `toInput` transform (e.g. currency minor→major) uses it; otherwise the raw
@@ -35,7 +40,7 @@ export function prefillFromRecord(
 ): Record<string, string> {
   const prefilled: Record<string, string> = {};
   for (const field of fields) {
-    if (field.divider || field.type === "repeatable") {
+    if (field.divider || field.type === "repeatable" || answerless(field)) {
       continue;
     }
     prefilled[field.key] = prefillField(field, record);
@@ -126,7 +131,7 @@ export function seedMissingFields(
     raw: Record<string, unknown>;
   } | null = null;
   for (const field of fields) {
-    if (field.divider || field.type === "repeatable") {
+    if (field.divider || field.type === "repeatable" || answerless(field)) {
       continue;
     }
     if (Object.hasOwn(values, field.key)) {

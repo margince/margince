@@ -11,10 +11,11 @@ import {
 } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select, type SelectOption } from "../../design-system/select";
 import { isTagTone, TAG_TONES } from "../../design-system/tagpill";
-import { useT } from "../../i18n";
-import { problemMessageOf } from "../../lib/problem";
+import { useLocale, useT } from "../../i18n";
+import { fieldCheckSentence, refusalSentences } from "../../lib/problem";
 import { useCreateTag } from "../../lib/tags.queries";
 import { nearMatches } from "./tagadmin.logic";
 import type { Tag, TagColor } from "./tagadmin.queries";
@@ -71,6 +72,17 @@ export function TagDialog({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const labels = {
+    name: t("tagAdmin.nameLabel"),
+    color: t("tagAdmin.colorLabel"),
+    description: t("tagAdmin.descriptionLabel"),
+  };
+  const refusal = (error: unknown) =>
+    refusalSentences(error, t, labels, {
+      conflict: { field: "name", sentence: t("tags.nameTaken") },
+    });
   const [name, setName] = useState(existing?.name ?? "");
   // Narrowed, not asserted: a string outside the palette would reach the API as
   // a colour the server refuses.
@@ -82,7 +94,7 @@ export function TagDialog({
   const create = useCreateTag();
   const update = useUpdateTag();
   const pending = create.isPending || update.isPending;
-  const failure = create.error ?? update.error;
+  const refused = refusal(create.error ?? update.error);
   // A row that came back with no version cannot be written. It gets its own
   // sentence, because the generic failure gives no way to fix it. Reopening
   // the page does.
@@ -94,9 +106,22 @@ export function TagDialog({
 
   const submit = () => {
     const trimmed = name.trim();
+    const checks = new Map<string, string>();
     if (trimmed === "") {
+      checks.set("name", fieldCheckSentence("required", locale, labels.name));
+    }
+    if (undescribedSuggestion(suggestible, description)) {
+      checks.set(
+        "description",
+        fieldCheckSentence("required", locale, labels.description),
+      );
+    }
+    if (faults.show(checks)) {
+      create.reset();
+      update.reset();
       return;
     }
+    const onError = (error: unknown) => faults.show(refusal(error).byField);
     if (existing) {
       update.mutate(
         {
@@ -109,13 +134,13 @@ export function TagDialog({
           description: description.trim(),
           suggestible,
         },
-        { onSuccess: onClose },
+        { onSuccess: onClose, onError },
       );
       return;
     }
     create.mutate(
       { name: trimmed, color: color === "" ? undefined : color },
-      { onSuccess: onClose },
+      { onSuccess: onClose, onError },
     );
   };
 
@@ -126,49 +151,53 @@ export function TagDialog({
       title={existing ? t("tagAdmin.editTitle") : t("tagAdmin.addTitle")}
       intent="form"
       confirmLabel={existing ? t("tagAdmin.save") : t("tagAdmin.create")}
-      confirmDisabled={
-        name.trim() === "" ||
-        unversioned ||
-        undescribedSuggestion(suggestible, description)
-      }
+      confirmDisabled={unversioned}
+      bodyRef={faultsRoot}
       pending={pending}
-      error={
-        unversioned
-          ? t("tagAdmin.noVersion")
-          : failure != null
-            ? problemMessageOf(failure, t)
-            : undefined
-      }
+      error={unversioned ? t("tagAdmin.noVersion") : refused.rest}
       onConfirm={submit}
     >
-      <Field label={t("tagAdmin.nameLabel")}>
+      <Field label={labels.name} required error={faults.of("name")}>
         {(control) => (
           <TextInput
             {...control}
             value={name}
             maxLength={64}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value);
+              faults.edited("name");
+            }}
           />
         )}
       </Field>
-      <Field label={t("tagAdmin.colorLabel")}>
+      <Field label={labels.color} error={faults.of("color")}>
         {(control) => (
           <Select
             {...control}
             value={color}
-            onChange={(next) => setColor(asTagColor(next))}
+            onChange={(next) => {
+              setColor(asTagColor(next));
+              faults.edited("color");
+            }}
             options={colorOptions(t)}
           />
         )}
       </Field>
       {/* Suggestions are switched on for a word that exists, so a new word is
-          coined first and described when it is edited. */}
+        coined first and described when it is edited. */}
       {existing && (
         <SuggestionFields
           description={description}
-          onDescription={setDescription}
+          descriptionError={faults.of("description")}
+          onDescription={(next) => {
+            setDescription(next);
+            faults.edited("description");
+          }}
           suggestible={suggestible}
-          onSuggestible={setSuggestible}
+          onSuggestible={(next) => {
+            setSuggestible(next);
+            faults.edited("description");
+          }}
         />
       )}
       {near.length > 0 && (
@@ -200,11 +229,13 @@ function undescribedSuggestion(suggestible: boolean, description: string) {
 /** What interest in a tag looks like, and whether captured mail may suggest it. */
 function SuggestionFields({
   description,
+  descriptionError,
   onDescription,
   suggestible,
   onSuggestible,
 }: Readonly<{
   description: string;
+  descriptionError: string | undefined;
   onDescription: (next: string) => void;
   suggestible: boolean;
   onSuggestible: (next: boolean) => void;
@@ -215,6 +246,7 @@ function SuggestionFields({
       <Field
         label={t("tagAdmin.descriptionLabel")}
         hint={t("tagAdmin.descriptionHint")}
+        error={descriptionError}
       >
         {(control) => (
           <Textarea

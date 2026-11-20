@@ -106,12 +106,9 @@ describe("the header's core record verbs — edit, merge, archive", () => {
     const subtitle = () =>
       document.querySelector(".record-split-lines")?.textContent ?? "";
     await waitFor(() => expect(subtitle()).toContain("Old title"));
-    // The left column edits the title too; this is the Research tab's grid.
-    const [, research] = await screen.findAllByRole("button", {
-      name: /^Change Title/,
-    });
-    if (!research) throw new Error("the Research tab draws no title editor");
-    await userEvent.click(research);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Change Title/ }),
+    );
     const title = await screen.findByRole("textbox", { name: "Title" });
     await userEvent.clear(title);
     await userEvent.type(title, "New title{Enter}");
@@ -239,7 +236,7 @@ describe("the left column edits a contact's fields", () => {
       }),
     );
 
-  it("saves a changed title as a PATCH of that field alone", async () => {
+  it("saves a title changed in the About section's dialog as a PATCH of that field alone", async () => {
     let patchBody: unknown = null;
     mount("overview", withVersion, [], {
       "PATCH /contacts/p-1": (body) => {
@@ -251,11 +248,13 @@ describe("the left column edits a contact's fields", () => {
 
     const left = await column();
     await userEvent.click(
-      await left.findByRole("button", { name: /^Change Title/ }),
+      await left.findByRole("button", { name: "Edit About" }),
     );
-    const title = await screen.findByRole("textbox", { name: "Title" });
+    const about = within(await screen.findByRole("dialog", { name: "About" }));
+    const title = about.getByRole("textbox", { name: "Title" });
     await userEvent.clear(title);
-    await userEvent.type(title, "New title{Enter}");
+    await userEvent.type(title, "New title");
+    await userEvent.click(about.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patchBody).toEqual({ title: "New title" }));
   });
@@ -268,6 +267,6 @@ describe("the left column edits a contact's fields", () => {
 
     const left = await column();
     await left.findAllByText("Old title");
-    expect(left.queryByRole("button", { name: /^Change Title/ })).toBeNull();
+    expect(left.queryByRole("button", { name: /^Edit / })).toBeNull();
   });
 });

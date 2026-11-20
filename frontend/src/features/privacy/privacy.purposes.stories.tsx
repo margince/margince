@@ -156,3 +156,26 @@ export const ReadFailed: Story = {
       ),
   }),
 };
+
+// A key the registry already holds, refused on the Key field before anything is
+// sent, naming the purpose that holds it.
+export const KeyTaken: Story = {
+  render: purposes(MAY_APPEND_PURPOSE),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /add purpose/i }),
+    );
+    const dialog = within(document.body);
+    await userEvent.type(
+      await dialog.findByRole("textbox", { name: "Key" }),
+      "Transactional",
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: /create purpose/i }),
+    );
+    await expect(
+      await dialog.findByText("This key is already used by Transactional."),
+    ).toBeVisible();
+  },
+};

@@ -5,7 +5,8 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordDetails } from "./recorddetails";
 
 afterEach(cleanup);
@@ -51,6 +52,61 @@ describe("Record details", () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Hide empty fields" }));
     expect(screen.queryByText("VAT ID")).toBeNull();
+  });
+
+  it("draws an Edit link only on a section that can be edited, named for it", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    render(
+      <RecordDetails
+        sections={[
+          { key: "about", label: "About", rows: [domain], edit: { onEdit } },
+          { key: "lists", label: "Lists", children: "Key accounts" },
+        ]}
+      />,
+    );
+    const link = screen.getByRole("button", { name: "Edit About" });
+    expect(link).toHaveTextContent("Edit");
+    expect(screen.queryByRole("button", { name: "Edit Lists" })).toBeNull();
+    await user.click(link);
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps an editable section's pane and Edit link while all its rows are folded", async () => {
+    const user = userEvent.setup();
+    render(
+      <RecordDetails
+        sections={[
+          { key: "about", label: "About", rows: [domain] },
+          {
+            key: "address",
+            label: "Address",
+            edit: { onEdit: vi.fn() },
+            rows: [
+              { key: "street", term: "Street", value: "Add…", empty: true },
+            ],
+          },
+          {
+            key: "registration",
+            label: "Registration",
+            rows: [{ key: "vat", term: "VAT ID", value: "Add…", empty: true }],
+          },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Address" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Edit Address" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Street")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Registration" })).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "Show 2 empty fields" }),
+    );
+    expect(screen.getByText("Street")).toBeInTheDocument();
   });
 
   it("offers no toggle when nothing is empty, and prints the footnote", () => {

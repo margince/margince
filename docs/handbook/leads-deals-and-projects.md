@@ -117,9 +117,10 @@ The lead goes back to the status it held before it was disqualified, and the rea
 Also called: restore a lead, undo a disqualification.
 
 ### How do I edit a lead?
-To edit a lead in Margince, open it from **Leads** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
-1. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. Pressing the **Email** address starts a message; press the box around it or its mark to change it.
-2. Fields: **Full name**, **Email**, **Phone**, **Title**, **Company**, **Industry**. The owner has its own control; see [How do I change a lead's owner?](#how-do-i-change-a-leads-owner). More fields: **Company routing key**, **Project**, **Origin**, **Origin note**, **Referred by partner**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
+To edit a lead in Margince, open it from **Leads** and press **Edit** in a section of its **Details** panel. The sections are **About**, **Email and phone**, **Ownership** and **Registration**. Each **Edit** opens a dialog with only the fields of its section.
+1. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing in the dialog is stored until **Save**; **Cancel** or Esc closes without saving. To rename the lead, press the name at the top. Pressing the **Email** address starts a message.
+2. **About** holds **Company**, **Title**, **Industry**, **Project** and **Product**, and **Full name** while the lead has none. **Email and phone** holds **Email** and **Phone**. **Registration** holds **Origin**, **Origin note**, **Referred by partner**, **Company routing key** and **Tags**. In the dialog, **Change Project**, **Change Product** and **Change Tags** close it and open a list of their own. A pick there saves at once.
+3. The owner has its own control; see [How do I change a lead's owner?](#how-do-i-change-a-leads-owner). **Added via** shows how the row came into Margince, and Margince writes it.
 
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead is read-only.
 Also called: update a lead, rename a lead, correct a prospect.
@@ -127,7 +128,7 @@ Also called: update a lead, rename a lead, correct a prospect.
 **Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
 
 ### How do I change a lead's owner?
-To change or set the owner of a lead in Margince, open the lead. Press **Change owner** beside the **Owner** value under **Ownership** in its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
+To change or set the owner of a lead in Margince, open the lead. Press **Edit** in the **Ownership** section of its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
 Pick yourself on a lead with no owner to claim it, or anyone else to hand it over. The current owner is marked; picking them changes nothing.
 
 For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**. A message says how many leads went to the new owner.
@@ -135,7 +136,7 @@ The new owner must be "an active colleague you may assign work to".
 Also called: assign a lead, reassign a prospect, take a lead, claim a lead.
 
 ### How do I set which product a lead wants?
-To name a lead's product in Margince, open the lead and choose **Name the product** on its **Product** row, then pick it under **Search products**. **Change product** and **Clear the product** change it later. Product reports count the lead under that product.
+To name a lead's product in Margince, open the lead, press **Edit** in the **About** section, then **Change Product**. Pick it under **Search products**. The same list changes it later, and **Clear the product** there removes it. Product reports count the lead under that product.
 Also called: lead product, the product a lead asks about.
 
 ### How do I see why a lead has its score?
@@ -191,29 +192,28 @@ On a company or project page, the button is hidden when the pipeline has no open
 Also called: opportunity.
 
 ### How do I edit a deal?
-To edit a deal in Margince, open it from **Deals** and press the value to change in its **Details** panel. **More actions** → **Edit details** opens every field in one place. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
+To edit a deal in Margince, open it from **Deals** and press **Edit** in a section of its **Details** panel. The sections are **About**, **Value**, **Ownership** and **Registration**. Each **Edit** opens a dialog with only the fields of its section. **More actions** → **Edit details** opens every field in one place.
 1. If the panel is hidden, choose **Show details**.
-2. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. **Value**, **Company** and **Referring partner** open a dialog with several fields.
+2. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing in the dialog is stored until **Save**; **Cancel** or Esc closes without saving. To rename the deal, press the name at the top.
 
-Fields: **Deal name**, **Value**, **Currency**, **Owner**, **Company**, **Project**, **Referring partner**, **Probability**, **Expected close**, **Wait until**, **Deal brief**, **Commercial motion**, **Priority**, **Acquisition source**, custom fields. The stage moves on the **Stage** ladder.
+**About** holds **Expected close**, **Probability**, **Wait until**, **Commercial motion** and **Priority**. A closed deal offers neither **Expected close** nor **Probability**. **Value** holds **Value**, **Expected ARR** and **Currency**, **Ownership** holds **Owner**, and **Registration** holds **Acquisition source** and **Tags**. In the dialog, **Change Tags** closes it and opens the tags in a panel of their own, where a change saves at once. **Company**, **Project**, **Referring partner** and custom fields change only in **Edit details**, where you press a value; the stage moves on the **Stage** ladder.
 Also called: update an opportunity, rename a deal, change deal details.
 
 ### How do I change a deal's value or currency?
-To change a deal's value or currency, open the deal and click **Value** in its **Details** panel, then change **Value** or **Currency** and choose **Save**.
-Value and currency go together: a value with no currency is refused, and so is a currency with no value.
-Changing the currency keeps the figures as typed, now in the new currency; nothing is turned into the new currency.
+To change a deal's value or currency, press **Edit** in the **Value** section of the deal's **Details** panel, change them and choose **Save**.
+Value and currency go together: a value with no currency is refused, and so is a currency with no value. Changing the currency keeps the figures as typed, now in the new currency; nothing is turned into the new currency.
 The recurring value may come from an accepted offer. Then the row reads **Expected ARR**, "comes from the accepted offer and is not edited here"; accepting another offer replaces it.
 Also called: change the amount, update deal size, switch to dollars.
 
 ### How do I change a deal's expected close date?
-To change when a deal is expected to close, open the deal, click **Expected close** in its **Details** panel and pick the date. On the **Board** view, an open deal's card has **Change close date** in its **…** menu.
+To change when a deal is expected to close, open the deal and press **Edit** in the **About** section of its **Details** panel. Pick the date under **Expected close** and press **Save**. On a closed deal, use **More actions** → **Edit details** and press **Expected close**. On the **Board** view, an open deal's card has **Change close date** in its **…** menu.
 
 An open deal cannot get a date in the past: "an open deal cannot claim a close date in the past; pick today or later". A closed deal keeps its dates open to edits, past ones included.
 To hold a deal until a date without moving its close date, set **Wait until** instead. **How it stands** reads **On hold** until that day, and **Follow-up overdue** from that day on.
 Also called: push the close date, change closing date, slip a deal.
 
 ### How do I change a deal's company or project?
-To change the company or project of a deal in Margince, open the deal and click **Company** in its **Details** panel. Pick the **Company**, then a **Project** of that company, and choose **Save**.
+To change the company or project of a deal in Margince, open the deal and choose **More actions** → **Edit details**, then press **Company**. Pick the **Company**, then a **Project** of that company, and choose **Save**.
 A deal and its project must belong to the same company. The **Project** field offers only that company's projects, and empties when you change the company.
 
 **New project…** creates one on the chosen company; without a company it says "Select the deal’s company first. A project belongs to a company."
@@ -221,7 +221,7 @@ Margince refuses to move a deal to another company while contracts filed on it n
 Also called: move a deal to another account, attach a deal to a project.
 
 ### How do I change the owner of a deal?
-To reassign a deal to a colleague in Margince, open the deal and press the **Owner** row of its **Details** panel. Pick the colleague in the dialog and press **Save**. On the **Board** view, open the card's **…** menu, choose **Change owner** and pick the colleague; that pick saves at once.
+To reassign a deal to a colleague in Margince, open the deal and press **Edit** in the **Ownership** section of its **Details** panel. Pick the colleague in the dialog and press **Save**. On the **Board** view, open the card's **…** menu, choose **Change owner** and pick the colleague; that pick saves at once.
 
 To reassign many, switch **Deals** to **Table** and tick them. Use **Pick an owner** → **Assign owner** in the bulk bar, then **Change owner**.
 The new owner must be "an active colleague you may assign work to". That is any active colleague on a full seat, not an agent, even one whose records you cannot change. You may reassign only a deal you may change, or one with no owner.
@@ -247,7 +247,7 @@ No. A deal in Margince stays in the pipeline it was created in, and its stage ca
 Also called: change a deal's pipeline, switch pipeline.
 
 ### Can I set the win probability of one deal?
-Yes. Press **Probability** in the deal's **Details** and enter a number from 0 to 100. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's. The ⓘ beside the figure says where it comes from: the stage, who set it by hand, or why Margince lowered it.
+Yes. Press **Edit** in the **About** section of the deal's **Details**, and enter a number from 0 to 100 under **Probability**. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's. The ⓘ beside the figure says where it comes from: the stage, who set it by hand, or why Margince lowered it.
 Also called: deal probability, likelihood, confidence, why this probability.
 
 ## Projects
@@ -292,7 +292,7 @@ Yes. In Margince, what you log on a deal, or relink onto it, also goes under the
 
 ### How do I edit or rename a project?
 To rename a project in Margince, open it from **Projects**, press its name at the top, type the new name and press **Save**. To edit the rest, choose **More actions** → **Edit project**, change the fields and choose **Save**.
-You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it. To change only **Owner**, **Target end date** or **Description** (behind **Show {count} empty fields**), press its value in the project's **Details** panel instead.
+You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it. For only **Target end date** or **Description**, press **Edit** in **About** in the project's **Details** panel; for **Owner**, in **Ownership**.
 
 The company is not in this form: add or take off companies in the project's **Companies** panel. The phase moves on the **Phase** bar. An archived project takes no changes.
 Also called: update a project, change the project's end date.

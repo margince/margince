@@ -78,6 +78,7 @@ export function AddEmploymentModal({
   // then corrected.
   const [status, setStatus] = useState<"current" | "former">("current");
   const [end, setEnd] = useState("");
+  const employmentZone = useEmploymentZone();
   // Ticked by default for somebody with no current job, because that is what
   // the save will do either way: the server marks a contact's only current
   // employment as their primary one. A box that started unticked and then
@@ -183,6 +184,23 @@ export function AddEmploymentModal({
           status={status}
           onStatusChange={(next) => {
             setStatus(next);
+            // A current role keeps a coming end, its notice; an end already
+            // past would save a held role that is over, so it goes.
+            const ended = datePatch(end);
+            if (
+              next === "current" &&
+              ended.date !== undefined &&
+              !stillHeld(
+                {
+                  employment_status: "current",
+                  ended_at: ended.date,
+                  ended_precision: ended.precision,
+                },
+                employmentZone,
+              )
+            ) {
+              setEnd("");
+            }
             // A company listed for a current role is not offered for another.
             if (
               next === "current" &&
@@ -288,7 +306,7 @@ export function useAddEmployment(
   );
   const modal = (
     <AddEmploymentModal
-      key={`add-employment-${adding.seq}`}
+      key={adding.seq}
       open={adding.open}
       onClose={() => setAdding((prior) => ({ ...prior, open: false }))}
       initialTerm={adding.company ? undefined : adding.term}

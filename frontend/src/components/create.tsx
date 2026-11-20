@@ -12,11 +12,7 @@ import { useT } from "../i18n";
 import { binding, shortcutTip } from "../lib/keymap";
 import { leaveCreateForm } from "../lib/listreturn";
 import { fromHere } from "../lib/navigatefrom";
-import {
-  ProblemError,
-  problemExistingId,
-  problemMessageOf,
-} from "../lib/problem";
+import { ProblemError, problemExistingId } from "../lib/problem";
 import { navigate, type Route, type Screen } from "../lib/router";
 import { useShortcutAria } from "../lib/shortcuts";
 import { useAddressWriters } from "../lib/urlstate";
@@ -25,7 +21,7 @@ import "./create.css";
 import "../design-system/querystates.css";
 
 // The shared create-record form: each screen declares its fields and keeps its
-// transport. The server validates: a 422's detail renders verbatim, unreworded.
+// transport. A refusal stands on the field it names, in the reader's words.
 import {
   type CreateField,
   type FormRows,
@@ -33,12 +29,14 @@ import {
   usePublishedValues,
 } from "./create.fields";
 import { RecordFormBody } from "./create.form";
-import { fieldRefusals } from "./create.refusals";
+import { type CreateConflict, fieldRefusals } from "./create.refusals";
 
 export { fieldControl } from "./create.controls";
 export {
+  answerless,
   type CreateField,
   type CreateFieldOption,
+  dayOutOfRange,
   type FormRow,
   type FormRows,
   fieldLabel,
@@ -51,6 +49,7 @@ export {
   visibleFields,
 } from "./create.fields";
 export { RecordFormBody, SUBMIT_COPY, type SubmitIntent } from "./create.form";
+export type { CreateConflict } from "./create.refusals";
 
 // The rail's WROTE head for a create here (agentrail-copy.ts). Only the three
 // kinds a salesperson creates by hand have one; others leave the ticker silent.
@@ -145,9 +144,12 @@ export function CreateAction<Created extends { id: string }>({
   reason,
   link,
   refusalNotice,
+  conflict,
 }: Readonly<{
   label: string;
   fields: CreateField[];
+  // See CreateConflict.
+  conflict?: CreateConflict;
   // Draws the verb as a card's text link. See NewRecordButton.
   link?: boolean;
   // Why this reader may not create, drawn beside the refused button. The verb
@@ -225,7 +227,13 @@ export function CreateAction<Created extends { id: string }>({
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
-  const refused = fieldRefusals(mutation.error, fields, t);
+  const refused = fieldRefusals(
+    mutation.error,
+    fields,
+    t,
+    conflict,
+    mutation.variables?.values,
+  );
   const notice = mutation.isError
     ? refusalNotice?.(
         mutation.error,
@@ -242,6 +250,8 @@ export function CreateAction<Created extends { id: string }>({
         label={label}
         onClick={() => {
           renew();
+          // A refusal from an earlier opening is about words no longer there.
+          mutation.reset();
           setCreating(true);
         }}
         testId={testId}
@@ -258,12 +268,9 @@ export function CreateAction<Created extends { id: string }>({
         title={label}
         fields={fields}
         pending={mutation.isPending}
-        error={
-          mutation.isError && !refused.allPlaced
-            ? problemMessageOf(mutation.error, t)
-            : null
-        }
+        error={mutation.isError && !refused.allPlaced ? refused.rest : null}
         fieldRefusals={refused.byField}
+        refusedAt={mutation.isError ? mutation.submittedAt : undefined}
         existing={existing}
         resolveExisting={resolveExisting}
         notice={notice}
@@ -337,6 +344,7 @@ export function CreateRecordModal({
   pending,
   error,
   fieldRefusals,
+  refusedAt,
   existing,
   resolveExisting,
   notice,
@@ -351,6 +359,7 @@ export function CreateRecordModal({
   pending: boolean;
   error: string | null;
   fieldRefusals?: ReadonlyMap<string, string>;
+  refusedAt?: number;
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
   notice?: ReactNode;
@@ -406,6 +415,7 @@ export function CreateRecordModal({
       pending={pending}
       error={error}
       fieldRefusals={fieldRefusals}
+      refusedAt={refusedAt}
       existing={existing}
       resolveExisting={resolveExisting}
       notice={notice}

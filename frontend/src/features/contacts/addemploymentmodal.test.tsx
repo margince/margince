@@ -1,5 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
@@ -8,6 +14,7 @@ import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
 import { Employers } from "./contactemployers";
@@ -24,8 +31,9 @@ afterEach(() => {
 
 const page = { has_more: false, next_cursor: null };
 
-function openAddCompany(endedAt: string | null = null) {
+function openAddCompany(endedAt: string | null = null, routes: RouteMap = {}) {
   installFetchStub({
+    ...routes,
     "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
     "GET /companies": () =>
       jsonResponse({
@@ -117,4 +125,52 @@ it("offers a former employer for a new current role", async () => {
   expect(
     within(dialog).queryByText(en["contact.rail.allCompaniesConnected"]),
   ).toBeNull();
+});
+
+it("adds a past job as former, with the end date it was given", async () => {
+  const sent: unknown[] = [];
+  const user = openAddCompany(null, {
+    "POST /relationships": (body) => {
+      sent.push(body);
+      return jsonResponse({ id: "rel-new" });
+    },
+  });
+  await user.click(await screen.findByRole("button", { name: "Add company" }));
+  await chooseStatus(user, "Former");
+  await user.type(screen.getByRole("searchbox"), "emp");
+  const dialog = screen.getByRole("dialog");
+  await user.click(await within(dialog).findByText("Employer GmbH"));
+  await user.type(within(dialog).getByLabelText("End date"), "2019-03");
+  // A former job cannot be the primary employer, so the box says no.
+  expect(
+    within(dialog).getByRole("checkbox", {
+      name: "This is their primary employer",
+    }),
+  ).toHaveProperty("checked", false);
+  await user.click(within(dialog).getByRole("button", { name: "Create" }));
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0]).toMatchObject({
+    employment_status: "former",
+    ended_at: "2019-03-01",
+    ended_precision: "month",
+    is_current_primary: false,
+  });
+});
+
+it("drops a past end date when the role turns current, and keeps a coming one", async () => {
+  const user = openAddCompany();
+  await user.click(await screen.findByRole("button", { name: "Add company" }));
+  const dialog = screen.getByRole("dialog");
+  await chooseStatus(user, "Former");
+  await user.type(within(dialog).getByLabelText("End date"), "2019-03");
+  await chooseStatus(user, "Current");
+  expect(within(dialog).getByLabelText("End date")).toHaveProperty("value", "");
+
+  await user.type(within(dialog).getByLabelText("End date"), "2999-03");
+  await chooseStatus(user, "Former");
+  await chooseStatus(user, "Current");
+  expect(within(dialog).getByLabelText("End date")).toHaveProperty(
+    "value",
+    "2999-03",
+  );
 });

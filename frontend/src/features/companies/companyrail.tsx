@@ -5,13 +5,15 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { RecordListsActions } from "../../components/addtoshortlist";
-import { mapCompanyUpdate } from "../../components/companyform";
+import { ADDRESS_FIELDS, mapCompanyUpdate } from "../../components/companyform";
 import {
   formatSizeBand,
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
+import { type RailEdit, RailField } from "../../components/railfield";
+import { useSectionEdit } from "../../components/sectionedit";
 import { Badge } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
@@ -22,10 +24,10 @@ import {
 } from "../../design-system/recorddetails";
 import type { RecordRename } from "../../design-system/recordview";
 import { postalLines } from "../../format/address";
-import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
+import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useRecordCarriesTags } from "../../lib/tags.queries";
@@ -35,12 +37,11 @@ import {
   displayHost,
   useCompanyReadOnlyReason,
 } from "./companyheader";
+import { useCompanyEdit, useCompanyFieldSave } from "./companyrailedit";
 import {
-  type CompoundField,
-  CompoundFieldValue,
-  useCompanyFieldSave,
-} from "./companyrailedit";
-import { useOwnershipRows, useRegistrationRows } from "./companyrailgroups";
+  useOwnershipSection,
+  useRegistrationSection,
+} from "./companyrailgroups";
 import { CompanyTagsSection } from "./companyrailtags";
 
 // The company's details under its head: About, Ownership, Registration and
@@ -106,23 +107,17 @@ function RailBody({
   lists,
 }: RailProps & Readonly<{ lists?: ReactNode }>) {
   const t = useT();
-  const edit = useCompanyEditGate(company);
+  const gate = useCompanyEditGate(company);
+  const edit = useCompanyEdit(company, gate.canEdit);
+  const about = useAboutSection(company, view, loading, edit);
+  const address = useAddressSection(company, edit);
+  const ownership = useOwnershipSection(company, edit);
+  const registration = useRegistrationSection(company, edit, gate);
   const sections: DetailSection[] = [
-    {
-      key: "about",
-      label: t("record.details.about"),
-      rows: useAboutRows(company, view, loading, edit),
-    },
-    {
-      key: "ownership",
-      label: t("record.details.ownership"),
-      rows: useOwnershipRows(company),
-    },
-    {
-      key: "registration",
-      label: t("record.registration"),
-      rows: useRegistrationRows(company, edit),
-    },
+    about.section,
+    address.section,
+    ownership.section,
+    registration.section,
   ];
   if (lists) {
     sections.push({
@@ -133,10 +128,16 @@ function RailBody({
     });
   }
   return (
-    <RecordDetails
-      sections={sections}
-      footnote={refusal && <span id={refusal.id}>{refusal.text}</span>}
-    />
+    <>
+      <RecordDetails
+        sections={sections}
+        footnote={refusal && <span id={refusal.id}>{refusal.text}</span>}
+      />
+      {about.element}
+      {address.element}
+      {ownership.element}
+      {registration.element}
+    </>
   );
 }
 
@@ -237,45 +238,82 @@ export function useRowBuilders(company: Company, edit: Edit) {
       ),
     };
   };
-  // `flag` sits beside the value rather than inside it, so the edit button's
-  // label does not swallow what the flag says.
+  // The Profile tab's grouped fields, each opening the record's edit form.
+  const companyEdit = useCompanyEdit(company, edit.canEdit);
   const compound = (
-    which: CompoundField,
+    key: "parent_company_id" | "relationship_types",
     label: string,
     reading: ReactNode | undefined,
-    shape: Readonly<{ flag?: ReactNode; link?: boolean }> = {},
+    shape: Readonly<{ link?: boolean }> = {},
   ): DetailRow => ({
-    key: which,
+    key,
     term: label,
     empty: !reading,
     value: (
-      <>
-        <CompoundFieldValue
-          company={company}
-          which={which}
-          label={label}
-          reading={reading}
-          link={shape.link}
-          canEdit={edit.canEdit}
-          readOnlyReason={edit.reason}
-        />
-        {shape.flag && <> {shape.flag}</>}
-      </>
+      <RailField
+        edit={companyEdit}
+        keys={[key]}
+        label={label}
+        reading={reading ?? (edit.canEdit ? undefined : t("field.unset"))}
+        link={shape.link && Boolean(reading)}
+      />
     ),
   });
   return { text, choice, compound };
 }
 
-// The fixed list in the reader's order. A value that is no code, from a row not
-// yet repaired, is offered as it is stored so the row never reads as unset.
-export function useIndustryOptions(company: Company) {
+const ABOUT_KEYS = ["domains", "industry", "size_band", "lifecycle"];
+const ADDRESS_KEYS = ADDRESS_FIELDS.map((field) => field.key);
+
+function useAboutSection(
+  company: Company,
+  view: Company360 | undefined,
+  loading: boolean,
+  edit: RailEdit,
+) {
   const t = useT();
-  const { locale } = useLocale();
-  const options = industryOptions(t, locale);
-  const stored = company.industry;
-  return stored && !INDUSTRY_CODES.some((code) => code === stored)
-    ? [{ value: stored, label: stored }, ...options]
-    : options;
+  const label = t("record.details.about");
+  const about = useSectionEdit(edit, { label, keys: ABOUT_KEYS });
+  const section: DetailSection = {
+    key: "about",
+    label,
+    rows: useAboutRows(company, view, loading),
+    edit: about.edit,
+  };
+  return { section, element: about.element };
+}
+
+function useAddressSection(company: Company, edit: RailEdit) {
+  const t = useT();
+  const label = t("co.address.summary");
+  const address = postalLines(company.address);
+  const change = useSectionEdit(edit, { label, keys: ADDRESS_KEYS });
+  const section: DetailSection = {
+    key: "address",
+    label,
+    edit: change.edit,
+    rows: [
+      {
+        key: "address",
+        term: label,
+        empty: !address,
+        value: (
+          <>
+            {address}
+            {company.address_country_mismatch && (
+              <>
+                {" "}
+                <AddressCountryMismatchBadge
+                  mismatch={company.address_country_mismatch}
+                />
+              </>
+            )}
+          </>
+        ),
+      },
+    ],
+  };
+  return { section, element: change.element };
 }
 
 // The rows the design reads under About: each set one shows, each empty one
@@ -285,18 +323,33 @@ function useAboutRows(
   company: Company,
   view: Company360 | undefined,
   loading: boolean,
-  edit: Edit,
 ): DetailRow[] {
   const t = useT();
-  const { choice, compound } = useRowBuilders(company, edit);
-  const industryOptions = useIndustryOptions(company);
+  const industries = useIndustryOptions(company.industry);
   const website = companyWebsite(company);
   const wayIn = useWayIn(company, view, loading);
   const tagged = useRecordCarriesTags("company", company.id, view?.tags);
+  const choice = (
+    key: "size_band" | "lifecycle" | "industry",
+    label: MessageKey,
+    options: readonly { value: string; label: string }[],
+  ): DetailRow => ({
+    key,
+    term: t(label),
+    empty: !company[key] || company[key] === "unknown",
+    value:
+      options.find((option) => option.value === company[key])?.label ??
+      t("field.unset"),
+  });
   return [
-    // The head already links the site; here the value opens the domains form.
-    compound("domains", t("field.domain"), website && displayHost(website)),
-    choice("industry", "create.industry", industryOptions),
+    // The head already links the site; here the domain is a reading.
+    {
+      key: "domains",
+      term: t("field.domain"),
+      empty: !website,
+      value: website && displayHost(website),
+    },
+    choice("industry", "create.industry", industries),
     choice(
       "size_band",
       "co.aside.size",
@@ -313,18 +366,6 @@ function useAboutRows(
         label: t(labelFor(LIFECYCLE_LABELS, value)),
       })),
     ),
-    compound(
-      "address",
-      t("co.address.summary"),
-      postalLines(company.address) || undefined,
-      {
-        flag: company.address_country_mismatch && (
-          <AddressCountryMismatchBadge
-            mismatch={company.address_country_mismatch}
-          />
-        ),
-      },
-    ),
     ...(wayIn
       ? [
           {
@@ -335,15 +376,24 @@ function useAboutRows(
           },
         ]
       : []),
-    {
-      key: "tags",
-      term: t("tags.panelTitle"),
-      block: true,
-      empty: Boolean(company.archived_at) || !tagged,
-      value: (
-        <CompanyTagsSection company={company} companyId={company.id} bare />
-      ),
-    },
+    // An archived company takes no tags, so it has no Tags row to fold.
+    ...(company.archived_at
+      ? []
+      : [
+          {
+            key: "tags",
+            term: t("tags.panelTitle"),
+            block: true,
+            empty: !tagged,
+            value: (
+              <CompanyTagsSection
+                company={company}
+                companyId={company.id}
+                bare
+              />
+            ),
+          },
+        ]),
   ];
 }
 

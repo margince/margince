@@ -24,10 +24,12 @@ export function OfferCurrencyField({
   value,
   lineItems,
   onChange,
+  error,
 }: Readonly<{
   value: string;
   lineItems: Offer["line_items"];
   onChange: (currency: string) => void;
+  error?: string;
 }>) {
   const t = useT();
   const leading = useLeadingCurrencies();
@@ -46,6 +48,7 @@ export function OfferCurrencyField({
     <Field
       label={t("offer.currency")}
       hint={priced > 0 ? t("offer.currencyFixedByLines") : undefined}
+      error={error}
     >
       {(control) => (
         <Select

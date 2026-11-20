@@ -105,8 +105,10 @@ func projectReportingMetric(def crmcontracts.ReportingMetricDefinition, frame cr
 		projectShare(&out, cohort, func(fact reporting.Fact) bool { return fact.Row.Value != nil && *fact.Row.Value == 1 })
 	case reportingPartnerActivity:
 		projectShare(&out, cohort, func(fact reporting.Fact) bool { return fact.GroupKey == partnerActiveGroup })
-	case reportingStageConversion, reportingLeadCohortOutcomes:
+	case reportingStageConversion, reportingLeadCohortOutcomes, reportingAccountProgression:
 		projectCohortRate(&out, cohort)
+	case reportingSourceQuality:
+		projectShare(&out, cohort, func(fact reporting.Fact) bool { return fact.Row.Value != nil && *fact.Row.Value == 1 })
 	}
 	if def.SupportsTarget {
 		out.TargetActual, _, _ = metricSum(metricFacts(facts, def.Id, reportingTarget))
@@ -222,6 +224,10 @@ func populateReportingChart(out *reporting.Evaluation, chart crmcontracts.Report
 		chart = reportingStageCohortChart(out, chart)
 	case reportingLeadCohort:
 		chart = reportingLeadCohortChart(out, chart)
+	case reportingAccountCohort:
+		chart = reportingAccountCohortChart(out, chart)
+	case reportingSourceQualityBlock:
+		chart = reportingSourceQualityChart(out, chart)
 	case reportingPipelineMovement:
 		chart.Coverage = crmcontracts.ReportingCoverage{Status: reportingUnavailable}
 		reason := reporting.ExplanationCopy(out.Result.Context).Say(reportingWords.Collecting)

@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"errors"
 	"maps"
 	"testing"
 	"time"
@@ -15,11 +16,14 @@ import (
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -132,6 +136,86 @@ func TestInfrastructureUpdatesDoNotMakeAQuietReceiptIncomplete(t *testing.T) {
 	}
 	if count, ok := unknownEntityCount(receipt); !ok || count != 6 {
 		t.Fatalf("unsupported business or unknown subjects disappeared: %+v", receipt.NotShown)
+	}
+}
+
+// A list membership and a tagging are business work under a maintenance subject.
+// The breakdown names them; the list's and tag's own edits stay upkeep.
+func TestTheUnplacedBreakdownNamesLinksAndAddsUpToTheReceipt(t *testing.T) {
+	e := Setup(t)
+	since := clocktest.Now(t).Add(-time.Hour)
+	seedUnplaceableMachineAction(t, e)
+	seedMachineLinkChanges(t, e)
+	svc := magic.NewService(e.Pool, nil, func() time.Time { return clocktest.Now(t) })
+
+	changes, err := svc.UnplacedChanges(e.Admin(), since)
+	if err != nil {
+		t.Fatalf("reading the breakdown as an admin: %v", err)
+	}
+	got := map[string]int{}
+	for _, change := range changes {
+		got[change.EntityType+"/"+change.Action] = change.Count
+	}
+	want := map[string]int{"product/update": 1, "list/added": 1, "list/removed": 1, "tag/applied": 1, "tag/removed": 1}
+	if !maps.Equal(got, want) {
+		t.Fatalf("breakdown %v, want %v", got, want)
+	}
+	receipt, err := svc.Read(e.Admin(), &since, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count, ok := unknownEntityCount(receipt); !ok || count != magic.UnplacedTotal(changes) {
+		t.Fatalf("receipt counts %+v, breakdown sums to %d", receipt.NotShown, magic.UnplacedTotal(changes))
+	}
+
+	if _, err := svc.UnplacedChanges(e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms), since); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a seat without ai_diagnostics read was given the breakdown: %v", err)
+	}
+}
+
+// seedMachineLinkChanges writes, as a machine and through the real writers, a
+// membership and a tagging made and undone, both renames and a document edit.
+func seedMachineLinkChanges(t *testing.T, e *Env) {
+	t.Helper()
+	ctx := principal.SystemActing(e.Admin(), "segment-sync")
+	store := collections.NewStore(e.DB())
+	contact := e.SeedContact(t, "Linked Contact", &e.Rep1)
+	list, err := store.CreateList(e.Admin(), collections.CreateListInput{Name: "Synced", EntityType: "contact", Sharing: "workspace"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	change := collections.MemberChange{EntityType: "contact", EntityID: contact, Reason: collections.ReasonAutomation}
+	if _, err := store.AddMember(ctx, list.ID, change); err != nil {
+		t.Fatal(err)
+	}
+	renamed := "Synced weekly"
+	if _, err := store.UpdateList(ctx, list.ID, collections.UpdateListInput{Name: &renamed, IfVersion: &list.Version}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.RemoveMember(ctx, list.ID, change); err != nil {
+		t.Fatal(err)
+	}
+	tag, err := store.NewTag(e.Admin(), "synced", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tagID := ids.From[ids.TagKind](tag.TagID)
+	if _, err := store.ApplyTag(ctx, tagID, "contact", contact); err != nil {
+		t.Fatal(err)
+	}
+	weekly := "synced weekly"
+	if _, err := store.UpdateTag(ctx, tagID, collections.TagUpdate{Name: &weekly}, 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.RemoveTag(ctx, tagID, "contact", contact); err != nil {
+		t.Fatal(err)
+	}
+	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, err := storekit.Audit(ctx, tx, "update", auditentity.KnowledgeDocument, ids.NewV7(), map[string]string{"state": "old"}, map[string]string{"state": "current"})
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

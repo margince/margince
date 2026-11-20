@@ -148,7 +148,11 @@ type DealCoverage struct {
 	// stakeholders, one edge per colleague and contact, warmest first.
 	// OurColleagues folds it to one entry per colleague.
 	OurSide []ColleagueEdge
-	Risks   []Risk
+	// Pairs says who talks to which seat, read from the activities the caller
+	// may open. Nil when the caller may not say: no activity grant, or the edge
+	// sections withheld. Set by the one handler that wires it.
+	Pairs *search.PairReading
+	Risks []Risk
 	// SectionsOmitted names the sections withheld for lack of the edge grant.
 	// Nil on the ordinary read.
 	//

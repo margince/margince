@@ -198,7 +198,7 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/internal/compose/meetingbrief/coachingcopy.go":  "German human-role wording names the sales colleague and accountable actor, not the contact record type",
 	"backend/internal/compose/meetingbrief/advancecopy.go":   "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/compose/meetingbrief/objectivecopy.go": "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/compose/reportingdefinitioncopy.go":    "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/metriccopy/metriccopy.go":      "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/compose/reportinglabelcopy.go":         "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/modules/reporting/statuscopy.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/shared/kernel/dealrole/words.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",

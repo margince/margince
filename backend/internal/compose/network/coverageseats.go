@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -83,4 +84,29 @@ func deniedAsNone(err error) error {
 		return nil
 	}
 	return err
+}
+
+// readSeatPairs says which current colleague talks to which seat. It asks only
+// about seats whose contact the caller can read (`readable` holds those), so an
+// unreadable contact gets neither a line nor a state. Nil means the caller may
+// not say: no activity grant, or the edge sections withheld.
+func readSeatPairs(
+	ctx context.Context, tx pgx.Tx, c DealCoverage, readable map[ids.UUID]string,
+) (*search.PairReading, error) {
+	if len(c.SectionsOmitted) > 0 || !auth.ReadGranted(ctx, "activity") {
+		return nil, nil //nolint:nilnil // nil is the wire's absent: the reader may not say who talked
+	}
+	asked := make([]ids.UUID, 0, len(c.Stakeholders))
+	seen := make(map[ids.UUID]bool, len(c.Stakeholders))
+	for _, seat := range c.Stakeholders {
+		if _, ok := readable[seat.ContactID]; ok && !seen[seat.ContactID] {
+			seen[seat.ContactID] = true
+			asked = append(asked, seat.ContactID)
+		}
+	}
+	reading, err := search.ReadablePairDates(ctx, tx, asked)
+	if err != nil {
+		return nil, err
+	}
+	return &reading, nil
 }

@@ -65,6 +65,12 @@ type FieldShapeError struct {
 	// cause keeps the decoder's original reachable for an operator's log.
 	// Withholding a message is not the same as losing it.
 	cause error
+	// code is the wire code a value of the wrong shape answers with; empty
+	// for a refusal that names its own (a range, a repeat).
+	code string
+	// Params are the values a screen words the refusal with, by name, as the
+	// contract spells them: the `min` and `max` of a range.
+	Params map[string]string
 }
 
 func (e *FieldShapeError) Error() string {
@@ -94,6 +100,15 @@ func (e *FieldShapeError) Error() string {
 }
 
 func (e *FieldShapeError) Unwrap() error { return e.cause }
+
+// ShapeCode is the wire code for a value this field cannot hold. The shape the
+// field takes chooses it, so a screen can word it without the message.
+func (e *FieldShapeError) ShapeCode() string {
+	if e.code == "" {
+		return codeInvalidType
+	}
+	return e.code
+}
 
 // ProbeDecoder re-runs a decode over one key's worth of a payload.
 //
@@ -142,20 +157,10 @@ type ProbeDecoder func(raw json.RawMessage, into any) error
 //
 //craft:ignore naked-any mirror of StrictDecode's seam target
 func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDecoder) *FieldShapeError {
+	// A fault inside an array item stays the decoder's, which names no index. A
+	// top-level name is not trusted: for an array it reports the item's type.
 	var typeErr *json.UnmarshalTypeError
-	if errors.As(err, &typeErr) && namesAKeyBelowATopLevelField(typeErr.Field) {
-		// A path that reaches inside a nested value (`links.entity_id`) names a
-		// key this walk cannot reach, since it only decodes top-level keys, so
-		// the decoder's answer is the more precise one and must survive.
-		//
-		// A bare top-level name is NOT deferred to, even though the decoder
-		// supplies one: at that point it reports the type it was filling when it
-		// failed, which for an array is the ELEMENT type — `links` reads as
-		// "must be an object" when the field is an array of them, and a caller
-		// who believes it sends an object where an array belongs. The walk below
-		// reads the FIELD's own type, so it describes the field.
-		return nil
-	}
+	deeper := errors.As(err, &typeErr) && namesAKeyBelowATopLevelField(typeErr.Field)
 	target := structTypeOf(into)
 	if target == nil {
 		return nil
@@ -171,8 +176,17 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 		if probeErr == nil {
 			continue
 		}
+		if inner := localizeInsideObject(keys[key], field.Type, probeErr, decode); inner != nil {
+			inner.Field = key + "." + inner.Field
+			return inner
+		}
+		if deeper {
+			return nil
+		}
 		want, shape, perItem := wantedShape(field.Type)
-		refusal := &FieldShapeError{Field: key, Want: want, shape: shape, perItem: perItem, cause: probeErr}
+		refusal := &FieldShapeError{
+			Field: key, Want: want, shape: shape, perItem: perItem, cause: probeErr, code: shapeCode(field.Type),
+		}
 		// Got only when it CONTRADICTS Want. A fault inside an item of a
 		// correctly-shaped array reports the array's own shape, and "must be an
 		// array of objects, not an array of objects" is a sentence that tells
@@ -183,6 +197,16 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 		return refusal
 	}
 	return nil
+}
+
+// localizeInsideObject names the key inside a nested object whose value failed,
+// or nil for a field that is no object the walk can open.
+func localizeInsideObject(raw json.RawMessage, t reflect.Type, err error, decode ProbeDecoder) *FieldShapeError {
+	inner := derefType(t)
+	if inner == nil || inner.Kind() != reflect.Struct || isNamedShape(inner.Name()) {
+		return nil
+	}
+	return LocalizeFieldFault(raw, reflect.New(inner).Interface(), err, decode)
 }
 
 // namesAKeyBelowATopLevelField reports whether a decoder path reaches a key

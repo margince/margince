@@ -6,7 +6,6 @@ import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { Button, Checkbox, Field, Modal } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
-import { EditableValue } from "../../design-system/editablevalue";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import {
@@ -28,22 +27,13 @@ import type { Contact360 } from "./contactrail";
 import "../../design-system/querystates.css";
 
 /**
- * The About column's employer value, editing from where it is read. With no
- * employer it opens the Companies panel's add dialog; with one, the dialog
- * below that moves the contact to another company or to none.
+ * Changes where the contact works: the add dialog when they work nowhere, else
+ * the dialog below. `open` is undefined for a reader who may not change it.
  */
-export function EmployerValue({
-  view,
-  employer,
-  reading,
-  notSet,
-}: Readonly<{
-  view: Contact360;
-  employer: Employment | undefined;
-  reading: ReactNode;
-  notSet: string;
-}>) {
-  const t = useT();
+export function useEmployerChange(
+  view: Contact360,
+  employer: Employment | undefined,
+): Readonly<{ open: (() => void) | undefined; element: ReactNode }> {
   const contactId = view.contact.id;
   const canEdit = useCanEditEmployment(view.contact);
   const actions = useEmploymentActions(contactId);
@@ -52,38 +42,29 @@ export function EmployerValue({
   // `seq` keys the dialog, so every open starts from the employer as it is now.
   const [changing, setChanging] = useState({ open: false, seq: 0 });
   if (!canEdit) {
-    return reading ?? notSet;
+    return { open: undefined, element: null };
   }
-  return (
-    <>
-      <EditableValue
-        editLabel={t("inlineChoice.change", {
-          field: t("contact.rail.employer"),
-        })}
-        placeholder={notSet}
-        link={Boolean(employer)}
-        block={Boolean(employer)}
-        onEdit={() =>
-          employer
-            ? setChanging((prior) => ({ open: true, seq: prior.seq + 1 }))
-            : adding.open()
-        }
-      >
-        {reading}
-      </EditableValue>
-      {adding.modal}
-      {employer && (
-        <ChangeEmployerModal
-          key={`change-employer-${changing.seq}`}
-          open={changing.open}
-          onClose={() => setChanging((prior) => ({ ...prior, open: false }))}
-          contactId={contactId}
-          employer={employer}
-          actions={actions}
-        />
-      )}
-    </>
-  );
+  return {
+    open: () =>
+      employer
+        ? setChanging((prior) => ({ open: true, seq: prior.seq + 1 }))
+        : adding.open(),
+    element: (
+      <>
+        {adding.modal}
+        {employer && (
+          <ChangeEmployerModal
+            key={`change-${changing.seq}`}
+            open={changing.open}
+            onClose={() => setChanging((prior) => ({ ...prior, open: false }))}
+            contactId={contactId}
+            employer={employer}
+            actions={actions}
+          />
+        )}
+      </>
+    ),
+  };
 }
 
 type Fate = "left" | "wrong";

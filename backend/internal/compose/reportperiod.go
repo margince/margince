@@ -233,7 +233,7 @@ func periodDimensions(anchor string) map[string]string {
 
 // periodAnchors are the instants a report cuts period buckets from. A period
 // field over one of them can keep the dates it named when it was saved.
-var periodAnchors = []string{colClosedAt}
+var periodAnchors = []string{colClosedAt, colLossAt}
 
 // periodGrains names each period field's grain.
 var periodGrains = map[string]analyticsquery.PeriodGrain{

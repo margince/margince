@@ -423,6 +423,18 @@ export const CloseDateRefusedPhone: Story = {
   tags: ["uat-phone"],
 };
 
+/** A day the server cannot store, refused on the field before anything is sent. */
+export const CloseDateOutOfRange: Story = {
+  render: closingOn({}),
+  play: async (context) => {
+    const dialog = await openCloseDate(context);
+    await typeCloseDate(dialog, "31/12/9999");
+    await dialog.findByText(
+      "Expected close must be from 02/01/0001 to 30/12/9999.",
+    );
+  },
+};
+
 /** A won deal is offered its owner change but no close date. */
 const closeDateClosedDeal = {
   render: closingOn({ status: "won", stage_id: "won" }),
