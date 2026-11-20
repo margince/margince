@@ -42,7 +42,7 @@ func (e *edgeAnchorEnv) seedDeal(t *testing.T, owner ids.UUID) ids.DealID {
 		sql  string
 		args []any
 	}{
-		{`INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, 'Sales', true, 0)`, []any{pipeline}},
+		{`INSERT INTO pipeline (id, name, is_default, position) VALUES ($1::uuid, 'Sales ' || $1::text, false, 0)`, []any{pipeline}},
 		{`INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability) VALUES ($1, $2, 'Qualify', 0, 'open', 10)`, []any{stage, pipeline}},
 		{`INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, source, captured_by) VALUES ($1, $2, 'Rollout', $3, $4, 'manual', 'human:seed')`, []any{deal, owner, pipeline, stage}},
 	} {
@@ -100,7 +100,7 @@ func TestADealWriterRemovesAStakeholderWithoutTheDeleteGrant(t *testing.T) {
 func TestStakeholderRemovalStillNeedsWriteOnTheDeal(t *testing.T) {
 	e := setupEdgeAnchor(t)
 	theirDeal := e.seedDeal(t, e.them)
-	edge := e.seedEdgeOn(t, theirDeal)
+	edge := e.seedEdgeOn(t, theirDeal, e.them)
 
 	me := e.asMember(e.me)
 	if _, err := e.store.ArchiveRelationship(me, edge.ID, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -119,9 +119,9 @@ func TestStakeholderRemovalStillNeedsWriteOnTheDeal(t *testing.T) {
 	}
 }
 
-func (e *edgeAnchorEnv) seedEdgeOn(t *testing.T, deal ids.DealID) relationshipRow {
+func (e *edgeAnchorEnv) seedEdgeOn(t *testing.T, deal ids.DealID, owner ids.UUID) relationshipRow {
 	t.Helper()
-	ctx := e.asMember(e.them)
+	ctx := e.asMember(owner)
 	row, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
 		Kind: dealStakeholderKind, DealID: &deal, ContactID: &e.theirContact, Source: "manual",
 	})
@@ -129,4 +129,52 @@ func (e *edgeAnchorEnv) seedEdgeOn(t *testing.T, deal ids.DealID) relationshipRo
 		t.Fatalf("seeding a stakeholder as the deal's owner: %v", err)
 	}
 	return row
+}
+
+// A seat that can write deals but read no relationship learns nothing from the
+// archive. An edge that exists and an id that does not answer the same.
+func TestArchiveAnswersAlikeForAnEdgeAndAMissingIdWithoutReadGrant(t *testing.T) {
+	e := setupEdgeAnchor(t)
+	edge := e.seedEdgeAsMe(e.as(e.me), t)
+
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.me.String(), UserID: e.me,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"custom"},
+			Objects:  map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
+			RowScope: principal.RowScopeOwn,
+		},
+	})
+	for name, id := range map[string]ids.UUID{"existing": edge.ID, "missing": ids.NewV7()} {
+		if _, err := e.store.ArchiveRelationship(ctx, id, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("archiving a %s edge without relationship read = %v, want ErrPermissionDenied", name, err)
+		}
+		if err := e.store.RefuseArchiveRelationship(ctx, id); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("the stage-time probe on a %s edge = %v, want ErrPermissionDenied", name, err)
+		}
+	}
+}
+
+// The list carries an archive answer per edge. It is true on a deal the caller
+// writes and false on another rep's deal.
+func TestTheListSaysWhichStakeholdersTheCallerMayRemove(t *testing.T) {
+	e := setupEdgeAnchor(t)
+	mine := e.seedEdgeOn(t, e.seedDeal(t, e.me), e.me)
+	theirs := e.seedEdgeOn(t, e.seedDeal(t, e.them), e.them)
+
+	rows, _, err := e.store.ListRelationships(e.asMember(e.me), ListRelationshipsInput{ContactID: &e.theirContact})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[ids.UUID]bool{}
+	for _, row := range rows {
+		if row.CanArchive == nil {
+			t.Fatalf("edge %s listed without an archive answer", row.ID)
+		}
+		got[row.ID] = *row.CanArchive
+	}
+	if !got[mine.ID] || got[theirs.ID] {
+		t.Errorf("can_archive = %v, want true for %s and false for %s", got, mine.ID, theirs.ID)
+	}
 }

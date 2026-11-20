@@ -126,13 +126,9 @@ export function RelationshipRows({
   refusedReasonId,
   extra,
   stacked,
-  dealWriter,
 }: Readonly<{
   scope: RelationshipScope;
   refusedReasonId?: string;
-  // The reader may write the deal this scope names. The server lets a deal
-  // writer take its stakeholders off without the relationship delete grant.
-  dealWriter?: boolean;
   extra?: {
     label: string;
     render: (rel: Relationship) => ReactNode;
@@ -153,9 +149,8 @@ export function RelationshipRows({
   // is no fact about the record to report — where the anchor's refusal above
   // keeps the verb and says why.
   const canUpdate = useCanWrite("relationship", "update");
-  const canDeleteGrant = useCanWrite("relationship", "delete");
-  const mayRemove = (rel: Relationship) =>
-    canDeleteGrant || (dealWriter === true && rel.kind === "deal_stakeholder");
+  // The server answers per edge, by the rule the archive itself applies.
+  const mayRemove = (rel: Relationship) => rel.can_archive === true;
   const query = useQuery({
     queryKey: scopeQueryKey(scope),
     queryFn: () => fetchRelationships(scope),

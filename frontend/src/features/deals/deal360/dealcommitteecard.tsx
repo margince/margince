@@ -120,7 +120,6 @@ export function DealCommitteeCard({
             scope={{ deal_id: dealId }}
             refusedReasonId={refusedReasonId}
             stacked
-            dealWriter
           />
         </Disclosure>
       )}

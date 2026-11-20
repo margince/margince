@@ -41124,6 +41124,8 @@ export interface components {
             updated_at: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /** @description List reads only. Whether the caller may archive this edge, answered by the rule the archive itself applies. */
+            readonly can_archive?: boolean;
         };
         CreateRelationshipRequest: {
             /** @enum {string} */
