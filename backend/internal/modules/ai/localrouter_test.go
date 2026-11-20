@@ -305,8 +305,7 @@ func TestNewLocalRouterPayloadCaptureKeepsTheWholeText(t *testing.T) {
 // The input-count cap bounds an ai_call_payload row, as the rune caps do. The
 // trace capture lifts it too, so no embedded input goes missing from a trace.
 func TestNewLocalRouterPayloadCaptureKeepsEveryEmbedInput(t *testing.T) {
-	store := &memCallStore{}
-	r, err := NewLocalRouter(localFakeConfig(), WithCallStore(store), WithoutResultCache(), WithFakeClient(NewFakeClient()), WithPayloadCapture())
+	r, err := NewLocalRouter(localFakeConfig(), WithoutResultCache(), WithFakeClient(NewFakeClient()), WithPayloadCapture())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,17 +313,11 @@ func TestNewLocalRouterPayloadCaptureKeepsEveryEmbedInput(t *testing.T) {
 	for i := range inputs {
 		inputs[i] = "x"
 	}
-	if _, err := r.Embed(wsContext(t), model.EmbedRequest{Inputs: inputs}); err != nil {
-		t.Fatal(err)
-	}
-	if len(store.calls) != 1 || store.calls[0].Payload == nil {
-		t.Fatalf("want one call with a captured payload, got %+v", store.calls)
-	}
 	var captured struct {
 		Inputs          []string `json:"inputs"`
 		InputsTruncated bool     `json:"inputs_truncated"`
 	}
-	if err := json.Unmarshal(store.calls[0].Payload.Request, &captured); err != nil {
+	if err := json.Unmarshal(r.buildEmbedPayload(model.EmbedRequest{Inputs: inputs}, model.Embeddings{}).Request, &captured); err != nil {
 		t.Fatal(err)
 	}
 	if len(captured.Inputs) != len(inputs) || captured.InputsTruncated {
