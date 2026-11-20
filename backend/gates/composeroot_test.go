@@ -33,7 +33,7 @@ const composeRootDir = "internal/compose"
 const (
 	composeRootProductionFiles = 1376
 	composeRootTestFiles       = 1901
-	composeRootProductionLines = 229_164
+	composeRootProductionLines = 229_178
 	composeRootTestLines       = 356_898
 )
 
