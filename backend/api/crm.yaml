@@ -59003,6 +59003,7 @@ components:
         deal_relevance:
           type: string
           enum: [relevant, unrelated, uncertain]
+          x-enum-varnames: [LinkDealRelevanceRelevant, LinkDealRelevanceUnrelated, LinkDealRelevanceUncertain]
           x-extensible-enum: true
           description: |
             On a deal link only: whether the activity is about the deal. Absent when nobody judged
@@ -59011,6 +59012,7 @@ components:
         relevance_source:
           type: string
           enum: [human, classifier]
+          x-enum-varnames: [LinkRelevanceSourceHuman, LinkRelevanceSourceClassifier]
           x-extensible-enum: true
           description: Who set `deal_relevance`. The classifier never changes a mark a human set.
 
@@ -60789,11 +60791,13 @@ components:
         deal_relevance:
           type: string
           enum: [relevant, unrelated, uncertain]
+          x-enum-varnames: [MarkDealRelevanceRelevant, MarkDealRelevanceUnrelated, MarkDealRelevanceUncertain]
           x-extensible-enum: true
           description: The link's mark after the call.
         relevance_source:
           type: string
           enum: [human, classifier]
+          x-enum-varnames: [MarkRelevanceSourceHuman, MarkRelevanceSourceClassifier]
           x-extensible-enum: true
           description: Who set the mark. Always `human` after this call.
         changed:

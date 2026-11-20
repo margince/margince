@@ -392,19 +392,19 @@ func (e ActivityEmailTargetRefusal) Valid() bool {
 
 // Defines values for ActivityLinkDealRelevance.
 const (
-	Relevant  ActivityLinkDealRelevance = "relevant"
-	Uncertain ActivityLinkDealRelevance = "uncertain"
-	Unrelated ActivityLinkDealRelevance = "unrelated"
+	LinkDealRelevanceRelevant  ActivityLinkDealRelevance = "relevant"
+	LinkDealRelevanceUncertain ActivityLinkDealRelevance = "uncertain"
+	LinkDealRelevanceUnrelated ActivityLinkDealRelevance = "unrelated"
 )
 
 // Valid indicates whether the value is a known member of the ActivityLinkDealRelevance enum.
 func (e ActivityLinkDealRelevance) Valid() bool {
 	switch e {
-	case Relevant:
+	case LinkDealRelevanceRelevant:
 		return true
-	case Uncertain:
+	case LinkDealRelevanceUncertain:
 		return true
-	case Unrelated:
+	case LinkDealRelevanceUnrelated:
 		return true
 	default:
 		return false
@@ -440,16 +440,16 @@ func (e ActivityLinkEntityType) Valid() bool {
 
 // Defines values for ActivityLinkRelevanceSource.
 const (
-	ActivityLinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
-	ActivityLinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
+	LinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
+	LinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
 )
 
 // Valid indicates whether the value is a known member of the ActivityLinkRelevanceSource enum.
 func (e ActivityLinkRelevanceSource) Valid() bool {
 	switch e {
-	case ActivityLinkRelevanceSourceClassifier:
+	case LinkRelevanceSourceClassifier:
 		return true
-	case ActivityLinkRelevanceSourceHuman:
+	case LinkRelevanceSourceHuman:
 		return true
 	default:
 		return false
@@ -1463,25 +1463,25 @@ func (e PartnerStageMeaning) Valid() bool {
 
 // Defines values for PrincipalAttributionActorType.
 const (
-	Agent     PrincipalAttributionActorType = "agent"
-	Buyer     PrincipalAttributionActorType = "buyer"
-	Connector PrincipalAttributionActorType = "connector"
-	Human     PrincipalAttributionActorType = "human"
-	System    PrincipalAttributionActorType = "system"
+	PrincipalAttributionActorTypeAgent     PrincipalAttributionActorType = "agent"
+	PrincipalAttributionActorTypeBuyer     PrincipalAttributionActorType = "buyer"
+	PrincipalAttributionActorTypeConnector PrincipalAttributionActorType = "connector"
+	PrincipalAttributionActorTypeHuman     PrincipalAttributionActorType = "human"
+	PrincipalAttributionActorTypeSystem    PrincipalAttributionActorType = "system"
 )
 
 // Valid indicates whether the value is a known member of the PrincipalAttributionActorType enum.
 func (e PrincipalAttributionActorType) Valid() bool {
 	switch e {
-	case Agent:
+	case PrincipalAttributionActorTypeAgent:
 		return true
-	case Buyer:
+	case PrincipalAttributionActorTypeBuyer:
 		return true
-	case Connector:
+	case PrincipalAttributionActorTypeConnector:
 		return true
-	case Human:
+	case PrincipalAttributionActorTypeHuman:
 		return true
-	case System:
+	case PrincipalAttributionActorTypeSystem:
 		return true
 	default:
 		return false

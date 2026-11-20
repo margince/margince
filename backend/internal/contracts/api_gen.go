@@ -585,19 +585,19 @@ func (e ActivityDealFilingRecordType) Valid() bool {
 
 // Defines values for ActivityDealRelevanceDealRelevance.
 const (
-	ActivityDealRelevanceDealRelevanceRelevant  ActivityDealRelevanceDealRelevance = "relevant"
-	ActivityDealRelevanceDealRelevanceUncertain ActivityDealRelevanceDealRelevance = "uncertain"
-	ActivityDealRelevanceDealRelevanceUnrelated ActivityDealRelevanceDealRelevance = "unrelated"
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceRelevant  ActivityDealRelevanceDealRelevance = "relevant"
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceUncertain ActivityDealRelevanceDealRelevance = "uncertain"
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceUnrelated ActivityDealRelevanceDealRelevance = "unrelated"
 )
 
 // Valid indicates whether the value is a known member of the ActivityDealRelevanceDealRelevance enum.
 func (e ActivityDealRelevanceDealRelevance) Valid() bool {
 	switch e {
-	case ActivityDealRelevanceDealRelevanceRelevant:
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceRelevant:
 		return true
-	case ActivityDealRelevanceDealRelevanceUncertain:
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceUncertain:
 		return true
-	case ActivityDealRelevanceDealRelevanceUnrelated:
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceUnrelated:
 		return true
 	default:
 		return false
@@ -606,16 +606,16 @@ func (e ActivityDealRelevanceDealRelevance) Valid() bool {
 
 // Defines values for ActivityDealRelevanceRelevanceSource.
 const (
-	ActivityDealRelevanceRelevanceSourceClassifier ActivityDealRelevanceRelevanceSource = "classifier"
-	ActivityDealRelevanceRelevanceSourceHuman      ActivityDealRelevanceRelevanceSource = "human"
+	ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceClassifier ActivityDealRelevanceRelevanceSource = "classifier"
+	ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceHuman      ActivityDealRelevanceRelevanceSource = "human"
 )
 
 // Valid indicates whether the value is a known member of the ActivityDealRelevanceRelevanceSource enum.
 func (e ActivityDealRelevanceRelevanceSource) Valid() bool {
 	switch e {
-	case ActivityDealRelevanceRelevanceSourceClassifier:
+	case ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceClassifier:
 		return true
-	case ActivityDealRelevanceRelevanceSourceHuman:
+	case ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceHuman:
 		return true
 	default:
 		return false
@@ -666,19 +666,19 @@ func (e ActivityEmailTargetRefusal) Valid() bool {
 
 // Defines values for ActivityLinkDealRelevance.
 const (
-	ActivityLinkDealRelevanceRelevant  ActivityLinkDealRelevance = "relevant"
-	ActivityLinkDealRelevanceUncertain ActivityLinkDealRelevance = "uncertain"
-	ActivityLinkDealRelevanceUnrelated ActivityLinkDealRelevance = "unrelated"
+	ActivityLinkDealRelevanceLinkDealRelevanceRelevant  ActivityLinkDealRelevance = "relevant"
+	ActivityLinkDealRelevanceLinkDealRelevanceUncertain ActivityLinkDealRelevance = "uncertain"
+	ActivityLinkDealRelevanceLinkDealRelevanceUnrelated ActivityLinkDealRelevance = "unrelated"
 )
 
 // Valid indicates whether the value is a known member of the ActivityLinkDealRelevance enum.
 func (e ActivityLinkDealRelevance) Valid() bool {
 	switch e {
-	case ActivityLinkDealRelevanceRelevant:
+	case ActivityLinkDealRelevanceLinkDealRelevanceRelevant:
 		return true
-	case ActivityLinkDealRelevanceUncertain:
+	case ActivityLinkDealRelevanceLinkDealRelevanceUncertain:
 		return true
-	case ActivityLinkDealRelevanceUnrelated:
+	case ActivityLinkDealRelevanceLinkDealRelevanceUnrelated:
 		return true
 	default:
 		return false
@@ -714,16 +714,16 @@ func (e ActivityLinkEntityType) Valid() bool {
 
 // Defines values for ActivityLinkRelevanceSource.
 const (
-	ActivityLinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
-	ActivityLinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
+	ActivityLinkRelevanceSourceLinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
+	ActivityLinkRelevanceSourceLinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
 )
 
 // Valid indicates whether the value is a known member of the ActivityLinkRelevanceSource enum.
 func (e ActivityLinkRelevanceSource) Valid() bool {
 	switch e {
-	case ActivityLinkRelevanceSourceClassifier:
+	case ActivityLinkRelevanceSourceLinkRelevanceSourceClassifier:
 		return true
-	case ActivityLinkRelevanceSourceHuman:
+	case ActivityLinkRelevanceSourceLinkRelevanceSourceHuman:
 		return true
 	default:
 		return false
