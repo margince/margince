@@ -37,28 +37,32 @@ export function DealRelevanceAction({
   // Pressed from the menu or from an Undo toast, so a refusal lands in a toast.
   const refuse = (error: Error) =>
     toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
-  const mark = useDealRelevance((answer, input) => {
-    if (!answer.changed) return;
-    const back: Relevance =
-      input.relevance === "unrelated" ? "relevant" : "unrelated";
-    toast.show(t(markedMessage(input.relevance, answer.project_kept)), {
-      action: undoAction(t("common.undo"), () =>
-        mark.mutate({ ...input, relevance: back }, { onError: refuse }),
-      ),
+  const mark = useDealRelevance();
+  // Each mark offers an Undo that sets the other mark, through the same send.
+  function send(input: DealRelevanceInput) {
+    mark.mutate(input, {
+      onError: refuse,
+      onSuccess: (answer) => {
+        if (!answer.changed) return;
+        const back: Relevance =
+          input.relevance === "unrelated" ? "relevant" : "unrelated";
+        toast.show(t(markedMessage(input.relevance, answer.project_kept)), {
+          action: undoAction(t("common.undo"), () =>
+            send({ ...input, relevance: back }),
+          ),
+        });
+      },
     });
-  });
+  }
   const unrelated = dealRelevanceOf(activity, dealId) === "unrelated";
   return (
     <Button
       onClick={() =>
-        mark.mutate(
-          {
-            activityId: activity.id,
-            dealId,
-            relevance: unrelated ? "relevant" : "unrelated",
-          },
-          { onError: refuse },
-        )
+        send({
+          activityId: activity.id,
+          dealId,
+          relevance: unrelated ? "relevant" : "unrelated",
+        })
       }
       pending={mark.isPending}
       reason={writable ? undefined : t("activity.notYoursToChange")}
