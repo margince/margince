@@ -111,7 +111,11 @@ func (w *documentExtractWorker) Work(ctx context.Context, job *river.Job[Documen
 		if modelfailure.Unanswered(err) {
 			detail = documentWords.Unanswered.In(said.Lang())
 		}
-		err = errors.Join(err, w.closeUnread(closeCtx, args, detail))
+		closed, closeErr := w.closeUnread(closeCtx, args, detail)
+		if wait := waitToClose(wsCtx, w.log, args.ExtractionReadID, closed, closeErr,
+			activities.ExtractionReadLease); wait != nil {
+			return wait
+		}
 	}
 	return jobs.FaultContext(ctx, err)
 }
@@ -135,21 +139,23 @@ func (w *documentExtractWorker) read(wsCtx context.Context, args DocumentExtract
 func (w *documentExtractWorker) declineUnread(ctx context.Context, args DocumentExtractArgs) error {
 	w.log.WarnContext(ctx, "document reading declined: no model lane configured",
 		"attachment_extraction_id", args.ExtractionReadID)
-	return w.closeUnread(ctx, args,
+	_, err := w.closeUnread(ctx, args,
 		documentWords.NoModel.In(documentCopyFor(string(w.language.Resolve(ctx))).Lang()))
+	return err
 }
 
-// closeUnread fails a reading no worker will read, with the reason why. To the
-// rep, a queued row nobody picks up looks the same as one being worked.
-func (w *documentExtractWorker) closeUnread(ctx context.Context, args DocumentExtractArgs, detail string) error {
+// closeUnread fails a reading no worker will read, with the reason why, and
+// reports whether it did. To the rep, a queued row nobody picks up looks the
+// same as one being worked.
+func (w *documentExtractWorker) closeUnread(ctx context.Context, args DocumentExtractArgs, detail string) (bool, error) {
 	claim, err := w.activities.BeginExtractionRead(ctx, args.ExtractionReadID, activities.ExtractionReadLease)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {
-			return nil
+			return false, nil
 		}
-		return err
+		return false, err
 	}
-	return w.activities.FinishExtractionRead(ctx, args.ExtractionReadID,
+	return true, w.activities.FinishExtractionRead(ctx, args.ExtractionReadID,
 		activities.ExtractionReadOutcome{
 			Status:    activities.ExtractionReadFailed,
 			Detail:    detail,

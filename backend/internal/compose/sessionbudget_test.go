@@ -14,7 +14,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -49,7 +48,9 @@ func TestSessionSlotsAreSharedAndReturned(t *testing.T) {
 // returns as it came waits as a snooze within the reschedule bounds, and
 // spends none of the job's tries.
 func TestAJobToldNotNowSleepsAndSpendsNoTry(t *testing.T) {
-	far := clocktest.Now(t).Add(264 * time.Hour)
+	// Instants no clock, skewed or not, comes near: the wait is capped or
+	// floored whatever the time is.
+	far := time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC)
 	other := errors.New("the database went away")
 	for name, tc := range map[string]struct {
 		err  error
@@ -57,7 +58,7 @@ func TestAJobToldNotNowSleepsAndSpendsNoTry(t *testing.T) {
 	}{
 		"budget used up": {&ai.BudgetDeferralError{NextAttemptAt: far}, 15 * time.Minute},
 		"provider down":  {&ai.ProviderDownError{Health: model.HealthDown, RetryAfter: far}, 15 * time.Minute},
-		"moment past":    {&ai.BudgetDeferralError{NextAttemptAt: far.Add(-1000 * time.Hour)}, time.Second},
+		"moment past":    {&ai.BudgetDeferralError{NextAttemptAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)}, time.Second},
 		"other fault":    {other, -1},
 	} {
 		work := river.WorkFunc(func(context.Context, *river.Job[CloseDateSweepArgs]) error { return tc.err })

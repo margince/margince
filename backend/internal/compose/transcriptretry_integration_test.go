@@ -107,3 +107,29 @@ func TestATranscriptReadingToldNotNowSleepsInsteadOfFailing(t *testing.T) {
 		t.Errorf("err = %v, reading %q; want a snooze, which spends no try, and the reading queued", errs[0], read.Status)
 	}
 }
+
+// stolenClaimBrain fails the call after another claim took the reading, so
+// the worker's release misses and its last-try close is refused.
+type stolenClaimBrain struct{ steal func() }
+
+func (b stolenClaimBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	b.steal()
+	return model.Response{}, ai.ErrAllTiersFailed
+}
+
+// A last try that cannot close its reading keeps a job behind it: the job
+// sleeps one lease rather than ending with the reading left running.
+func TestALastTryThatCannotCloseItsReadingWaitsForIt(t *testing.T) {
+	e := setupTranscript(t)
+	brain := stolenClaimBrain{steal: func() {
+		if _, err := e.owner.Exec(t.Context(), `UPDATE transcript_read SET started_at = started_at - interval '1 second'
+			WHERE activity_id = $1 AND status = 'running'`, e.activity.UUID); err != nil {
+			t.Errorf("taking the claim: %v", err)
+		}
+	}}
+	read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, brain)
+	snooze, snoozed := errors.AsType[*river.JobSnoozeError](errs[0])
+	if !snoozed || snooze.Duration != activities.TranscriptReadLease || read.Status != activities.TranscriptReadRunning {
+		t.Errorf("err = %v, reading %q; want a snooze of one lease while the other claim holds the reading", errs[0], read.Status)
+	}
+}

@@ -130,7 +130,11 @@ func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[Trans
 		if modelfailure.Unanswered(err) {
 			code = activities.TranscriptFailureUnanswered
 		}
-		err = errors.Join(err, w.closeUnread(closeCtx, args, code))
+		closed, closeErr := w.closeUnread(closeCtx, args, code)
+		if wait := waitToClose(wsCtx, w.log, args.TranscriptReadID, closed, closeErr,
+			activities.TranscriptReadLease); wait != nil {
+			return wait
+		}
 	}
 	return jobs.FaultContext(ctx, err)
 }
@@ -139,21 +143,37 @@ func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[Trans
 func (w *transcriptProposeWorker) declineUnread(ctx context.Context, args TranscriptProposeArgs) error {
 	w.log.WarnContext(ctx, "transcript reading declined: no model lane configured",
 		"transcript_read_id", args.TranscriptReadID)
-	return w.closeUnread(ctx, args, activities.TranscriptFailureNoModel)
+	_, err := w.closeUnread(ctx, args, activities.TranscriptFailureNoModel)
+	return err
 }
 
-// closeUnread fails a reading no worker will read, with the reason why. To the
-// rep, a queued row nobody picks up looks the same as one being worked.
-func (w *transcriptProposeWorker) closeUnread(ctx context.Context, args TranscriptProposeArgs, code string) error {
+// closeUnread fails a reading no worker will read, with the reason why, and
+// reports whether it did. To the rep, a queued row nobody picks up looks the
+// same as one being worked. A claim refused means another claim holds it.
+func (w *transcriptProposeWorker) closeUnread(ctx context.Context, args TranscriptProposeArgs, code string) (bool, error) {
 	if _, err := w.activities.BeginTranscriptRead(ctx, args.TranscriptReadID, activities.TranscriptReadLease); err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {
-			return nil
+			return false, nil
 		}
-		return err
+		return false, err
 	}
-	return w.activities.FinishTranscriptRead(ctx, args.TranscriptReadID,
+	return true, w.activities.FinishTranscriptRead(ctx, args.TranscriptReadID,
 		transcriptCopyFor(string(w.language.Resolve(ctx))).failedOutcome(
 			activities.TranscriptFailure{Code: code}))
+}
+
+// waitToClose keeps a live job behind a reading its last try could not close:
+// the release failed and a claim still holds it, or the close did not write.
+// The job then sleeps one lease, which River does not count as a try, and the
+// next run reclaims the reading or finds it settled. It answers nil once the
+// reading is closed.
+func waitToClose(ctx context.Context, log *slog.Logger, readID ids.UUID, closed bool, closeErr error, lease time.Duration) error {
+	if closed && closeErr == nil {
+		return nil
+	}
+	log.WarnContext(ctx, "a reading's last try could not close it; the job waits one lease and tries again",
+		"read_id", readID, "error", closeErr)
+	return river.JobSnooze(lease)
 }
 
 // newTranscriptProposeWorker assembles the worker-role reading. brain may be

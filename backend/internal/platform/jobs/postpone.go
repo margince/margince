@@ -19,7 +19,9 @@ import (
 // their owners.
 type Postponement interface {
 	error
-	RetryAt() time.Time
+	// RetryAt is when to ask again, and false when the error is a call that
+	// was made and failed, which is a failure however it is typed.
+	RetryAt() (time.Time, bool)
 }
 
 // postponementClock is when a postponement's wait is measured from. A test in
@@ -31,11 +33,11 @@ var postponementClock = time.Now
 // asks again and sleeps again, so it stays visible to the health readings. It
 // answers nil for any other error.
 func postponed(ctx context.Context, kind string, err error) error {
-	until, ok := errors.AsType[Postponement](err)
+	until, ok := waitUntil(err)
 	if !ok {
 		return nil
 	}
-	return rescheduleFor(ctx, kind, "postponed", until.RetryAt().Sub(postponementClock()), err)
+	return rescheduleFor(ctx, kind, "postponed", until.Sub(postponementClock()), err)
 }
 
 // Exhausted reports whether err ends the job for good. River will not run it
@@ -48,6 +50,15 @@ func Exhausted(row *rivertype.JobRow, err error) bool {
 	if _, snoozed := errors.AsType[*river.JobSnoozeError](err); snoozed {
 		return false
 	}
-	_, waits := errors.AsType[Postponement](err)
+	_, waits := waitUntil(err)
 	return !waits
+}
+
+// waitUntil is when a postponement asks again, and false for any other error.
+func waitUntil(err error) (time.Time, bool) {
+	postponement, ok := errors.AsType[Postponement](err)
+	if !ok {
+		return time.Time{}, false
+	}
+	return postponement.RetryAt()
 }
