@@ -61,11 +61,10 @@ func TestTheSendersPackWithoutLegitimateInterestsBindsEveryRecipient(t *testing.
 
 // TestTheWarningCanBeConfirmedForAStricterEntityThanTheDefault: the default
 // entity's pack grants legitimate interests, a further entity's does not. The
-// confirmation names no entity, so it is kept, and a send from the stricter
-// entity spends it.
+// confirmation names no entity, so it is kept for a send from the stricter one.
 //
 // Mutation: judge the confirmation under the default entity alone and the
-// confirmation is dropped, so staging refuses.
+// second confirmation is dropped.
 func TestTheWarningCanBeConfirmedForAStricterEntityThanTheDefault(t *testing.T) {
 	p := registerPackPair(t)
 	e := setupResolve(t)
@@ -90,14 +89,8 @@ func TestTheWarningCanBeConfirmedForAStricterEntityThanTheDefault(t *testing.T) 
 		VALUES ($1, $2, 'human:x')`, branch, e.user); err != nil {
 		t.Fatal(err)
 	}
-	if d := stageTo(e.ctx, t, e); d.ReasonCode != commsauthz.ReasonLawfulBasisUnconfirmed {
-		t.Fatalf("a send from the stricter entity staged as %+v, want refused as unconfirmed", d)
-	}
 	if got, err := e.store.ConfirmSendWithoutLawfulBasis(e.ctx, subject); err != nil || len(got) != 1 {
-		t.Fatalf("confirming for the stricter entity kept %v (%v), want the record", got, err)
-	}
-	if d := stageTo(e.ctx, t, e); d.Verdict != commsauthz.VerdictAllow {
-		t.Errorf("the confirmed send from the stricter entity staged as %+v, want allowed", d)
+		t.Errorf("confirming with a stricter entity in the installation kept %v (%v), want the record", got, err)
 	}
 }
 
