@@ -35,8 +35,10 @@ func (e *transcriptEnv) workTranscriptTry(t *testing.T, readID ids.UUID, brain c
 	}
 	err := worker.Work(context.Background(), &river.Job[TranscriptProposeArgs]{
 		JobRow: &rivertype.JobRow{Attempt: attempt, MaxAttempts: oneOffJobMaxAttempts},
-		Args: TranscriptProposeArgs{Workspace: e.WS, ActivityID: e.activity.UUID, TranscriptReadID: readID,
-			RequestedBy: "human:" + e.Rep1.String()},
+		Args: TranscriptProposeArgs{
+			Workspace: e.WS, ActivityID: e.activity.UUID, TranscriptReadID: readID,
+			RequestedBy: "human:" + e.Rep1.String(),
+		},
 	})
 	read, readErr := e.Activities.GetTranscriptRead(e.ctx, e.activity, readID)
 	if readErr != nil {

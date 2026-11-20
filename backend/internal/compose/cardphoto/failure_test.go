@@ -74,8 +74,10 @@ func TestACardPhotoTheModelDidNotReadSaysWhy(t *testing.T) {
 			code: "ai_allowance_used_up",
 		},
 		"provider down": {
-			err: &ai.ProviderDownError{Provider: "p", Health: model.HealthDown,
-				RetryAfter: time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)},
+			err: &ai.ProviderDownError{
+				Provider: "p", Health: model.HealthDown,
+				RetryAfter: time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC),
+			},
 			code: "provider_unavailable",
 		},
 		"every tier failed": {err: ai.ErrAllTiersFailed, code: "assistant_unavailable"},

@@ -37,6 +37,7 @@ type cardPhotoFixture struct {
 // CertCases is the certification of the `cards` site of document_extract.
 type CertCases struct{}
 
+// Site names the document_extract/cards site this case certifies.
 func (CertCases) Site() aitasks.Site {
 	return aitasks.Site{Task: ai.TaskDocumentExtract, Variant: laneCards, Kind: ai.SiteKindOneShot}
 }
@@ -44,6 +45,8 @@ func (CertCases) Site() aitasks.Site {
 // CertifiedScope is the site's own kind: a photo is read in one call.
 func (CertCases) CertifiedScope() string { return aitasks.ScopeFullInvocation }
 
+// Prepare reads one photo fixture and the names it is expected to yield.
+//
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
 func (CertCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
 	var f cardPhotoFixture
