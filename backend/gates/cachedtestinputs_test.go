@@ -18,17 +18,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// A cached test file that runs a process to read the tree for it declares what
-// that process read through gatekit. Go's test cache sees what the test opens
-// and nothing a child process opens, so a cached pass over the process's answer
-// replays after the tree has changed underneath it. The census judges test
-// files, file by file: a production helper that shells out is out of its sight.
-//
-// Any program is taken to read the tree, git, go, node and a built helper alike,
-// except the few listed here that cannot.
+// A cached test file that runs a process declares what that process read
+// through gatekit. Go's test cache sees only what the test opens itself, so a
+// pass over the process's answer replays after the tree changed. The census
+// judges test files; a production helper that shells out is out of its sight.
+// Any program counts as a tree reader except those listed here.
 var readsNoTree = map[string]bool{"sleep": true}
 
-// launchers run whatever their arguments name, so they read the tree when an
+// launchers run whatever their arguments name. They read the tree when an
 // argument names a tree reader, a path or a file, or cannot be read at all.
 var launchers = map[string]bool{"sh": true, "bash": true, "env": true}
 
