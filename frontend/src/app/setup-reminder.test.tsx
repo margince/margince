@@ -105,9 +105,21 @@ function serve(world: World = {}) {
   );
 }
 
-function mountTopBar(hash = "#/deals") {
+// A reader who already answered the three personal steps, so the cases about
+// mail, calendar, voice and booking keep their own shape.
+function mountTopBar(hash = "#/deals", personal: "done" | "open" = "done") {
   const client = newClient();
-  client.setQueryData(["me"], meFixture({ allow: VOICE_WRITER }));
+  const me = meFixture({
+    allow: VOICE_WRITER,
+    personalChoicesMade: personal === "done",
+  });
+  client.setQueryData(["me"], me);
+  if (personal === "done") {
+    writeStored(
+      { family: STORAGE_KEYS.setupPermissionsSeen, member: me.user.id },
+      "1",
+    );
+  }
   const view = renderWith(
     client,
     <TopBar
@@ -156,7 +168,7 @@ describe("SetupReminder", () => {
     mountTopBar();
 
     const chip = await trigger();
-    expect(chip.textContent).toContain("Finish setup1 of 4");
+    expect(chip.textContent).toContain("Finish setup4 of 7");
     await userEvent.setup().click(chip);
 
     const panel = screen.getByRole("region", { name: /Finish setup/ });
@@ -168,6 +180,9 @@ describe("SetupReminder", () => {
       [
         "Connect your mail Done",
         "Connect your calendar Still to do",
+        "Choose where you work Done",
+        "Choose your language Done",
+        "See what Margince may do Done",
         "Train your writing voice Still to do",
         "Turn on your booking link ",
       ]
@@ -177,21 +192,21 @@ describe("SetupReminder", () => {
     expect(steps[1].textContent).toContain("Skipped during setup.");
     // The booking link waits on the calendar: it explains, wears the grey
     // Waiting badge and offers no verb.
-    expect(steps[3].textContent).toContain("Needs a calendar.");
-    expect(within(steps[3]).queryByRole("button")).toBeNull();
-    expect(steps[3].querySelector(".badge")?.textContent).toBe("Waiting");
+    expect(steps[6].textContent).toContain("Needs a calendar.");
+    expect(within(steps[6]).queryByRole("button")).toBeNull();
+    expect(steps[6].querySelector(".badge")?.textContent).toBe("Waiting");
     // The current step's verb is primary; the other open ones are not.
     expect(
       within(panel)
         .getAllByRole("button", { name: /^Connect|^Add/ })
         .map((verb) => verb.className.includes("btn-primary")),
     ).toEqual([true, false]);
-    within(panel).getByText("1 of 4 done");
+    within(panel).getByText("4 of 7 done");
     expect(
       within(panel)
         .getByRole("meter", { name: "Setup progress" })
         .getAttribute("aria-valuenow"),
-    ).toBe("1");
+    ).toBe("4");
   });
 
   it("sends a step's action to its settings page", async () => {
@@ -260,7 +275,7 @@ describe("SetupReminder", () => {
 
     forgetSeat();
     mountTopBar();
-    expect((await trigger()).textContent).toContain("1 of 4");
+    expect((await trigger()).textContent).toContain("4 of 7");
   });
 
   it("stands down once every step is done", async () => {
@@ -315,7 +330,7 @@ describe("SetupReminder at phone width", () => {
     const rows = screen
       .getAllByRole("menuitem")
       .map((row) => row.textContent ?? "");
-    expect(rows.indexOf("Finish setup1 of 4")).toBe(
+    expect(rows.indexOf("Finish setup4 of 7")).toBe(
       rows.indexOf("Help and feedback") + 1,
     );
     // The row leads where the panel's current step would.

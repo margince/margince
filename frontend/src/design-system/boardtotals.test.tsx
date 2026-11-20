@@ -102,7 +102,7 @@ describe("the stage totals at the head of a board column", () => {
       "6 deals have no price and are left out of both totals.",
     );
     expect(tip).toContain(
-      `Converted at rates as of ${formatDate("2026-11-03T08:00:00Z", "en", UTC_ZONE)}.`,
+      `Converted at exchange rates as of ${formatDate("2026-11-03T08:00:00Z", "en", UTC_ZONE)}.`,
     );
   });
 });

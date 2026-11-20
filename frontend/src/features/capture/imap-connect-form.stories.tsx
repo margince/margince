@@ -37,6 +37,8 @@ async function fillAndSubmit() {
   await userEvent.click(canvas.getByRole("button", { name: "Connect" }));
 }
 
+const SUBPIXEL = 1;
+
 // The refusal lands at the foot of a scrolling form, so it has to bring itself
 // into the scroller's view: at the harness's 1024x720 it starts below the fold,
 // and on a phone the action row pinned to the sheet's foot would cover it.
@@ -49,10 +51,11 @@ async function expectRefusalInView(sentence: RegExp) {
   await waitFor(() => {
     const view = scrollerOf(refusal).getBoundingClientRect();
     const line = refusal.getBoundingClientRect();
-    expect(line.top).toBeGreaterThanOrEqual(view.top);
-    expect(line.bottom).toBeLessThanOrEqual(view.bottom);
+    // A line scrolled flush to an edge can end a fraction of a pixel past it.
+    expect(line.top).toBeGreaterThanOrEqual(view.top - SUBPIXEL);
+    expect(line.bottom).toBeLessThanOrEqual(view.bottom + SUBPIXEL);
     expect(line.bottom).toBeLessThanOrEqual(
-      actions.getBoundingClientRect().top,
+      actions.getBoundingClientRect().top + SUBPIXEL,
     );
   });
 }

@@ -178,6 +178,10 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"decline_activity_deal": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("inbound_email"), "request_body": map[string]any{"deal_id": p.take("deal")}}
 	},
+	"set_activity_deal_relevance": func(p *recordPool) map[string]any {
+		note := p.take("deal_note")
+		return map[string]any{"id": note, "request_body": map[string]any{"deal_id": p.fact(note, "deal"), "deal_relevance": "unrelated"}}
+	},
 	"set_thread_audience":     func(p *recordPool) map[string]any { return map[string]any{"thread_key": p.take("captured_thread")} },
 	"hide_deal_document":      dealDocument,
 	"unhide_deal_document":    dealDocument,
@@ -273,6 +277,12 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 			questions = nil
 		}
 		return map[string]any{"id": template, "request_body": map[string]any{"version": version, "questions": questions}}
+	},
+	"create_activity_review_template": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{
+			"label": "Sweep win review", "outcome": "won",
+			"questions": []any{map[string]any{"key": "why", "label": "Why did we win?", "type": "text", "required": true}},
+		}}
 	},
 	"update_legal_review_settings": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"enabled": true}}

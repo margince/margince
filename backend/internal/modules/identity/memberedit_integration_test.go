@@ -99,6 +99,24 @@ func TestAMemberEmailEditCannotTakeAnotherAccount(t *testing.T) {
 	}
 }
 
+// An invited member's address may still change, and not to one another seat holds.
+func TestAnInvitedMembersEmailEditCannotTakeAnotherAccount(t *testing.T) {
+	e := setupRevocationEnv(t, "invited-email-conflict")
+	ctx := e.wsCtx(e.admin)
+	invited, _, err := e.svc.InviteUser(ctx, e.admin, InviteUserInput{Email: "new@" + e.slug + ".test", DisplayName: "New", Role: "rep"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := e.svc.GetUser(ctx, e.admin, invited)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = e.svc.UpdateMember(ctx, e.admin, invited, MemberEdit{Name: row.DisplayName, Email: e.admin.Email, ExpectedUpdatedAt: row.UpdatedAt})
+	if !errors.Is(err, errEmailTaken) {
+		t.Fatalf("an invited member's edit onto a taken email = %v, want the taken-email refusal", err)
+	}
+}
+
 func TestAUsedSignInAddressCannotBeChangedByTheMemberEditor(t *testing.T) {
 	e := setupRevocationEnv(t, "protected-member-email")
 	ctx := e.wsCtx(e.admin)

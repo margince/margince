@@ -2,24 +2,29 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import { Button, TextInput } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 
 // The choices of a picklist or multiselect, one text row each, as the add-field
 // builder and the choices editor both edit them. `aside` draws next to a row,
-// such as how many records hold that choice.
+// such as how many records hold that choice. `error` is a refusal of the
+// choices as a whole, so every row is marked and the sentence shows once.
 export function OptionRows({
   options,
   onChange,
   aside,
+  error,
 }: Readonly<{
   options: string[];
   onChange: (options: string[]) => void;
   aside?: (option: string) => ReactNode;
+  error?: string;
 }>) {
   const t = useT();
+  const errorId = useId();
   const toast = useToast();
   const remove = (idx: number) => {
     // The last option row is a floor, not a delete target. The refusal shows
@@ -41,6 +46,8 @@ export function OptionRows({
           <div className="cf-option-row" key={idx}>
             <TextInput
               aria-label={t("cf.optionPlaceholder")}
+              aria-invalid={error === undefined ? undefined : true}
+              aria-describedby={error === undefined ? undefined : errorId}
               placeholder={t("cf.optionPlaceholder")}
               value={option}
               onChange={(event) =>
@@ -65,6 +72,7 @@ export function OptionRows({
       <Button onClick={() => onChange([...options, ""])}>
         {t("cf.addOption")}
       </Button>
+      {error !== undefined && <ErrorLine id={errorId}>{error}</ErrorLine>}
     </div>
   );
 }

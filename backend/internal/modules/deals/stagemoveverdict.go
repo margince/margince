@@ -297,7 +297,7 @@ func (s *Store) ledgerSettles(ctx context.Context, tx pgx.Tx, deal ids.DealID, c
 // the deal, and holds both rows until the move commits.
 func holdActivityOnDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID, activity ids.UUID) (bool, error) {
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		WHERE l.deal_id = $1 AND a.id = $2 AND a.archived_at IS NULL AND `+relstrength.DealEvidenceSQL("a")+`
+		WHERE l.deal_id = $1 AND a.id = $2 AND a.archived_at IS NULL AND `+relstrength.DealEvidenceSQL("a", "l.deal_id")+`
 		FOR SHARE OF l, a`, deal, activity)
 	if err != nil {
 		return false, fmt.Errorf("deals: holding a cited activity: %w", err)

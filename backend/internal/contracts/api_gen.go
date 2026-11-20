@@ -583,6 +583,45 @@ func (e ActivityDealFilingRecordType) Valid() bool {
 	}
 }
 
+// Defines values for ActivityDealRelevanceDealRelevance.
+const (
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceRelevant  ActivityDealRelevanceDealRelevance = "relevant"
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceUncertain ActivityDealRelevanceDealRelevance = "uncertain"
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceUnrelated ActivityDealRelevanceDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealRelevanceDealRelevance enum.
+func (e ActivityDealRelevanceDealRelevance) Valid() bool {
+	switch e {
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceRelevant:
+		return true
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceUncertain:
+		return true
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityDealRelevanceRelevanceSource.
+const (
+	ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceClassifier ActivityDealRelevanceRelevanceSource = "classifier"
+	ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceHuman      ActivityDealRelevanceRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealRelevanceRelevanceSource enum.
+func (e ActivityDealRelevanceRelevanceSource) Valid() bool {
+	switch e {
+	case ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceClassifier:
+		return true
+	case ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceHuman:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityEmailTargetEntityType.
 const (
 	ActivityEmailTargetEntityTypeCompany ActivityEmailTargetEntityType = "company"
@@ -625,6 +664,27 @@ func (e ActivityEmailTargetRefusal) Valid() bool {
 	}
 }
 
+// Defines values for ActivityLinkDealRelevance.
+const (
+	ActivityLinkDealRelevanceLinkDealRelevanceRelevant  ActivityLinkDealRelevance = "relevant"
+	ActivityLinkDealRelevanceLinkDealRelevanceUncertain ActivityLinkDealRelevance = "uncertain"
+	ActivityLinkDealRelevanceLinkDealRelevanceUnrelated ActivityLinkDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkDealRelevance enum.
+func (e ActivityLinkDealRelevance) Valid() bool {
+	switch e {
+	case ActivityLinkDealRelevanceLinkDealRelevanceRelevant:
+		return true
+	case ActivityLinkDealRelevanceLinkDealRelevanceUncertain:
+		return true
+	case ActivityLinkDealRelevanceLinkDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -646,6 +706,24 @@ func (e ActivityLinkEntityType) Valid() bool {
 	case ActivityLinkEntityTypeLead:
 		return true
 	case ActivityLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityLinkRelevanceSource.
+const (
+	ActivityLinkRelevanceSourceLinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
+	ActivityLinkRelevanceSourceLinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkRelevanceSource enum.
+func (e ActivityLinkRelevanceSource) Valid() bool {
+	switch e {
+	case ActivityLinkRelevanceSourceLinkRelevanceSourceClassifier:
+		return true
+	case ActivityLinkRelevanceSourceLinkRelevanceSourceHuman:
 		return true
 	default:
 		return false
@@ -9913,6 +9991,24 @@ func (e CreateActivityRequestMeetingStatus) Valid() bool {
 	case CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusHeld:
 		return true
 	case CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusNoShow:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateActivityReviewTemplateRequestOutcome.
+const (
+	CreateActivityReviewTemplateRequestOutcomeLost CreateActivityReviewTemplateRequestOutcome = "lost"
+	CreateActivityReviewTemplateRequestOutcomeWon  CreateActivityReviewTemplateRequestOutcome = "won"
+)
+
+// Valid indicates whether the value is a known member of the CreateActivityReviewTemplateRequestOutcome enum.
+func (e CreateActivityReviewTemplateRequestOutcome) Valid() bool {
+	switch e {
+	case CreateActivityReviewTemplateRequestOutcomeLost:
+		return true
+	case CreateActivityReviewTemplateRequestOutcomeWon:
 		return true
 	default:
 		return false
@@ -23677,6 +23773,24 @@ func (e ServiceStatusStatus) Valid() bool {
 	}
 }
 
+// Defines values for SetActivityDealRelevanceRequestDealRelevance.
+const (
+	SetActivityDealRelevanceRequestDealRelevanceRelevant  SetActivityDealRelevanceRequestDealRelevance = "relevant"
+	SetActivityDealRelevanceRequestDealRelevanceUnrelated SetActivityDealRelevanceRequestDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the SetActivityDealRelevanceRequestDealRelevance enum.
+func (e SetActivityDealRelevanceRequestDealRelevance) Valid() bool {
+	switch e {
+	case SetActivityDealRelevanceRequestDealRelevanceRelevant:
+		return true
+	case SetActivityDealRelevanceRequestDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetActivityDispositionRequestDisposition.
 const (
 	SetActivityDispositionRequestDispositionHandled  SetActivityDispositionRequestDisposition = "handled"
@@ -33320,6 +33434,9 @@ type ActivityDealDecline struct {
 	// DeclinedDealIds The deals this call declined on the message. A deal declined before is not listed again.
 	DeclinedDealIds []openapi_types.UUID `json:"declined_deal_ids"`
 
+	// MarkedUnrelated A deal link of the message is now marked `unrelated` by a human.
+	MarkedUnrelated bool `json:"marked_unrelated"`
+
 	// ProjectKept A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project.
 	ProjectKept bool `json:"project_kept"`
 
@@ -33329,7 +33446,8 @@ type ActivityDealDecline struct {
 	// QuestionsClosed The open deal questions of the conversation this call marked done.
 	QuestionsClosed int `json:"questions_closed" minimum:"0"`
 
-	// Unlinked A deal link came off the message.
+	// Unlinked Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Unlinked bool `json:"unlinked"`
 }
 
@@ -33354,6 +33472,34 @@ type ActivityDealFilingOptions struct {
 
 // ActivityDealFilingRecordType defines model for ActivityDealFilingRecordType.
 type ActivityDealFilingRecordType string
+
+// ActivityDealRelevance defines model for ActivityDealRelevance.
+type ActivityDealRelevance struct {
+	// Changed The call changed the mark.
+	Changed bool               `json:"changed"`
+	DealId  openapi_types.UUID `json:"deal_id"`
+
+	// DealRelevance The link's mark after the call.
+	DealRelevance ActivityDealRelevanceDealRelevance `json:"deal_relevance"`
+
+	// ProjectFiled The activity was filed on the deal's project again.
+	ProjectFiled bool `json:"project_filed"`
+
+	// ProjectKept A project link came from the deal and stays, because a retention rule keeps it or the caller cannot read the project.
+	ProjectKept bool `json:"project_kept"`
+
+	// ProjectUnfiled The project link that came from the deal came off the activity.
+	ProjectUnfiled bool `json:"project_unfiled"`
+
+	// RelevanceSource Who set the mark. Always `human` after this call.
+	RelevanceSource ActivityDealRelevanceRelevanceSource `json:"relevance_source"`
+}
+
+// ActivityDealRelevanceDealRelevance The link's mark after the call.
+type ActivityDealRelevanceDealRelevance string
+
+// ActivityDealRelevanceRelevanceSource Who set the mark. Always `human` after this call.
+type ActivityDealRelevanceRelevanceSource string
 
 // ActivityEmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
 type ActivityEmailTarget struct {
@@ -33384,14 +33530,30 @@ type ActivityFollowUpTask struct {
 
 // ActivityLink defines model for ActivityLink.
 type ActivityLink struct {
-	ActivityId *openapi_types.UUID    `json:"activity_id,omitempty"`
-	EntityId   openapi_types.UUID     `json:"entity_id"`
-	EntityType ActivityLinkEntityType `json:"entity_type"`
-	Id         *openapi_types.UUID    `json:"id,omitempty"`
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// DealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+	// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+	// it; only `unrelated` also leaves it out of the silent close.
+	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
+	EntityId      openapi_types.UUID         `json:"entity_id"`
+	EntityType    ActivityLinkEntityType     `json:"entity_type"`
+	Id            *openapi_types.UUID        `json:"id,omitempty"`
+
+	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
 }
+
+// ActivityLinkDealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+// it; only `unrelated` also leaves it out of the silent close.
+type ActivityLinkDealRelevance string
 
 // ActivityLinkEntityType defines model for ActivityLink.EntityType.
 type ActivityLinkEntityType string
+
+// ActivityLinkRelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+type ActivityLinkRelevanceSource string
 
 // ActivityLinkInput One record an activity is filed under, as a caller supplies it. The read shape
 // (ActivityLink) carries the ids the server assigned; this carries only the target.
@@ -43139,7 +43301,7 @@ type CompanyProfileInput struct {
 	CustomerPains    *string `json:"customer_pains,omitempty"`
 	DesiredOutcomes  *string `json:"desired_outcomes,omitempty"`
 
-	// DisplayName The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters.
+	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.
 	DisplayName string  `json:"display_name"`
 	History     *string `json:"history,omitempty"`
 	Icp         *string `json:"icp,omitempty"`
@@ -46484,6 +46646,20 @@ type CreateActivityRequestLinksEntityType string
 // CreateActivityRequestMeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 type CreateActivityRequestMeetingStatus string
 
+// CreateActivityReviewTemplateRequest defines model for CreateActivityReviewTemplateRequest.
+type CreateActivityReviewTemplateRequest struct {
+	// Key Derived from the label when omitted.
+	Key   *string `json:"key,omitempty"`
+	Label string  `json:"label"`
+
+	// Outcome Which outcome the template is asked for.
+	Outcome   CreateActivityReviewTemplateRequestOutcome `json:"outcome"`
+	Questions []ReviewQuestion                           `json:"questions"`
+}
+
+// CreateActivityReviewTemplateRequestOutcome Which outcome the template is asked for.
+type CreateActivityReviewTemplateRequestOutcome string
+
 // CreateAutomationRequest defines model for CreateAutomationRequest.
 type CreateAutomationRequest struct {
 	Key    string                 `json:"key"`
@@ -47178,6 +47354,14 @@ type CreateOutcomeReviewRequest struct {
 
 	// SubmissionId The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
 	SubmissionId openapi_types.UUID `json:"submission_id"`
+
+	// TemplateKey Key of the template shown when the form opened. A template added or restored since then
+	// is a different template, possibly at the same version, so a key that is not the live
+	// template's returns 409. Optional: a client that omits it keeps the version-only check, so
+	// a client built before this field keeps working. That client cannot tell a swap to another
+	// template at the same version; its answers are still checked against the live questions,
+	// and an answer to a question the live template does not ask is refused 422.
+	TemplateKey *string `json:"template_key,omitempty"`
 
 	// TemplateVersion Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
 	TemplateVersion *int64 `json:"template_version,omitempty"`
@@ -60468,6 +60652,14 @@ type Problem struct {
 	// name, so a screen can word the code in the reader's language; `message` stays
 	// the English sentence.
 	//
+	// A value its field cannot hold names the field's path (`address.city` for a key of a
+	// nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+	// `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+	// `invalid_type` for any other shape. A body that is not one JSON object, and a value
+	// inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+	// carries its bounds as `params.min` and `params.max`, as the schema spells them;
+	// a date-time range states them as ISO dates.
+	//
 	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
 	// `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
@@ -67001,6 +67193,18 @@ type SetActivityAudienceRequest struct {
 	Members *[]AudienceMember `json:"members,omitempty"`
 }
 
+// SetActivityDealRelevanceRequest defines model for SetActivityDealRelevanceRequest.
+type SetActivityDealRelevanceRequest struct {
+	// DealId The deal whose link to the activity is judged.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// DealRelevance `relevant` says the activity is about the deal; `unrelated` says it is not.
+	DealRelevance SetActivityDealRelevanceRequestDealRelevance `json:"deal_relevance"`
+}
+
+// SetActivityDealRelevanceRequestDealRelevance `relevant` says the activity is about the deal; `unrelated` says it is not.
+type SetActivityDealRelevanceRequestDealRelevance string
+
 // SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
 type SetActivityDispositionRequest struct {
 	// Disposition What the reader decided. `not_sales` binds the thread for everybody; `handled`,
@@ -69446,9 +69650,11 @@ type UpdateActivityRequestCallOutcome string
 // refuses it like any status other than `held` or `no_show`.
 type UpdateActivityRequestMeetingStatus string
 
-// UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
+// UpdateActivityReviewTemplateRequest Every field but `version` is optional; an omitted one is left alone.
 type UpdateActivityReviewTemplateRequest struct {
-	Questions []ReviewQuestion `json:"questions"`
+	// Active false retires the template; true makes it the one its outcome asks.
+	Active    *bool             `json:"active,omitempty"`
+	Questions *[]ReviewQuestion `json:"questions,omitempty"`
 
 	// Version Last read template version.
 	Version int64 `json:"version" minimum:"1"`
@@ -75205,6 +75411,33 @@ type SendMessageParams struct {
 	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// CreateActivityReviewTemplateParams defines parameters for CreateActivityReviewTemplate.
+type CreateActivityReviewTemplateParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // GetAutomaticWorkHealthParams defines parameters for GetAutomaticWorkHealth.
@@ -83756,6 +83989,9 @@ type AnswerCalendarInvitationJSONRequestBody = AnswerCalendarInvitationRequest
 // DeclineActivityDealJSONRequestBody defines body for DeclineActivityDeal for application/json ContentType.
 type DeclineActivityDealJSONRequestBody = DeclineActivityDealRequest
 
+// SetActivityDealRelevanceJSONRequestBody defines body for SetActivityDealRelevance for application/json ContentType.
+type SetActivityDealRelevanceJSONRequestBody = SetActivityDealRelevanceRequest
+
 // SetActivityDispositionJSONRequestBody defines body for SetActivityDisposition for application/json ContentType.
 type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
@@ -83788,6 +84024,9 @@ type PreviewSendAuthorizationJSONRequestBody = PreviewSendRequest
 
 // SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
 type SendMessageJSONRequestBody = SendMessageRequest
+
+// CreateActivityReviewTemplateJSONRequestBody defines body for CreateActivityReviewTemplate for application/json ContentType.
+type CreateActivityReviewTemplateJSONRequestBody = CreateActivityReviewTemplateRequest
 
 // UpdateActivityReviewTemplateJSONRequestBody defines body for UpdateActivityReviewTemplate for application/json ContentType.
 type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateRequest
@@ -98722,6 +98961,9 @@ type ServerInterface interface {
 	// Say a captured message is not about a deal, or about none of the deals its question offered.
 	// (POST /activities/{id}/deal-decline)
 	DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id)
+	// Say whether an activity linked to a deal is about that deal, or take that back.
+	// (PUT /activities/{id}/deal-relevance)
+	SetActivityDealRelevance(w http.ResponseWriter, r *http.Request, id Id)
 	// Pick the message back up — the undo behind every set-aside verb.
 	// (DELETE /activities/{id}/disposition)
 	ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams)
@@ -98785,7 +99027,10 @@ type ServerInterface interface {
 	// The question sets an outcome review can ask.
 	// (GET /activity-review-templates)
 	ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request)
-	// Edit the questions for future outcome reviews.
+	// Add the question set an outcome's reviews ask from now on.
+	// (POST /activity-review-templates)
+	CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, params CreateActivityReviewTemplateParams)
+	// Edit the questions for future outcome reviews, or retire or restore a template.
 	// (PATCH /activity-review-templates/{id})
 	UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id)
 	// Per colleague and day, how much work automation handed out and what became of it.
@@ -102136,6 +102381,12 @@ func (_ Unimplemented) DeclineActivityDeal(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Say whether an activity linked to a deal is about that deal, or take that back.
+// (PUT /activities/{id}/deal-relevance)
+func (_ Unimplemented) SetActivityDealRelevance(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Pick the message back up — the undo behind every set-aside verb.
 // (DELETE /activities/{id}/disposition)
 func (_ Unimplemented) ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams) {
@@ -102262,7 +102513,13 @@ func (_ Unimplemented) ListActivityReviewTemplates(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Edit the questions for future outcome reviews.
+// Add the question set an outcome's reviews ask from now on.
+// (POST /activity-review-templates)
+func (_ Unimplemented) CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, params CreateActivityReviewTemplateParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Edit the questions for future outcome reviews, or retire or restore a template.
 // (PATCH /activity-review-templates/{id})
 func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109809,6 +110066,40 @@ func (siw *ServerInterfaceWrapper) DeclineActivityDeal(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// SetActivityDealRelevance operation middleware
+func (siw *ServerInterfaceWrapper) SetActivityDealRelevance(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetActivityDealRelevance(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ClearActivityDisposition operation middleware
 func (siw *ServerInterfaceWrapper) ClearActivityDisposition(w http.ResponseWriter, r *http.Request) {
 
@@ -110706,6 +110997,55 @@ func (siw *ServerInterfaceWrapper) ListActivityReviewTemplates(w http.ResponseWr
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListActivityReviewTemplates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateActivityReviewTemplate operation middleware
+func (siw *ServerInterfaceWrapper) CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateActivityReviewTemplateParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateActivityReviewTemplate(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -158114,6 +158454,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activities/{id}/deal-decline", wrapper.DeclineActivityDeal)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/activities/{id}/deal-relevance", wrapper.SetActivityDealRelevance)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/activities/{id}/disposition", wrapper.ClearActivityDisposition)
 	})
 	r.Group(func(r chi.Router) {
@@ -158175,6 +158518,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activity-review-templates", wrapper.ListActivityReviewTemplates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activity-review-templates", wrapper.CreateActivityReviewTemplate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activity-review-templates/{id}", wrapper.UpdateActivityReviewTemplate)

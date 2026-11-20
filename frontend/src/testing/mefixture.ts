@@ -69,6 +69,7 @@ export function meFixture({
   allow = {},
   rowScope = "own",
   settingsAvailability = {},
+  personalChoicesMade = false,
   refusedDealFilters,
   refusedLeadFilters,
 }: {
@@ -94,6 +95,11 @@ export function meFixture({
    * absence needs its own spelling rather than riding the default.
    */
   settingsAvailability?: Partial<SettingsAvailability> | null;
+  /**
+   * The seat has chosen its own time zone and language, as the setup
+   * checklist's personal steps read them. Left out, it has chosen neither.
+   */
+  personalChoicesMade?: boolean;
   /** The deal list filters the server says this role is refused. */
   refusedDealFilters?: string[];
   /** The lead list filters the server says this role is refused. */
@@ -113,6 +119,7 @@ export function meFixture({
       email: "test@example.test",
       display_name: "Test User",
       timezone: FIXTURE_TIMEZONE,
+      ...(personalChoicesMade ? { timezone_chosen: true, locale: "en" } : {}),
       status: "active",
       is_agent: false,
     },

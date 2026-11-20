@@ -4225,7 +4225,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3168,
+      "tokens": 3209,
       "agents": [],
       "required_by_cases": [
         "case106_turn_that_rule_off",
@@ -4262,7 +4262,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 2841,
+      "tokens": 2877,
       "agents": [
         "overnight_at_risk_sweep"
       ],

@@ -2333,7 +2333,7 @@ export interface paths {
          * @description Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          *     A `parent_company_id` that names a company the caller cannot read answers 422 naming
          *     `parent_company_id`, the same for a missing record and for one hidden by row scope.
          */
@@ -7019,11 +7019,14 @@ export interface paths {
         put?: never;
         /**
          * Say a captured message is not about a deal, or about none of the deals its question offered.
-         * @description With `deal_id`, the message is not about that deal. Its link to the deal comes off, and no
-         *     automatic pass (capture, the refile pass, the repair) files it on that deal again. Other
-         *     deals stay open to it, and a colleague's own relink still files it anywhere.
+         * @description With `deal_id`, the message is not about that deal. Its link to the deal stays and is marked
+         *     `unrelated` by a human, as `setActivityDealRelevance` marks it, so the deal's timeline still
+         *     shows the message and "About this deal" takes it back. A link marked so keeps the deal
+         *     alive in no reading of it. No automatic pass (capture, the refile pass, the repair, the
+         *     topic recheck) files the message on that deal again or changes the mark. A colleague's own
+         *     relink still files it anywhere.
          *
-         *     A project link that came from the deal comes off with it, through the same rules as the
+         *     A project link that came from the deal comes off, through the same rules as the
          *     project-filing undo. It stays when the project was filed some other way, when a retention
          *     rule keeps it, or when the caller cannot read the project. An agent's decline takes it off
          *     as a member's does. `project_kept` says so.
@@ -7033,9 +7036,50 @@ export interface paths {
          *     message and on each unfiled message of the conversation, and the question is done. A
          *     message with no open question answers 422.
          *
-         *     Declining a deal already declined is the same success and writes nothing.
+         *     Declining a deal already declined is the same success and writes nothing. With `deal_id`,
+         *     the caller needs the right to change the deal too, as for `setActivityDealRelevance`.
          */
         post: operations["declineActivityDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/deal-relevance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say whether an activity linked to a deal is about that deal, or take that back.
+         * @description Marks the activity's link to `deal_id` as `relevant` or `unrelated`, with `human` as its
+         *     source. The link is never taken off: the deal's timeline still shows the activity with its
+         *     mark, and the opposite call is the undo. A link marked `unrelated`, or `uncertain` by the
+         *     classifier, warms the deal in no reading of it: its last-activity date, the quiet and
+         *     stalled rules, a meeting ahead and engagement all leave it out. The deal's last-activity
+         *     date moves back at once. Only `unrelated` also leaves it out of the silent close, so the
+         *     classifier's doubt never closes a deal.
+         *
+         *     `unrelated` is the same act as `declineActivityDeal` with a `deal_id`: the decline is
+         *     recorded, and a project link that came from the deal comes off under the project-filing
+         *     undo's rules. `relevant` files the activity on the deal's project again when it has none
+         *     and the caller is a member who may.
+         *
+         *     The classifier never changes a mark a human set, and no automatic pass takes a link a human
+         *     judged off the activity. Needs `activity.update` and the right to change both the activity
+         *     and the deal; a deal the caller cannot see answers 404. An activity with no link to the deal
+         *     answers 404. Setting the mark the link already has is the same success with `changed`
+         *     false.
+         */
+        put: operations["setActivityDealRelevance"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -22019,7 +22063,14 @@ export interface paths {
         /** The question sets an outcome review can ask. */
         get: operations["listActivityReviewTemplates"];
         put?: never;
-        post?: never;
+        /**
+         * Add the question set an outcome's reviews ask from now on.
+         * @description Requires custom_field create permission. A closing asks one review, so an outcome has at
+         *     most one active template: the new one is asked from now on, and the template asked before
+         *     is retired in the same write. Reviews already written keep their frozen questions. A key
+         *     another template uses answers 409.
+         */
+        post: operations["createActivityReviewTemplate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22043,8 +22094,12 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Edit the questions for future outcome reviews.
-         * @description Requires custom_field update permission. Version conflicts return 409; submitted reviews retain their frozen questions and answers.
+         * Edit the questions for future outcome reviews, or retire or restore a template.
+         * @description Requires custom_field update permission. Version conflicts return 409; submitted reviews
+         *     retain their frozen questions and answers. `active: false` retires the template: a closing
+         *     with that outcome asks no review until a template for it is active again. There is no
+         *     delete, so an old review always names a template the list still shows. `active: true`
+         *     makes the template the one its outcome asks and retires the one asked before.
          */
         patch: operations["updateActivityReviewTemplate"];
         trace?: never;
@@ -26340,7 +26395,7 @@ export interface paths {
          *     Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          */
         patch: operations["updateCompanyProfileField"];
         trace?: never;
@@ -33876,6 +33931,14 @@ export interface components {
              *     code names other values carries them in `params`, an object of text values by
              *     name, so a screen can word the code in the reader's language; `message` stays
              *     the English sentence.
+             *
+             *     A value its field cannot hold names the field's path (`address.city` for a key of a
+             *     nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+             *     `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+             *     `invalid_type` for any other shape. A body that is not one JSON object, and a value
+             *     inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+             *     carries its bounds as `params.min` and `params.max`, as the schema spells them;
+             *     a date-time range states them as ISO dates.
              *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -42835,6 +42898,18 @@ export interface components {
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
+            /**
+             * @description On a deal link only: whether the activity is about the deal. Absent when nobody judged
+             *     it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+             *     it; only `unrelated` also leaves it out of the silent close.
+             * @enum {string}
+             */
+            deal_relevance?: "relevant" | "unrelated" | "uncertain";
+            /**
+             * @description Who set `deal_relevance`. The classifier never changes a mark a human set.
+             * @enum {string}
+             */
+            relevance_source?: "human" | "classifier";
         };
         /**
          * @description The destination for every writable, non-archived activity of one conversation thread.
@@ -44089,11 +44164,50 @@ export interface components {
              */
             deal_id?: string;
         };
+        SetActivityDealRelevanceRequest: {
+            /**
+             * Format: uuid
+             * @description The deal whose link to the activity is judged.
+             */
+            deal_id: string;
+            /**
+             * @description `relevant` says the activity is about the deal; `unrelated` says it is not.
+             * @enum {string}
+             */
+            deal_relevance: "relevant" | "unrelated";
+        };
+        ActivityDealRelevance: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * @description The link's mark after the call.
+             * @enum {string}
+             */
+            deal_relevance: "relevant" | "unrelated" | "uncertain";
+            /**
+             * @description Who set the mark. Always `human` after this call.
+             * @enum {string}
+             */
+            relevance_source: "human" | "classifier";
+            /** @description The call changed the mark. */
+            changed: boolean;
+            /** @description The project link that came from the deal came off the activity. */
+            project_unfiled: boolean;
+            /** @description A project link came from the deal and stays, because a retention rule keeps it or the caller cannot read the project. */
+            project_kept: boolean;
+            /** @description The activity was filed on the deal's project again. */
+            project_filed: boolean;
+        };
         ActivityDealDecline: {
             /** @description The deals this call declined on the message. A deal declined before is not listed again. */
             declined_deal_ids: string[];
-            /** @description A deal link came off the message. */
+            /**
+             * @deprecated
+             * @description Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
+             */
             unlinked: boolean;
+            /** @description A deal link of the message is now marked `unrelated` by a human. */
+            marked_unrelated: boolean;
             /** @description The project link that came from a declined deal came off the message. */
             project_unfiled: boolean;
             /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
@@ -46458,12 +46572,26 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description Every field but `version` is optional; an omitted one is left alone. */
         UpdateActivityReviewTemplateRequest: {
             /**
              * Format: int64
              * @description Last read template version.
              */
             version: number;
+            questions?: components["schemas"]["ReviewQuestion"][];
+            /** @description false retires the template; true makes it the one its outcome asks. */
+            active?: boolean;
+        };
+        CreateActivityReviewTemplateRequest: {
+            /** @description Derived from the label when omitted. */
+            key?: string;
+            label: string;
+            /**
+             * @description Which outcome the template is asked for.
+             * @enum {string}
+             */
+            outcome: "won" | "lost";
             questions: components["schemas"]["ReviewQuestion"][];
         };
         ActivityReviewTemplateListResponse: {
@@ -46516,6 +46644,15 @@ export interface components {
              * @description Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
              */
             template_version?: number;
+            /**
+             * @description Key of the template shown when the form opened. A template added or restored since then
+             *     is a different template, possibly at the same version, so a key that is not the live
+             *     template's returns 409. Optional: a client that omits it keeps the version-only check, so
+             *     a client built before this field keeps working. That client cannot tell a swap to another
+             *     template at the same version; its answers are still checked against the live questions,
+             *     and an answer to a question the live template does not ask is refused 422.
+             */
+            template_key?: string;
             /**
              * Format: uuid
              * @description The closing being reviewed. Must be the one the deal is on now, else 409.
@@ -53621,7 +53758,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
-            /** @description The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters. */
+            /** @description The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;
@@ -75056,6 +75193,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityDealDecline"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
+    setActivityDealRelevance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetActivityDealRelevanceRequest"];
+            };
+        };
+        responses: {
+            /** @description The link's mark after the call. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityDealRelevance"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -98461,7 +98630,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Every live template. */
+            /** @description Every template, active and retired. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -98470,6 +98639,59 @@ export interface operations {
                     "application/json": components["schemas"]["ActivityReviewTemplateListResponse"];
                 };
             };
+        };
+    };
+    createActivityReviewTemplate: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateActivityReviewTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created template. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityReviewTemplate"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateActivityReviewTemplate: {

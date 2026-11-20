@@ -161,7 +161,7 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 		WHERE a.archived_at IS NULL AND %[4]s AND %[5]s AND %[6]s AND %[8]s AND a.direction = $%[2]d
 		ORDER BY a.occurred_at DESC, %[7]s, a.id DESC
 		LIMIT 1`, dealPos, directionPos, rolePos, scope, healthInteraction("now()"),
-		relstrength.ExternalActivityCountsSQL("a", "now()"), tie, relstrength.DealEvidenceSQL("a")), args...).
+		relstrength.ExternalActivityCountsSQL("a", "now()"), tie, relstrength.DealEvidenceSQL("a", "l.deal_id")), args...).
 		Scan(&side.At, &side.DateOnly, &side.Kind, &contactID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QuietSide{}, false, nil

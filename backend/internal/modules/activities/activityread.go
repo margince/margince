@@ -362,7 +362,7 @@ func attachLinksFrom(ctx context.Context, tx pgx.Tx, activities []crmcontracts.A
 		visible = "TRUE"
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT al.id, al.activity_id, al.entity_type, `+linkIDCoalesceQualified("al")+`
+		SELECT al.id, al.activity_id, al.entity_type, `+linkIDCoalesceQualified("al")+`, al.deal_relevance, al.relevance_source
 		FROM activity_link al
 		WHERE al.activity_id = ANY($1) AND `+visible+`
 		ORDER BY al.activity_id, al.entity_type, al.id`, args...)
@@ -373,7 +373,9 @@ func attachLinksFrom(ctx context.Context, tx pgx.Tx, activities []crmcontracts.A
 	for rows.Next() {
 		var linkID, activityID, entityID ids.UUID
 		var entityType string
-		if err := rows.Scan(&linkID, &activityID, &entityType, &entityID); err != nil {
+		var relevance *crmcontracts.ActivityLinkDealRelevance
+		var source *crmcontracts.ActivityLinkRelevanceSource
+		if err := rows.Scan(&linkID, &activityID, &entityType, &entityID, &relevance, &source); err != nil {
 			return err
 		}
 		i, ok := owner[activityID]
@@ -381,10 +383,12 @@ func attachLinksFrom(ctx context.Context, tx pgx.Tx, activities []crmcontracts.A
 			continue
 		}
 		link := crmcontracts.ActivityLink{
-			Id:         (*openapi_types.UUID)(&linkID),
-			ActivityId: (*openapi_types.UUID)(&activityID),
-			EntityType: crmcontracts.ActivityLinkEntityType(entityType),
-			EntityId:   openapi_types.UUID(entityID),
+			Id:              (*openapi_types.UUID)(&linkID),
+			ActivityId:      (*openapi_types.UUID)(&activityID),
+			EntityType:      crmcontracts.ActivityLinkEntityType(entityType),
+			EntityId:        openapi_types.UUID(entityID),
+			DealRelevance:   relevance,
+			RelevanceSource: source,
 		}
 		if activities[i].Links == nil {
 			activities[i].Links = &[]crmcontracts.ActivityLink{}

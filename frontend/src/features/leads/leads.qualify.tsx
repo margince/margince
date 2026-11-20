@@ -25,7 +25,7 @@ import {
   leadPromotePreviewKey,
 } from "../../lib/leadkeys";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
-import { unwrap } from "../../lib/problem";
+import { moneyLimit, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useLeadCompanyNameReading } from "./leadcompany";
@@ -266,7 +266,10 @@ function QualificationForm({
     });
   };
 
-  const refused = qualifyRefusals(qualify.error, t);
+  const refused = qualifyRefusals(qualify.error, t, {
+    label: t("lead.qualify.amount", { currency: currency ?? "" }),
+    ...(currency ? { limit: moneyLimit(currency, locale) } : {}),
+  });
   const amountError = amountRefusal(
     { amountMinor, refused: amountRefused },
     refused.amount,

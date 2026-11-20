@@ -7,7 +7,10 @@ package aicert
 // confidence level thresholds.go names. Standard textbook forms on purpose: a
 // reader arguing with a grade should be able to redo it by hand.
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 // wilsonBounds is the Wilson score interval for passed of runs at confidenceZ.
 //
@@ -25,6 +28,34 @@ func wilsonBounds(passed, runs int) (lower, upper float64) {
 	radius := confidenceZ * math.Sqrt(p*(1-p)/n+z2/(4*n*n))
 	denom := 1 + z2/n
 	return (centre - radius) / denom, (centre + radius) / denom
+}
+
+// ReliabilityInterval is the Wilson interval on a pass rate, from the formula
+// and z the verdict uses. A band reads the lower end of a site's pooled rate
+// and the upper end of each case alone. A pooled row's interval grades nothing.
+type ReliabilityInterval struct {
+	Lower float64 `json:"lower"`
+	Upper float64 `json:"upper"`
+}
+
+// ReliabilityIntervalOf is the interval on passed of runs, nil with no runs.
+func ReliabilityIntervalOf(passed, runs int) *ReliabilityInterval {
+	if runs == 0 {
+		return nil
+	}
+	lower, upper := wilsonBounds(passed, runs)
+	return &ReliabilityInterval{Lower: lower, Upper: upper}
+}
+
+// ReliabilityCell is how every report prints a reliability: the point with its
+// Wilson interval, as "0.67 [0.32, 0.89]". A point alone invites comparing two
+// records inside their sampling noise. Zero runs prints Unmeasured.
+func ReliabilityCell(passed, runs int) string {
+	interval := ReliabilityIntervalOf(passed, runs)
+	if interval == nil {
+		return Unmeasured
+	}
+	return fmt.Sprintf("%.2f [%.2f, %.2f]", float64(passed)/float64(runs), interval.Lower, interval.Upper)
 }
 
 // meanBounds is the t interval on the mean of xs, with its small-n quantile and

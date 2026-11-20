@@ -152,6 +152,11 @@ func (e *ColumnTakenError) Error() string {
 // without a dedicated branch still answer 409, never 500.
 func (e *ColumnTakenError) Is(target error) bool { return target == apperrors.ErrConflict }
 
+// MessageFault names it a label clash: another label gives the field another column.
+func (e *ColumnTakenError) MessageFault() (code, message string) {
+	return codeLabelTaken, e.Error()
+}
+
 // catalogColumns is the ONE spelling of the custom_field row selection,
 // in scanCustomField's scan order.
 const catalogColumns = `id, object, slug, label, type, status, archived_at,

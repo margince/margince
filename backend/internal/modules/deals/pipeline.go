@@ -70,8 +70,8 @@ func createPipelineTx(ctx context.Context, tx pgx.Tx, in CreatePipelineInput) (c
 		`INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, $2, $3, $4)`,
 		id, in.Name, in.IsDefault, in.Position)
 	if err != nil {
-		if storekit.IsUniqueViolation(err) {
-			return crmcontracts.Pipeline{}, apperrors.ErrConflict
+		if refused := pipelineUniqueRefusal(err); refused != nil {
+			return crmcontracts.Pipeline{}, refused
 		}
 		return crmcontracts.Pipeline{}, fmt.Errorf("insert pipeline: %w", err)
 	}

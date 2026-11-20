@@ -42,7 +42,7 @@ func TestAnOfferCreateRefusesEveryTotalTheServerDerives(t *testing.T) {
 func TestAnOfferCreateNamesWhatIsWrongWithItsBody(t *testing.T) {
 	for name, tc := range map[string]struct{ body, field, code string }{
 		"malformed json":    {`{"currency":`, "body", "malformed_json"},
-		"line items as one": {`{"currency":"EUR","source":"manual","line_items":{}}`, "body", "malformed_json"},
+		"line items as one": {`{"currency":"EUR","source":"manual","line_items":{}}`, "line_items", "invalid_type"},
 		"a blank source":    {`{"currency":"EUR","source":"  "}`, "source", "required"},
 	} {
 		_, err := OfferCreationInput(t.Context(), []byte(tc.body))
