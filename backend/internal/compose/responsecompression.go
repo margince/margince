@@ -15,8 +15,10 @@ import (
 func compressAPIJSON(next http.Handler) http.Handler {
 	compressed := middleware.Compress(5, "application/json", "application/problem+json")(next)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Vary", "Accept-Encoding")
 		if !acceptsAPIGzip(r.Header.Values("Accept-Encoding")) {
+			// chi names Accept-Encoding in Vary only on an answer it compresses,
+			// so the answer it would have compressed names it here.
+			w.Header().Add("Vary", "Accept-Encoding")
 			next.ServeHTTP(w, r)
 			return
 		}

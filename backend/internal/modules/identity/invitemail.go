@@ -149,7 +149,7 @@ func (h Handlers) writeInvitedMember(w http.ResponseWriter, member userRow, stat
 
 // ResendUserInvite (POST /users/{id}/resend-invite) mails an invited member a
 // new set-password link, replacing any older one.
-func (h Handlers) ResendUserInvite(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) ResendUserInvite(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ResendUserInviteParams) {
 	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return

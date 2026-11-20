@@ -7,6 +7,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -293,6 +294,26 @@ describe("the account's document library", () => {
 
     expect(screen.getByText("deck.png")).toBeTruthy();
     expect(screen.queryByText("Kuendigung.pdf")).toBeNull();
+  });
+
+  it("gives a contract file no agreement holds its own chip, so the chips add up to All", async () => {
+    const user = userEvent.setup();
+    stub(DOCS);
+    show(<CompanyDocumentsCard companyId="o-1" />);
+
+    const chips = within(
+      await screen.findByRole("group", { name: "Document category" }),
+    ).getAllByRole("button");
+    const counts = chips.map((chip) =>
+      Number(chip.querySelector(".t-num")?.textContent),
+    );
+    const [all, ...cuts] = counts;
+    expect(all).toBe(DOCS.length);
+    expect(cuts.reduce((sum, count) => sum + count, 0)).toBe(all);
+
+    await user.click(screen.getByRole("button", { name: /SOW\/Contract/ }));
+    expect(screen.getByText("Framework agreement — signed")).toBeTruthy();
+    expect(screen.queryByText("scan_0001.pdf")).toBeNull();
   });
 
   it("says nothing about pinning, which nothing in this product can do", async () => {

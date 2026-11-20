@@ -35,7 +35,7 @@ does in this state.
 
 | Task | Name | Mode | Ladder | Every rung blocked | Decision model |
 | --- | --- | --- | --- | --- | --- |
-| `account_scan` | Reading what an account needs | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
+| `account_scan` | Reading what a company needs | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `agent_loop` | Agent reasoning loop | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `brief_ranking` | Morning brief ranking | background | `premium` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `capture_classify` | Message classification | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |

@@ -50,6 +50,7 @@ type RouteVerb struct {
 	AnswerSchema json.RawMessage
 	// AskUserFirst is true when the app confirms the act before it runs.
 	AskUserFirst bool
+	Egress       bool
 }
 
 // RouteCall is one route-backed call as its route takes it.
@@ -168,7 +169,6 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	for _, name := range slices.Sorted(maps.Keys(properties)) {
 		members = append(members, strconv.Quote(name)+":"+properties[name])
 	}
-	egress := v.Scope.Egresses()
 	answer := v.AnswerSchema
 	if v.Method != http.MethodGet {
 		answer = writeAnswerSchema(answer)
@@ -176,7 +176,7 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: v.Verb, Title: v.Summary, Version: toolVersionV1,
 		Description:   v.Summary + " (" + v.Method + " " + v.Pattern + ", as the app does it.)",
-		RequiredScope: v.Scope, Tier: mcp.TierAutoExecute, Egress: egress, AskUserFirst: v.AskUserFirst,
+		RequiredScope: v.Scope, Tier: mcp.TierAutoExecute, Egress: v.Egress, AskUserFirst: v.AskUserFirst,
 		Unlisted: true,
 		// The route's own answer schema decides: one that names only ids, numbers,
 		// dates and closed sets of words holds nothing someone wrote.

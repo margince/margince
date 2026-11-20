@@ -48,8 +48,8 @@ var summaryVerbs = map[string][]string{
 	"deleteFact":          {"%s", "%s"},
 	"confirmProfileField": {"%s", "%s"},
 	"updateProfileField":  {"%s", "%s"},
-	"mergeMembers":        {"%q", "%s", "%q", "%s"},
-	"mergeTags":           {"%q", "%q", "%q"},
+	"mergeMembers":        {"%s", "%s", "%s", "%s"},
+	"mergeTags":           {"%s", "%s", "%s"},
 	"setUpPartner":        {"%s", "%s"},
 	"promoteLead":         {"%s", "%s"},
 	"disqualifyLead":      {"%s"},
@@ -62,12 +62,12 @@ var summaryVerbs = map[string][]string{
 	"dealClose":           {"%s", "%s"},
 	"sendEmail":           {"%s"},
 	"cc":                  {"%s"},
-	"sendSubject":         {"%q"},
-	"sendMessage":         {"%q"},
+	"sendSubject":         {"%s"},
+	"sendMessage":         {"%s"},
 	"draftReply":          {"%s"},
 	"accountSend":         {"%s"},
-	"accountSendFiled":    {"%q", "%d"},
-	"booking":             {"%q", "%s", "%s"},
+	"accountSendFiled":    {"%s", "%d"},
+	"booking":             {"%s", "%s", "%s"},
 	"bookingHost":         {"%s"},
 	"bookingLinks":        {"%d"},
 	"hostNamed":           {"%s"},
@@ -206,14 +206,14 @@ func TestStagedSummariesFollowTheInjectedLanguage(t *testing.T) {
 		To: []string{"ada@example.com"}, Cc: []string{"bob@example.com"}, Subject: "Angebot",
 	}, []RecordLink{{EntityType: "company", EntityID: ids.NewV7()}})
 	if want := `E-Mail-Unterhaltung beginnen mit ada@example.com, Cc: bob@example.com, ` +
-		`Betreff "Angebot", zugeordnete Datensätze: 1`; send != want {
+		`Betreff „Angebot“, zugeordnete Datensätze: 1`; send != want {
 		t.Errorf("send summary = %q, want %q", send, want)
 	}
 
 	start := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
 	booking := describeBooking(said, BookMeetingCommand{Start: start, End: start.Add(time.Hour)},
 		[]RecordLink{{EntityType: "deal", EntityID: ids.NewV7()}})
-	if want := `Termin buchen: "(kein Betreff)" von 2026-08-10T09:00:00Z bis 2026-08-10T10:00:00Z, ` +
+	if want := `Termin buchen: „(kein Betreff)“ von 2026-08-10T09:00:00Z bis 2026-08-10T10:00:00Z, ` +
 		`verknüpfte Datensätze: 1`; booking != want {
 		t.Errorf("booking summary = %q, want %q", booking, want)
 	}

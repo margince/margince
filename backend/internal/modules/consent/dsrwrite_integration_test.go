@@ -52,7 +52,8 @@ func (e *dsrEnv) assigned(t *testing.T) dsrRow {
 	officer := ids.From[ids.UserKind](e.user)
 	row, err := e.store.CreateDSR(e.ctx, CreateDSRInput{
 		Kind: dsrKindAccess, SubjectRef: "assigned@dsr.test", AssigneeID: &officer,
-		DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
+		ReceivedAt: new(time.Date(2026, 8, 21, 0, 0, 0, 0, time.UTC)),
+		DueAt:      new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("opening an assigned request: %v", err)
@@ -95,7 +96,7 @@ func TestANullAssigneeHandsTheRequestBack(t *testing.T) {
 func TestAFailedNameReadStillAnswersTheWriteAndTheQueue(t *testing.T) {
 	e := setupDSR(t)
 	h := e.handlers().WithRecordNames(failingNames{})
-	created := e.sendDSR(http.MethodPost, `{"kind":"access","subject_ref":"`+e.user.String()+`","due_at":"2026-08-31T00:00:00Z"}`,
+	created := e.sendDSR(http.MethodPost, `{"kind":"access","subject_ref":"`+e.user.String()+`","received_at":"2026-08-21T00:00:00Z","due_at":"2026-08-31T00:00:00Z"}`,
 		func(w http.ResponseWriter, r *http.Request) {
 			h.CreateDataSubjectRequest(w, r, crmcontracts.CreateDataSubjectRequestParams{})
 		})

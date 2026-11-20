@@ -19004,6 +19004,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -19115,6 +19117,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -19147,6 +19151,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -19695,6 +19701,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -20186,6 +20194,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
           description: The member, and whether the new invitation email was handed to the sender.
@@ -26808,7 +26818,8 @@ components:
         Client-supplied key making a mutation safe to retry — an update exactly as much as a
         create. **Scope:** the key is unique within
         `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-        returns the original status + body. Reusing the same key with a *different* request body
+        returns the original status + body. A connected agent's principal is its connection, so a
+        retry on a refreshed token replays too. Reusing the same key with a *different* request body
         returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
         do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
         means the first request under the key is still running and carries `Retry-After`;
@@ -34161,7 +34172,7 @@ components:
       required: [activity_id, subject, overdue]
       properties:
         activity_id: {type: string, format: uuid}
-        subject: {type: string}
+        subject: {type: string, description: 'The task''s subject. A task Margince wrote is named in the reader''s language, as its History row names it; a task typed by hand reads as written.'}
         body:
           type: [string, 'null']
           description: |-
@@ -43223,7 +43234,7 @@ components:
           readOnly: true
           description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         open_task_count: {type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them.'}
-        next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.'}
+        next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader''s language, as its History row names it; a task typed by hand reads as written.'}
         next_task_due_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.'}
         score_reason: {type: [string, 'null'], readOnly: true, description: 'The highest-impact factor in the retained current score explanation, for a compact queue reason.'}
         source: {type: string, description: 'How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from.'}
@@ -50707,7 +50718,7 @@ components:
       properties:
         type: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
         id: {type: string, format: uuid}
-        title: {type: [string, 'null'], description: Display label (name/subject).}
+        title: {type: [string, 'null'], description: 'Display label (name/subject). An activity Margince wrote is titled in the reader''s language, as its History row names it.'}
         snippet: {type: [string, 'null']}
         score: {type: [number, 'null'], description: Relevance score.}
         identifier_match:

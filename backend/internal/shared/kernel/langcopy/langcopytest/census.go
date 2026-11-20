@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -133,8 +134,8 @@ func censusMap(t reporter, prefix string, table reflect.Value) int {
 }
 
 // censusEntry holds the one check every phrase answers to, however it was
-// reached: written in every shipped language, with the same placeholders its
-// English sentence was given.
+// reached. It is written in every shipped language, with the placeholders of
+// its English sentence, and never with Go's own quoting.
 func censusEntry(t reporter, name string, p langcopy.Phrase) {
 	t.Helper()
 	english := p.In(textlang.English)
@@ -150,12 +151,37 @@ func censusEntry(t reporter, name string, p langcopy.Phrase) {
 			continue
 		}
 		got, want := Placeholders(text), Placeholders(english)
+		if slices.ContainsFunc(got, func(verb string) bool { return strings.HasSuffix(verb, "q") }) {
+			t.Errorf("%s writes %s with %%q, which prints Go string syntax: a backslash before every "+
+				"quote mark the value holds, and straight quotes in every language. Put the language's "+
+				"own marks around %%s („%%s“ in German, “%%s” in English and Vietnamese), or pass the "+
+				"value through langcopy.Spoken.Quote", lang, name)
+		}
+		if marks := foreignQuoting(lang, text); marks != "" {
+			t.Errorf("%s quotes a value in %s with %s, which are not its own marks; write %s",
+				lang, name, marks, langcopy.Quoted.In(lang))
+		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("%s writes %s with placeholders %v, but the sentence is given %v.\n  %s\n"+
 				"A dropped placeholder renders as %%!s(MISSING) in a card; an extra one reads an "+
 				"argument nobody passed.", lang, name, got, want, text)
 		}
 	}
+}
+
+// quotedValue is one value placeholder between two quotation marks.
+var quotedValue = regexp.MustCompile(`(["“„”])%(?:\[[0-9]+\])?s(["“”])`)
+
+// foreignQuoting names the marks a sentence quotes a value with when they are
+// not its own language's. It answers "" when every value wears its own marks.
+func foreignQuoting(lang textlang.Lang, text string) string {
+	opening, closing := langcopy.For(string(lang)).Marks()
+	for _, m := range quotedValue.FindAllStringSubmatch(text, -1) {
+		if m[1] != opening || m[2] != closing {
+			return m[1] + "…" + m[2]
+		}
+	}
+	return ""
 }
 
 // NoCount fails unless each named phrase is written without a placeholder, for

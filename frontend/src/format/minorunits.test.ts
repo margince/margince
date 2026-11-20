@@ -143,6 +143,14 @@ describe("the scale between what a human types and what we store", () => {
 });
 
 describe("typedMinorUnits", () => {
+  // A currency still loading arrives as "". Read at the two-digit default,
+  // "500" became 50000, which a dong installation then stored as 50000 VND.
+  it.each(["", "  "])("refuses an amount with no currency (%j)", (code) => {
+    expect(typedMinorUnits("500", code, "en")).toEqual({
+      refused: { key: "amount.refused.noCurrency", params: {} },
+    });
+  });
+
   it.each([
     ["de", "12,5", "EUR", 1250],
     ["de", "1500", "EUR", 150_000],

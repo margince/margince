@@ -222,6 +222,38 @@ it("takes no amount before the base currency is known, then keeps the typed amou
   });
 });
 
+it("says the base currency could not be read and reads it again on Retry", async () => {
+  const user = steppedClock();
+  vi.setSystemTime(new Date("2026-10-05T12:00:00Z"));
+  let settingsUp = false;
+  stubFetch(async (url) => {
+    if (url.includes("/promote-preview"))
+      return jsonResponse({ outcome: "create", existing_deals: [] });
+    if (url.includes("/installation/settings"))
+      return settingsUp
+        ? jsonResponse({ base_currency: "VND" })
+        : jsonResponse({ detail: "unavailable" }, 503);
+    return jsonResponse({ data: [] });
+  });
+  render(
+    <QualifyDialog lead={lead} open onClose={vi.fn()} onQualified={vi.fn()} />,
+    new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  );
+  await user.click(
+    await screen.findByRole("radio", { name: "Open a new deal" }),
+  );
+  expect(
+    await screen.findByText(
+      "The currency could not be read, so no amount can be entered yet.",
+    ),
+  ).toBeTruthy();
+
+  settingsUp = true;
+  await user.click(screen.getByRole("button", { name: "Retry" }));
+  const amount = await screen.findByLabelText("Amount (VND)");
+  await waitFor(() => expect(amount).toBeEnabled());
+});
+
 // A German reader writes "12,5" for twelve and a half, and "1.500" reads as
 // fifteen hundred to them, so the dialog refuses it.
 it("sends 12,5 typed in German as 1250 minor units", async () => {

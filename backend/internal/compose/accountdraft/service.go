@@ -201,7 +201,7 @@ func ViewOptions(req Request) (company360.AssembleOptions, error) {
 	recipient, err := ids.ParseAs[ids.ContactKind](req.ContactID)
 	if err != nil {
 		return company360.AssembleOptions{}, fieldError("contact_id",
-			"that contact is not a contact you can see on this account")
+			"that contact is not a contact you can see at this company")
 	}
 	return company360.AssembleOptions{
 		ProjectID: req.ProjectID, WrittenByHumanOnly: true, PartyContactID: &recipient,
