@@ -458,9 +458,6 @@ export function fitLabel(
 
 // Graphemes, so a cut never splits a flag, a joined emoji or an accent.
 function graphemes(text: string): string[] {
-  if (typeof Intl.Segmenter !== "function") {
-    return Array.from(text);
-  }
   const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
   return Array.from(segmenter.segment(text), (part) => part.segment);
 }

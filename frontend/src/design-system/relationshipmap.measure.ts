@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type RefObject, useMemo, useSyncExternalStore } from "react";
+import {
+  type RefObject,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { MeasureText } from "./relationshipmap.layout";
 
 /** Each kind of word on the map, measured in the type its own element draws. */
@@ -21,26 +27,37 @@ const SELECTORS = [
   ".rmap-more text",
 ] as const;
 
-let faceLoads = 0;
-
 /** A kind is null until drawn, or with no canvas (happy-dom), so the caller
  * falls back to counting characters. */
 export function useMapTextMeasures(
   scope: RefObject<Element | null>,
 ): MapTextMeasures {
-  // Every face that lands changes the key, so a late one re-measures although
-  // the computed font names did not change.
-  const key = useSyncExternalStore(
-    watchFonts,
-    () =>
-      [
-        `${faceLoads} ${globalThis.document?.fonts?.status ?? ""}`,
-        ...SELECTORS.map((selector) =>
-          fontOf(scope.current?.querySelector(selector)),
-        ),
-      ].join("\n"),
-    () => "",
-  );
+  const [key, setKey] = useState("");
+  const landed = useRef(0);
+  // After every commit, because the drawn labels decide which kinds exist. An
+  // unchanged key sets the same string, which renders nothing.
+  useLayoutEffect(() => {
+    const sample = () => setKey(keyOf(scope.current, landed.current));
+    sample();
+  });
+  // A face that lands changes the metrics but not the font names, so it bumps
+  // the key. Subscribed in the commit, so no face lands unheard before it.
+  useLayoutEffect(() => {
+    const fonts = globalThis.document?.fonts;
+    if (!fonts?.addEventListener) {
+      return;
+    }
+    const resample = () => {
+      landed.current += 1;
+      setKey(keyOf(scope.current, landed.current));
+    };
+    fonts.addEventListener("loadingdone", resample);
+    fonts.addEventListener("loadingerror", resample);
+    return () => {
+      fonts.removeEventListener("loadingdone", resample);
+      fonts.removeEventListener("loadingerror", resample);
+    };
+  }, [scope]);
   return useMemo(() => {
     const [, name, sub, pill, lane, more] = key.split("\n");
     return {
@@ -53,21 +70,11 @@ export function useMapTextMeasures(
   }, [key]);
 }
 
-function watchFonts(changed: () => void) {
-  const fonts = globalThis.document?.fonts;
-  if (!fonts?.addEventListener) {
-    return () => undefined;
-  }
-  const landed = () => {
-    faceLoads += 1;
-    changed();
-  };
-  fonts.addEventListener("loadingdone", landed);
-  fonts.addEventListener("loadingerror", landed);
-  return () => {
-    fonts.removeEventListener("loadingdone", landed);
-    fonts.removeEventListener("loadingerror", landed);
-  };
+function keyOf(scope: Element | null, landed: number): string {
+  return [
+    String(landed),
+    ...SELECTORS.map((selector) => fontOf(scope?.querySelector(selector))),
+  ].join("\n");
 }
 
 function fontOf(element: Element | null | undefined): string {
