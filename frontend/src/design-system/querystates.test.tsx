@@ -94,6 +94,50 @@ describe("QueryStates", () => {
     ).toBeTruthy();
   });
 
+  it("says a 404 is gone and offers no Retry, a 5xx keeps both", () => {
+    const { unmount } = render(
+      <QueryStates
+        query={failing(new ProblemError({ status: 404, detail: "not found" }))}
+        pendingLabel="Loading the section"
+        goneAction={<a href="#back">Back</a>}
+      >
+        {null}
+      </QueryStates>,
+    );
+    expect(screen.getByRole("alert").textContent).toBe(t("common.gone"));
+    expect(screen.queryByText(t("common.error"))).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: t("common.retry") }),
+    ).toBeNull();
+    expect(screen.getByText("Back")).toBeTruthy();
+    unmount();
+    render(
+      <QueryStates
+        query={failing(new ProblemError({ status: 503, detail: "down" }))}
+        pendingLabel="Loading the section"
+      >
+        {null}
+      </QueryStates>,
+    );
+    expect(screen.getByText(t("common.error"))).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: t("common.retry") }),
+    ).toBeTruthy();
+  });
+
+  it("uses the screen's own gone sentence", () => {
+    render(
+      <QueryStates
+        query={failing(new ProblemError({ status: 404 }))}
+        pendingLabel="Loading the section"
+        goneKey="book.linkGone"
+      >
+        {null}
+      </QueryStates>,
+    );
+    expect(screen.getByText(t("book.linkGone"))).toBeTruthy();
+  });
+
   it("reports a load in progress as busy, since the shimmer bars say nothing", () => {
     render(
       <QueryStates

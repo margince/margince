@@ -258,7 +258,11 @@ export function BookingGuestScreen({
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">
-        <QueryGate pendingLabel={t("common.loading")} query={profile}>
+        <QueryGate
+          pendingLabel={t("common.loading")}
+          query={profile}
+          goneKey="book.linkGone"
+        >
           {(host) =>
             publicUnavailable ? (
               <GuestUnavailable host={host} zone={zone} />

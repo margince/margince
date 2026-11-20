@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ComponentProps, type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import { Button, Disclosure, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -11,6 +11,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { openAnalyticsSection } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
@@ -236,7 +237,7 @@ export function ReportingReportDetail({
       </OverflowMenu>
     );
   return (
-    <QueryGate query={report} pendingLabel={t("reporting.reports")}>
+    <ReportGate query={report}>
       {(report) => (
         <>
           <div className="reporting-header">
@@ -473,6 +474,30 @@ export function ReportingReportDetail({
           )}
         </>
       )}
+    </ReportGate>
+  );
+}
+
+function ReportGate({
+  query,
+  children,
+}: Readonly<{
+  query: ComponentProps<typeof QueryGate<ReportingReport>>["query"];
+  children: (report: ReportingReport) => ReactNode;
+}>) {
+  const t = useT();
+  return (
+    <QueryGate
+      query={query}
+      pendingLabel={t("reporting.reports")}
+      goneKey="reporting.reportGone"
+      goneAction={
+        <Button onClick={() => openAnalyticsSection("reports")}>
+          {t("common.goneBackToAnalytics")}
+        </Button>
+      }
+    >
+      {children}
     </QueryGate>
   );
 }

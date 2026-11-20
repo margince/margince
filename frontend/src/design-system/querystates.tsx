@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { type FieldLabels, problemMessageOf } from "../lib/problem";
+import { type FieldLabels, isGone, problemMessageOf } from "../lib/problem";
 import { Button, EmptyState, PendingBody } from "./atoms";
 import { Callout } from "./callout";
 import "./querystates.css";
@@ -28,6 +28,8 @@ export function QueryStates({
   query,
   pendingLabel,
   pendingLines,
+  goneKey,
+  goneAction,
   children,
 }: Readonly<{
   query: Readonly<{
@@ -43,6 +45,10 @@ export function QueryStates({
   // the page down as it arrives.
   pendingLabel: string;
   pendingLines?: number;
+  // What a 404 says when the screen can name what is gone, and the one way on
+  // from it. Without them a 404 still reads as gone, never as a failed load.
+  goneKey?: MessageKey;
+  goneAction?: ReactNode;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -52,6 +58,14 @@ export function QueryStates({
         label={pendingLabel ?? t("common.loading")}
         lines={pendingLines}
       />
+    );
+  }
+  if (query.isError && isGone(query.error)) {
+    return (
+      <EmptyState>
+        <p role="alert">{t(goneKey ?? "common.gone")}</p>
+        {goneAction}
+      </EmptyState>
     );
   }
   if (query.isError) {
@@ -155,6 +169,8 @@ export function QueryGate<Data>({
   empty,
   pendingLabel,
   pendingLines,
+  goneKey,
+  goneAction,
   children,
 }: Readonly<{
   query: QueryLike<Data>;
@@ -163,6 +179,8 @@ export function QueryGate<Data>({
   // pending state, so there is one place a screen names its wait.
   pendingLabel: string;
   pendingLines?: number;
+  goneKey?: MessageKey;
+  goneAction?: ReactNode;
   children: (data: Data) => ReactNode;
 }>) {
   const t = useT();
@@ -184,6 +202,8 @@ export function QueryGate<Data>({
       query={query}
       pendingLabel={pendingLabel}
       pendingLines={pendingLines}
+      goneKey={goneKey}
+      goneAction={goneAction}
     >
       {success}
     </QueryStates>
