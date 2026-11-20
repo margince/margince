@@ -30,7 +30,6 @@ const (
 	attemptReasonDecisionError         = "decision_error"
 	attemptReasonDecisionOffEnum       = "decision_off_enum"
 	attemptReasonDecisionStateTooLarge = "decision_state_too_large"
-	attemptReasonDecisionUncertified   = "decision_uncertified"
 )
 
 // decisionAttemptReasons lists the reasons a decision attempt hands the walk
@@ -38,7 +37,7 @@ const (
 // constants.
 var decisionAttemptReasons = []string{
 	attemptReasonDecisionBelowFloor, attemptReasonDecisionError, attemptReasonDecisionOffEnum,
-	attemptReasonDecisionStateTooLarge, attemptReasonDecisionUncertified,
+	attemptReasonDecisionStateTooLarge,
 }
 
 func isDecisionFallbackReason(reason string) bool {
@@ -50,12 +49,9 @@ func isDecisionFallbackReason(reason string) bool {
 // slow one falls back rather than stalling a background task for minutes.
 const DecisionCallTimeout = 15 * time.Second
 
-// Why a task that declares a decision form is not answered by the decision
-// lane. The route preview reports one; the wire enum is the same three words.
-const (
-	DecisionSkipUnbound     = "unbound"
-	DecisionSkipUncertified = "uncertified"
-)
+// DecisionSkipUnbound is why a task that declares a decision form is not
+// answered by the decision lane: no lane is bound. The route preview reports it.
+const DecisionSkipUnbound = "unbound"
 
 // DecisionVerdict is a site's reading of one decision answer.
 type DecisionVerdict int

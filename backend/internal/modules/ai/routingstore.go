@@ -295,6 +295,7 @@ func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingCon
 		return RoutingConfig{}, err
 	}
 	LogSingleRungLadders(s.logger(), served)
+	LogUncertifiedDecisionSites(s.logger(), served)
 	return written, nil
 }
 

@@ -2032,8 +2032,6 @@ export const en = {
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
-  "aiAdmin.decisionSkip.uncertified":
-    "Decision model not used: not certified for this activity.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -16672,8 +16670,6 @@ export const en = {
     "Decision model answered outside the options",
   "aicalls.reason.decision_state_too_large":
     "Input too large for the decision model",
-  "aicalls.reason.decision_uncertified":
-    "Decision model not certified for this task",
   "aicalls.reason.timeout": "The attempt before ran out of time",
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
@@ -17502,7 +17498,7 @@ export const en = {
     "Higher local-tier route; inspect the configured endpoint",
   "aiRouting.lane.embeddings": "Search and retrieval across records",
   "aiRouting.lane.decisions":
-    "Typed questions, asked before the tiers where certified",
+    "Typed questions, asked before the tiers",
   "aiRouting.decisions.add": "Add decision model",
   "aiRouting.decisions.remove": "Remove decision model",
   "aiRouting.decisions.preset.openrouter": "Preset: OpenRouter",

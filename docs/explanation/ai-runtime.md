@@ -287,7 +287,9 @@ ladder and prompt unless every check passes, in this order:
 No certification row is needed, only the answer checks above.
 
 [Certifying a site](../how-to/certify-a-decision-site.md) is advice: a measured record that an operator
-trusts it by, never something `Router.Decide` reads. A fallback leaves its reason on the ladder's first
+trusts it by, never something `Router.Decide` reads. A row needs at least 15 kept answers
+(`DecisionMinKept`). Where the bound lane's model has no row for a site, the API and worker log a
+warning at start and at each routing save that names the model and the sites. A fallback leaves its reason on the ladder's first
 attempt: `decision_state_too_large`, `decision_error`, `decision_off_enum` or
 `decision_below_floor`.
 

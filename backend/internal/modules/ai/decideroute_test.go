@@ -4,10 +4,12 @@
 package ai
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 	"testing"
@@ -93,7 +95,6 @@ func newDecideFixtureOver(t *testing.T, decider decision.Client, spent int64, ch
 		lane = &decisionLane{client: decider, meta: jevLane.routeMeta()}
 	}
 	r.install(r.binding().withConfig(RoutingConfig{}, lane))
-	r.decisionCertified = func(DecisionCertKey) bool { return true }
 	return decideFixture{router: r, store: store, meter: meter}
 }
 
@@ -391,7 +392,6 @@ func verdictRouter(lane *DecisionsConfig, decider decision.Client, store *fakeCa
 		ProfileCloudFrontier, &memMeter{}, StaticBudget(100), store,
 		map[Tier]routeMeta{TierLocalSmall: {provider: providerOllama, model: "gemma3"}}, true, nil)
 	r.install(r.binding().withConfig(RoutingConfig{}, &decisionLane{client: decider, meta: lane.routeMeta()}))
-	r.decisionCertified = func(DecisionCertKey) bool { return true }
 	return r
 }
 
@@ -439,7 +439,6 @@ func TestTheRailOpensOnceAcrossTheDecisionAndTheLadder(t *testing.T) {
 			r.install(r.binding().withConfig(RoutingConfig{}, &decisionLane{
 				client: &scriptedDecider{replies: []decisionReply{tc.reply}}, meta: jevLane.routeMeta(),
 			}))
-			r.decisionCertified = func(DecisionCertKey) bool { return true }
 			ctx := principal.WithCorrelationID(wsCtx(), ids.NewV7())
 			if _, _, err := r.Decide(ctx, TaskCaptureClassify, "classify", triageQuestion, model.Request{}, acceptAnything, floorGate); err != nil {
 				t.Fatal(err)
@@ -481,14 +480,13 @@ func TestAZeroVerdictIsNeverAccepted(t *testing.T) {
 	}
 }
 
-// The DB-less router takes a fake decider under the config's lane, and a
-// certification run may treat every site as certified; without the lane the
-// fake answers nothing.
+// The DB-less router takes a fake decider under the config's lane; without
+// the lane the fake answers nothing.
 func TestTheLocalRouterTakesAFakeDecider(t *testing.T) {
 	cfg := FakeRoutingConfig()
 	cfg.Decisions = jevLane
 	decider := &scriptedDecider{replies: []decisionReply{answered("parked", 0.95)}}
-	r, err := NewLocalRouter(cfg, WithFakeDecider(decider), WithEveryDecisionCertified())
+	r, err := NewLocalRouter(cfg, WithFakeDecider(decider))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -496,12 +494,36 @@ func TestTheLocalRouterTakesAFakeDecider(t *testing.T) {
 	if err != nil || !out.Decided || len(decider.calls) != 1 {
 		t.Fatalf("outcome=%+v err=%v calls=%d", out, err, len(decider.calls))
 	}
-	production, err := NewLocalRouter(cfg, WithFakeDecider(decider))
+}
+
+// A bound lane answers a site it holds no certified row for, so the boot names
+// the model and the site rather than letting a missing record read as a lane
+// switched off.
+func TestABoundLaneAnswersAnUncertifiedSiteAndTheBootSaysSo(t *testing.T) {
+	cfg := FakeRoutingConfig()
+	cfg.Decisions = jevLane
+	if _, certified := decisionCertified[DecisionCertKey{Task: TaskSiteTriage, Site: "triage", Provider: jevLane.Provider, Model: jevLane.Model}]; certified {
+		t.Fatal("the generated table certifies the test lane; this case would prove nothing")
+	}
+	decider := &scriptedDecider{replies: []decisionReply{answered("parked", 0.95)}}
+	r, err := NewLocalRouter(cfg, WithFakeDecider(decider))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if production.decisionCertified(DecisionCertKey{Task: TaskSiteTriage, Site: "triage", Provider: jevLane.Provider, Model: jevLane.Model}) {
-		t.Error("an uncertified model is served without WithEveryDecisionCertified")
+	out, info, err := r.Decide(wsContext(t), TaskSiteTriage, "triage", triageQuestion, triageLLMRequest, acceptAnything, floorGate)
+	if err != nil || !out.Decided || info.Tier != TierDecideLane {
+		t.Fatalf("an uncertified lane did not answer: outcome=%+v info=%+v err=%v", out, info, err)
+	}
+
+	var boot bytes.Buffer
+	LogLadderWarnings(slog.New(slog.NewTextHandler(&boot, nil)), cfg)
+	for _, want := range []string{"no current certified record", "model=" + jevLane.Model, "site_triage/triage"} {
+		if !strings.Contains(boot.String(), want) {
+			t.Errorf("the boot warning does not say %q:\n%s", want, boot.String())
+		}
+	}
+	if certified := FakeRoutingConfig().UncertifiedDecisionSites(); certified != nil {
+		t.Errorf("a config with no decisions lane warns about %v", certified)
 	}
 }
 

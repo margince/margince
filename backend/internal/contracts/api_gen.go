@@ -34707,7 +34707,7 @@ type AiCall struct {
 type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
-	// AttemptReason Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
+	// AttemptReason Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
 	AttemptReason string `json:"attempt_reason"`
 
 	// DecisionChoice The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer.
@@ -34886,8 +34886,9 @@ type AiDecisionSummary struct {
 
 // AiDecisionsBinding The decision-model lane: a model that answers a typed question with calibrated
 // probabilities, asked before a decision site's ladder. Absent means no task uses
-// one. It serves a task only when certified for that site and when its endpoint
-// reaches no further than the task's own bindings.
+// one. Bound, it answers every task that declares a decision form, with or without
+// a certification record; each site keeps an answer only at its own floor and
+// otherwise falls back to its ladder.
 type AiDecisionsBinding struct {
 	// BaseUrl The decision provider's endpoint as resolved from `providers` (the FULL URL, posted to as written; jev defaults to https://api.typesafe.ai/v1/systemone). On write it is accepted only when empty or equal to the provider's; a different one is a 422 `moved_to_provider`.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -35544,8 +35545,9 @@ type AiRouteCandidate struct {
 type AiRouting struct {
 	// Decisions The decision-model lane: a model that answers a typed question with calibrated
 	// probabilities, asked before a decision site's ladder. Absent means no task uses
-	// one. It serves a task only when certified for that site and when its endpoint
-	// reaches no further than the task's own bindings.
+	// one. Bound, it answers every task that declares a decision form, with or without
+	// a certification record; each site keeps an answer only at its own floor and
+	// otherwise falls back to its ladder.
 	Decisions  *AiDecisionsBinding `json:"decisions,omitempty"`
 	Embeddings AiEmbeddingsBinding `json:"embeddings"`
 

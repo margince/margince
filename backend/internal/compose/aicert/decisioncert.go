@@ -3,11 +3,12 @@
 
 package aicert
 
-// The certified decision table: which (task, site, provider, model) the
-// decisions lane may serve, generated from the committed decision records into
-// internal/modules/ai/decisioncert_gen.go. The runtime reads only that table,
-// so a record that goes stale drops its row at the next `make gen`, and the
-// drift check here names the record whose row moved.
+// The certified decision table: which (task, site, provider, model) a current
+// certified decision record stands behind, generated from the committed
+// decision records into internal/modules/ai/decisioncert_gen.go. The runtime
+// reads it only to warn where a bound lane answers with no row, so a record
+// that goes stale drops its row at the next `make gen`, and the drift check
+// here names the record whose row moved.
 
 import (
 	"bytes"
@@ -53,13 +54,21 @@ func DecisionCertTable(corpus []Scenario, census *aitasks.Registry, records []Re
 	return DecisionCertRows(readiness), readiness, nil
 }
 
-// Serves is whether this decision record earns a row in the generated table:
-// certified, still describing every scenario it measured, and measuring at
-// least one the site still ships. A record the corpus has moved out from under
-// serves nothing. Asked of the record rather than of its table key, because
-// the key names no environment class and two records can share one.
-func (r DecisionRow) Serves() bool {
-	return r.Record.Verdict == VerdictCertified && !r.Standing.Stale && r.Standing.Measured > 0
+// DecisionMinKept is the fewest kept answers a certified decision record needs
+// to earn a row. Zero wrong in 15 bounds the wrong rate under 14% at 90%
+// confidence, the count privacyMinRuns already sets for a privacy case.
+const DecisionMinKept = privacyMinRuns
+
+// Certified is whether this decision record earns a row in the generated
+// table: certified on at least DecisionMinKept kept answers, still describing
+// every scenario it measured, and measuring at least one the site still ships.
+// The row is evidence for an operator; the lane answers a site with or without
+// one. Asked of the record rather than of its table key, because the key names
+// no environment class and two records can share one.
+func (r DecisionRow) Certified() bool {
+	rec := r.Record
+	return rec.Verdict == VerdictCertified && rec.Decision != nil && rec.Decision.Kept >= DecisionMinKept &&
+		!r.Standing.Stale && r.Standing.Measured > 0
 }
 
 // DecisionCertRows is one row per certified key, sorted by key. Two current
@@ -69,7 +78,7 @@ func (r DecisionRow) Serves() bool {
 func DecisionCertRows(readiness []DecisionRow) []DecisionCertRow {
 	byKey := map[ai.DecisionCertKey]*DecisionCertRow{}
 	for _, row := range readiness {
-		if !row.Serves() {
+		if !row.Certified() {
 			continue
 		}
 		rec := row.Record
