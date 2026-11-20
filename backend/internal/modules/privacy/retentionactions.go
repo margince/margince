@@ -242,6 +242,9 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
 	}
 	if err == nil {
+		err = redactSubjectLegalReviewText(ctx, tx, id, subjectEmails, subjectName, "retention", causeRetention)
+	}
+	if err == nil {
 		err = scrubSubjectSignals(ctx, tx, ids.From[ids.ContactKind](id), nil, "retention", causeRetention)
 	}
 	if err == nil {
@@ -290,9 +293,6 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 	}
 	if err == nil {
 		err = deleteSubjectHandoffs(ctx, tx, id)
-	}
-	if err == nil {
-		err = clearSubjectLegalReviewText(ctx, tx, id, "retention", causeRetention)
 	}
 	if err == nil {
 		// The contact alone: this anonymize leaves the leads it came from as

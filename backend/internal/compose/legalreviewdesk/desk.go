@@ -47,7 +47,7 @@ var _ deals.LegalReviewDesk = Desk{}
 // Reviewers lists the live seats that may read and answer legal reviews.
 func (Desk) Reviewers(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
 	seats, err := identity.LiveSeatsAllowingTx(principal.SystemActing(ctx, actor), tx,
-		objectName, principal.ActionRead, principal.ActionUpdate)
+		objectName, approvalsubject.LegalReviewDecisionActions()...)
 	if err != nil {
 		return nil, err
 	}

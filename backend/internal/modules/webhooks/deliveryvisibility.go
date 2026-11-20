@@ -370,7 +370,7 @@ func (s *Store) dealRoomVisibleTo(ctx context.Context, roomID ids.UUID) (bool, e
 }
 
 // legalReviewVisibleTo gates a review subject on legal_review.read, then on the
-// row-scope visibility of its deal. An absent review reads as not-visible.
+// row scope of its deal, without asking for the deal grant. An absent review reads as not-visible.
 func (s *Store) legalReviewVisibleTo(ctx context.Context, reviewID ids.UUID) (bool, error) {
 	readable, err := objectReadable(ctx, "legal_review")
 	if err != nil || !readable {
@@ -386,7 +386,9 @@ func (s *Store) legalReviewVisibleTo(ctx context.Context, reviewID ids.UUID) (bo
 	if err != nil {
 		return false, err
 	}
-	return s.rowScopedVisible(ctx, "deal", func(c context.Context, tx pgx.Tx) error {
+	// The review's own read opens its pack without a deal grant, so only the deal's
+	// row scope is asked here.
+	return s.probeVisible(ctx, func(c context.Context, tx pgx.Tx) error {
 		return auth.EnsureVisible(c, tx, "deal", dealID)
 	})
 }

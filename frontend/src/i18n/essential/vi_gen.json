@@ -5405,6 +5405,8 @@
   "aiOutcome.gaveUp.deferred": "bị hoãn do ngân sách",
   "aiOutcome.gaveUp.budgetUnavailable": "không kiểm tra được ngân sách",
   "aiOutcome.gaveUp.meteringFailed": "đã trả lời, chưa ghi nhận mức dùng",
+  "legalReview.openQueue": "Mở Rà soát pháp lý",
+  "legalReview.dismissRequest": "Ẩn",
   "legalReview.queueTitle": "Rà soát pháp lý",
   "legalReview.advanceRefused": "Giai đoạn này cần pháp lý phê duyệt trước. Hãy yêu cầu rà soát pháp lý, rồi chuyển deal.",
   "aiTask.name.account_scan": "Phân tích nhu cầu khách hàng",

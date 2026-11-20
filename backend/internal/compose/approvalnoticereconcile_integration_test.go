@@ -18,10 +18,13 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/legalreviewdesk"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -80,6 +83,7 @@ func assertReconciledHomeNotices(t *testing.T, a approvalNotifyEnv, want int) {
 func TestNoticeReconciliationResumesPastAPageOfPendingDecisions(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
 	integration.ApplyRiverSchema(t)
+	a.grantRole(t, a.e.AdminUser)
 	ctx := principal.SystemActing(a.e.Admin(), approvalNoticeRetractActor)
 	store := notices.NewStore(a.db)
 	var firstApproval ids.ApprovalID
@@ -293,4 +297,45 @@ func TestNoticeReconciliationTakesBackAPendingApprovalsCopyFromAMemberItIsNotFor
 	if got := a.unreadFor(t, a.e.AdminUser); got != 1 {
 		t.Errorf("the decider has %d notices, want their own one", got)
 	}
+}
+
+func TestNoticeReconciliationRetractsALegalReviewNoticeOnceTheGrantIsLost(t *testing.T) {
+	a := newApprovalNotifyEnv(t)
+	key := "legalrole-" + a.e.AdminUser.String()
+	a.e.WsExec(t, `INSERT INTO role (key, name, permissions) VALUES ($1, 'Legal', $2::jsonb)`, key,
+		`{"objects":{"legal_review":{"read":true,"update":true}},"row_scope":"all"}`)
+	a.e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = $2`, a.e.AdminUser, key)
+	desk := legalreviewdesk.Desk{Approvals: a.svc, Notices: notices.NewStore(a.db)}
+	if err := a.db.Tx(a.proposerCtx(ids.Nil), func(tx pgx.Tx) error {
+		return desk.Raise(a.proposerCtx(ids.Nil), tx, deals.ReviewRequest{
+			ReviewID: ids.NewV7(), DealID: a.deal, DealName: "Fleet renewal", Seats: []ids.UUID{a.e.AdminUser}})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, env := range a.requestedEnvelopes(t) {
+		a.deliver(t, env)
+	}
+	sweep, worker := principal.SystemActing(a.e.Admin(), approvalNoticeReconcileActor), newApprovalNoticeReconcileWorker(a.e.Pool)
+	if _, changed, err := worker.reconcilePage(sweep, ids.Nil); err != nil || changed != 0 {
+		t.Fatalf("a reviewer who still holds the grants lost %d notices (err %v)", changed, err)
+	}
+	a.e.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, a.e.AdminUser)
+	if _, changed, err := worker.reconcilePage(sweep, ids.Nil); err != nil || changed != 1 {
+		t.Fatalf("the sweep took back %d notices (err %v), want the one naming the deal", changed, err)
+	}
+	if got := a.unreadFor(t, a.e.AdminUser); got != 0 {
+		t.Errorf("the reviewer who lost the grants still has %d notices", got)
+	}
+}
+func (a approvalNotifyEnv) requestedEnvelopes(t *testing.T) []kevents.Envelope {
+	t.Helper()
+	var out []kevents.Envelope
+	a.read(t, func(ctx context.Context, tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT envelope FROM event_outbox WHERE envelope->>'type' = 'approval.requested' ORDER BY id`)
+		if err == nil {
+			out, err = pgx.CollectRows(rows, pgx.RowTo[kevents.Envelope])
+		}
+		return err
+	})
+	return out
 }

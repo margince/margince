@@ -93,17 +93,13 @@ func (w *approvalNoticeReconcileWorker) Work(ctx context.Context, job *river.Job
 func (w *approvalNoticeReconcileWorker) reconcilePage(ctx context.Context, after ids.UUID) (ids.UUID, int64, error) {
 	var page notices.OutstandingApprovalPage
 	var pending map[ids.ApprovalID]bool
-	var asked map[approvals.AskedPair]bool
 	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		page, err = w.notices.OutstandingApprovalNotices(ctx, tx, after, approvalNoticePageSize)
 		if err != nil {
 			return err
 		}
-		if pending, err = w.approvals.StillPending(ctx, tx, page.ApprovalIDs); err != nil {
-			return err
-		}
-		asked, err = w.approvals.StillAskedOf(ctx, tx, askedPairs(page.Notices))
+		pending, err = w.approvals.StillPending(ctx, tx, page.ApprovalIDs)
 		return err
 	})
 	if err != nil {
@@ -121,7 +117,7 @@ func (w *approvalNoticeReconcileWorker) reconcilePage(ctx context.Context, after
 		retracted += count
 	}
 	for _, held := range page.Notices {
-		if !pending[held.Approval] || asked[approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient}] {
+		if !pending[held.Approval] {
 			continue
 		}
 		count, err := w.retractUnasked(ctx, held)
@@ -141,8 +137,13 @@ func (w *approvalNoticeReconcileWorker) retractUnasked(ctx context.Context, held
 	var taken int64
 	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
 		asked, err := w.approvals.StillAskedOf(ctx, tx, []approvals.AskedPair{pair})
-		if err != nil || asked[pair] {
+		if err != nil {
 			return err
+		}
+		if asked[pair] {
+			if decidable, err := w.decidableByRecipient(ctx, tx, held); err != nil || decidable {
+				return err
+			}
 		}
 		taken, err = w.notices.RetractCopy(ctx, tx, held.ID)
 		return err
@@ -153,10 +154,20 @@ func (w *approvalNoticeReconcileWorker) retractUnasked(ctx context.Context, held
 	return taken, nil
 }
 
-func askedPairs(copies []notices.OutstandingApprovalNotice) []approvals.AskedPair {
-	pairs := make([]approvals.AskedPair, 0, len(copies))
-	for _, held := range copies {
-		pairs = append(pairs, approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient})
+// decidableByRecipient asks the delivery question again: is this approval still
+// theirs to decide, under the grants they hold now. A reviewer who lost the grant
+// since the notice was written no longer keeps a line naming the record.
+func (w *approvalNoticeReconcileWorker) decidableByRecipient(
+	ctx context.Context, tx pgx.Tx, held notices.OutstandingApprovalNotice,
+) (bool, error) {
+	ws, err := w.identity.InstallationWorkspace(ctx)
+	if err != nil {
+		return false, err
 	}
-	return pairs
+	seatCtx, live, err := seatAuthorityContext(ctx, w.identity, ws.UUID, held.Recipient)
+	if err != nil || !live {
+		return false, err
+	}
+	decidable, _, _, err := w.approvals.PendingAskOfInTx(seatCtx, tx, held.Approval)
+	return decidable, err
 }

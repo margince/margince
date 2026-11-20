@@ -51,35 +51,61 @@ func reviewText(ctx context.Context, t *testing.T, tx pgx.Tx, review ids.UUID) (
 	return note, comments, status
 }
 
-func TestAnonymizingAStakeholderClearsTheLegalReviewTextOfTheirDeals(t *testing.T) {
+func redactFor(ctx context.Context, t *testing.T, tx pgx.Tx, subject ids.UUID) {
+	t.Helper()
+	if err := redactSubjectLegalReviewText(ctx, tx, subject, nil, "Sara Subject", "retention", causeRetention); err != nil {
+		t.Fatalf("redacting the subject from legal review text: %v", err)
+	}
+}
+
+func TestRedactingAStakeholderKeepsTheRestOfTheLegalReviewText(t *testing.T) {
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
-	subject, bystander := ids.NewV7(), ids.NewV7()
-	for _, c := range []ids.UUID{subject, bystander} {
+	subject, other := ids.NewV7(), ids.NewV7()
+	for _, c := range []ids.UUID{subject, other} {
 		mustExec(ctx, t, tx, `INSERT INTO contact (id, full_name, source, captured_by)
-			VALUES ($1, 'Review Subject', 'manual', 'test')`, c)
+			VALUES ($1, 'Sara Subject', 'manual', 'test')`, c)
 	}
-	_, theirs := seedReviewedDeal(ctx, t, tx, subject)
-	_, others := seedReviewedDeal(ctx, t, tx, bystander)
+	deal, theirs := seedReviewedDeal(ctx, t, tx, subject)
+	mustExec(ctx, t, tx, `INSERT INTO relationship (kind, contact_id, deal_id, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'manual', 'test')`, other, deal)
+	_, unrelated := seedReviewedDeal(ctx, t, tx, other)
 
-	if err := purgeAnonymizedContactJudgments(ctx, tx, subject, nil); err != nil {
-		t.Fatalf("purging the anonymized contact's judgments: %v", err)
-	}
+	redactFor(ctx, t, tx, subject)
 
 	note, comments, status := reviewText(ctx, t, tx, theirs)
-	if note != nil || comments != nil {
-		t.Errorf("the subject's review keeps note=%v comments=%v, want both cleared", note, comments)
+	if note == nil || *note != "Please check the clause Erased asked for" {
+		t.Errorf("note = %v, want the sentence kept with the name redacted", note)
+	}
+	if comments == nil || *comments != "Erased's change is acceptable" {
+		t.Errorf("comments = %v, want the sentence kept with the name redacted", comments)
 	}
 	if status != "changes_needed" {
-		t.Errorf("the subject's review status = %q, want the outcome kept for the stage gate", status)
+		t.Errorf("status = %q, want the outcome kept for the stage gate", status)
 	}
-	if note, comments, _ := reviewText(ctx, t, tx, others); note == nil || comments == nil {
-		t.Errorf("another contact's review lost its text: note=%v comments=%v", note, comments)
+	if note, _, _ := reviewText(ctx, t, tx, unrelated); note == nil || *note != reviewNote {
+		t.Errorf("a review on a deal the subject has no part in changed: %v", note)
 	}
 	var tombstones int
 	if err := tx.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE entity_type = 'legal_review' AND entity_id = $1 AND action = 'erase'`,
 		theirs).Scan(&tombstones); err != nil || tombstones != 1 {
-		t.Errorf("tombstones for the cleared review = %d, %v; want 1", tombstones, err)
+		t.Errorf("tombstones for the changed review = %d, %v; want 1", tombstones, err)
+	}
+}
+
+func TestRedactingAStakeholderReachesADealWhoseLinkWasArchived(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
+	tx := subjectColumnsTx(ctx, t)
+	subject := ids.NewV7()
+	mustExec(ctx, t, tx, `INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Sara Subject', 'manual', 'test')`, subject)
+	deal, review := seedReviewedDeal(ctx, t, tx, subject)
+	mustExec(ctx, t, tx, `UPDATE relationship SET archived_at = now() WHERE deal_id = $1`, deal)
+
+	redactFor(ctx, t, tx, subject)
+
+	if note, _, _ := reviewText(ctx, t, tx, review); note == nil || *note != "Please check the clause Erased asked for" {
+		t.Errorf("note = %v, want the archived stakeholder redacted too", note)
 	}
 }
 

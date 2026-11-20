@@ -89,3 +89,23 @@ func TestAnsweringOrWithdrawingAReviewSettlesTheWordToReviewers(t *testing.T) {
 		t.Errorf("announcements = %d, want one per request", len(e.desk.raised))
 	}
 }
+
+func TestAFreshRequestAfterAWithdrawalAnnouncesAgainAndSettlesCleanly(t *testing.T) {
+	e := setupReviewEnv(t)
+	dealID, _, _ := gatedDeal(t, e)
+	e.desk.reviewers = []ids.UUID{e.reviewer}
+
+	first := e.request(t, dealID, nil)
+	if _, err := e.store.WithdrawLegalReview(e.asRequester(), first); err != nil {
+		t.Fatal(err)
+	}
+	second := e.request(t, dealID, nil)
+	e.answer(t, second, ReviewApproved)
+
+	if len(e.desk.raised) != 2 || e.desk.raised[1].ReviewID != second {
+		t.Errorf("announcements = %+v, want one per request, the second naming the fresh review", e.desk.raised)
+	}
+	if !slices.Equal(e.desk.settled, []ids.UUID{first, second}) {
+		t.Errorf("settled %v, want the withdrawn review then the answered one", e.desk.settled)
+	}
+}

@@ -22592,6 +22592,8 @@ export const en = {
   "legalReview.status.approved": "Approved",
   "legalReview.status.changes_needed": "Changes needed",
   "legalReview.status.withdrawn": "Withdrawn",
+  "legalReview.openQueue": "Open Legal reviews",
+  "legalReview.dismissRequest": "Dismiss",
   "legalReview.queueTitle": "Legal reviews",
   "legalReview.queueOpen": "Waiting",
   "legalReview.queueDecided": "Answered",

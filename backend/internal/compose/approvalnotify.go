@@ -42,6 +42,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -225,6 +226,10 @@ func (a *ApprovalNotify) announceToSeat(
 			return err
 		}
 		line := approvalNoticeFor(seat, approvalID, staged.Summary, parts, approvalNoticeTarget(staged), metadata)
+		if approvalsubject.InAppOnly(staged.Kind) {
+			_, err := a.notices.CreateTx(ctx, tx, line)
+			return err
+		}
 		return recordApprovalNotice(ctx, tx, a.notices.CreateTx, a.mail, wsID, line)
 	})
 }
@@ -295,7 +300,15 @@ func stageNoticeMail(
 func (a *ApprovalNotify) seatContext(
 	ctx context.Context, wsID, seat ids.UUID,
 ) (context.Context, bool, error) {
-	rbac, seatType, err := a.identity.EffectiveAuthority(ctx, wsID, seat)
+	return seatAuthorityContext(ctx, a.identity, wsID, seat)
+}
+
+// seatAuthorityContext binds one seat's current stored authority. live is false
+// for a seat that is gone, which is a race and not a fault.
+func seatAuthorityContext(
+	ctx context.Context, ident *identity.Service, wsID, seat ids.UUID,
+) (context.Context, bool, error) {
+	rbac, seatType, err := ident.EffectiveAuthority(ctx, wsID, seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, nil
 	}

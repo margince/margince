@@ -5405,6 +5405,8 @@
   "aiOutcome.gaveUp.deferred": "deferred by budget",
   "aiOutcome.gaveUp.budgetUnavailable": "budget check failed",
   "aiOutcome.gaveUp.meteringFailed": "answered, usage not recorded",
+  "legalReview.openQueue": "Open Legal reviews",
+  "legalReview.dismissRequest": "Dismiss",
   "legalReview.queueTitle": "Legal reviews",
   "legalReview.advanceRefused": "This stage needs legal’s approval first. Request a legal review, then move the deal.",
   "aiTask.name.account_scan": "Reading what an account needs",

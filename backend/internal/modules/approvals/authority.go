@@ -255,7 +255,7 @@ var decisionGrants = map[string][]DecisionGrant{
 	// Answering a due-date question writes the date onto the captured task.
 	approvalsubject.KindTaskDueDate: {{objectActivity, principal.ActionUpdate}},
 	// The card decides nothing; a seat needs the grants the review's own answer takes.
-	approvalsubject.KindLegalReviewRequest: {{approvalsubject.ObjectLegalReview, principal.ActionRead}, {approvalsubject.ObjectLegalReview, principal.ActionUpdate}},
+	approvalsubject.KindLegalReviewRequest: legalReviewGrants(),
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
 	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create

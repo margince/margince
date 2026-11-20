@@ -21,6 +21,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -29,7 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-const legalReviewEntity = "legal_review"
+const legalReviewEntity = approvalsubject.ObjectLegalReview
 
 // reviewIDKey names the review in the deal's audit images of a request and a
 // withdrawal.

@@ -18169,7 +18169,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.legal_review.decided.label": "Đã trả lời rà soát pháp lý",
   "webhooks.event.legal_review.decided.when":
     "Bộ phận pháp lý duyệt một deal hoặc yêu cầu chỉnh sửa.",
-  "webhooks.event.legal_review.withdrawn.label": "Đã rút yêu cầu rà soát pháp lý",
+  "webhooks.event.legal_review.withdrawn.label":
+    "Đã rút yêu cầu rà soát pháp lý",
   "webhooks.event.legal_review.withdrawn.when":
     "Một yêu cầu gửi bộ phận pháp lý được rút lại.",
   "webhooks.eventGroup.introductions": "Giới thiệu",
@@ -22300,6 +22301,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalReview.status.approved": "Đã duyệt",
   "legalReview.status.changes_needed": "Cần thay đổi",
   "legalReview.status.withdrawn": "Đã rút",
+  "legalReview.openQueue": "Mở Rà soát pháp lý",
+  "legalReview.dismissRequest": "Ẩn",
   "legalReview.queueTitle": "Rà soát pháp lý",
   "legalReview.queueOpen": "Đang chờ",
   "legalReview.queueDecided": "Đã trả lời",

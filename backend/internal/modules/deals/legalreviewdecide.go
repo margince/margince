@@ -18,10 +18,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -44,11 +44,10 @@ func (s *Store) DecideLegalReview(
 	if err != nil {
 		return out, err
 	}
-	if err := auth.Require(ctx, legalReviewEntity, principal.ActionRead); err != nil {
-		return out, err
-	}
-	if err := auth.Require(ctx, legalReviewEntity, principal.ActionUpdate); err != nil {
-		return out, err
+	for _, action := range approvalsubject.LegalReviewDecisionActions() {
+		if err := auth.Require(ctx, legalReviewEntity, action); err != nil {
+			return out, err
+		}
 	}
 	if err := validDecision(in); err != nil {
 		return out, err

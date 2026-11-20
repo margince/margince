@@ -32,10 +32,14 @@ const (
 	dealOnlyGrants      = `{"objects":{"deal":{"read":true,"update":true}},"row_scope":"all"}`
 )
 
-// noMail takes the jobs the notice lane stages: this suite asks for notices only.
-type noMail struct{}
+// noMail fails the test when the notice lane stages a mail job: reviewers are
+// told in the app only.
+type noMail struct{ t *testing.T }
 
-func (noMail) EnqueueTx(context.Context, pgx.Tx, river.JobArgs, *river.InsertOpts) error { return nil }
+func (m noMail) EnqueueTx(_ context.Context, _ pgx.Tx, args river.JobArgs, _ *river.InsertOpts) error {
+	m.t.Errorf("a %s mail job was staged for a legal review", args.Kind())
+	return nil
+}
 
 type deskEnv struct {
 	e    *integration.Env
@@ -49,7 +53,7 @@ func newDeskEnv(t *testing.T) deskEnv {
 	e := integration.Setup(t)
 	db := compose.InstallationDB(e.Pool)
 	return deskEnv{
-		e: e, db: db, lane: compose.NewApprovalNotify(e.Pool, db, noMail{}),
+		e: e, db: db, lane: compose.NewApprovalNotify(e.Pool, db, noMail{t: t}),
 		desk: legalreviewdesk.Desk{Approvals: compose.NewApprovalsService(db), Notices: notices.NewStore(db)},
 	}
 }
@@ -123,6 +127,10 @@ func TestEveryReviewerGetsOneEntryAndOneNoticeAndSettlingClearsBoth(t *testing.T
 	d.grant(t, d.e.AdminUser, legalReviewerGrants)
 	d.grant(t, d.e.Rep3, legalReviewerGrants)
 	d.grant(t, d.e.Rep2, dealOnlyGrants)
+	for _, seat := range []ids.UUID{d.e.AdminUser, d.e.Rep3} {
+		d.e.WsExec(t, `INSERT INTO notification_preference (user_id, class, delivery) VALUES ($1, $2, 'email')`,
+			seat, notices.ClassApprovalPending)
+	}
 
 	var reviewers []ids.UUID
 	d.inTx(t, func(ctx context.Context, tx pgx.Tx) (err error) {

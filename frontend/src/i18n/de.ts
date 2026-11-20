@@ -22916,6 +22916,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.status.approved": "Freigegeben",
   "legalReview.status.changes_needed": "Änderungen nötig",
   "legalReview.status.withdrawn": "Zurückgezogen",
+  "legalReview.openQueue": "Rechtsprüfungen öffnen",
+  "legalReview.dismissRequest": "Ausblenden",
   "legalReview.queueTitle": "Rechtsprüfungen",
   "legalReview.queueOpen": "Offen",
   "legalReview.queueDecided": "Beantwortet",

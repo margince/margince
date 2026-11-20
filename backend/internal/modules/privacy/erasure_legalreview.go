@@ -22,26 +22,33 @@ const subjectDealIDsSQL = `SELECT r.deal_id FROM relationship r
 // only the deals the subject stands in now. Erasure keeps the wider set above.
 const subjectLiveDealIDsSQL = subjectDealIDsSQL + ` AND r.archived_at IS NULL`
 
-// clearSubjectLegalReviewText empties the note and comments of every legal review
-// on a deal the subject is a stakeholder of, and tombstones each row it cleared.
+// redactSubjectLegalReviewText replaces the subject's name and addresses inside the
+// note and comments of every legal review on a deal they are or were a stakeholder
+// of, and tombstones each row it changed.
 //
-// The text is a colleague's words about the deal and may name the subject. Nothing
-// can tell which sentence does. The row stays because its outcome settles the
-// deal's stage gate. Both erasure acts call this, as neither deletes the deal.
-func clearSubjectLegalReviewText[ID ids.UUID | ids.ContactID](
-	ctx context.Context, tx pgx.Tx, contactID ID, reason, cause string,
+// The text is a colleague's prose about the deal, shared with its other
+// stakeholders, so only what names the subject goes, as with an unlinked note.
+// Both erasure acts call this, as neither deletes the deal.
+func redactSubjectLegalReviewText(
+	ctx context.Context, tx pgx.Tx, contactID ids.UUID, emails []string, displayName, reason, cause string,
 ) error {
+	pattern := subjectTextPattern(emails, displayName)
+	if pattern == "" {
+		return nil
+	}
 	rows, err := tx.Query(ctx, `
-		UPDATE legal_review SET note = NULL, comments = NULL
+		UPDATE legal_review SET note = regexp_replace(note, $2, $3, 'gi'),
+		       comments = regexp_replace(comments, $2, $3, 'gi')
 		 WHERE deal_id IN (`+subjectDealIDsSQL+`)
-		   AND (note IS NOT NULL OR comments IS NOT NULL)
-		RETURNING id`, contactID)
+		   AND (note IS DISTINCT FROM regexp_replace(note, $2, $3, 'gi')
+		        OR comments IS DISTINCT FROM regexp_replace(comments, $2, $3, 'gi'))
+		RETURNING id`, contactID, pattern, erasedTextMention)
 	if err != nil {
-		return fmt.Errorf("privacy: clearing the legal review text on the subject's deals: %w", err)
+		return fmt.Errorf("privacy: redacting the subject from legal review text: %w", err)
 	}
-	cleared, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	changed, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
-		return fmt.Errorf("privacy: clearing the legal review text on the subject's deals: %w", err)
+		return fmt.Errorf("privacy: redacting the subject from legal review text: %w", err)
 	}
-	return tombstoneCollateralScrubs(ctx, tx, "legal_review", cleared, reason, cause)
+	return tombstoneCollateralScrubs(ctx, tx, "legal_review", changed, reason, cause)
 }
