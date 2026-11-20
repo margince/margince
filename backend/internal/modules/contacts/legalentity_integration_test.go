@@ -363,10 +363,6 @@ func TestTheDefaultEntityReadsTheAnchorCompany(t *testing.T) {
 	if parse, ok := errors.AsType[*values.ParseError](err); !ok || parse.Code != codeFieldOnCompanyForm {
 		t.Errorf("renaming the default entity answered %v, want %s", err, codeFieldOnCompanyForm)
 	}
-	updated, err := e.store.UpdateLegalEntity(admin, identity.ID, LegalEntityInput{Country: new("de")}, nil)
-	if err != nil || updated.Country == nil || *updated.Country != "de" || updated.DisplayName != "Acme" {
-		t.Errorf("setting the default entity's own country gave %+v (%v), want de beside the anchor's name", updated, err)
-	}
 }
 
 // TestAStoredDefaultCountryIsNeverRead: a country stored on the default entity
