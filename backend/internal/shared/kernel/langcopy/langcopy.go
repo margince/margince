@@ -13,7 +13,11 @@
 // object, and a glued sentence cannot move it.
 package langcopy
 
-import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 // Phrase is one sentence in every language, kept together so a translator reads
 // the three side by side and a reviewer can see at a glance that they say the
@@ -48,6 +52,17 @@ func (s Spoken) Lang() textlang.Lang {
 		return textlang.English
 	}
 	return s.lang
+}
+
+// quoteMarks are each language's own opening and closing quotation marks, from
+// the copy style pages: German writes „…“, English and Vietnamese write “…”.
+var quoteMarks = Phrase{En: "“%s”", De: "„%s“", Vi: "“%s”"}
+
+// Quote wraps a name the reader typed, such as a deal's, in the language's own
+// marks. Not %q: that is Go's string syntax and shows a backslash before every
+// quote mark the name already holds.
+func (s Spoken) Quote(text string) string {
+	return fmt.Sprintf(s.Say(quoteMarks), text)
 }
 
 // For resolves a stored language code, falling back to English for anything

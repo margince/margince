@@ -97,11 +97,7 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
     <li className="auto-run">
       <div className="auto-run-head">
         <OutcomeBadge outcome={run.outcome} />
-        <time
-          className="t-caption"
-          dateTime={run.occurred_at}
-          title={run.occurred_at}
-        >
+        <time className="t-caption" dateTime={run.occurred_at}>
           {formatDateTime(run.occurred_at, locale, zone)}
         </time>
         <AutonomyDot tier={run.tier === "auto_execute" ? "auto" : "confirm"} />

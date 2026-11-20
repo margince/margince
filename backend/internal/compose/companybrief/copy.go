@@ -196,19 +196,19 @@ var floor = companyPhrases{
 		Vi: "Lần liên hệ gần nhất là %s vào %s.",
 	},
 	LastContactSubject: phrase{
-		En: "Last contact was %s: %q.", De: "Der letzte Kontakt war %s: %q.",
-		Vi: "Lần liên hệ gần nhất là %s: %q.",
+		En: "Last contact was %s: “%s”.", De: "Der letzte Kontakt war %s: „%s“.",
+		Vi: "Lần liên hệ gần nhất là %s: “%s”.",
 	},
 	LastContactFull: phrase{
-		En: "Last contact was %s on %s: %q.", De: "Der letzte Kontakt war %s am %s: %q.",
-		Vi: "Lần liên hệ gần nhất là %s vào %s: %q.",
+		En: "Last contact was %s on %s: “%s”.", De: "Der letzte Kontakt war %s am %s: „%s“.",
+		Vi: "Lần liên hệ gần nhất là %s vào %s: “%s”.",
 	},
 
 	OpenTaskOne:  phrase{En: "1 open task", De: "1 offene Aufgabe", Vi: "1 công việc đang mở"},
 	OpenTaskMany: phrase{En: "%d open tasks", De: "%d offene Aufgaben", Vi: "%d công việc đang mở"},
 	TasksStarting: phrase{
-		En: "%s, starting with %q.", De: "%s, beginnend mit %q.",
-		Vi: "%s, bắt đầu với %q.",
+		En: "%s, starting with “%s”.", De: "%s, beginnend mit „%s“.",
+		Vi: "%s, bắt đầu với “%s”.",
 	},
 
 	KnownContactOne: phrase{
@@ -225,19 +225,19 @@ var floor = companyPhrases{
 		Vi: "%s, sớm nhất đến hạn %s.",
 	},
 	OpenTaskNamed: phrase{
-		En: "Open task: %q.", De: "Offene Aufgabe: %q.", Vi: "Công việc đang mở: %q.",
+		En: "Open task: “%s”.", De: "Offene Aufgabe: „%s“.", Vi: "Công việc đang mở: “%s”.",
 	},
 	OpenTaskDue: phrase{
-		En: "Open task: %q, due %s.", De: "Offene Aufgabe: %q, fällig am %s.",
-		Vi: "Công việc đang mở: %q, đến hạn %s.",
+		En: "Open task: “%s”, due %s.", De: "Offene Aufgabe: „%s“, fällig am %s.",
+		Vi: "Công việc đang mở: “%s”, đến hạn %s.",
 	},
 	OpenTaskHeld: phrase{
-		En: "Open task: %q, assigned to %s.", De: "Offene Aufgabe: %q, zugewiesen an %s.",
-		Vi: "Công việc đang mở: %q, giao cho %s.",
+		En: "Open task: “%s”, assigned to %s.", De: "Offene Aufgabe: „%s“, zugewiesen an %s.",
+		Vi: "Công việc đang mở: “%s”, giao cho %s.",
 	},
 	OpenTaskHeldDue: phrase{
-		En: "Open task: %q, assigned to %s, due %s.", De: "Offene Aufgabe: %q, zugewiesen an %s, fällig am %s.",
-		Vi: "Công việc đang mở: %q, giao cho %s, đến hạn %s.",
+		En: "Open task: “%s”, assigned to %s, due %s.", De: "Offene Aufgabe: „%s“, zugewiesen an %s, fällig am %s.",
+		Vi: "Công việc đang mở: “%s”, giao cho %s, đến hạn %s.",
 	},
 	OpenDealNamed: phrase{
 		En: "Open deal: %s", De: "Offener Deal: %s", Vi: "Cơ hội đang mở: %s",
@@ -247,18 +247,18 @@ var floor = companyPhrases{
 	OpenCommitmentOne:  phrase{En: "1 open commitment", De: "1 offene Zusage", Vi: "1 cam kết đang mở"},
 	OpenCommitmentMany: phrase{En: "%d open commitments", De: "%d offene Zusagen", Vi: "%d cam kết đang mở"},
 	OpenCommitmentOurs: phrase{
-		En: "Our commitment: %q.", De: "Unsere Zusage: %q.", Vi: "Cam kết của chúng ta: %q.",
+		En: "Our commitment: “%s”.", De: "Unsere Zusage: „%s“.", Vi: "Cam kết của chúng ta: “%s”.",
 	},
 	OpenCommitmentOursDue: phrase{
-		En: "Our commitment: %q, due %s.", De: "Unsere Zusage: %q, fällig am %s.",
-		Vi: "Cam kết của chúng ta: %q, đến hạn %s.",
+		En: "Our commitment: “%s”, due %s.", De: "Unsere Zusage: „%s“, fällig am %s.",
+		Vi: "Cam kết của chúng ta: “%s”, đến hạn %s.",
 	},
 	OpenCommitmentTheirs: phrase{
-		En: "Commitment from %s: %q.", De: "Zusage von %s: %q.", Vi: "Cam kết từ %s: %q.",
+		En: "Commitment from %s: “%s”.", De: "Zusage von %s: „%s“.", Vi: "Cam kết từ %s: “%s”.",
 	},
 	OpenCommitmentTheirsDue: phrase{
-		En: "Commitment from %s: %q, due %s.", De: "Zusage von %s: %q, fällig am %s.",
-		Vi: "Cam kết từ %s: %q, đến hạn %s.",
+		En: "Commitment from %s: “%s”, due %s.", De: "Zusage von %s: „%s“, fällig am %s.",
+		Vi: "Cam kết từ %s: “%s”, đến hạn %s.",
 	},
 	OpenCommitmentUnnamed: phrase{En: "the contact", De: "dem Kontakt", Vi: "liên hệ"},
 	OpenWorkIncomplete: phrase{

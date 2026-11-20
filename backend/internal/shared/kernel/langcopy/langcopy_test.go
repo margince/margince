@@ -54,3 +54,19 @@ func TestZeroSpokenUsesEnglishForBothProseAndLanguage(t *testing.T) {
 		t.Fatal("zero value language and prose disagree")
 	}
 }
+
+// A name is quoted in the reader's own marks and kept as typed: a quote mark
+// inside it is shown, never escaped.
+func TestQuoteUsesTheLanguagesMarksAndEscapesNothing(t *testing.T) {
+	t.Parallel()
+	name := `Order „Zitat“ "Test"`
+	for lang, want := range map[textlang.Lang]string{
+		textlang.English:    "“" + name + "”",
+		textlang.German:     "„" + name + "“",
+		textlang.Vietnamese: "“" + name + "”",
+	} {
+		if got := langcopy.For(string(lang)).Quote(name); got != want {
+			t.Errorf("%s quoted %s, want %s", lang, got, want)
+		}
+	}
+}

@@ -12,10 +12,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
-// decorate adds what a hit carries beyond its rank: tag reach, an email's
-// summary, the partner mark and the company logo.
+// decorate adds what a hit carries beyond its rank. That is tag reach, the
+// reader's words for an activity Margince wrote, an email's summary, the
+// partner mark and the company logo.
 func (s *Store) decorate(ctx context.Context, tx pgx.Tx, hits []Hit) error {
 	if err := s.countTagReach(ctx, tx, hits); err != nil {
+		return err
+	}
+	if err := renderSystemText(ctx, tx, hits); err != nil {
 		return err
 	}
 	if err := s.attachEmailSummaries(ctx, tx, hits); err != nil {

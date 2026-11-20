@@ -27,6 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // sectionLimit is how many rows of a nested collection one 360 carries.
@@ -220,7 +222,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		extra += " AND " + activities.NotSystemMinted("a")
 	}
 	query := fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, ''), a.body, `+storekit.TaskDueSQL("a")+`, a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
+		SELECT a.id, coalesce(a.subject, ''), a.system_text, a.body, `+storekit.TaskDueSQL("a")+`, a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
 		       a.source_activity_id, coalesce(a.source_system, ''),
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
@@ -240,10 +242,11 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, nil, err
 	}
+	reader := systemtext.Locale(ctx)
 	var filed []time.Time
 	var sources []taskSource
 	steps, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.Company360NextStep, error) {
-		step, occurredAt, source, err := scanNextStep(row, now)
+		step, occurredAt, source, err := scanNextStep(row, now, reader)
 		filed = append(filed, occurredAt)
 		sources = append(sources, source)
 		return step, err
@@ -277,8 +280,9 @@ func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 
 // scanNextStep reads one task row of the account's next steps: the row the wire
 // carries, when it was filed, and where its promise came from.
-func scanNextStep(row pgx.CollectableRow, now time.Time) (crmcontracts.Company360NextStep, time.Time, taskSource, error) {
+func scanNextStep(row pgx.CollectableRow, now time.Time, reader textlang.Lang) (crmcontracts.Company360NextStep, time.Time, taskSource, error) {
 	var step crmcontracts.Company360NextStep
+	var written *systemtext.Message
 	var id ids.UUID
 	var assignee, dealID, contactID *ids.UUID
 	var assigneeName string
@@ -292,10 +296,11 @@ func scanNextStep(row pgx.CollectableRow, now time.Time) (crmcontracts.Company36
 	var version int64
 	var source taskSource
 	var dueHasTime bool
-	if err := row.Scan(&id, &step.Subject, &step.Body, &step.DueAt, &dueHasTime, &assignee, &assigneeName, &occurredAt, &version,
+	if err := row.Scan(&id, &step.Subject, &written, &step.Body, &step.DueAt, &dueHasTime, &assignee, &assigneeName, &occurredAt, &version,
 		&source.activity, &source.system, &dealID, &contactID, &step.DueIntent); err != nil {
 		return step, occurredAt, source, err
 	}
+	step.Subject = written.SubjectIn(step.Subject, reader)
 	step.ActivityId = openapi_types.UUID(id)
 	step.DueHasTime = new(dueHasTime && step.DueAt != nil)
 	step.Version = &version

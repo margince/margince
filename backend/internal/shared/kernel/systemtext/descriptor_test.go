@@ -46,7 +46,14 @@ func TestCatalogRendersEveryDefinition(t *testing.T) {
 			}
 		}
 	}
-	langcopytest.Census(t, phrases)
+	// Each waived code is a stored subject whose writer formats the same bytes
+	// from its own %q copy. The template and that writer change together.
+	langcopytest.Census(t, phrases, langcopytest.WaiveGoQuoting(
+		"[agent.accountSendFiled]", "[agent.booking]", "[agent.mergeMembers]", "[agent.mergeTags]",
+		"[agent.sendMessage]", "[agent.sendSubject]", "[approval.draftedReplyWaiting]",
+		"[approval.heldNotSent]", "[approval.taskDueAsked]", "[commitment.explanation]",
+		"[commitment.taken_over]", "[deals.draftFollowUp]",
+	))
 }
 
 func TestBindingRetiresEditedComponents(t *testing.T) {
