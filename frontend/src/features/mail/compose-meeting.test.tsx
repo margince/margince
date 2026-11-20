@@ -164,7 +164,7 @@ describe("we met in person", () => {
   });
 });
 
-describe("a meeting is noted only on the person the mail goes to", () => {
+describe("a meeting is noted only on the contact the mail goes to", () => {
   it("is not offered when the mail goes to someone other than the record", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes(CONTACT_WRITER);

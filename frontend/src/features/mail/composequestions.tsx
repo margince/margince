@@ -45,7 +45,7 @@ export function ComposeQuestions({
 
 // The record a meeting is noted on: the contact or lead the composer was
 // opened from, and only while the message goes to that record's own address
-// alone. A meeting with one person is never noted on another, so a changed or
+// alone. A meeting with one contact is never noted on another, so a changed or
 // added recipient takes "Met in person" off the list.
 export function meetingSubjectOf(
   entityType: string,
