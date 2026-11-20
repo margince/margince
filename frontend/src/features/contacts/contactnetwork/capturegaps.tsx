@@ -25,18 +25,19 @@ function useContactCaptureGaps(id: string) {
   });
 }
 
+// The last answer was a failure, also while a retry runs: the notice's own
+// mount starts one, and hiding the failure then would drop its Retry.
+function readFailed(network: ReturnType<typeof useContactCaptureGaps>) {
+  return network.errorUpdatedAt > network.dataUpdatedAt;
+}
+
 /**
  * Whether CaptureGapsNotice draws anything, for a host that must not frame
  * nothing. It reads the notice's own query, so it asks the server nothing new.
- * A failure counts while its retry runs. The notice's mount starts that retry,
- * and unmounting it then would start another on the next mount.
  */
 export function useCaptureGapsShown(contactId: string): boolean {
   const network = useContactCaptureGaps(contactId);
-  return (
-    network.errorUpdatedAt > network.dataUpdatedAt ||
-    (network.data?.capture_gaps ?? []).length > 0
-  );
+  return readFailed(network) || (network.data?.capture_gaps ?? []).length > 0;
 }
 
 /**
@@ -53,7 +54,7 @@ export function CaptureGapsNotice({
   const plural = usePlural();
   const { locale } = useLocale();
   const network = useContactCaptureGaps(contactId);
-  if (network.isError) {
+  if (readFailed(network)) {
     return (
       <ErrorLine
         actions={

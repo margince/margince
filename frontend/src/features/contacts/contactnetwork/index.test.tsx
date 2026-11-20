@@ -99,29 +99,37 @@ describe("a contact nobody here reaches", () => {
     ).toBeTruthy();
   });
 
+  const GAPS_FAILED = en["contact.network.captureGapsFailed"];
+  const RETRY = en["common.retry"];
+  const isMailboxRead = (input: RequestInfo | URL) =>
+    String(input instanceof Request ? input.url : input).endsWith("/network");
+  const reads = () =>
+    vi.mocked(fetch).mock.calls.filter(([input]) => isMailboxRead(input))
+      .length;
+
   it("keeps a failed mailbox read with its Retry, and does not read it again on its own", async () => {
     renderTab(alone(), "en", {}, { captureGaps: "fail" });
-    const reads = () =>
-      vi
-        .mocked(fetch)
-        .mock.calls.filter(([input]) =>
-          String(input instanceof Request ? input.url : input).endsWith(
-            "/network",
-          ),
-        ).length;
 
-    expect(
-      await screen.findByText(en["contact.network.captureGapsFailed"]),
-    ).toBeTruthy();
+    expect(await screen.findByText(GAPS_FAILED)).toBeTruthy();
     await waitFor(() => expect(reads()).toBeGreaterThanOrEqual(2));
     await act(async () => {});
-    expect(
-      screen.getByText(en["contact.network.captureGapsFailed"]),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: en["common.retry"] }),
-    ).toBeTruthy();
+    expect(screen.getByText(GAPS_FAILED)).toBeTruthy();
+    expect(screen.getByRole("button", { name: RETRY })).toBeTruthy();
     expect(reads()).toBeLessThanOrEqual(2);
+  });
+
+  it("keeps a failed mailbox read and its Retry on screen while the read runs again", async () => {
+    renderTab(alone(), "en", {}, { captureGaps: "fail" });
+    const answer = vi.mocked(fetch).getMockImplementation();
+    vi.mocked(fetch).mockImplementation((input, init) =>
+      (isMailboxRead(input) && reads() > 1) || !answer
+        ? new Promise<Response>(() => {})
+        : answer(input, init),
+    );
+
+    await waitFor(() => expect(reads()).toBe(2));
+    expect(screen.getByText(GAPS_FAILED)).toBeTruthy();
+    expect(screen.getByRole("button", { name: RETRY })).toBeTruthy();
   });
 
   it("keeps the Retry of an introduction list that could not be read", async () => {
