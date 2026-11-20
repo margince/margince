@@ -201,11 +201,14 @@ func applyCreate(ctx context.Context, ex Executors, eff workflow.Effect, action 
 	if action.Kind == workflow.ActionCreateTask {
 		entity = datasource.EntityActivity
 	}
-	_, createErr = ex.Provider.Create(systemtext.WithMessage(ctx, action.SystemText), datasource.CreateInput{
+	created, createErr := ex.Provider.Create(systemtext.WithMessage(ctx, action.SystemText), datasource.CreateInput{
 		EntityType: entity,
 		Fields:     action.Args,
 		Source:     systemSource,
 	})
+	if createErr == nil && created.ID != ids.Nil {
+		action.Created = &created
+	}
 	return action, nil, createErr
 }
 

@@ -73,7 +73,7 @@ func columnNames(list string) []string {
 	return names
 }
 
-var sqlUnion = regexp.MustCompile(`(?i)\bUNION(?:\s+ALL)?\b`)
+var sqlUnion = regexp.MustCompile(`(?i)\bUNION(?:\s+(?:ALL|DISTINCT))?\b`)
 
 // auditStatementTypes reads the literals in the entity_type position of each
 // SELECT or VALUES row an INSERT takes.
@@ -95,6 +95,10 @@ func auditStatementTypes(body string, column int) []string {
 			for _, group := range gatekit.SplitSQLList(trimmed[len("VALUES"):]) {
 				rows = append(rows, strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(group), "("), ")"))
 			}
+		default:
+			// An arm this cannot read, such as a CTE or a parenthesized query,
+			// may name any type.
+			return nil
 		}
 	}
 	var out []string
@@ -147,14 +151,17 @@ func entityLiterals(item string) ([]string, bool) {
 func topLevelFrom(list string) int {
 	depth := 0
 	upper := strings.ToUpper(list)
+	quoted := false
 	for i := 0; i < len(list); i++ {
 		switch list[i] {
+		case '\'':
+			quoted = !quoted
 		case '(':
 			depth++
 		case ')':
 			depth--
 		}
-		if depth == 0 && strings.HasPrefix(upper[i:], "FROM") && (i == 0 || !isWordByte(list[i-1])) &&
+		if !quoted && depth == 0 && strings.HasPrefix(upper[i:], "FROM") && (i == 0 || !isWordByte(list[i-1])) &&
 			(i+4 == len(list) || !isWordByte(list[i+4])) {
 			return i
 		}
@@ -162,8 +169,13 @@ func topLevelFrom(list string) int {
 	return -1
 }
 
-// auditInsertAnywhere finds an INSERT into audit_log, with or without a column list.
-var auditInsertAnywhere = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(?:"?public"?\.)?"?audit_log\b`)
+// auditInsertAnywhere finds an INSERT into audit_log, with or without a column
+// list. auditInsertStatement asks for a statement's rows too, so a message that
+// names the INSERT is not one.
+var (
+	auditInsertAnywhere  = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(?:"?public"?\.)?"?audit_log\b`)
+	auditInsertStatement = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(?:"?public"?\.)?"?audit_log\b.*\b(?:VALUES|SELECT)\b`)
+)
 
 // directAuditInserts answers each Go statement other than the seed's that
 // inserts into audit_log, reading string concatenations through constants.
@@ -221,5 +233,5 @@ func (c *auditCensus) insertsIntoAuditLog(src *auditSource, expr ast.Expr) bool 
 		}
 		return false
 	}
-	return walk(expr) && auditInsertAnywhere.MatchString(text.String())
+	return walk(expr) && auditInsertStatement.MatchString(text.String())
 }

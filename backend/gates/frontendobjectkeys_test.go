@@ -119,13 +119,30 @@ func tsLiteralEntries(body string) map[string]string {
 			entries["..."+strings.TrimSpace(spread)] = ""
 			continue
 		}
-		key, value, ok := strings.Cut(entry, ":")
+		key, value, ok := tsCutKey(entry)
 		if !ok {
-			continue
+			// A shorthand entry is a key whose value is the variable of that name.
+			key, value = entry, entry
 		}
-		entries[strings.Trim(strings.TrimSpace(key), `"'`)] = strings.TrimSpace(value)
+		entries[key] = strings.TrimSpace(value)
 	}
 	return entries
+}
+
+// tsCutKey splits an entry at the colon after its key, so a quoted key may
+// hold a colon of its own.
+func tsCutKey(entry string) (key, value string, ok bool) {
+	if quote := entry[0]; quote == '"' || quote == '\'' {
+		end := strings.IndexByte(entry[1:], quote)
+		if end < 0 {
+			return "", "", false
+		}
+		rest := strings.TrimSpace(entry[end+2:])
+		value, ok = strings.CutPrefix(rest, ":")
+		return entry[1 : end+1], value, ok
+	}
+	key, value, ok = strings.Cut(entry, ":")
+	return strings.TrimSpace(key), value, ok
 }
 
 // tsTopLevel splits text on the commas outside brackets and strings.

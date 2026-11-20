@@ -120,7 +120,7 @@ func TestARunNamesItsRecordTheTaskItCreatedAndTheStageThatFiredIt(t *testing.T) 
 	requireStr(t, "action_result", run.ActionResult, "applied create_task")
 }
 
-func TestARunWhoseRecordTheReaderCannotSeeCarriesNoNames(t *testing.T) {
+func TestARunNamesOnlyTheRecordsTheReaderMayRead(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -143,9 +143,14 @@ func TestARunWhoseRecordTheReaderCannotSeeCarriesNoNames(t *testing.T) {
 	if run.Target == nil || run.Target.Id.String() != f.deal || run.Target.Label != nil {
 		t.Fatalf("target = %+v, want the deal's id with no name", run.Target)
 	}
-	if run.Created == nil || run.Created.Label != nil || run.TriggerStageName != nil {
-		t.Fatalf("created = %+v stage = %v, want neither named", run.Created, run.TriggerStageName)
+	if run.TriggerStageName != nil {
+		t.Fatalf("stage = %v, want it unnamed with the deal", *run.TriggerStageName)
 	}
+	// The task is the reader's to read, so its subject is named apart from the deal.
+	if run.Created == nil {
+		t.Fatal("created is absent, want the task")
+	}
+	requireStr(t, "created label", run.Created.Label, "Send the proposal")
 	requireStr(t, "trigger_event_type", run.TriggerEventType, "deal.stage_changed")
 }
 
@@ -169,8 +174,8 @@ func TestARunOnARecordOutsideTheReadersScopeCarriesNoNames(t *testing.T) {
 	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: rule, Status: "applied", Trigger: trigger, Planned: &trace, Applied: &trace, At: clocktest.Now(t)})
 
 	admin := onlyRun(t, e, rule)
-	if admin.Target == nil || admin.Target.Label == nil || admin.Created == nil || admin.Created.Label == nil || admin.TriggerStageName == nil {
-		t.Fatalf("the contact's owner reads target=%+v created=%+v stage=%v, want all three named", admin.Target, admin.Created, admin.TriggerStageName)
+	if admin.Target == nil || admin.Target.Label == nil || admin.TriggerStageName == nil {
+		t.Fatalf("the contact's owner reads target=%+v stage=%v, want both named", admin.Target, admin.TriggerStageName)
 	}
 	const email, password = "rep@run-scope.test", "run-scope-rep-password"
 	apptest.SetPasswordByLink(t, e, createdRecord(t, e, "/v1/users", AnyMap{"email": email, "display_name": "Rae Rep", "role": "rep"}), password)
@@ -186,7 +191,33 @@ func TestARunOnARecordOutsideTheReadersScopeCarriesNoNames(t *testing.T) {
 	if run.Target == nil || run.Target.Id.String() != contact || run.Target.Label != nil {
 		t.Fatalf("target = %+v, want the contact's id with no name", run.Target)
 	}
-	if run.Created == nil || run.Created.Label != nil || run.TriggerStageName != nil {
-		t.Fatalf("created = %+v stage = %v, want neither named", run.Created, run.TriggerStageName)
+	if run.TriggerStageName != nil {
+		t.Fatalf("stage = %v, want it unnamed with the contact", *run.TriggerStageName)
+	}
+}
+
+// The rule's task is private to the admin who wrote it. A rep who reads the
+// deal still gets no subject for the task.
+func TestARunNamesNoCreatedTaskTheReaderMayNotRead(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
+	f := moveADealIntoAWatchedStage(t, e)
+	created := onlyRun(t, e, f.rule).Created
+	if created == nil || created.Id == nil || created.Label == nil {
+		t.Fatalf("created = %+v, want the task with its id and subject for the admin", created)
+	}
+	if _, err := e.Owner.Exec(t.Context(), `UPDATE activity SET audience = 'selected', captured_by = $2 WHERE id = $1`,
+		created.Id.String(), "human:"+signedInUser(t, e)); err != nil {
+		t.Fatal(err)
+	}
+	const email, password = "rep@run-task.test", "run-task-rep-password"
+	apptest.SetPasswordByLink(t, e, createdRecord(t, e, "/v1/users", AnyMap{"email": email, "display_name": "Rae Rep", "role": "rep"}), password)
+	reader := e.AsSecondSeat(t, email, password)
+
+	run := onlyRun(t, reader, f.rule)
+	requireStr(t, "target label", run.Target.Label, "Globex Renewal")
+	if run.Created == nil || run.Created.Id == nil || run.Created.Label != nil {
+		t.Fatalf("created = %+v, want the task's id with no subject", run.Created)
 	}
 }

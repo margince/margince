@@ -76,6 +76,20 @@ func TestEveryDrawnCatalogParameterHasWords(t *testing.T) {
 	}
 }
 
+const frontendRecipeWords = "../frontend/src/features/automations/automations.recipe.ts"
+
+// Each trigger a catalog rule fires on has words in the library. A trigger the
+// registry defines that no rule uses needs none.
+func TestEveryCatalogTriggerHasWords(t *testing.T) {
+	t.Parallel()
+	inGo := map[string]bool{}
+	for _, entry := range automation.Catalog() {
+		inGo[entry.Trigger] = true
+	}
+	wordsMatchVocabulary(t, "catalog trigger", "TRIGGER", inGo,
+		tsKeySet(t, tsObjectEntries(t, frontendRecipeWords, "const TRIGGER")))
+}
+
 // The inquiry recipe words its own fields in its own dialog, so the rule form
 // and this gate both skip it, by the same key.
 func assertTheInquiryRecipeIsTheOneTheFormSkips(t *testing.T) {

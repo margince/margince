@@ -104,6 +104,11 @@ var scrubbedEntityTypes = map[string]bool{
 	// keep a corrected kind and evidence, are withheld. The weekly review
 	// rebuilds a DEAL from its own audit images and never reads a signal's.
 	"signal": true,
+	// The retention pass erases these on their policy. Each is a record of its
+	// own, and the weekly review rebuilds a DEAL from deal images alone.
+	"deal_risk_day":  true,
+	"raw_capture":    true,
+	"report_edition": true,
 	// An extension's own table. Core has no restore or undo for a unit's row.
 	// The weekly review reads deals. The compliance log is the one reader, and it
 	// hides these images.
@@ -112,12 +117,17 @@ var scrubbedEntityTypes = map[string]bool{
 
 func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {
 	t.Parallel()
-	found, opaque := scrubbedTypesInPrivacy(t)
+	found, opaque, unreadVerbs := scrubbedTypesInPrivacy(t)
 	for _, site := range opaque {
 		t.Errorf("%s stamps a scrub tombstone whose record type is not a literal, so "+
 			"this census cannot read it and would pass without ever seeing it.\n"+
 			"Spell the entity type at the call site, or extend scrubbedTypesInPrivacy "+
 			"to resolve it.", site)
+	}
+	for _, site := range unreadVerbs {
+		t.Errorf("%s audits a privacy write whose verb this census cannot read, so it "+
+			"cannot tell whether the row is a scrub tombstone.\n"+
+			"Pass the verb as privacy's constant or a literal.", site)
 	}
 	if len(found) == 0 {
 		t.Fatal("no scrub tombstone writer found in the privacy module — this census " +
@@ -142,22 +152,39 @@ func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {
 }
 
 // scrubbedTypesInPrivacy reads the record type of every scrub tombstone the
-// privacy module writes, from the audit write census (auditwrites_test.go).
+// privacy module writes, from the audit write census (auditwrites_test.go). A
+// privacy write whose verb it cannot read is returned apart.
 //
-// Two sites take their type at runtime from a declaration. redactDeclaredTables
-// stamps the declared tables' types. An extension row's table is the ext_* class.
-// Any other scrub site the census cannot resolve is returned.
-func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
+// Three sites take their type at runtime from a declaration. redactDeclaredTables
+// stamps the declared tables' types, an extension row's table is the ext_*
+// class, and the retention pass reads its own dispatch table.
+func scrubbedTypesInPrivacy(t *testing.T) (found map[string]bool, opaque, unreadVerbs []string) {
 	t.Helper()
 	privacyDir := filepath.ToSlash(filepath.Join("backend", "internal", "modules", "privacy"))
 	wrappers := privacyScrubWrappers(t)
-	found := map[string]bool{}
-	var opaque []string
+	found = map[string]bool{}
 	for _, site := range auditWriteSites(t) {
-		if (site.src.dir != privacyDir || !carriesScrubVerb(site.call)) && !callsPrivacyWrapper(site, privacyDir, wrappers) {
+		viaWrapper := callsPrivacyWrapper(site, privacyDir, wrappers)
+		if site.asValue || (site.src.dir != privacyDir && !viaWrapper) {
 			continue
 		}
+		if site.fn == "apply" && strings.HasSuffix(site.src.path, "/retentionactions.go") {
+			for _, object := range retentionScrubObjects(t) {
+				found[object] = true
+			}
+			continue
+		}
+		scrub, readable := viaWrapper, true
+		if !viaWrapper {
+			scrub, readable = auditCensusRead.actionScrubs(site.at, site.writer, 0)
+		}
 		switch {
+		case !scrub:
+		case isExtensionEntity(site):
+			// A row of an extension's own table is that class whatever its verb.
+			found[extensionScrubbedTypes] = true
+		case !readable:
+			unreadVerbs = append(unreadVerbs, site.pos)
 		case site.opaque == "":
 			for _, entity := range site.types {
 				found[entity] = true
@@ -168,13 +195,87 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 					found[o.Table.Name] = true
 				}
 			}
-		case slices.ContainsFunc(site.call.Args, isExtensionTableArgument):
-			found[extensionScrubbedTypes] = true
 		default:
 			opaque = append(opaque, site.pos)
 		}
 	}
-	return found, opaque
+	return found, opaque, unreadVerbs
+}
+
+// retentionScrubObjects are the objects the retention pass scrubs, by the
+// verb each pair in its dispatch table names.
+func retentionScrubObjects(t *testing.T) []string {
+	t.Helper()
+	var objects []string
+	for _, pair := range auditPackageMapKeys(t, "backend/internal/modules/privacy", "retentionActions") {
+		object, verb, _ := strings.Cut(pair, "/")
+		if isScrubVerb(verb) {
+			objects = append(objects, object)
+		}
+	}
+	return objects
+}
+
+func isScrubVerb(verb string) bool {
+	return verb == "erase" || verb == "anonymize" || verb == "restrict"
+}
+
+// actionScrubs reads the verb a writer call audits with, from the writer's
+// action argument. A writer that chooses its verb inside is read through the
+// calls it hands its record type on to. A verb it cannot read reports
+// unreadable, and counts as a scrub.
+func (c *auditCensus) actionScrubs(at auditCall, writer auditFuncKey, depth int) (scrub, readable bool) {
+	decl := c.funcs[writer]
+	if decl == nil || depth > auditResolveDepth {
+		return true, false
+	}
+	_, shift := c.match(at.src, at.fn, unindexed(at.call.Fun), writer)
+	if i := auditParamIndex(decl, "action"); i >= 0 {
+		if i+shift >= len(at.call.Args) {
+			return true, false
+		}
+		values, ok := c.resolve(at.src, at.fn, at.closures, at.call.Args[i+shift], 0)
+		return !ok || slices.ContainsFunc(values, isScrubVerb), ok
+	}
+	readable, seen := true, false
+	ast.Inspect(decl.Body, func(n ast.Node) bool {
+		call, isCall := n.(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		inner := auditCall{src: c.srcOf[decl], fn: decl, call: call}
+		for key, indexes := range c.writers {
+			if key.name != auditCalleeName(call) {
+				continue
+			}
+			matched, innerShift := c.match(inner.src, decl, unindexed(call.Fun), key)
+			for index := range indexes {
+				if !matched || index+innerShift >= len(call.Args) || !c.handsOn(decl, writer, call.Args[index+innerShift]) {
+					continue
+				}
+				seen = true
+				innerScrub, innerReadable := c.actionScrubs(inner, key, depth+1)
+				scrub, readable = scrub || innerScrub, readable && innerReadable
+			}
+		}
+		return true
+	})
+	return scrub || !seen, readable && seen
+}
+
+// handsOn reports whether arg is one of the parameters writer receives a
+// record type at.
+func (c *auditCensus) handsOn(decl *ast.FuncDecl, writer auditFuncKey, arg ast.Expr) bool {
+	ident, ok := unconverted(arg).(*ast.Ident)
+	if !ok {
+		return false
+	}
+	for index := range c.writers[writer] {
+		if auditParamIndex(decl, ident.Name) == index {
+			return true
+		}
+	}
+	return false
 }
 
 // callsPrivacyWrapper reports whether a site, in any package, calls one of
@@ -184,9 +285,13 @@ func callsPrivacyWrapper(site auditWriteSite, privacyDir string, wrappers map[st
 	if !wrappers[name] {
 		return false
 	}
-	at := auditCall{src: site.src, call: site.call}
-	return auditCensusRead.reaches(at, auditFuncKey{dir: privacyDir, name: name}) ||
-		auditCensusRead.reaches(at, auditFuncKey{dir: privacyDir, name: name, method: true})
+	candidates := append([]auditFuncKey{{dir: privacyDir, name: name}}, auditCensusRead.methods[privacyDir+"."+name]...)
+	for _, key := range candidates {
+		if matched, _ := auditCensusRead.match(site.src, site.at.fn, unindexed(site.call.Fun), key); matched {
+			return true
+		}
+	}
+	return false
 }
 
 // extensionScrubbedTypes stands for the record types an extension declares
@@ -195,9 +300,22 @@ func callsPrivacyWrapper(site auditWriteSite, privacyDir string, wrappers map[st
 // reads that shape as this class.
 const extensionScrubbedTypes = "ext_*"
 
-func isExtensionTableArgument(arg ast.Expr) bool {
-	sel, ok := arg.(*ast.SelectorExpr)
-	return ok && sel.Sel.Name == "Table" && isIdentNamed(sel.X, "row")
+// isExtensionEntity reports whether a site's record type is an extension
+// table's name. Every value it resolves to is one, or it is a field of a value
+// an extension package types, or a cleared row's Table.
+func isExtensionEntity(site auditWriteSite) bool {
+	if len(site.types) > 0 {
+		return !slices.ContainsFunc(site.types, func(entity string) bool { return !strings.HasPrefix(entity, "ext_") })
+	}
+	sel, ok := site.entity.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	if sel.Sel.Name == "Table" && isIdentNamed(sel.X, "row") {
+		return true
+	}
+	typeDir, _, typed := auditCensusRead.exprType(site.src, site.at.fn, sel.X, 0)
+	return typed && strings.HasPrefix(typeDir, "backend/pkg/extension/")
 }
 
 // scrubVerbConstants are privacy's own names for the three verbs that certify a

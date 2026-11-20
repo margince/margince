@@ -10,13 +10,14 @@ package gates
 // follow is returned as opaque, for the caller to refuse.
 
 import (
+	"bytes"
 	"go/ast"
-	"go/build/constraint"
+	"go/build"
 	"go/token"
 	"go/types"
+	"io"
 	"io/fs"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -35,6 +36,9 @@ type auditWriteSite struct {
 	call   *ast.CallExpr
 	types  []string
 	opaque string // the argument as written, when nothing above reaches a value
+	entity ast.Expr
+	at     auditCall
+	writer auditFuncKey // the writer the call reaches
 	// asValue marks a writer named other than as a call's function, whose calls
 	// through that value this census cannot see.
 	asValue bool
@@ -52,6 +56,18 @@ type auditSource struct {
 type auditFuncKey struct {
 	dir, name string
 	method    bool
+	recv      string // a method's receiver type
+}
+
+// auditFuncKeyOf is the key fn is declared under.
+func auditFuncKeyOf(src *auditSource, fn *ast.FuncDecl) auditFuncKey {
+	key := auditFuncKey{dir: src.dir, name: fn.Name.Name, method: fn.Recv != nil}
+	if fn.Recv != nil && len(fn.Recv.List) > 0 {
+		if _, typeName, ok := (&auditCensus{}).typeOf(src, fn.Recv.List[0].Type); ok {
+			key.recv = typeName
+		}
+	}
+	return key
 }
 
 type auditCall struct {
@@ -88,8 +104,16 @@ type auditCensus struct {
 	// wholeWrites are the struct types some code fills without naming a field.
 	wholeWrites map[string]bool
 	calls       map[string][]auditCall
-	writers     map[auditFuncKey]int
-	sites       []auditWriteSite
+	typeNames   map[string]bool       // "dir.Type" for every declared type
+	fieldTypes  map[string]auditConst // "dir.Type.field" → the field's declared type
+	// mutated are the package-level names some function stores into or
+	// assigns again, by "dir.name".
+	mutated map[string]bool
+	methods map[string][]auditFuncKey
+	// writers holds each writer and every parameter position its entity
+	// arguments arrive at.
+	writers map[auditFuncKey]map[int]bool
+	sites   []auditWriteSite
 }
 
 const auditModulePrefix = "github.com/margince/margince/"
@@ -115,7 +139,9 @@ func auditWriteSites(t *testing.T) []auditWriteSite {
 			srcOf: map[*ast.FuncDecl]*auditSource{}, consts: map[string]map[string]auditConst{},
 			structs: map[string][]string{}, fields: map[string][]auditLiteralField{}, wholeWrites: map[string]bool{},
 			importers: map[string]map[string]bool{},
-			calls:     map[string][]auditCall{}, writers: map[auditFuncKey]int{},
+			calls:     map[string][]auditCall{}, writers: map[auditFuncKey]map[int]bool{},
+			typeNames: map[string]bool{}, methods: map[string][]auditFuncKey{}, fieldTypes: map[string]auditConst{},
+			mutated: map[string]bool{},
 		}
 		auditCensusFailed = c.load()
 		for _, src := range c.sources {
@@ -175,8 +201,7 @@ func (c *auditCensus) load() string {
 		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			return nil
 		}
-		source, err := gatekit.ReadFile(path)
-		if err != nil || !inDefaultBuild(source) {
+		if built, err := inDefaultBuild(path); err != nil || !built {
 			return err
 		}
 		file, err := gatekit.ParseFile(path, 0)
@@ -192,21 +217,16 @@ func (c *auditCensus) load() string {
 	return ""
 }
 
-// inDefaultBuild reports whether a plain build compiles the file. One behind a
-// test tag, such as the integration harness, is test code as a _test file is.
-func inDefaultBuild(source []byte) bool {
-	for line := range strings.SplitSeq(string(source), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "package ") {
-			return true
-		}
-		if expr, err := constraint.Parse(line); err == nil && constraint.IsGoBuild(line) {
-			return expr.Eval(func(tag string) bool {
-				return tag == runtime.GOOS || tag == runtime.GOARCH || tag == "unix" || strings.HasPrefix(tag, "go1.")
-			})
-		}
+// inDefaultBuild reports whether a plain build for this platform compiles the
+// file, by its name and its build constraint. One behind a test tag, such as the
+// integration harness, is test code as a _test file is.
+func inDefaultBuild(path string) (bool, error) {
+	ctx := build.Default
+	ctx.OpenFile = func(path string) (io.ReadCloser, error) {
+		source, err := gatekit.ReadFile(path)
+		return io.NopCloser(bytes.NewReader(source)), err
 	}
-	return true
+	return ctx.MatchFile(filepath.Dir(path), filepath.Base(path))
 }
 
 func (c *auditCensus) index(path string, file *ast.File) {
@@ -256,14 +276,23 @@ func (c *auditCensus) index(path string, file *ast.File) {
 						}
 					}
 				case *ast.TypeSpec:
+					c.typeNames[src.dir+"."+sp.Name.Name] = true
 					if st, isStruct := sp.Type.(*ast.StructType); isStruct {
 						c.structs[src.dir+"."+sp.Name.Name] = auditStructFields(st)
+						for _, field := range st.Fields.List {
+							for _, name := range field.Names {
+								c.fieldTypes[src.dir+"."+sp.Name.Name+"."+name.Name] = auditConst{src: src, expr: field.Type}
+							}
+						}
 					}
 				}
 			}
 		case *ast.FuncDecl:
-			key := auditFuncKey{dir: src.dir, name: d.Name.Name, method: d.Recv != nil}
+			key := auditFuncKeyOf(src, d)
 			c.funcs[key], c.srcOf[d] = d, src
+			if key.method {
+				c.methods[src.dir+"."+key.name] = append(c.methods[src.dir+"."+key.name], key)
+			}
 		}
 	}
 	c.sources = append(c.sources, src)
@@ -315,8 +344,17 @@ func (c *auditCensus) indexBodies(src *auditSource) {
 			c.indexLiteral(src, fn, node)
 		case *ast.AssignStmt:
 			for i, lhs := range node.Lhs {
-				if sel, ok := lhs.(*ast.SelectorExpr); ok {
-					c.indexFieldWrite(src, fn, sel, auditAssignedValue(node.Rhs, len(node.Lhs), i))
+				switch target := lhs.(type) {
+				case *ast.SelectorExpr:
+					c.indexFieldWrite(src, fn, target, auditAssignedValue(node.Rhs, len(node.Lhs), i))
+				case *ast.IndexExpr:
+					if x, ok := target.X.(*ast.Ident); ok && fn != nil {
+						c.mutated[src.dir+"."+x.Name] = true
+					}
+				case *ast.Ident:
+					if node.Tok == token.ASSIGN && fn != nil {
+						c.mutated[src.dir+"."+target.Name] = true
+					}
 				}
 			}
 		case *ast.UnaryExpr:
@@ -497,23 +535,32 @@ func (c *auditCensus) grow() string {
 	if index < 0 {
 		return auditSeed + " has no entityType parameter, so this census cannot tell which argument names the record type"
 	}
-	c.writers[seed] = index
-	queue := []auditFuncKey{seed}
-	seen := map[*ast.CallExpr]bool{}
+	queue := []auditForward{{key: seed, index: index}}
+	c.writers[seed] = map[int]bool{index: true}
+	type visited struct {
+		call  *ast.CallExpr
+		index int
+	}
+	seen := map[visited]bool{}
 	for len(queue) > 0 {
 		writer := queue[0]
 		queue = queue[1:]
-		for _, at := range c.calls[writer.name] {
-			if seen[at.call] || !c.reaches(at, writer) || c.writers[writer] >= len(at.call.Args) {
+		for _, at := range c.calls[writer.key.name] {
+			matched, shift := c.match(at.src, at.fn, unindexed(at.call.Fun), writer.key)
+			arg := writer.index + shift
+			if !matched || arg >= len(at.call.Args) || seen[visited{at.call, arg}] {
 				continue
 			}
-			seen[at.call] = true
-			if next, forwarded := c.visit(at, c.writers[writer]); forwarded {
-				if _, known := c.writers[next.key]; !known {
-					c.writers[next.key] = next.index
-					queue = append(queue, next.key)
-				}
+			seen[visited{at.call, arg}] = true
+			next, forwarded := c.visit(at, arg, writer.key)
+			if !forwarded || c.writers[next.key][next.index] {
+				continue
 			}
+			if c.writers[next.key] == nil {
+				c.writers[next.key] = map[int]bool{}
+			}
+			c.writers[next.key][next.index] = true
+			queue = append(queue, next)
 		}
 	}
 	return ""
@@ -526,14 +573,14 @@ type auditForward struct {
 
 // visit reads one writer call. A parameter handed straight on makes the
 // enclosing function a writer; anything else is recorded as a site.
-func (c *auditCensus) visit(at auditCall, index int) (auditForward, bool) {
+func (c *auditCensus) visit(at auditCall, index int, writer auditFuncKey) (auditForward, bool) {
 	arg := at.call.Args[index]
 	if p := paramBehind(at.fn, at.closures, arg, 0); p >= 0 {
-		return auditForward{key: auditFuncKey{dir: at.src.dir, name: at.fn.Name.Name, method: at.fn.Recv != nil}, index: p}, true
+		return auditForward{key: auditFuncKeyOf(at.src, at.fn), index: p}, true
 	}
 	site := auditWriteSite{
 		pos: at.src.path + ":" + strconv.Itoa(gatekit.SourceFileSet().Position(at.call.Pos()).Line),
-		src: at.src, call: at.call,
+		src: at.src, call: at.call, entity: arg, at: at, writer: writer,
 	}
 	if at.fn != nil {
 		site.fn = at.fn.Name.Name
@@ -548,31 +595,75 @@ func (c *auditCensus) visit(at auditCall, index int) (auditForward, bool) {
 	return auditForward{}, false
 }
 
-// reaches reports whether this call names writer. A function is matched by its
-// package. A method is matched by name in its own package, or anywhere if exported.
-func (c *auditCensus) reaches(at auditCall, writer auditFuncKey) bool {
-	return c.names(at.src, unindexed(at.call.Fun), writer)
-}
-
-// names reports whether the expression fun, in src, refers to writer.
-func (c *auditCensus) names(src *auditSource, fun ast.Expr, writer auditFuncKey) bool {
+// match reports whether fun, in src and fn, refers to writer, and how far a
+// call through it shifts the writer's arguments. A method expression takes its
+// receiver first. A function is matched by its package. A method is matched by
+// its receiver's struct type where this can name it. Otherwise it is matched by
+// name in its own package, or anywhere if exported.
+func (c *auditCensus) match(src *auditSource, fn *ast.FuncDecl, fun ast.Expr, writer auditFuncKey) (bool, int) {
 	switch fun := fun.(type) {
 	case *ast.Ident:
-		return !writer.method && writer.dir == src.dir && fun.Name == writer.name
+		return !writer.method && writer.dir == src.dir && fun.Name == writer.name, 0
 	case *ast.SelectorExpr:
 		if fun.Sel.Name != writer.name {
-			return false
+			return false, 0
+		}
+		if typeDir, typeName, ok := c.methodExpressionType(src, fn, fun.X); ok {
+			return writer.method && writer.dir == typeDir && writer.recv == typeName, 1
 		}
 		if q, ok := fun.X.(*ast.Ident); ok {
 			if dir, imported := src.imports[q.Name]; imported {
-				return !writer.method && dir == writer.dir
+				return !writer.method && dir == writer.dir, 0
 			}
+		}
+		if typeDir, typeName, typed := c.exprType(src, fn, fun.X, 0); typed && c.structs[typeDir+"."+typeName] != nil {
+			return writer.method && writer.dir == typeDir && writer.recv == typeName, 0
 		}
 		// A generated handler calls a store through an interface whose method
 		// names a store's own, so its method calls name no writer.
-		return writer.method && !src.generated && (writer.dir == src.dir || ast.IsExported(writer.name))
+		return writer.method && !src.generated && (writer.dir == src.dir || ast.IsExported(writer.name)), 0
 	}
-	return false
+	return false, 0
+}
+
+// exprType names the type of a local name, or of a field reached through one.
+func (c *auditCensus) exprType(src *auditSource, fn *ast.FuncDecl, expr ast.Expr, depth int) (string, string, bool) {
+	switch x := expr.(type) {
+	case *ast.Ident:
+		return c.typeOfLocal(src, fn, x.Name)
+	case *ast.SelectorExpr:
+		typeDir, typeName, ok := c.exprType(src, fn, x.X, depth+1)
+		field, declared := c.fieldTypes[typeDir+"."+typeName+"."+x.Sel.Name]
+		if !ok || !declared || depth > auditResolveDepth {
+			return "", "", false
+		}
+		return c.typeOf(field.src, field.expr)
+	}
+	return "", "", false
+}
+
+// methodExpressionType names the type a method expression such as Store.Write
+// or (*pkg.Store).Write selects on.
+func (c *auditCensus) methodExpressionType(src *auditSource, fn *ast.FuncDecl, x ast.Expr) (string, string, bool) {
+	if paren, ok := x.(*ast.ParenExpr); ok {
+		x = paren.X
+	}
+	if star, ok := x.(*ast.StarExpr); ok {
+		x = star.X
+	}
+	switch t := x.(type) {
+	case *ast.Ident:
+		if typ, _ := c.localType(src, fn, t.Name); typ == nil && c.typeNames[src.dir+"."+t.Name] {
+			return src.dir, t.Name, true
+		}
+	case *ast.SelectorExpr:
+		if q, ok := t.X.(*ast.Ident); ok {
+			if dir, imported := src.imports[q.Name]; imported && c.typeNames[dir+"."+t.Sel.Name] {
+				return dir, t.Sel.Name, true
+			}
+		}
+	}
+	return "", "", false
 }
 
 // writersUsedAsValues records, as an opaque site, every writer this census
@@ -603,7 +694,7 @@ func (c *auditCensus) writersUsedAsValues() {
 				return true
 			}
 			for _, key := range byName[identName(auditSelectedName(ref))] {
-				if c.names(src, ref, key) {
+				if matched, _ := c.match(src, fn, ref, key); matched {
 					c.sites = append(c.sites, auditWriteSite{
 						pos: src.path + ":" + strconv.Itoa(gatekit.SourceFileSet().Position(ref.Pos()).Line),
 						src: src, fn: funcName(fn), call: &ast.CallExpr{Fun: ref}, opaque: types.ExprString(ref), asValue: true,

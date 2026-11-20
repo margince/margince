@@ -57254,10 +57254,12 @@ export interface components {
             target?: components["schemas"]["MagicEntityRef"];
             created?: components["schemas"]["AutomationRunCreatedRecord"];
         };
-        /** @description A record a fired run created, as the run's trace names it: a task by its subject. Its label is absent when the reader may not see the record the run acted on. */
+        /** @description A task a fired run created. Its id is absent for a run recorded before runs kept it. Its label is the task's subject, present only when the reader may read the task itself. */
         AutomationRunCreatedRecord: {
             /** @description The record type, e.g. activity for a task. */
             type: string;
+            /** Format: uuid */
+            id?: string;
             label?: string;
         };
         /** @description How a claim finished. */

@@ -133,32 +133,32 @@ func describeRun(rec AutomationRunRecord, run *crmcontracts.AutomationRun) {
 	if target, ok := runTarget(rec); ok {
 		run.Target = &crmcontracts.MagicEntityRef{Type: string(target.Type), Id: openapi_types.UUID(target.ID)}
 	}
-	if _, ok := createdTaskSubject(rec); ok {
+	if task, ok := createdTask(rec); ok {
 		run.Created = &crmcontracts.AutomationRunCreatedRecord{Type: string(datasource.EntityActivity)}
+		if task != nil {
+			id := openapi_types.UUID(task.ID)
+			run.Created.Id = &id
+		}
 	}
 }
 
-// createdTaskSubject is the subject of the first task a fired run created.
-func createdTaskSubject(rec AutomationRunRecord) (string, bool) {
+// createdTask is the first task a fired run created, and its record where the
+// trace kept one.
+func createdTask(rec AutomationRunRecord) (*datasource.EntityRef, bool) {
 	if rec.Status != runStatusApplied {
-		return "", false
+		return nil, false
 	}
 	for _, a := range performedActions(rec) {
-		if a.Kind != workflow.ActionCreateTask {
-			continue
-		}
-		var task struct {
-			Subject string `json:"subject"`
-		}
-		if json.Unmarshal(a.Args, &task) == nil && task.Subject != "" {
-			return task.Subject, true
+		if a.Kind == workflow.ActionCreateTask {
+			return a.Created, true
 		}
 	}
-	return "", false
+	return nil, false
 }
 
-// nameRunRecords labels each run's target where the reader may see it. The
-// created task and the trigger's stage describe that record, so they go with its label.
+// nameRunRecords labels each run's target and created task, each only where
+// the reader may read that record. The trigger's stage describes the target, so
+// it goes with the target's label.
 func (h Handlers) nameRunRecords(ctx context.Context, recs []AutomationRunRecord, runs []crmcontracts.AutomationRun) error {
 	if h.names == nil {
 		return nil
@@ -167,6 +167,9 @@ func (h Handlers) nameRunRecords(ctx context.Context, recs []AutomationRunRecord
 	for _, run := range runs {
 		if run.Target != nil {
 			wanted[run.Target.Type] = append(wanted[run.Target.Type], ids.UUID(run.Target.Id))
+		}
+		if run.Created != nil && run.Created.Id != nil {
+			wanted[run.Created.Type] = append(wanted[run.Created.Type], ids.UUID(*run.Created.Id))
 		}
 	}
 	labels := map[string]map[ids.UUID]string{}
@@ -178,6 +181,11 @@ func (h Handlers) nameRunRecords(ctx context.Context, recs []AutomationRunRecord
 		labels[entityType] = named
 	}
 	for i := range runs {
+		if created := runs[i].Created; created != nil && created.Id != nil {
+			if label := labels[created.Type][ids.UUID(*created.Id)]; label != "" {
+				created.Label = &label
+			}
+		}
 		target := runs[i].Target
 		if target == nil {
 			continue
@@ -188,9 +196,6 @@ func (h Handlers) nameRunRecords(ctx context.Context, recs []AutomationRunRecord
 		}
 		target.Label = &label
 		runs[i].TriggerStageName = recs[i].ToStageName
-		if subject, ok := createdTaskSubject(recs[i]); ok && runs[i].Created != nil {
-			runs[i].Created.Label = &subject
-		}
 	}
 	return nil
 }

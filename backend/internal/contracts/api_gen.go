@@ -38659,7 +38659,7 @@ type AutomationRun struct {
 	AuditId      *string            `json:"audit_id,omitempty"`
 	AutomationId openapi_types.UUID `json:"automation_id"`
 
-	// Created A record a fired run created, as the run's trace names it: a task by its subject. Its label is absent when the reader may not see the record the run acted on.
+	// Created A task a fired run created. Its id is absent for a run recorded before runs kept it. Its label is the task's subject, present only when the reader may read the task itself.
 	Created *AutomationRunCreatedRecord `json:"created,omitempty"`
 
 	// EventId The event that fired the run, for technical details. A clock rule's run names its scan.
@@ -38705,9 +38705,10 @@ type AutomationRunOutcome string
 // AutomationRunTier The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for approval.
 type AutomationRunTier string
 
-// AutomationRunCreatedRecord A record a fired run created, as the run's trace names it: a task by its subject. Its label is absent when the reader may not see the record the run acted on.
+// AutomationRunCreatedRecord A task a fired run created. Its id is absent for a run recorded before runs kept it. Its label is the task's subject, present only when the reader may read the task itself.
 type AutomationRunCreatedRecord struct {
-	Label *string `json:"label,omitempty"`
+	Id    *openapi_types.UUID `json:"id,omitempty"`
+	Label *string             `json:"label,omitempty"`
 
 	// Type The record type, e.g. activity for a task.
 	Type string `json:"type"`

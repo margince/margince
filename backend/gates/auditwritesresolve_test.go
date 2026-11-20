@@ -57,8 +57,30 @@ func (c *auditCensus) resolveReturns(src *auditSource, call *ast.CallExpr, resul
 	default:
 		return nil, false
 	}
-	decl, ok := c.funcs[key]
-	if !ok || decl.Body == nil {
+	decls := []*ast.FuncDecl{c.funcs[key]}
+	if key.method {
+		decls = nil
+		for _, method := range c.methods[key.dir+"."+key.name] {
+			decls = append(decls, c.funcs[method])
+		}
+	}
+	if len(decls) == 0 {
+		return nil, false
+	}
+	var out []string
+	for _, decl := range decls {
+		values, ok := c.returnedValues(decl, result, depth)
+		if !ok {
+			return nil, false
+		}
+		out = append(out, values...)
+	}
+	return out, true
+}
+
+// returnedValues reads what decl returns in the given result.
+func (c *auditCensus) returnedValues(decl *ast.FuncDecl, result, depth int) ([]string, bool) {
+	if decl == nil || decl.Body == nil {
 		return nil, false
 	}
 	var out []string
@@ -90,14 +112,55 @@ func paramBehind(fn *ast.FuncDecl, closures []*ast.FuncType, arg ast.Expr, depth
 	if fn == nil || !ok || depth > auditResolveDepth || shadowedByClosure(closures, ident.Name) {
 		return -1
 	}
+	if declaredTwice(fn, ident.Name) {
+		return -1
+	}
 	bindings, bound := localValues(fn, ident.Name)
+	param := auditParamIndex(fn, ident.Name)
 	switch {
 	case !bound:
-		return auditParamIndex(fn, ident.Name)
-	case len(bindings) == 1 && bindings[0].value != nil:
+		return param
+	case param < 0 && len(bindings) == 1 && bindings[0].value != nil:
 		return paramBehind(fn, closures, bindings[0].value, depth+1)
 	}
 	return -1
+}
+
+// declaredTwice reports whether fn declares name more than once, so that a
+// binding read by name alone could be another variable's.
+func declaredTwice(fn *ast.FuncDecl, name string) bool {
+	if fn == nil {
+		return false
+	}
+	declarations := 0
+	count := func(fields *ast.FieldList) {
+		if fieldListNames(fields)[name] {
+			declarations++
+		}
+	}
+	count(fn.Recv)
+	ast.Inspect(fn, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.FuncType:
+			count(node.Params)
+		case *ast.ValueSpec:
+			for _, ident := range node.Names {
+				if ident.Name == name {
+					declarations++
+				}
+			}
+		case *ast.AssignStmt:
+			if node.Tok == token.DEFINE && slices.ContainsFunc(node.Lhs, func(lhs ast.Expr) bool { return isIdentNamed(lhs, name) }) {
+				declarations++
+			}
+		case *ast.RangeStmt:
+			if node.Tok == token.DEFINE && (isIdentNamed(node.Key, name) || isIdentNamed(node.Value, name)) {
+				declarations++
+			}
+		}
+		return true
+	})
+	return declarations > 1
 }
 
 // shadowedByClosure reports whether a closure around the call rebinds name.
@@ -114,21 +177,8 @@ func (c *auditCensus) resolveName(src *auditSource, fn *ast.FuncDecl, closures [
 	if shadowedByClosure(closures, name) {
 		return nil, false
 	}
-	if fn != nil {
-		if bindings, found := localValues(fn, name); found {
-			var out []string
-			for _, binding := range bindings {
-				types, ok := c.resolveBinding(src, fn, closures, binding, depth+1)
-				if !ok {
-					return nil, false
-				}
-				out = append(out, types...)
-			}
-			return out, true
-		}
-		if i := auditParamIndex(fn, name); i >= 0 {
-			return c.resolveParam(fn, i, depth)
-		}
+	if values, local, ok := c.resolveLocal(src, fn, closures, name, depth); local {
+		return values, ok
 	}
 	if constant, ok := c.consts[src.dir][name]; ok {
 		return c.resolve(constant.src, nil, nil, constant.expr, depth+1)
@@ -136,18 +186,45 @@ func (c *auditCensus) resolveName(src *auditSource, fn *ast.FuncDecl, closures [
 	return nil, false
 }
 
+// resolveLocal reads a name fn declares, and reports whether it declares it. A
+// reassigned parameter holds what its callers pass and what the function
+// assigns, so both are read.
+func (c *auditCensus) resolveLocal(src *auditSource, fn *ast.FuncDecl, closures []*ast.FuncType, name string, depth int) (values []string, local, ok bool) {
+	if fn == nil {
+		return nil, false, false
+	}
+	if declaredTwice(fn, name) {
+		return nil, true, false
+	}
+	param := auditParamIndex(fn, name)
+	if param >= 0 {
+		if values, ok = c.resolveParam(fn, param, depth); !ok {
+			return nil, true, false
+		}
+	}
+	bindings, found := localValues(fn, name)
+	for _, binding := range bindings {
+		types, ok := c.resolveBinding(src, fn, closures, binding, depth+1)
+		if !ok {
+			return nil, true, false
+		}
+		values = append(values, types...)
+	}
+	return values, found || param >= 0, true
+}
+
 // resolveParam reads a parameter by what every caller passes for it.
 func (c *auditCensus) resolveParam(fn *ast.FuncDecl, index, depth int) ([]string, bool) {
-	src := c.srcOf[fn]
-	key := auditFuncKey{dir: src.dir, name: fn.Name.Name, method: fn.Recv != nil}
+	key := auditFuncKeyOf(c.srcOf[fn], fn)
 	var out []string
 	callers := 0
 	for _, at := range c.calls[fn.Name.Name] {
-		if !c.reaches(at, key) || index >= len(at.call.Args) {
+		matched, shift := c.match(at.src, at.fn, unindexed(at.call.Fun), key)
+		if !matched || index+shift >= len(at.call.Args) {
 			continue
 		}
 		callers++
-		values, ok := c.resolve(at.src, at.fn, at.closures, at.call.Args[index], depth+1)
+		values, ok := c.resolve(at.src, at.fn, at.closures, at.call.Args[index+shift], depth+1)
 		if !ok {
 			return nil, false
 		}
@@ -200,14 +277,15 @@ func (c *auditCensus) literalCollection(src *auditSource, fn *ast.FuncDecl, clos
 		return src, e, true
 	case *ast.Ident:
 		if bindings, found := localValues(fn, e.Name); fn != nil && found {
-			if len(bindings) != 1 || bindings[0].value == nil || shadowedByClosure(closures, e.Name) {
+			if len(bindings) != 1 || bindings[0].value == nil || shadowedByClosure(closures, e.Name) ||
+				declaredTwice(fn, e.Name) || writesInto(fn, e.Name) {
 				return nil, nil, false
 			}
 			return c.literalCollection(src, fn, closures, bindings[0].value, depth+1)
 		}
 		known := false
 		constant, known = c.consts[src.dir][e.Name]
-		if !known {
+		if !known || c.mutated[src.dir+"."+e.Name] {
 			return nil, nil, false
 		}
 	case *ast.SelectorExpr:
@@ -217,13 +295,29 @@ func (c *auditCensus) literalCollection(src *auditSource, fn *ast.FuncDecl, clos
 			dir, imported = src.imports[q.Name]
 		}
 		known := false
-		if constant, known = c.consts[dir][e.Sel.Name]; !imported || !known {
+		if constant, known = c.consts[dir][e.Sel.Name]; !imported || !known || c.mutated[dir+"."+e.Sel.Name] {
 			return nil, nil, false
 		}
 	default:
 		return nil, nil, false
 	}
 	return c.literalCollection(constant.src, nil, nil, constant.expr, depth+1)
+}
+
+// writesInto reports whether fn stores into the collection name holds.
+func writesInto(fn *ast.FuncDecl, name string) bool {
+	written := false
+	ast.Inspect(fn, func(n ast.Node) bool {
+		if assign, ok := n.(*ast.AssignStmt); ok {
+			for _, lhs := range assign.Lhs {
+				if index, isIndex := lhs.(*ast.IndexExpr); isIndex && isIdentNamed(index.X, name) {
+					written = true
+				}
+			}
+		}
+		return !written
+	})
+	return written
 }
 
 // resolveSelector reads pkg.Name, or x.Field by every value written to that
