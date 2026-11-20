@@ -14,15 +14,6 @@ include scripts/composition-profile.mk
 # one target here that invokes the compiler directly instead of delegating.
 GO ?= go
 
-# -trimpath keeps the folder path out of every compile cache key, so worktrees
-# of one commit share build output. CI keeps its own cache keys and release
-# builds never read this, so it is local only.
-ifeq ($(CI),)
-ifeq ($(findstring -trimpath,$(GOFLAGS)),)
-export GOFLAGS += -trimpath
-endif
-endif
-
 # The deterministic script gates `check-root-gates` fans out. One list, one
 # consumer — see the comment on check-root-gates for why they are not that
 # target's prerequisites.
@@ -283,6 +274,7 @@ check-q:
 ## + fitness tests, contract drift). A scope-aware per-task gate for backend-only
 ## work; the full `make check` adds the deterministic script gates.
 check-go:
+	@bash scripts/gate-slot.sh acquire $@
 	$(MAKE) -C backend check
 
 ## check-gates — the meta-gate lane: the waiver census, the obligations derived
@@ -1474,7 +1466,7 @@ test-migration-versions:
 test-keep-unchanged-mtimes:
 	@bash scripts/keep-unchanged-mtimes.test.sh
 
-## gate-slot.sh gives check, check-backend, check-fe and (in backend/)
+## gate-slot.sh gives check, check-backend, check-go, check-fe and (in backend/)
 ## test-integration one of the machine's gate slots for the whole run: two by
 ## default, GATE_SLOTS=N to change, 0 to switch off, never taken when CI is set.
 ## The make running the recipe is the holder, so the slot frees itself when that

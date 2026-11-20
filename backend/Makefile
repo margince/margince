@@ -3,15 +3,6 @@ include ../scripts/composition-profile.mk
 # Golden path: `make dev` boots everything; `make check` is the merge gate.
 
 GO        ?= go
-
-# -trimpath keeps the folder path out of every compile cache key, so worktrees
-# of one commit share build output. CI keeps its own cache keys and release
-# builds never read this, so it is local only.
-ifeq ($(CI),)
-ifeq ($(findstring -trimpath,$(GOFLAGS)),)
-export GOFLAGS += -trimpath
-endif
-endif
 PG_PORT   ?= 15432
 REDIS_PORT?= 16379
 DB_NAME   ?= margince

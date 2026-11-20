@@ -90,7 +90,9 @@ try_take() {
 		d="$DIR/slot-$i"
 		[[ -d "$d" ]] && reclaim_if_dead "$d" || true
 		if mkdir "$d" 2>/dev/null; then
-			printf '%s\n%s\n%s\n%s\n' "$pid" "$(start_stamp "$pid")" "worktree $PWD" "target $target" >"$d/holder"
+			# Written aside and renamed, so a waiter never reads a half-written holder.
+			printf '%s\n%s\n%s\n%s\n' "$pid" "$(start_stamp "$pid")" "worktree $PWD" "target $target" >"$d/.holder.$$"
+			mv "$d/.holder.$$" "$d/holder"
 			TAKEN="$d"
 			return 0
 		fi
