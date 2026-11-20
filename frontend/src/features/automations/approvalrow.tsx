@@ -27,6 +27,7 @@ import {
 } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { recordRoute } from "../../lib/entity";
+import { hideHomeRows } from "../../lib/homerows";
 import {
   isAlreadyDecided,
   isVersionSkew,
@@ -237,6 +238,9 @@ function DecidableApprovalRow({
         }),
       );
     },
+    onMutate: () =>
+      hideHomeRows(queryClient, [{ source: "approval", id: approval.id }]),
+    onSettled: (_data, _error, _input, settle) => settle?.(),
     onSuccess: (data, input) => {
       void invalidateApprovalViews(queryClient);
       for (const queryKey of extraInvalidateKeys ?? []) {
