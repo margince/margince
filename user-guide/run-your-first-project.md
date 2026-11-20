@@ -221,13 +221,12 @@ the partner's own commercial work sits on the same project as the customer's.
 
 Margince refuses the following, and shows the reason on screen:
 
-- **Removing the last company.** *A project keeps at least one company; add
-  another before taking this one off.*
-<!-- prose:allow sentence the refusal message is quoted as the screen shows it -->
-- **Removing a company with deals here.** *This company still has 1
-  `deal(s)` on the project; move or close them before taking the company off.*
-  Winning or losing a deal does not clear this, because the count is of deals
-  that still exist. Point them at another project, or archive them.
+- **Removing the last company.** A project keeps at least one company, so its
+  only company offers no **Detach**.
+- **Removing a company with deals here.** *This company still has 1 deal on
+  the project. Move it to another project or archive it before you take the
+  company off.* Winning or losing a deal does not clear this, because the count
+  is of deals that still exist.
 
 Attaching a company that is already on the project changes its role instead of
 adding it twice. That is how you move DACHPartner from subcontractor to partner
