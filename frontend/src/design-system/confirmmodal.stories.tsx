@@ -175,3 +175,42 @@ export const WithRefusedField: Story = {
     await expect(dialog.getByLabelText("Competitor")).toHaveFocus();
   },
 };
+
+function EnterConfirmsDemo() {
+  const [name, setName] = useState("");
+  const [saved, setSaved] = useState<string | null>(null);
+  return (
+    <>
+      {saved !== null && <p>Saved “{saved}”</p>}
+      <ConfirmModal
+        open={saved === null}
+        onClose={() => setSaved("")}
+        title="Add tag"
+        intent="form"
+        confirmLabel="Add"
+        confirmDisabled={name.trim() === ""}
+        onConfirm={() => setSaved(name.trim())}
+      >
+        <Field label="Name">
+          {(control) => (
+            <TextInput
+              {...control}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          )}
+        </Field>
+      </ConfirmModal>
+    </>
+  );
+}
+
+/** Enter in a single-line field of a form presses the confirm. */
+export const EnterConfirms: Story = {
+  render: () => <EnterConfirmsDemo />,
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.type(dialog.getByLabelText("Name"), "Renewal{Enter}");
+    await expect(await screen.findByText("Saved “Renewal”")).toBeVisible();
+  },
+};

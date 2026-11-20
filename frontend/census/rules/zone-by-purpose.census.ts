@@ -252,6 +252,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The close column draws its day in the zone it is given; the fixture pins UTC so the expected day does not move with the test machine.",
   },
   {
+    file: "features/lists/filterresults.test.tsx",
+    why: "Pins a reader west of UTC, where a date column sent as midnight UTC would read as the day before; the test proves it keeps its day.",
+  },
+  {
     file: "features/deals/deal360/dealstanding.test.ts",
     why: "Days in a stage are counted in the record zone; the fixture pins UTC so the expected count does not move with the test machine.",
   },
