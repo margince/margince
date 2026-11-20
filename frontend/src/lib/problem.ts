@@ -217,6 +217,14 @@ export function unwrap(
   return result.data;
 }
 
+// writeMayHaveLanded tells a failed write that may still have been saved from
+// one that was refused. The server may have failed after its commit, a proxy
+// may have stopped waiting, or the connection may have dropped in flight.
+export function writeMayHaveLanded(error: unknown): boolean {
+  if (error instanceof ConnectivityError) return !error.unsent;
+  return error instanceof EmptySuccessError || problemStatus(error) >= 500;
+}
+
 // The same discriminator, read off a query/mutation failure rather than a raw
 // body. Only a ProblemError carries a server problem, so a network exception
 // or a thrown Error never claims a server code it doesn't have.

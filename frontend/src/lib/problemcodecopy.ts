@@ -67,6 +67,10 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["run_in_flight", "import.reason.run_in_flight"],
   // A date-only meeting cannot hold its host's calendar hour.
   ["day_holds_host_slot", "activity.dayHoldsHostSlot"],
+  // The member invite's refusals: the detail is English and names no screen.
+  ["already_invited", "users.alreadyInvited"],
+  ["email_taken", "users.emailTaken"],
+  ["removed_member_email", "users.removedEmail"],
   // A legal entity's refusals: the detail is English and names no screen.
   ["legal_entity_has_members", "legalEntities.hasMembers"],
   ["legal_entity_is_assessed_against", "legalEntities.assessedAgainst"],

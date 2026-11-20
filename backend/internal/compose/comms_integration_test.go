@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -120,6 +121,7 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 		store:  activities.NewStore(e.DB()),
 		gate:   consent.NewGate(consent.NewStore(InstallationDB(e.Pool))),
 		stager: realDeliveryStager(t, e),
+		own:    capture.NewOwnDomainStore(InstallationDB(e.Pool)),
 		// This installation holds its own records, which the send guard asks
 		// before it composes anything (comms_soraut.go). An adapter with no
 		// seam refuses rather than passes, so a suite that sends says so.

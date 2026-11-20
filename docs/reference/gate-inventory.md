@@ -16,7 +16,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
-| `accountreachcopies_test.go` | H2 | "Which activities belong to this account" is computed in two places, and they must agree. |
+| `accountreachcopies_test.go` | H2 | The stored company clock and the activity walk use the same employment bounds. |
 | `acquisitionvocabulary_test.go` | H1 | Two modules spell "we do not know how this contact arrived" the same way. |
 | `agenttoolcatalogtiers_test.go` | H2 | The tool catalog's Tier column says what the contract says. |
 | `aiactivitycatalogparity_test.go` | H3 | The AI-activity contract names the work that can reach it and nothing else, and caps what the read caps. |
