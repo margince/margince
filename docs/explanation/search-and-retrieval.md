@@ -128,15 +128,17 @@ the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per
 `email_summary` under `Emails`, separate from the calls and notes beside it.
 
 A grouped page of one plain word reads a type's own matches first (`withOwnMatches`). For
-contacts, companies and leads, these are the rows the name index finds, plus a whole identifier
-or one that earns an identifier tier. A row found only by a contained address or domain then
-scores 0. A company found that way scores at most its domain similarity share, a tenth. The
-employer arm scores below 0. When the own matches fill the `N + 1` rows above that score, the
-statement skips the contained-address scans and the employer arm. Postgres reads that check as a
-constant and never runs their plans, so a two-letter prefix no longer reads every address that
-contains it. A plain word holds letters and digits only (`plainWord`). With more words, an
-apostrophe or an operator, a contained-only row can score above 0, so the page reads every branch
-whole. So does the ranked page.
+contacts, companies and leads, these are the rows the name index finds. A whole address or domain
+counts too, and so does one that earns a tier. A row found only by part of an address then scores
+0, or at most 0.1 for a company. The employer arm scores below 0.
+
+When the own matches fill the `N + 1` rows above that score, the statement skips the scans for
+part of an address and the employer arm. Postgres reads that check as a constant and never runs
+their plans. So a two-letter prefix no longer reads every address that holds it.
+
+A plain word holds letters and digits only (`plainWord`). With more words, an apostrophe or an
+operator, a row found by part of an address can score above 0. Such a page reads every branch
+whole, and so does the ranked page.
 
 **`typeahead=true` leaves mail out of a short prefix.** A short prefix matches a large share of
 all activities, and ranking them is slow. The `⌘K` menu sends `typeahead=true`. `Store.Search` then

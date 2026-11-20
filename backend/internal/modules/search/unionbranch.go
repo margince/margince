@@ -121,7 +121,7 @@ func branchSelect(ctx context.Context, branch searchBranch, q branchQuery, arm i
 		noEmployer, branch.identifierEvidence("t", q.identifierPos), source), true, nil
 }
 
-// unionSQL is every element of a union, as the ranked shape joins them.
+// unionSQL joins the elements of a union for the ranked shape.
 func unionSQL(branches []unionBranch) string {
 	elements := make([]string, len(branches))
 	for i, branch := range branches {
