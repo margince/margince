@@ -36,6 +36,7 @@ import {
   GuestDetailsForm,
   GuestHost,
   GuestUnavailable,
+  guestTitle,
   PreviewNotice,
   videoAppOf,
 } from "./booking-guest-parts";
@@ -384,17 +385,6 @@ export function BookingGuestScreen({
       </div>
     </div>
   );
-}
-
-// The tab names the host only while their page takes bookings; a paused or
-// missing page keeps a generic title, as its link-preview card does.
-function guestTitle(
-  t: ReturnType<typeof useT>,
-  host: { paused: boolean; host_name: string } | undefined,
-): string {
-  return host && !host.paused && host.host_name
-    ? t("book.pageTitle", { host: host.host_name })
-    : t("book.pageTitleGeneric");
 }
 
 // A busy month's read stops after a bounded number of pages; a day past where
