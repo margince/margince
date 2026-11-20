@@ -97,10 +97,6 @@ func readLeadWorkQueue(ctx context.Context, tx pgx.Tx, in ListLeadsInput, active
 	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	where, args, arg, err := leadQueueWhere(ctx, in, active, policy)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
 	asOf := leadSLAClock().UTC()
 	var cursor *leadQueueCursor
 	if in.Cursor != nil && *in.Cursor != "" {
@@ -110,6 +106,13 @@ func readLeadWorkQueue(ctx context.Context, tx pgx.Tx, in ListLeadsInput, active
 		}
 		cursor = &decoded
 		asOf = decoded.AsOf
+	}
+	// The filters, the rank, the columns and the scanner all judge the page's
+	// instant, the cursor's on a continuation page.
+	ctx = withPinnedSLANow(ctx, asOf)
+	where, args, arg, err := leadQueueWhere(ctx, in, active, policy)
+	if err != nil {
+		return nil, storekit.Page{}, err
 	}
 	// The count is taken HERE: after the scope and the filters have bound
 	// their arguments, and BEFORE either the rank expression or the keyset
@@ -130,7 +133,7 @@ func readLeadWorkQueue(ctx context.Context, tx pgx.Tx, in ListLeadsInput, active
 		where = append(where, storekit.SQLf("("+rank+", -score, created_at, id) > ($%d, $%d, $%d, $%d)",
 			arg(cursor.Rank), arg(-cursor.Score), arg(cursor.CreatedAt), arg(cursor.ID)))
 	}
-	columns, err := leadColumns(withPinnedSLANow(ctx, asOf), arg)
+	columns, err := leadColumns(ctx, arg)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
