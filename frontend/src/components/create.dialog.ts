@@ -3,7 +3,8 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { CF_OBJECTS, type CfObject } from "../lib/customfields.logic";
+import type { CfObject } from "../lib/customfields.logic";
+import { customFieldsQuery } from "../lib/customfields.query";
 import type { Screen } from "../lib/router";
 
 // Past this a catalog read that has not answered stops holding the dialog.
@@ -22,17 +23,12 @@ export function catalogOfScreen(screen: Screen): CfObject | undefined {
   return CATALOG_OF_SCREEN[screen];
 }
 
-// An edit's record key is the catalog's own object name where it has one.
-export function catalogOfRecord(recordKey: string): CfObject | undefined {
-  return CF_OBJECTS.find((object) => object === recordKey);
-}
-
 // Not while `catalog`'s first read, retries included, is in flight: the form
 // would open half-built. A read that fails for good or is slow opens the core.
 export function useSettledOpen(open: boolean, catalog?: CfObject): boolean {
   const client = useQueryClient();
   const catalogHash = client.defaultQueryOptions({
-    queryKey: ["custom-fields", catalog],
+    queryKey: customFieldsQuery(catalog).queryKey,
   }).queryHash;
   const cache = client.getQueryCache();
   const subscribe = useCallback(

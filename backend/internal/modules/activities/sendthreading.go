@@ -26,6 +26,11 @@ type threading struct {
 	// leaves, empty when the reply stays in it. answers is then the anchor.
 	splitFrom string
 	answers   ids.UUID
+	// continues is the anchor when the reply threads onto a mail with a
+	// message identity, so the reply carries that mail's links (mayCarry).
+	// Nil for a note, meeting or task anchor, and for a reply on a new topic.
+	// Those start a conversation, and their links are attached anew.
+	continues *ids.UUID
 }
 
 // anchorThreading derives the chain a reply carries from its anchor, inside the
@@ -71,6 +76,9 @@ func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageI
 	}
 
 	chain := threading{inReplyTo: parent, threadKey: root}
+	if parent != "" {
+		chain.continues = &id.UUID
+	}
 	if root != "" && root != parent {
 		chain.references = append(chain.references, root)
 	}

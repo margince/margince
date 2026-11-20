@@ -18636,6 +18636,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/consent-purposes/send-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many messages went out under each declared consent purpose, and how many the record disputes.
+         * @description Needs `consent_config:read`. A send names a consent purpose, and may claim what kind of
+         *     message it is. The send engine records, for every message it stages, what was claimed and
+         *     what the record bore out. This read counts those staged messages per purpose in the window,
+         *     most sent first.
+         *
+         *     `disputed` counts the messages whose claimed kind differs from the one the engine resolved:
+         *     for example a campaign claimed as customer service with nothing on record behind it. That is
+         *     where a mislabelled send shows.
+         *
+         *     A key that names no live purpose, and a message that named none, count under the purpose
+         *     key `unknown`, without a class. The answer holds at most 200 entries.
+         */
+        get: operations["listConsentPurposeSendCounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/existing-customer-notices": {
         parameters: {
             query?: never;
@@ -45651,8 +45681,9 @@ export interface components {
             provision?: components["schemas"]["CitedProvision"];
         };
         /**
-         * @description The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-         *     for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+         * @description The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+         *     for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+         *     data-protection law settles. Shown beside the engine's sentence; it decides nothing.
          *     Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
          *     pack's next review is overdue, or the law has not taken effect or has expired. On a
          *     review it is the citation shown when the refusal was assessed, never today's.
@@ -45683,11 +45714,18 @@ export interface components {
             /** @description Missing contact methods, such as email, phone or web. */
             missing_means: string[];
             provision?: components["schemas"]["CitedProvision"];
+            /** @description Every law cited for `kind`, `provision` first. Absent when none may be shown. */
+            provisions?: components["schemas"]["CitedProvision"][];
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
             /** @description The law the recipient's pack cites for `reason_code`, absent when none may be shown. */
             provision?: components["schemas"]["CitedProvision"];
+            /**
+             * @description Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
+             *     sending entity's for a finding its data-protection law settles. Absent when none may be shown.
+             */
+            provisions?: components["schemas"]["CitedProvision"][];
             /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
             footer_findings?: components["schemas"]["FooterFinding"][];
             /** Format: email */
@@ -51350,6 +51388,10 @@ export interface components {
             category?: string;
             /** @description The category the sender claimed. */
             requested_category?: string;
+            /** @description The first law cited for `reason_code`, absent when none may be shown. */
+            provision?: components["schemas"]["CitedProvision"];
+            /** @description Every law cited for `reason_code`, `provision` first. Absent when none may be shown. */
+            provisions?: components["schemas"]["CitedProvision"][];
         };
         /**
          * @description A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
@@ -55215,14 +55257,26 @@ export interface components {
              * @default false
              */
             requires_double_opt_in: boolean;
-            /**
-             * @description What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
-             * @enum {string}
-             */
-            class?: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+            /** @description What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration. */
+            class?: string & components["schemas"]["ConsentPurposeClass"];
             frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /** Format: date-time */
             created_at: string;
+        };
+        /**
+         * @description Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
+         * @enum {string}
+         */
+        ConsentPurposeClass: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+        ConsentPurposeSendCount: {
+            /** @description The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none. */
+            purpose_key: string;
+            /** @description The purpose's class. Absent under `unknown`. */
+            class?: components["schemas"]["ConsentPurposeClass"];
+            /** @description Messages staged under this purpose in the window. */
+            sends: number;
+            /** @description Of those, the messages whose claimed kind differs from the kind the record bore out. */
+            disputed: number;
         };
         /**
          * @description How often the purpose's mail goes out, roughly. The subscription question states it.
@@ -55902,6 +55956,11 @@ export interface components {
             reason_code: string;
             /** @description The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed. */
             provision?: components["schemas"]["CitedProvision"];
+            /**
+             * @description Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
+             *     recipient's pack, then the sending entity's for a finding its data-protection law settles.
+             */
+            provisions?: components["schemas"]["CitedProvision"][];
             category?: string;
             /** Format: uuid */
             sending_entity_id?: string;
@@ -61777,7 +61836,7 @@ export interface components {
          */
         WorklistBand: {
             /** @enum {string} */
-            band: "now" | "build_pipeline" | "keep_momentum" | "review";
+            band: "now" | "build_pipeline" | "keep_momentum" | "review" | "more";
             /** @description How many rows of this band are on the page. */
             shown: number;
         };
@@ -62646,12 +62705,15 @@ export interface components {
              *     scanning for "what must happen now" should not have to know which levels mean that.
              *
              *     Derived from the level and the row's own subject, so it cannot disagree with the order:
-             *     the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-             *     interleave prospecting and deal follow-up. A client
-             *     draws a heading when the band changes and never re-sorts.
+             *     the queue arrives already sorted, and across the pages of one walk a band never comes
+             *     back once a later band has started. `more` heads the rows past the ranked top, which a
+             *     walk reaches after every ranked row. They follow each store's own date order, are not
+             *     ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+             *     `due_group` still say what each one is. A client draws a heading when the band changes
+             *     and never re-sorts.
              * @enum {string}
              */
-            band?: "now" | "build_pipeline" | "keep_momentum" | "review";
+            band?: "now" | "build_pipeline" | "keep_momentum" | "review" | "more";
             /**
              * @description The ways this row can be PUT DOWN, as the server declares them. A client
              *     never infers this from `source`: which rows a rep may judge is a server
@@ -92842,6 +92904,36 @@ export interface operations {
                     "application/json": components["schemas"]["ConsentPurpose"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listConsentPurposeSendCounts: {
+        parameters: {
+            query?: {
+                /** @description How many days back the window reaches from now. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The send counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ConsentPurposeSendCount"][];
+                        /** @description The window the counts cover. */
+                        days: number;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

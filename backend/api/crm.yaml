@@ -27449,6 +27449,45 @@ paths:
               schema: { $ref: '#/components/schemas/ConsentPurpose' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /consent-purposes/send-counts:
+    get:
+      tags: [Compliance]
+      operationId: listConsentPurposeSendCounts
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: How many messages went out under each declared consent purpose, and how many the record disputes.
+      description: |
+        Needs `consent_config:read`. A send names a consent purpose, and may claim what kind of
+        message it is. The send engine records, for every message it stages, what was claimed and
+        what the record bore out. This read counts those staged messages per purpose in the window,
+        most sent first.
+
+        `disputed` counts the messages whose claimed kind differs from the one the engine resolved:
+        for example a campaign claimed as customer service with nothing on record behind it. That is
+        where a mislabelled send shows.
+
+        A key that names no live purpose, and a message that named none, count under the purpose
+        key `unknown`, without a class. The answer holds at most 200 entries.
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 366, default: 30 }
+          description: How many days back the window reaches from now.
+      responses:
+        '200':
+          description: The send counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, days]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/ConsentPurposeSendCount' } }
+                  days: { type: integer, description: 'The window the counts cover.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /existing-customer-notices:
     get:
       tags: [Compliance]
@@ -62064,6 +62103,7 @@ components:
             objected, so naming one here is refused (422 `invalid`).
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -62095,6 +62135,7 @@ components:
             `invalid`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -62558,9 +62599,11 @@ components:
             allowed.
         marketing_purpose:
           type: string
+          maxLength: 200
           description: Which marketing purpose, when the context is `marketing`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             The deprecated purpose key, when the composer still has one. It authorizes
             nothing on its own, and it is accepted here for one reason: the SEND still
@@ -62622,8 +62665,10 @@ components:
           allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
         marketing_purpose:
           type: string
+          maxLength: 200
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             The deprecated purpose key, when the composer still has one. It authorizes
             nothing on its own, and it is accepted here for one reason: the SEND still
@@ -62777,8 +62822,9 @@ components:
     CitedProvision:
       type: object
       description: |
-        The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-        for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+        The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+        for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+        data-protection law settles. Shown beside the engine's sentence; it decides nothing.
         Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
         pack's next review is overdue, or the law has not taken effect or has expired. On a
         review it is the citation shown when the refusal was assessed, never today's.
@@ -62808,6 +62854,10 @@ components:
         missing_means: { type: array, items: { type: string }, description: 'Missing contact methods, such as email, phone or web.' }
         provision:
           $ref: '#/components/schemas/CitedProvision'
+        provisions:
+          type: array
+          items: { $ref: '#/components/schemas/CitedProvision' }
+          description: Every law cited for `kind`, `provision` first. Absent when none may be shown.
 
     SendAuthorizationPreviewRecipient:
       type: object
@@ -62817,6 +62867,12 @@ components:
         provision:
           allOf: [{ $ref: '#/components/schemas/CitedProvision' }]
           description: The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+        provisions:
+          type: array
+          items: { $ref: '#/components/schemas/CitedProvision' }
+          description: |
+            Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
+            sending entity's for a finding its data-protection law settles. Absent when none may be shown.
         footer_findings:
           type: array
           items: { $ref: '#/components/schemas/FooterFinding' }
@@ -63036,6 +63092,7 @@ components:
             objected, so naming one here is refused (422 `invalid`).
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -63067,6 +63124,7 @@ components:
             `invalid`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -63156,6 +63214,7 @@ components:
             objected, so naming one here is refused (422 `invalid`).
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -63174,6 +63233,7 @@ components:
           description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -70288,6 +70348,13 @@ components:
         can_be_overruled: { type: boolean, description: Whether a recorded reason may send this one message anyway. }
         category: { type: string, description: The category the engine resolved. }
         requested_category: { type: string, description: The category the sender claimed. }
+        provision:
+          allOf: [{ $ref: '#/components/schemas/CitedProvision' }]
+          description: The first law cited for `reason_code`, absent when none may be shown.
+        provisions:
+          type: array
+          items: { $ref: '#/components/schemas/CitedProvision' }
+          description: Every law cited for `reason_code`, `provision` first. Absent when none may be shown.
     AnalyticsRefusal:
       description: >-
         A problem body whose `details` spell out an analytics refusal, present whenever the
@@ -75560,11 +75627,27 @@ components:
         requires_double_opt_in: { type: boolean, default: false, description: 'When true, a grant is only effective after a confirmed DOI event (German email norm).' }
         class:
           type: string
-          enum: [business_correspondence, transactional, marketing, phone_outreach]
-          x-extensible-enum: true
+          allOf: [{ $ref: '#/components/schemas/ConsentPurposeClass' }]
           description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
         frequency: { $ref: '#/components/schemas/ConsentPurposeFrequency' }
         created_at: { type: string, format: date-time }
+
+    ConsentPurposeClass:
+      type: string
+      enum: [business_correspondence, transactional, marketing, phone_outreach]
+      x-extensible-enum: true
+      description: Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
+
+    ConsentPurposeSendCount:
+      type: object
+      required: [purpose_key, sends, disputed]
+      properties:
+        purpose_key: { type: string, description: 'The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none.' }
+        class:
+          allOf: [{ $ref: '#/components/schemas/ConsentPurposeClass' }]
+          description: The purpose's class. Absent under `unknown`.
+        sends: { type: integer, description: 'Messages staged under this purpose in the window.' }
+        disputed: { type: integer, description: 'Of those, the messages whose claimed kind differs from the kind the record bore out.' }
 
     ConsentPurposeFrequency:
       type: string
@@ -76394,6 +76477,12 @@ components:
         provision:
           allOf: [{ $ref: '#/components/schemas/CitedProvision' }]
           description: The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
+        provisions:
+          type: array
+          items: { $ref: '#/components/schemas/CitedProvision' }
+          description: |
+            Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
+            recipient's pack, then the sending entity's for a finding its data-protection law settles.
         category: { type: string }
         sending_entity_id: { type: string, format: uuid }
         sending_entity_name: { type: string }
@@ -82799,7 +82888,7 @@ components:
         the rows it received could not say it.
       required: [band, shown]
       properties:
-        band: { type: string, enum: [now, build_pipeline, keep_momentum, review], x-extensible-enum: true }
+        band: { type: string, enum: [now, build_pipeline, keep_momentum, review, more], x-extensible-enum: true }
         shown: { type: integer, description: 'How many rows of this band are on the page.' }
 
     WorklistCount:
@@ -83749,7 +83838,7 @@ components:
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string
-          enum: [now, build_pipeline, keep_momentum, review]
+          enum: [now, build_pipeline, keep_momentum, review, more]
           x-extensible-enum: true
           description: |
             The heading this row sits under, as an OUTCOME rather than a priority number.
@@ -83759,9 +83848,12 @@ components:
             scanning for "what must happen now" should not have to know which levels mean that.
 
             Derived from the level and the row's own subject, so it cannot disagree with the order:
-            the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-            interleave prospecting and deal follow-up. A client
-            draws a heading when the band changes and never re-sorts.
+            the queue arrives already sorted, and across the pages of one walk a band never comes
+            back once a later band has started. `more` heads the rows past the ranked top, which a
+            walk reaches after every ranked row. They follow each store's own date order, are not
+            ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+            `due_group` still say what each one is. A client draws a heading when the band changes
+            and never re-sorts.
         dispositions:
           type: array
           items:

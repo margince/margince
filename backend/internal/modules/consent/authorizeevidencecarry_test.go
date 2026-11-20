@@ -35,7 +35,7 @@ func TestEveryEvidenceIDSurvivesTheRoundTrip(t *testing.T) {
 		BasisID:        ids.NewV7(),
 		AuthoredOffer:  true,
 	}
-	raw, err := evidenceJSON(in)
+	raw, err := evidenceJSON(in, "")
 	if err != nil {
 		t.Fatalf("rendering: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestAnUnusableEvidenceColumnYieldsNoEvidenceRatherThanAnError(t *testing.T)
 // An empty Evidence renders as the column's own default rather than as a row of
 // nulls, so a decision taken on no named record reads as one.
 func TestNoEvidenceRendersAsTheEmptyObject(t *testing.T) {
-	raw, err := evidenceJSON(commsauthz.Evidence{})
+	raw, err := evidenceJSON(commsauthz.Evidence{}, "")
 	if err != nil {
 		t.Fatalf("rendering: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestNoEvidenceRendersAsTheEmptyObject(t *testing.T) {
 
 func TestFooterDecisionEvidenceStoresADigestRatherThanTheDisplayedText(t *testing.T) {
 	in := commsauthz.Evidence{FooterDigest: "digest", FooterPreview: []string{"Company footer text"}, FooterFindings: []commsauthz.FooterFinding{{Kind: "objection_route"}}}
-	raw, err := evidenceJSON(in)
+	raw, err := evidenceJSON(in, "")
 	if err != nil {
 		t.Fatal(err)
 	}

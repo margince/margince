@@ -3137,6 +3137,8 @@ export const en = {
     "Your access could not be read. Reload the page to check it again.",
   "contact.attachRefused":
     "You can only read this contact. Ask its owner for write access.",
+  "record.attachRefused":
+    "You can only read this record. Ask its owner for write access.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
@@ -8673,6 +8675,9 @@ export const en = {
   "tasks.log.action": "Log what happened",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
+  "tasks.log.noRecord": "Log without a record",
+  "tasks.log.pickRecord": "Choose a record",
+  "tasks.log.back": "Back",
   "tasks.log.leftOpen":
     "The activity was logged. The task stays open until all files attach; retry to finish.",
   "tasks.log.completeFailed":
@@ -11847,6 +11852,21 @@ export const en = {
   "privacy.purposeDoiBadge": "Double opt-in",
   "privacy.purposesLoading": "Loading purposes…",
   "privacy.purposesEmpty": "No purposes registered yet.",
+  "privacy.purposeClass": "Class",
+  "privacy.purposeClass.businessCorrespondence": "Correspondence",
+  "privacy.purposeClass.transactional": "Transactional",
+  "privacy.purposeClass.marketing": "Marketing",
+  "privacy.purposeClass.phoneOutreach": "Phone outreach",
+  "privacy.purposeClass.undefined": "Not defined",
+  "privacy.purposeSends": "Sent in {days} days",
+  "privacy.purposeSendsSub":
+    "Each mail names its purpose and may say what kind of mail it is. Margince checks that against the record before it sends. These counts cover the last {days} days. Kind not borne out counts mail whose stated kind the record did not support, such as a newsletter sent as customer service.",
+  "privacy.purposeSendsLoading": "Counting sent mail…",
+  "privacy.purposeSendsEmpty":
+    "No mail named a purpose in the last {days} days.",
+  "privacy.purposeDisputed": "Kind not borne out",
+  "privacy.purposeUnknown": "No known purpose",
+  "privacy.purposeSendsTable": "Mail sent per purpose",
   "privacy.customerNotices": "Existing customers",
   "privacy.customerNoticesSub":
     "In Germany you may send advertising for similar products to a customer without consent, if they were told when you collected their address that they can object. Declare here where and when you told them. Customers who bought from that entity in that period then receive your newsletters with an opt-out link.",
@@ -19858,6 +19878,8 @@ export const en = {
   "filters.date.daysAgo": "Days ago",
   "filters.date.mode": "How the date is given",
   "filters.date.daysAgoCount": "{field}: days before today",
+  "filters.date.daysAgoInvalid":
+    "Enter a whole number of days from 0 to {max}.",
   "filters.saveListConfirm": "Save list",
   "filters.propose.label": "Describe the {records} you want",
   "filters.propose.hint":
@@ -19907,6 +19929,7 @@ export const en = {
   "lists.sharing.private": "Only me",
   "lists.sharing.team": "A team",
   "lists.sharing.workspace": "Everyone",
+  "lists.sharing.noTeamHint": "You are in no team.",
   "lists.sharingLabel": "Who can find it",
   "lists.sharingHint":
     "Sharing a list shows nobody a record they could not already see.",
@@ -20872,6 +20895,7 @@ export const en = {
   "worklist.band.build_pipeline": "Prospecting",
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",
+  "worklist.band.more": "More in your list",
   // A band holding nothing, said rather than left out. Each says what is
   // absent, because "nothing here" four times over tells a reader less than
   // one line naming what they are clear of.

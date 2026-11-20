@@ -162,12 +162,18 @@ The **Reason for contact** field says why you are writing. The line beside it sa
 
 A reply to their own message needs no reason. When you ask the assistant to move a meeting, such as "Termin verschieben", the draft picks **They asked for it**. **Met in person** shows only when you write from a contact or a lead, to their own address alone.
 
-Margince checks the email once, when you press **Send**. Nothing is checked while you write. The check reads your reason, the record and the law where each recipient lives. When it allows every recipient, the email is queued and the composer closes. When it does not, the email is not sent, and the bar above **Send** says why (below). Your text, recipients and attachments stay.
+Margince checks the email once, when you press **Send**. Nothing is checked while you write. The check reads your reason, the record and two laws. Rules on marketing follow the law where each recipient lives. Your reason to contact someone must hold there and where your own company is based.
+
+When the check allows every recipient, the email is queued and the composer closes. When it does not, the email is not sent, and the bar above **Send** says why (below). Your text, recipients and attachments stay.
 
 Some purposes that Margince knows, such as a security notice, are not offered here. A sender who could pick one could send marketing that looks like a security notice.
 
 ### Why can't I send an email to this contact?
-When Margince does not send an email, the bar above **Send** names the first reason. An example is "{address} objected to marketing.". The bar also names the law behind it, with a link to its text. With more than one reason, "{count} more findings" lists the other recipients and reasons. The recipients it names are marked in **To**, **Cc** and **Bcc**.
+When Margince does not send an email, the bar above **Send** names the first reason. An example is "{address} objected to marketing.". The bar also names the law behind it, with a link to its text. When both laws apply, it names both, the recipient's first: "(GDPR Art. 6(1); Law 91/2025/QH15 Art. 9)".
+
+Below the reason, the bar says where Margince takes the recipient to live, and where it read that, such as their employer's address. When that is wrong, open the place on the recipient in **To** and pick the right one for this message.
+
+With more than one reason, "{count} more findings" lists the other recipients and reasons. The recipients it names are marked in **To**, **Cc** and **Bcc**.
 
 - **Send anyway**: when your reason may lift every refusal, the bar asks **Why send this one message anyway?**. Write your reason and press **Send anyway**. This sends only this message and grants no permission for later ones. The recipient's choice stays as it is: the next message is refused again. Your name, your reason and the message are kept in a record that cannot be edited. Reps hold this right by default.
 - When the refusal cannot be lifted with a reason, the bar says "Edit the message or remove this recipient to send it." Examples are an address that does not take mail, or one on several records or none. Correct the address, merge the records or remove that recipient.

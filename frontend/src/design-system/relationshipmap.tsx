@@ -1,13 +1,17 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "./motion";
 import {
+  fitLabel,
+  type LaneHead,
   type Layout,
   layout,
   type MapEdge,
+  type MeasureText,
   type RelationshipMapModel,
   routeFor,
 } from "./relationshipmap.layout";
 import "./relationshipmap.css";
+import { useMapTextMeasures } from "./relationshipmap.measure";
 
 import { Panel } from "./relationshipmappanel";
 // The account's routes, drawn.
@@ -82,6 +86,7 @@ export function RelationshipMap({
   const [cursorId, setCursorId] = useState<string | null>(null);
   const focused = cursorId && order.includes(cursorId) ? cursorId : order[0];
   const svgRef = useRef<SVGSVGElement>(null);
+  const measures = useMapTextMeasures(svgRef);
   // What the cursor was when this render drew, so the effect below can tell a
   // keyboard move from a re-render and only chase the former.
   const moved = useRef(false);
@@ -215,14 +220,7 @@ export function RelationshipMap({
               ))}
             </g>
             {placement.heads.map((head) => (
-              <text
-                key={head.id}
-                className="rmap-lane t-eyebrow"
-                x={head.x}
-                y={head.y + 12}
-              >
-                {head.label}
-              </text>
+              <LaneHeading key={head.id} head={head} measure={measures.lane} />
             ))}
             {placement.placed.map((node) => (
               <Node
@@ -236,6 +234,7 @@ export function RelationshipMap({
                 faded={dimming && !related.has(node.id)}
                 tabbable={node.id === focused}
                 onPress={press}
+                measures={measures}
               />
             ))}
           </svg>
@@ -254,6 +253,20 @@ export function RelationshipMap({
         </div>
       </div>
     </div>
+  );
+}
+
+/** A lane's heading, cut to its column; a cut one names itself in full on hover. */
+function LaneHeading({
+  head,
+  measure,
+}: Readonly<{ head: LaneHead; measure: MeasureText | null }>) {
+  const shown = fitLabel(head.label, head.w, measure);
+  return (
+    <text className="rmap-lane t-eyebrow" x={head.x} y={head.y + 12}>
+      {shown}
+      {shown !== head.label && <title>{head.label}</title>}
+    </text>
   );
 }
 

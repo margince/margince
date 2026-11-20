@@ -3231,6 +3231,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
     "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
+  "record.attachRefused":
+    "Du kannst diesen Datensatz nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -8689,6 +8691,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.log.action": "Ergebnis erfassen",
   "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
+  "tasks.log.noRecord": "Ohne Datensatz erfassen",
+  "tasks.log.pickRecord": "Datensatz wählen",
+  "tasks.log.back": "Zurück",
   "tasks.log.leftOpen":
     "Die Aktivität wurde erfasst. Die Aufgabe bleibt offen, bis alle Dateien angehängt sind. Versuche es erneut.",
   "tasks.log.completeFailed":
@@ -11905,6 +11910,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
   "privacy.purposesEmpty": "Noch keine Zwecke registriert.",
+  "privacy.purposeClass": "Art",
+  "privacy.purposeClass.businessCorrespondence": "Korrespondenz",
+  "privacy.purposeClass.transactional": "Transaktional",
+  "privacy.purposeClass.marketing": "Werbung",
+  "privacy.purposeClass.phoneOutreach": "Telefonische Ansprache",
+  "privacy.purposeClass.undefined": "Nicht definiert",
+  "privacy.purposeSends": "Gesendet in {days} Tagen",
+  "privacy.purposeSendsSub":
+    "Jede Mail nennt ihren Zweck und kann sagen, welche Art Mail sie ist. Margince prüft das vor dem Senden an den Daten. Die Zahlen gelten für die letzten {days} Tage. „Art nicht belegt“ zählt Mails, deren genannte Art die Daten nicht stützen, etwa einen Newsletter, der als Kundenservice gesendet wurde.",
+  "privacy.purposeSendsLoading": "Gesendete Mails werden gezählt …",
+  "privacy.purposeSendsEmpty":
+    "In den letzten {days} Tagen hat keine Mail einen Zweck genannt.",
+  "privacy.purposeDisputed": "Art nicht belegt",
+  "privacy.purposeUnknown": "Kein bekannter Zweck",
+  "privacy.purposeSendsTable": "Gesendete Mails je Zweck",
   "privacy.customerNotices": "Bestandskunden",
   "privacy.customerNoticesSub":
     "In Deutschland darfst du Kunden ohne Einwilligung Werbung für ähnliche Produkte schicken, wenn du sie beim Erheben der Adresse auf ihr Widerspruchsrecht hingewiesen hast. Trage hier ein, wo und wann du den Hinweis gegeben hast. Kunden, die in diesem Zeitraum bei dieser Gesellschaft gekauft haben, erhalten dann deine Newsletter mit Abmeldelink.",
@@ -20064,6 +20084,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",
   "filters.date.daysAgoCount": "{field}: Tage vor heute",
+  "filters.date.daysAgoInvalid":
+    "Gib eine ganze Zahl von 0 bis {max} Tagen ein.",
   "filters.saveListConfirm": "Liste speichern",
   "filters.propose.label": "Beschreibe die {records}, die du suchst",
   "filters.propose.hint":
@@ -20113,6 +20135,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.sharing.private": "Privat",
   "lists.sharing.team": "Ein Team",
   "lists.sharing.workspace": "Alle",
+  "lists.sharing.noTeamHint": "Du bist in keinem Team.",
   "lists.sharingLabel": "Wer sie finden kann",
   "lists.sharingHint":
     "Wer eine Liste sieht, sieht dadurch keinen Datensatz, den er nicht schon sehen durfte.",
@@ -21160,6 +21183,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.band.build_pipeline": "Akquise",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
+  "worklist.band.more": "Weiteres in deiner Liste",
   "worklist.disposition.verb.snooze": "Zurückstellen",
   "worklist.disposition.snoozeForDays_one": "{value} Tag zurückstellen",
   "worklist.disposition.snoozeForDays_other": "{value} Tage zurückstellen",

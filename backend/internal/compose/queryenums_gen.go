@@ -438,6 +438,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/confirm-submissions": {
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/consent-purposes/send-counts": {
+		{Name: "days", Minimum: 1},
+	},
 	"GET /v1/contacts": {
 		{Name: "limit", Minimum: 1},
 	},

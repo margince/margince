@@ -401,3 +401,8 @@
     gap: var(--space-1);
   }
 }
+
+/* A goal's reason is typed text and may be one unbroken run. */
+.goal-reason-text {
+  overflow-wrap: anywhere;
+}

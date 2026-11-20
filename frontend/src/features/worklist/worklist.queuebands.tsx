@@ -34,9 +34,6 @@ export function QueueBand<RowProps>({
   // The row list is passed IN rather than imported: it lives in the screen
   // beside the props it needs, and reaching back for it would make this file
   // and that one import each other.
-  // The row list is passed IN rather than imported: it lives in the screen
-  // beside the props it needs, and reaching back for it would make this file
-  // and that one import each other.
   rows: (props: RowProps & { items: readonly WorklistItem[] }) => ReactNode;
   rowProps: RowProps;
 }>) {
