@@ -20,7 +20,7 @@ import (
 // delivered. A shared mailbox's import takes its own connection's company. A
 // seat's takes the live connections named in delivered, only when all have a
 // company and they agree on one. Anything unclear leaves the import unscoped.
-// The data task and recordImportTx both use it, so they cannot drift.
+// The data task and recordImportTx both call it.
 func deliveringEntitySQL(row, delivered string) string {
 	return `coalesce(
 	(SELECT c.legal_entity_id FROM capture_connection c WHERE c.id = ` + row + `.connection_id),
