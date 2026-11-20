@@ -290,3 +290,17 @@ export function invalidateAfterEdge(
     queryClient.invalidateQueries({ queryKey: worklistKey });
   }
 }
+
+/**
+ * mayRemoveEdge is whether a seat may take an edge of this kind off. A deal
+ * stakeholder comes off with the grant that put it on; every other kind needs
+ * delete. It mirrors removalGrants in
+ * backend/internal/modules/contacts/relationshiparchive.go, and the anchor's
+ * own refusal still disables the verb with its reason.
+ */
+export function mayRemoveEdge(
+  kind: string,
+  grants: Readonly<{ create: boolean; delete: boolean }>,
+): boolean {
+  return grants.delete || (kind === "deal_stakeholder" && grants.create);
+}

@@ -21135,6 +21135,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Deal hat noch kein Unternehmen. Trage es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
+  "deal.committee.changeOnly": "Stakeholder ändern",
+  "deal.committee.removeOnly": "Stakeholder entfernen",
   "deal.links.card": "Verknüpfungen",
   "deal.links.add": "Verknüpfung hinzufügen",
   "deal.links.none": "Dieser Deal ist mit keinem anderen Datensatz verknüpft.",

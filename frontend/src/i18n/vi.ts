@@ -20591,6 +20591,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Deal này chưa có công ty. Thêm công ty trong “Sửa chi tiết” để đặt lịch họp.",
   "deal.committee.card": "Hội đồng mua",
   "deal.committee.change": "Sửa hoặc gỡ bên liên quan",
+  "deal.committee.changeOnly": "Sửa bên liên quan",
+  "deal.committee.removeOnly": "Gỡ bên liên quan",
   "deal.links.card": "Liên kết",
   "deal.links.add": "Thêm liên kết",
   "deal.links.none": "Deal này chưa liên kết với bản ghi nào khác.",

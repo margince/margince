@@ -6320,6 +6320,8 @@ export const en = {
     "This deal has no company yet. Add one under Edit details to book a meeting.",
   "deal.committee.card": "Committee",
   "deal.committee.change": "Change or remove stakeholders",
+  "deal.committee.changeOnly": "Change stakeholders",
+  "deal.committee.removeOnly": "Remove stakeholders",
   "deal.links.card": "Links",
   "deal.links.add": "Add link",
   "deal.links.none": "This deal is not linked to another record.",

@@ -44,7 +44,11 @@ import {
   scopeCopy,
   scopeQueryKey,
 } from "./relationships";
-import { dateRangeParts, RANGE_DASH } from "./relationships.edges";
+import {
+  dateRangeParts,
+  mayRemoveEdge,
+  RANGE_DASH,
+} from "./relationships.edges";
 
 // Each date is held whole, since an ISO date breaks at its hyphens, so the
 // range breaks only after its dash.
@@ -144,12 +148,16 @@ export function RelationshipRows({
   const datesOf = (rel: Relationship) =>
     dateRange(rel, t, locale, zone, employmentZone);
   // The object half of each verb's gate, asked as the server asks it
-  // (relationship:create on an add, :update on an edit, :delete on a
+  // (relationship:create on an add, :update on an edit, mayRemoveEdge on a
   // removal). A verb the role holds no grant for is withheld outright — there
   // is no fact about the record to report — where the anchor's refusal above
   // keeps the verb and says why.
   const canUpdate = useCanWrite("relationship", "update");
-  const canDelete = useCanWrite("relationship", "delete");
+  const grants = {
+    create: useCanWrite("relationship", "create"),
+    delete: useCanWrite("relationship", "delete"),
+  };
+  const canRemove = (rel: Relationship) => mayRemoveEdge(rel.kind, grants);
   const query = useQuery({
     queryKey: scopeQueryKey(scope),
     queryFn: () => fetchRelationships(scope),
@@ -213,7 +221,7 @@ export function RelationshipRows({
   // trailing cell and the stacked block's foot. Two copies would be two
   // versions of a hard DELETE the day either one is touched.
   const verbsFor = (rel: Relationship) =>
-    canUpdate || canDelete ? verbBar(rel) : null;
+    canUpdate || canRemove(rel) ? verbBar(rel) : null;
   const verbBar = (rel: Relationship) => (
     <div
       className={
@@ -265,7 +273,7 @@ export function RelationshipRows({
           recordKey="relationship"
         />
       )}
-      {canDelete && (
+      {canRemove(rel) && (
         <Button
           variant="danger"
           reasonId={refusedReasonId}

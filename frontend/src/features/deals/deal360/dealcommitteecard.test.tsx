@@ -352,14 +352,76 @@ describe("the deal's committee card", () => {
     );
   });
 
-  // A reader who may neither change nor remove an edge is offered no fold.
-  it("offers no change for a reader without the grants", async () => {
-    stubFetch(["read", "create"]);
+  // The Member role holds create and update but not delete. The seat that
+  // added a stakeholder takes it off again, and the fold names both verbs.
+  it("lets a seat that may add a stakeholder remove one without the delete grant", async () => {
+    const deleted: string[] = [];
+    stubFetch(["read", "create", "update"], [], deleted);
+    const user = userEvent.setup();
     draw(coverage());
-    await screen.findByText("Mai Trần");
+    await user.click(
+      await screen.findByText(translate("en", "deal.committee.change")),
+    );
+    await user.click(await screen.findByTestId("remove-relationship"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: translate("en", "rel.remove"),
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(deleted).toEqual(["/v1/relationships/rel-1"]),
+    );
+  });
+
+  // The fold promises only the verbs its rows offer.
+  it("names the fold for edit alone when the seat may not remove", async () => {
+    stubFetch(["read", "update"]);
+    const user = userEvent.setup();
+    draw(coverage());
+    await user.click(
+      await screen.findByText(translate("en", "deal.committee.changeOnly")),
+    );
+    expect(
+      await screen.findByRole("button", {
+        name: translate("en", "rel.editStakeholder"),
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("remove-relationship")).toBeNull();
     expect(
       screen.queryByText(translate("en", "deal.committee.change")),
     ).toBeNull();
+  });
+
+  it("names the fold for removal alone when the seat may not edit", async () => {
+    stubFetch(["read", "create"]);
+    const user = userEvent.setup();
+    draw(coverage());
+    await user.click(
+      await screen.findByText(translate("en", "deal.committee.removeOnly")),
+    );
+    expect(
+      await screen.findByTestId("remove-relationship"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: translate("en", "rel.editStakeholder"),
+      }),
+    ).toBeNull();
+  });
+
+  // A reader who may neither change nor remove an edge is offered no fold.
+  it("offers no change for a reader without the grants", async () => {
+    stubFetch(["read"]);
+    draw(coverage());
+    await screen.findByText("Mai Trần");
+    for (const key of [
+      "deal.committee.change",
+      "deal.committee.changeOnly",
+      "deal.committee.removeOnly",
+    ] as const) {
+      expect(screen.queryByText(translate("en", key))).toBeNull();
+    }
   });
 
   it("names who talks to which seat, and the seat nobody has reached", async () => {

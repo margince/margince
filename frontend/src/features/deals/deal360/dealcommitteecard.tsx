@@ -5,10 +5,12 @@ import type { components } from "../../../api/schema";
 import { useRecordAssignments } from "../../../components/recordassignments.queries";
 import { RelationshipRows } from "../../../components/relationshiprows";
 import { AddRelationshipAction } from "../../../components/relationships";
+import { mayRemoveEdge } from "../../../components/relationships.edges";
 import { Disclosure } from "../../../design-system/disclosure";
 import { OverviewCard } from "../../../design-system/overviewcard";
 import { activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
+import type { MessageKey } from "../../../i18n/en";
 import { useCanWrite } from "../../../lib/capability";
 import { useMemberName } from "../../../lib/membernames";
 import { useViewerZone } from "../../../lib/viewerzone";
@@ -26,8 +28,9 @@ type DealCoverage = components["schemas"]["DealCoverage"];
  * fills it, and each buyer seat opens its contact.
  *
  * A reader who may change or remove a stakeholder finds each edge under a
- * fold below the committee, with the same Edit and Remove the relationship
- * panel offers everywhere else. A seat stays a link to its contact.
+ * fold below the committee. It has the Edit and Remove the relationship panel
+ * offers elsewhere. Whoever may add a stakeholder may remove one. A seat stays
+ * a link to its contact.
  */
 export function DealCommitteeCard({
   dealId,
@@ -55,11 +58,15 @@ export function DealCommitteeCard({
   roleLabel: (role: string) => string;
 }>) {
   const t = useT();
-  // Both asked on every render: hooks run in one order, so no short circuit.
-  const canCreate = useCanWrite("relationship", "create") && canWrite;
+  // All asked on every render: hooks run in one order, so no short circuit.
+  const mayCreate = useCanWrite("relationship", "create");
   const canUpdate = useCanWrite("relationship", "update");
-  const canDelete = useCanWrite("relationship", "delete");
-  const canChange = (canUpdate || canDelete) && canWrite;
+  const canRemove = mayRemoveEdge("deal_stakeholder", {
+    create: mayCreate,
+    delete: useCanWrite("relationship", "delete"),
+  });
+  const canCreate = mayCreate && canWrite;
+  const changeSummary = committeeChangeSummary(canUpdate, canRemove);
   const { locale } = useLocale();
   const zone = useViewerZone();
   const assignments = useRecordAssignments("deal", dealId);
@@ -117,8 +124,8 @@ export function DealCommitteeCard({
       {drawn && (
         <CommitteeLines lines={drawn.lines} unreached={drawn.unreached} />
       )}
-      {canChange && !withheld && (
-        <Disclosure summary={t("deal.committee.change")}>
+      {changeSummary && canWrite && !withheld && (
+        <Disclosure summary={t(changeSummary)}>
           <RelationshipRows
             scope={{ deal_id: dealId }}
             refusedReasonId={refusedReasonId}
@@ -128,4 +135,19 @@ export function DealCommitteeCard({
       )}
     </OverviewCard>
   );
+}
+
+// The fold's name says only the verbs the rows inside it offer: a seat that may
+// edit but not remove is not promised a Remove.
+function committeeChangeSummary(
+  canUpdate: boolean,
+  canRemove: boolean,
+): MessageKey | undefined {
+  if (canUpdate && canRemove) {
+    return "deal.committee.change";
+  }
+  if (canUpdate) {
+    return "deal.committee.changeOnly";
+  }
+  return canRemove ? "deal.committee.removeOnly" : undefined;
 }

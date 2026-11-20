@@ -17,8 +17,31 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// removalGrants are the relationship grants that admit taking an edge of kind
+// off. A deal stakeholder comes off with the grant that put it on. So whoever
+// may seat a contact on a deal they may write may also unseat them. Every other
+// kind needs delete. frontend/src/components/relationships.edges.tsx mirrors it.
+func removalGrants(kind string) []principal.Action {
+	if kind == dealStakeholderKind {
+		return []principal.Action{principal.ActionDelete, principal.ActionCreate}
+	}
+	return []principal.Action{principal.ActionDelete}
+}
+
+// requireAnyRemovalGrant refuses, before any read, a seat that may remove no
+// kind of edge at all.
+func requireAnyRemovalGrant(ctx context.Context) error {
+	return auth.RequireAny(ctx, "relationship", removalGrants(dealStakeholderKind)...)
+}
+
+// requireRemovalGrant is the relationship grant for removing one stored edge
+// of kind. The anchor's update grant and row authority are asked beside it.
+func requireRemovalGrant(ctx context.Context, kind string) error {
+	return auth.RequireAny(ctx, "relationship", removalGrants(kind)...)
+}
+
 func (s *Store) archiveRelationshipTx(ctx context.Context, tx pgx.Tx, id ids.UUID, ifVersion *int64, evidence map[string]any) (relationshipRow, error) {
-	if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
+	if err := requireAnyRemovalGrant(ctx); err != nil {
 		return relationshipRow{}, err
 	}
 	var out relationshipRow
@@ -33,6 +56,9 @@ func (s *Store) archiveRelationshipTx(ctx context.Context, tx pgx.Tx, id ids.UUI
 		return relationshipRow{}, err
 	}
 	if err := refuseGenericProjectCompany(current.Kind); err != nil {
+		return relationshipRow{}, err
+	}
+	if err := requireRemovalGrant(ctx, current.Kind); err != nil {
 		return relationshipRow{}, err
 	}
 	anchorObject, _ := relationshipAnchor(current.Kind)
