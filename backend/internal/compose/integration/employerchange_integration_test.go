@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/employerchange"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -141,8 +142,8 @@ func TestAcceptingMovesTheEmployerAndKeepsTheHistory(t *testing.T) {
 	if want := f.employedAt.Add(30 * time.Second).UTC().Format(time.DateOnly); oldStatus != "former" || endedOn != want || oldPrimary {
 		t.Errorf("Oldco employment is %s, ended %q, primary %v; want former, ended %s, not primary", oldStatus, endedOn, oldPrimary, want)
 	}
-	if n := f.e.WsCount(t, `SELECT count(*) FROM relationship WHERE contact_id = $1 AND company_id = $2
-		AND is_current_primary AND archived_at IS NULL AND ended_at IS NULL`, f.contact, f.newco); n != 1 {
+	if n := f.e.WsCount(t, `SELECT count(*) FROM relationship r WHERE r.contact_id = $1 AND r.company_id = $2 AND `+
+		employment.LiveCurrentPrimarySQL("r"), f.contact, f.newco); n != 1 {
 		t.Errorf("%d current primary Newco employments, want 1", n)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'relationship'

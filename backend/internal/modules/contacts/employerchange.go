@@ -72,6 +72,12 @@ func (s *Store) offerEmployerChangeTx(ctx context.Context, tx pgx.Tx, signal emp
 	if s.employerChanges == nil || signal.activity.IsZero() {
 		return nil
 	}
+	// The question first: most mail comes from the employer on record, and
+	// that answer costs one statement.
+	change, found, err := readEmployerChange(ctx, tx, signal)
+	if err != nil || !found {
+		return err
+	}
 	if signal.domain != "" {
 		ours, err := s.domainNamesNoEmployer(ctx, tx, signal.domain)
 		if err != nil || ours {
@@ -79,10 +85,6 @@ func (s *Store) offerEmployerChangeTx(ctx context.Context, tx pgx.Tx, signal emp
 		}
 	}
 	if seat, err := contactIsSeatTx(ctx, tx, signal.contact.UUID); err != nil || seat {
-		return err
-	}
-	change, found, err := readEmployerChange(ctx, tx, signal)
-	if err != nil || !found {
 		return err
 	}
 	change.Domain, change.Signature = signal.domain, signal.signature
