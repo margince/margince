@@ -316,7 +316,7 @@ func writeAICertGlossary(page *strings.Builder) {
 	page.WriteString("| Column | What it says |\n|---|---|\n")
 	page.WriteString("| Quality | Who scores how good a test case's answers are: `judge`, a second model, or `checked mechanically`, where the case's own check sees everything a judge would and no judge is asked. |\n")
 	page.WriteString("| Runs, Passed | How many times the model was asked, and how often it did what the test case wanted. |\n")
-	page.WriteString("| Reliability | Passed divided by Runs, then its Wilson interval in brackets. Each end is a one-sided 90% bound, the bounds the verdict reads. Two results differ only where their intervals do not overlap. |\n")
+	page.WriteString("| Reliability | Passed divided by Runs, then its Wilson interval in brackets, from the formula and z the verdict uses. A band reads the lower end of a site's pooled rate and the upper end of each case alone. A binding or family row is graded by no band. Treat a change as real only when the intervals do not overlap or the band changes. |\n")
 	page.WriteString("| `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back. This is a different split from pass/fail. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |\n")
 	page.WriteString("| Scenarios | How many of the site's test cases the saved result still covers, out of how many the site has today. |\n")
 	page.WriteString("| Record p50, p95 | How long answers took: the middle one, and a slow one (only 1 in 20 was slower). Both belong to the whole test run, not to the single site whose table they appear in, so a run covering several sites shows the same pair on each. |\n")

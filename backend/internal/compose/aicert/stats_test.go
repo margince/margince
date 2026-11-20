@@ -56,19 +56,18 @@ func TestIdenticalScoresStillCarryTheJudgesDoubt(t *testing.T) {
 	}
 }
 
-// A printed interval is the verdict's own: every K of N up to 30 runs reads
-// the same bounds through ReliabilityBounds as through wilsonBounds.
-func TestTheReliabilityIntervalIsTheVerdictsWilsonBounds(t *testing.T) {
-	for runs := 0; runs <= 30; runs++ {
-		for passed := 0; passed <= runs; passed++ {
-			wantLower, wantUpper := wilsonBounds(passed, runs)
-			lower, upper := ReliabilityBounds(passed, runs)
-			if lower != wantLower || upper != wantUpper {
-				t.Errorf("%d of %d: printed [%v, %v], verdict reads [%v, %v]", passed, runs, lower, upper, wantLower, wantUpper)
-			}
+// The printed interval against hand-computed Wilson values at the verdict's z.
+func TestTheReliabilityCellPrintsTheWilsonInterval(t *testing.T) {
+	for _, c := range []struct {
+		passed, runs int
+		want         string
+	}{
+		{2, 3, "0.67 [0.32, 0.89]"},
+		{27, 30, "0.90 [0.81, 0.95]"},
+		{0, 0, Unmeasured},
+	} {
+		if got := ReliabilityCell(c.passed, c.runs); got != c.want {
+			t.Errorf("%d of %d prints %q, want %q", c.passed, c.runs, got, c.want)
 		}
-	}
-	if got := ReliabilityCell(0, 0); got != Unmeasured {
-		t.Errorf("no runs prints %q, want %q: zero runs is not a reliability of zero", got, Unmeasured)
 	}
 }

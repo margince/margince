@@ -4,7 +4,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -187,10 +186,6 @@ func TestReadinessReportPrintsReliabilityWithTheVerdictsInterval(t *testing.T) {
 
 	out := renderReadiness(aicert.Census{Sites: sites}, map[string]string{"rate_extract": currentStamp}, nil, records)
 
-	lower, upper := aicert.ReliabilityBounds(2, 3)
-	if fmt.Sprintf("%.2f %.2f", lower, upper) != "0.32 0.89" {
-		t.Fatalf("the Wilson interval on 2 of 3 is [%.4f, %.4f], want [0.32, 0.89] at one-sided 90%%", lower, upper)
-	}
 	if row := rowFor(t, out, "rate_extract/fx"); !strings.Contains(row, "0.67 [0.32, 0.89]") {
 		t.Errorf("the row does not print 2 of 3 as its point and interval 0.67 [0.32, 0.89]: %q", row)
 	}

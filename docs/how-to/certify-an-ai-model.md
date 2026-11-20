@@ -327,9 +327,9 @@ is in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go): ed
 `gradingRule`, and generate again.
 
 `reliability` is the share of runs with a HardPass. When the model that served a run is not the same across runs
-or calls, the record **does not count**. Reports print it with its range, as `0.67 [0.32, 0.89]` for 2 of 3 runs.
-Each end is a one-sided 90% bound from `wilsonBounds`, as the verdict reads it. A change between two records
-counts only when the ranges do not meet, or the band changes. Otherwise it is `not measurable at this sample`.
+or calls, the record **does not count**. Reports print it with its range, as `0.67 [0.32, 0.89]` for 2 of 3 runs,
+from `wilsonBounds`, which the verdict also uses. Count a change as real only when the two ranges do not meet or
+the band changes. Otherwise call it "not measurable at this sample".
 
 A run is not always one model call: a site may try again, fall back, or turn a tool loop. All that the
 run is judged on and paid for is added up across all of those calls. One degraded call degrades the

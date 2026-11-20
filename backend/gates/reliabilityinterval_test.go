@@ -11,10 +11,13 @@ package gates
 // as a bare point invites quoting a difference inside the sampling noise.
 
 import (
+	"bytes"
+	"encoding/json"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"go/types"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -29,6 +32,26 @@ const (
 	reliabilityCell  = "ReliabilityCell"
 )
 
+var (
+	intervalScanRoots = []string{".", filepath.Join(repoRoot, "extensions")}
+	// bareReliabilityWaivers are files that print a pass rate without its interval.
+	bareReliabilityWaivers = gatekit.Waive(map[string]string{
+		"internal/compose/mcptoolcoveragepage_test.go": "the MCP coverage rate feeds no Wilson-graded verdict, " +
+			"and package compose cannot import aicert because aicert imports compose",
+	})
+	// knownReliabilityPrinters each print a reliability today, so a scan that
+	// stops seeing them has gone blind rather than clean.
+	knownReliabilityPrinters = []string{
+		aicertDir + "/reportcmd/report.go",
+		aicertDir + "/e2e_test.go",
+		aicertDir + "/certificationpage_test.go",
+		aicertDir + "/certificationfamily_test.go",
+	}
+	reliabilityPages = []string{
+		repoRoot + "/docs/reference/ai-certification.json",
+	}
+)
+
 // printingCalls are the calls that put text in front of a reader. Errorf and
 // Fatalf are left out: a failing test's message is a diagnosis, not a report.
 var printingCalls = map[string]bool{
@@ -40,13 +63,13 @@ var printingCalls = map[string]bool{
 func TestOnePassRateIntervalFormula(t *testing.T) {
 	t.Parallel()
 	owners := 0
-	eachGoFileUnder(t, []string{".", filepath.Join(repoRoot, "extensions")}, func(path string, file *ast.File) {
+	eachGoFileUnder(t, intervalScanRoots, func(path string, file *ast.File) {
 		for _, fn := range binomialVarianceFuncs(file) {
 			if path == wilsonOwnerFile && fn == wilsonOwnerFunc {
 				owners++
 				continue
 			}
-			t.Errorf("%s: %s computes a binomial interval of its own; call aicert.ReliabilityBounds, "+
+			t.Errorf("%s: %s computes a binomial interval of its own; call aicert.ReliabilityIntervalOf, "+
 				"which reads the verdict's %s", path, fn, wilsonOwnerFunc)
 		}
 	})
@@ -58,17 +81,97 @@ func TestOnePassRateIntervalFormula(t *testing.T) {
 
 func TestCertificationReliabilityPrintsWithItsInterval(t *testing.T) {
 	t.Parallel()
-	cellCalls := 0
-	eachGoFileUnder(t, []string{aicertDir}, func(path string, file *ast.File) {
+	cellsByFile := map[string]int{}
+	eachGoFileUnder(t, intervalScanRoots, func(path string, file *ast.File) {
 		bare, cells := bareReliabilityPrints(file)
-		cellCalls += cells
-		for _, pos := range bare {
+		cellsByFile[path] += cells
+		for _, pos := range unwaivedPrints(t, path, bare) {
 			t.Errorf("%s: prints a reliability without its interval; print aicert.ReliabilityCell(passed, runs)",
 				gatekit.SourceFileSet().Position(pos))
 		}
 	})
-	if cellCalls == 0 {
-		t.Fatalf("no call to %s under %s: the scan read nothing", reliabilityCell, aicertDir)
+	bareReliabilityWaivers.AssertAllMatched(t)
+	for _, printer := range knownReliabilityPrinters {
+		if cellsByFile[printer] == 0 {
+			t.Errorf("%s makes no call to %s: the scan missed a known printer, or it now prints another way",
+				printer, reliabilityCell)
+		}
+	}
+}
+
+// TestEveryPublishedReliabilityCarriesItsInterval reads the generated JSON a
+// tool consumes. Each non-null reliability there has a reliability_interval.
+func TestEveryPublishedReliabilityCarriesItsInterval(t *testing.T) {
+	t.Parallel()
+	for _, page := range reliabilityPages {
+		raw, err := os.ReadFile(page)
+		if err != nil {
+			t.Fatalf("reading %s: %v", page, err)
+		}
+		measured, missing := countReliabilityIntervals(t, page, raw)
+		if measured == 0 {
+			t.Errorf("%s holds no measured reliability: the scan read nothing", page)
+		}
+		if missing > 0 {
+			t.Errorf("%s: %d of %d measured reliabilities carry no reliability_interval; regenerate it",
+				page, missing, measured)
+		}
+	}
+}
+
+// countReliabilityIntervals walks a JSON value and counts the objects with a
+// non-null reliability, and those of them without an interval.
+func countReliabilityIntervals(t *testing.T, page string, raw json.RawMessage) (measured, missing int) {
+	t.Helper()
+	var children []json.RawMessage
+	switch trimmed := bytes.TrimSpace(raw); {
+	case bytes.HasPrefix(trimmed, []byte("{")):
+		var object map[string]json.RawMessage
+		if err := json.Unmarshal(trimmed, &object); err != nil {
+			t.Fatalf("parsing %s: %v", page, err)
+		}
+		if isMeasured(object["reliability"]) {
+			measured++
+			if !isMeasured(object["reliability_interval"]) {
+				missing++
+			}
+		}
+		for _, child := range object {
+			children = append(children, child)
+		}
+	case bytes.HasPrefix(trimmed, []byte("[")):
+		if err := json.Unmarshal(trimmed, &children); err != nil {
+			t.Fatalf("parsing %s: %v", page, err)
+		}
+	}
+	for _, child := range children {
+		m, x := countReliabilityIntervals(t, page, child)
+		measured, missing = measured+m, missing+x
+	}
+	return measured, missing
+}
+
+func isMeasured(value json.RawMessage) bool {
+	return len(value) > 0 && string(value) != "null"
+}
+
+// unwaivedPrints drops the bare prints of a waived file, asking the waiver only
+// about a file that offends.
+func unwaivedPrints(t *testing.T, path string, bare []token.Pos) []token.Pos {
+	t.Helper()
+	if len(bare) == 0 || bareReliabilityWaivers.Waived(t, path) {
+		return nil
+	}
+	return bare
+}
+
+// A bare print in any other root compose file still fails: the waiver names
+// one file, never its package.
+func TestTheBareReliabilityWaiverCoversOneFile(t *testing.T) {
+	t.Parallel()
+	bare, _ := bareReliabilityPrints(parseGateSnippet(t, "planted", `fmt.Sprintf("%.2f", m.Reliability)`))
+	if got := unwaivedPrints(t, "internal/compose/plantedpage_test.go", bare); len(got) != 1 {
+		t.Errorf("a bare print in another compose file reports %d finding(s), want 1", len(got))
 	}
 }
 
@@ -80,9 +183,10 @@ func TestTheIntervalGatesSeeEachShape(t *testing.T) {
 		body string
 		want int
 	}{
-		"wald":             {`p := 0.5; _ = math.Sqrt(p * (1 - p) / n)`, 1},
-		"reversed float":   {`p := 0.5; _ = (1.0 - p) * p`, 1},
-		"other operands":   {`p, q := 0.5, 0.2; _ = p * (1 - q)`, 0},
+		"wald":           {`p := 0.5; _ = math.Sqrt(p * (1 - p) / n)`, 1},
+		"reversed float": {`p := 0.5; _ = (1.0 - p) * p`, 1},
+		"other operands": {`p, q := 0.5, 0.2; _ = p * (1 - q)`, 0},
+		// A known blind spot, pinned so a change to it is a decision.
 		"named complement": {`p := 0.5; q := 1 - p; _ = p * q`, 0},
 	}
 	for name, c := range formulas {

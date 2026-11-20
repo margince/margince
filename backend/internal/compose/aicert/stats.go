@@ -30,21 +30,32 @@ func wilsonBounds(passed, runs int) (lower, upper float64) {
 	return (centre - radius) / denom, (centre + radius) / denom
 }
 
-// ReliabilityBounds is the Wilson interval the verdict reads on passed of runs,
-// so a printed interval and the band it sits next to cannot disagree.
-func ReliabilityBounds(passed, runs int) (lower, upper float64) {
-	return wilsonBounds(passed, runs)
+// ReliabilityInterval is the Wilson interval on a pass rate, from the formula
+// and z the verdict uses. A band reads the lower end of a site's pooled rate
+// and the upper end of each case alone. A pooled row's interval grades nothing.
+type ReliabilityInterval struct {
+	Lower float64 `json:"lower"`
+	Upper float64 `json:"upper"`
+}
+
+// ReliabilityIntervalOf is the interval on passed of runs, nil with no runs.
+func ReliabilityIntervalOf(passed, runs int) *ReliabilityInterval {
+	if runs == 0 {
+		return nil
+	}
+	lower, upper := wilsonBounds(passed, runs)
+	return &ReliabilityInterval{Lower: lower, Upper: upper}
 }
 
 // ReliabilityCell is how every report prints a reliability: the point with its
 // Wilson interval, as "0.67 [0.32, 0.89]". A point alone invites comparing two
 // records inside their sampling noise. Zero runs prints Unmeasured.
 func ReliabilityCell(passed, runs int) string {
-	if runs == 0 {
+	interval := ReliabilityIntervalOf(passed, runs)
+	if interval == nil {
 		return Unmeasured
 	}
-	lower, upper := ReliabilityBounds(passed, runs)
-	return fmt.Sprintf("%.2f [%.2f, %.2f]", float64(passed)/float64(runs), lower, upper)
+	return fmt.Sprintf("%.2f [%.2f, %.2f]", float64(passed)/float64(runs), interval.Lower, interval.Upper)
 }
 
 // meanBounds is the t interval on the mean of xs, with its small-n quantile and
