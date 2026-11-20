@@ -14941,7 +14941,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.rule.pack": "Regelwerk {rule}",
   "jurisdiction.documents.title": "Dokumente",
   "jurisdiction.documents.empty":
-    "Das Paket dieses Rechtsraums enthält keine Dokumente.",
+    "Für dieses Land sind keine integrierten Compliance-Vorlagen verfügbar.",
   "jurisdiction.documents.emptyUnset":
     "Es gibt keine Dokumente zum Anzeigen, da kein Rechtsraum festgelegt ist.",
   "jurisdiction.documents.read": "Lesen",

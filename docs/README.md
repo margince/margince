@@ -38,14 +38,10 @@ The one tree here for the user of Margince, not the developer. It has no code an
   that can answer a question, and to measure it, read
   [how-to/update-the-handbook.md](how-to/update-the-handbook.md).
 
-### Compliance: the German documents a customer signs
+### Compliance documents for mail capture
 
-An installation needs these documents before it may read the mail of its own team in Germany. The
-customer signs them, and Margince does not check them.
-[handbook/compliance.md](handbook/compliance.md) says why.
-
-- [compliance/README.md](compliance/README.md): the list, with each German document next to its
-  English copy. `extensions/eu` ships them, and only the German text is the legal one.
+[The list of compliance documents](compliance/README.md) links to the built-in forms.
+[The handbook](handbook/compliance.md) shows where to find them in Settings.
 
 ### Attacks: what we must do as the maker
 
