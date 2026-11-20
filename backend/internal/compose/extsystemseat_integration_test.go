@@ -42,8 +42,8 @@ func (s *systemReadEnv) serviceSeat(t *testing.T, grants string) ids.UUID {
 func (s *systemReadEnv) company(t *testing.T, name string, owner ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	s.WsExec(t, `INSERT INTO company (id, display_name, legal_name, source, captured_by, owner_id, source_system, source_id)
-		VALUES ($1, $2, $2 || ' AG', 'system', 'system', $3, 'erp', $4)`, id, name, owner, "c-"+name)
+	s.WsExec(t, `INSERT INTO company (id, display_name, legal_name, source, captured_by, owner_id, visibility, source_system, source_id)
+		VALUES ($1, $2, $2 || ' AG', 'system', 'system', $3, 'owner', 'erp', $4)`, id, name, owner, "c-"+name)
 	return id
 }
 

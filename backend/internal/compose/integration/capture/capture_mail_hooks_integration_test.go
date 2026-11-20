@@ -89,10 +89,14 @@ func TestADealHookDealDoesNotSurviveAColleaguesDecline(t *testing.T) {
 	if status, _ := decline(w.ctx, t, e, mail, dealBody(chosen)); status != http.StatusOK {
 		t.Fatalf("the decline answered %d", status)
 	}
-	wantDeals(t, e, "hook2@acme.example")
-	// Core's own rule files the other deal. The declined one stays off.
+	// The decline keeps the link and marks it unrelated.
+	wantMark(t, e, "hook2@acme.example", chosen, "unrelated/human")
+	// Core's own rule files the other deal. The declined one stays marked.
 	env.sync(t, raw)
-	wantDeals(t, e, "hook2@acme.example", operations)
+	if !slices.Contains(dealsOf(t, e, "hook2@acme.example"), operations) {
+		t.Fatal("the mail was not filed on the other deal")
+	}
+	wantMark(t, e, "hook2@acme.example", chosen, "unrelated/human")
 }
 
 // A parties hook that names a company core did not derive moves the rule to
@@ -244,7 +248,7 @@ func TestADealHookChangeWithoutADeclaredReasonIsIgnored(t *testing.T) {
 }
 
 // A parties hook cannot name a company the mailbox owner may not see. The
-// answer is ignored, and no deal of that company is reached through it.
+// answer is ignored and the trace says so. No deal of that company is reached.
 func TestAPartiesHookCannotNameACompanyTheMailboxOwnerCannotSee(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -270,7 +274,7 @@ func TestAPartiesHookCannotNameACompanyTheMailboxOwnerCannotSee(t *testing.T) {
 	if slices.Contains(dealsOf(t, e, "hook9@acme.example"), hiddenDeal) {
 		t.Fatal("the mail was filed on a deal of a company its mailbox owner cannot see")
 	}
-	wantFiling(t, e, activityOf(t, e, "hook9@acme.example"), "core", "linked", "sole_open_deal")
+	wantFiling(t, e, activityOf(t, e, "hook9@acme.example"), "deal-rules", "ignored", "other_account")
 }
 
 // wantFiling asserts what the mail's capture trace says about who filed it.
