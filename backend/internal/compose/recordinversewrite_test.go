@@ -82,9 +82,8 @@ func TestDoneForYouHoldsTheArchiveRulesGrantForAnArchiveUndo(t *testing.T) {
 	}
 	for name, want := range map[string]bool{"edit": true, "read": false} {
 		grant := principal.ObjectGrant{Read: true, Update: name == "edit"}
-		held, err := undoGrants{}.holds(seat(grant), archive)
-		if err != nil || held != want {
-			t.Errorf("a seat that may %s deals holds the undo = %v (%v), want %v", name, held, err, want)
+		if held := (undoGrants{}).holds(seat(grant), archive); held != want {
+			t.Errorf("a seat that may %s deals holds the undo = %v, want %v", name, held, want)
 		}
 	}
 }

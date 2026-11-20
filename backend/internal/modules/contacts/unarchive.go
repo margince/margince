@@ -100,6 +100,12 @@ func (s *Store) RestoreContactTx(
 func (s *Store) RestoreContactLeavingTwinsTx(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
+	if err := auth.RequireArchiveGrant(ctx, auth.ContactArchive); err != nil {
+		return storekit.RestoreReport{}, err
+	}
+	if _, err := storekit.LockRow(ctx, tx, contactEntity, id.UUID, storekit.IncludeArchived); err != nil {
+		return storekit.RestoreReport{}, err
+	}
 	if err := ensureRestorable(ctx, tx, auth.ContactArchive, contactEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
@@ -180,23 +186,23 @@ func refuseRestoreOverLead(ctx context.Context, tx pgx.Tx, id ids.ContactID) err
 func (s *Store) RestoreCompanyTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
+	if err := auth.RequireArchiveGrant(ctx, auth.CompanyArchive); err != nil {
+		return storekit.RestoreReport{}, err
+	}
+	if _, err := storekit.LockRow(ctx, tx, companyEntity, id.UUID, storekit.IncludeArchived); err != nil {
+		return storekit.RestoreReport{}, err
+	}
 	if err := ensureRestorable(ctx, tx, auth.CompanyArchive, companyEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
 	return storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, with)
 }
 
-// ensureRestorable asks what the archive asks: its rule's grant, write
-// authority on the row, and auth.EnsureRestorable, judged under the row lock.
-// Not the live twin: the row is archived by definition, and a restore is the
-// write meant to reach it.
+// ensureRestorable asks what the archive asks of the row: write authority and
+// auth.EnsureRestorable. The caller asks the rule's grant and takes the row
+// lock first, so both are judged under it. Not the live twin: the row is
+// archived by definition, and a restore is the write meant to reach it.
 func ensureRestorable(ctx context.Context, tx pgx.Tx, rule auth.ArchiveRule, table string, id ids.UUID) error {
-	if err := auth.RequireArchiveGrant(ctx, rule); err != nil {
-		return err
-	}
-	if _, err := storekit.LockRow(ctx, tx, table, id, storekit.IncludeArchived); err != nil {
-		return err
-	}
 	if err := auth.EnsureWritable(ctx, tx, table, id); err != nil {
 		return err
 	}

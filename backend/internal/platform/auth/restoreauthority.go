@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -39,6 +40,39 @@ func EnsureRestorable(ctx context.Context, tx pgx.Tx, r ArchiveRule, id ids.UUID
 		return refusedOn(ctx, deleteCheck, &RestoreAuthorityError{})
 	}
 	return nil
+}
+
+// RequireUndoGrant asks the object grant an undo writes with on table. An
+// undo that archives or restores (action delete) asks the archive rule's grant
+// where the type has one.
+func RequireUndoGrant(ctx context.Context, table string, action principal.Action) error {
+	if rule, ok := ArchiveRuleFor(table); ok && action == principal.ActionDelete {
+		return RequireArchiveGrant(ctx, rule)
+	}
+	return Require(ctx, table, action)
+}
+
+// AllowsUndoGrant answers RequireUndoGrant as a yes or no, for a page that
+// asks it of many entries.
+func AllowsUndoGrant(ctx context.Context, table string, action principal.Action) bool {
+	if _, ok := ArchiveRuleFor(table); ok && action == principal.ActionDelete {
+		return slices.ContainsFunc(archiveGrant, func(a principal.Action) bool { return Allows(ctx, table, a) })
+	}
+	return Allows(ctx, table, action)
+}
+
+// EnsureUndoRow asks the archive rule's row arm of an undo that archives or
+// restores (action delete): EnsureRestorable when it restores, and
+// EnsureArchivable when it archives. Any other undo asks nothing here.
+func EnsureUndoRow(ctx context.Context, tx pgx.Tx, table string, action principal.Action, id ids.UUID, restoring bool) error {
+	rule, ok := ArchiveRuleFor(table)
+	switch {
+	case !ok || action != principal.ActionDelete:
+		return nil
+	case restoring:
+		return EnsureRestorable(ctx, tx, rule, id)
+	}
+	return EnsureArchivable(ctx, tx, rule, id)
 }
 
 // archivedBySelf answers whether the row's latest archive was made by the

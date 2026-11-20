@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -227,18 +228,15 @@ type undoGrants map[string]bool
 // entry writes with, on the entry's OWN record type. Without it a rep who owns
 // the row but holds no grant is offered a control that can only 403 — row
 // authority alone is not the question the writer asks.
-func (g undoGrants) holds(ctx context.Context, row AuditRow) (bool, error) {
-	key := row.EntityType + "/" + string(undoGrantFor(row))
+func (g undoGrants) holds(ctx context.Context, row AuditRow) bool {
+	grant := undoGrantFor(row)
+	key := row.EntityType + "/" + string(grant)
 	held, asked := g[key]
 	if !asked {
-		err := requireUndoGrant(ctx, row)
-		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
-			return false, err
-		}
-		held = err == nil
+		held = auth.AllowsUndoGrant(ctx, row.EntityType, grant)
 		g[key] = held
 	}
-	return held, nil
+	return held
 }
 
 // judgeOne answers for one entry, or declines to answer at all.
@@ -266,11 +264,7 @@ func (j magicUndoJudge) judgeOne(
 	if err != nil {
 		return nil, err
 	}
-	held, err := grants.holds(ctx, row)
-	if err != nil {
-		return nil, err
-	}
-	if !held {
+	if !grants.holds(ctx, row) {
 		return magicRefusal(string(ReasonNotWritableByCaller)), nil
 	}
 	// A scope MISS is an answer — no control for a record this reader cannot

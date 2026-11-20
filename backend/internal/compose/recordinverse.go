@@ -139,39 +139,6 @@ func undoGrantFor(row AuditRow) principal.Action {
 	return principal.ActionUpdate
 }
 
-// undoArchiveRule is the archive rule an archive or un-archive undo answers
-// to, for a record type that has one. Archive and restore share one authority,
-// so a rep who could archive a deal they own with edit rights may restore it.
-func undoArchiveRule(row AuditRow) (auth.ArchiveRule, bool) {
-	if undoGrantFor(row) != principal.ActionDelete {
-		return auth.ArchiveRule{}, false
-	}
-	return auth.ArchiveRuleFor(row.EntityType)
-}
-
-// requireUndoGrant asks the object grant the undo of this entry writes with:
-// the archive rule's grant where the type has one, undoGrantFor's otherwise.
-func requireUndoGrant(ctx context.Context, row AuditRow) error {
-	if rule, ok := undoArchiveRule(row); ok {
-		return auth.RequireArchiveGrant(ctx, rule)
-	}
-	return auth.Require(ctx, row.EntityType, undoGrantFor(row))
-}
-
-// ensureUndoArchiveRule asks the archive rule's row arm. Undoing an archive
-// is a restore, and asks auth.EnsureRestorable. Undoing a create or a restore
-// archives, and asks the archive's arm.
-func ensureUndoArchiveRule(ctx context.Context, tx pgx.Tx, row AuditRow, kind inverse) error {
-	rule, ok := undoArchiveRule(row)
-	switch {
-	case !ok:
-		return nil
-	case kind == inverseUnarchive:
-		return auth.EnsureRestorable(ctx, tx, rule, row.EntityID)
-	}
-	return auth.EnsureArchivable(ctx, tx, rule, row.EntityID)
-}
-
 // evaluateInverse answers whether an entry a module verb undoes can be undone
 // now. Same order as the record path: who may act first, then whether it is
 // already undone, then whether anything has moved since, then the erasure
@@ -179,7 +146,7 @@ func ensureUndoArchiveRule(ctx context.Context, tx pgx.Tx, row AuditRow, kind in
 func (e Evaluator) evaluateInverse(ctx context.Context, tx pgx.Tx, row AuditRow, kind inverse) (Undoability, error) {
 	// The object grant the module verb asks at its own door: an archive asks
 	// delete, or for its owner edit rights alone.
-	if err := requireUndoGrant(ctx, row); err != nil {
+	if err := auth.RequireUndoGrant(ctx, row.EntityType, undoGrantFor(row)); err != nil {
 		if !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return Undoability{}, err
 		}
@@ -193,7 +160,7 @@ func (e Evaluator) evaluateInverse(ctx context.Context, tx pgx.Tx, row AuditRow,
 			return refuse(ReasonNotWritableByCaller, ""), nil
 		}
 	}
-	if err := ensureUndoArchiveRule(ctx, tx, row, kind); err != nil {
+	if err := auth.EnsureUndoRow(ctx, tx, row.EntityType, undoGrantFor(row), row.EntityID, kind == inverseUnarchive); err != nil {
 		if _, restore := errors.AsType[*auth.RestoreAuthorityError](err); restore {
 			return refuse(ReasonRestoreArchiverRequired, ""), nil
 		}
