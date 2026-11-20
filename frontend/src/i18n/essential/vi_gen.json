@@ -1800,7 +1800,7 @@
   "common.providerOutOfCredit": "Dịch vụ AI đã hết số dư. Liên hệ quản trị viên.",
   "common.providerUnauthorized": "Mã kết nối AI không hợp lệ. Liên hệ quản trị viên.",
   "common.providerUnavailable": "AI hiện không phản hồi. Thử lại sau hoặc liên hệ quản trị viên.",
-  "common.aiAllowanceUsedUp": "Hạn mức AI hằng tháng đã dùng hết. Hãy nhờ quản trị viên tăng hạn mức trong Cài đặt → AI, hoặc thử lại khi hạn mức được làm mới.",
+  "common.aiAllowanceUsedUp": "Đã dùng hết hạn mức AI hàng tháng. Liên hệ quản trị viên để tăng hạn mức trong Cài đặt, mục AI, hoặc thử lại khi hạn mức được làm mới.",
   "common.gatewayUnavailable": "Máy chủ không kịp xử lý xong yêu cầu và có thể vẫn đang xử lý. Chờ một lúc rồi hãy thử lại, nếu không thao tác có thể chạy hai lần.",
   "common.requestTimedOut": "Máy chủ xử lý quá lâu nên đã dừng yêu cầu này. Hãy thử lại sau giây lát.",
   "common.individualPerformanceOff": "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên. Toàn bộ dự báo bị ẩn nếu một nhóm trong đó có thể cho thấy số liệu của riêng một đồng nghiệp.",

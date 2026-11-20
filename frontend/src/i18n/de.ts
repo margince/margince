@@ -3558,7 +3558,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.providerUnavailable":
     "Der KI-Anbieter antwortet gerade nicht. Bitte versuche es später erneut oder wende dich an die Systemadministration.",
   "common.aiAllowanceUsedUp":
-    "Das monatliche KI-Kontingent ist aufgebraucht. Bitte die Administration, es unter Einstellungen → KI zu erhöhen, oder versuche es nach der Erneuerung erneut.",
+    "Das monatliche KI-Kontingent ist aufgebraucht. Ein Admin kann es unter Einstellungen → KI erhöhen. Sonst versuche es nach der Erneuerung erneut.",
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
   "common.requestTimedOut":
