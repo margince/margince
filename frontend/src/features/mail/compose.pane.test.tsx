@@ -640,7 +640,7 @@ it.each([false, true])(
       />,
     );
     const reason = await screen.findByRole("combobox", { name: WHY_ASK });
-    expect(reason.textContent).toContain(en["compose.why.activeDeal"]);
+    expect(reason.textContent).toContain(en["compose.why.openDeal"]);
     await user.type(screen.getByLabelText("To"), "a@x.com");
     await user.tab();
     await user.type(screen.getByLabelText("Subject"), "Meeting proposal");

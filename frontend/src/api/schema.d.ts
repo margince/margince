@@ -45632,8 +45632,8 @@ export interface components {
         /**
          * @description The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
          *     for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-         *     Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-         *     review is overdue or not yet done, or the law has not taken effect or has expired. On a
+         *     Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+         *     pack's next review is overdue, or the law has not taken effect or has expired. On a
          *     review it is the citation shown when the refusal was assessed, never today's.
          */
         CitedProvision: {
@@ -50296,12 +50296,6 @@ export interface components {
             license_lapsed?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;
-            /**
-             * @description The `activities.inline_send_review` setting: whether the email composer is decided at
-             *     Send, with a refusal shown inline from the embedded review. Absent or false keeps the
-             *     check while writing and the confirmation dialog.
-             */
-            inline_send_review?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
             user: components["schemas"]["User"];
             /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
@@ -55953,7 +55947,7 @@ export interface components {
             /**
              * @description Every warning this review is served with to this reader; a decision may name any of their
              *     versions and no other. `warning` is always among them. The sender of a held message is
-             *     also served the composer's short warning (`inline-v1`), which a decision from any other
+             *     also served the composer's short warning (`inline-v2`), which a decision from any other
              *     reader is refused for naming.
              */
             warnings?: components["schemas"]["OverrideWarning"][];
@@ -56574,6 +56568,8 @@ export interface components {
             keep: string;
             /** @description The period counts from the end of the calendar year. */
             from_year_end: boolean;
+            /** @description The statute and article that set the period. Absent when the pack names none. */
+            law?: string;
         };
         /**
          * @description The correspondence floor in force. With no jurisdiction selected it is the strictest floor

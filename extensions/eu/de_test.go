@@ -5,6 +5,7 @@ package eu
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -197,7 +198,8 @@ func TestThePackShipsEachDocumentInGermanAndEnglish(t *testing.T) {
 }
 
 // TestTheCompiledRulesAreTheV2Rules pins every value of the compiled rule set.
-// Provenance and the digest describe the policy source, so they are left out.
+// Provenance, the digest, instruments and citations describe the policy source
+// and decide no send, so they are left out.
 func TestTheCompiledRulesAreTheV2Rules(t *testing.T) {
 	want := messaging.Rules{
 		Jurisdiction:                  "de",
@@ -219,9 +221,32 @@ func TestTheCompiledRulesAreTheV2Rules(t *testing.T) {
 		},
 	}
 	got := germanRules(t)
-	got.Provenance, got.Digest = messaging.Provenance{}, ""
+	got.Provenance, got.Digest, got.Instruments, got.Citations = messaging.Provenance{}, "", nil, nil
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("the compiled rules differ from the v2 rules:\n got %+v\nwant %+v", got, want)
+	}
+}
+
+// Marketing mail without consent is refused under UWG § 7(2) Nr. 2, and a
+// message with no reason for contact on record under GDPR Art. 6(1).
+func TestTheGermanRefusalsCiteTheirLaw(t *testing.T) {
+	r := germanRules(t)
+	for code, want := range map[string]string{
+		"marketing_permission_required": "Gesetz gegen den unlauteren Wettbewerb (UWG) § 7 Abs. 2 Nr. 2",
+		"no_compatible_evidence":        "Regulation (EU) 2016/679 (GDPR) Art. 6(1)",
+	} {
+		i := slices.IndexFunc(r.Citations, func(c messaging.Citation) bool { return c.Code == code })
+		if i < 0 {
+			t.Errorf("%s cites no law", code)
+			continue
+		}
+		cited, err := r.ResolveCitation(r.Citations[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := cited.Instrument + " " + cited.Provision; got != want || cited.SourceURL == "" {
+			t.Errorf("%s cites %q at %q, want %q with a source", code, got, cited.SourceURL, want)
+		}
 	}
 }
 

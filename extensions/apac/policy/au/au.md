@@ -6,6 +6,7 @@ instruments:
   - name: Spam Act 2003 (Cth)
     effective: 2004-04-10
     provision: "ss. 16-18"
+    source-url: https://www.legislation.gov.au/C2004A01214/latest/text
   - name: Spam Regulations 2021 (Cth)
   - name: "Privacy Act 1988 (Cth), Schedule 1"
     effective: 2014-03-12
@@ -30,6 +31,47 @@ fixtures:
   - finding: advertiser_contact
     triggers: au/fixtures/advertising-without-advertiser-contact.md
     clears: au/fixtures/advertising-complete.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Spam Act 2003 (Cth)"
+    provision: "s. 16(1) and (2)"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Spam Act 2003 (Cth)"
+    provision: "s. 16(1) and (2)"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Spam Act 2003 (Cth)"
+    provision: "s. 16(1) and (2)"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Spam Act 2003 (Cth)"
+    provision: "s. 16(1) and (2)"
+  - code: advertiser_contact
+    territorial-test: any_sender
+    instrument: "Spam Act 2003 (Cth)"
+    provision: "s. 17(1)"
+  - code: objection_route
+    territorial-test: any_sender
+    instrument: "Spam Act 2003 (Cth)"
+    provision: "s. 18(1)"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Spam Act 2003 (Cth)"
+    provision: "s. 18(1)"
+  - code: marketing_objection
+    territorial-test: any_sender
+    instrument: "Spam Act 2003 (Cth)"
+    provision: "Schedule 2, cl. 6"
+  - code: opted_out_after_request
+    territorial-test: any_sender
+    instrument: "Spam Act 2003 (Cth)"
+    provision: "Schedule 2, cl. 6"
+  - code: consent_withdrawn
+    territorial-test: any_sender
+    instrument: "Spam Act 2003 (Cth)"
+    provision: "Schedule 2, cl. 6"
 ---
 
 # What Australian law requires of an outbound message

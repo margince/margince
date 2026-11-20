@@ -6,8 +6,10 @@ instruments:
   - name: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
     effective: 2014-11-29
     provision: "art. 50"
+    source-url: https://www.law.go.kr/법령/정보통신망이용촉진및정보보호등에관한법률
   - name: "Enforcement Decree of the Act on Promotion of Information and Communications Network Utilization and Information Protection"
     provision: "arts. 61 and 62-2"
+    source-url: https://www.law.go.kr/법령/정보통신망이용촉진및정보보호등에관한법률시행령
 reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-exceptions: []
@@ -33,6 +35,47 @@ fixtures:
   - finding: subject_prefix
     triggers: kr/fixtures/advertising-without-label.md
     clears: kr/fixtures/advertising-complete.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
+    provision: "art. 50(1)"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
+    provision: "art. 50(1)"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
+    provision: "art. 50(1)"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
+    provision: "art. 50(1)"
+  - code: marketing_objection
+    territorial-test: any_sender
+    instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
+    provision: "art. 50(2)"
+  - code: opted_out_after_request
+    territorial-test: any_sender
+    instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
+    provision: "art. 50(2)"
+  - code: consent_withdrawn
+    territorial-test: any_sender
+    instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
+    provision: "art. 50(2)"
+  - code: advertiser_contact
+    territorial-test: any_sender
+    instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
+    provision: "art. 50(4)"
+  - code: objection_route
+    territorial-test: any_sender
+    instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
+    provision: "art. 50(4)"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
+    provision: "art. 50(4)"
 ---
 
 # What Korean law requires of an outbound message

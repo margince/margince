@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { CommunicationStatus } from "../design-system/communicationstatus";
 import { Row } from "../design-system/stack";
 import { footerFindingsText } from "../format/footerfindings";
 import { formatNumber } from "../format/format";
@@ -119,8 +118,7 @@ type Answer = Readonly<{
 
 /**
  * The one status a surface draws for the message: the refused Send when there
- * is one, else the preview. SendPermission and SendMark both read this, so the
- * mark beside Send never says ready while the body explains a refusal.
+ * is one, else the preview.
  */
 export function sendStatus({
   preview,
@@ -388,52 +386,4 @@ function AffectedRecipients({
     );
   }
   return null;
-}
-
-/**
- * SendMark is the quiet half of the answer: a mark that says the engine has
- * looked and found nothing wrong.
- *
- * SendPermission draws a Callout for the states a rep has to act on and
- * NOTHING for the state they do not. That silence was deliberate — the
- * overwhelming majority of sends are allowed and none should cost attention —
- * but it is also what the composer showed while it was still asking, and before
- * anybody had asked at all. Three situations, one blank space, and no way to
- * tell "checked and fine" from "not asked yet".
- *
- * So the allowed state gets a mark and the other two keep their Callout: this
- * renders beside the Send button, where the decision is made, and the Callout
- * stays in the body where an explanation belongs. A rep who never looks at the
- * mark loses nothing, which is the test a quiet signal has to pass.
- *
- * It draws NOTHING when there is no question yet. A mark over an empty form
- * would claim an answer about a message nobody has addressed.
- */
-export function SendMark({
-  preview,
-  asking = false,
-  unanswered = false,
-  refusal,
-  blocked = false,
-}: Answer &
-  Readonly<{
-    /** Something the surface knows will stop the send, such as an empty field. */
-    blocked?: boolean;
-  }>) {
-  const t = useT();
-  const { kind } = sendStatus({ preview, asking, unanswered, refusal });
-  // Every other state is the Callout's: a sentence a rep has to read does not
-  // belong in a glyph beside a button. A blocked form makes no passed claim.
-  if (kind !== "checking" && (kind !== "ready" || blocked)) return null;
-  const label = t(
-    kind === "checking" ? "sendPermission.checking" : "sendPermission.ready",
-  );
-  return (
-    <CommunicationStatus
-      state={kind}
-      scope="current_message"
-      label={label}
-      name={`${t("sendPermission.markName")}: ${label}`}
-    />
-  );
 }

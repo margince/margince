@@ -88,6 +88,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "auto.renewal.authorizer",
     // A duplicate case asks whether two contacts are the same human being.
     "contactCase.intro",
+    // "In person" says the rep and the contact were in one room.
+    "compose.why.met",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
     "contactCase.member.dismissedWith",
@@ -425,10 +427,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "homeRepair.explain",
     // These name users, recipients and participants, not contact records.
     "approval.scheduled.rearm",
-    "compose.holdRefused",
     "sendPermission.appliesToSome_one",
     "sendPermission.appliesToSome_other",
-    "sendPermission.ready",
     "approval.read.retained",
     "approval.read.effect",
     "approval.preview.companyPrivateReadings",

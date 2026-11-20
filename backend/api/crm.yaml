@@ -62759,8 +62759,8 @@ components:
       description: |
         The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
         for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-        Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-        review is overdue or not yet done, or the law has not taken effect or has expired. On a
+        Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+        pack's next review is overdue, or the law has not taken effect or has expired. On a
         review it is the citation shown when the refusal was assessed, never today's.
       required: [instrument, provision, source_url]
       properties:
@@ -68646,12 +68646,6 @@ components:
         reader_rendering_available:
           type: boolean
           description: Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
-        inline_send_review:
-          type: boolean
-          description: |
-            The `activities.inline_send_review` setting: whether the email composer is decided at
-            Send, with a refusal shown inline from the embedded review. Absent or false keeps the
-            check while writing and the confirmation dialog.
         analytics_startup: { $ref: '#/components/schemas/AnalyticsStartup' }
         user: { $ref: '#/components/schemas/User' }
         workspace_name:
@@ -76454,7 +76448,7 @@ components:
           description: |
             Every warning this review is served with to this reader; a decision may name any of their
             versions and no other. `warning` is always among them. The sender of a held message is
-            also served the composer's short warning (`inline-v1`), which a decision from any other
+            also served the composer's short warning (`inline-v2`), which a decision from any other
             reader is refused for naming.
 
     OverrideWarning:
@@ -77135,6 +77129,7 @@ components:
         name: { type: string, description: 'The class, e.g. `commercial_correspondence`.' }
         keep: { type: string, description: 'The ISO 8601 period the class keeps, e.g. `P6Y`.' }
         from_year_end: { type: boolean, description: 'The period counts from the end of the calendar year.' }
+        law: { type: string, description: 'The statute and article that set the period. Absent when the pack names none.' }
 
     RetentionFloorPolicy:
       type: object

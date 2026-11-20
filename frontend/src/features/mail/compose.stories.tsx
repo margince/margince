@@ -36,7 +36,7 @@ import { editSeedOf } from "./schedulededit";
 // served below because the composer reads them, but a reader never picks one —
 // the answer here is what the send derives its purpose from.
 const WHY_ASK = "Reason for contact";
-const WHY_ANSWER = "Follow-up they requested";
+const WHY_ANSWER = "They asked for it";
 
 // One consent purpose is enough to satisfy the Send precondition and populate
 // the purpose dropdown; its `label` is what the story clicks and its `key`

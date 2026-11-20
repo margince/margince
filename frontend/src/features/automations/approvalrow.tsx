@@ -66,6 +66,7 @@ import {
   refusalToast,
   useHeldRejection,
 } from "./heldrejection";
+import { LegalReviewRequestRow } from "./legalreviewrequestrow";
 import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
@@ -134,7 +135,7 @@ function statusLabels(
   };
 }
 
-export function ApprovalRow({
+function DecidableApprovalRow({
   approval,
   decided,
   onAlreadyDecided,
@@ -465,4 +466,18 @@ export function ApprovalRow({
       {lawfulBasis.dialog}
     </DecisionCard>
   );
+}
+
+/** One staged proposal as a row. A legal review request has its own presentation. */
+export function ApprovalRow(props: Parameters<typeof DecidableApprovalRow>[0]) {
+  if (props.approval.kind === "legal_review_request") {
+    return (
+      <LegalReviewRequestRow
+        approval={props.approval}
+        decided={props.decided}
+        extraInvalidateKeys={props.extraInvalidateKeys}
+      />
+    );
+  }
+  return <DecidableApprovalRow {...props} />;
 }
