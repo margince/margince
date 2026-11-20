@@ -30,7 +30,7 @@
   ],
   "catalog": {
     "tools": 48,
-    "system_frame_tokens": 672,
+    "system_frame_tokens": 730,
     "tokens": 51541,
     "median_tool_tokens": 797,
     "mean_tool_tokens": 1073
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4381,
+      "tokens": 4439,
       "listing_tokens": 2055,
       "step_schema_tokens": 1653,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 18829,
+      "headroom_tokens": 18771,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6647,
+      "tokens": 6705,
       "listing_tokens": 3354,
       "step_schema_tokens": 2620,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 16563,
+      "headroom_tokens": 16505,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",

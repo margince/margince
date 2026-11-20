@@ -52,9 +52,10 @@ type readProject360 struct {
 func (t readProject360) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_project_360", Title: "Read a project's page", Version: toolVersionV1,
-		Description:   readProject360Copy.render(),
-		Instead:       readProject360Copy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       readProject360Copy.render(),
+		Instead:           readProject360Copy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getProject360",
 		InputSchema: schema(`{"type":"object","required":["project_id"],"properties":{
 			"project_id":{"type":"string","format":"uuid","description":"The project to read"}},

@@ -60,7 +60,7 @@ func TestAPendingAgentCallThatNoLongerWaitsIsWithdrawn(t *testing.T) {
 func withdrawLiftedAgentCalls(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	batch := approvals.WithdrawLiftedAgentCallsTx(liftedAgentCallKinds())
+	batch := approvals.WithdrawLiftedAgentCallsTx(approvals.LiftedAgentCallKinds())
 	in := datatask.BatchIn{Limit: 1, RunID: ids.NewV7()}
 	changed := 0
 	for range 100 {

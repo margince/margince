@@ -318,7 +318,11 @@ describe("InstallationSettingsCard", () => {
     // it is read before the dialog is opened over a field nobody can type in.
     expect(await screen.findByText(reason)).not.toBeNull();
 
-    const dialog = await openFrom(user, /edit base currency/i);
+    // A frozen currency has nothing to edit, so its row offers no Edit.
+    expect(
+      screen.queryByRole("button", { name: /edit base currency/i }),
+    ).toBeNull();
+    const dialog = await openFrom(user, /edit company time zone/i);
     const currency = within(dialog).getByLabelText(
       /base currency/i,
     ) as HTMLInputElement;
@@ -330,6 +334,30 @@ describe("InstallationSettingsCard", () => {
       /company time zone/i,
     ) as HTMLInputElement;
     expect(zone.disabled).toBe(false);
+  });
+
+  it("opens a dialog with only the tab's own facts, titled for the tab", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard part="forecast" />);
+    const forecast = await openFrom(user, /edit likely threshold/i);
+    expect(
+      within(forecast).getByRole("heading", { name: "Forecast rules" }),
+    ).toBeTruthy();
+    expect(within(forecast).getByLabelText(/likely threshold/i)).toBeTruthy();
+    expect(within(forecast).queryByLabelText(/company time zone/i)).toBeNull();
+    expect(within(forecast).queryByLabelText(/base currency/i)).toBeNull();
+    cleanup();
+
+    render(<InstallationSettingsCard part="regional" />);
+    const regional = await openFrom(user, /edit fiscal year starts/i);
+    expect(
+      within(regional).getByRole("heading", { name: "Regional and calendar" }),
+    ).toBeTruthy();
+    expect(within(regional).getByLabelText(/company time zone/i)).toBeTruthy();
+    expect(within(regional).queryByLabelText(/likely threshold/i)).toBeNull();
+    expect(within(regional).queryByText("Projection basis")).toBeNull();
   });
 
   it("refuses a fact a boot source sets, says where to change it, and saves the rest", async () => {

@@ -92,7 +92,14 @@ function look(state: Visibility): string {
 export function VisibilityBadge({
   state,
   opens = false,
-}: Readonly<{ state: Visibility; opens?: boolean }>) {
+  label,
+}: Readonly<{
+  state: Visibility;
+  opens?: boolean;
+  // The word a control behind the mark uses for this state, so the mark and
+  // the choice that set it read the same.
+  label?: string;
+}>) {
   const t = useT();
   const Icon = ICON[state];
   return (
@@ -100,7 +107,7 @@ export function VisibilityBadge({
       className={`visibility${look(state)}${opens ? " visibility-opens" : ""}`}
     >
       <Icon aria-hidden="true" />
-      {t(WORD[state])}
+      {label ?? t(WORD[state])}
       {opens && <ChevronDown aria-hidden="true" />}
     </span>
   );

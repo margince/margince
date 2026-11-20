@@ -76,6 +76,7 @@ export function RecordFormBody({
   onClose,
   intent,
   dialog,
+  resetToken = 0,
   answerlessRow,
   unsaved,
 }: Readonly<{
@@ -101,6 +102,8 @@ export function RecordFormBody({
   onClose: () => void;
   intent: SubmitIntent;
   dialog?: { open: boolean; title: string };
+  // Bumped when a save empties the form for the next record.
+  resetToken?: number;
   // A read-only or flow field's row. Only an edit has them, so a create form never loads them.
   answerlessRow?: (field: CreateField) => ReactNode;
   // Whether a close asks first. Left out, any keystroke since the opening counts.
@@ -157,18 +160,33 @@ export function RecordFormBody({
     return field.required && !(values[field.key] ?? "").trim();
   });
   const requiredMissing = missing.length > 0;
-  const refusals = new Map(
-    shown.flatMap((field) => {
-      if (answerless(field)) return [];
-      const refusal =
-        (field.rowsUnique
-          ? repeatedRowRefusal(field, rows[field.key] ?? [], t)
-          : undefined) ??
-        field.validate?.(values[field.key] ?? "", values, rows) ??
-        ownCheck(field, values[field.key] ?? "", touched, locale, t);
-      return refusal ? [[field.key, refusal] as const] : [];
-    }),
-  );
+  const checked = shown.flatMap((field) => {
+    if (answerless(field)) return [];
+    const rowsRefusal = field.rowsUnique
+      ? repeatedRowRefusal(field, rows[field.key] ?? [], t)
+      : undefined;
+    const validated = rowsRefusal
+      ? undefined
+      : field.validate?.(values[field.key] ?? "", values, rows);
+    const refusal =
+      rowsRefusal ??
+      validated ??
+      ownCheck(field, values[field.key] ?? "", touched, locale, t);
+    return refusal
+      ? [{ key: field.key, refusal, fromValidate: validated !== undefined }]
+      : [];
+  });
+  const refusals = new Map(checked.map((c) => [c.key, c.refusal] as const));
+  // A field's own validate holds Save from the first render. An empty field
+  // keeps quiet until the reader changes something or tries to save. A value
+  // already there, or a rule across fields, is said at once or once any field
+  // is filled.
+  const said = (key: string) => {
+    const entry = checked.find((c) => c.key === key);
+    const empty = !(values[key] ?? "").trim();
+    const hidden = entry?.fromValidate === true && !edited && empty;
+    return (hidden ? undefined : refusals.get(key)) ?? faults.of(key);
+  };
   // A refusal lands at the foot of a long stack, out of sight of a pinned Save.
   useEffect(() => {
     if (error) {
@@ -176,6 +194,18 @@ export function RecordFormBody({
       last?.scrollIntoView?.({ block: "nearest" });
     }
   }, [error, formId]);
+
+  // The emptied form is for the next record, so typing starts in its first box.
+  useEffect(() => {
+    if (resetToken > 0) {
+      document
+        .getElementById(formId)
+        ?.querySelector<HTMLElement>(
+          "input:not([type=hidden]), textarea, select",
+        )
+        ?.focus();
+    }
+  }, [resetToken, formId]);
 
   // Enter in a field submits without touching Save, so the form holds the
   // same latch the button does.
@@ -232,7 +262,7 @@ export function RecordFormBody({
               field={field}
               formId={formId}
               labelHidden={titledByDialog}
-              error={refusals.get(field.key) ?? faults.of(field.key)}
+              error={said(field.key)}
               rows={rows[field.key] ?? []}
               setRows={(next) => {
                 setEdited(true);
@@ -248,7 +278,7 @@ export function RecordFormBody({
               key={field.key}
               field={field}
               labelHidden={titledByDialog}
-              error={refusals.get(field.key) ?? faults.of(field.key)}
+              error={said(field.key)}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })
@@ -273,7 +303,7 @@ export function RecordFormBody({
                   )
                 : field.hint
             }
-            error={refusals.get(field.key) ?? faults.of(field.key)}
+            error={said(field.key)}
           >
             {(control) =>
               field.offers ? (

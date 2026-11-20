@@ -92,8 +92,8 @@ func assertAutomationCatalogIsClosed(t *testing.T, e *apptest.AppEnv) {
 		if !ok {
 			t.Fatalf("unexpected or repeated recipe %q", entry.Key)
 		}
-		if entry.Tier != registered.Tier {
-			t.Fatalf("recipe %s tier = %q, want %q", entry.Key, entry.Tier, registered.Tier)
+		if entry.Tier != registered.Tier() {
+			t.Fatalf("recipe %s tier = %q, want %q", entry.Key, entry.Tier, registered.Tier())
 		}
 		if entry.ParamsSchema == nil {
 			t.Fatalf("starter %s ships no params_schema — the editor form has nothing to render", entry.Key)

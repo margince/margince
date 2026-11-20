@@ -14,7 +14,6 @@ import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Heading } from "../../design-system/heading";
-import { KeyCode } from "../../design-system/keyedname";
 import {
   NameDialog,
   nameRefusal,
@@ -345,7 +344,6 @@ export function LeadOriginsCard() {
         title={t("leadOrigins.renameTitle")}
         label={t("leadSources.labelField")}
         initial={renaming?.label ?? ""}
-        hint={renaming && <KeyCode code={renaming.key} />}
         confirmLabel={t("leadSources.renameSave")}
         pending={rename.isPending}
         problem={rename.isError ? problemMessageOf(rename.error, t) : null}

@@ -18,6 +18,7 @@ import type { MessageKey } from "../../i18n/en";
 import { type ActorFields, actorAttribution } from "../../lib/auditactor";
 import { SEARCH_HIT_KIND_KEY } from "../../lib/searchkinds";
 import { useViewerZone } from "../../lib/viewerzone";
+import { AUDIT_KIND_LABEL } from "./audit.kinds";
 import "./audit.css";
 
 // Reusable audit attribution — turns a raw AuditLogEntry into a line a contact
@@ -98,11 +99,11 @@ export function actionLabel(action: string, t: Translator): string {
 
 const KIND_LABELS = new Map<string, MessageKey>([
   ...Object.entries(SEARCH_HIT_KIND_KEY),
+  ...Object.entries(AUDIT_KIND_LABEL),
   ["custom_field", "audit.kind.customField"],
 ]);
 
-// A record kind reads in the reader's language; a governance object keeps its
-// own name.
+// A type newer than this client still reads as words rather than as a key.
 export function entityLabel(entityType: string, t: Translator): string {
   const key = KIND_LABELS.get(entityType);
   return key ? t(key) : humanizeToken(entityType);

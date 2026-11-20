@@ -37,19 +37,30 @@ func (h Handlers) CreateStageExitCriterion(w http.ResponseWriter, r *http.Reques
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	criterion, err := h.store.CreateStageExitCriterion(r.Context(), CreateCriterionInput{
-		StageID:  pathID[ids.StageKind](id),
-		Key:      req.Key,
-		Label:    req.Label,
-		Kind:     string(req.Kind),
-		Required: req.Required,
-		Hint:     req.Hint,
-	})
+	criterion, err := h.store.CreateStageExitCriterion(r.Context(),
+		criterionInputOf(pathID[ids.StageKind](id), req))
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, criterion)
+}
+
+// criterionInputOf tells an omitted key, which is minted, from an empty one,
+// which is refused like any other bad key.
+func criterionInputOf(stageID ids.StageID, req crmcontracts.CreateStageExitCriterionRequest) CreateCriterionInput {
+	in := CreateCriterionInput{
+		StageID:  stageID,
+		MintKey:  req.Key == nil,
+		Label:    req.Label,
+		Kind:     string(req.Kind),
+		Required: req.Required,
+		Hint:     req.Hint,
+	}
+	if req.Key != nil {
+		in.Key = *req.Key
+	}
+	return in
 }
 
 // UpdateStageExitCriterion edits a criterion's label, kind, requiredness,

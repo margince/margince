@@ -6,6 +6,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { STAGE_CHANCES_KEY } from "../../lib/activitykeys";
 import { unwrap } from "../../lib/problem";
 
 export type StageChance = components["schemas"]["ForecastStageChance"];
@@ -13,7 +14,7 @@ export type StageChance = components["schemas"]["ForecastStageChance"];
 /** Every open stage's chance in use, keyed by stage id. */
 export function useStageChances() {
   return useQuery({
-    queryKey: ["forecast", "stage-chances"],
+    queryKey: STAGE_CHANCES_KEY,
     queryFn: async () => unwrap(await api.GET("/forecast/stage-chances")),
     select: (data) => ({
       selfCorrecting: data.self_correcting,

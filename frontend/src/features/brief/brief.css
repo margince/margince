@@ -549,6 +549,7 @@
   overflow-wrap: anywhere;
 }
 
+.magic-line-sep,
 .magic-line-subject {
   margin-inline-start: var(--space-2);
   color: var(--textSecondary);

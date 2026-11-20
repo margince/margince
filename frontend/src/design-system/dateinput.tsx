@@ -33,6 +33,7 @@ import { useDialogFocus } from "./dialogfocus";
 import { ErrorLine } from "./errorline";
 import { firstRefusedControl } from "./formvalidity";
 import { IconAction } from "./iconaction";
+import { useTopLayer } from "./toplayer";
 import "./dateinput.css";
 
 export {
@@ -300,6 +301,7 @@ function DatePopup({
 }>) {
   const t = useT();
   const panel = useRef<HTMLDivElement | null>(null);
+  useTopLayer(panel, true);
   const [month, setMonth] = useState(() => dateOf(selected || today));
   const at = useAnchoredToTrigger(true, anchor, panel, "end");
   useDismissOnOutsidePress(true, onClose, anchor, panel);
@@ -318,6 +320,7 @@ function DatePopup({
   return createPortal(
     <div
       ref={panel}
+      popover="manual"
       id={id}
       role="dialog"
       aria-modal="true"

@@ -53,7 +53,7 @@ To erase a contact on request, an admin opens **Settings → Privacy and retenti
 2. Set **Due**, then choose **Open request**.
 3. Choose the request in the list to open it. Leave **Resolution** empty: the erasure records its own answer.
 4. Fill **How the identity was checked** and choose **Fulfill**.
-5. Type ERASE in **Type ERASE to confirm** and choose **Erase and suppress**.
+5. Type ERASE in **Type this word to confirm: ERASE** and choose **Erase and suppress**.
 This cannot be undone. A contact that the law says you must still keep is refused with **Blocked by legal hold**.
 Also called: right to be forgotten, Art. 17, delete my data, data subject request, DSR.
 
@@ -150,9 +150,9 @@ Some examples of the difference in the product's own words:
 
 - Archiving a project "removes this project from the active list and frees its key." The project is then read-only: "This project is archived and takes no changes."
 - Archiving a document set stops the set, and everything filed in it, from showing up in search. Nothing is destroyed.
-- Merging two records destroys nothing either: "Merge {source} into {target}?
-  This archives {source}." Both values are kept in a merge; choosing a side decides
-  which record stays and which value is shown first.
+- Merging two records destroys nothing either: the record merged away is archived, and
+  the one you keep takes over its history, tasks, tags and links. A merge cannot be undone.
+  Both values are kept; choosing a side decides which record stays and which value shows first.
 
 ## A new company starts with retention rules
 

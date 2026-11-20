@@ -86,6 +86,13 @@ func (req dcrRequest) validate() *dcrRefusal {
 	if !validAgentClientName(req.ClientName) {
 		return &dcrRefusal{oauthErrInvalidClientMetadata, fmt.Sprintf("client_name must use at most %d characters", maxAgentClientNameRunes), agentClientFieldClient}
 	}
+	if !withinRedirectLimit(req.RedirectURIs) {
+		return &dcrRefusal{
+			oauthErrInvalidRedirectURI,
+			fmt.Sprintf("redirect_uris: register at most %d", maxAgentClientRedirects),
+			"redirect_uris",
+		}
+	}
 	for _, raw := range req.RedirectURIs {
 		if !validRedirectURI(raw) {
 			return &dcrRefusal{

@@ -127,8 +127,6 @@ const (
 
 // taintOf ranks the tiers by how little the content can be trusted, so folding
 // many records into one label is a max rather than a table of special cases.
-// The zero value is t0, which is why an answer that carried no content at all
-// reports as product-generated without anything having to say so.
 var taintOf = map[string]int{trustSystem: 0, trustInternal: 1, trustExternal: 2}
 
 // capturedByHuman is the actor-kind prefix that earns T1. Provenance spells the
@@ -156,7 +154,6 @@ type envelopeFacts struct {
 	seen       map[EvidenceRef]struct{}
 	oldestSync time.Time
 	// trust is the tier folded so far, and it only ever moves DOWN in trust.
-	// Empty means no content has contributed, which reads as t0.
 	trust         string
 	authoritative bool
 	warnings      []Warning
@@ -167,12 +164,20 @@ type envelopeFacts struct {
 	served int
 }
 
-func newEnvelopeFacts() *envelopeFacts {
+// newEnvelopeFacts starts an answer at t0 only when its tool declares a
+// product-made answer (mcp.ToolSpec.ProductMadeAnswer). Every other answer
+// starts at t2: a tool that never said where its text came from is read as
+// carrying someone else's words.
+func newEnvelopeFacts(productMade bool) *envelopeFacts {
+	start := trustExternal
+	if productMade {
+		start = trustSystem
+	}
 	return &envelopeFacts{
 		seen:          map[EvidenceRef]struct{}{},
 		warned:        map[string]struct{}{},
 		authoritative: true,
-		trust:         trustSystem,
+		trust:         start,
 	}
 }
 
@@ -181,8 +186,8 @@ type envelopeFactsKey struct{}
 // withEnvelopeFacts opens a collector for one call. Registry.Invoke opens
 // exactly one; nothing else does, so a nested read cannot start a second and
 // have its evidence disappear when it closes.
-func withEnvelopeFacts(ctx context.Context) (context.Context, *envelopeFacts) {
-	facts := newEnvelopeFacts()
+func withEnvelopeFacts(ctx context.Context, spec mcp.ToolSpec) (context.Context, *envelopeFacts) {
+	facts := newEnvelopeFacts(spec.ProductMadeAnswer)
 	return context.WithValue(ctx, envelopeFactsKey{}, facts), facts
 }
 

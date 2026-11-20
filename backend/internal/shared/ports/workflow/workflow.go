@@ -209,6 +209,10 @@ type Action struct {
 	// it). Typed here rather than smuggled into Args so a trace reader can
 	// render the fold instead of reporting a write that never happened.
 	Deduplicated bool `json:"deduplicated,omitempty"`
+
+	// Created is the record an applied create made, so a reader of the trace can
+	// open it under its own grants.
+	Created *datasource.EntityRef `json:"created,omitempty"`
 }
 
 // ApprovalToken references the typed, signed, single-use, effect-bound

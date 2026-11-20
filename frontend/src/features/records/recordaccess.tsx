@@ -52,6 +52,12 @@ type AccessibleRecord = Readonly<{
 
 type Audience = "workspace" | "owner";
 
+// The chip names the audience in the words of the choice that sets it.
+const AUDIENCE_WORD = {
+  owner: "recordAccess.option.owner",
+  workspace: "recordAccess.option.workspace",
+} as const satisfies Record<Audience, MessageKey>;
+
 // Which record this is, which decides the endpoint, the cache key and the
 // sentences. A closed union rather than a string: a typo would otherwise
 // invalidate a cache nobody watches and leave the header stale after a write.
@@ -168,6 +174,7 @@ export function RecordAccess({
           <span className="sr-only">{t(copy.title)}: </span>
           <VisibilityBadge
             state={current === "owner" ? "private" : "workspace"}
+            label={t(AUDIENCE_WORD[current])}
             opens
           />
         </>
@@ -263,7 +270,7 @@ function AudienceSwitch({
         choices={[
           {
             value: "owner",
-            label: t("recordAccess.option.owner"),
+            label: t(AUDIENCE_WORD.owner),
             description: t(OWNER_HINT[owner]),
             // The server refuses owner-only on a record nobody owns: no seat
             // could read it.
@@ -271,7 +278,7 @@ function AudienceSwitch({
           },
           {
             value: "workspace",
-            label: t("recordAccess.option.workspace"),
+            label: t(AUDIENCE_WORD.workspace),
           },
         ]}
         onChange={setPicked}

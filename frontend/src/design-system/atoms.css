@@ -1239,9 +1239,12 @@ span.error-line {
   justify-content: flex-end;
 }
 
-/* A dialog's own heading, where the content has no SectionHeader of its own. */
+/* A dialog's own heading, where the content has no SectionHeader of its own.
+   A title can be data, such as a role name with no space in it, so it breaks
+   anywhere rather than running under the close control. */
 .modal-title {
   margin-bottom: var(--space-3);
+  overflow-wrap: anywhere;
 }
 
 /* Group divider inside a form (create.form.tsx RecordFormBody): sets custom fields

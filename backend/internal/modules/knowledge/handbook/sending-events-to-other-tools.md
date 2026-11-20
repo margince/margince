@@ -5,6 +5,7 @@
 A webhook sends a message to another tool when something happens in Margince: a deal is won, a
 contact is added, an offer is sent. Use it to post to a team chat channel, or to feed another
 system. Admin and Ops set webhooks up in **Settings → Integrations**, under **Webhooks**.
+Webhooks need a signing key, the `webhook_key` setting, which whoever runs your Margince server sets. Until then **Webhooks** says so and offers no **New subscription**.
 
 ### How do I post to Slack or Teams when a deal moves?
 To post to Slack or Microsoft Teams when a deal moves, open **Settings → Integrations** and choose **New subscription** in **Webhooks**.

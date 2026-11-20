@@ -37,6 +37,7 @@ import { useHoverIntent } from "./hoverintent";
 import { Modal } from "./modal";
 import { usePanelDismiss } from "./popoverdismiss";
 import { usePortalPanelFocus } from "./portalfocus";
+import { useTopLayer } from "./toplayer";
 import "./popover.css";
 
 /**
@@ -136,6 +137,7 @@ export function Popover({
   const [openedBy, setOpenedBy] = useState<"press" | "hover">("press");
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panel = useRef<HTMLElement | null>(null);
+  useTopLayer(panel, open);
   const panelId = useId();
   const triggerId = useId();
   // The leading edge by default, since words open a popover as often as a chip
@@ -211,6 +213,7 @@ export function Popover({
           <section
             id={panelId}
             ref={panel}
+            popover="manual"
             className={withClass(
               withClass(
                 "popover-panel",

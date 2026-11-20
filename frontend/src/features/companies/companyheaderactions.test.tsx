@@ -31,6 +31,9 @@ import {
   CompanyHeaderActions,
 } from "./companyheaderactions";
 
+// The verb shows "Meet", so its name starts with the word a speech user says.
+const BOOK_NAME = `${en["record.verb.meet"]}, ${en["scheduling.bookContact"]}`;
+
 // The account header's Email and Log strip, and the menu's Add task. The strip
 // is icon-first like every other record header's action strip.
 
@@ -241,7 +244,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
       log.getAttribute("aria-describedby"),
     );
     const book = screen.getByRole("button", {
-      name: en["scheduling.bookContact"],
+      name: BOOK_NAME,
     });
     expect(book.getAttribute("title")).toBe(
       `${en["scheduling.bookContact"]}. ${en["scheduling.bookRefused"]}`,
@@ -281,7 +284,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
 
     // Booking needs the same grant, and says so in the booking screen's words.
     const book = screen.getByRole("button", {
-      name: en["scheduling.bookContact"],
+      name: BOOK_NAME,
     });
     expect(book.hasAttribute("disabled")).toBe(true);
     expect(
@@ -316,9 +319,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     expect(log.hasAttribute("disabled")).toBe(true);
     expect(task.hasAttribute("disabled")).toBe(true);
     expect(
-      screen
-        .getByRole("button", { name: en["scheduling.bookContact"] })
-        .hasAttribute("disabled"),
+      screen.getByRole("button", { name: BOOK_NAME }).hasAttribute("disabled"),
     ).toBe(true);
     expect(
       screen.queryByText(
@@ -367,7 +368,7 @@ it("draws the bar's verbs in the design's order with their short words", async (
   const log = await screen.findByRole("button", { name: en["log.title"] });
   expect(log.querySelector(".verb-word")?.textContent).toBe("Log");
   const book = screen.getByRole("button", {
-    name: en["scheduling.bookContact"],
+    name: BOOK_NAME,
   });
   // Meet stands with Email, ahead of the two that record.
   expect(
@@ -476,8 +477,7 @@ describe("Book a meeting from the account", () => {
 
     // The picker is drawn once `/me` allows it; before that the face is a
     // disabled stand-in.
-    const book = () =>
-      screen.getByRole("button", { name: en["scheduling.bookContact"] });
+    const book = () => screen.getByRole("button", { name: BOOK_NAME });
     await waitFor(() => expect(book().hasAttribute("disabled")).toBe(false));
     await user.click(book());
     await user.type(
@@ -504,8 +504,7 @@ describe("Book a meeting from the account", () => {
     stubWritableAccount({ posted: [], read });
     renderInApp(<ActionsHost view={TWO_CONTACTS} />);
 
-    const book = () =>
-      screen.getByRole("button", { name: en["scheduling.bookContact"] });
+    const book = () => screen.getByRole("button", { name: BOOK_NAME });
     await waitFor(() => expect(book().hasAttribute("disabled")).toBe(false));
     vi.useFakeTimers();
     fireEvent.click(book());

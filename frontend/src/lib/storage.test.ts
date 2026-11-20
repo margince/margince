@@ -112,6 +112,7 @@ describe("a stored value", () => {
       "margince.documents.view",
       "margince.table.widths.v2.*",
       "margince.table.order.*",
+      "margince.table.hidden.*",
       "margince.agent.faults-seen",
       "margince.leads.segregationNoteDismissed",
       "margince.latestInbound.noticed:*",

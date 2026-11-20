@@ -32,9 +32,10 @@ type runAnalyticsQuery struct {
 func (t runAnalyticsQuery) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "run_analytics_query", Title: "Run an analytics query", Version: toolVersionV1,
-		Description:   runAnalyticsQueryCopy.render(),
-		Instead:       runAnalyticsQueryCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       runAnalyticsQueryCopy.render(),
+		Instead:           runAnalyticsQueryCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "runAnalyticsQuery",
 		// The population/field vocabulary is NOT re-declared here — it is

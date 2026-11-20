@@ -143,12 +143,9 @@ func oauthAdmits(r *http.Request, lim mcpLimiters) bool {
 		// registration outage, and Claude's fresh-client-per-connection
 		// behaviour made ten the legitimate ceiling too.
 		//
-		// What it still costs us: an attacker sustaining 60 registrations a
-		// minute keeps the endpoint shut for as long as they sustain it, and
-		// creates up to 60 oauth_client rows a minute per replica while doing
-		// so. Nothing else bounds that row growth today — the per-workspace
-		// registration cap and the admin bulk-delete of never-used clients that
-		// DESIGN §5.3/§5.5 name are both Phase 2 surfaces.
+		// The count is shared by every replica through Redis. The rows it lets
+		// in are bounded apart from it: mcp.client_registration.unused_limit caps
+		// the clients no consent has used, and the hourly sweep deletes them.
 		return lim.register.Allow(ip)
 	default:
 		// A path this router grows later arrives bounded by the ceiling no
