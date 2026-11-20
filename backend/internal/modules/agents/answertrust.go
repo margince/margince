@@ -37,10 +37,8 @@ func CarriesFreeText(schema json.RawMessage) bool {
 	if len(schema) == 0 || json.Unmarshal(schema, &node) != nil {
 		return true
 	}
-	for _, member := range slices.Concat(node.AnyOf, node.OneOf, node.AllOf) {
-		if CarriesFreeText(member) {
-			return true
-		}
+	if slices.ContainsFunc(slices.Concat(node.AnyOf, node.OneOf, node.AllOf), CarriesFreeText) {
+		return true
 	}
 	if (len(node.Enum) > 0 || len(node.Const) > 0) && !node.ExtensibleEnum {
 		return false

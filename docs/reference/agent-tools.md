@@ -121,7 +121,7 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 - The relink verbs (`relink_activity`, `relink_thread`, `relink_activities`) read the record type the activity moves
   to. Filing under a project is 🟡, because it marks every named activity as sales mail. A thread or a named set
   cannot pin a version, so a named set always waits. For an agent that acts as its own user, a relink waits only when
-  it files under a project, because only a member can undo that filing.
+  it files under a project. Only a member can undo that filing.
 - `relink_thread` refuses every call; `relink_activities`, whose approval binds the named IDs, replaces it.
 - A credential may give the approval for its own staged relink with `decide_approvals`, on a call with a human there.
   The same checks the decision applies must pass: the decision grants, and the target is visible. The change must

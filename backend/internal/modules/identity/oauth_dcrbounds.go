@@ -20,12 +20,12 @@ import (
 )
 
 // DefaultUnusedDynamicClientCap is far above what real tools make: one client
-// per connection a person starts, most of which a consent then uses.
+// per connection a user starts, most of which a consent then uses.
 const DefaultUnusedDynamicClientCap = 1000
 
 // DefaultUnusedDynamicClientRetention is how long a self-registered client may
 // wait for its first consent. A sign-in runs within minutes of registering; a
-// week also covers one a person left open and finishes later.
+// week also covers one a user left open and finishes later.
 const DefaultUnusedDynamicClientRetention = 7 * 24 * time.Hour
 
 // unusedDynamicClient is the predicate on an oauth_client aliased c: it
