@@ -59076,9 +59076,13 @@ components:
 
     CreateStageExitCriterionRequest:
       type: object
-      required: [key, label, kind]
+      required: [label, kind]
       properties:
-        key: { type: string }
+        key:
+          type: string
+          description: |
+            Optional. Left out, Margince makes the key from the label and adds a
+            number when the stage already has a live criterion under that key.
         label: { type: string }
         kind: { $ref: '#/components/schemas/StageCriterionKind' }
         required: { type: boolean, default: true }

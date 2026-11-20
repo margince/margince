@@ -11961,14 +11961,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tải lại trước khi thay đổi; danh sách có thể chưa đầy đủ.",
   "stage.criteria.none": "Chưa có tiêu chí rời giai đoạn nào.",
   "stage.criteria.add": "Thêm tiêu chí",
-  "stage.criteria.key": "Khóa",
-  "stage.criteria.keyHint":
-    "Tên mà bằng chứng trích dẫn. Chữ thường, chữ số và dấu gạch dưới. Không thể đổi về sau.",
   "stage.criteria.label": "Nhãn",
   "stage.criteria.kind": "Loại",
   "stage.criteria.required": "Bắt buộc",
   "stage.criteria.optional": "Không bắt buộc",
   "stage.criteria.hint": "Gợi ý",
+  "stage.criteria.kindHelp":
+    "Điều được tính là bằng chứng. Loại của bên mua chỉ tính lời của chính bên mua.",
+  "stage.criteria.requiredHelp":
+    "Tiêu chí bắt buộc khiến Margince không tự chuyển giao dịch đi tiếp.",
+  "stage.criteria.hintHelp": "Hướng dẫn cho AI tìm bằng chứng.",
   "stage.criteria.editOf": "Sửa {name}",
   "stage.criteria.removeOf": "Gỡ {name}",
   "stage.criteria.remove": "Gỡ",
@@ -14313,7 +14315,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.builder.open": "Trường mới",
   "cf.builder.noCode": "Không cần viết mã",
   "cf.builder.intro":
-    "Trường mới là một cột thật trên bảng sẵn có. Trường hoạt động trong bộ lọc, báo cáo, bản xuất và API như mọi trường lõi. Đây không phải đối tượng mới.",
+    "Trường mới xuất hiện trên mọi bản ghi loại này. Trường hoạt động trong bộ lọc, báo cáo, bản xuất và API như mọi trường có sẵn. Bạn có thể lưu trữ trường sau này, nhưng không khôi phục được.",
   "cf.label": "Nhãn",
   "cf.apiKey": "Tên API",
   "cf.apiKeyHint":
@@ -14346,7 +14348,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã lưu lựa chọn của “{label}”. {count} bản ghi đã thay đổi.",
   "cf.gate.title": "Thêm trường này?",
   "cf.gate.body":
-    "Khi xác nhận, trường này sẽ thành cột hoạt động trên mọi {object}: trên trang 360, trong tìm kiếm và bộ lọc, danh sách, bản xuất và API. Thao tác thêm này sẽ được ghi vào nhật ký hoạt động.",
+    "Khi xác nhận, trường này được thêm vào mọi {object}: trên trang 360, trong tìm kiếm và bộ lọc, danh sách, bản xuất và API. Thao tác thêm này sẽ được ghi vào nhật ký hoạt động.",
   "cf.refuse.title": "Trông như một đối tượng hoặc quan hệ mới",
   "cf.refuse.body":
     "Trình dựng này chỉ thêm trường đơn giản vào hồ sơ sẵn có. Đối tượng mới, liên kết giữa các đối tượng hay số tổng hợp tính toán là thay đổi cấu trúc. Thay đổi đó có trong một phiên bản Margince mới sau khi được xem xét, do con người làm, không phải do sản phẩm tự sửa mã của chính mình.",

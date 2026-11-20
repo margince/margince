@@ -37,9 +37,13 @@ func (h Handlers) CreateStageExitCriterion(w http.ResponseWriter, r *http.Reques
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	key := ""
+	if req.Key != nil {
+		key = *req.Key
+	}
 	criterion, err := h.store.CreateStageExitCriterion(r.Context(), CreateCriterionInput{
 		StageID:  pathID[ids.StageKind](id),
-		Key:      req.Key,
+		Key:      key,
 		Label:    req.Label,
 		Kind:     string(req.Kind),
 		Required: req.Required,

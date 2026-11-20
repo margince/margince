@@ -42856,7 +42856,11 @@ export interface components {
          */
         StageCriterionKind: "buyer_confirmed" | "event_held" | "document_signed" | "role_identified" | "terms_accepted" | "custom" | "legal_reviewed";
         CreateStageExitCriterionRequest: {
-            key: string;
+            /**
+             * @description Optional. Left out, Margince makes the key from the label and adds a
+             *     number when the stage already has a live criterion under that key.
+             */
+            key?: string;
             label: string;
             kind: components["schemas"]["StageCriterionKind"];
             /** @default true */

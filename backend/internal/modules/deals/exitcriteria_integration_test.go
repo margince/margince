@@ -89,6 +89,32 @@ func TestACriterionKeyIsUniqueWithinItsStage(t *testing.T) {
 	addCriterion(t, e, other, "buyer_confirmed")
 }
 
+// A criterion added without a key gets one made from its label. A clash in the
+// same stage adds a number, and a label with no a-z letters gets the fallback.
+func TestACriterionWithoutAKeyGetsOneFromItsLabel(t *testing.T) {
+	e := setupConfigEnv(t)
+	stageID := openStage(t, e, SemanticOpen)
+	add := func(label string) crmcontracts.StageExitCriterion {
+		c, err := e.store.CreateStageExitCriterion(e.as(), CreateCriterionInput{
+			StageID: stageID, Label: label, Kind: string(CriterionCustom),
+		})
+		if err != nil {
+			t.Fatalf("adding %q: %v", label, err)
+		}
+		return c
+	}
+	first := add("Budget confirmed")
+	second := add("Budget  confirmed!")
+	fallback := add("決裁者")
+	for got, want := range map[string]string{
+		first.Key: "budget_confirmed", second.Key: "budget_confirmed_2", fallback.Key: "criterion",
+	} {
+		if got != want {
+			t.Errorf("minted key %q, want %q", got, want)
+		}
+	}
+}
+
 // Won and lost are where a deal stops, so there is nothing it takes to leave
 // them. No CHECK can see the stage row from the criterion, so the store owns
 // this and this test is what holds it.
