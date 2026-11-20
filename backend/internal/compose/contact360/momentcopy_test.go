@@ -111,13 +111,13 @@ func momentFacts(moment contracts.ContactMoment) contracts.ContactMoment {
 func TestUnknownContactRoleDoesNotBecomeARecordedRoleInTranslation(t *testing.T) {
 	for _, language := range []string{"de", "vi"} {
 		said := momentCopyFor(language)
-		for _, role := range []*string{nil, new(""), new("  "), new("economic_buyer")} {
+		for _, role := range []*string{nil, new(""), new("  "), new("contact"), new("Key contact"), new("economic_buyer")} {
 			got := said.recordedSeat(role)
 			recorded := "erfasste Rolle"
 			if language == "vi" {
 				recorded = "được ghi nhận"
 			}
-			wantRecorded := role != nil && strings.TrimSpace(*role) != ""
+			wantRecorded := role != nil && *role == "economic_buyer"
 			if strings.Contains(got, recorded) != wantRecorded {
 				t.Fatalf("%s inferred or lost role: %s", language, got)
 			}

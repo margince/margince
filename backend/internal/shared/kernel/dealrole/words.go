@@ -14,11 +14,19 @@ var roleWords = map[string]langcopy.Phrase{
 	User:                {En: "user", De: "Nutzer", Vi: "người dùng"},
 }
 
-// Word labels known roles and preserves an unfamiliar stored role verbatim.
-func Word(role, language string) string {
+// Known reports whether role is in the vocabulary. The stored role is free
+// text, so a reader must not print or pass on one that is not.
+func Known(role string) bool {
+	_, ok := roleWords[role]
+	return ok
+}
+
+// Label is a role in the reader's language, or "" for a role outside the
+// vocabulary: a typed value such as "contact" has no meaning to translate.
+func Label(role, language string) string {
 	phrase, ok := roleWords[role]
 	if !ok {
-		return role
+		return ""
 	}
 	return langcopy.For(language).Say(phrase)
 }

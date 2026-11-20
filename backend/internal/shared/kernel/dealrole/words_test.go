@@ -17,15 +17,20 @@ func TestEveryRecordedRoleHasWordsInEveryLanguage(t *testing.T) {
 			t.Errorf("role %s has no wording", role)
 		}
 		for _, language := range textlang.Shipped {
-			if Word(role, string(language)) == "" {
+			if Label(role, string(language)) == "" {
 				t.Errorf("%s/%s is empty", role, language)
 			}
 		}
 	}
-	if Word("future_role", "de") != "future_role" {
-		t.Fatal("unknown role changed")
+	for _, typed := range []string{"contact", "future_role", "Champion", " champion"} {
+		if Known(typed) || Label(typed, "de") != "" {
+			t.Errorf("free-text role %q got a label", typed)
+		}
 	}
-	if Word(EconomicBuyer, "unknown") != "economic buyer" {
+	if !Known(Champion) || Label(Champion, "de") != "Fürsprecher" {
+		t.Fatal("built-in role lost its German label")
+	}
+	if Label(EconomicBuyer, "unknown") != "economic buyer" {
 		t.Fatal("unknown language lost English fallback")
 	}
 }

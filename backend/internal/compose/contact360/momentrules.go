@@ -14,7 +14,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -247,17 +246,21 @@ func fingerprintOf(evidence []crmcontracts.ContactMomentEvidence) string {
 	return owedwork.Fingerprint(marks)
 }
 
-// recordedSeat names this contact's seat on the deal as the record spells it,
-// falling back to what is true when no role was recorded.
+// recordedSeat names this contact's seat on the deal in the reader's words,
+// falling back to what is true when no built-in role was recorded.
 //
 // The fallback is the load-bearing half: a stakeholder edge may carry no role
-// at all, and a sentence that named one anyway would be inventing the fact the
-// rung exists to report.
+// or a typed one, and a sentence that named it anyway would print a word
+// with no meaning in any language.
 func (said momentCopy) recordedSeat(role *string) string {
-	if role == nil || strings.TrimSpace(*role) == "" {
+	if role == nil {
 		return said.Say(momentWords.Stakeholder)
 	}
-	return fmt.Sprintf(said.Say(momentWords.RecordedRole), strings.ReplaceAll(dealrole.Word(*role, string(said.Lang())), "_", " "))
+	label := dealrole.Label(*role, string(said.Lang()))
+	if label == "" {
+		return said.Say(momentWords.Stakeholder)
+	}
+	return fmt.Sprintf(said.Say(momentWords.RecordedRole), label)
 }
 
 func (said momentCopy) replyAction(label, intent string, activityID *openapi_types.UUID) crmcontracts.ContactMomentAction {
