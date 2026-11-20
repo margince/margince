@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturetimeline"
+	"github.com/margince/margince/backend/internal/compose/duequestion"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
@@ -294,6 +295,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		}).
 		WithClock(cfg.clock()).
 		WithStager(mergeStager{svc: NewApprovalsService(InstallationDB(pool))}).
+		WithDueAsker(duequestion.Asker{Approvals: NewApprovalsService(InstallationDB(pool))}).
 		WithTaskAssigneeCheck(activities.CheckNewTaskAssignee).
 		WithContactArrivals(contactArrivalTeller{
 			store: newContactsStore(InstallationDB(pool)).

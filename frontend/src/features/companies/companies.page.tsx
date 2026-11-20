@@ -171,7 +171,6 @@ export function CompanyPage({
     company,
     view,
     loading,
-    failed,
     active: tab === "timeline",
   });
   const showChanges = () => {

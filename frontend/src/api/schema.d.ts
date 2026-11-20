@@ -1408,6 +1408,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/claims/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Margince's close of a promise.
+         * @description Opens again a promise Margince closed itself (`auto_kept` on the claim). The close
+         *     touched only the claim, so nothing else needs undoing. Whoever may settle the claim
+         *     by hand may reopen it. A claim outside the caller's scope is a 404. A claim a human
+         *     settled is a 409: it reopens through the settle path. A claim already open is the
+         *     same success.
+         */
+        post: operations["reopenConversationClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/claims/{id}/settle": {
         parameters: {
             query?: never;
@@ -6992,11 +7019,14 @@ export interface paths {
         put?: never;
         /**
          * Say a captured message is not about a deal, or about none of the deals its question offered.
-         * @description With `deal_id`, the message is not about that deal. Its link to the deal comes off, and no
-         *     automatic pass (capture, the refile pass, the repair) files it on that deal again. Other
-         *     deals stay open to it, and a colleague's own relink still files it anywhere.
+         * @description With `deal_id`, the message is not about that deal. Its link to the deal stays and is marked
+         *     `unrelated` by a human, as `setActivityDealRelevance` marks it, so the deal's timeline still
+         *     shows the message and "About this deal" takes it back. A link marked so keeps the deal
+         *     alive in no reading of it. No automatic pass (capture, the refile pass, the repair, the
+         *     topic recheck) files the message on that deal again or changes the mark. A colleague's own
+         *     relink still files it anywhere.
          *
-         *     A project link that came from the deal comes off with it, through the same rules as the
+         *     A project link that came from the deal comes off, through the same rules as the
          *     project-filing undo. It stays when the project was filed some other way, when a retention
          *     rule keeps it, or when the caller cannot read the project. An agent's decline takes it off
          *     as a member's does. `project_kept` says so.
@@ -7006,9 +7036,50 @@ export interface paths {
          *     message and on each unfiled message of the conversation, and the question is done. A
          *     message with no open question answers 422.
          *
-         *     Declining a deal already declined is the same success and writes nothing.
+         *     Declining a deal already declined is the same success and writes nothing. With `deal_id`,
+         *     the caller needs the right to change the deal too, as for `setActivityDealRelevance`.
          */
         post: operations["declineActivityDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/deal-relevance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say whether an activity linked to a deal is about that deal, or take that back.
+         * @description Marks the activity's link to `deal_id` as `relevant` or `unrelated`, with `human` as its
+         *     source. The link is never taken off: the deal's timeline still shows the activity with its
+         *     mark, and the opposite call is the undo. A link marked `unrelated`, or `uncertain` by the
+         *     classifier, warms the deal in no reading of it: its last-activity date, the quiet and
+         *     stalled rules, a meeting ahead and engagement all leave it out. The deal's last-activity
+         *     date moves back at once. Only `unrelated` also leaves it out of the silent close, so the
+         *     classifier's doubt never closes a deal.
+         *
+         *     `unrelated` is the same act as `declineActivityDeal` with a `deal_id`: the decline is
+         *     recorded, and a project link that came from the deal comes off under the project-filing
+         *     undo's rules. `relevant` files the activity on the deal's project again when it has none
+         *     and the caller is a member who may.
+         *
+         *     The classifier never changes a mark a human set, and no automatic pass takes a link a human
+         *     judged off the activity. Needs `activity.update` and the right to change both the activity
+         *     and the deal; a deal the caller cannot see answers 404. An activity with no link to the deal
+         *     answers 404. Setting the mark the link already has is the same success with `changed`
+         *     false.
+         */
+        put: operations["setActivityDealRelevance"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -18435,6 +18506,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/custom-fields/{id}/choices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * How many records hold each choice of a picklist or multiselect field.
+         * @description What removing a choice would clear, asked before an options edit is confirmed. Every
+         *     record of the field's object counts, archived ones included, because the edit clears
+         *     them all. Each current choice is listed, with zero where no record holds it. A read:
+         *     it needs `custom_field:read` and read on the field's object.
+         */
+        get: operations["listCustomFieldChoiceUse"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/custom-fields/{id}/retire": {
         parameters: {
             query?: never;
@@ -18484,17 +18581,27 @@ export interface paths {
         head?: never;
         /**
          * Edit a picklist custom field's allowed options (regenerates the column's CHECK).
-         * @description CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` fields (422 `not_picklist`
+         * @description CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` and `type=multiselect` fields (422 `not_picklist`
          *     otherwise). Replaces the catalog's `options` array and regenerates the physical
          *     column's CHECK constraint from the new set via the governed engine (the same
          *     one-transaction owner-ALTER shape as `createCustomField` — this is the
          *     one DDL path rename/retire never touch). Removing every option is refused (422,
          *     detail "A picklist needs at least one option") — a picklist always keeps at least
          *     one allowed value. Like `retireCustomField`, an agent asks its user first: this
-         *     mutates a schema-adjacent CHECK constraint. A retired field
+         *     mutates a schema-adjacent CHECK constraint, and clears data. A retired field
          *     refuses the edit with a 409 `conflict` — retirement is terminal, so its options
-         *     are frozen; removing an option that stored values still use is also a 409
-         *     (`ADD CONSTRAINT` validates existing rows — migrate the values first).
+         *     are frozen.
+         *
+         *     Removing a choice that records hold clears it from them in the same transaction:
+         *     a picklist value becomes null, and a multiselect keeps its other choices. Archived
+         *     records are cleared too. Each changed record gets its own audit entry and its
+         *     object's `*.updated` event, and the answer's `records_changed` counts them.
+         *     `listCustomFieldChoiceUse` tells the caller that count before they confirm. Removing a
+         *     choice also needs the grant to update the field's object, or the edit answers 403. A
+         *     record that cannot change, such as an activity under a retention hold, refuses the
+         *     edit with a 409 that says so. A Live
+         *     List whose filter names a removed choice keeps evaluating and matches no record
+         *     through it.
          */
         patch: operations["updateCustomFieldOptions"];
         trace?: never;
@@ -37305,7 +37412,7 @@ export interface components {
          * @enum {string}
          */
         ConversationClaimKind: "commitment_ours" | "commitment_theirs" | "open_question" | "decision" | "priority" | "objection" | "success_criterion" | "decision_process";
-        /** @description A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb. */
+        /** @description A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on. */
         ConversationClaimLooksKept: {
             /** Format: uuid */
             meeting_id: string;
@@ -37314,6 +37421,10 @@ export interface components {
             meeting_at: string;
             /** @description How to read `meeting_at`. `day` means only its date is known. */
             meeting_precision: components["schemas"]["OccurredPrecision"];
+        };
+        /** @description Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting. */
+        ConversationClaimAutoKept: {
+            evidence?: components["schemas"]["ConversationClaimLooksKept"];
         };
         /**
          * @description One thing said in a captured conversation, with the evidence it was read from.
@@ -37354,6 +37465,7 @@ export interface components {
              */
             corrected_at?: string | null;
             looks_kept?: components["schemas"]["ConversationClaimLooksKept"];
+            auto_kept?: components["schemas"]["ConversationClaimAutoKept"];
             /**
              * Format: uuid
              * @description The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
@@ -42784,6 +42896,18 @@ export interface components {
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
+            /**
+             * @description On a deal link only: whether the activity is about the deal. Absent when nobody judged
+             *     it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+             *     it; only `unrelated` also leaves it out of the silent close.
+             * @enum {string}
+             */
+            deal_relevance?: "relevant" | "unrelated" | "uncertain";
+            /**
+             * @description Who set `deal_relevance`. The classifier never changes a mark a human set.
+             * @enum {string}
+             */
+            relevance_source?: "human" | "classifier";
         };
         /**
          * @description The destination for every writable, non-archived activity of one conversation thread.
@@ -44038,11 +44162,50 @@ export interface components {
              */
             deal_id?: string;
         };
+        SetActivityDealRelevanceRequest: {
+            /**
+             * Format: uuid
+             * @description The deal whose link to the activity is judged.
+             */
+            deal_id: string;
+            /**
+             * @description `relevant` says the activity is about the deal; `unrelated` says it is not.
+             * @enum {string}
+             */
+            deal_relevance: "relevant" | "unrelated";
+        };
+        ActivityDealRelevance: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * @description The link's mark after the call.
+             * @enum {string}
+             */
+            deal_relevance: "relevant" | "unrelated" | "uncertain";
+            /**
+             * @description Who set the mark. Always `human` after this call.
+             * @enum {string}
+             */
+            relevance_source: "human" | "classifier";
+            /** @description The call changed the mark. */
+            changed: boolean;
+            /** @description The project link that came from the deal came off the activity. */
+            project_unfiled: boolean;
+            /** @description A project link came from the deal and stays, because a retention rule keeps it or the caller cannot read the project. */
+            project_kept: boolean;
+            /** @description The activity was filed on the deal's project again. */
+            project_filed: boolean;
+        };
         ActivityDealDecline: {
             /** @description The deals this call declined on the message. A deal declined before is not listed again. */
             declined_deal_ids: string[];
-            /** @description A deal link came off the message. */
+            /**
+             * @deprecated
+             * @description Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
+             */
             unlinked: boolean;
+            /** @description A deal link of the message is now marked `unrelated` by a human. */
+            marked_unrelated: boolean;
             /** @description The project link that came from a declined deal came off the message. */
             project_unfiled: boolean;
             /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
@@ -47982,7 +48145,7 @@ export interface components {
              */
             name: string;
             /**
-             * @description The six custom-field types, plus `id` for a reference to another record,
+             * @description The custom-field types, plus `id` for a reference to another record,
              *     `domain` for a host column and `distance` for a place on the earth. A `distance`
              *     field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
              *     `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -47998,7 +48161,7 @@ export interface components {
              *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "id" | "domain" | "distance";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "url" | "id" | "domain" | "distance";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for
@@ -52430,10 +52593,10 @@ export interface components {
             /** @description Admin-facing key the column_name derives from. */
             slug: string;
             /**
-             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "url";
             /**
              * @description retired = soft: hidden from the API and filtering, column and values preserved.
              * @enum {string}
@@ -52465,6 +52628,17 @@ export interface components {
              */
             archived_at?: string | null;
             version?: components["schemas"]["RowVersion"];
+            /** @description Only on the answer to `updateCustomFieldOptions`: how many records held a choice the edit removed and had it cleared. */
+            records_changed?: number;
+        };
+        /** @description How many records hold each current choice of a picklist or multiselect field. */
+        CustomFieldChoiceUse: {
+            choices: components["schemas"]["CustomFieldChoiceCount"][];
+        };
+        CustomFieldChoiceCount: {
+            choice: string;
+            /** @description Records that hold the choice, archived ones included. */
+            records: number;
         };
         /** @description The Live Lists whose filter names a custom field: the ones the caller may find by name, and how many more exist that they may not find. */
         CustomFieldLiveLists: {
@@ -52496,7 +52670,7 @@ export interface components {
             object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
             label: string;
             /** @enum {string} */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "url";
             currency?: string | null;
             options?: string[] | null;
             source: string;
@@ -66232,6 +66406,32 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    reopenConversationClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reopened, or was already open. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     settleConversationClaim: {
         parameters: {
             query?: never;
@@ -74968,6 +75168,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityDealDecline"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
+    setActivityDealRelevance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetActivityDealRelevanceRequest"];
+            };
+        };
+        responses: {
+            /** @description The link's mark after the call. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityDealRelevance"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -92338,6 +92570,41 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listCustomFieldChoiceUse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The records holding each choice. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFieldChoiceUse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The field is not a picklist or multiselect. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     retireCustomField: {
         parameters: {
             query?: never;
@@ -92461,7 +92728,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description Stored values still use a removed option, the field is retired (options are frozen — retirement is terminal), or the target table is busy with concurrent activity — the last is retryable. */
+            /** @description The field is retired (options are frozen — retirement is terminal), a record that holds a removed choice belongs to a member who has left and must be handed on first, a record that holds one is under a retention hold, or the target table is busy with concurrent activity — the last is retryable. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -94532,7 +94799,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Refused, with the reason distinguished by the problem `code`: `email_taken` (a member with this email already exists), `no_delivery_channel` (this installation has neither an outbound-email channel nor a public base URL, so neither the mailed link nor an admin-issued one could reach the member — an invite would create an ACTIVE account nobody could ever sign in as), or `company_not_described` (this installation has not yet saved its own company through `PUT /company`; the onboarding gate holds every admin on the company form until it is saved, so no seat of any role is added before then, and a client may read any non-admin seat as proof that the company exists. Asked after the caller's grant, so a caller who may not invite is answered 403 either way). */
+            /** @description Refused, with the reason distinguished by the problem `code`: `already_invited` (a member with this email exists and is still waiting on an invitation; resend it with `POST /users/{id}/resend-invite`. Answered only to a caller who may read `user_admin`; any other caller is answered `email_taken` or the seat refusal, as for any other taken address), `email_taken` (a member with this email already exists), `no_delivery_channel` (this installation has neither an outbound-email channel nor a public base URL, so neither the mailed link nor an admin-issued one could reach the member — an invite would create an ACTIVE account nobody could ever sign in as), or `company_not_described` (this installation has not yet saved its own company through `PUT /company`; the onboarding gate holds every admin on the company form until it is saved, so no seat of any role is added before then, and a client may read any non-admin seat as proof that the company exists. Asked after the caller's grant, so a caller who may not invite is answered 403 either way). */
             409: {
                 headers: {
                     [name: string]: unknown;

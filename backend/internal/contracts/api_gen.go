@@ -583,6 +583,45 @@ func (e ActivityDealFilingRecordType) Valid() bool {
 	}
 }
 
+// Defines values for ActivityDealRelevanceDealRelevance.
+const (
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceRelevant  ActivityDealRelevanceDealRelevance = "relevant"
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceUncertain ActivityDealRelevanceDealRelevance = "uncertain"
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceUnrelated ActivityDealRelevanceDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealRelevanceDealRelevance enum.
+func (e ActivityDealRelevanceDealRelevance) Valid() bool {
+	switch e {
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceRelevant:
+		return true
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceUncertain:
+		return true
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityDealRelevanceRelevanceSource.
+const (
+	ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceClassifier ActivityDealRelevanceRelevanceSource = "classifier"
+	ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceHuman      ActivityDealRelevanceRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealRelevanceRelevanceSource enum.
+func (e ActivityDealRelevanceRelevanceSource) Valid() bool {
+	switch e {
+	case ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceClassifier:
+		return true
+	case ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceHuman:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityEmailTargetEntityType.
 const (
 	ActivityEmailTargetEntityTypeCompany ActivityEmailTargetEntityType = "company"
@@ -625,6 +664,27 @@ func (e ActivityEmailTargetRefusal) Valid() bool {
 	}
 }
 
+// Defines values for ActivityLinkDealRelevance.
+const (
+	ActivityLinkDealRelevanceLinkDealRelevanceRelevant  ActivityLinkDealRelevance = "relevant"
+	ActivityLinkDealRelevanceLinkDealRelevanceUncertain ActivityLinkDealRelevance = "uncertain"
+	ActivityLinkDealRelevanceLinkDealRelevanceUnrelated ActivityLinkDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkDealRelevance enum.
+func (e ActivityLinkDealRelevance) Valid() bool {
+	switch e {
+	case ActivityLinkDealRelevanceLinkDealRelevanceRelevant:
+		return true
+	case ActivityLinkDealRelevanceLinkDealRelevanceUncertain:
+		return true
+	case ActivityLinkDealRelevanceLinkDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -646,6 +706,24 @@ func (e ActivityLinkEntityType) Valid() bool {
 	case ActivityLinkEntityTypeLead:
 		return true
 	case ActivityLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityLinkRelevanceSource.
+const (
+	ActivityLinkRelevanceSourceLinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
+	ActivityLinkRelevanceSourceLinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkRelevanceSource enum.
+func (e ActivityLinkRelevanceSource) Valid() bool {
+	switch e {
+	case ActivityLinkRelevanceSourceLinkRelevanceSourceClassifier:
+		return true
+	case ActivityLinkRelevanceSourceLinkRelevanceSourceHuman:
 		return true
 	default:
 		return false
@@ -10085,6 +10163,7 @@ const (
 	CreateCustomFieldRequestTypePicklist    CreateCustomFieldRequestType = "picklist"
 	CreateCustomFieldRequestTypeRecord      CreateCustomFieldRequestType = "record"
 	CreateCustomFieldRequestTypeText        CreateCustomFieldRequestType = "text"
+	CreateCustomFieldRequestTypeUrl         CreateCustomFieldRequestType = "url"
 )
 
 // Valid indicates whether the value is a known member of the CreateCustomFieldRequestType enum.
@@ -10105,6 +10184,8 @@ func (e CreateCustomFieldRequestType) Valid() bool {
 	case CreateCustomFieldRequestTypeRecord:
 		return true
 	case CreateCustomFieldRequestTypeText:
+		return true
+	case CreateCustomFieldRequestTypeUrl:
 		return true
 	default:
 		return false
@@ -10859,6 +10940,7 @@ const (
 	CustomFieldTypePicklist    CustomFieldType = "picklist"
 	CustomFieldTypeRecord      CustomFieldType = "record"
 	CustomFieldTypeText        CustomFieldType = "text"
+	CustomFieldTypeUrl         CustomFieldType = "url"
 )
 
 // Valid indicates whether the value is a known member of the CustomFieldType enum.
@@ -10879,6 +10961,8 @@ func (e CustomFieldType) Valid() bool {
 	case CustomFieldTypeRecord:
 		return true
 	case CustomFieldTypeText:
+		return true
+	case CustomFieldTypeUrl:
 		return true
 	default:
 		return false
@@ -13349,6 +13433,7 @@ const (
 	FilterVocabularyFieldTypePicklist    FilterVocabularyFieldType = "picklist"
 	FilterVocabularyFieldTypeRecord      FilterVocabularyFieldType = "record"
 	FilterVocabularyFieldTypeText        FilterVocabularyFieldType = "text"
+	FilterVocabularyFieldTypeUrl         FilterVocabularyFieldType = "url"
 )
 
 // Valid indicates whether the value is a known member of the FilterVocabularyFieldType enum.
@@ -13375,6 +13460,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeRecord:
 		return true
 	case FilterVocabularyFieldTypeText:
+		return true
+	case FilterVocabularyFieldTypeUrl:
 		return true
 	default:
 		return false
@@ -23668,6 +23755,24 @@ func (e ServiceStatusStatus) Valid() bool {
 	}
 }
 
+// Defines values for SetActivityDealRelevanceRequestDealRelevance.
+const (
+	SetActivityDealRelevanceRequestDealRelevanceRelevant  SetActivityDealRelevanceRequestDealRelevance = "relevant"
+	SetActivityDealRelevanceRequestDealRelevanceUnrelated SetActivityDealRelevanceRequestDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the SetActivityDealRelevanceRequestDealRelevance enum.
+func (e SetActivityDealRelevanceRequestDealRelevance) Valid() bool {
+	switch e {
+	case SetActivityDealRelevanceRequestDealRelevanceRelevant:
+		return true
+	case SetActivityDealRelevanceRequestDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetActivityDispositionRequestDisposition.
 const (
 	SetActivityDispositionRequestDispositionHandled  SetActivityDispositionRequestDisposition = "handled"
@@ -33311,6 +33416,9 @@ type ActivityDealDecline struct {
 	// DeclinedDealIds The deals this call declined on the message. A deal declined before is not listed again.
 	DeclinedDealIds []openapi_types.UUID `json:"declined_deal_ids"`
 
+	// MarkedUnrelated A deal link of the message is now marked `unrelated` by a human.
+	MarkedUnrelated bool `json:"marked_unrelated"`
+
 	// ProjectKept A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project.
 	ProjectKept bool `json:"project_kept"`
 
@@ -33320,7 +33428,8 @@ type ActivityDealDecline struct {
 	// QuestionsClosed The open deal questions of the conversation this call marked done.
 	QuestionsClosed int `json:"questions_closed" minimum:"0"`
 
-	// Unlinked A deal link came off the message.
+	// Unlinked Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Unlinked bool `json:"unlinked"`
 }
 
@@ -33345,6 +33454,34 @@ type ActivityDealFilingOptions struct {
 
 // ActivityDealFilingRecordType defines model for ActivityDealFilingRecordType.
 type ActivityDealFilingRecordType string
+
+// ActivityDealRelevance defines model for ActivityDealRelevance.
+type ActivityDealRelevance struct {
+	// Changed The call changed the mark.
+	Changed bool               `json:"changed"`
+	DealId  openapi_types.UUID `json:"deal_id"`
+
+	// DealRelevance The link's mark after the call.
+	DealRelevance ActivityDealRelevanceDealRelevance `json:"deal_relevance"`
+
+	// ProjectFiled The activity was filed on the deal's project again.
+	ProjectFiled bool `json:"project_filed"`
+
+	// ProjectKept A project link came from the deal and stays, because a retention rule keeps it or the caller cannot read the project.
+	ProjectKept bool `json:"project_kept"`
+
+	// ProjectUnfiled The project link that came from the deal came off the activity.
+	ProjectUnfiled bool `json:"project_unfiled"`
+
+	// RelevanceSource Who set the mark. Always `human` after this call.
+	RelevanceSource ActivityDealRelevanceRelevanceSource `json:"relevance_source"`
+}
+
+// ActivityDealRelevanceDealRelevance The link's mark after the call.
+type ActivityDealRelevanceDealRelevance string
+
+// ActivityDealRelevanceRelevanceSource Who set the mark. Always `human` after this call.
+type ActivityDealRelevanceRelevanceSource string
 
 // ActivityEmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
 type ActivityEmailTarget struct {
@@ -33375,14 +33512,30 @@ type ActivityFollowUpTask struct {
 
 // ActivityLink defines model for ActivityLink.
 type ActivityLink struct {
-	ActivityId *openapi_types.UUID    `json:"activity_id,omitempty"`
-	EntityId   openapi_types.UUID     `json:"entity_id"`
-	EntityType ActivityLinkEntityType `json:"entity_type"`
-	Id         *openapi_types.UUID    `json:"id,omitempty"`
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// DealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+	// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+	// it; only `unrelated` also leaves it out of the silent close.
+	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
+	EntityId      openapi_types.UUID         `json:"entity_id"`
+	EntityType    ActivityLinkEntityType     `json:"entity_type"`
+	Id            *openapi_types.UUID        `json:"id,omitempty"`
+
+	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
 }
+
+// ActivityLinkDealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+// it; only `unrelated` also leaves it out of the silent close.
+type ActivityLinkDealRelevance string
 
 // ActivityLinkEntityType defines model for ActivityLink.EntityType.
 type ActivityLinkEntityType string
+
+// ActivityLinkRelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+type ActivityLinkRelevanceSource string
 
 // ActivityLinkInput One record an activity is filed under, as a caller supplies it. The read shape
 // (ActivityLink) carries the ids the server assigned; this carries only the target.
@@ -46161,6 +46314,9 @@ type ControllerSend struct {
 // is final against the machine — a later run may add claims but never overwrites or
 // resurrects a corrected one while its evidence fingerprint is unchanged.
 type ConversationClaim struct {
+	// AutoKept Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+	AutoKept *ConversationClaimAutoKept `json:"auto_kept,omitempty"`
+
 	// Body What the claim says, in the reader's language. The verbatim evidence is `source_quote`, beside it.
 	Body string `json:"body"`
 
@@ -46182,7 +46338,7 @@ type ConversationClaim struct {
 	// dropped from the product.
 	Kind ConversationClaimKind `json:"kind"`
 
-	// LooksKept A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+	// LooksKept A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
 	LooksKept *ConversationClaimLooksKept `json:"looks_kept,omitempty"`
 
 	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
@@ -46218,6 +46374,12 @@ type ConversationClaim struct {
 // ConversationClaimStatus `open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.
 type ConversationClaimStatus string
 
+// ConversationClaimAutoKept Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+type ConversationClaimAutoKept struct {
+	// Evidence A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
+	Evidence *ConversationClaimLooksKept `json:"evidence,omitempty"`
+}
+
 // ConversationClaimKind The eight kinds one extraction mechanism produces (ADR-0097 D1). They share a
 // lifecycle — extracted → cited → correctable → dismissible — and differ only here.
 //
@@ -46231,7 +46393,7 @@ type ConversationClaimStatus string
 // dropped from the product.
 type ConversationClaimKind string
 
-// ConversationClaimLooksKept A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+// ConversationClaimLooksKept A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
 type ConversationClaimLooksKept struct {
 	GuestName string             `json:"guest_name"`
 	MeetingAt time.Time          `json:"meeting_at"`
@@ -47660,6 +47822,9 @@ type CustomField struct {
 	// Options Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
 	Options *[]string `json:"options,omitempty"`
 
+	// RecordsChanged Only on the answer to `updateCustomFieldOptions`: how many records held a choice the edit removed and had it cleared.
+	RecordsChanged *int `json:"records_changed,omitempty" minimum:"0"`
+
 	// Reportable Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object.
 	Reportable bool `json:"reportable"`
 
@@ -47672,7 +47837,7 @@ type CustomField struct {
 	// Status retired = soft: hidden from the API and filtering, column and values preserved.
 	Status CustomFieldStatus `json:"status"`
 
-	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
 	Type      CustomFieldType `json:"type"`
 	UpdatedAt time.Time       `json:"updated_at"`
 
@@ -47692,8 +47857,21 @@ type CustomFieldObject string
 // CustomFieldStatus retired = soft: hidden from the API and filtering, column and values preserved.
 type CustomFieldStatus string
 
-// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
 type CustomFieldType string
+
+// CustomFieldChoiceCount defines model for CustomFieldChoiceCount.
+type CustomFieldChoiceCount struct {
+	Choice string `json:"choice"`
+
+	// Records Records that hold the choice, archived ones included.
+	Records int `json:"records" minimum:"0"`
+}
+
+// CustomFieldChoiceUse How many records hold each current choice of a picklist or multiselect field.
+type CustomFieldChoiceUse struct {
+	Choices []CustomFieldChoiceCount `json:"choices"`
+}
 
 // CustomFieldListResponse defines model for CustomFieldListResponse.
 type CustomFieldListResponse struct {
@@ -51370,7 +51548,7 @@ type FilterVocabularyField struct {
 	// `id`, so only a core field can carry a reference.
 	References *FilterVocabularyFieldReferences `json:"references,omitempty"`
 
-	// Type The six custom-field types, plus `id` for a reference to another record,
+	// Type The custom-field types, plus `id` for a reference to another record,
 	// `domain` for a host column and `distance` for a place on the earth. A `distance`
 	// field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
 	// `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -51401,7 +51579,7 @@ type FilterVocabularyFieldOperators string
 // `id`, so only a core field can carry a reference.
 type FilterVocabularyFieldReferences string
 
-// FilterVocabularyFieldType The six custom-field types, plus `id` for a reference to another record,
+// FilterVocabularyFieldType The custom-field types, plus `id` for a reference to another record,
 // `domain` for a host column and `distance` for a place on the earth. A `distance`
 // field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
 // `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -66983,6 +67161,18 @@ type SetActivityAudienceRequest struct {
 	// Members The users and teams admitted besides the participants. Read only when `audience` is `selected`; replaces the previous set.
 	Members *[]AudienceMember `json:"members,omitempty"`
 }
+
+// SetActivityDealRelevanceRequest defines model for SetActivityDealRelevanceRequest.
+type SetActivityDealRelevanceRequest struct {
+	// DealId The deal whose link to the activity is judged.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// DealRelevance `relevant` says the activity is about the deal; `unrelated` says it is not.
+	DealRelevance SetActivityDealRelevanceRequestDealRelevance `json:"deal_relevance"`
+}
+
+// SetActivityDealRelevanceRequestDealRelevance `relevant` says the activity is about the deal; `unrelated` says it is not.
+type SetActivityDealRelevanceRequestDealRelevance string
 
 // SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
 type SetActivityDispositionRequest struct {
@@ -83739,6 +83929,9 @@ type AnswerCalendarInvitationJSONRequestBody = AnswerCalendarInvitationRequest
 // DeclineActivityDealJSONRequestBody defines body for DeclineActivityDeal for application/json ContentType.
 type DeclineActivityDealJSONRequestBody = DeclineActivityDealRequest
 
+// SetActivityDealRelevanceJSONRequestBody defines body for SetActivityDealRelevance for application/json ContentType.
+type SetActivityDealRelevanceJSONRequestBody = SetActivityDealRelevanceRequest
+
 // SetActivityDispositionJSONRequestBody defines body for SetActivityDisposition for application/json ContentType.
 type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
@@ -98705,6 +98898,9 @@ type ServerInterface interface {
 	// Say a captured message is not about a deal, or about none of the deals its question offered.
 	// (POST /activities/{id}/deal-decline)
 	DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id)
+	// Say whether an activity linked to a deal is about that deal, or take that back.
+	// (PUT /activities/{id}/deal-relevance)
+	SetActivityDealRelevance(w http.ResponseWriter, r *http.Request, id Id)
 	// Pick the message back up — the undo behind every set-aside verb.
 	// (DELETE /activities/{id}/disposition)
 	ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams)
@@ -99485,6 +99681,9 @@ type ServerInterface interface {
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
+	// Undo Margince's close of a promise.
+	// (POST /claims/{id}/reopen)
+	ReopenConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
 	// Say a promise was kept, or that it no longer stands.
 	// (POST /claims/{id}/settle)
 	SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
@@ -100007,6 +100206,9 @@ type ServerInterface interface {
 	// Rename a custom field or change whether create dialogs offer it (not a schema change).
 	// (PATCH /custom-fields/{id})
 	RenameCustomField(w http.ResponseWriter, r *http.Request, id Id, params RenameCustomFieldParams)
+	// How many records hold each choice of a picklist or multiselect field.
+	// (GET /custom-fields/{id}/choices)
+	ListCustomFieldChoiceUse(w http.ResponseWriter, r *http.Request, id Id)
 	// The Live Lists whose filter names this custom field.
 	// (GET /custom-fields/{id}/lists)
 	ListCustomFieldLiveLists(w http.ResponseWriter, r *http.Request, id Id)
@@ -102113,6 +102315,12 @@ func (_ Unimplemented) DeclineActivityDeal(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Say whether an activity linked to a deal is about that deal, or take that back.
+// (PUT /activities/{id}/deal-relevance)
+func (_ Unimplemented) SetActivityDealRelevance(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Pick the message back up — the undo behind every set-aside verb.
 // (DELETE /activities/{id}/disposition)
 func (_ Unimplemented) ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams) {
@@ -103673,6 +103881,12 @@ func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Undo Margince's close of a promise.
+// (POST /claims/{id}/reopen)
+func (_ Unimplemented) ReopenConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Say a promise was kept, or that it no longer stands.
 // (POST /claims/{id}/settle)
 func (_ Unimplemented) SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
@@ -104714,6 +104928,12 @@ func (_ Unimplemented) CreateCustomField(w http.ResponseWriter, r *http.Request,
 // Rename a custom field or change whether create dialogs offer it (not a schema change).
 // (PATCH /custom-fields/{id})
 func (_ Unimplemented) RenameCustomField(w http.ResponseWriter, r *http.Request, id Id, params RenameCustomFieldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How many records hold each choice of a picklist or multiselect field.
+// (GET /custom-fields/{id}/choices)
+func (_ Unimplemented) ListCustomFieldChoiceUse(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109765,6 +109985,40 @@ func (siw *ServerInterfaceWrapper) DeclineActivityDeal(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeclineActivityDeal(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetActivityDealRelevance operation middleware
+func (siw *ServerInterfaceWrapper) SetActivityDealRelevance(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetActivityDealRelevance(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121138,6 +121392,38 @@ func (siw *ServerInterfaceWrapper) ListChannelProviders(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ReopenConversationClaim operation middleware
+func (siw *ServerInterfaceWrapper) ReopenConversationClaim(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReopenConversationClaim(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SettleConversationClaim operation middleware
 func (siw *ServerInterfaceWrapper) SettleConversationClaim(w http.ResponseWriter, r *http.Request) {
 
@@ -129557,6 +129843,40 @@ func (siw *ServerInterfaceWrapper) RenameCustomField(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RenameCustomField(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCustomFieldChoiceUse operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomFieldChoiceUse(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomFieldChoiceUse(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -158013,6 +158333,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activities/{id}/deal-decline", wrapper.DeclineActivityDeal)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/activities/{id}/deal-relevance", wrapper.SetActivityDealRelevance)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/activities/{id}/disposition", wrapper.ClearActivityDisposition)
 	})
 	r.Group(func(r chi.Router) {
@@ -158793,6 +159116,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/channel-providers", wrapper.ListChannelProviders)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/claims/{id}/reopen", wrapper.ReopenConversationClaim)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/claims/{id}/settle", wrapper.SettleConversationClaim)
 	})
 	r.Group(func(r chi.Router) {
@@ -159313,6 +159639,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/custom-fields/{id}", wrapper.RenameCustomField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/custom-fields/{id}/choices", wrapper.ListCustomFieldChoiceUse)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/custom-fields/{id}/lists", wrapper.ListCustomFieldLiveLists)

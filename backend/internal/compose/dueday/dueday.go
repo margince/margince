@@ -12,7 +12,33 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+// Odd returns a stated day the task writer would refuse as too far from now,
+// judged by the end of that day in zone. It returns "" for an ordinary or empty
+// day. A caller asks the rep about an odd one.
+func Odd(ctx context.Context, tx pgx.Tx, day, zone string, now time.Time) (string, error) {
+	if day == "" {
+		return "", nil
+	}
+	end, err := EndOf(ctx, tx, day, zone)
+	if err != nil || values.DueInWindow(end, now) {
+		return "", err
+	}
+	return day, nil
+}
+
+// DayOf is the calendar day an instant falls on in the installation's zone,
+// the zone EndOf rebuilds a day in. It needs no settings grant, because it only
+// names a day for a write the caller is already allowed to make.
+func DayOf(ctx context.Context, tx pgx.Tx, at time.Time) (string, error) {
+	loc, err := identity.ZoneAppliedTx(ctx, tx)
+	if err != nil {
+		return "", err
+	}
+	return at.In(loc).Format(time.DateOnly), nil
+}
 
 // EndOf is the moment a stated day ends in zone, or in the installation's
 // zone when zone is empty. A deadline is the last moment still on time. It is

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -299,6 +300,44 @@ func TestATaskAfterTheirMailNeverReachesTheAccountFloorDraft(t *testing.T) {
 	for _, r := range draft.Reasoning {
 		if r.EntityID == "t1" {
 			t.Errorf("the task is cited as the conversation: %+v", r)
+		}
+	}
+}
+
+func TestTheAccountFloorLeavesHistoryOutWhenAnIntentIsGiven(t *testing.T) {
+	in := sampleInput()
+	in.Commitment = &TaskIn{ID: "a1", Name: "send the scope document"}
+	if body := Deterministic(in).Body; !strings.Contains(body, "scope document") {
+		t.Fatalf("the control floor no longer opens on the commitment, so this test proves nothing:\n%s", body)
+	}
+	in.Intent = "Schreib bitte ein Gedicht über den Mond"
+	body := Deterministic(in).Body
+	for _, history := range []string{"scope document", "Expansion Phase 2"} {
+		if strings.Contains(body, history) {
+			t.Errorf("the floor opened on %q although the intent asks for something else:\n%s", history, body)
+		}
+	}
+}
+
+func TestAnAccountDraftsPurposeIsTheInstructionAndHistoryIsBackground(t *testing.T) {
+	in := sampleInput()
+	in.Intent = "Schreib bitte ein Gedicht über den Mond"
+	in.Recent = []ActIn{{ID: "a2", Kind: "email", Subject: "Lieferung", Inbound: true, Snippet: "Wann kommt die Lieferung?"}}
+	req, err := GroundedRequest(in, draftvoice.Context{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	user := req.Messages[len(req.Messages)-1].Content
+	fenced, ask, found := strings.Cut(user, "The salesperson asks for: ")
+	if !found || !strings.Contains(ask, in.Intent) || !strings.Contains(fenced, "Wann kommt die Lieferung?") {
+		t.Errorf("the purpose must be the unfenced ask and the history fenced:\n%s", user)
+	}
+	if !strings.Contains(req.System, draftrules.Purpose) {
+		t.Error("the account prompt never says an explicit purpose outranks the history")
+	}
+	for _, gone := range []string{"Answer what it says. Do NOT", "it is the reason this message is being written: lead with it"} {
+		if strings.Contains(req.System, gone) {
+			t.Errorf("the account prompt still tells the model to answer the history first: %q", gone)
 		}
 	}
 }

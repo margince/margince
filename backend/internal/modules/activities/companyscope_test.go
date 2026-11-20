@@ -69,37 +69,11 @@ func filterFor(ctx context.Context, t *testing.T, entityType string) (where stri
 	return strings.Join(terms, " AND "), args
 }
 
-func TestCompanyFilterWalksTheAccountsFourArms(t *testing.T) {
+func TestCompanyFilterUsesAccountReach(t *testing.T) {
 	where, args := filterFor(unscopedCtx(), t, "company")
-	if !strings.Contains(where, "a.id IN (SELECT reach.activity_id") {
-		t.Fatalf("company filter is not a membership test against the account's reach: %s", where)
+	if !strings.Contains(where, CompanyLinkedActivityExists(1)) {
+		t.Fatalf("company filter bypasses the account reach: %s", where)
 	}
-	for _, arm := range []string{
-		"l.company_id = $1", "d.company_id = $1", "r.company_id = $1",
-		"e0.company_id = $1",
-	} {
-		if !strings.Contains(where, arm) {
-			t.Errorf("company filter misses the %q arm: %s", arm, where)
-		}
-	}
-	if !strings.Contains(where, "r.kind = 'employment'") ||
-		!strings.Contains(where, "r.ended_at IS NULL") {
-		t.Errorf("the employment arm must be live employment only: %s", where)
-	}
-	// The participant arm reads employment the same way. A former colleague's
-	// company is one they left, whether they were linked or invited.
-	if !strings.Contains(where, "emp.kind = 'employment'") ||
-		!strings.Contains(where, "emp.ended_at IS NULL") {
-		t.Errorf("the participant arm must be live employment only: %s", where)
-	}
-	// Anchored on the activity in hand. Without it the arm asks "is anybody
-	// anywhere a participant who works here", which is true of the whole
-	// workspace at once.
-	if !strings.Contains(where, "ap.activity_id = a.id") {
-		t.Errorf("the participant arm is not anchored on the activity: %s", where)
-	}
-	// One bind position, read by all four arms: an account id registered
-	// four times would silently mis-number every later placeholder.
 	if len(args) != 1 {
 		t.Errorf("company filter bound %d args, want 1 (the account id): %v", len(args), args)
 	}
@@ -121,24 +95,6 @@ func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
 	if !strings.Contains(CompanyLinkedActivityExists(1), "activity_participant") {
 		t.Error("the timeline predicate no longer reaches through participants either, " +
 			"so the split above holds nothing apart")
-	}
-}
-
-// The set form is the predicate's walk split by arm. Every link branch carries
-// the shared arms verbatim. The participant branch decides with the predicate's
-// own arm, bound to the account the branch started from.
-func TestTheReachedSetIsThePredicatesArmsOneBranchEach(t *testing.T) {
-	set := CompanyReachedActivities(1)
-	if got := strings.Count(set, companyArms); got != 2 {
-		t.Errorf("the reached set carries the shared arms %d times, want one per joined link branch:\n%s", got, set)
-	}
-	for _, column := range []string{"l.company_id", "d.company_id", "r.company_id"} {
-		if !strings.Contains(set, column+" = ANY($1)") {
-			t.Errorf("the reached set has no branch on %s:\n%s", column, set)
-		}
-	}
-	if !strings.Contains(set, sprintf(participantEmployerArm, "e0.company_id")) {
-		t.Errorf("the reached set's participant branch is not the predicate's own arm:\n%s", set)
 	}
 }
 

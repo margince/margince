@@ -31,7 +31,11 @@ const asking: ConversationState = {
 const NEW_USER = "018f3a1b-0000-7000-8000-0000000000e7";
 
 function renderTeam(
-  options: { passwordLink?: boolean; persisted?: boolean } = {},
+  options: {
+    passwordLink?: boolean;
+    persisted?: boolean;
+    inviteAnswer?: () => Response;
+  } = {},
 ) {
   installFetchStub({
     // An admin, on an installation that may or may not be able to mail: the
@@ -46,7 +50,8 @@ function renderTeam(
       jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
     "POST /users/access-preview": () =>
       jsonResponse({ role: "rep", row_scope: "own", objects: {} }),
-    "POST /users": () => jsonResponse({ id: NEW_USER }, 201),
+    "POST /users":
+      options.inviteAnswer ?? (() => jsonResponse({ id: NEW_USER }, 201)),
     [`POST /users/${NEW_USER}/password-link`]: () =>
       jsonResponse({
         set_password_url: "https://crm.example/set-password?t=abc",
@@ -140,5 +145,23 @@ describe("TeamAct", () => {
     expect((await screen.findByTestId("password-link-url")).textContent).toBe(
       "https://crm.example/set-password?t=abc",
     );
+  });
+
+  // No member list sits on this screen, so the note names where one is.
+  it("sends the admin to Settings when an invite may have landed unseen", async () => {
+    renderTeam({
+      inviteAnswer: () => jsonResponse({ title: "Internal", status: 500 }, 500),
+    });
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText(/^Email/), "ada@example.com");
+    await user.click(screen.getByRole("button", { name: "Invite" }));
+
+    expect(
+      await screen.findByText(en["ob.conv.team.inviteUnconfirmed"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(en["users.inviteUnconfirmed"]),
+    ).not.toBeInTheDocument();
   });
 });

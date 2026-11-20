@@ -395,6 +395,31 @@ func TestAbsorbLeavesTheEchosDealLinkBehindWhenTheSurvivorHasOne(t *testing.T) {
 	}
 }
 
+// The echo's deal link comes over with its mark, so a colleague's "not about
+// this deal" on the echo still holds on the survivor.
+func TestAbsorbCarriesTheMarkOnTheEchosDealLink(t *testing.T) {
+	e := setupSend(t)
+	survivor := e.seedSentEmail(t, mintedIdentity)
+	echo := e.seedCapturedEcho(t)
+	deal := e.seedDeal(t, "Rollout")
+	e.link(t, echo, "deal", deal)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE activity_link SET deal_relevance = 'unrelated',
+		relevance_source = 'human' WHERE activity_id = $1 AND deal_id = $2`, echo, deal); err != nil {
+		t.Fatalf("marking the echo's deal link: %v", err)
+	}
+
+	e.reconcileAbsorbing(t, survivor)
+
+	var mark string
+	if err := e.owner.QueryRow(context.Background(), `SELECT coalesce(deal_relevance || '/' || relevance_source, '')
+		FROM activity_link WHERE activity_id = $1 AND deal_id = $2`, survivor, deal).Scan(&mark); err != nil {
+		t.Fatalf("reading the survivor's deal link: %v", err)
+	}
+	if mark != "unrelated/human" {
+		t.Errorf("the survivor's deal link is marked %q, want the echo's unrelated/human", mark)
+	}
+}
+
 // A survivor with NO project link gets the echo's: nothing is being
 // overwritten, and skipping it would lose a placement the ladder had already
 // decided on evidence the survivor never saw.
