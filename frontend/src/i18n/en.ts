@@ -3855,7 +3855,7 @@ export const en = {
   "consent.reason.unconfirmed_double_opt_in":
     "Consent was recorded but never confirmed by the double opt-in",
   "consent.reason.no_connection":
-    "They have never written to you, and no deal or inquiry connects you",
+    "They have not written to you, met you or asked you for anything that is on file",
   "consent.reason.qualifying_event": "A recorded exchange connects you",
   "consent.reason.consent_confirmed":
     "They gave consent, with the confirmation on file",

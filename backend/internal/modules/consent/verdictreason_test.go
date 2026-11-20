@@ -4,6 +4,7 @@
 package consent
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -37,5 +38,39 @@ func TestAnObjectionQuotesItsDateOnlyWhenTheRecordHasOne(t *testing.T) {
 	undated := said(Verdict{ReasonCode: ReasonObjection, ReasonAt: knownDate(time.Time{})})
 	if undated.ReasonAt != nil || undated.Reason != reasonSentences[ReasonObjection] {
 		t.Errorf("an objection with no proof row reads %q at %v", undated.Reason, undated.ReasonAt)
+	}
+}
+
+// The no-connection sentence tells a rep what would change the answer, so it
+// may name only evidence latestQualifyingEvent reads. A deal is read on the
+// send path alone, through the message's own deal links.
+func TestTheNoConnectionSentenceNamesOnlyEvidenceTheGuardReads(t *testing.T) {
+	read := map[string]bool{kindInboundMessage: true, KindInquiry: true, KindMeeting: true}
+	for kind := range handRecordedKinds {
+		read[kind] = true
+	}
+	wordsFor := map[crmcontracts.ConsentQualifyingEventKind][]string{
+		crmcontracts.ConsentQualifyingEventKindActiveDeal:         {"deal"},
+		crmcontracts.ConsentQualifyingEventKindInPerson:           {"met", "in person"},
+		crmcontracts.ConsentQualifyingEventKindInboundMessage:     {"written", "wrote"},
+		crmcontracts.ConsentQualifyingEventKindInquiry:            {"inquiry", "asked"},
+		crmcontracts.ConsentQualifyingEventKindMeeting:            {"met", "meeting"},
+		crmcontracts.ConsentQualifyingEventKindRequestedBySubject: {"asked"},
+	}
+	for kind := range read {
+		if _, named := wordsFor[crmcontracts.ConsentQualifyingEventKind(kind)]; !named {
+			t.Errorf("the guard reads %q, and this test has no words for it", kind)
+		}
+	}
+	sentence := said(Verdict{ReasonCode: ReasonNoConnection}).Reason
+	for kind, words := range wordsFor {
+		if read[string(kind)] {
+			continue
+		}
+		for _, word := range words {
+			if strings.Contains(sentence, word) {
+				t.Errorf("%q names %q, evidence of kind %s that the guard never reads", sentence, word, kind)
+			}
+		}
 	}
 }

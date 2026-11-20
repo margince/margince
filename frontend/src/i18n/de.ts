@@ -3926,7 +3926,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.unconfirmed_double_opt_in":
     "Einwilligung erfasst, aber nie per Double-Opt-in bestätigt",
   "consent.reason.no_connection":
-    "Der Kontakt hat dir nie geschrieben, und kein Deal und keine Anfrage verbindet euch",
+    "Der Kontakt hat dir nicht geschrieben, dich nicht getroffen und um nichts gebeten, das erfasst ist",
   "consent.reason.qualifying_event": "Ein erfasster Austausch verbindet euch",
   "consent.reason.consent_confirmed": "Einwilligung erteilt, mit Bestätigung",
   "consent.reason.consent_withdrawn":

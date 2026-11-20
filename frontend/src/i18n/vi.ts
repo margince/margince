@@ -3800,7 +3800,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.reason.unconfirmed_double_opt_in":
     "Đã ghi nhận đồng ý nhưng chưa được xác nhận lần hai",
   "consent.reason.no_connection":
-    "Họ chưa từng viết cho bạn, và không có deal hay yêu cầu nào liên kết hai bên",
+    "Họ chưa viết cho bạn, chưa gặp bạn và chưa yêu cầu điều gì được ghi nhận",
   "consent.reason.qualifying_event":
     "Có một lần trao đổi đã ghi nhận giữa hai bên",
   "consent.reason.consent_confirmed": "Họ đã đồng ý, và đã có xác nhận",
