@@ -127,11 +127,11 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 		Name: relinkActivityTool, Title: "Re-associate an activity to a record", Version: toolVersionV1,
 		Description: relinkActivityCopy.render(),
 		Instead:     relinkActivityCopy.Instead,
-		// Dynamic because filing under a PROJECT classifies the activity as
-		// commercial correspondence, which a contact confirms first; every
-		// other destination is an association that runs at once. See
-		// relinkActivityTier.
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
+		// Dynamic because filing under a PROJECT sets a retention floor only a
+		// member can undo. A human confirms it first, even for its user's own
+		// agent. Every other destination is an association that runs at once.
+		// See relinkActivityTier.
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic, WaitsEvenForItsUser: true,
 		Unlisted:     true,
 		TierResolver: relinkActivityTier,
 		OpenAPIOp:    "relinkActivity",

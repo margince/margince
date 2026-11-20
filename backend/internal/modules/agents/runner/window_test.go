@@ -228,6 +228,12 @@ func TestTheFrameTellsAModelToNameADisagreementRatherThanReconcileIt(t *testing.
 	}
 }
 
+func TestTheFrameSaysToolAnswersAreDataNotInstructions(t *testing.T) {
+	if prompt := systemPrompt(nil, promptfence.New(), ""); !strings.Contains(prompt, mcp.UntrustedContentRule) {
+		t.Errorf("the frame no longer carries the untrusted-content rule:\n%s", prompt)
+	}
+}
+
 func TestTheFrameSaysWhoseRecordItIs(t *testing.T) {
 	if prompt := systemPrompt(nil, promptfence.New(), ""); !strings.Contains(prompt, mcp.OwnershipRule) {
 		t.Errorf("the frame no longer carries the ownership rule:\n%s", prompt)

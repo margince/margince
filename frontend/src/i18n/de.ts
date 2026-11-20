@@ -2451,6 +2451,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.linkedin_rematch": "Zuordnung des LinkedIn-Imports",
   "systemJob.list_checker": "Prüfung der Live-Listen",
   "systemJob.mail_draft_retention": "Bereinigung von E-Mail-Entwürfen",
+  "systemJob.oauth_client_unused_sweep":
+    "Bereinigung ungenutzter KI-Tool-Clients",
   "systemJob.privacy_request_proof_expiry":
     "Bereinigung der Nachweise zu Datenschutzanfragen",
   "systemJob.waiting_horizon_refresh": "Messung der Antwortzeiten",

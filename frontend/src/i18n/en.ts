@@ -2360,6 +2360,7 @@ export const en = {
   "systemJob.linkedin_rematch": "LinkedIn import matching",
   "systemJob.list_checker": "Live list check",
   "systemJob.mail_draft_retention": "Mail draft cleanup",
+  "systemJob.oauth_client_unused_sweep": "Unused AI tool client cleanup",
   "systemJob.privacy_request_proof_expiry": "Privacy request proof cleanup",
   "systemJob.waiting_horizon_refresh": "Reply time measurement",
   "systemJob.evidence_authorship": "Deal evidence author check",
