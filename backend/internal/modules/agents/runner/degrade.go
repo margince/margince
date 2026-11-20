@@ -29,6 +29,10 @@ const (
 		"the server log carries the provider's own message"
 	reasonModelWithheld = "model declined — the AI provider withheld its answer to this run; " +
 		"the server log carries the provider's reason"
+	reasonAllowanceUsedUp = "the monthly AI allowance is used up — the run stopped before its next model call; " +
+		"scheduled runs start again once an administrator raises the allowance or the next budget window opens"
+	reasonProviderBlocked = "the AI provider is unavailable — the run stopped before its next model call; " +
+		"the next scheduled occurrence starts clean"
 	reasonStepTooLong = "model answer was longer than one step allows — " +
 		"the next scheduled run starts clean"
 	reasonStepBudgetExhausted        = "step budget exhausted"
@@ -43,13 +47,27 @@ func invalidOutputReason(attempts int) string {
 		"the server log carries the parser's error", attempts)
 }
 
+// ErrAllowanceUsedUp and ErrProviderBlocked wrap a step the router declined
+// without calling a provider: the budget stop, or a blocked provider. The
+// runner may not import the router, so the Brain names the refusal.
+var (
+	ErrAllowanceUsedUp = errors.New("runner: the monthly AI allowance is used up")
+	ErrProviderBlocked = errors.New("runner: the AI provider is blocked")
+)
+
 // modelCallReason names a failed model call for its reader. A withheld answer
 // is the provider declining, which is not an outage and must not read as one; a
 // rejected request is our own defect, which the reader can do nothing about, so
 // it reads as the ordinary failure while degradeFromCause logs it as an error.
+// A step the router declined made no call, so it never reads as one that failed.
 func modelCallReason(err error) string {
-	if errors.Is(err, model.ErrOutputWithheld) {
+	switch {
+	case errors.Is(err, model.ErrOutputWithheld):
 		return reasonModelWithheld
+	case errors.Is(err, ErrAllowanceUsedUp):
+		return reasonAllowanceUsedUp
+	case errors.Is(err, ErrProviderBlocked):
+		return reasonProviderBlocked
 	}
 	return reasonModelCallFailed
 }

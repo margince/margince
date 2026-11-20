@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func endWorkLease(t *testing.T, env *integration.Env, lease *database.SessionLease) {
@@ -222,5 +224,74 @@ func TestConcurrentSessionJobOffersCoalesceWhileWaiting(t *testing.T) {
 	err = env.Pool.QueryRow(t.Context(), `SELECT count(*) FROM river_job WHERE kind = @kind`, pgx.StrictNamedArgs{"kind": args.Kind()}).Scan(&count)
 	if err != nil || count != 1 {
 		t.Fatalf("concurrent offers queued %d rows: %v", count, err)
+	}
+}
+
+// failingDocumentBrain is a document lane that ends without an answer; with
+// cancel set it is a call the job's timeout cut off.
+type failingDocumentBrain struct {
+	err    error
+	cancel context.CancelFunc
+}
+
+func (b failingDocumentBrain) AttachmentMIMEs() []string { return nil }
+
+func (b failingDocumentBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	if b.cancel != nil {
+		b.cancel()
+	}
+	return model.Response{}, b.err
+}
+
+// A document reading's failed try hands the reading back even when the try
+// timed out. Its last try closes it with a reason chosen from the cause,
+// instead of leaving it queued with no job behind it.
+func TestADocumentReadingIsHandedBackAndClosedOnItsLastTry(t *testing.T) {
+	env := integration.Setup(t)
+	pipeline, stage, _ := integration.DealFixture(t, env)
+	deal := env.SeedDeal(t, "Document tries", pipeline, stage, &env.Rep1)
+	blob := blobstore.NewMemory()
+	store := activities.NewStore(env.DB()).WithBlobstore(blob)
+	for _, tc := range []struct {
+		name                     string
+		err                      error
+		timeout                  bool
+		attempt                  int
+		status, detailedContains string
+	}{
+		{"timed out with tries left", context.Canceled, true, 1, activities.ExtractionReadQueued, ""},
+		{"model failed on the last try", ai.ErrAllTiersFailed, false, oneOffJobMaxAttempts, activities.ExtractionReadFailed, "did not answer"},
+		{"timed out on the last try", context.Canceled, true, oneOffJobMaxAttempts, activities.ExtractionReadFailed, "could not finish"},
+	} {
+		in := activities.AttachmentInput{EntityType: "deal", EntityID: deal, Filename: tc.name + ".txt", ContentType: "text/plain", Content: strings.NewReader("Price: 10 EUR.")}
+		attachment, err := store.UploadAttachment(env.Admin(), in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		reading, _, err := store.StartExtractionReadQueued(env.Admin(), ids.UUID(attachment.Id), "human:"+env.AdminUser.String(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		brain := failingDocumentBrain{err: tc.err}
+		if tc.timeout {
+			brain.cancel = cancel
+		}
+		worker := newDocumentExtractWorker(env.Pool, brain, blob, discardLogger())
+		args := DocumentExtractArgs{Workspace: env.WS, AttachmentID: ids.UUID(attachment.Id), ExtractionReadID: reading.ID, RequestedBy: "human:" + env.AdminUser.String()}
+		row := &rivertype.JobRow{Attempt: tc.attempt, MaxAttempts: oneOffJobMaxAttempts}
+		workErr := worker.Work(ctx, &river.Job[DocumentExtractArgs]{JobRow: row, Args: args})
+		cancel()
+		after, err := store.GetExtractionRead(env.Admin(), ids.UUID(attachment.Id), reading.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		detail := ""
+		if after.StatusDetail != nil {
+			detail = *after.StatusDetail
+		}
+		if workErr == nil || after.Status != tc.status || !strings.Contains(detail, tc.detailedContains) {
+			t.Errorf("%s: err = %v, reading %q %q; want the fault on the job and the reading %q saying %q", tc.name, workErr, after.Status, detail, tc.status, tc.detailedContains)
+		}
 	}
 }

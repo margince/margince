@@ -45,7 +45,7 @@ func readChatScreenshot(t *testing.T, modelReply string) chatFixture {
 	contact := env.SeedContact(t, "Lena Hoffmann", &env.AdminUser)
 	att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
 		EntityType: "contact", EntityID: contact, Filename: "chat.png", ContentType: "image/png",
-		Content: bytes.NewReader(cardPNG(t)),
+		Content: bytes.NewReader(tallPNG(t)),
 	})
 	if err != nil {
 		t.Fatal(err)
