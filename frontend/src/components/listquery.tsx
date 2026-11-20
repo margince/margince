@@ -305,8 +305,8 @@ export function useListQuery<Row>({
   const sortRefused = problemFieldErrorsOf(infinite.error).some(
     (refusal) => refusal.field === "sort" && SORT_REFUSALS.has(refusal.code),
   );
-  // Keyed on the sort too: a cached read that kept its rows also keeps its
-  // refusal, so the way back to a refused opening order changes nothing else.
+  // Keyed on the sort too. A cached read that kept its rows also keeps its
+  // refusal, so going back to a refused opening order changes nothing else.
   useEffect(() => {
     if (!sortRefused || query.sort === "") {
       return;
