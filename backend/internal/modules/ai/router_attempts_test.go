@@ -303,6 +303,28 @@ func TestEmbedLaneKeepsNoPayloadWithCaptureOn(t *testing.T) {
 	}
 }
 
+// A batch of short inputs costs almost nothing against the rune budget, so
+// only the count cap bounds the captured array; inputs_truncated says it was cut.
+func TestEmbedPayloadCapsInputCountWhenBatchExceedsTheLimit(t *testing.T) {
+	r := assembleRouter(map[Tier]model.Client{}, NewFakeClient(), ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens,
+		&fakeCallStore{}, nil, true, nil)
+	inputs := make([]string, maxCapturedEmbedInputs+50)
+	for i := range inputs {
+		inputs[i] = "x"
+	}
+	var captured struct {
+		Inputs          []string `json:"inputs"`
+		InputsTruncated bool     `json:"inputs_truncated"`
+	}
+	if err := json.Unmarshal(r.buildEmbedPayload(model.EmbedRequest{Inputs: inputs}, model.Embeddings{}).Request, &captured); err != nil {
+		t.Fatalf("unmarshal captured request: %v", err)
+	}
+	if !captured.InputsTruncated || len(captured.Inputs) != maxCapturedEmbedInputs {
+		t.Fatalf("captured %d inputs (truncated=%v), want exactly the cap (%d), marked truncated",
+			len(captured.Inputs), captured.InputsTruncated, maxCapturedEmbedInputs)
+	}
+}
+
 // TestMetricsCountOneCallPerLogicalCallNotPerAttempt is the Prometheus half
 // of the grain change: margince_ai_calls_total must bump once per served-or-
 // failed decision, not once per ladder rung it took to get there — a

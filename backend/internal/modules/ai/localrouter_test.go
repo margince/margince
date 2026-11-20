@@ -5,6 +5,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"slices"
 	"strings"
@@ -298,5 +299,28 @@ func TestNewLocalRouterPayloadCaptureKeepsTheWholeText(t *testing.T) {
 	}
 	if got := longestRun(string(p.Response), 'b'); got != len(answer) {
 		t.Fatalf("response kept %d of %d runes", got, len(answer))
+	}
+}
+
+// The input-count cap bounds an ai_call_payload row, as the rune caps do. The
+// trace capture lifts it too, so no embedded input goes missing from a trace.
+func TestNewLocalRouterPayloadCaptureKeepsEveryEmbedInput(t *testing.T) {
+	r, err := NewLocalRouter(localFakeConfig(), WithoutResultCache(), WithFakeClient(NewFakeClient()), WithPayloadCapture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	inputs := make([]string, maxCapturedEmbedInputs+50)
+	for i := range inputs {
+		inputs[i] = "x"
+	}
+	var captured struct {
+		Inputs          []string `json:"inputs"`
+		InputsTruncated bool     `json:"inputs_truncated"`
+	}
+	if err := json.Unmarshal(r.buildEmbedPayload(model.EmbedRequest{Inputs: inputs}, model.Embeddings{}).Request, &captured); err != nil {
+		t.Fatal(err)
+	}
+	if len(captured.Inputs) != len(inputs) || captured.InputsTruncated {
+		t.Fatalf("trace kept %d of %d inputs (truncated=%v)", len(captured.Inputs), len(inputs), captured.InputsTruncated)
 	}
 }

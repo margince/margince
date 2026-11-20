@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -56,6 +57,8 @@ func TestEmitGoProducesTaskConstantsLaddersAndExecutionModes(t *testing.T) {
 	}
 }
 
+var embedNoPayloadEntry = regexp.MustCompile(`(?m)^\s*TaskEmbeddings:\s+true,$`)
+
 // The embed lane traces under TaskEmbeddings, so the workload's no_payload must
 // land in the same table every capture site reads, and only when declared.
 func TestEmbedNoPayloadJoinsTheNoPayloadTable(t *testing.T) {
@@ -68,7 +71,7 @@ func TestEmbedNoPayloadJoinsTheNoPayloadTable(t *testing.T) {
 		if err != nil {
 			t.Fatalf("emitGo: %v", err)
 		}
-		if got := strings.Contains(out, "\tTaskEmbeddings: true,\n"); got != declared {
+		if got := embedNoPayloadEntry.MatchString(out); got != declared {
 			t.Errorf("embed no_payload=%t, but the noPayloadTasks entry for TaskEmbeddings present=%t", declared, got)
 		}
 	}
