@@ -70,8 +70,8 @@ export function mailLeftOut(typed: string): boolean {
   return letters > 0 && letters < MAIL_PREFIX_FLOOR;
 }
 
-// The type the list may be narrowed to for `typed`: a narrowing to mail waits
-// for the word to be long enough, as a list of nothing would read as "no matches".
+// The type the list may be narrowed to for `typed`. A narrowing to mail waits
+// for a long enough word, because an empty list would read as "no matches".
 export function narrowingFor(
   narrowedTo: CoreSearchHitType | null,
   typed: string,

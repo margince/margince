@@ -196,8 +196,8 @@ export function CommandPalette({
   );
   // Create mode answers "make a record", so a typed word narrows those and asks nothing else.
   const searched = creates ? "" : query;
-  // Mail is left out of a short word's answer, so a narrowing to it would list
-  // nothing and read as "no matches": the list widens again until it can.
+  // Mail is left out of a short word's answer. A narrowing to it would list
+  // nothing, so the list widens until the word is long enough.
   const kind = narrowingFor(narrowedTo, searched);
   const matched = useMemo(
     () => matchingCommands(commands, query),

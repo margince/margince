@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package searchplan
 
 import (
 	"slices"
@@ -15,12 +15,13 @@ import (
 )
 
 // A typeahead search ranks messages only once the word being typed has four
-// letters; every other type is found from the first letter.
+// letters; every other type is found from the first letter. The messages carry
+// the short words whole, because a message matches the fragment as a whole word.
 func TestTypeaheadLeavesMessagesOutUntilTheLastWordHasFourLetters(t *testing.T) {
 	e := integration.Setup(t)
 	e.SeedCompany(t, "Abc Corp", nil)
 	contact := e.SeedContact(t, "Kick Starter", nil)
-	for _, subject := range []string{"Abc kickoff notes", "Übergabe Protokoll"} {
+	for _, subject := range []string{"Abc ki kic kick notes", "Über ube Protokoll"} {
 		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 			Kind: "note", Subject: new(subject), Source: "manual",
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
