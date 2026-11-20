@@ -1741,6 +1741,7 @@
   "record.save": "Speichern",
   "record.archived": "Archiviert",
   "contact.attachRefused": "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
+  "record.attachRefused": "Du kannst diesen Datensatz nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.logActivityRefused": "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.moreActions": "Weitere Aktionen",
   "share.access.read": "Lesezugriff",
