@@ -22580,9 +22580,7 @@ export interface paths {
         };
         /**
          * A team's week, frozen — what each member's week came to, and the one thing to raise.
-         * @deprecated
-         * @description Deprecated: no screen reads the team week. The operation stays callable through
-         *     the notice window in the API compatibility policy.
+         * @description Home, Weekly reads it when a lead or an overseer picks a team.
          *
          *     The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
          *     live and recomputed on every open; this answers what last week WAS, written once when
@@ -61210,8 +61208,8 @@ export interface components {
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
             /**
              * @deprecated
-             * @description Deprecated: no screen opens the team week, and the operation it describes,
-             *     `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
+             * @description Deprecated: read `team_week` from `GET /me`, which carries the same answer
+             *     without assembling the day.
              */
             team_week?: components["schemas"]["TeamWeekReach"];
             /**

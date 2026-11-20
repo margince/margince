@@ -73,6 +73,7 @@ import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { taskName } from "./brief.taskcard";
+import { shownTeam } from "./brief.teamselect";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
@@ -83,7 +84,8 @@ export function BriefScreen() {
   const me = useMe();
   const [params, setParams] = useUrlParams();
   const query = useHomeDay(Boolean(params.get(FOCUS_PARAM)));
-  const address = addressFrom(params);
+  const asked = addressFrom(params);
+  const address = { ...asked, team: shownTeam(asked.team, me.data?.team_week) };
   const day = briefDay(query.data?.pages);
   const queueOpen = drawerOpen(params);
   const review = useWeeklyReview(address.week, address.view === "weekly");
@@ -131,13 +133,14 @@ export function BriefScreen() {
             }
           : undefined
       }
-      week={review.data}
+      // A team's week names itself below; the reader's own week is not its head.
+      week={address.team ? undefined : review.data}
       firstName={firstName}
       now={new Date(nowMs)}
       pending={query.isPending}
       briefedAt={morning ? brief.data?.generated_at : undefined}
       controls={dials}
-      titleAside={morning ? undefined : <WeekStepper />}
+      titleAside={morning || address.team ? undefined : <WeekStepper />}
     />
   );
   return (
@@ -166,7 +169,7 @@ function BriefBody({
   query: ReturnType<typeof useWorklist>;
   queueToggle: ReactNode;
 }>) {
-  if (address.view === "weekly") return <WeeklyPage />;
+  if (address.view === "weekly") return <WeeklyPage team={address.team} />;
   return <PersonalMorning query={query} queueToggle={queueToggle} />;
 }
 

@@ -7107,6 +7107,96 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.feed.caughtUpDetail":
     "Als Margince um {time} nachsah, wartete niemand auf dich.",
   "teamweekly.pickTeam": "Team auswählen",
+  "teamweekly.agenda.copied": "Kopiert",
+  "teamweekly.agenda.copy": "Agenda kopieren",
+  "teamweekly.agenda.copyFailed":
+    "Die Agenda konnte nicht kopiert werden. Markiere die Liste und kopiere sie manuell.",
+  "teamweekly.agenda.empty":
+    "Für dieses Team konnte keine Woche eines Mitglieds geladen werden, daher gibt es keine Agenda.",
+  "teamweekly.agenda.summary_one":
+    "{count} Punkt für Montag, beginnend mit {first}.",
+  "teamweekly.agenda.summary_other":
+    "{count} Punkte für Montag, beginnend mit {first}.",
+  "teamweekly.agenda.title": "Agenda für Montag",
+  "teamweekly.card.commitments": "Eingehaltene Zusagen",
+  "teamweekly.card.commitmentsBasis": "Im Plan fällig",
+  "teamweekly.card.firstResponse": "Beantwortete Leads",
+  "teamweekly.card.firstResponseBasis": "Über der Zielzeit: {breached}",
+  "teamweekly.card.meetings": "Termine mit Follow-up",
+  "teamweekly.card.meetingsBasis": "Aufgabe vor Ende der Woche verknüpft",
+  "teamweekly.card.noCommitments": "Keine fällig",
+  "teamweekly.card.noLeads": "Keine eingegangen",
+  "teamweekly.card.noMeetings": "Keine erfasst",
+  "teamweekly.card.reps": "Gezählte Mitglieder",
+  "teamweekly.card.repsBasis": "Ganze Woche erfasst",
+  "teamweekly.card.won": "Gewonnen",
+  "teamweekly.card.wonBasis": "Verloren: {lost} · Wert nicht verfügbar",
+  "teamweekly.card.wonBasisValue": "{value} · Verloren: {lost}",
+  "teamweekly.commitmentRate": "Erledigte fällige Zusagen: {done} von {total}.",
+  "teamweekly.coverage.atRisk": "Deckung gefährdet gegenüber {basis}",
+  "teamweekly.coverage.basis.historical_median": "dem historischen Median",
+  "teamweekly.coverage.basis.manager_call":
+    "der Einschätzung der Führungskraft",
+  "teamweekly.coverage.holds": "Deckung ausreichend gegenüber {basis}",
+  "teamweekly.coverage.month": "Monat",
+  "teamweekly.coverage.notAuthorized":
+    "Die Einschätzung für diesen Zeitraum konnte beim Wochenabschluss nicht gelesen werden.",
+  "teamweekly.coverage.percent": "{percent} des benötigten Dealwerts",
+  "teamweekly.coverage.quarter": "Quartal",
+  "teamweekly.coverage.replan": "Neuplanung empfohlen",
+  "teamweekly.coverage.title": "Deckung des Dealwerts",
+  "teamweekly.focus.close_dates_provisional": "Abschlusstermine vorläufig",
+  "teamweekly.focus.commitments_missed": "Verpasste Planzusagen",
+  "teamweekly.focus.deals_at_risk": "Rettung gefährdeter Deals",
+  "teamweekly.focus.forecast_downgrades": "Prognose herabgestuft",
+  "teamweekly.focus.help_requested": "Hilfe angefragt",
+  "teamweekly.focus.leads_breached": "Zielzeiten für Antworten verfehlt",
+  "teamweekly.focus.meetings_without_next_step": "Beleg für Follow-up fehlt",
+  "teamweekly.focus.no_next_step_coverage": "Nächste Schritte fehlen",
+  "teamweekly.focus.quiet_week": "Keine Priorität erkannt",
+  "teamweekly.focus.stage_regressions": "Deals zurückgefallen",
+  "teamweekly.focus.strong_week": "Starke Woche",
+  "teamweekly.forbidden":
+    "Du kannst die Woche dieses Teams nicht mehr öffnen. Teamwochen sehen die Teamleitung und Rollen, die alle Teams überblicken.",
+  "teamweekly.funnel.line": "{stage} → {next}: {rep} gegenüber {team} im Team",
+  "teamweekly.funnel.lineLast": "{stage}: {rep} gegenüber {team} im Team",
+  "teamweekly.headline.notRecorded":
+    "Einige Zahlen wurden für diese Woche nicht erfasst und fehlen hier.",
+  "teamweekly.headline.partial":
+    "Unvollständige Abdeckung. Diese Zahlen betreffen die unten gezählten Mitglieder.",
+  "teamweekly.headline.plain":
+    "Es wurden keine Termine oder fälligen Zusagen erfasst.",
+  "teamweekly.headline.unmeasured":
+    "Für diese Woche liegen keine Snapshots der Mitglieder vor. Die Leistung wird nicht gemessen.",
+  "teamweekly.loading": "Teamwoche wird geladen…",
+  "teamweekly.meetingRate":
+    "Termine mit erfasstem nächsten Schritt: {done} von {total}.",
+  "teamweekly.mine": "Meine Woche",
+  "teamweekly.movement.leads": "Verteilte Leads",
+  "teamweekly.movement.lost": "Verloren",
+  "teamweekly.movement.meetings": "Abgehaltene Termine",
+  "teamweekly.movement.moved": "Vorangebracht",
+  "teamweekly.movement.title": "Aktivität der Woche",
+  "teamweekly.movement.won": "Gewonnen",
+  "teamweekly.noPriority": "Die erfassten Kennzahlen zeigen keine Priorität",
+  "teamweekly.noSnapshot":
+    "Für dieses Team und diese Woche ist kein gespeicherter Rückblick verfügbar. Wähle eine andere Woche oder prüfe die aktuelle Arbeit des Teams.",
+  "teamweekly.ofTotal": "{part} von {whole}",
+  "teamweekly.outcomes":
+    "Gewonnen: {won} · Verloren: {lost} · Deals bewegt: {moved} · Leads zugewiesen: {leads}",
+  "teamweekly.quality.accepted": "Vorschläge angenommen",
+  "teamweekly.quality.basis": "Mit der Woche eingefroren",
+  "teamweekly.quality.notMeasured": "Nicht gemessen",
+  "teamweekly.quality.rejected": "Vorschläge abgelehnt",
+  "teamweekly.quality.reversals": "Automatische Änderungen rückgängig gemacht",
+  "teamweekly.quality.title": "Datenqualität",
+  "teamweekly.repsUnread_one":
+    "Die Woche von {count} Mitglied konnte nicht gelesen werden. Diese Zahlen umfassen die {counted} gezählten Mitglieder.",
+  "teamweekly.repsUnread_other":
+    "Die Wochen von {count} Mitgliedern konnten nicht gelesen werden. Diese Zahlen umfassen die {counted} gezählten Mitglieder.",
+  "teamweekly.week": "Woche ab",
+  "teamweekly.weekOf": "{team} · Woche vom {day}",
+  "teamweekly.whose": "Wessen Woche",
 
   "plan.loading": "Plan wird geladen…",
   "plan.empty": "Noch nichts im Plan.",
