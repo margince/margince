@@ -169,21 +169,49 @@ jurisdiction pack for, and the boot refuses two units that declare one code.
 The installation can then choose the code in `workspace.country`, at the setup claim or on the
 Jurisdiction settings page; see [Deploy Margince](deploy-margince.md#choose-the-country).
 
+## Citations
+
+`citations` link an engine code to the provision a rep is shown beside the warning. Each entry
+names:
+
+- `code`: the refusal or finding it explains, such as `no_marketing_consent` or `objection_route`.
+  `TestEveryCitationExplainsACodeTheEngineEmits` in `backend/gates/messagingruleapplied_test.go`
+  refuses a code the engine never reports.
+- `territorial-test`: `any_sender`, `sender_here` or `sender_elsewhere`, for where the sending legal
+  entity is established.
+- `instrument`: the `name` of one instrument the compiled pack declares, in this layer or one below.
+- `provision` and `source-url`: the part of the law, and its official text over https. Either may be
+  left out to take the instrument's own.
+
+```yaml
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
+    provision: "§ 7 Abs. 2 Nr. 2"
+```
+
+One code is cited once per sender across all layers. A citation in `regional/eu.md` therefore holds
+for every member state, and a country layer cites only the codes the region leaves out.
+`Validate` in `backend/pkg/extension/messaging/provenance.go` checks each citation when the pack
+compiles.
+
 ## Drafts and reviewed packs
 
-A pack is a draft until a legal review stamps it. A draft applies all its rules, and shows a rep no
-citation. These keys record the review, and the compiler takes the weakest value across the layers:
+A pack cites its law whether or not a review stamps it. The packs are refreshed against their
+sources at each release, and no human sign-off is a condition for a citation. These keys record a
+review where one took place, and the compiler takes the weakest value across the layers:
 
 - `reviewed`: the date a named reviewer approved the layer. A pack with no date is a draft.
 - `reviewer`: who approved it. A review with no reviewer is refused.
-- `source-checked`: the date the instruments were last compared with their published texts. A pack
-  that cites must have checked its sources on or before its review.
-- `review-due`: when the next review is owed. Once it passes, the pack still applies and its
-  citations are withheld.
+- `source-checked`: the date the instruments were last compared with their published texts. A
+  reviewed pack that cites must have checked its sources on or before its review.
+- `review-due`: when the next review of a reviewed pack is owed. Once it passes, the pack still
+  applies and its citations are withheld. A draft has no review to fall due.
 
-`citations` link an engine finding to the provision a rep is shown. `Validate` in
-`backend/pkg/extension/messaging/provenance.go` refuses a citation on a draft, and `citationFor` in
-`backend/internal/modules/consent/citation.go` decides when a reviewed one is shown.
+`citationFor` in `backend/internal/modules/consent/citation.go` decides when a citation is shown. It
+withholds one whose instrument is not yet in force or has expired, and every citation of a reviewed
+pack whose `review-due` has passed.
 
 ## Roll a change back
 

@@ -43,12 +43,20 @@ func TestEveryCountryRegistersOnePackAndOneRuleSet(t *testing.T) {
 	}
 }
 
-// No country here declares a retention floor: their record-keeping duties
-// bind books and invoices, which a CRM does not hold.
-func TestNoCountryDeclaresARetentionFloor(t *testing.T) {
+// Every country but the Philippines carries one accounting floor that names
+// its law, and none carries a correspondence floor: no law here names business
+// letters.
+func TestEveryCountryDeclaresItsAccountingFloor(t *testing.T) {
 	for _, p := range New().Jurisdictions {
-		if classes := p.Retention().Classes(); len(classes) != 0 {
-			t.Errorf("%s declares %d retention classes, want none", p.Code(), len(classes))
+		classes := p.Retention().Classes()
+		if p.Code() == "ph" {
+			if len(classes) != 0 {
+				t.Errorf("ph declares %d retention classes; its tax-code anchor cannot be stated", len(classes))
+			}
+			continue
+		}
+		if len(classes) != 1 || classes[0].Name != jurisdiction.AccountingRecords || classes[0].Law == "" {
+			t.Errorf("%s declares %+v, want one accounting floor naming its law", p.Code(), classes)
 		}
 	}
 }
@@ -137,12 +145,20 @@ func TestAKoreanRefusalIsAnsweredWithinFourteenDays(t *testing.T) {
 	}
 }
 
-// Every pack is a draft until a legal review stamps it, so none may show a
-// citation to a rep.
-func TestEveryPackIsAnUnreviewedDraft(t *testing.T) {
+// uncited are the packs that name no law beside a warning. Their instruments
+// have no confirmed official text to link to, or are not yet in force.
+var uncited = []jurisdiction.Code{"id", "in", "my", "ph", "th"}
+
+// No pack waits for a legal review to name its law, so a draft cites. Every
+// pack that cites names the law for the objection route a footer lacks.
+func TestEveryDraftPackCitesItsLaw(t *testing.T) {
 	for _, r := range New().Messaging {
-		if !r.Provenance.ReviewedAt.IsZero() || r.Provenance.Reviewer != "" || len(r.Citations) != 0 {
-			t.Errorf("%s carries review %+v and %d citations, want a draft with none", r.Jurisdiction, r.Provenance, len(r.Citations))
+		if !r.Provenance.ReviewedAt.IsZero() {
+			t.Errorf("%s carries a review %+v; the packs are drafts refreshed at release", r.Jurisdiction, r.Provenance)
+		}
+		cites := slices.ContainsFunc(r.Citations, func(c messaging.Citation) bool { return c.Code == "objection_route" })
+		if want := !slices.Contains(uncited, r.Jurisdiction); cites != want {
+			t.Errorf("%s cites the objection route = %v, want %v", r.Jurisdiction, cites, want)
 		}
 	}
 }

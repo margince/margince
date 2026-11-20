@@ -364,7 +364,7 @@ The answer stays when you refresh the page, as under **Done for you**.
 
 ## For a team lead
 
-On **Home → Team** you get the team board and the coaching suggestions. The rest lives in the Worklist panel, which has its own **Whose work** switch (**Mine**, **Unassigned**, **Team**, **All**). **Hidden from the Worklist** appears only at **All**, with no teammate selected.
+The team board and the coaching suggestions are in the Worklist at **Team**. The Worklist has its own **Whose work** switch (**Mine**, **Unassigned**, **Team**, **All**). Your team's closed week is on **Home → Weekly**, under **Whose week**; see [Your week](your-week.md#a-teams-week). **Hidden from the Worklist** appears only at **All**, with no teammate selected.
 
 **Team exceptions** shows money at risk, work nobody has taken, or the same thing failing again. Each row names **what it was judged against**, so you can see the bar instead of guessing it. You can take a row on from here.
 

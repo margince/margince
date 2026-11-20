@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId, useState } from "react";
-import { SendPermission } from "../../components/sendpermission";
+import { useId, useState } from "react";
 import { useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
 import { useVoiceProfile } from "../../lib/voice-profile";
@@ -18,18 +17,19 @@ import {
   useCarriageBlocks,
 } from "./composeattachments";
 import { useKeptDraft } from "./composeautosave";
-import { ComposeBlockers } from "./composeblockers";
 import { useDealChoice } from "./composedeal";
 import { type ComposeFields, useComposeFields } from "./composefields";
 import { useAccountRecipient, useComposeRecords } from "./composefiling";
-import { useInlineFlow, useInlineReview } from "./composeinlinereview";
+import { useInlineReview, useOverrideExplanation } from "./composeinlinereview";
 import { groundingOf } from "./composelinks";
+import { useMeeting } from "./composemeeting";
 import type { ComposeProps } from "./composeprops";
+import { ComposeQuestions, meetingSubjectOf } from "./composequestions";
 import { useRecipientOffer } from "./composerecipientoffer";
 import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
 import { savedFieldsOf } from "./composesaveddraftfields";
 import { ScheduleDialogOnDemand } from "./composeschedule";
-import { type ComposeSend, useComposeSend } from "./composesend";
+import { useComposeSend } from "./composesend";
 import { InlineBlockers, markedRecipients } from "./composesendanyway";
 import { sendWording } from "./composesendhold";
 import {
@@ -40,7 +40,6 @@ import {
 } from "./composetarget";
 import { ThreadBar } from "./composethreadbar";
 import { useDraftOnOpen, useVoiceDraft } from "./composevoicedraft";
-import { SendRefusalRemedies } from "./sendrefusal";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
 import {
@@ -88,13 +87,17 @@ export function ComposeWindow({
   const bodyId = useId();
   const dial = useTransportDial({ open, transports, initialTransportId, kind });
   const { isChannelReply } = dial;
-  const { inline, reason } = useInlineFlow(open, isChannelReply);
+  const reason = useOverrideExplanation(open);
   const fields = useComposeFields({
     initialMessage,
     initialReason,
     askedIntent,
     edit,
   });
+  const meeting = useMeeting(
+    open,
+    meetingSubjectOf(entityType, entityId, recordAddress, fields),
+  );
   const { answering, choose, sourceBlocked } = useAnswerTarget({
     open,
     channelAnchorId: dial.channel?.anchorId,
@@ -232,11 +235,11 @@ export function ComposeWindow({
     projectId,
     needsDeal: dealChoice.needsChoice,
     savedDraft,
-    inline,
+    meeting,
     onSent,
     onClose,
   });
-  const inlineReview = useInlineReview(inline, send);
+  const inlineReview = useInlineReview(send);
   const sendPending = inlineReview.sending;
   const voice = useVoiceDraft({
     open,
@@ -391,26 +394,23 @@ export function ComposeWindow({
               onChange={attached.setFiles}
               disabled={locked}
             />
-            {inline ? (
-              <InlineBlockers
-                refusal={inlineReview.refusal}
-                sendUnavailable={fields.sendUnavailable}
-                bodyKey={wording.body}
-                state={inlineReview}
-                explanation={reason.text}
-                onExplanationChange={reason.setText}
-              />
-            ) : (
-              <ComposeBlockers
-                isChannelReply={isChannelReply}
+            <InlineBlockers
+              isChannelReply={isChannelReply}
+              refusal={inlineReview.refusal}
+              sendUnavailable={fields.sendUnavailable}
+              bodyKey={wording.body}
+              state={inlineReview}
+              explanation={reason.text}
+              onExplanationChange={reason.setText}
+            >
+              <ComposeQuestions
+                meeting={meeting}
                 fields={fields}
                 send={send}
                 anchorActivity={thread.anchorActivity}
                 dealChoice={dealChoice}
-                bodyKey={wording.body}
-                permission={legacyPermission(send)}
               />
-            )}
+            </InlineBlockers>
           </div>
           <ComposeFoot
             scheduling={scheduling}
@@ -466,34 +466,4 @@ function startsInTo(
   to: readonly string[],
 ): boolean {
   return newMessage && account.nothingOffered && to.length === 0;
-}
-
-// The checked flow's status, with what the server offers after a refused Send.
-function legacyPermission(send: ComposeSend) {
-  return (
-    override: ReactNode,
-    surface: Readonly<{ picksReason: boolean; unclaimed: boolean }>,
-  ) => (
-    <SendPermission
-      {...send.permission}
-      refusal={
-        send.permission.refusal && {
-          ...send.permission.refusal,
-          remedies: (
-            <SendRefusalRemedies
-              review={send.sendReview}
-              onDirectSent={send.directSent}
-              directOpen={send.directOpen}
-              onDirectOpenChange={send.setDirectOpen}
-            />
-          ),
-        }
-      }
-      override={override}
-      picksReason={surface.picksReason}
-      unclaimed={surface.unclaimed}
-      namesRecipients
-      onRecheck={send.permission.recheck}
-    />
-  );
 }

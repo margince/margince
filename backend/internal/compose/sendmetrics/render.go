@@ -9,13 +9,13 @@ package sendmetrics
 import (
 	"io"
 	"maps"
-	"sort"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 type snapshot struct {
-	outcomes, reviews, anyway map[pair]uint64
+	outcomes, reviews, anyway map[string]uint64
 	decisions                 map[string]httpserver.Histogram
 }
 
@@ -37,13 +37,13 @@ func (c *collector) snapshot() snapshot {
 func (c *collector) writePrometheus(w io.Writer) {
 	snap := c.snapshot()
 	writeCounters(w, counterHeader(w, "margince_email_send_outcomes_total",
-		"Distinct first Sends of a human in the email composer since process start, by composer flow and outcome. Repeat presses and Send anyway confirmations are not first Sends."),
+		"Distinct first Sends of a human in the email composer since process start, by outcome. Repeat presses and Send anyway confirmations are not first Sends."),
 		"outcome", snap.outcomes)
 	writeCounters(w, counterHeader(w, "margince_email_send_reviews_total",
-		"First Sends that the engine refused and that opened a review, by composer flow and the context class of the resolved category."),
+		"First Sends that the engine refused and that opened a review, by the context class of the resolved category."),
 		"context", snap.reviews)
 	writeCounters(w, counterHeader(w, "margince_email_send_anyway_total",
-		"Send anyway confirmations since process start, by the composer that confirmed and what the confirmation came to."),
+		"Send anyway confirmations since process start, by what the confirmation came to."),
 		"result", snap.anyway)
 	name := histogramHeader(w, "margince_email_send_decision_seconds",
 		"Wall time of the engine's decision on a human's fresh Send at staging, in seconds. Provider delivery is not part of it.")
@@ -64,15 +64,8 @@ func histogramHeader(w io.Writer, name, help string) string {
 
 // writeCounters renders a family sorted by its labels, so a scrape read by
 // hand does not reshuffle between requests.
-func writeCounters(w io.Writer, name, label string, family map[pair]uint64) {
-	labels := make(map[pair]string, len(family))
-	keys := make([]pair, 0, len(family))
-	for k := range family {
-		keys = append(keys, k)
-		labels[k] = "flow=" + httpserver.Label(k.flow) + "," + label + "=" + httpserver.Label(k.value)
-	}
-	sort.Slice(keys, func(i, j int) bool { return labels[keys[i]] < labels[keys[j]] })
-	for _, k := range keys {
-		httpserver.WriteLine(w, "%s{%s} %d\n", name, labels[k], family[k])
+func writeCounters(w io.Writer, name, label string, family map[string]uint64) {
+	for _, value := range slices.Sorted(maps.Keys(family)) {
+		httpserver.WriteLine(w, "%s{%s=%s} %d\n", name, label, httpserver.Label(value), family[value])
 	}
 }

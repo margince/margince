@@ -42,17 +42,40 @@ func TestEveryMemberStateRegistersOnePackAndOneRuleSet(t *testing.T) {
 	}
 }
 
-// Germany alone carries retention floors. Every other member state's duties
-// bind books and invoices, which a CRM does not hold.
-func TestOnlyGermanyDeclaresRetentionFloors(t *testing.T) {
+// Every member state but Slovenia carries an accounting floor that names its
+// law. Only a state whose law names business letters has a letters floor.
+func TestEveryMemberStateDeclaresItsStatutoryFloors(t *testing.T) {
+	keepsLetters := []jurisdiction.Code{"at", "de", "es", "fi", "it", "lu", "mt", "pt"}
 	for _, p := range New().Jurisdictions {
 		classes := p.Retention().Classes()
-		if p.Code() == "de" && len(classes) == 0 {
-			t.Error("the German pack lost its GoBD floors")
+		if p.Code() == "si" {
+			if len(classes) != 0 {
+				t.Errorf("si declares %d retention classes; no statutory period was confirmed", len(classes))
+			}
+			continue
 		}
-		if p.Code() != "de" && len(classes) != 0 {
-			t.Errorf("%s declares %d retention classes, want none", p.Code(), len(classes))
+		assertFloors(t, p.Code(), classes, slices.Contains(keepsLetters, p.Code()))
+	}
+}
+
+func assertFloors(t *testing.T, code jurisdiction.Code, classes []jurisdiction.RetentionClass, keepsLetters bool) {
+	t.Helper()
+	var letters, books bool
+	for _, c := range classes {
+		if err := c.Name.Validate(); err != nil {
+			t.Errorf("%s: %v", code, err)
 		}
+		if c.Law == "" {
+			t.Errorf("%s: the %s floor names no law", code, c.Name)
+		}
+		letters = letters || c.Name == jurisdiction.CommercialCorrespondence
+		books = books || c.Name == jurisdiction.AccountingRecords
+	}
+	if !books {
+		t.Errorf("%s declares no accounting floor", code)
+	}
+	if letters != keepsLetters {
+		t.Errorf("%s correspondence floor = %t, want %t", code, letters, keepsLetters)
 	}
 }
 
@@ -91,12 +114,23 @@ func TestNationalAdditionsReachTheirPack(t *testing.T) {
 	}
 }
 
-// Every pack is a draft until a legal review stamps it, so none may show a
-// citation to a rep.
-func TestEveryPackIsAnUnreviewedDraft(t *testing.T) {
+// citedEverywhere are the codes every member state's pack names the law for:
+// the marketing refusal, the missing reason for contact, and the objection.
+var citedEverywhere = []string{
+	"no_marketing_consent", "marketing_permission_required", "no_compatible_evidence",
+	"marketing_objection", "objection_route", "public_opt_out_link",
+}
+
+// No pack waits for a legal review to name its law, so a draft cites.
+func TestEveryDraftPackCitesItsLaw(t *testing.T) {
 	for _, r := range New().Messaging {
-		if !r.Provenance.ReviewedAt.IsZero() || r.Provenance.Reviewer != "" || len(r.Citations) != 0 {
-			t.Errorf("%s carries review %+v and %d citations, want a draft with none", r.Jurisdiction, r.Provenance, len(r.Citations))
+		if !r.Provenance.ReviewedAt.IsZero() {
+			t.Errorf("%s carries a review %+v; the packs are drafts refreshed at release", r.Jurisdiction, r.Provenance)
+		}
+		for _, code := range citedEverywhere {
+			if !slices.ContainsFunc(r.Citations, func(c messaging.Citation) bool { return c.Code == code }) {
+				t.Errorf("%s cites no law for %s", r.Jurisdiction, code)
+			}
 		}
 	}
 }

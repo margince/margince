@@ -3,16 +3,34 @@ jurisdiction: ro
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice"
     provision: "art. 12"
+    source-url: https://legislatie.just.ro/Public/DetaliiDocument/56973
 fixtures:
   - finding: objection_route
     triggers: ro/fixtures/advertising-without-objection-route.md
     clears: ro/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice"
+    provision: "art. 12 alin. (1)"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice"
+    provision: "art. 12 alin. (1)"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice"
+    provision: "art. 12 alin. (1)"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice"
+    provision: "art. 12 alin. (1)"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice"
+    provision: "art. 12 alin. (3)"
 ---
 
 # What Romanian law requires of an outbound message

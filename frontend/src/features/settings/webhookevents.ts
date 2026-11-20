@@ -26,6 +26,7 @@ const PREFIX_GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ["commissions", ["commission"]],
   ["lists", ["list"]],
   ["deal_rooms", ["deal_room"]],
+  ["legal_reviews", ["legal_review"]],
   ["introductions", ["intro_request"]],
   ["consent_privacy", ["consent", "retention"]],
   ["signals", ["signal"]],

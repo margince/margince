@@ -88,8 +88,8 @@ type IssuedConfirm struct {
 // capability it arrived through.
 type ConfirmRef struct {
 	ContactID ids.ContactID
-	// LeadID is set instead of ContactID on a website lead's privacy notice,
-	// the one link a lead can hold.
+	// LeadID is set instead of ContactID on a lead's link: its privacy notice
+	// or its consent question.
 	LeadID      ids.LeadID
 	TokenID     ids.UUID
 	DeliveredTo string
@@ -134,7 +134,7 @@ type ConfirmRef struct {
 // resolve path needs no extra state. Delivery of the plaintext is the caller's,
 // which is what keeps this store free of a mail dependency.
 func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID, language string) (IssuedConfirm, error) {
-	return s.issueLink(ctx, contactID, LinkRecordConfirmation, ids.PurposeID{}, "", refuseWithoutMailLane, userAsks, language)
+	return s.issueLink(ctx, linkSubjectOf(contactID, ids.LeadID{}), LinkRecordConfirmation, ids.PurposeID{}, "", refuseWithoutMailLane, userAsks, language)
 }
 
 // IssuePrivacyNotice mints the link that tells a contact what is held about
@@ -153,7 +153,7 @@ func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID, 
 // stop, and only CategoryPrivacyNotice survives it in the engine. Before this
 // the duty was owed to exactly those contacts and undeliverable to them.
 func (s *Store) IssuePrivacyNotice(ctx context.Context, contactID ids.ContactID, language string) (IssuedConfirm, error) {
-	return s.issueLink(ctx, contactID, LinkPrivacyNotice, ids.PurposeID{}, "", refuseWithoutMailLane, userAsks, language)
+	return s.issueLink(ctx, linkSubjectOf(contactID, ids.LeadID{}), LinkPrivacyNotice, ids.PurposeID{}, "", refuseWithoutMailLane, userAsks, language)
 }
 
 // PreviewConsentLink uses the mint's recipient and purpose guards without creating a token.
@@ -200,7 +200,7 @@ func (s *Store) IssueConsentLink(
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return IssuedConfirm{}, err
 	}
-	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, refuseWithoutMailLane, userAsks, language)
+	return s.issueLink(ctx, linkSubjectOf(contactID, ids.LeadID{}), LinkConsentConfirmation, purposeID, expectedAddress, refuseWithoutMailLane, userAsks, language)
 }
 
 // IssueBookedConsentLink mints the same double opt-in for a booking, which
@@ -215,10 +215,25 @@ func (s *Store) IssueConsentLink(
 func (s *Store) IssueBookedConsentLink(ctx context.Context, contactID ids.ContactID,
 	purposeID ids.PurposeID, expectedAddress string, askedBySubject bool,
 ) (IssuedConfirm, error) {
+	return s.issueBookedLink(ctx, linkSubjectOf(contactID, ids.LeadID{}), purposeID, expectedAddress, askedBySubject)
+}
+
+// IssueBookedLeadConsentLink is IssueBookedConsentLink for a lead the booking
+// landed on. It runs the same mint, guards and per-address budget, keyed by the
+// lead; the confirmed link grants the lead's consent, which a promotion carries.
+func (s *Store) IssueBookedLeadConsentLink(ctx context.Context, leadID ids.LeadID,
+	purposeID ids.PurposeID, expectedAddress string, askedBySubject bool,
+) (IssuedConfirm, error) {
+	return s.issueBookedLink(ctx, linkSubjectOf(ids.ContactID{}, leadID), purposeID, expectedAddress, askedBySubject)
+}
+
+func (s *Store) issueBookedLink(ctx context.Context, who subject,
+	purposeID ids.PurposeID, expectedAddress string, askedBySubject bool,
+) (IssuedConfirm, error) {
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return IssuedConfirm{}, err
 	}
-	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, mintWithoutMailLane, !askedBySubject, "")
+	return s.issueLink(ctx, who, LinkConsentConfirmation, purposeID, expectedAddress, mintWithoutMailLane, !askedBySubject, "")
 }
 
 // deliveryAddressTx reads the subject's own live primary address, the same way
@@ -336,8 +351,8 @@ const (
 	mintWithoutMailLane   mailLanePolicy = false
 )
 
-func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind string, purposeID ids.PurposeID, expectedAddress string, lane mailLanePolicy, operatorAsks bool, language string) (IssuedConfirm, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+func (s *Store) issueLink(ctx context.Context, who subject, kind string, purposeID ids.PurposeID, expectedAddress string, lane mailLanePolicy, operatorAsks bool, language string) (IssuedConfirm, error) {
+	if err := who.requireUpdate(ctx); err != nil {
 		return IssuedConfirm{}, err
 	}
 	if err := requireMailLanguage(language); err != nil {
@@ -347,6 +362,7 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 	if err != nil {
 		return IssuedConfirm{}, err
 	}
+	contactID, leadID := who.asIDs()
 	var minted mintedLink
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -354,6 +370,7 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 		// somebody else asking on the subject's behalf.
 		minted, err = s.issueLinkTx(ctx, tx, mintRequest{
 			contactID:       contactID,
+			leadID:          leadID,
 			kind:            kind,
 			purposeID:       purposeID,
 			expectedAddress: expectedAddress,
@@ -379,78 +396,6 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 		NoMailLane:            minted.noLane,
 		NoticeCasesDischarged: minted.noticeCasesDischarged,
 	}, nil
-}
-
-// subjectOfConfirmTokenTx names whose link this is, without taking a row lock.
-//
-// A plain read, and that is what it is for: the submit has to know the subject
-// BEFORE it locks anything, because the subject row is the first lock its
-// transaction may take. Art. 17 erasure holds the contact and then deletes these
-// token rows, so a transaction touching the token first would close a cycle.
-//
-// Naming the subject is not authorization. The spend below is what redeems the
-// link, and it runs under the subject lock this read makes possible.
-func (s *Store) subjectOfConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string) (ids.ContactID, string, bool, error) {
-	var contactID ids.ContactID
-	var kind string
-	var asksNews bool
-	// The kind comes back with the subject so a submission wider than the mail
-	// can be refused BEFORE the link is spent. Refusing after would burn the
-	// subject's one chance to answer on a request the store was never going to
-	// stand behind — the same reason validateConfirmSubmission runs first.
-	err := tx.QueryRow(ctx, `
-		SELECT ct.contact_id, ct.kind, ct.asks_news FROM confirm_token ct
-		 WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
-		   AND EXISTS (SELECT 1 FROM contact p
-		                WHERE p.id = ct.contact_id AND p.archived_at IS NULL)`,
-		hashPublicToken(token), s.now().UTC()).Scan(&contactID, &kind, &asksNews)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.ContactID{}, "", false, fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
-	}
-	return contactID, kind, asksNews, err
-}
-
-// spendConfirmTokenTx marks the link used, inside the caller's transaction so
-// the submit it authorizes and the spending of it commit together. A token that
-// is no longer live refuses rather than being spent twice, which is what makes a
-// replayed submit a refusal instead of a second write.
-//
-// This is also what stops a MailboxProof from being a claim anyone can make:
-// the proof is only reachable through a token this statement could spend.
-func (s *Store) spendConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string) (ConfirmRef, error) {
-	var ref ConfirmRef
-	var purposeID *ids.PurposeID
-	// The published question this link pinned, which the grant names.
-	var questionKey *string
-	var questionLocale *string
-	var questionVersion *int
-	err := tx.QueryRow(ctx, `
-		UPDATE confirm_token ct SET consumed_at = $2
-		WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
-		  AND EXISTS (SELECT 1 FROM contact p
-		               WHERE p.id = ct.contact_id AND p.archived_at IS NULL)
-		RETURNING ct.contact_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id,
-		          ct.question_key, ct.question_locale, ct.question_version, ct.asks_news,
-		          coalesce(ct.subject_request_id, '00000000-0000-0000-0000-000000000000')`,
-		hashPublicToken(token), s.now().UTC()).Scan(
-		&ref.ContactID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID,
-		&questionKey, &questionLocale, &questionVersion, &ref.AsksNews, &ref.SubjectRequest)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ConfirmRef{}, fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
-	}
-	if purposeID != nil {
-		ref.PurposeID = *purposeID
-	}
-	if questionKey != nil {
-		ref.QuestionKey = *questionKey
-	}
-	if questionLocale != nil {
-		ref.QuestionLocale = *questionLocale
-	}
-	if questionVersion != nil {
-		ref.QuestionVersion = *questionVersion
-	}
-	return ref, err
 }
 
 func newConfirmToken() (string, error) {

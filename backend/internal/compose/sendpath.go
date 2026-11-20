@@ -196,7 +196,7 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		WithColleagues(ColleagueDomainsFor(pool)).
 		WithSendAuthority(send.SendAuthority).
 		WithDraftOutcome(send.DraftOutcome).
-		WithSendObserver(sendmetrics.Observer(activities.InlineSendReviewFor(StoredConfig(pool))))
+		WithSendObserver(sendmetrics.Observer())
 	decisions := s.approvalsHandlers
 	s.approvalsHandlers = decisions.WithLateEffects(func(svc *approvals.Service) {
 		registerLateApprovalEffects(svc, pool, send)

@@ -4181,7 +4181,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4462,
+      "tokens": 4459,
       "agents": [],
       "required_by_cases": [
         "case112_my_plan_and_the_dossier",
@@ -4225,7 +4225,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3168,
+      "tokens": 3209,
       "agents": [],
       "required_by_cases": [
         "case106_turn_that_rule_off",

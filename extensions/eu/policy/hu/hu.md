@@ -3,12 +3,9 @@ jurisdiction: hu
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "2008. évi XLVIII. törvény a gazdasági reklámtevékenység alapvető feltételeiről és egyes korlátairól"
     provision: "6. §"
+    source-url: https://njt.hu/jogszabaly/2008-48-00-00
   - name: "2001. évi CVIII. törvény az elektronikus kereskedelmi szolgáltatások, valamint az információs társadalommal összefüggő szolgáltatások egyes kérdéseiről"
     provision: "14. §"
 marketing-exceptions: []
@@ -16,6 +13,27 @@ fixtures:
   - finding: objection_route
     triggers: hu/fixtures/advertising-without-objection-route.md
     clears: hu/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "2008. évi XLVIII. törvény a gazdasági reklámtevékenység alapvető feltételeiről és egyes korlátairól"
+    provision: "6. § (1)"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "2008. évi XLVIII. törvény a gazdasági reklámtevékenység alapvető feltételeiről és egyes korlátairól"
+    provision: "6. § (1)"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "2008. évi XLVIII. törvény a gazdasági reklámtevékenység alapvető feltételeiről és egyes korlátairól"
+    provision: "6. § (1)"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "2008. évi XLVIII. törvény a gazdasági reklámtevékenység alapvető feltételeiről és egyes korlátairól"
+    provision: "6. § (1)"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(4)"
 ---
 
 # What Hungarian law requires of an outbound message

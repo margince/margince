@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/brief/brief.weekly.tsx frontend/src/features/brief/brief.weekly.scorecard.tsx frontend/src/features/brief/brief.plan.tsx frontend/src/features/worklist/brief.teamplan.tsx backend/internal/compose/weekly backend/internal/modules/weeklyplan -->
+<!-- describes: frontend/src/features/brief/brief.weekly.tsx frontend/src/features/brief/brief.teamweekly.tsx frontend/src/features/brief/brief.weekly.scorecard.tsx frontend/src/features/brief/brief.plan.tsx frontend/src/features/worklist/brief.teamplan.tsx backend/internal/compose/weekly backend/internal/modules/weeklyplan -->
 # Your week
 
 The **Weekly** view of **Home** looks back on a closed week and plans the next one. The day,
@@ -103,6 +103,24 @@ were fewer than three records to name, so no model was asked.
 
 An installation with no AI model set up still gets the whole review. It only never gets the
 observations or the written summary.
+
+## A team's week
+
+A team lead sees the week of each team they are on. A role that may watch over every team sees
+every team's week. On **Home → Weekly**, pick the team in **Whose week**; **My week** brings back your
+own. Others do not see **Whose week**.
+
+Margince writes a team's week on the Monday after it, from the weeks of its members, and marks it
+**Frozen**. It keeps the members the team had that week. It shows:
+- a line on the week, and how many members' weeks could not be read;
+- **Leads answered**, **Meetings with follow-up**, **Commitments kept**, **Won** and
+  **Members counted**;
+- the **Monday agenda**: one item per member, in the order to raise them. **Copy agenda** copies it.
+- **Week activity**, the forecast, **Deal value coverage** and **Record quality**.
+
+Pick any day in the date field to open the week it falls in. A team with no closed week yet says
+so. If you lose access to a team while the page is open, the page says that you can no longer
+open it.
 
 ## Planning a week
 
