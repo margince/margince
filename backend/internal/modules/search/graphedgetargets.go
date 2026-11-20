@@ -56,14 +56,16 @@ func (t *edgeTargets) addActivities(ctx context.Context, tx pgx.Tx, activityIDs 
 	return nil
 }
 
+var countingActivitiesSQL = `SELECT a.id FROM activity a WHERE a.id = ANY($1) AND a.archived_at IS NULL` + audienceWorkspaceOnly + `
+		   AND ` + graphCountedActivity
+
 // countingActivities keeps the activities that count towards an edge now, by
 // the join every fold makes to activity.
 func countingActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]ids.UUID, error) {
 	if len(activityIDs) == 0 {
 		return nil, nil
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE a.id = ANY($1) AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity, activityIDs)
+	rows, err := tx.Query(ctx, countingActivitiesSQL, activityIDs)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading which arrivals count towards an edge: %w", err)
 	}
@@ -110,7 +112,7 @@ func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
 	if err != nil {
 		return err
 	}
-	if err := recomputeContactPairs(ctx, tx, t.contactPairs, missingContacts); err != nil {
+	if err := recomputeContactPairs(ctx, tx, t.contactPairs, missingContacts, false); err != nil {
 		return err
 	}
 
@@ -129,7 +131,7 @@ func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
 	if err != nil {
 		return err
 	}
-	if err := recomputePairs(ctx, tx, t.pairs, missingInteractions); err != nil {
+	if err := recomputePairs(ctx, tx, t.pairs, missingInteractions, false); err != nil {
 		return err
 	}
 

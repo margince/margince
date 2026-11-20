@@ -160,46 +160,38 @@ func DropEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) err
 	return t.apply(ctx, tx)
 }
 
-// foldPairs re-folds the named pairs from the base tables in one
-// statement, and deletes the ones that no longer qualify.
-//
-// Written as one INSERT … ON CONFLICT DO UPDATE plus one DELETE rather than a
-// read-modify-write: the fold has to be atomic with respect to concurrent
-// capture, and a Go-side loop would leave a window in which a pair is
-// half-updated.
-//
-// The upsert writes in key order. Worker replicas share the consumer group, a
-// batch can name thousands of pairs, and two batches for the same colleague
-// name mostly the same ones; taking the row locks in one global order is what
-// makes the second batch wait for the first instead of deadlocking with it.
-func foldPairs(ctx context.Context, tx pgx.Tx, pairs []pair) ([]pair, error) {
-	if len(pairs) == 0 {
-		return nil, nil
-	}
-	users, contacts := interactionPairKeys(pairs)
-	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
+// interactionEdgeFacts are the folded columns of graph_interaction_edge, as the
+// row comparison that lets an unchanged fold skip its write.
+var interactionEdgeFacts = []string{
+	"last_at", "last_inbound_at", "last_outbound_at", "last_met_at",
+	"count_90d", "in_count_90d", "out_count_90d", "sent_count_90d",
+	"late_count_90d", "late_out_count_90d", "count_total",
+}
 
-	rows, err := tx.Query(ctx, `
-		WITH target AS (
+// foldPairsSQL is the upsert that refolds named pairs, built once per mode so
+// the columns it reads can be derived from the statement itself.
+func foldPairsSQL(advanceSnapshot bool) string {
+	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
+	return `WITH target AS (
 		    SELECT DISTINCT user_id, contact_id
 		      FROM unnest($1::uuid[], $2::uuid[]) AS t(user_id, contact_id)
 		),
 		counted AS (
-		    SELECT t.user_id AS edge_user, t.contact_id AS edge_contact, `+relstrength.FoldColumnsSQL("a")+`, `+graphMet+` AS met, `+graphMemberSent+` AS sent
+		    SELECT t.user_id AS edge_user, t.contact_id AS edge_contact, ` + relstrength.FoldColumnsSQL("a") + `, ` + graphMet + ` AS met, ` + graphMemberSent + ` AS sent
 		      FROM target t
 		      JOIN activity_participant up
-		        ON up.user_id = t.user_id AND up.role IN `+interactionRoles+`
+		        ON up.user_id = t.user_id AND up.role IN ` + interactionRoles + `
 		      JOIN activity_participant pp
 		        ON pp.activity_id = up.activity_id
-		       AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
-		       AND `+liveContactSQL("pp.contact_id")+`
+		       AND pp.contact_id = t.contact_id AND pp.role IN ` + interactionRoles + `
+		       AND ` + liveContactSQL("pp.contact_id") + `
 		      JOIN activity a
-		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
+		        ON a.id = up.activity_id AND a.archived_at IS NULL` + audienceWorkspaceOnly + `
+		   AND ` + graphCountedActivity + ` AND ` + auth.ParticipantStandsSQL("up", "a") + `
 		),
 		folded AS (
-		    SELECT a.edge_user AS user_id, a.edge_contact AS contact_id, `+graphFoldColumns(window)+`
-		      FROM (`+graphEngagedRows+`) a
+		    SELECT a.edge_user AS user_id, a.edge_contact AS contact_id, ` + graphFoldColumns(window) + `
+		      FROM (` + graphEngagedRows + `) a
 		     GROUP BY a.edge_user, a.edge_contact
 		)
 		INSERT INTO graph_interaction_edge AS e
@@ -222,9 +214,46 @@ func foldPairs(ctx context.Context, tx pgx.Tx, pairs []pair) ([]pair, error) {
 		    late_out_count_90d = EXCLUDED.late_out_count_90d,
 		    count_total      = EXCLUDED.count_total,
 		    computed_at      = EXCLUDED.computed_at,
-            read_snapshot = EXCLUDED.read_snapshot
-        RETURNING e.user_id, e.contact_id`,
-		users, contacts)
+            read_snapshot = EXCLUDED.read_snapshot` + unchangedEdgeGuard(advanceSnapshot, interactionEdgeFacts) + `
+        RETURNING e.user_id, e.contact_id`
+}
+
+// pruneInteractionEdgesSQL deletes the named pairs that have no qualifying
+// interaction left.
+func pruneInteractionEdgesSQL() string {
+	return `DELETE FROM graph_interaction_edge e
+		 USING unnest($1::uuid[], $2::uuid[]) AS t(user_id, contact_id)
+		 WHERE e.user_id = t.user_id AND e.contact_id = t.contact_id
+		   AND NOT EXISTS (
+		       SELECT 1
+		         FROM activity_participant up
+		         JOIN activity_participant pp ON pp.activity_id = up.activity_id
+		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL` + audienceWorkspaceOnly + `
+		   AND ` + graphCountedActivity + ` AND ` + auth.ParticipantStandsSQL("up", "a") + `
+		        WHERE up.user_id = t.user_id AND up.role IN ` + interactionRoles + `
+		          AND pp.contact_id = t.contact_id AND pp.role IN ` + interactionRoles + `
+		          AND ` + liveContactSQL("pp.contact_id") + `)`
+}
+
+// foldPairs re-folds the named pairs from the base tables in one
+// statement, and deletes the ones that no longer qualify.
+//
+// Written as one INSERT … ON CONFLICT DO UPDATE plus one DELETE rather than a
+// read-modify-write: the fold has to be atomic with respect to concurrent
+// capture, and a Go-side loop would leave a window in which a pair is
+// half-updated.
+//
+// The upsert writes in key order. Worker replicas share the consumer group, a
+// batch can name thousands of pairs, and two batches for the same colleague
+// name mostly the same ones; taking the row locks in one global order is what
+// makes the second batch wait for the first instead of deadlocking with it.
+func foldPairs(ctx context.Context, tx pgx.Tx, pairs []pair, advanceSnapshot bool) ([]pair, error) {
+	if len(pairs) == 0 {
+		return nil, nil
+	}
+	users, contacts := interactionPairKeys(pairs)
+
+	rows, err := tx.Query(ctx, foldPairsSQL(advanceSnapshot), users, contacts)
 	if err != nil {
 		return nil, fmt.Errorf("search: recomputing interaction edges: %w", err)
 	}
@@ -237,19 +266,7 @@ func foldPairs(ctx context.Context, tx pgx.Tx, pairs []pair) ([]pair, error) {
 	// The pairs that no longer have a single qualifying interaction lose their
 	// row. Without this an archived last message leaves an edge recommending a
 	// colleague for an introduction the evidence no longer supports.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM graph_interaction_edge e
-		 USING unnest($1::uuid[], $2::uuid[]) AS t(user_id, contact_id)
-		 WHERE e.user_id = t.user_id AND e.contact_id = t.contact_id
-		   AND NOT EXISTS (
-		       SELECT 1
-		         FROM activity_participant up
-		         JOIN activity_participant pp ON pp.activity_id = up.activity_id
-		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
-		        WHERE up.user_id = t.user_id AND up.role IN `+interactionRoles+`
-		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
-		          AND `+liveContactSQL("pp.contact_id")+`)`,
+	if _, err := tx.Exec(ctx, pruneInteractionEdgesSQL(),
 		users, contacts); err != nil {
 		return nil, fmt.Errorf("search: pruning interaction edges that lost their evidence: %w", err)
 	}
