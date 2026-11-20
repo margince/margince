@@ -16,15 +16,17 @@ UPDATE agent_task t
    AND p.oauth_grant_id IS NOT NULL
    AND t.expires_at > now();
 
--- A retry key a connected agent spent inside the 24-hour replay window moves to
--- its connection, the holder both doors key on now. Where two of its passports
--- spent one key on one path, the newest claim moves and the older one stays.
+-- A settled retry key a connected agent spent inside the 24-hour replay window
+-- moves to its connection, the holder both doors key on now. A claim still in
+-- flight stays, because the process running it settles it under the old holder.
+-- Where two of its passports spent one key on one path, the newest claim moves.
 WITH moving AS (
     SELECT DISTINCT ON (p.oauth_grant_id, k.key, k.endpoint)
            k.principal_id, k.key, k.endpoint, 'agent:' || p.oauth_grant_id::text AS holder
       FROM idempotency_key k
       JOIN passport p ON k.principal_id = 'agent:' || p.id::text
      WHERE p.oauth_grant_id IS NOT NULL
+       AND k.response_status IS NOT NULL
        AND k.created_at > now() - interval '24 hours'
      ORDER BY p.oauth_grant_id, k.key, k.endpoint, k.created_at DESC
 )

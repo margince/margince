@@ -37,6 +37,7 @@ func TestTheConnectionHolderBackfillMovesOnlyLiveConnectedRows(t *testing.T) {
 	}
 
 	user := seedAppUserForConnection(t, conn, "holder@backfill.example")
+	settled := 200
 	grant := seedValue(t, conn, `WITH c AS (
 		INSERT INTO oauth_client (client_id, client_name, redirect_uris) VALUES ('backfill', 'Claude', ARRAY['https://client.example/cb']))
 		INSERT INTO oauth_grant (client_id, user_id, scopes) VALUES ('backfill', $1, ARRAY['read']) RETURNING id::text`, user)
@@ -47,11 +48,14 @@ func TestTheConnectionHolderBackfillMovesOnlyLiveConnectedRows(t *testing.T) {
 		RETURNING id::text`, user)
 	liveTask := seedValue(t, conn, `INSERT INTO agent_task (approval_id, passport_id, tool, expires_at, created_at)
 		VALUES ($1, $2, 'enrich', now() + interval '1 hour', now()) RETURNING id::text`, approval, connected)
-	for _, row := range []struct{ holder, key string }{
-		{"agent:" + connected, "fresh"}, {"agent:" + minted, "minted"},
+	for _, row := range []struct {
+		holder, key string
+		status      *int
+	}{
+		{"agent:" + connected, "fresh", &settled}, {"agent:" + minted, "minted", &settled}, {"agent:" + connected, "in-flight", nil},
 	} {
-		if _, err := conn.Exec(ctx, `INSERT INTO idempotency_key (principal_id, key, endpoint, request_digest)
-			VALUES ($1, $2, 'MCP create_record', 'd')`, row.holder, row.key); err != nil {
+		if _, err := conn.Exec(ctx, `INSERT INTO idempotency_key (principal_id, key, endpoint, request_digest, response_status)
+			VALUES ($1, $2, 'MCP create_record', 'd', $3)`, row.holder, row.key, row.status); err != nil {
 			t.Fatalf("seeding a claim: %v", err)
 		}
 	}
@@ -66,7 +70,10 @@ func TestTheConnectionHolderBackfillMovesOnlyLiveConnectedRows(t *testing.T) {
 	if got := seedValue(t, conn, `SELECT COALESCE(connection_id::text, '') FROM agent_task WHERE id = $1`, liveTask); got != grant {
 		t.Errorf("the live task names connection %q, want the grant %q", got, grant)
 	}
-	for key, want := range map[string]string{"fresh": "agent:" + grant, "minted": "agent:" + minted, "stale": "agent:" + connected} {
+	// An in-flight claim stays, so the process running it can still settle it.
+	for key, want := range map[string]string{
+		"fresh": "agent:" + grant, "minted": "agent:" + minted, "stale": "agent:" + connected, "in-flight": "agent:" + connected,
+	} {
 		if got := seedValue(t, conn, `SELECT principal_id FROM idempotency_key WHERE key = $1`, key); got != want {
 			t.Errorf("claim %q is held by %q, want %q", key, got, want)
 		}
