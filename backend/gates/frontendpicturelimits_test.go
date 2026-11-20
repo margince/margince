@@ -27,6 +27,7 @@ const frontendPictureLimits = "../frontend/src/features/settings/picturelimits.t
 var (
 	tsPictureTypes    = regexp.MustCompile(`(?s)PICTURE_TYPES[^=]*=\s*\[(.*?)\]`)
 	tsPictureMaxBytes = regexp.MustCompile(`PICTURE_MAX_BYTES\s*=\s*([0-9_]+)\s*;`)
+	tsPictureMaxPx    = regexp.MustCompile(`PICTURE_MAX_PIXELS\s*=\s*([0-9_]+)\s*;`)
 	tsPictureType     = regexp.MustCompile(`["']([^"']+)["']`)
 )
 
@@ -70,5 +71,17 @@ func TestTheFrontendPictureLimitsMatchTheServer(t *testing.T) {
 	}
 	if got != compose.AvatarFileMaxBytes {
 		t.Errorf("the frontend caps a picture at %d bytes and the server at %d", got, compose.AvatarFileMaxBytes)
+	}
+
+	pixels := tsPictureMaxPx.FindStringSubmatch(source)
+	if pixels == nil {
+		t.Fatalf("%s declares no numeric PICTURE_MAX_PIXELS", frontendPictureLimits)
+	}
+	gotPixels, err := strconv.Atoi(strings.ReplaceAll(pixels[1], "_", ""))
+	if err != nil {
+		t.Fatalf("PICTURE_MAX_PIXELS %q is not a pixel count: %v", pixels[1], err)
+	}
+	if gotPixels != compose.AvatarMaxPixels {
+		t.Errorf("the frontend shrinks a picture past %d pixels and the server refuses one past %d", gotPixels, compose.AvatarMaxPixels)
 	}
 }

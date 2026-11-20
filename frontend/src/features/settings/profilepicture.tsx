@@ -13,21 +13,31 @@ import type { Toast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { postMultipart } from "../../lib/multipart";
-import { problemMessageOf, problemStatus, unwrap } from "../../lib/problem";
+import {
+  problemCodeOf,
+  problemMessageOf,
+  problemStatus,
+  unwrap,
+} from "../../lib/problem";
 import { PICTURE_MAX_BYTES, PICTURE_TYPES } from "./picturelimits";
+import { SHRINKABLE_MAX_BYTES, shrinkPicture } from "./pictureshrink";
 
 type User = components["schemas"]["User"];
 
-// The server is the authority on both; this only spares a reader the upload.
+// The server is the authority on both; this only spares a reader the upload. A file over
+// the server's ceiling may still shrink under it. So the pick is bounded only by what the
+// browser will decode, and the ceiling is judged on the file that is sent.
 export function pictureProblem(file: File): MessageKey | null {
   if (!PICTURE_TYPES.includes(file.type)) {
     return "account.pictureWrongType";
   }
-  if (file.size > PICTURE_MAX_BYTES) {
+  if (file.size > SHRINKABLE_MAX_BYTES) {
     return "account.pictureTooLarge";
   }
   return null;
 }
+
+class PictureTooLarge extends Error {}
 
 const REFUSAL_BY_STATUS = new Map<number, MessageKey>([
   [413, "account.pictureTooLarge"],
@@ -46,7 +56,11 @@ function usePictureWrite(toast: Toast) {
         unwrap(await api.DELETE("/me/avatar"));
         return;
       }
-      await postMultipart("/v1/me/avatar", { file });
+      const sending = await shrinkPicture(file);
+      if (sending.size > PICTURE_MAX_BYTES) {
+        throw new PictureTooLarge();
+      }
+      await postMultipart("/v1/me/avatar", { file: sending });
     },
     onSuccess: async (_done, file) => {
       toast.show(
@@ -133,7 +147,13 @@ function refusalText(
   if (error === null) {
     return null;
   }
-  const known = REFUSAL_BY_STATUS.get(problemStatus(error));
+  if (error instanceof PictureTooLarge) {
+    return t("account.pictureTooLarge");
+  }
+  const known =
+    problemCodeOf(error) === "too_many_pixels"
+      ? "account.pictureTooManyPixels"
+      : REFUSAL_BY_STATUS.get(problemStatus(error));
   if (known !== undefined) {
     return t(known);
   }

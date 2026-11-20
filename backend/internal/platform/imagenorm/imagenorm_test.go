@@ -150,6 +150,22 @@ func TestDecodeRefusesAHeaderClaimingMorePixelsThanItWillAllocate(t *testing.T) 
 	}
 }
 
+func TestDecodeNamesAPhotoPastThePixelBoundAsTooManyPixels(t *testing.T) {
+	// The smallest square past the bound, encoded for real, so the refusal is the
+	// bound's and not a broken header's.
+	var photo bytes.Buffer
+	if err := jpeg.Encode(&photo, image.NewGray(image.Rect(0, 0, 2897, 2897)), nil); err != nil {
+		t.Fatalf("encoding the fixture JPEG: %v", err)
+	}
+	_, err := Decode(photo.Bytes())
+	if !errors.Is(err, ErrTooManyPixels) {
+		t.Fatalf("a JPEG past the pixel bound gave %v, want ErrTooManyPixels", err)
+	}
+	if !errors.Is(err, ErrUnsupported) {
+		t.Fatal("ErrTooManyPixels must stay an ErrUnsupported, or a candidate chain stops skipping it")
+	}
+}
+
 func TestSquarePNGPadsToASquareWithoutStretchingTheMark(t *testing.T) {
 	// A wide source: the mark must keep its 4:1 shape inside a square canvas,
 	// which means transparent bands above and below it.

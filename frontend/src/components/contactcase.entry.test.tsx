@@ -115,9 +115,7 @@ describe("the door to a contact's duplicate case", () => {
     await user.click(
       await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
     );
-    await user.click(
-      screen.getByRole("radio", { name: "Mira Kovač stays" }),
-    );
+    await user.click(screen.getByRole("radio", { name: "Mira Kovač stays" }));
     await user.click(screen.getByRole("button", { name: "Preview merge" }));
     await user.click(
       await screen.findByRole("button", { name: "Merge 2 contacts" }),

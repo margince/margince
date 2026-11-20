@@ -26,6 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -121,7 +123,11 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	-- lead card every seat reads; the card names the next one its reader may
 	-- actually open. The count and the max beside them are aggregate markers
 	-- over all tasks and owe nothing.
-	(SELECT a.subject FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	--
+	-- The descriptor rides with the subject so a task Margince wrote is named
+	-- in the reader's language, as History names it.
+	(SELECT jsonb_build_object('subject', a.subject, 'system_text', a.system_text)
+	   FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     ` + auth.AudienceWorkspaceOnly("a") + `
 	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1),
@@ -168,7 +174,7 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	l, err := scanLead(tx.QueryRow(ctx, q, args...), active, policy, slaNow(ctx))
+	l, err := scanLead(tx.QueryRow(ctx, q, args...), active, policy, slaNow(ctx), systemtext.Locale(ctx))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}
@@ -248,7 +254,7 @@ func (r leadRefs) applyTo(l *crmcontracts.Lead) {
 // scanLead scans core + active custom columns, plus whatever trailing
 // expressions the caller selected — the list page appends the sort's
 // __cursor_key there, exactly as scanContact does.
-func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, now time.Time, extra ...any) (crmcontracts.Lead, error) {
+func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, now time.Time, reader textlang.Lang, extra ...any) (crmcontracts.Lead, error) {
 	var l crmcontracts.Lead
 	var id ids.UUID
 	var refs leadRefs
@@ -262,7 +268,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, n
 	var hasInbound bool
 	var authorName, authorSeatName *string
 	var authorID, markedBy *ids.UUID
-	var companyFacts []byte
+	var companyFacts, nextTask []byte
 
 	dests := []any{
 		&id, &l.FullName, &email, &l.Phone, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
@@ -273,7 +279,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, n
 		&l.RoutedAt, &l.FirstResponseAt, &markedBy, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &refs.disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &refs.qualifiedDeal, &evidence,
 		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
-		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &refs.company,
+		&nextTask, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &refs.company,
 		&l.Industry, &companyFacts, &refs.partner, &l.PartnerAcceptedAt, &l.PartnerAcceptedBy,
 	}
 	cf := storekit.ScanDests(active)
@@ -288,6 +294,9 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, n
 	l.FirstResponseMarkedBy = uuidPtr(markedBy)
 	refs.applyTo(&l)
 	if err := scanLeadCompanyFacts(&l, companyFacts); err != nil {
+		return l, err
+	}
+	if err := nameNextTask(&l, nextTask, reader); err != nil {
 		return l, err
 	}
 	if statusSetBy != nil {

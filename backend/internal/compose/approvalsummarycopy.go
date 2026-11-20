@@ -34,7 +34,7 @@ type approvalSummaryCopy struct {
 	taskCompleted    string
 	taskContact      string
 	signaturePrivate string
-	// draftedReplyWaiting: a follow-up reply is drafted. %q is its subject.
+	// draftedReplyWaiting: a follow-up reply is drafted. The quoted %s is its subject.
 	draftedReplyWaiting string
 	// counterpartyWorthKeeping asks about an unresolved sender. %s is the address.
 	counterpartyWorthKeeping string
@@ -58,7 +58,7 @@ type approvalSummaryCopy struct {
 	// linkedInLooksLike's second hole.
 	unnamedEmployer string
 
-	// heldNotSent: %q is the message's subject, %s one of the held* reasons.
+	// heldNotSent: the quoted %s is the message's subject, the other one of the held* reasons.
 	heldNotSent          string
 	heldConsentWithdrawn string
 	heldSenderInactive   string

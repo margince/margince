@@ -478,4 +478,30 @@ describe("MoneyInput refusal before blur", () => {
     expect(input.validity.customError).toBe(false);
     expect(onRefusedChange).toHaveBeenLastCalledWith(false);
   });
+
+  it("takes no amount while its currency is unknown, then reads one at the currency's scale", () => {
+    const onChangeMinor = vi.fn();
+    const box = (currency: string) => (
+      <LocaleProvider initial="en">
+        <MoneyInput
+          currency={currency}
+          valueMinor={0}
+          blankWhenZero
+          onChangeMinor={onChangeMinor}
+          aria-label="Value"
+        />
+      </LocaleProvider>
+    );
+    const { rerender } = rtlRender(box(""));
+    const early = screen.getByLabelText("Value") as HTMLInputElement;
+    expect(early.disabled).toBe(true);
+    expect(early.placeholder).toBe("Opens once a currency is set.");
+
+    rerender(box("VND"));
+    const input = screen.getByLabelText("Value") as HTMLInputElement;
+    expect(input.disabled).toBe(false);
+    expect(input.value).toBe("");
+    fireEvent.change(input, { target: { value: "500" } });
+    expect(onChangeMinor).toHaveBeenLastCalledWith(500);
+  });
 });

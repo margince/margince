@@ -265,7 +265,7 @@ func findProject(view crmcontracts.Company360, projectID ids.ProjectID) (Project
 		}
 		return projectFact(project, view), nil
 	}
-	return ProjectIn{}, fieldError("project_id", "that project is not on this account, or you cannot see it")
+	return ProjectIn{}, fieldError("project_id", "that project is not at this company, or you cannot see it")
 }
 
 // projectFact is the one project as the draft reads it. The open-commitment
@@ -408,7 +408,7 @@ func findContact(
 		}
 	}
 	return crmcontracts.Company360Contact{}, fieldError("contact_id",
-		"that contact is not a contact you can see on this account")
+		"that contact is not a contact you can see at this company")
 }
 
 // findDeal resolves the named deal the same way. The caller checks for an
@@ -434,7 +434,7 @@ func findDeal(view crmcontracts.Company360, dealID string) (DealIn, error) {
 		}
 		return out, nil
 	}
-	return DealIn{}, fieldError("deal_id", "that deal is not open on this account, or you cannot see it")
+	return DealIn{}, fieldError("deal_id", "that deal is not open at this company, or you cannot see it")
 }
 
 // String is the debug rendering, never the prompt payload — the prompt sends
