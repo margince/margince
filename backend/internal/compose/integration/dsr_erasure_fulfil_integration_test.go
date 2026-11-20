@@ -44,7 +44,7 @@ func setupErasureDSR(t *testing.T, e *Env, subjectRef string) (consent.Handlers,
 	t.Helper()
 	store := consent.NewStore(e.DB())
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
-		Kind: "erasure", SubjectRef: subjectRef, DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
+		Kind: "erasure", SubjectRef: subjectRef, ReceivedAt: new(time.Date(2026, 8, 21, 0, 0, 0, 0, time.UTC)), DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("creating erasure DSR: %v", err)
@@ -274,7 +274,7 @@ func TestFulfillErasureHoldsTheRequestLockedAcrossTheErase(t *testing.T) {
 
 	store := consent.NewStore(e.DB())
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
-		Kind: "erasure", SubjectRef: contactID.String(), DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
+		Kind: "erasure", SubjectRef: contactID.String(), ReceivedAt: new(time.Date(2026, 8, 21, 0, 0, 0, 0, time.UTC)), DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("creating erasure DSR: %v", err)

@@ -271,7 +271,7 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 		if err != nil {
 			return err
 		}
-		due, overridden, err := dueAtFor(in.DueAt, computed, rule)
+		due, overridden, err := dueAtFor(in.DueAt, received, computed, rule)
 		if err != nil {
 			return err
 		}

@@ -15343,8 +15343,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für heute leer lassen. Eine spät erfasste Anfrage behält die Frist ihres tatsächlichen Eingangs.",
   "privacy.earlierDue": "Frühere Frist",
   "privacy.earlierDueHint":
-    "Optional. Nur ein Datum vor der Frist oben wird angenommen.",
+    "Optional. Ein Tag ab dem Eingang der Anfrage bis zur Frist oben.",
   "privacy.earlierDueTooLate": "Wähle ein Datum vor dem {date}.",
+  "privacy.earlierDueTooEarly": "Wähle den {date} oder ein späteres Datum.",
   "privacy.dueRule": "Fristregel",
   "privacy.dueRuleUnknown":
     "Manuell eingetragen, bevor Fristen berechnet wurden",
@@ -21969,7 +21970,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.because.promised": "von dir zugesagt",
   "worklist.because.approved_and_failed": "freigegeben, aber nicht ausgeführt",
   "worklist.because.account_termination":
-    "Kontobeendigung braucht eine Entscheidung",
+    "Das Ende der Kundenbeziehung braucht eine Entscheidung",
   "worklist.because.blocks_customer_work": "ein Kontakt wartet darauf",
   "worklist.because.routine": "routinemäßiges Aufräumen",
   "worklist.because.repeated_failure": "wiederholter Fehler",
