@@ -83,6 +83,45 @@ describe("an axis with nothing dated", () => {
       screen.getByRole("button", { name: "Email, 10 Aug" }),
     ).toBeInTheDocument();
   });
+
+  it("opens wide enough for a logged item older than a quarter", () => {
+    drawOnly([mark({ key: "m", at: "2026-01-10", when: "10 Jan" })]);
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jan" }),
+    ).toBeInTheDocument();
+  });
+
+  it("measures the canvas once a first logged item draws it", () => {
+    const observed: Element[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe(node: Element) {
+          observed.push(node);
+        }
+        disconnect() {}
+      },
+    );
+    try {
+      const { rerender } = drawOnly([]);
+      rerender(
+        <StandingTimeline
+          label="Brandt over time"
+          asOf="2026-08-13T09:00:00Z"
+          record={UTC_ZONE}
+          events={[]}
+          marks={[mark({ key: "m", at: "2026-08-10", when: "10 Aug" })]}
+        />,
+      );
+      expect(
+        observed.some((node) =>
+          node.classList.contains("standing-timeline-canvas"),
+        ),
+      ).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 describe("marks on the line", () => {

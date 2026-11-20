@@ -143,7 +143,7 @@ export function StandingTimeline({
   const { locale } = useLocale();
   const scroller = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
-  const canvasPx = useWidth(canvas);
+  const canvasPx = useWidth(canvas, events.length > 0 || marks.length > 0);
   const region = useScrollRegion(scroller, label);
   const [chosen, setChosen] = useState<TimelineZoom>();
   const today = instant(asOf);
@@ -151,7 +151,8 @@ export function StandingTimeline({
     chosen ??
     defaultZoom(
       today,
-      events.map((e) => instant(e.at)),
+      // With no event, the logged items are all the line holds, so it opens on them.
+      (events.length > 0 ? events : marks).map((e) => instant(e.at)),
     );
   const from = zoomStart(zoom, today, [
     ...events.map((event) => instant(event.at)),
@@ -326,12 +327,16 @@ function namedActivities(
 }
 
 // The canvas's drawn width, so labels are measured against the room they
-// really have; 760px, the design's canvas, until the first layout.
-function useWidth(target: RefObject<HTMLDivElement | null>): number {
+// really have; 760px, the design's canvas, until the first layout. `drawn`
+// says the canvas is mounted, which an empty line is not.
+function useWidth(
+  target: RefObject<HTMLDivElement | null>,
+  drawn: boolean,
+): number {
   const [width, setWidth] = useState(760);
   useLayoutEffect(() => {
     const node = target.current;
-    if (!node || typeof ResizeObserver === "undefined") {
+    if (!drawn || !node || typeof ResizeObserver === "undefined") {
       return;
     }
     const observer = new ResizeObserver(([entry]) => {
@@ -341,7 +346,7 @@ function useWidth(target: RefObject<HTMLDivElement | null>): number {
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [target]);
+  }, [target, drawn]);
   return width;
 }
 
