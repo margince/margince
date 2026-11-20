@@ -17249,8 +17249,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiRouting.lane.local_large":
     "Cấp cục bộ cao hơn; kiểm tra endpoint đã cấu hình",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy xuất trên các hồ sơ",
-  "aiRouting.lane.decisions":
-    "Câu hỏi có kiểu, hỏi trước các cấp",
+  "aiRouting.lane.decisions": "Câu hỏi có kiểu, hỏi trước các cấp",
   "aiRouting.decisions.add": "Thêm mô hình quyết định",
   "aiRouting.decisions.remove": "Gỡ mô hình quyết định",
   "aiRouting.decisions.preset.openrouter": "Cấu hình sẵn: OpenRouter",

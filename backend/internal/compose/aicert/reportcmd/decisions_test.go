@@ -73,8 +73,8 @@ func TestTheDecisionReportNamesWhatIsCertifiedAndWhatWentStale(t *testing.T) {
 	}
 }
 
-// A current certified record on too few kept answers prints no as its row and
-// says why, rather than leaving a bare no beside a certified verdict.
+// A current certified record on too few kept answers prints no as its row.
+// It also says why, so a certified verdict never sits beside a bare no.
 func TestTheDecisionReportSaysWhyAThinRecordEarnsNoRow(t *testing.T) {
 	thin := aicert.Record{
 		Task: "site_triage", Kind: aicert.KindDecision, Site: "triage", Provider: "jev_compatible",

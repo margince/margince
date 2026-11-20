@@ -17561,8 +17561,7 @@ export const en = {
   "aiRouting.lane.local_large":
     "Higher local-tier route; inspect the configured endpoint",
   "aiRouting.lane.embeddings": "Search and retrieval across records",
-  "aiRouting.lane.decisions":
-    "Typed questions, asked before the tiers",
+  "aiRouting.lane.decisions": "Typed questions, asked before the tiers",
   "aiRouting.decisions.add": "Add decision model",
   "aiRouting.decisions.remove": "Remove decision model",
   "aiRouting.decisions.preset.openrouter": "Preset: OpenRouter",
