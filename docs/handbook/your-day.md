@@ -33,11 +33,11 @@ On a big screen the panel stops before its rows get too long to read. Also calle
 ### How do I snooze something on my worklist?
 To snooze a customer who is waiting for a reply in Margince, press **More actions** at the end of their Worklist row and choose **Snooze**. It comes back tomorrow ("Back on your list tomorrow.").
 1. Open **Home** → **Show Worklist**.
-2. At the end of a row where a customer waits on a conversation, press **More actions**, the button with three dots.
+2. On a row where a customer waits for a reply, press **More actions**, the button with three dots.
 3. Choose **Snooze** for one day, or **Snooze for 3 days**, **Snooze for 7 days** or **Until they reply**.
 4. The note that follows offers **Undo**.
 
-A task has no snooze under **More actions**, which offers **Open**, **Pin** and **Reassign**. Press the task's title and choose **Snooze 1 day** in its details; see [How do I complete a task?](#how-do-i-complete-a-task). Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work.
+A task's **More actions** has no snooze, so press its title and choose **Snooze 1 day** ([How do I complete a task?](#how-do-i-complete-a-task)). Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work.
 A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
