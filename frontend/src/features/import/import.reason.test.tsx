@@ -65,7 +65,7 @@ describe("a problem's reason", () => {
       params: { plural: "contacts" },
     };
     show(<ProblemTable issues={[refused]} />, "de");
-    expect(screen.getByText(/vom Typ Kontakte anlegen/)).toBeVisible();
+    expect(screen.getByText(/vom Typ Kontakte erstellen/)).toBeVisible();
   });
 
   it("names the deals file by its type in the reader's language", () => {
@@ -77,7 +77,7 @@ describe("a problem's reason", () => {
       params: { plural: "deals" },
     };
     show(<ProblemTable issues={[refused]} />, "de");
-    expect(screen.getByText(/vom Typ Deals anlegen/)).toBeVisible();
+    expect(screen.getByText(/vom Typ Deals erstellen/)).toBeVisible();
   });
 
   it("says an undo refusal from its code", () => {

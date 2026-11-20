@@ -4,6 +4,7 @@
 import { Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Eyebrow } from "../design-system/eyebrow";
+import { scopeName } from "../features/analytics/analytics.context";
 import { AnswerTable } from "../features/analytics/analytics.questions.answer";
 import {
   reportingAmount,
@@ -87,7 +88,9 @@ function SearchMetric({
     <>
       <p>{names(metric.id)}</p>
       <p>
-        {evaluation.context.scope.label ?? evaluation.context.scope.kind} ·{" "}
+        {scopeName(evaluation.context.scope, t) ??
+          evaluation.context.scope.kind}{" "}
+        ·{" "}
         {reportingPeriodLabel(
           evaluation.context.interval,
           evaluation.context.timezone,

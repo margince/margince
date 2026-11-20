@@ -2843,6 +2843,7 @@ export const en = {
   "shell.shortcuts.sendEmail": "Send email",
   "shell.shortcuts.submitDialog": "Submit dialog",
   "shell.shortcuts.then": "then",
+  "shell.shortcuts.ctrl": "Ctrl",
   "shell.shortcuts.or": "or",
   "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
   "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
@@ -9366,6 +9367,7 @@ export const en = {
   "analytics.share.listCreated": "Created {date}",
   "analytics.share.listExpires": "Expires {date}",
   "analytics.share.populationCompany": "Whole company",
+  "analytics.scope.workspace": "Whole company",
   "analytics.share.populationTeam": "Team",
   "analytics.share.populationOwner": "Colleague",
   "analytics.share.closeTitle": "Close this link?",
@@ -12228,14 +12230,16 @@ export const en = {
     "Reload before changing them; the list may be incomplete.",
   "stage.criteria.none": "No exit criteria yet.",
   "stage.criteria.add": "Add criterion",
-  "stage.criteria.key": "Key",
-  "stage.criteria.keyHint":
-    "The name evidence cites. Lowercase letters, digits and underscores. It cannot be changed later.",
   "stage.criteria.label": "Label",
   "stage.criteria.kind": "Kind",
   "stage.criteria.required": "Required",
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hint",
+  "stage.criteria.kindHelp":
+    "What counts as proof. Buyer kinds count only the buyer’s own words.",
+  "stage.criteria.requiredHelp":
+    "A required criterion keeps Margince from moving the deal on by itself.",
+  "stage.criteria.hintHelp": "Guidance for the AI that looks for evidence.",
   "stage.criteria.editOf": "Edit {name}",
   "stage.criteria.removeOf": "Remove {name}",
   "stage.criteria.remove": "Remove",
@@ -14665,7 +14669,7 @@ export const en = {
   "cf.builder.open": "New field",
   "cf.builder.noCode": "No code",
   "cf.builder.intro":
-    "A new field is a real column on the existing table. It works in filters, reports, exports and the API like any core field. It is not a new object.",
+    "A new field appears on every record of this kind. It works in filters, reports, exports and the API like any built-in field. You can archive it later, but not bring it back.",
   "cf.label": "Label",
   "cf.apiKey": "API name",
   "cf.apiKeyHint":
@@ -14696,7 +14700,7 @@ export const en = {
     "Choices of “{label}” saved. {count} records changed.",
   "cf.gate.title": "Add this field?",
   "cf.gate.body":
-    "On confirm, it becomes a live column on every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
+    "On confirm, it is added to every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
   "cf.refuse.title": "This looks like a new object or relationship",
   "cf.refuse.body":
     "This builder adds simple fields to existing records only. A new object, a link between objects or a calculated roll-up is a structural change. It ships as a reviewed change in a new Margince version, made by people, not by the product editing its own code.",

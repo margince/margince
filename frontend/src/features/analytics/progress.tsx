@@ -16,13 +16,14 @@ import {
   identifierNumber,
   monthName,
 } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { isUuid } from "../../lib/uuid";
 import {
   type AnalyticsScope,
   scopeKey,
+  scopeName,
   useAnalyticsContext,
 } from "./analytics.context";
 import {
@@ -161,7 +162,7 @@ export function ProgressScreen() {
             {(field) => (
               <Select
                 {...field}
-                options={scopeOptions(scopes, named, progress.data)}
+                options={scopeOptions(scopes, named, progress.data, t)}
                 value={
                   scope
                     ? scopeKey(scope)
@@ -186,15 +187,16 @@ function scopeOptions(
   scopes: readonly AnalyticsScope[],
   named: AnalyticsScope | undefined,
   progress: SalesProgress | undefined,
+  t: Translator,
 ) {
   const options = scopes.map((each) => ({
     value: scopeKey(each),
-    label: each.label,
+    label: scopeName(each, t) ?? "",
   }));
   if (named && !options.some((each) => each.value === scopeKey(named)))
     options.push({
       value: scopeKey(named),
-      label: progress?.scope.label ?? "",
+      label: (progress && scopeName(progress.scope, t)) ?? "",
     });
   return options;
 }
