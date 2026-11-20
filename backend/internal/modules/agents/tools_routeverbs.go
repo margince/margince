@@ -50,7 +50,7 @@ type RouteVerb struct {
 	AnswerSchema json.RawMessage
 	// AskUserFirst is true when the app confirms the act before it runs.
 	AskUserFirst bool
-	Egress bool
+	Egress       bool
 }
 
 // RouteCall is one route-backed call as its route takes it.
