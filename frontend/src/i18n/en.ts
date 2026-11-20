@@ -3511,10 +3511,9 @@ export const en = {
   "common.duplicate.slotTaken":
     "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
-  "common.gone": "This is gone, or the link is wrong.",
   "common.goneBackToAnalytics": "Back to Analytics",
   "reporting.sharedForecastGone":
-    "This link no longer works. It was closed or has expired. Ask the sender for a new one.",
+    "This link no longer works. Ask the sender for a new one.",
   "reporting.reportGone":
     "This report does not exist, or it is not shared with you.",
   "analytics.q.gone":

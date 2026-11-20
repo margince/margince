@@ -19,7 +19,7 @@ import {
   openAnalyticsSection,
   openSavedQuestion,
 } from "../../lib/analytics.address";
-import { isGone, problemStatus, unwrap } from "../../lib/problem";
+import { isGone, unwrap } from "../../lib/problem";
 import { routeHash, useRoute } from "../../lib/router";
 import {
   type AnalyticsContext,
@@ -334,11 +334,9 @@ function SavedQuestion({
     return <PendingBody label={t("analytics.q.loadingRun")} />;
   }
   if (run.isError) {
-    const status = problemStatus(run.error);
-    const gone = isGone(run.error) || status === 400 || status === 422;
     return (
       <Stack gap="3">
-        {gone ? (
+        {isGone(run.error) ? (
           <p role="alert">{t("analytics.q.gone")}</p>
         ) : (
           <QuestionFailure error={run.error} />

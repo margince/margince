@@ -3495,10 +3495,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.slotTaken":
     "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
-  "common.gone": "Mục này không còn nữa, hoặc liên kết sai.",
   "common.goneBackToAnalytics": "Quay lại Phân tích",
   "reporting.sharedForecastGone":
-    "Liên kết này không còn dùng được. Nó đã bị đóng hoặc hết hạn. Hãy hỏi bên gửi để có liên kết mới.",
+    "Liên kết này không còn dùng được. Hãy hỏi bên gửi để có liên kết mới.",
   "reporting.reportGone":
     "Báo cáo này không tồn tại, hoặc chưa được chia sẻ với bạn.",
   "analytics.q.gone":

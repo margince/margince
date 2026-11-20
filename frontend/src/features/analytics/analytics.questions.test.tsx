@@ -349,3 +349,51 @@ describe("a refused save", () => {
     expect(screen.queryByText("group by stage")).toBeNull();
   });
 });
+
+describe("a saved question that cannot be opened", () => {
+  it("says it does not exist or is not shared on a 404, and keeps New question", async () => {
+    globalThis.location.hash = "#/analytics/questions/run-gone";
+    stubServer({
+      "GET /analytics/runs/run-gone": () =>
+        jsonResponse({ status: 404, code: "not_found" }, 404),
+    });
+    renderView();
+    expect(
+      await screen.findByText(
+        "This question does not exist, or it is not shared with you.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "New question" })).toBeTruthy();
+  });
+
+  it("keeps a 400 the server's own refusal, since the question was found", async () => {
+    globalThis.location.hash = "#/analytics/questions/run-refused";
+    stubServer({
+      "GET /analytics/runs/run-refused": () =>
+        jsonResponse(
+          {
+            status: 400,
+            code: "invalid_argument",
+            detail: "vocabulary: field outside yours — ask its owner",
+            details: {
+              kind: "vocabulary",
+              message: "field outside yours",
+              suggest: "ask its owner",
+            },
+          },
+          400,
+        ),
+    });
+    renderView();
+    expect(
+      await screen.findByText(
+        "vocabulary: field outside yours — ask its owner",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        "This question does not exist, or it is not shared with you.",
+      ),
+    ).toBeNull();
+  });
+});

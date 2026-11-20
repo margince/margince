@@ -94,26 +94,31 @@ describe("QueryStates", () => {
     ).toBeTruthy();
   });
 
-  it("says a 404 is gone and offers no Retry, a 5xx keeps both", () => {
-    const { unmount } = render(
-      <QueryStates
-        query={failing(new ProblemError({ status: 404, detail: "not found" }))}
-        pendingLabel="Loading the section"
-        goneAction={<a href="#back">Back</a>}
-      >
-        {null}
-      </QueryStates>,
-    );
-    expect(screen.getByRole("alert").textContent).toBe(t("common.gone"));
-    expect(screen.queryByText(t("common.error"))).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: t("common.retry") }),
-    ).toBeNull();
-    expect(screen.getByText("Back")).toBeTruthy();
-    unmount();
+  it("says a 404 or 410 is gone when the screen names it, and offers no Retry", () => {
+    for (const status of [404, 410]) {
+      const { unmount } = render(
+        <QueryStates
+          query={failing(new ProblemError({ status, detail: "not found" }))}
+          pendingLabel="Loading the section"
+          goneKey="book.linkGone"
+          goneAction={<a href="#back">Back</a>}
+        >
+          {null}
+        </QueryStates>,
+      );
+      expect(screen.getByRole("alert").textContent).toBe(t("book.linkGone"));
+      expect(
+        screen.queryByRole("button", { name: t("common.retry") }),
+      ).toBeNull();
+      expect(screen.getByText("Back")).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it("keeps a 404 a failed load with Retry when the screen names no gone sentence, since it may be a scope refusal", () => {
     render(
       <QueryStates
-        query={failing(new ProblemError({ status: 503, detail: "down" }))}
+        query={failing(new ProblemError({ status: 404, detail: "not found" }))}
         pendingLabel="Loading the section"
       >
         {null}
@@ -125,17 +130,20 @@ describe("QueryStates", () => {
     ).toBeTruthy();
   });
 
-  it("uses the screen's own gone sentence", () => {
+  it("keeps a 5xx a failed load with Retry even when the screen names a gone sentence", () => {
     render(
       <QueryStates
-        query={failing(new ProblemError({ status: 404 }))}
+        query={failing(new ProblemError({ status: 503, detail: "down" }))}
         pendingLabel="Loading the section"
         goneKey="book.linkGone"
       >
         {null}
       </QueryStates>,
     );
-    expect(screen.getByText(t("book.linkGone"))).toBeTruthy();
+    expect(screen.queryByText(t("book.linkGone"))).toBeNull();
+    expect(
+      screen.getByRole("button", { name: t("common.retry") }),
+    ).toBeTruthy();
   });
 
   it("reports a load in progress as busy, since the shimmer bars say nothing", () => {

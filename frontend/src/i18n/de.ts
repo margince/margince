@@ -3601,10 +3601,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.slotTaken":
     "Dieser Zeitpunkt ist nicht mehr verfügbar. Wähle einen anderen Zeitpunkt.",
   "common.retry": "Erneut versuchen",
-  "common.gone": "Das gibt es nicht mehr, oder der Link stimmt nicht.",
   "common.goneBackToAnalytics": "Zurück zu Analytics",
   "reporting.sharedForecastGone":
-    "Dieser Link funktioniert nicht mehr. Er wurde geschlossen oder ist abgelaufen. Frag bei der Absenderin oder dem Absender nach einem neuen.",
+    "Dieser Link funktioniert nicht mehr. Frag bei der Absenderin oder dem Absender nach einem neuen.",
   "reporting.reportGone":
     "Diesen Bericht gibt es nicht, oder er ist nicht mit dir geteilt.",
   "analytics.q.gone":

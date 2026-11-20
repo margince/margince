@@ -45,8 +45,8 @@ export function QueryStates({
   // the page down as it arrives.
   pendingLabel: string;
   pendingLines?: number;
-  // What a 404 says when the screen can name what is gone, and the one way on
-  // from it. Without them a 404 still reads as gone, never as a failed load.
+  // A screen whose 404 can only mean the link or record is gone names it here.
+  // Without it a 404 stays a failed load, since it may be a row-scope refusal.
   goneKey?: MessageKey;
   goneAction?: ReactNode;
   children: ReactNode;
@@ -60,10 +60,10 @@ export function QueryStates({
       />
     );
   }
-  if (query.isError && isGone(query.error)) {
+  if (goneKey && query.isError && isGone(query.error)) {
     return (
       <EmptyState>
-        <p role="alert">{t(goneKey ?? "common.gone")}</p>
+        <p role="alert">{t(goneKey)}</p>
         {goneAction}
       </EmptyState>
     );
