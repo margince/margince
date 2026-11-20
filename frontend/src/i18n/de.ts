@@ -21939,7 +21939,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.because.promised": "von dir zugesagt",
   "worklist.because.approved_and_failed": "freigegeben, aber nicht ausgeführt",
   "worklist.because.account_termination":
-    "Kontobeendigung braucht eine Entscheidung",
+    "Das Ende der Kundenbeziehung braucht eine Entscheidung",
   "worklist.because.blocks_customer_work": "ein Kontakt wartet darauf",
   "worklist.because.routine": "routinemäßiges Aufräumen",
   "worklist.because.repeated_failure": "wiederholter Fehler",

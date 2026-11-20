@@ -210,9 +210,9 @@ export const en = {
   "homeRepair.reason.buyer":
     "The reviewed sources no longer verify a current buyer request.",
   "homeRepair.reason.engagement":
-    "An active contract or delivery contradicts ending the whole account.",
+    "An active contract or delivery contradicts ending the whole company relationship.",
   "homeRepair.reason.workstream":
-    "The evidence ends one engagement, not the whole account.",
+    "The evidence ends one engagement, not the whole company relationship.",
   "homeRepair.reason.evidenceChanged":
     "Newer verified evidence replaces the context of this proposal.",
   "homeRepair.withdraw": "Withdraw automatic proposal",
@@ -655,16 +655,16 @@ export const en = {
   "history.field.closed_at": "Closed on",
   "history.field.amount_minor_base": "Amount in base currency",
   "approval.preview.activeContract":
-    "An agreement is still active. Review it before ending the account relationship.",
+    "An agreement is still active. Review it before ending the company relationship.",
   "approval.preview.activeDelivery":
-    "A project is still in delivery. Review it before ending the account relationship.",
+    "A project is still in delivery. Review it before ending the company relationship.",
   "approval.preview.unknownScope":
-    "The source does not establish that the whole account relationship ended.",
+    "The source does not establish that the whole company relationship ended.",
   "approval.preview.incompleteEvidence":
-    "The current evidence is incomplete. Review the account before changing its lifecycle.",
+    "The current evidence is incomplete. Review the company before changing its lifecycle.",
   "approval.preview.newerEvidence":
     "The source changed after this proposal. Review the current evidence.",
-  "approval.preview.scopeCompany": "Whole account relationship",
+  "approval.preview.scopeCompany": "Whole company relationship",
   "approval.preview.scopeWorkstream": "One engagement",
   "approval.preview.scopeUnknown": "Scope not established",
   "approval.preview.scope": "Scope of the ending",
@@ -1212,9 +1212,9 @@ export const en = {
     "Nothing to draw for this report’s period and metrics yet. Add the chart anyway, or change the period under Customize report.",
   "reporting.chooseChart": "Chart to add",
   "reporting.exportCsv": "Export CSV",
-  "reporting.coverageThresholds": "Account coverage limits",
+  "reporting.coverageThresholds": "Company coverage limits",
   "reporting.coverageThresholdsHelp":
-    "What the Account coverage section counts as at risk. The limits apply from the next read.",
+    "What the Company coverage section counts as at risk. The limits apply from the next read.",
   "reporting.maxEngagedSeats": "Engaged contacts at most",
   "reporting.untouchedDays": "Days without exchange in pipeline",
   "reporting.silentDays": "Days without exchange after a win",
@@ -2167,7 +2167,7 @@ export const en = {
   "dealSuggestion.field.amount": "Amount",
   "dealSuggestion.field.currency": "Currency",
   "dealSuggestion.field.stage": "Stage",
-  "dealSuggestion.accountOwner": "Account owner",
+  "dealSuggestion.accountOwner": "Company owner",
   "dealSuggestion.unassignedOwner": "Unassigned",
   "dealSuggestion.field.owner": "Owner",
   "dealSuggestion.ownerMe": "Me",
@@ -4113,7 +4113,7 @@ export const en = {
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
   "co.health.reason.lastMet_other": "Last met them {days} days ago.",
   "co.health.reason.singleThreaded":
-    "In contact, but one contact carries the whole account.",
+    "In contact, but one contact carries the whole company relationship.",
   "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
   "co.health.reason.severalContacts_other":
     "{count} contacts here are in touch.",
@@ -6301,7 +6301,7 @@ export const en = {
   "deal.room.invited": "{invited} invited",
   "deal.room.nobodyInvited": "Nobody invited yet",
   "deal.room.signedIn": "{active} signed in",
-  "deal.aside.account": "Account",
+  "deal.aside.account": "Company",
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "None",
   "deal.editDetails": "Edit details",
@@ -9001,30 +9001,30 @@ export const en = {
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
   "analytics.sectionDelivery": "Delivery",
-  "analytics.sectionAccounts": "Account coverage",
+  "analytics.sectionAccounts": "Company coverage",
   "analytics.accounts.views": "Risk views",
   "analytics.accounts.singleThreaded": "Single-contact deals",
   "analytics.accounts.untouched": "Untouched in pipeline",
   "analytics.accounts.silent": "Won but silent",
-  "analytics.accounts.pending": "Judging the accounts",
+  "analytics.accounts.pending": "Judging the companies",
   "analytics.accounts.thresholds":
     "At risk means: at most {seats} engaged contact on a deal, no exchange in {untouched} days while in pipeline, no exchange in {silent} days after a win within {won} days.",
   "analytics.accounts.singleThreadedPurpose":
-    "Open deals where at most {seats} contact inside the account has exchanged mail or met with you lately.",
+    "Open deals where at most {seats} contact inside the company has exchanged mail or met with you lately.",
   "analytics.accounts.untouchedPurpose":
-    "Accounts with an open deal and no exchange either way in the last {days} days.",
+    "Companies with an open deal and no exchange either way in the last {days} days.",
   "analytics.accounts.silentPurpose":
-    "Accounts with a deal won in the last {won} days, no open deal, and no exchange either way in the last {days} days.",
+    "Companies with a deal won in the last {won} days, no open deal, and no exchange either way in the last {days} days.",
   "analytics.accounts.noActivityGrant":
-    "Judging accounts needs permission to read activities.",
+    "Judging companies needs permission to read activities.",
   "analytics.accounts.none": "Nothing at risk here.",
   "analytics.accounts.truncated":
-    "More accounts than this read judges: the counts cover the largest ones. Narrow the records you chose.",
+    "More companies than this read judges: the counts cover the largest ones. Narrow the records you chose.",
   "analytics.accounts.withheld_one":
     "{count} more deal has contacts you may not see, so it is not judged.",
   "analytics.accounts.withheld_other":
     "{count} more deals have contacts you may not see, so they are not judged.",
-  "analytics.accounts.account": "Account",
+  "analytics.accounts.account": "Company",
   "analytics.accounts.deal": "Deal",
   "analytics.accounts.owner": "Owner",
   "analytics.accounts.engagedSeats": "Engaged contacts",
@@ -9038,8 +9038,8 @@ export const en = {
   "analytics.accounts.factSeats":
     "{engaged} of {named} contacts named on the deal exchanged mail or met with you in the last 90 days.",
   "analytics.accounts.factStage": "The deal is in stage {stage}.",
-  "analytics.accounts.factOpen_one": "{count} open deal on this account.",
-  "analytics.accounts.factOpen_other": "{count} open deals on this account.",
+  "analytics.accounts.factOpen_one": "{count} open deal on this company.",
+  "analytics.accounts.factOpen_other": "{count} open deals on this company.",
   "analytics.accounts.factWon": "{deal} was won on {date}.",
   "analytics.accounts.factInbound": "They last wrote: {date}.",
   "analytics.accounts.factOutbound": "You last wrote: {date}.",
@@ -20344,7 +20344,7 @@ export const en = {
   "lists.noteHint": "Kept with the change so colleagues can see why.",
   "lists.record.title": "Lists",
   "lists.record.help":
-    "The lists this company is on. Live Lists add it by their rules; you add it to a Shortlist yourself. Use a list to work through accounts one after another.",
+    "The lists this company is on. Live Lists add it by their rules; you add it to a Shortlist yourself. Use a list to work through companies one after another.",
   "lists.record.loading": "Loading lists",
   "lists.record.empty": "Not on any list you can find.",
   "lists.record.check": "Check a Live List",
@@ -21626,7 +21626,7 @@ export const en = {
   "worklist.because.promised": "committed by you",
   "worklist.because.approved_and_failed": "approved but did not run",
   "worklist.because.account_termination":
-    "account termination needs a decision",
+    "ending a company relationship needs a decision",
   "worklist.because.blocks_customer_work": "customer waiting on this",
   "worklist.because.routine": "routine cleanup",
   "worklist.because.repeated_failure": "repeated failure",
@@ -23130,7 +23130,7 @@ export const en = {
   "legalReview.packOlder":
     "This pack was made before agreements, contact and tasks were included.",
   "legalReview.packBinding": "Other offers sent to the buyer",
-  "aiTask.name.account_scan": "Reading what an account needs",
+  "aiTask.name.account_scan": "Reading what a company needs",
   "aiTask.name.agent_loop": "Agent reasoning loop",
   "aiTask.name.brief_ranking": "Morning brief ranking",
   "aiTask.name.capture_classify": "Message classification",
@@ -23212,7 +23212,7 @@ export const en = {
   "standing.peek.partial_other": "Showing {shown} of {count}.",
   "co.standing.peek.inTouch": "Contacts here who have been in touch",
   "standing.peek.lastInTouch": "last in touch {date}",
-  "co.standing.peek.openDeals": "Open deals on this account",
+  "co.standing.peek.openDeals": "Open deals on this company",
   "co.standing.peek.closes": "closes {date}",
   "standing.next.peek": "Other open tasks",
   "standing.next.peek.undated": "No date",
@@ -23270,14 +23270,14 @@ export const en = {
   "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
   "deal.verdict.notStarted": "Not started",
   "co.verdict.active": "Active",
-  "co.verdict.lastExchange": "The last activity with this account was {date}.",
+  "co.verdict.lastExchange": "The last activity with this company was {date}.",
   "co.verdict.cooling": "Cooling",
   "co.verdict.dormant": "Dormant",
   "co.verdict.stale": "Stale",
   "co.verdict.silentFor":
-    "Nothing has happened with this account for {days} days, since {date}. An account cools from day {cooling}, goes dormant from day {dormant} and stale from day {stale}.",
+    "Nothing has happened with this company for {days} days, since {date}. A company cools from day {cooling}, goes dormant from day {dormant} and stale from day {stale}.",
   "co.verdict.noActivity":
-    "No activity recorded since the account was added {date}.",
+    "No activity recorded since the company was added {date}.",
   "project.verdict.startsOn": "The project starts {date}.",
   "project.verdict.overrunning": "Overrunning",
   "project.verdict.endPassed": "The target end, {date}, has passed.",
