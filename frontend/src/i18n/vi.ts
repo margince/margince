@@ -3211,6 +3211,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thu hồi quyền {access} với {record} của {name}? Quyền sẽ bị hủy ở yêu cầu tiếp theo và không thể hoàn tác.",
   "share.granted": "{name} giờ có quyền {access} với {record}.",
   "share.thisRecord": "hồ sơ này",
+  "share.until": "Đến {date}",
   "share.unnamedSubject": "thành viên hoặc nhóm này",
   "share.approvalRequired":
     "Lần chia sẻ này chỉ có hiệu lực sau khi được duyệt. Hiện chưa được áp dụng.",
@@ -3223,6 +3224,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể tải danh sách nhóm. Các thành viên hiển thị bên dưới.",
   "share.rosterErrorBoth": "Không thể tải danh sách thành viên và nhóm.",
   "share.rosterEmpty": "Không có thành viên hay nhóm nào để chia sẻ.",
+  "share.rosterNoMatch": "Không có thành viên hay nhóm nào khớp với tìm kiếm.",
 
   "merge.contact": "Gộp liên hệ",
   "merge.company": "Gộp công ty",

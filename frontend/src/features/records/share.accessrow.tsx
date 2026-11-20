@@ -11,7 +11,7 @@ import {
 } from "../../components/share.parts";
 import { Badge, Button } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
-import { formatDate } from "../../format/format";
+import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 
@@ -66,10 +66,14 @@ export function ShareAccessRow({
             {t("share.grantedBy")}{" "}
             <EntityRef kind="user" id={grant.granted_by} />
           </span>
-          {grant.reason && <span className="t-caption">{grant.reason}</span>}
+          {grant.reason && (
+            <span className="t-caption share-acl-reason">{grant.reason}</span>
+          )}
           {grant.expires_at && (
             <Badge tone="warning">
-              {formatDate(grant.expires_at, locale, zone)}
+              {t("share.until", {
+                date: formatDateAbbrev(grant.expires_at, locale, zone),
+              })}
             </Badge>
           )}
         </div>

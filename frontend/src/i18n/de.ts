@@ -3308,6 +3308,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{access} auf {record} für {name} widerrufen? Der Zugriff endet mit der nächsten Anfrage und kann anschließend nicht mehr rückgängig gemacht werden.",
   "share.granted": "{name} hat jetzt {access} auf {record}.",
   "share.thisRecord": "diesen Datensatz",
+  "share.until": "Bis {date}",
   "share.unnamedSubject": "dieses Mitglied oder Team",
   "share.approvalRequired":
     "Dieser geteilte Zugriff wird erst nach einer Freigabe wirksam. Der Zugriff gilt noch nicht.",
@@ -3321,6 +3322,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.rosterErrorBoth":
     "Die Personen und Teams konnten nicht geladen werden.",
   "share.rosterEmpty": "Keine Personen oder Teams zum Teilen.",
+  "share.rosterNoMatch": "Kein Mitglied und kein Team passt zu deiner Suche.",
 
   "merge.contact": "Kontakt zusammenführen",
   "merge.company": "Unternehmen zusammenführen",

@@ -3212,6 +3212,7 @@ export const en = {
     "Revoke {access} access to {record} for {name}? It ends at the next request and cannot be undone.",
   "share.granted": "{name} now has {access} access to {record}.",
   "share.thisRecord": "this record",
+  "share.until": "Until {date}",
   "share.unnamedSubject": "this member or team",
   "share.approvalRequired":
     "This share takes effect only after approval. It is not applied yet.",
@@ -3222,6 +3223,7 @@ export const en = {
   "share.rosterErrorTeams": "Teams did not load. People are shown below.",
   "share.rosterErrorBoth": "People and teams did not load.",
   "share.rosterEmpty": "No people or teams to share with.",
+  "share.rosterNoMatch": "No member or team matches your search.",
 
   "merge.contact": "Merge contact",
   "merge.company": "Merge company",

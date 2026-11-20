@@ -40,6 +40,7 @@ import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useViewerId } from "../../lib/session";
 import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
 import { ShareAccessRow, useShareNames } from "./share.accessrow";
+import { ShareBack } from "./share.back";
 import { ShareConfirmation } from "./share.confirmation";
 import {
   ApprovalRequiredError,
@@ -242,6 +243,11 @@ export function ShareScreenBody({
 
   return (
     <div className="wrap share-screen">
+      <ShareBack
+        recordType={recordType}
+        recordId={recordId}
+        name={recordName}
+      />
       <Panel title={t(contactsOnly ? "share.companyContacts" : "share.title")}>
         <PanelBody>
           <div className="share-backlink">
@@ -306,6 +312,7 @@ export function ShareScreenBody({
                 teamsQuery={teamsQuery}
                 partial={rosterPartial}
                 filteredRoster={filteredRoster}
+                searching={searchWords(term).length > 0}
                 held={heldBySubject}
                 subject={subject}
                 t={t}

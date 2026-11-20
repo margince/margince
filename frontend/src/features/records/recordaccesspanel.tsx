@@ -170,6 +170,20 @@ function YouLine({
 
 // The first page carries the counts and the reader's own line; every loaded
 // page adds its rows.
+// The answer has one row per member, but its pages are read at different times,
+// so a member can land on two of them. A second row would list them twice under
+// one key.
+function oncePerMember(rows: readonly Member[]): Member[] {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    if (seen.has(row.user_id)) {
+      return false;
+    }
+    seen.add(row.user_id);
+    return true;
+  });
+}
+
 function AccessBody({
   pages,
   kind,
@@ -187,7 +201,7 @@ function AccessBody({
   const count = (n: number) => ({ count: formatNumber(n, locale) });
   const [answer] = pages;
   if (answer === undefined) return null;
-  const rows = pages.flatMap((page) => page.data);
+  const rows = oncePerMember(pages.flatMap((page) => page.data));
   const byGroup = (group: Group) => rows.filter((m) => m.group === group);
   const everyone = byGroup("everyone");
   return (

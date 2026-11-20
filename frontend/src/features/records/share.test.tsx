@@ -1,4 +1,7 @@
 /** @vitest-environment happy-dom */
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -586,6 +589,63 @@ describe("ShareScreen", () => {
       ),
     ).toBeTruthy();
     expect(posts).toHaveLength(1);
+  });
+
+  it("leads back to the record it shares", async () => {
+    installBaseFetch();
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    const back = await screen.findByRole("link", {
+      name: "Back to Acme renewal",
+    });
+    expect(back.getAttribute("href")).toMatch(/deals\/d-1$/);
+  });
+
+  it("labels a share's end date and writes it the way the record page does", async () => {
+    const ending = { ...existingGrant, expires_at: "2026-11-23T12:00:00Z" };
+    installBaseFetch({
+      "/record-grants": () =>
+        jsonResponse({
+          data: [ending],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    const aclList = await screen.findByTestId("share-acl-list");
+    expect(within(aclList).getByText(/^Until /).textContent).toBe(
+      "Until 23 Nov 2026",
+    );
+  });
+
+  // A reason is free text: one long word has to break inside its row.
+  it("lets a long reason break inside its row", async () => {
+    installBaseFetch();
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    const reason = await screen.findByText("compliance review");
+    expect(reason.classList.contains("share-acl-reason")).toBe(true);
+    // jsdom loads no stylesheet, so the rule is read off the file.
+    const sheet = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "share.css"),
+      "utf8",
+    );
+    expect(sheet).toMatch(
+      /\.share-acl-reason\s*\{[^}]*overflow-wrap\s*:\s*anywhere\s*[;}]/,
+    );
+  });
+
+  it("says a search matched nobody, not that there is nobody to share with", async () => {
+    installBaseFetch();
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+    await screen.findByRole("button", { name: /Priya Shah/ });
+
+    await user.type(screen.getByLabelText("Person or team"), "zzzz");
+
+    expect(screen.getByTestId("share-roster-empty").textContent).toBe(
+      "No member or team matches your search.",
+    );
   });
 
   it("revoke on a row, confirmed, fires DELETE /record-grants/{id} behind the version it showed", async () => {
