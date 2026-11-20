@@ -47193,6 +47193,14 @@ type CreateOutcomeReviewRequest struct {
 	// SubmissionId The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
 	SubmissionId openapi_types.UUID `json:"submission_id"`
 
+	// TemplateKey Key of the template shown when the form opened. A template added or restored since then
+	// is a different template, possibly at the same version, so a key that is not the live
+	// template's returns 409. Optional: a client that omits it keeps the version-only check, so
+	// a client built before this field keeps working. That client cannot tell a swap to another
+	// template at the same version; its answers are still checked against the live questions,
+	// and an answer to a question the live template does not ask is refused 422.
+	TemplateKey *string `json:"template_key,omitempty"`
+
 	// TemplateVersion Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
 	TemplateVersion *int64 `json:"template_version,omitempty"`
 }

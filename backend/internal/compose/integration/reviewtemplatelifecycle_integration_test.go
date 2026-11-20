@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -115,6 +116,8 @@ func TestAnAddedReviewTemplateIsAskedAndRetiresTheOneBefore(t *testing.T) {
 	keepReviewTemplates(t)
 	ctx := reviewTemplateAdmin(e)
 	before := liveTemplate(ctx, t, e, "won")
+	retiredAudits := reviewTemplateAudits(t, e, before.Id, "update")
+	retiredEvents := reviewTemplateEvents(t, e, before.Id)
 
 	added, err := e.Activities.CreateReviewTemplate(ctx, crmcontracts.CreateActivityReviewTemplateRequest{
 		Label: "Win review", Outcome: "won",
@@ -130,12 +133,18 @@ func TestAnAddedReviewTemplateIsAskedAndRetiresTheOneBefore(t *testing.T) {
 	if reviewTemplateByID(ctx, t, e, before.Id).Active {
 		t.Fatal("the template asked before is still active, so an outcome asks two")
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'create'`, added.Id); got != 1 {
+	if got := reviewTemplateAudits(t, e, added.Id, "create"); got != 1 {
 		t.Fatalf("audit rows for the added template = %d, want 1", got)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM event_outbox
-		WHERE envelope->>'type' = 'reporting.changed' AND envelope::text LIKE '%' || $1 || '%'`, added.Id.String()); got != 1 {
+	if got := reviewTemplateEvents(t, e, added.Id); got != 1 {
 		t.Fatalf("reporting.changed events for the added template = %d, want 1", got)
+	}
+	// Retiring the template asked before is a write of its own.
+	if got := reviewTemplateAudits(t, e, before.Id, "update") - retiredAudits; got != 1 {
+		t.Fatalf("update audit rows for the retired template = %d, want 1", got)
+	}
+	if got := reviewTemplateEvents(t, e, before.Id) - retiredEvents; got != 1 {
+		t.Fatalf("reporting.changed events for the retired template = %d, want 1", got)
 	}
 
 	deal, closing := closedDeal(t, e, "Asked the added template")
@@ -223,4 +232,125 @@ func TestOnlyAGrantedSeatAddsOrRetiresAReviewTemplate(t *testing.T) {
 	if !liveTemplate(reviewTemplateAdmin(e), t, e, "lost").Active {
 		t.Fatal("a refused retirement retired the template")
 	}
+
+	retired, err := e.Activities.UpdateReviewTemplate(reviewTemplateAdmin(e), ids.UUID(template.Id),
+		crmcontracts.UpdateActivityReviewTemplateRequest{Version: *template.Version, Active: &off})
+	if err != nil {
+		t.Fatalf("an admin retiring the template: %v", err)
+	}
+	on := true
+	_, err = e.Activities.UpdateReviewTemplate(rep, ids.UUID(template.Id),
+		crmcontracts.UpdateActivityReviewTemplateRequest{Version: *retired.Version, Active: &on})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a rep restoring a template = %v, want permission denied", err)
+	}
+	if reviewTemplateByID(reviewTemplateAdmin(e), t, e, template.Id).Active {
+		t.Fatal("a refused restore turned the template back on")
+	}
+}
+
+func reviewTemplateAudits(t *testing.T, e *Env, id openapi_types.UUID, action string) int {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = $2`, id, action)
+}
+
+func reviewTemplateEvents(t *testing.T, e *Env, id openapi_types.UUID) int {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM event_outbox
+		WHERE envelope->>'type' = 'reporting.changed' AND envelope::text LIKE '%' || $1 || '%'`, id.String())
+}
+
+// A review opened on one template and submitted after another took its place
+// is refused, even when both stand at the same version.
+func TestAReviewOpenedOnOneTemplateIsRefusedOnTheNext(t *testing.T) {
+	e := Setup(t)
+	keepReviewTemplates(t)
+	ctx := reviewTemplateAdmin(e)
+	question := []crmcontracts.ReviewQuestion{{Key: "why", Label: "Why?", Type: "text", Required: true}}
+	opened, err := e.Activities.CreateReviewTemplate(ctx, crmcontracts.CreateActivityReviewTemplateRequest{
+		Label: "First win review", Outcome: "won", Questions: question,
+	})
+	if err != nil {
+		t.Fatalf("adding the template the form opens on: %v", err)
+	}
+	next, err := e.Activities.CreateReviewTemplate(ctx, crmcontracts.CreateActivityReviewTemplateRequest{
+		Label: "Second win review", Outcome: "won", Questions: question,
+	})
+	if err != nil {
+		t.Fatalf("adding the template that replaces it: %v", err)
+	}
+	if *next.Version != *opened.Version {
+		t.Fatalf("versions %d and %d differ, so the version check alone would catch the swap", *opened.Version, *next.Version)
+	}
+	deal, closing := closedDeal(t, e, "Reviewed across a swap")
+	_, err = compose.NewOutcomeReviews(e.Pool).Write(ctx, deal, crmcontracts.CreateOutcomeReviewRequest{
+		ClosingOccurrenceId: openapi_types.UUID(closing), SubmissionId: openapi_types.UUID(ids.NewV7()),
+		Answers: map[string]string{"why": "Fit"}, TemplateVersion: opened.Version, TemplateKey: &opened.Key,
+	})
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a review opened on %s and filed after %s replaced it = %v, want a conflict", opened.Key, next.Key, err)
+	}
+}
+
+// Two admins adding a template for one outcome at once: one wins, the other is
+// told the list changed, and the outcome still asks one template.
+func TestTwoConcurrentAddsForOneOutcomeLeaveOneActiveTemplate(t *testing.T) {
+	e := Setup(t)
+	keepReviewTemplates(t)
+	ctx := reviewTemplateAdmin(e)
+	asked := liveTemplate(ctx, t, e, "won")
+	release := holdRow(t, `SELECT 1 FROM activity_review_template WHERE id = $1 FOR UPDATE`, ids.UUID(asked.Id))
+
+	results := make(chan error, 2)
+	for i, label := range []string{"Racing win review", "Other racing win review"} {
+		returned := make(chan struct{})
+		go func() {
+			defer close(returned)
+			_, err := e.Activities.CreateReviewTemplate(ctx, crmcontracts.CreateActivityReviewTemplateRequest{
+				Label: label, Outcome: "won",
+				Questions: []crmcontracts.ReviewQuestion{{Key: "why", Label: "Why?", Type: "text", Required: true}},
+			})
+			results <- err
+		}()
+		waitForRetireWaiters(t, i+1, returned)
+	}
+	release()
+
+	var conflicts, added int
+	for range 2 {
+		switch err := <-results; {
+		case err == nil:
+			added++
+		case errors.Is(err, apperrors.ErrConflict):
+			conflicts++
+		default:
+			t.Fatalf("a concurrent add answered %v, want success or a conflict", err)
+		}
+	}
+	if added != 1 || conflicts != 1 {
+		t.Fatalf("concurrent adds: %d added, %d conflicts, want one of each", added, conflicts)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_review_template WHERE outcome = 'won' AND active`); got != 1 {
+		t.Fatalf("active won templates = %d, want 1", got)
+	}
+}
+
+// waitForRetireWaiters waits until n adds are parked on the held template row.
+func waitForRetireWaiters(t *testing.T, n int, returned <-chan struct{}) {
+	t.Helper()
+	conn := freshConnection(t)
+	testdb.WaitForContention(t, returned,
+		"an add finished while the asked template was held, so it never tried to retire it",
+		"an add never queued on the asked template",
+		func(ctx context.Context) (bool, error) {
+			if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+				return false, err
+			}
+			var waiting int
+			err := conn.QueryRow(ctx, `
+				SELECT count(*) FROM pg_stat_activity
+				 WHERE datname = current_database() AND wait_event_type = 'Lock'
+				   AND query LIKE '%UPDATE activity_review_template SET active = false%'`).Scan(&waiting)
+			return waiting >= n, err
+		})
 }

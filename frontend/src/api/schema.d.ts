@@ -46474,6 +46474,15 @@ export interface components {
              */
             template_version?: number;
             /**
+             * @description Key of the template shown when the form opened. A template added or restored since then
+             *     is a different template, possibly at the same version, so a key that is not the live
+             *     template's returns 409. Optional: a client that omits it keeps the version-only check, so
+             *     a client built before this field keeps working. That client cannot tell a swap to another
+             *     template at the same version; its answers are still checked against the live questions,
+             *     and an answer to a question the live template does not ask is refused 422.
+             */
+            template_key?: string;
+            /**
              * Format: uuid
              * @description The closing being reviewed. Must be the one the deal is on now, else 409.
              */
