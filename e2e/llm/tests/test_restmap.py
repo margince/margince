@@ -22,6 +22,8 @@ def run(*blocks):
     return [
         json.dumps({"type": "system", "subtype": "init", "tools": [restmap.HTTP_TOOL]}),
         json.dumps({"type": "assistant", "message": {"content": list(blocks)}}),
+        json.dumps({"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": block["id"], "is_error": False} for block in blocks if "id" in block]}}),
     ]
 
 

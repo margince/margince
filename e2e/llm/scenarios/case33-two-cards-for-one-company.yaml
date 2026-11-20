@@ -158,5 +158,10 @@ must_not_mention:
   # and archives must not be reported as one that cannot.
   - "cannot (?:be )?merge(?:d)?[^.]{0,25}record|no way to (?:merge|combine) (?:two )?(?:records|companies)|(?:CRM|workspace) (?:does not|doesn't) support (?:merging|archiving)"
 
+# Archived leaves the day-to-day list. Either Ostfriesen card may survive the
+# merge, so no entry names the survivor or its owner.
+must_end_with:
+  - company "Sauerland Kunststoff GmbH" records=0
+
 runs: 3
 pass_at: 2

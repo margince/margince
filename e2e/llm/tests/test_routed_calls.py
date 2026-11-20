@@ -35,9 +35,10 @@ class RoutedCallsTest(unittest.TestCase):
         path = transcript([
             {"type": "system", "subtype": "init", "tools": ["mcp__margince__" + router]},
             {"type": "assistant", "message": {"content": [{
-                "type": "tool_use", "name": "mcp__margince__" + router,
+                "type": "tool_use", "id": "c1", "name": "mcp__margince__" + router,
                 "input": {table["field"]: action, "record_type": "deal"},
             }]}},
+            {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "c1", "is_error": False}]}},
         ])
         self.addCleanup(os.remove, path)
         scenario = {"must_call": ["list_records"], "must_call_with": ["list_records.record_type=deal"]}

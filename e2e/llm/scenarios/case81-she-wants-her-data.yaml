@@ -32,5 +32,8 @@ may_call:
 must_mention:
   - "Katrin"
 
+must_end_with:
+  - contact "Katrin Sommer" data_subject_request=access
+
 runs: 3
 pass_at: 2
