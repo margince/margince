@@ -141,7 +141,8 @@ type dealDecline struct {
 }
 
 // declineDealTx marks the locked message's link to deal unrelated, or records
-// the decline when there is no link. A deal declined before writes nothing.
+// the decline when there is no link. A deal declined before writes nothing,
+// and so does a linked deal the caller may not change.
 func declineDealTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) (dealDecline, error) {
 	var args []any
 	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
@@ -161,6 +162,11 @@ func declineDealTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids
 		}
 		_, err := unlinkRecordedTx(ctx, tx, mail, linkEntityDeal, deal, decision, nil)
 		return dealDecline{declined: true}, err
+	}
+	if err := auth.EnsureChangeable(ctx, tx, linkEntityDeal, deal); notTheirsToFile(err) {
+		return dealDecline{linked: true}, nil
+	} else if err != nil {
+		return dealDecline{}, err
 	}
 	marked, err := writeDealMarkTx(ctx, tx, mail, deal, dealMark{
 		relevance: relstrength.DealUnrelated, source: relstrength.RelevanceByHuman, decision: decision,

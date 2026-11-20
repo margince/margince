@@ -106,19 +106,22 @@ func (r DealRepair) recheckTopic(f dealFiling, tx pgx.Tx, mail ids.ActivityID, c
 	case answer.digest != digest || !answer.answered:
 		return DealNone, nil, nil
 	}
-	if _, err := markMachineDealLink(f, tx, mail, current, recheckMark(answer.topic)); err != nil {
+	if _, err := markMachineDealLink(f, tx, mail, current, recheckMark(answer.topic, current)); err != nil {
 		return DealNone, nil, err
 	}
 	return DealMachineConfirmed, nil, f.filer.StampDealTopic(f.writer, tx, mail, digest)
 }
 
-// recheckMark is the mark one answer about a single deal gives its link.
-func recheckMark(topic DealTopic) string {
+// recheckMark is the mark one answer about current gives its link. An answer
+// naming any other deal was not asked for, so it proves nothing either way.
+func recheckMark(topic DealTopic, current ids.UUID) string {
 	switch {
 	case !topic.Confident:
 		return relstrength.DealUncertain
 	case topic.Deal.IsZero():
 		return relstrength.DealUnrelated
+	case topic.Deal != current:
+		return relstrength.DealUncertain
 	}
 	return relstrength.DealRelevant
 }

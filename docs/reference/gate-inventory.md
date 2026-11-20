@@ -307,6 +307,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `datecolumncalendars_test.go` | H2 | Every `date` column states whose calendar it is a day in. |
 | `dealevidencereaders_test.go` | H2 | A Go reader that judges whether a deal is alive asks relstrength.DealEvidenceSQL with the deal it reads. |
 | `deallinewriters_test.go` | H2 | A lines-priced deal has one value writer; every other writer must refuse line-owned columns and preserve its product projection. |
+| `dealmarkcarried_test.go` | H2 | A statement that copies deal links onto another activity carries each link's mark with it. |
 | `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |

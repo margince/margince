@@ -154,9 +154,9 @@ func TestAReimportKeepsAColleaguesMark(t *testing.T) {
 	w.wantClock(t, reviewAt, "after the re-import")
 }
 
-// The mark answers by the caller's rights. Three callers are refused, and none
-// changes the mark. One may change the activity but not the deal, one lacks
-// the deal grant, and one sits in another workspace.
+// The mark and its undo answer by the caller's rights. Three callers are
+// refused, and none changes the mark. One may change the activity but not the
+// deal, one lacks the deal grant, and one sits in another workspace.
 func TestADealMarkAnswersByTheCallersRights(t *testing.T) {
 	w := newDealEvidenceWorld(t)
 	w.contact = w.e.SeedContact(t, "Ada Shared", &w.e.Rep3)
@@ -168,25 +168,32 @@ func TestADealMarkAnswersByTheCallersRights(t *testing.T) {
 	noDealUpdate.Objects = map[string]principal.ObjectGrant{
 		"contact": {Read: true}, "deal": {Read: true}, "activity": {Read: true, Update: true},
 	}
-	for name, c := range map[string]struct {
+	refused := map[string]struct {
 		ctx  context.Context
 		want error
 	}{
 		"a seat that may not change the deal":  {otherTeam, apperrors.ErrPermissionDenied},
 		"a seat without the deal update grant": {w.e.As(w.e.Rep1, []ids.UUID{w.e.Team1}, noDealUpdate), apperrors.ErrPermissionDenied},
 		"a seat of another workspace":          {elsewhere, apperrors.ErrPermissionDenied},
-	} {
-		store := w.e.Activities
-		if c.ctx == elsewhere {
-			store = activities.NewStore(w.e.DBFor(ws))
-		}
-		_, err := store.SetDealRelevance(c.ctx, ids.From[ids.ActivityKind](dinner), w.deal.UUID, "unrelated")
-		if !errors.Is(err, c.want) {
-			t.Errorf("%s: the mark answered %v, want %v", name, err, c.want)
-		}
 	}
-	if got := w.markOf(t, dinner); got != "" {
-		t.Fatalf("a refused mark left the link marked %q", got)
+	// Each refusal is asked of the mark and of its undo, and leaves the link as it was.
+	for _, step := range []struct{ relevance, before string }{{"unrelated", ""}, {"relevant", "unrelated/human"}} {
+		if step.relevance == "relevant" {
+			w.mark(t, dinner, "unrelated")
+		}
+		for name, c := range refused {
+			store := w.e.Activities
+			if c.ctx == elsewhere {
+				store = activities.NewStore(w.e.DBFor(ws))
+			}
+			_, err := store.SetDealRelevance(c.ctx, ids.From[ids.ActivityKind](dinner), w.deal.UUID, step.relevance)
+			if !errors.Is(err, c.want) {
+				t.Errorf("%s, %s: the mark answered %v, want %v", name, step.relevance, err, c.want)
+			}
+		}
+		if got := w.markOf(t, dinner); got != step.before {
+			t.Fatalf("a refused %s mark left the link marked %q, want %q", step.relevance, got, step.before)
+		}
 	}
 	if _, err := w.e.Activities.SetDealRelevance(w.owner(), ids.From[ids.ActivityKind](dinner), ids.NewV7(), "unrelated"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("a deal the activity has no link to answered %v, want not found", err)
@@ -206,4 +213,22 @@ func (w dealEvidenceWorld) otherWorkspace(t *testing.T) (context.Context, ids.UU
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, Permissions: dealMarkPerms,
 	}), ws
+}
+
+// A deal link inserted already marked moves the deal clock no further, though
+// the activity's contact link would. The insert's advance reads that one link.
+func TestADealLinkInsertedAlreadyMarkedMovesNoClock(t *testing.T) {
+	w := newDealEvidenceWorld(t)
+	dinner := CalendarMeeting{
+		Event: "dinner-" + ids.NewV7().String(), At: w.now.AddDate(0, 0, -2), Seat: w.e.Rep1, DeliveredTo: w.calendar,
+		Links: []datasource.EntityRef{{Type: datasource.EntityContact, ID: w.contact}},
+	}.Capture(t, w.e)
+	for _, relevance := range []string{"unrelated", "uncertain"} {
+		w.e.WsExec(t, `DELETE FROM activity_link WHERE activity_id = $1 AND entity_type = 'deal'`, dinner)
+		w.e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, deal_id, deal_relevance, relevance_source)
+			VALUES ($1, 'deal', $2, $3, 'classifier')`, dinner, w.deal.UUID, relevance)
+		if clock := w.dealClock(t); clock != nil {
+			t.Errorf("a deal link inserted %s moved the deal clock to %v, want none", relevance, clock)
+		}
+	}
 }
