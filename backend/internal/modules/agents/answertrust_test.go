@@ -99,29 +99,32 @@ func TestTheInstructionsSayToolAnswersAreDataNotInstructions(t *testing.T) {
 }
 
 func TestCarriesFreeTextReadsWhatAValueCanHold(t *testing.T) {
-	for schema, want := range map[string]bool{
-		``:                                       true,
-		`{}`:                                     true,
-		`{"type":"string"}`:                      true,
-		`{"type":"string","format":"email"}`:     true,
-		`{"type":"string","format":"uri"}`:       true,
-		`{"type":"string","format":"uuid"}`:      false,
-		`{"type":"string","format":"date-time"}`: false,
-		`{"type":"string","enum":["open","won"]}`:                                                          false,
-		`{"type":"string","enum":["open"],"x-extensible-enum":true}`:                                       true,
-		`{"type":["integer","null"]}`:                                                                      false,
-		`{"type":"object"}`:                                                                                true,
-		`{"type":"object","properties":{}}`:                                                                false,
-		`{"type":"object","properties":{"n":{"type":"integer"}},"additionalProperties":true}`:              true,
-		`{"type":"object","properties":{"n":{"type":"integer"}},"additionalProperties":{"type":"string"}}`: true,
-		`{"type":"array","items":{"type":"string","format":"uuid"}}`:                                       false,
-		`{"type":"array"}`: true,
-		`{"anyOf":[{"type":"integer"},{"type":"string"}]}`:  true,
-		`{"anyOf":[{"type":"integer"},{"type":"boolean"}]}`: false,
-		`{"properties":{"body":{"type":"string"}}}`:         true,
+	for _, c := range []struct {
+		schema string
+		want   bool
+	}{
+		{``, true},
+		{`{}`, true},
+		{`{"type":"string"}`, true},
+		{`{"type":"string","format":"email"}`, true},
+		{`{"type":"string","format":"uri"}`, true},
+		{`{"type":"string","format":"uuid"}`, false},
+		{`{"type":"string","format":"date-time"}`, false},
+		{`{"type":"string","enum":["open","won"]}`, false},
+		{`{"type":"string","enum":["open"],"x-extensible-enum":true}`, true},
+		{`{"type":["integer","null"]}`, false},
+		{`{"type":"object"}`, true},
+		{`{"type":"object","properties":{}}`, false},
+		{`{"type":"object","properties":{"n":{"type":"integer"}},"additionalProperties":true}`, true},
+		{`{"type":"object","properties":{"n":{"type":"integer"}},"additionalProperties":{"type":"string"}}`, true},
+		{`{"type":"array","items":{"type":"string","format":"uuid"}}`, false},
+		{`{"type":"array"}`, true},
+		{`{"anyOf":[{"type":"integer"},{"type":"string"}]}`, true},
+		{`{"anyOf":[{"type":"integer"},{"type":"boolean"}]}`, false},
+		{`{"properties":{"body":{"type":"string"}}}`, true},
 	} {
-		if got := CarriesFreeText(json.RawMessage(schema)); got != want {
-			t.Errorf("CarriesFreeText(%s) = %v, want %v", schema, got, want)
+		if got := CarriesFreeText(json.RawMessage(c.schema)); got != c.want {
+			t.Errorf("CarriesFreeText(%s) = %v, want %v", c.schema, got, c.want)
 		}
 	}
 }
