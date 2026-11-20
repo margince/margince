@@ -69,5 +69,23 @@ judge:
   - "Criterion 2. The answer says Mara Voigt's conversion was undone — she is a lead again — and that she is no longer on the list, and says Jens Falk was added. Answer no if it says she was deleted or disqualified, says she is still a contact, or does not report Jens as added."
   - "Criterion 3. The answer reports the hand-over to Sofia Meier as covering everybody who stayed on the list plus Jens Falk, and not Mara Voigt. Answer no if it hands Mara to Sofia, hands over only some of the people, or says nothing about who was handed over."
 
+# Mara is a lead again, and everyone else on the list, Jens included, is
+# Sofia's.
+must_end_with:
+  - lead "Mara Voigt" records=1
+  - contact "Mara Voigt" records=0
+  - contact "Ralf Thiel" owner=Sofia Meier
+  - contact "Sabine Ott" owner=Sofia Meier
+  - contact "Dirk Hallmann" owner=Sofia Meier
+  - contact "Inge Rohde" owner=Sofia Meier
+  - contact "Tobias Kruse" owner=Sofia Meier
+  - contact "Wiebke Lange" owner=Sofia Meier
+  - contact "Hartmut Seidel" owner=Sofia Meier
+  - contact "Ute Brandl" owner=Sofia Meier
+  - contact "Florian Eck" owner=Sofia Meier
+  - contact "Marlene Pohl" owner=Sofia Meier
+  - contact "Gernot Vahl" owner=Sofia Meier
+  - contact "Jens Falk" owner=Sofia Meier
+
 runs: 3
 pass_at: 2

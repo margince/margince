@@ -81,9 +81,9 @@ _NAME_FIELD = {"company": "display_name", "project": "name", "deal": "name",
                "contact": "full_name", "lead": "full_name", "deal_room": "title"}
 
 # The types found ON a parent rather than by a list of their own, and the
-# parent's type: list_records has no activity, and read_project's overview carries the
-# project's timeline whole.
-_FOUND_ON = {"activity": "project"}
+# parents they are found on: an activity is named by its subject, which only
+# its parent's timeline makes unique.
+_FOUND_ON = {"activity": ("project", "company", "contact")}
 
 # Not record fields: what list_documents answers about the record's files.
 _DOCUMENT = "document"
@@ -105,6 +105,8 @@ _TEAM, _MEMBER = "team", "member"
 _CONTRACT = "contract"
 _AUTOMATION, _ME = "automation", "me"
 _SAVED_QUESTIONS = "saved_questions"
+_WORKING_DAYS, _WORKING_HOURS = "working_days", "working_hours"
+_PIPELINE = "pipeline"
 _OWN_DRAFT = "own_draft"
 _DRAFT_ANCHORS = ("company", "contact", "deal", "lead", "project")
 
@@ -164,11 +166,11 @@ def parse(entry):
     elif parent_type is None and record_type not in _NAME_FIELD:
         raise ValueError(f"must_end_with entry {entry!r} names a type this reader cannot find by name")
     _special_wanted(entry, found)
-    if parent_type is not None and _FOUND_ON.get(record_type) != parent_type:
+    if parent_type is not None and parent_type not in _FOUND_ON.get(record_type, ()):
         raise ValueError(f"must_end_with entry {entry!r} names a {record_type} this reader cannot find on a {parent_type}")
     if field in (_DOCUMENT, _DOCUMENT_CONTRACT):
         _document_wanted(found)
-    if field == _DOCUMENT_CONTRACT and parent_type is None:
+    if field == _DOCUMENT_CONTRACT and parent_type != "project":
         raise ValueError("document_contract finds its contract on a project, so the entry needs: on project \"Name\"")
     if field == _DOCUMENT_COUNT and not value.isdigit():
         raise ValueError(f"documents wants a count of files, not {value!r}")
@@ -177,12 +179,14 @@ def parse(entry):
 
 def _special_wanted(entry, want):
     """ValueError when a non-field name is asked of a record it cannot be read on."""
-    if want.field == _RECORD_COUNT and (want.parent_type is not None or not want.value.isdigit()):
-        raise ValueError(f"must_end_with entry {entry!r}: records wants a count, on a record found by name")
+    if want.field == _RECORD_COUNT and not want.value.isdigit():
+        raise ValueError(f"must_end_with entry {entry!r}: records wants a count of records")
     if want.field in (_TAGGED, _UNTAGGED) and (want.record_type not in _TAGGABLE or want.parent_type):
         raise ValueError(f"must_end_with entry {entry!r}: read_tags reads the words on a {', '.join(_TAGGABLE)}")
-    if want.field == _STAGE and want.record_type != "deal":
-        raise ValueError(f"must_end_with entry {entry!r}: only a deal has a stage")
+    if want.field in (_STAGE, _PIPELINE) and want.record_type != "deal":
+        raise ValueError(f"must_end_with entry {entry!r}: only a deal has a {want.field}")
+    if want.field in (_WORKING_DAYS, _WORKING_HOURS) and want.record_type != _ME:
+        raise ValueError(f"must_end_with entry {entry!r}: {want.field} is read on me")
     if want.field == _CONTRACT and (want.record_type != "company" or want.parent_type):
         raise ValueError(f"must_end_with entry {entry!r}: read_details lists the contracts of a company")
     if want.field == _OWNER and want.parent_type is not None:
@@ -284,26 +288,51 @@ def _section(view, name, project):
     return section["items"]
 
 
-def _locate(session, want):
-    """(record id, the parent project's 360 read or None, problem).
+def _on_parent(session, want):
+    """(the activities on the parent carrying the entry's subject, the parent
+    project's 360 read or None, problem).
 
-    An activity is found by its subject on its project's timeline, the one
-    activity read that is whole, and the same read carries the project's
-    contracts for document_contract.
+    A project's timeline is read whole in its overview, which also carries the
+    contracts document_contract needs; a company's or contact's is every page
+    of the activity list filtered to that record.
     """
+    parent_id, problem = _named(session, want.parent_type, want.parent_name)
+    if problem:
+        return [], None, problem
+    if want.parent_type == "project":
+        view = _data(session, "read_project", {"view": "overview", "project_id": parent_id})
+        found = [a for a in _section(view, "activities", want.parent_name) if a.get("subject") == want.name]
+        return [{**a, "id": a.get("activity_id")} for a in found], view, ""
+    filters = {"entity_type": want.parent_type, "entity_id": parent_id}
+    found, cursor = [], None
+    for _ in range(_MAX_PAGES):
+        arguments = {"engine": "list", "record_type": "activity", "filters": filters, "limit": _PAGE_LIMIT}
+        if cursor:
+            arguments["cursor"] = cursor
+        page = _data(session, "find_records", arguments)
+        records = page.get("records")
+        if not isinstance(records, list):
+            raise Unreadable(f"list_records answered with no activity list on {want.parent_type} \"{want.parent_name}\"")
+        found += [r for r in records if (r.get("fields") or {}).get("subject") == want.name]
+        cursor = page.get("next_cursor")
+        if not cursor:
+            return found, None, ""
+    raise Unreadable(f"list_records was still paging activities after {_MAX_PAGES} pages")
+
+
+def _locate(session, want):
+    """(record id, the parent project's 360 read or None, problem)."""
     if want.parent_type is None:
         record_id, problem = _named(session, want.record_type, want.name)
         return record_id, None, problem
-    project_id, problem = _named(session, want.parent_type, want.parent_name)
+    found, view, problem = _on_parent(session, want)
     if problem:
-        return None, None, problem
-    view = _data(session, "read_project", {"view": "overview", "project_id": project_id})
-    found = [a for a in _section(view, "activities", want.parent_name) if a.get("subject") == want.name]
+        return None, view, problem
     if not found:
         return None, view, f"ended with no {_where(want)}"
     if len(found) > 1:
         return None, view, f"ended with {len(found)} records for {_where(want)}"
-    return found[0].get("activity_id"), view, ""
+    return found[0].get("id"), view, ""
 
 
 def _documents(session, record_type, record_id):
@@ -387,6 +416,8 @@ def _field_problem(session, want, record_id):
         actual = str(owner["name"]) if isinstance(owner, dict) and "name" in owner else "(none)"
     elif want.field == _STAGE:
         actual = _stage_name(session, fields.get("stage_id"), want)
+    elif want.field == _PIPELINE:
+        actual = _pipeline_name(session, fields.get("pipeline_id"), want)
     elif want.field in fields:
         actual = _rendered(fields[want.field])
     else:
@@ -406,6 +437,17 @@ def _stage_name(session, stage_id, want):
             if stage.get("id") == stage_id:
                 return str(stage.get("name"))
     raise Unreadable(f"read_workspace lists no stage {stage_id!r} for {_where(want)}")
+
+
+def _pipeline_name(session, pipeline_id, want):
+    """The name read_workspace gives the deal's pipeline: its id is minted per seed."""
+    pipelines = _data(session, "read_workspace", {"topic": "pipelines"}).get("pipelines")
+    if not isinstance(pipelines, list):
+        raise Unreadable("read_workspace answered with no pipelines list")
+    for pipeline in pipelines:
+        if pipeline.get("id") == pipeline_id:
+            return str(pipeline.get("name"))
+    raise Unreadable(f"read_workspace lists no pipeline {pipeline_id!r} for {_where(want)}")
 
 
 def _tags_problem(session, want, record_id):
@@ -521,10 +563,24 @@ def _me_problem(session, want):
         raise Unreadable(f"the lane's passport acts for {seat.get('email')!r}, not {want.name!r}")
     if want.field == _SAVED_QUESTIONS:
         return _saved_questions_problem(session, want)
-    actual = _rendered(seat[want.field]) if seat.get(want.field) not in (None, "") else "(empty)"
+    if want.field in (_WORKING_DAYS, _WORKING_HOURS):
+        actual = _working_hours(session, want.field)
+    else:
+        actual = _rendered(seat[want.field]) if seat.get(want.field) not in (None, "") else "(empty)"
     if actual == want.value:
         return ""
     return f'ended with {want.field}={actual} on the seat "{want.name}", wanted {want.value}'
+
+
+def _working_hours(session, field):
+    """The seat's own days as 1,2,3 or hours as 09:00-17:00. The fallback a seat
+    that chose nothing is answered with reads like any other choice."""
+    hours = _data(session, "read_workspace", {"topic": "my_working_hours"}).get("working_hours")
+    if not isinstance(hours, dict) or not isinstance(hours.get("days"), list):
+        raise Unreadable("read_workspace my_working_hours carries no working_hours")
+    if field == _WORKING_DAYS:
+        return ",".join(str(day) for day in hours["days"])
+    return f"{hours.get('start_time')}-{hours.get('end_time')}"
 
 
 def _saved_questions_problem(session, want):
@@ -603,6 +659,11 @@ def _problem(session, want):
     if want.record_type == _ME:
         return _me_problem(session, want)
     if want.field == _RECORD_COUNT:
+        if want.parent_type is not None:
+            on_parent, _, problem = _on_parent(session, want)
+            if problem or len(on_parent) == int(want.value):
+                return problem
+            return f"ended with {len(on_parent)} records for {_where(want)}, wanted {want.value}"
         found = len(_matching(session, want.record_type, want.name))
         if found == int(want.value):
             return ""

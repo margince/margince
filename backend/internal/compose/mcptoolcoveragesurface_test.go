@@ -33,11 +33,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -373,89 +376,65 @@ func unitManifestCount(dir string) (int, error) {
 // has ever graded this".
 const corpusDir = "aicert/corpus"
 
-// corpusGradedTools returns, per tool name, the certification tasks whose
-// scenarios name it — as the expected answer or as a near miss.
+// corpusGrades is what the certification corpus grades of each tool: the
+// tasks whose scenarios expect it as the answer, and the tasks that name it
+// only as a near miss a model must not reach for.
+type corpusGrades struct {
+	expected, nearMiss map[string][]string
+}
+
+// corpusGradedTools reads the two fields of a certification scenario that name
+// a tool, `expect.answer` and `expect.near_misses`, with an action behind a
+// router counted as its router. A word anywhere else in the file names
+// something else: `task: enrich` is the AI task that reads a mail signature,
+// not the enrich tool.
 //
-// A near miss COUNTS as graded, and that is the point rather than a looseness.
-// The certification corpus grades tool SELECTION: a scenario naming a tool in
-// `near_misses:` is asserting that a model must NOT reach for it on that goal,
-// which is a live assertion about that tool's description. The use-case lane
-// cannot express it at all — check.py matches a tool NAME appearing in a
-// transcript, so it cannot tell a right first pick from a wrong one recovered.
-//
-// Read as TEXT rather than parsed as YAML. The corpus is the corpus of another
-// lane and its schema is that lane's to change; a reader that only needs "is
-// this word in this file" should not acquire an opinion about the file's shape,
-// because the day the shape moves is the day this silently returns nothing.
-// Matching a whole word is what keeps `read_record` out of `read_record_tags`.
-// A MISSING CORPUS IS AN ERROR, not an empty one. The path is a fixed location
-// in this repository, so its absence means the corpus moved and this reader did
-// not — and answering "nothing is graded elsewhere" to that would publish the
-// larger untried number with nothing failing. Under-recognition again, and the
-// direction rule 8 names.
-func corpusGradedTools(dir string, names []string) (map[string][]string, error) {
-	tasks, err := os.ReadDir(dir)
+// A MISSING CORPUS IS AN ERROR, not an empty one: the path is fixed in this
+// repository, and answering "nothing is graded elsewhere" to a moved corpus
+// would publish the larger untried number with nothing failing.
+func corpusGradedTools(dir string, names []string, routes map[string]string) (corpusGrades, error) {
+	grades := corpusGrades{expected: map[string][]string{}, nearMiss: map[string][]string{}}
+	files, err := filepath.Glob(filepath.Join(dir, "*", "*.yaml"))
 	if err != nil {
-		return nil, fmt.Errorf("reading the certification corpus at %s: %w", dir, err)
+		return grades, err
 	}
-	graded := map[string][]string{}
-	for _, task := range tasks {
-		if !task.IsDir() {
-			continue
-		}
-		scenarios, readErr := os.ReadDir(filepath.Join(dir, task.Name()))
+	if len(files) == 0 {
+		return grades, fmt.Errorf("reading the certification corpus at %s: no scenario", dir)
+	}
+	served := map[string]bool{}
+	for _, name := range names {
+		served[name] = true
+	}
+	for _, file := range files {
+		body, readErr := os.ReadFile(file)
 		if readErr != nil {
-			return nil, readErr
+			return grades, readErr
 		}
-		var body strings.Builder
-		for _, scenario := range scenarios {
-			if !strings.HasSuffix(scenario.Name(), ".yaml") {
-				continue
-			}
-			text, fileErr := os.ReadFile(filepath.Join(dir, task.Name(), scenario.Name()))
-			if fileErr != nil {
-				return nil, fileErr
-			}
-			body.Write(text)
-			body.WriteString("\n")
+		var scenario struct {
+			Expect struct {
+				Answer     any      `yaml:"answer"`
+				NearMisses []string `yaml:"near_misses"`
+			} `yaml:"expect"`
 		}
-		corpus := body.String()
-		for _, name := range names {
-			if namedInCorpus(corpus, name) {
-				graded[name] = append(graded[name], task.Name())
+		if decodeErr := yaml.Unmarshal(body, &scenario); decodeErr != nil {
+			return grades, fmt.Errorf("%s: %w", file, decodeErr)
+		}
+		task := filepath.Base(filepath.Dir(file))
+		if answer, ok := scenario.Expect.Answer.(string); ok && served[routedName(answer, routes)] {
+			grades.expected[routedName(answer, routes)] = append(grades.expected[routedName(answer, routes)], task)
+		}
+		for _, miss := range scenario.Expect.NearMisses {
+			if tool := routedName(miss, routes); served[tool] {
+				grades.nearMiss[tool] = append(grades.nearMiss[tool], task)
 			}
 		}
 	}
-	for name := range graded {
-		sort.Strings(graded[name])
-	}
-	return graded, nil
-}
-
-// namedInCorpus reports whether a tool name appears as a whole word.
-//
-// The boundary is checked against the characters a tool name is built from
-// rather than with a regex per tool: the corpus is read once per task and the
-// name set is the whole catalog, so this runs tens of thousands of times.
-func namedInCorpus(corpus, name string) bool {
-	for from := 0; ; {
-		at := strings.Index(corpus[from:], name)
-		if at < 0 {
-			return false
+	for _, byTool := range []map[string][]string{grades.expected, grades.nearMiss} {
+		for name := range byTool {
+			byTool[name] = sortedCopy(byTool[name])
 		}
-		at += from
-		before := at == 0 || !isToolNameByte(corpus[at-1])
-		end := at + len(name)
-		after := end == len(corpus) || !isToolNameByte(corpus[end])
-		if before && after {
-			return true
-		}
-		from = at + 1
 	}
-}
-
-func isToolNameByte(b byte) bool {
-	return b == '_' || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
+	return grades, nil
 }
 
 // writeCoverageSurfaces is the section this page did not have, and the reason
@@ -586,4 +565,33 @@ func equalStrings(got, want []string) bool {
 		}
 	}
 	return true
+}
+
+// A tool is graded elsewhere only where a corpus field names it as one: the
+// expected answer, or a near miss kept apart. The word in a task's own name,
+// or anywhere else in the file, grades nothing.
+func TestTheCorpusGradesOnlyTheToolsItsAnswerFieldsName(t *testing.T) {
+	dir := t.TempDir()
+	plant := func(task, body string) {
+		if err := os.MkdirAll(filepath.Join(dir, task), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, task, "s.yaml"), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	plant("enrich", "task: enrich\nfixture:\n  text: read the enrich signature\nexpect:\n  answer: {company: x}\n")
+	plant("brief", "task: brief\nexpect:\n  answer: read_brief\n  near_misses:\n    - annotate_brief\n")
+	grades, err := corpusGradedTools(dir, []string{"enrich", "read_details", "annotate_brief"},
+		map[string]string{"read_brief": "read_details"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := map[string][]string{"read_details": {"brief"}}; !reflect.DeepEqual(grades.expected, want) {
+		t.Errorf("expected answers = %v, want %v (an action counts as its router; a task name is no tool)",
+			grades.expected, want)
+	}
+	if want := map[string][]string{"annotate_brief": {"brief"}}; !reflect.DeepEqual(grades.nearMiss, want) {
+		t.Errorf("near misses = %v, want %v", grades.nearMiss, want)
+	}
 }

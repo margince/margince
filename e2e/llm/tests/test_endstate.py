@@ -259,23 +259,41 @@ class FoundOnAProjectTest(unittest.TestCase):
 QUALIFIED, NEGOTIATION = "s-qualified", "s-negotiation"
 
 
-def crm_world(records, tags=None, words=None, runs=None):
+def crm_world(records, tags=None, words=None, runs=None, timeline=None):
     """A workspace over [(record_type, id, name, fields, owner_name)].
+
+    timeline maps a record id to the subjects of the activities filed on it,
+    listed one to a page so a reader that stopped at the first page misses one.
 
     tags maps a record id to the words read_tags lists on it; words maps a word
     to (tag_id, {kind: count}) for read_tags list and get; runs maps an import
     run id to the states read_import answers in turn, the last one repeating.
     """
     tags, words, runs = tags or {}, words or {}, {k: list(v) for k, v in (runs or {}).items()}
+    timeline = timeline or {}
     name_field = {"company": "display_name", "deal": "name", "contact": "full_name", "lead": "full_name"}
 
     def ok(data):
         return json.dumps({"data": data}), False
 
     def list_records(arguments):
+        if arguments.get("record_type") == "activity":
+            return activities(arguments)
         rows = [{"record_type": t, "id": i, "fields": {name_field[t]: n}} for t, i, n, _, _ in records
                 if t == arguments.get("record_type")]
         return ok({"records": rows})
+
+    def activities(arguments):
+        filters = arguments.get("filters") or {}
+        parent = next((i for t, i, _, _, _ in records
+                       if i == filters.get("entity_id") and t == filters.get("entity_type")), None)
+        subjects = timeline.get(parent, [])
+        start = int(arguments.get("cursor") or 0)
+        page = {"records": [{"record_type": "activity", "id": f"a{start}", "fields": {"subject": s}}
+                            for s in subjects[start:start + 1]]}
+        if start + 1 < len(subjects):
+            page["next_cursor"] = str(start + 1)
+        return ok(page)
 
     def read_record(arguments):
         for t, i, n, fields, owner in records:
@@ -290,7 +308,8 @@ def crm_world(records, tags=None, words=None, runs=None):
         if arguments.get("topic") != "pipelines":
             return "unknown topic", True
         stages = [{"id": QUALIFIED, "name": "Qualified"}, {"id": NEGOTIATION, "name": "Negotiation"}]
-        return ok({"pipelines": [{"id": "p", "name": "Sales", "stages": stages}]})
+        return ok({"pipelines": [{"id": "p", "name": "Sales", "stages": stages},
+                                 {"id": "p2", "name": "Service renewals", "stages": []}]})
 
     def read_tags(arguments):
         mode = arguments.get("mode")
@@ -315,7 +334,7 @@ def crm_world(records, tags=None, words=None, runs=None):
 
 
 HERZOG = [("company", "c1", "Herzog Fertigung GmbH", {"description": "Fertigungsbetrieb."}, "Sofia Meier"),
-          ("deal", "d1", "Rheinufer Netzmodernisierung", {"stage_id": QUALIFIED}, "Demo Admin"),
+          ("deal", "d1", "Rheinufer Netzmodernisierung", {"stage_id": QUALIFIED, "pipeline_id": "p"}, "Demo Admin"),
           ("contact", "n1", "Nora Feld", {}, "Demo Admin"),
           ("lead", "l1", "Ines Waldner", {"status": "promoted"}, "Demo Admin")]
 
@@ -379,7 +398,10 @@ class AgentLimitReadersTest(unittest.TestCase):
 
     SEAT = "admin@demo.test"
 
-    def read(self, entries, rules=(), zone="Europe/Lisbon", draft=None, welcome=None, saved=()):
+    LISBON_HOURS = {"days": [1, 2, 3, 4], "start_time": "09:00", "end_time": "17:00", "timezone": "Europe/Lisbon"}
+
+    def read(self, entries, rules=(), zone="Europe/Lisbon", draft=None, welcome=None, saved=(), locale="de",
+             hours=LISBON_HOURS):
         def ok(data):
             return json.dumps({"data": data}), False
 
@@ -399,8 +421,10 @@ class AgentLimitReadersTest(unittest.TestCase):
 
         replies = {"list_records": list_records, "read_record": read_record, "read_details": read_details,
                    "read_view": ok({"data": list(rules), "page": {"has_more": False}}),
-                   "read_workspace": ok({"id": "u1", "display_name": "Sofia Meier"}),
-                   "whoami": ok({"email": self.SEAT, "timezone": zone}),
+                   "read_workspace": lambda arguments: ok(
+                       {"working_hours": hours, "chosen": True} if arguments.get("topic") == "my_working_hours"
+                       else {"id": "u1", "display_name": "Sofia Meier"}),
+                   "whoami": ok({"email": self.SEAT, "timezone": zone, "locale": locale}),
                    "read_reports": ok({"data": list(saved), "page": {"has_more": False}})}
         tools = [{"name": n, "inputSchema": {"type": "object"}} for n in replies]
         with FakeMcp(tools, replies=replies) as server:
@@ -431,12 +455,23 @@ class AgentLimitReadersTest(unittest.TestCase):
         self.assertTrue(problems and "welcome_message=Willkommen!," in problems[0], problems)
 
     def test_the_zone_is_read_on_the_lanes_own_seat(self):
-        entries = committed("case109-show-my-times-in-lisbon.yaml")
+        entries = committed("case109-my-hours-zone-and-language.yaml")
         self.assertEqual(self.read(entries)[1], [])
-        _, problems = self.read(entries, zone="Europe/Berlin")
-        self.assertEqual(problems, [f'ended with timezone=Europe/Berlin on the seat "{self.SEAT}", wanted Europe/Lisbon'])
+        _, problems = self.read(entries, zone="Europe/Berlin", locale="en")
+        self.assertEqual(problems, [f'ended with timezone=Europe/Berlin on the seat "{self.SEAT}", wanted Europe/Lisbon',
+                                    f'ended with locale=en on the seat "{self.SEAT}", wanted de'])
         with self.assertRaisesRegex(endstate.Unreadable, "acts for"):
             self.read(['me "someone@demo.test" timezone=Europe/Lisbon'])
+
+    def test_the_seats_own_hours_are_read_as_days_and_a_range(self):
+        entries = committed("case109-my-hours-zone-and-language.yaml")
+        fallback = dict(self.LISBON_HOURS, days=[1, 2, 3, 4, 5])
+        _, problems = self.read(entries, hours=fallback)
+        self.assertEqual(problems, [f'ended with working_days=1,2,3,4,5 on the seat "{self.SEAT}", wanted 1,2,3,4'])
+        _, problems = self.read(entries, hours=dict(self.LISBON_HOURS, end_time="18:00"))
+        self.assertEqual(problems, [f'ended with working_hours=09:00-18:00 on the seat "{self.SEAT}", wanted 09:00-17:00'])
+        with self.assertRaisesRegex(endstate.Unreadable, "my_working_hours"):
+            self.read(entries, hours=None)
 
     def test_figures_kept_for_finance_need_a_saved_question(self):
         entries = committed("case20-put-it-in-the-board-pack.yaml")
@@ -514,6 +549,39 @@ class ReadersTest(unittest.TestCase):
         held, problems = self.read(crm_world(moved), ['deal "Rheinufer Netzmodernisierung" stage=Negotiation'])
         self.assertEqual((len(held), problems), (1, []))
 
+    def test_a_pipeline_is_read_by_its_name_not_its_id(self):
+        entry = 'deal "Rheinufer Netzmodernisierung" pipeline=Sales'
+        self.assertEqual(self.read(crm_world(HERZOG), [entry]), ([entry], []))
+        moved = [r if r[0] != "deal" else r[:3] + ({"pipeline_id": "p2"}, r[4]) for r in HERZOG]
+        _, problems = self.read(crm_world(moved), [entry])
+        self.assertEqual(problems, ['ended with deal "Rheinufer Netzmodernisierung" pipeline=Service renewals, wanted Sales'])
+        lost = [r if r[0] != "deal" else r[:3] + ({"pipeline_id": "p9"}, r[4]) for r in HERZOG]
+        with self.assertRaisesRegex(endstate.Unreadable, "no pipeline 'p9'"):
+            self.read(crm_world(lost), [entry])
+
+    MOVED_OFF = 'activity "Lieferverzug" on company "Herzog Fertigung GmbH" records=0'
+    TWO_REPLIES = 'activity "Re: Lieferverzug" on contact "Nora Feld" records=2'
+
+    def test_activities_on_a_company_or_contact_are_counted_by_subject(self):
+        timeline = {"c1": ["Angebot"], "n1": ["Lieferverzug", "Re: Lieferverzug", "Re: Lieferverzug"]}
+        held, problems = self.read(crm_world(HERZOG, timeline=timeline), [self.MOVED_OFF, self.TWO_REPLIES])
+        self.assertEqual((held, problems), ([self.MOVED_OFF, self.TWO_REPLIES], []))
+
+    def test_an_activity_left_on_the_wrong_record_is_scored(self):
+        timeline = {"c1": ["Lieferverzug"], "n1": ["Re: Lieferverzug"]}
+        _, problems = self.read(crm_world(HERZOG, timeline=timeline), [self.MOVED_OFF, self.TWO_REPLIES])
+        self.assertEqual(problems, ['ended with 1 records for activity "Lieferverzug" on company "Herzog Fertigung GmbH", wanted 0',
+                                    'ended with 1 records for activity "Re: Lieferverzug" on contact "Nora Feld", wanted 2'])
+
+    def test_an_activity_on_a_company_is_read_like_one_on_a_project(self):
+        replies = crm_world(HERZOG, timeline={"c1": ["Angebot", "Lieferverzug"]})
+        replies["read_record"] = lambda arguments: (json.dumps({"data": {
+            "record_type": "activity", "id": arguments["id"], "fields": {"kind": "email"}}}), False)
+        entry = 'activity "Lieferverzug" on company "Herzog Fertigung GmbH" kind=email'
+        self.assertEqual(self.read(replies, [entry]), ([entry], []))
+        _, problems = self.read(replies, ['activity "Fehlt" on company "Herzog Fertigung GmbH" kind=email'])
+        self.assertEqual(problems, ['ended with no activity "Fehlt" on company "Herzog Fertigung GmbH"'])
+
     def test_a_contact_and_a_lead_are_found_by_full_name(self):
         held, _ = self.read(crm_world(HERZOG), ['lead "Ines Waldner" status=promoted'])
         self.assertEqual(held, ['lead "Ines Waldner" status=promoted'])
@@ -581,7 +649,8 @@ class ReadersTest(unittest.TestCase):
     def test_a_malformed_special_entry_is_refused(self):
         for entry in ('company "E" records=some', 'company "E" stage=Won', 'project "P" tagged=K5',
                       'tag "T" description=x', 'tag "T" on project "P" records=1',
-                      'activity "S" on project "P" records=1', 'activity "S" on project "P" owner=X'):
+                      'activity "S" on project "P" records=many', 'activity "S" on project "P" owner=X',
+                      'company "E" pipeline=Sales', 'company "E" working_days=1'):
             with self.assertRaises(ValueError, msg=entry):
                 endstate.parse(entry)
 
@@ -602,7 +671,7 @@ class ParseTest(unittest.TestCase):
                          endstate.Expectation("activity", "Signing", "documents", "1", "project", "Rollout"))
 
     def test_a_type_on_a_parent_it_is_not_found_on_is_refused(self):
-        for entry in ('activity "Signing" documents=1', 'activity "Signing" on company "E" documents=1',
+        for entry in ('activity "Signing" documents=1', 'activity "Signing" on deal "E" documents=1',
                       'company "E" on project "Rollout" documents=1'):
             with self.assertRaises(ValueError, msg=entry):
                 endstate.parse(entry)

@@ -49,7 +49,9 @@ done
 finished() {
   local tree verdict
   for tree in $worktrees; do
-    verdict="$tree/backend/internal/compose/aicert/records/mcp_e2e/$folder/$1.json"
+    # E2E_LLM_VERDICTS moves a lane's verdicts out of the records tree, and the
+    # sweep must look where the lane wrote.
+    verdict="${E2E_LLM_VERDICTS:-$tree/backend/internal/compose/aicert/records/mcp_e2e/$folder}/$1.json"
     # GNU stat reads -f as file-system mode and prints "?", so -c goes first.
     [[ -f "$verdict" && $(stat -c %Y "$verdict" 2>/dev/null || stat -f %m "$verdict") -ge $since ]] && return 0
   done

@@ -1,4 +1,4 @@
-# CASE 66 — What are these two deals worth together.
+# CASE 66 — What are these two deals worth together, and where do I open one.
 #
 # Every amount a tool returns is a `<name>_minor` figure with a readable
 # `<name>_display` beside it. A model that divides the minor figure itself, or
@@ -9,14 +9,20 @@
 # The seeded world holds Körber Sensorik Rollout at 56,000.00 EUR and Rheinufer
 # Netzmodernisierung at 12,500.00 EUR, so the pair is 68,500.00 EUR. Neither
 # raw minor sum (6,850,000) nor a missed division (685,000) may appear.
+#
+# Every evidence entry for a deal also carries a `web_url` to its page in the
+# app. A user who asks for a link needs it, and a model that has only seen an id
+# cannot give one. A deal's page is `/#/deals/<id>` on the stack's public base
+# URL. The harness reads the answer and the calls, not the tool results, so it
+# cannot compare the link's id to the deal's; it holds the shape of a deal page.
 name: case66_what_are_these_two_worth
-title: What are these two deals worth together
-criteria: [1]
+title: What two deals are worth, and where to open one
+criteria: [1, 2]
 writes: false
 
 prompt: |
   What are the Körber Sensorik Rollout and the Rheinufer Netzmodernisierung
-  deals worth together?
+  deals worth together? And give me a link I can open the Körber one from.
 
 must_call:
   - search_records|list_records|query_workspace|read_record|read_forecast
@@ -31,6 +37,7 @@ must_mention:
   - "68[.,' ’]?500"
   - "56[.,' ’]?000"
   - "12[.,' ’]?500"
+  - "/#/deals/[0-9a-f]{8}-[0-9a-f]{4}-"
 
 must_not_mention:
   - "6[.,' ’]?850[.,' ’]?000"
@@ -38,6 +45,7 @@ must_not_mention:
 
 judge:
   - "Criterion 1. The answer gives the two deals' combined value as 68,500 EUR (any thousands separator) and each deal's own value, 56,000 EUR for Körber Sensorik Rollout and 12,500 EUR for Rheinufer Netzmodernisierung. Answer no if it gives a different total or a different value for either deal, quotes a figure in minor units as if it were money, or gives no total."
+  - "Criterion 2. The answer gives a link whose path is a deal's page in the app and says it is the Körber Sensorik Rollout deal. Answer no if it gives no link, gives a link that is not a deal page, or names a different deal."
 
 runs: 3
 pass_at: 2

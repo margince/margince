@@ -52,10 +52,6 @@ ONLY=" ${SCENARIO:-} "
 #   E2E_LLM_VERDICTS   write the verdicts to this directory INSTEAD of the
 #                      committed records tree — a run that sets it publishes
 #                      nothing.
-#
-# The verdicts under claude-opus-5/ were measured over the claude CLI before
-# routes existed, and those before 2026-08-27 on claude-fable-5 because nothing
-# pinned the model then: neither is a baseline for a bridge number.
 CANDIDATE="${E2E_LLM_CANDIDATE:-claude}"
 VIA="${E2E_LLM_VIA:-api}"
 # THE DOOR the assistant works through. mcp (the default) offers the product's own
@@ -98,6 +94,12 @@ fi
 
 command -v python3 >/dev/null || { echo "python3 is required to read the scenarios" >&2; exit 1; }
 
+# The whole corpus is linted before the stack boots: an unknown key, a pattern
+# that does not compile, a writes:, passport: or setup: value the lane cannot
+# act on. A typo in the last scenario would otherwise stop the lane after every
+# earlier case was paid for, or switch a check off without a word.
+python3 "$ROOT/e2e/llm/check.py" --lint "$SCENARIO_DIR"/*.yaml || exit 1
+
 # A name SCENARIO lists that no scenario carries would run nothing for it and
 # report the sweep as complete, so every listed name is matched before a boot.
 if [[ -n "${ONLY// /}" ]]; then
@@ -120,10 +122,18 @@ eval "$ROUTE"
 VERDICT_TREE=mcp_e2e
 [[ "$DOOR" = rest ]] && VERDICT_TREE=mcp_e2e_rest
 VERDICT_DIR="${E2E_LLM_VERDICTS:-$ROOT/backend/internal/compose/aicert/records/$VERDICT_TREE/$FOLDER}"
+# A word-overlap search measures a harder tool than a run by hand, so its
+# verdicts never land in the published records, where they would replace ones
+# made by meaning. The page refuses a folder that mixes the two as well.
+if [[ "${E2E_LLM_ALLOW_LEXICAL:-0}" = "1" && -z "${E2E_LLM_VERDICTS:-}" ]]; then
+  echo "E2E_LLM_ALLOW_LEXICAL=1 needs E2E_LLM_VERDICTS: a lexical verdict is never filed in the records tree" >&2
+  exit 1
+fi
 SYSTEM_PROMPT=mcp-instructions
 [[ "$VIA" = cli ]] && SYSTEM_PROMPT=cli-default
-SELF_JUDGED=false
-[[ "$CANDIDATE" = claude ]] && SELF_JUDGED=true
+# A judge of the candidate's own family grades its own kind, which the page shows.
+SELF_JUDGED="$(cd "$ROOT/e2e/llm" && python3 -c 'import sys, judge
+print(str(judge.family(judge.pinned_model()) == sys.argv[1]).lower())' "$CANDIDATE")"
 
 if [[ "$WIRE" = claude-cli || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
   command -v claude >/dev/null || { echo "the claude CLI is not on PATH" >&2; exit 1; }
@@ -164,6 +174,23 @@ cleanup() {
   rm -rf "$WORK"
 }
 trap cleanup EXIT
+
+# THE STAMP SAYS WHAT EACH VERDICT MEASURED: the scenario, the copy of the tools
+# it names, the server instructions, the judge and the grading harness, read
+# from committed files by the one generator the coverage page also uses. The
+# published catalog is checked against what this tree serves first, or a stamp
+# would name copy the model never saw.
+echo "==> stamping what this run measures"
+if ! (cd "$ROOT/backend" && go test ./internal/compose/ -run '^TestPublishedMCPSurfaceMatchesWhatAClientIsServed$' \
+  -count=1 >"$WORK/surface.log" 2>&1); then
+  echo "docs/reference/mcp-info.json is not what this tree serves, so a stamp would name copy no model saw:" >&2
+  tail -20 "$WORK/surface.log" >&2
+  echo "  regenerate it: cd backend && go test ./internal/compose/ -run TestPublishedMCPSurface -update-mcp-info" >&2
+  exit 1
+fi
+(cd "$ROOT/backend" && go run ./internal/compose/mcpe2e/mcpe2ecmd stamps -out "$WORK/stamps.json")
+COMMIT="$(git -C "$ROOT" rev-parse HEAD)"
+[[ -z "$(git -C "$ROOT" status --porcelain)" ]] || COMMIT="$COMMIT+uncommitted"
 
 # --- the stack ---------------------------------------------------------------
 #
@@ -423,7 +450,7 @@ if [[ "$ready" -eq 1 ]]; then
     echo "HARNESS: $why." >&2
     echo "  Every candidate would be measured on a degraded search. Put GEMINI_API_KEY in" >&2
     echo "  .env.local, or OPENAI_COMPATIBLE_API_KEY with E2E_LLM_STACK_PRESET=config/presets/" >&2
-    echo "  openrouter_cloud_eu.yaml; E2E_LLM_ALLOW_LEXICAL=1 runs anyway and files it as lexical." >&2
+    echo "  openrouter_cloud_eu.yaml; E2E_LLM_ALLOW_LEXICAL=1 with E2E_LLM_VERDICTS runs anyway, unpublished." >&2
     exit 2
   fi
   echo "==> search is lexical only, by E2E_LLM_ALLOW_LEXICAL: $why"
@@ -599,54 +626,11 @@ drive_once() {
 # scenario, so the first run of the first case has the world the seed built.
 WORLD_DIRTY=0
 
-# EVERY DECLARATION IS CHECKED BEFORE THE FIRST TOKEN IS SPENT.
-#
-# The per-scenario check below runs inside the loop, which is the right place to
-# USE the value and the wrong place to discover it is missing: a typo in the last
-# scenario would abort the lane after every earlier case had been paid for. This
-# lane bills real money, so the whole corpus is validated while it is still free.
-# The judge is one of those declarations. A lane that drives twenty-one cases
-# and then cannot score the judged half of them has spent the whole budget to
-# learn one environment variable was unset, so it is asked before the first
-# token — and only for the scenarios that actually carry a judged criterion.
+# THE JUDGE IS ASKED FOR BEFORE THE FIRST TOKEN. A lane that drives every case
+# and then cannot score the judged half has spent the budget to learn that one
+# variable was unset, so it is asked here, and only for scenarios that carry a
+# judged criterion.
 python3 "$ROOT/e2e/llm/check.py" --judge-ready "$SCENARIO_DIR"/*.yaml
-
-for scenario in "$SCENARIO_DIR"/*.yaml; do
-  declared="$(python3 "$ROOT/e2e/llm/check.py" --field writes "$scenario")"
-  case "$declared" in
-    true|false) ;;
-    *)
-      echo "$(basename "$scenario") declares writes=${declared:-<absent>}; it must be exactly" >&2
-      echo "true or false. It is the case author's statement that this case changes the world," >&2
-      echo "and TestEveryWritingScenarioDeclaresThatItWrites derives the same fact from the tools" >&2
-      echo "the case names and fails when the two disagree — an absent or misspelled value would" >&2
-      echo "leave that gate comparing against nothing." >&2
-      exit 1
-      ;;
-  esac
-done
-
-# `passport:` is absent (the narrow credential), `wide` or `research`. Anything else would be
-# read as narrow by use_passport and measure a case on a surface its author did
-# not mean, so a misspelling stops the lane here, before the first token.
-for scenario in "$SCENARIO_DIR"/*.yaml; do
-  declared="$(python3 "$ROOT/e2e/llm/check.py" --field passport "$scenario")"
-  case "$declared" in
-    ""|wide|research) ;;
-    *)
-      echo "$(basename "$scenario") declares passport=$declared; it must be absent, wide or research" >&2
-      exit 1
-      ;;
-  esac
-done
-
-# `setup:` names a step in e2e/llm/casesetup.py, never a command, and a name it does
-# not know stops the lane before the first token rather than at that case.
-for scenario in "$SCENARIO_DIR"/*.yaml; do
-  declared="$(python3 "$ROOT/e2e/llm/check.py" --field setup "$scenario")"
-  [[ -z "$declared" ]] || python3 "$ROOT/e2e/llm/casesetup.py" --known "$declared" ||
-    { echo "$(basename "$scenario") declares setup=$declared" >&2; exit 1; }
-done
 
 PASSED=0
 FAILED=0
@@ -884,6 +868,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
+    E2E_LLM_STAMPS="$WORK/stamps.json" E2E_LLM_COMMIT="$COMMIT" \
     python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$made" \
     ${transcripts[@]+"${transcripts[@]}"} > "$VERDICT_DIR/${name}.json"
 

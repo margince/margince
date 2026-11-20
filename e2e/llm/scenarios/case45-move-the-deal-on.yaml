@@ -32,6 +32,7 @@ prompt: |
 must_call:
   - progress_deal
 must_not_call_with:
+  - move_deal_pipeline~.
   - change_offers~.
   - change_settings~.
 

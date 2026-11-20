@@ -33,6 +33,7 @@ def run(calls, answer):
     with transcript.Transcript(path) as out:
         out.init("m", "gpt:api", "mcp-instructions", "connected", sorted({name for name, _ in calls}))
         out.assistant("", [(f"c{i}", name, args) for i, (name, args) in enumerate(calls)])
+        out.tool_results([(f"c{i}", "{}", False) for i in range(len(calls))])
         out.finish(False, answer, 1)
     return path
 

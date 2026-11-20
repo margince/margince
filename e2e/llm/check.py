@@ -71,6 +71,8 @@ the offline self-test replays recorded verdicts with neither a credential nor a
 network.
 """
 
+import collections
+import datetime
 import json
 import os
 import re
@@ -124,10 +126,39 @@ def _open_checked(path):
     return open(checked_path(path), encoding="utf-8")
 
 
+# Every key a scenario may carry, and its shape. A key outside this table is a
+# typo that would switch its check off, so the reader refuses it.
+_SCHEMA = {
+    "name": "text", "title": "text", "prompt": "text", "writes": "text", "passport": "text",
+    "setup": "text", "figures_from_results": "text", "runs": "count", "pass_at": "count",
+    "criteria": "list", "must_call": "list", "may_call": "list", "must_call_with": "list",
+    "must_not_call_with": "list", "must_call_matching": "list", "must_mention": "list",
+    "must_not_mention": "list", "judge": "list", "must_end_with": "list",
+}
+_REQUIRED = ("name", "prompt", "writes", "runs", "pass_at")
+
+
+class ScenarioError(ValueError):
+    """A scenario file the reader refuses, with every problem it found."""
+
+    def __init__(self, path, problems):
+        super().__init__(f"{os.path.basename(path)}: " + "; ".join(problems))
+        self.problems = problems
+
+
 def parse_scenario(path):
-    """Read the subset of YAML the scenario files use."""
-    data, key, block, block_indent, seq = {}, None, None, 0, None
-    for raw in _open_checked(path).read().splitlines():
+    """Read the subset of YAML the scenario files use, refusing what it cannot place."""
+    data, problems = _read_scenario(path)
+    if problems:
+        raise ScenarioError(path, problems)
+    return data
+
+
+def _read_scenario(path):
+    data, key, block, block_indent, seq, problems = {}, None, None, 0, None, []
+    with _open_checked(path) as handle:
+        text = handle.read()
+    for number, raw in enumerate(text.splitlines(), start=1):
         if block is not None:
             # A block scalar runs until a line that is neither blank nor
             # indented past the key.
@@ -150,8 +181,11 @@ def parse_scenario(path):
         # only made the pattern ambiguous about which of the two ate the spaces.
         m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*):(.*)$", line)
         if not m:
+            problems.append(f"line {number}: a line the scenario reader cannot place: {line!r}")
             continue
         key, value = m.group(1), m.group(2).strip()
+        if key not in _SCHEMA:
+            problems.append(f"line {number}: unknown key {key}")
         if value == "|":
             block, block_indent = [], 2
         elif value == "":
@@ -163,7 +197,81 @@ def parse_scenario(path):
             data[key] = _scalar(value)
     if block is not None:
         data[key] = "\n".join(block).strip()
-    return data
+    return data, problems
+
+
+def lint(path):
+    """Every problem with one scenario file, found before a token is spent.
+
+    The reader's own refusals, then each value against its shape: a list where
+    a list belongs, a pattern that compiles, an entry the grader can read.
+    """
+    data, problems = _read_scenario(path)
+    for key in _REQUIRED:
+        if key not in data:
+            problems.append(f"{key} is missing")
+    for key, value in data.items():
+        shape = _SCHEMA.get(key)
+        if shape == "list" and not isinstance(value, list):
+            problems.append(f"{key} must be a list, not {value!r}")
+        elif shape == "count" and not (isinstance(value, int) and value > 0):
+            problems.append(f"{key} must be a whole number above 0, not {value!r}")
+    if problems:
+        return problems
+    if data["pass_at"] > data["runs"]:
+        problems.append(f"pass_at {data['pass_at']} is more than runs {data['runs']}")
+    # The lane's own reset and the write-declaration gate both read writes:, so
+    # an absent or misspelled value would leave them comparing against nothing.
+    if data["writes"] not in ("true", "false"):
+        problems.append(f"writes must be true or false, not {data['writes']!r}")
+    if data.get("passport", "") not in ("", "wide", "research"):
+        problems.append(f"passport must be absent, wide or research, not {data['passport']!r}")
+    if data.get("figures_from_results", "true") != "true":
+        problems.append(f"figures_from_results is {data['figures_from_results']!r}; the only value is true")
+    if data.get("setup"):
+        import casesetup
+
+        if data["setup"] not in casesetup.STEPS:
+            problems.append(f"setup {data['setup']!r} is no step in casesetup.py")
+    return problems + _entry_problems(data)
+
+
+def _entry_problems(data):
+    problems = []
+    for key in ("must_mention", "must_not_mention"):
+        problems += [p for p in (_compiles(key, str(pattern)) for pattern in data.get(key, [])) if p]
+    for entry in data.get("must_not_call_with", []):
+        tool, sep, pattern = str(entry).partition("~")
+        problems.append(_compiles("must_not_call_with", pattern) if sep and tool and pattern
+                        else f"must_not_call_with entry {entry!r} is not tool~regex")
+    for entry in data.get("must_call_matching", []):
+        for alternative in str(entry).split(" || "):
+            tool, sep, pattern = alternative.strip().partition("~")
+            problems.append(_compiles("must_call_matching", pattern) if sep and tool and pattern
+                            else f"must_call_matching entry {entry!r} is not tool~regex")
+    for entry in data.get("must_call_with", []):
+        for alternative in alternatives(entry):
+            target, sep, _ = alternative.partition("=")
+            tool, _, argument = target.partition(".")
+            if not sep or not tool or not argument:
+                problems.append(f"must_call_with entry {alternative!r} is not tool.argument=value")
+    if data.get("must_end_with"):
+        import endstate
+
+        for entry in data["must_end_with"]:
+            try:
+                endstate.parse(entry)
+            except ValueError as malformed:
+                problems.append(str(malformed))
+    return [p for p in problems if p]
+
+
+def _compiles(key, pattern):
+    try:
+        re.compile(pattern)
+    except re.error as err:
+        return f"{key}: /{pattern}/ does not compile: {err}"
+    return ""
 
 
 def _scalar(text):
@@ -213,16 +321,21 @@ def offered_verbs(offered, routes):
     return out
 
 
-def read_transcript(path):
-    """Pull the tool names called and everything the assistant said.
+# One run as the grader reads it. `said` is every word the assistant wrote and
+# `final` is the answer the user was left with; `calls` are every attempt and
+# `worked` the calls whose result was not an error. A call with no result did
+# not finish, so it is not in `worked`.
+Run = collections.namedtuple("Run", "called said calls final worked refused")
 
-    stream-json is JSONL. Tool calls arrive as `tool_use` content blocks and the
-    prose as `text` blocks; the terminal `result` event carries the final answer
-    and is included so a scenario checking the closing sentence sees it.
-    """
-    called, said, calls = [], [], []
-    routes = load_routes()
-    for line in _open_checked(path):
+
+def read_run(path):
+    """Read a stream-json transcript: tool calls as `tool_use` blocks, prose as
+    `text` blocks, each call's outcome as a `tool_result`, and the final answer
+    as the terminal `result` event's text."""
+    attempts, said, final, failed = [], [], "", {}
+    with _open_checked(path) as handle:
+        lines = handle.readlines()
+    for line in lines:
         line = line.strip()
         if not line:
             continue
@@ -233,30 +346,43 @@ def read_transcript(path):
 
         if event.get("type") == "result" and isinstance(event.get("result"), str):
             said.append(event["result"])
+            final = event["result"]
 
-        message = event.get("message") or {}
-        content = message.get("content")
+        content = (event.get("message") or {}).get("content")
         if not isinstance(content, list):
             continue
         for block in content:
             if not isinstance(block, dict):
                 continue
             if block.get("type") == "tool_use":
-                called.append(block.get("name", ""))
-                # The ARGUMENTS too, for must_call_with. A scenario that checks
-                # only the tool name passes on a call to the right tool with the
-                # wrong plan, and must_mention only sees the closing prose — so
-                # an unrelated call plus an invented number would score green.
-                calls.append((block.get("name", ""), block.get("input") or {}))
-                # Recorded twice on purpose, as the router and as its verb, so a
-                # scenario may name either; nothing here counts calls.
-                verb = routed(block.get("name", ""), block.get("input") or {}, routes)
-                if verb:
-                    called.append(verb[0])
-                    calls.append(verb)
+                attempts.append((block.get("id"), block.get("name", ""), block.get("input") or {}))
+            elif block.get("type") == "tool_result":
+                failed[block.get("tool_use_id")] = bool(block.get("is_error"))
             elif block.get("type") == "text":
                 said.append(block.get("text", ""))
-    return called, "\n".join(said), calls
+
+    routes = load_routes()
+    called, calls, worked, refused = [], [], [], []
+    for call_id, name, arguments in attempts:
+        # Recorded twice on purpose, as the router and as its verb, so a
+        # scenario may name either; nothing here counts calls.
+        both = [(name, arguments)]
+        verb = routed(name, arguments, routes)
+        if verb:
+            both.append(verb)
+        called += [each for each, _ in both]
+        calls += both
+        if failed.get(call_id) is False:
+            worked += both
+        else:
+            refused.append(name.rsplit("__", 1)[-1])
+    return Run(called, "\n".join(said), calls, final, worked, refused)
+
+
+def read_transcript(path):
+    """(every tool name called, every word said, every call with its arguments)."""
+    run = read_run(path)
+    return run.called, run.said, run.calls
 
 
 def read_tool_results(path):
@@ -428,6 +554,26 @@ def total_usage(paths):
         "runs_costed": costed,
         "cost_usd": round(cost, 4) if costed else None,
     }
+
+
+def recorded_stamp(name, clock=None):
+    """What this verdict measured, from the stamps the lane wrote before the
+    sweep (backend/internal/compose/mcpe2e), with the commit and the time it
+    ran. None when the lane wrote none, as the offline harness does not.
+
+    A scenario the stamps do not name is a stamp file from another tree, and a
+    verdict filed under it would claim to have measured copy it never saw.
+    """
+    path = os.environ.get("E2E_LLM_STAMPS")
+    if not path:
+        return None
+    with _open_checked(path) as handle:
+        stamps = json.load(handle)
+    if name not in stamps:
+        raise ValueError(f"the stamps at {path} carry no {name}: they were made for another tree")
+    when = (clock or (lambda: datetime.datetime.now(datetime.timezone.utc)))()
+    return {**stamps[name], "commit": os.environ.get("E2E_LLM_COMMIT", ""),
+            "ran_at": when.strftime("%Y-%m-%dT%H:%M:%SZ")}
 
 
 def settled(passed, made, runs, pass_at):
@@ -723,15 +869,20 @@ def _unmatched_problem(calls, entry):
 
 
 def check(scenario, transcript_path):
-    called, said, calls = read_transcript(transcript_path)
+    """The problem lines of one run. The positive checks read the final answer
+    and the calls that worked; the forbidding checks read every word and every
+    attempt, because a wrong claim or a forbidden call counts wherever it is."""
+    run = read_run(transcript_path)
+    called, said, calls = [name for name, _ in run.worked], run.said, run.worked
     problems = []
 
     for entry in scenario.get("must_call", []):
         wanted = alternatives(entry)
         if not any(tool_matches(called, want) for want in wanted):
+            refused = f"; refused: {', '.join(sorted(set(run.refused)))}" if run.refused else ""
             problems.append(
                 f"never called {' or '.join(wanted)} — the answer was not drawn from Margince "
-                f"(called: {', '.join(sorted(set(called))) or 'nothing'})"
+                f"(called: {', '.join(sorted(set(called))) or 'nothing'}{refused})"
             )
 
     # must_call_with entries are `tool.argument=value`, flat rather than nested
@@ -755,7 +906,7 @@ def check(scenario, transcript_path):
             )
 
     for entry in scenario.get("must_not_call_with", []):
-        problems.extend(_sent_problems(calls, entry))
+        problems.extend(_sent_problems(run.calls, entry))
 
     for entry in scenario.get("must_call_matching", []):
         problem = _unmatched_problem(calls, entry)
@@ -763,7 +914,7 @@ def check(scenario, transcript_path):
             problems.append(problem)
 
     for pattern in scenario.get("must_mention", []):
-        if not re.search(pattern, said, re.IGNORECASE):
+        if not re.search(pattern, run.final, re.IGNORECASE):
             problems.append(f"never said anything matching /{pattern}/")
 
     for pattern in scenario.get("must_not_mention", []):
@@ -783,7 +934,7 @@ def check(scenario, transcript_path):
     # here rather than being caught and scored, because a criterion nobody
     # decided is not a criterion the answer failed.
     for criterion in scenario.get("judge", []):
-        held, reason = judge.verdict(criterion, said)
+        held, reason = judge.verdict(criterion, run.final)
         if not held:
             problems.append(f"{JUDGED_NO} {criterion}\n      the judge's reason: {reason}")
 
@@ -842,6 +993,9 @@ def main():
                 record[field] = os.environ[variable]
         if os.environ.get("E2E_LLM_SELF_JUDGED") in ("true", "false"):
             record["self_judged"] = os.environ["E2E_LLM_SELF_JUDGED"] == "true"
+        stamp = recorded_stamp(record["scenario"])
+        if stamp:
+            record["stamp"] = stamp
         if usage is not None:
             # runs_measured rides WITH the totals into the committed record. A
             # later reader summing cost across scenarios can then tell a cheap
@@ -894,6 +1048,14 @@ def main():
             break
         return 0
 
+    if sys.argv[1] == "--lint":
+        found = 0
+        for path in sys.argv[2:]:
+            for problem in lint(path):
+                print(f"{os.path.basename(path)}: {problem}")
+                found += 1
+        return 1 if found else 0
+
     if sys.argv[1] == "--check":
         problems = check(parse_scenario(sys.argv[2]), sys.argv[3])
         for problem in problems:
@@ -913,4 +1075,7 @@ if __name__ == "__main__":
         # shape as the expired credential that once reported six broken use
         # cases. 2 is the harness stop scripts/e2e-llm.sh acts on.
         print(f"the judge could not be reached: {unavailable}", file=sys.stderr)
+        sys.exit(2)
+    except Exception as crash:  # noqa: BLE001 — a grader that crashed scored nothing
+        print(f"HARNESS: check.py {sys.argv[1]} crashed: {crash!r}", file=sys.stderr)
         sys.exit(2)

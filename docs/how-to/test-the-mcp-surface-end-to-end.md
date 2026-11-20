@@ -58,8 +58,10 @@ snapshot before the next run, and that restore undoes the step. A step the file
 does not name stops the lane before the first run.
 
 The judge (the model that decides the `judge:` criteria of each scenario) is
-`claude-haiku-5-5` (`DEFAULT_MODEL` in `e2e/llm/judge.py`), for every candidate. `E2E_LLM_JUDGE_VIA=cli|api|openrouter` chooses how to
-reach it. `cli` (the default) needs the `claude` CLI and a Claude credential.
+`claude-haiku-5-5` (the judge's routes in `e2e/llm/candidates.json`), for every candidate. `E2E_LLM_JUDGE_VIA=cli|api|openrouter` chooses how to
+reach it. `cli` (the default) needs the `claude` CLI and a Claude credential. It reads only the
+final answer. When it says no, it is asked twice more, and the majority decides. A verdict for a
+candidate of the judge's own family says `self_judged: true`, and the coverage page says so.
 
 ## 2. Give the stack a search that works
 
@@ -83,7 +85,8 @@ E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml
 The lane sets the binding of the stack through `PUT /v1/ai/routing`, and starts it again. It waits
 until search answers by meaning before it takes a snapshot of the test data.
 `E2E_LLM_ALLOW_LEXICAL=1` runs on a degraded stack all the same, and files every
-verdict with `"search": "lexical"`.
+verdict with `"search": "lexical"`. It needs `E2E_LLM_VERDICTS=<dir>`, because a lexical verdict
+is never filed in the records tree.
 
 ## 3. Run one scenario first
 
@@ -138,7 +141,8 @@ Most of the time of a case goes to the start and seed of its stack, not to the m
    Generate the coverage page again (section 8): its count of tools that no case requires must not grow.
 3. **Run a discovery pass.** Fix all that it finds ([improve-mcp-quality.md](improve-mcp-quality.md)).
 4. **Freeze the copy for the final pass.** After a copy change, run again only the cases that the change can move, on every target ([improve-mcp-quality.md](improve-mcp-quality.md#6-run-again-what-changed-plus-controls)).
-5. **Name the commit in the PR.** A verdict file does not say which copy it measured. So the PR body says which cases ran on which commit.
+5. **Read the stamps.** Each verdict carries a `stamp` of what it measured (section 8).
+   `make e2e-llm-report` lists the verdicts a later change made stale.
 
 **Run lanes, not one long command.** A lane is one worktree with its own `E2E_LLM_SLUG`. The lanes share the Postgres, Redis and object store containers, so each adds only an API, a worker and one database. One stack still serves one case at a time. Every run restores the database from the snapshot, which would remove a second case's data. Two lanes work on one machine; four made it slow, because each lane's start and the judge use the CPU.
 
@@ -169,6 +173,13 @@ Give each lane half the cases, some long and some short. The batch logs are unde
 A harness stop prints `HARNESS:` and the reason, and keeps the transcript. The
 lane stops on it, and does not score. Without the stop, a refused key, or a tool that the model
 could not see, would read as a product failure.
+
+The checks that ask for something read the final answer and the calls that succeeded:
+`must_mention`, the judge, `must_call`, `must_call_with` and `must_call_matching`. A sentence the
+model wrote on the way, or a call the server refused, does not count. The checks that forbid read
+every word and every attempt: `must_not_mention` and `must_not_call_with`. `check.py --lint` runs
+before the stack boots. It refuses an unknown key, a line it cannot place, a pattern that does not
+compile and a value of the wrong shape.
 
 A scenario that fails lists what failed to hold. That can be a tool it never called,
 a fact it never said, or something it must not say. It can be a judged criterion, with the
@@ -328,9 +339,19 @@ verdicts you want to publish, then generate the page again:
 cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished -update-mcp-tool-coverage
 ```
 
-The weekly scheduled run opens a pull request with its own verdicts, which say `search: lexical`.
-`make check` fails while the page and the committed verdicts do not agree. Delete a
-verdict you do not want to publish, such as a degraded run, or a run to try something.
+Each verdict carries a `stamp`: a digest of the scenario file, of the published entries of the
+tools its checks name (`docs/reference/mcp-info.json`, a verb by its router), of the server
+instructions and of the grading harness, plus the judge model, the commit and the time. Before it
+runs, the lane checks that `mcp-info.json` is what the tree serves. A verdict whose stamp no longer
+matches the tree, or that has none, is stale: the page marks it *re-check pending*, and
+`make e2e-llm-report` names what moved. A pull request that makes a verdict stale gets a comment
+that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you do not run them again.
+
+The weekly scheduled run sweeps every case in shards and opens a pull request with its verdicts only
+when every case has a fresh one from a stack whose search ranks by meaning. The maintainer that the
+`RECORDS_OWNER` repository variable names owns that pull request, and runs the lane by hand when the
+weekly run cannot. `make check` fails while the page and the committed verdicts do not agree. Delete a
+verdict you do not want to publish, such as a run to try something.
 Do not leave it next to the others without a commit.
 
 ## 9. Run the role sweep with every pass
