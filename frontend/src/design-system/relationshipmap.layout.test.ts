@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { expect, test } from "vitest";
+import { expect, onTestFinished, test } from "vitest";
 import {
   COL_W,
   fitLabel,
@@ -308,6 +308,23 @@ test("never splits a character made of two code units", () => {
 test("never splits a flag made of two code points", () => {
   const flags = "🇩🇪🇫🇷🇮🇹";
   expect(fitLabel(flags, eightWide("🇩🇪🇫…"), eightWide)).toBe("🇩🇪…");
+});
+
+test("still cuts where the browser has no Intl.Segmenter", () => {
+  const segmenter = Object.getOwnPropertyDescriptor(Intl, "Segmenter");
+  Object.defineProperty(Intl, "Segmenter", {
+    value: undefined,
+    configurable: true,
+    writable: true,
+  });
+  onTestFinished(() => {
+    if (segmenter) {
+      Object.defineProperty(Intl, "Segmenter", segmenter);
+    }
+  });
+  const fitted = fitLabel("Benjamin Alpha-Hartmann", NAME_ROOM, eightWide);
+  expect(fitted).toMatch(/…$/);
+  expect(eightWide(fitted)).toBeLessThanOrEqual(NAME_ROOM);
 });
 
 test("leaves an empty label empty", () => {
