@@ -71,7 +71,7 @@ func ownContact(t *testing.T, e *resolveEnv) {
 }
 
 // TestTheContactOwnersEntityAnswersForTheRecord: once the contact's owner works
-// for the branch, the erasure deadline is the branch's, the privacy page names
+// for the branch, the erasure deadline is the branch's. The privacy page names
 // the branch as controller, and Margince's own mail goes out for the branch.
 // Before that, all three are the default entity's.
 //

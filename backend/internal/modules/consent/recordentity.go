@@ -17,8 +17,8 @@ import (
 
 // recordEntityTx is the legal entity that answers for a contact or lead when
 // nobody is acting on it: the entity its owner works for, else the default.
-// Data-protection law follows the company that controls the data, and the
-// owner's company is the one that holds this record.
+// Data-protection law follows the company that controls the data. The owner's
+// company is the one that holds this record.
 func recordEntityTx(ctx context.Context, tx pgx.Tx, who ruleSubject) (ids.UUID, error) {
 	owner, err := recordOwnerTx(ctx, tx, who)
 	if err != nil {

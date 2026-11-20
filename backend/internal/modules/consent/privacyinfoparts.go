@@ -85,8 +85,8 @@ func disclosureRecipients() []string {
 }
 
 // readControllerTx is who answers for the record's data: the installation's
-// particulars, with the legal name and address of the further entity that
-// answers for the record (recordEntityTx) in place of its own.
+// particulars. A further entity that answers for the record (recordEntityTx)
+// puts its own legal name and address in place of the installation's.
 func readControllerTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation, who ruleSubject) error {
 	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
 	if err != nil {
