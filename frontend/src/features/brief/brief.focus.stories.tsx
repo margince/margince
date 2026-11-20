@@ -275,6 +275,23 @@ const offeredDeal = (id: string, name: string, amount: number) => () =>
   });
 
 /** A deal question in hand: the deals as cards, then Link email thread to deal. */
+/** Reach out on a promise made by mail: Email leads, and Call waits in the
+    menu rather than standing beside it. */
+export const ReachOutAfterMailInHand: Story = {
+  render: typedPanel({ type: "reach_out", extra: { reply_channel: "email" } }),
+  play: async ({ canvasElement }) => {
+    const card = await focusedCard(canvasElement);
+    await card.findByRole("link", { name: en["record.verb.email"] });
+    await expect(
+      card.queryByRole("link", { name: en["record.verb.call"] }),
+    ).toBeNull();
+  },
+};
+export const ReachOutAfterMailInHandDark: Story = {
+  ...ReachOutAfterMailInHand,
+  globals: { theme: "dark" },
+};
+
 export const DecideTaskInHand: Story = {
   render: typedPanel({
     type: "decide",
