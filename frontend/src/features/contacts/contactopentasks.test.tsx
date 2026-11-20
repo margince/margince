@@ -10,6 +10,7 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
   installFetchStub,
   jsonResponse,
@@ -119,10 +120,12 @@ function mount(page: () => Contact360, routes: RouteMap = {}) {
       }
     >
       <LocaleProvider initial="en">
-        <ToastProvider>
-          <Card />
-          <ToastRegion />
-        </ToastProvider>
+        <ViewerZoneProvider zone="Europe/Berlin">
+          <ToastProvider>
+            <Card />
+            <ToastRegion />
+          </ToastProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
