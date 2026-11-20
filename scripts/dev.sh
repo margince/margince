@@ -48,6 +48,8 @@ case "${3:-}" in
 esac
 
 cd "$(git rev-parse --show-toplevel)"
+# Same flag as the Makefiles, so this stack shares the build cache with them.
+[[ -n "${CI:-}" ]] || [[ "${GOFLAGS:-}" == *-trimpath* ]] || export GOFLAGS="${GOFLAGS:-} -trimpath"
 
 # shellcheck source=scripts/lib-diskspace.sh
 source "$PWD/scripts/lib-diskspace.sh"

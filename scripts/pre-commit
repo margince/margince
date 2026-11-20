@@ -16,4 +16,7 @@ if [ -n "$staged_go" ]; then
 	fi
 fi
 
+# Same flag as the Makefiles, so this run shares the build cache with them.
+[ -n "${CI:-}" ] || case "${GOFLAGS:-}" in *-trimpath*) ;; *) export GOFLAGS="${GOFLAGS:-} -trimpath" ;; esac
+
 cd "$root/backend" && go test -run TestEveryHandWrittenGoFileCarriesTheLicenseHeader -count=1 ./gates

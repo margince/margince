@@ -3,6 +3,15 @@ include ../scripts/composition-profile.mk
 # Golden path: `make dev` boots everything; `make check` is the merge gate.
 
 GO        ?= go
+
+# -trimpath keeps the folder path out of every compile cache key, so worktrees
+# of one commit share build output. CI keeps its own cache keys and release
+# builds never read this, so it is local only.
+ifeq ($(CI),)
+ifeq ($(findstring -trimpath,$(GOFLAGS)),)
+export GOFLAGS += -trimpath
+endif
+endif
 PG_PORT   ?= 15432
 REDIS_PORT?= 16379
 DB_NAME   ?= margince
@@ -343,6 +352,7 @@ preflight-gates: composition ## The size gates a small diff trips, in seconds; `
 # lane means a security gate (RLS, erasure) silently didn't run — that must
 # read as red, never as green.
 test-integration: composition ## Integration lane: real Postgres, fails loudly without it (never skips). Parallel — each package on its own throwaway clone db.
+	@bash ../scripts/gate-slot.sh acquire $@
 	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-parallel.sh
 
 # The paid BYOK e2e targets below (e2e-siteread, e2e-ai) call a real cloud model,
