@@ -12,9 +12,10 @@ import {
   waitForElementToBeRemoved,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { useTooltip, useTruncationTooltip } from "./tooltip";
+import { stubLineClamp } from "./tooltip-testing";
 
 // The specs for the tip that reveals a string its row could not fit. The
 // promise the three call sites depend on is narrow and worth stating twice: the
@@ -187,10 +188,68 @@ describe("a string its row can already show in full", () => {
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
+  it("takes a tab stop once a late web font leaves it cut", async () => {
+    const scroll = { value: 220 };
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(
+      () => scroll.value,
+    );
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(220);
+    let loaded: () => void = () => {};
+    const ready = new Promise<void>((resolve) => {
+      loaded = resolve;
+    });
+    const fonts = Object.getOwnPropertyDescriptor(document, "fonts");
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready },
+    });
+    onTestFinished(() => {
+      if (fonts) Object.defineProperty(document, "fonts", fonts);
+      else Reflect.deleteProperty(document, "fonts");
+    });
+    render(<Row text="Sontana" />);
+    expect(screen.getByText("Sontana")).not.toHaveAttribute("tabindex");
+
+    scroll.value = 480;
+    await act(async () => {
+      loaded();
+      await ready;
+    });
+
+    expect(screen.getByText("Sontana")).toHaveAttribute("tabindex", "0");
+  });
+
   it("takes no tab stop, so a page of short names adds none", () => {
     stubWidths({ scroll: 220, client: 220 });
     render(<Row text="Sontana" />);
 
     expect(screen.getByText("Sontana")).not.toHaveAttribute("tabindex");
+  });
+});
+
+describe("a string held to its lines by a clamp", () => {
+  it("reveals the whole of it when the clamp hides the rest", async () => {
+    stubLineClamp({ lines: "2", scroll: 72, client: 40 });
+    render(<Row text={LONG} />);
+    const row = screen.getByText(LONG);
+
+    await userEvent.tab();
+
+    expect(row).toHaveFocus();
+    expect(screen.getByRole("tooltip")).toHaveTextContent(LONG);
+  });
+
+  it("gets no tip when every line fits under the clamp", () => {
+    stubLineClamp({ lines: "2", scroll: 41, client: 40 });
+    render(<Row text="Sontana" />);
+
+    expect(screen.getByText("Sontana")).not.toHaveAttribute("tabindex");
+  });
+
+  it("gets no tip when taller text is drawn whole, with no clamp to cut it", () => {
+    stubLineClamp({ lines: "none", scroll: 72, client: 40 });
+    render(<Row text={LONG} />);
+
+    expect(screen.getByText(LONG)).not.toHaveAttribute("tabindex");
   });
 });

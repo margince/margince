@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import type { Reference } from "../../components/filterreference";
 import type { VocabularyField } from "../../lib/filterdata";
 import type { FilterOp, LeafValue } from "../../lib/segmentpredicate";
@@ -100,6 +101,23 @@ export const Quantity: Story = {
 
 export const Text: Story = {
   render: story({ type: "text", op: "eq", start: "Referral" }),
+};
+
+export const DaysAgo: Story = {
+  render: story({ type: "date", op: "gte", start: { days_ago: 30 } }),
+};
+
+// A count the engine cannot take stays as typed, with the reason under it.
+export const DaysAgoRefused: Story = {
+  render: story({ type: "date", op: "gte", start: { days_ago: 30 } }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const days = await canvas.findByDisplayValue("30");
+    await userEvent.clear(days);
+    await userEvent.type(days, "-1");
+    await canvas.findByText("Enter a whole number of days from 0 to 36,600.");
+    await expect(days).toHaveAttribute("aria-invalid", "true");
+  },
 };
 
 // A money field whose currency the reader cannot learn: the amount is held back, and the line under it says why.

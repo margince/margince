@@ -357,7 +357,7 @@ function PublishConfirm({
       }
     >
       <p>{t("goals.publishBody", { total })}</p>
-      <p className="t-caption">
+      <p className="t-caption goal-reason-text">
         {t("goals.publishReason", { reason: body.reason })}
       </p>
       <Checkbox

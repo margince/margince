@@ -10,7 +10,6 @@ import {
   useActivityGate,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
-import { catalogOfRecord } from "../../components/create.dialog";
 import { useRailRename } from "../../components/railfield";
 import { RecordTeam } from "../../components/recordteam";
 import { useFieldsDialog } from "../../components/sectionedit";
@@ -27,6 +26,7 @@ import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useCan } from "../../lib/capability";
+import { catalogOfRecord } from "../../lib/customfields.logic";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useShortcut } from "../../lib/shortcuts";

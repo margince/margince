@@ -88,6 +88,9 @@ export function isRadiusOperand(value: unknown): value is RadiusOperand {
   );
 }
 
+/** storekit's `MaxRelativeDays`, held equal by gates/frontendrelativedays_test.go. */
+export const MAX_DAYS_AGO = 36600;
+
 export function isRelativeDate(value: unknown): value is RelativeDate {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -98,7 +101,8 @@ export function isRelativeDate(value: unknown): value is RelativeDate {
     keys.length === 1 &&
     typeof days === "number" &&
     Number.isInteger(days) &&
-    days >= 0
+    days >= 0 &&
+    days <= MAX_DAYS_AGO
   );
 }
 
@@ -306,6 +310,10 @@ const OPERATORS: ReadonlySet<string> = new Set<FilterOp>([
   "within_radius",
 ]);
 
+export function isFilterOp(value: string): value is FilterOp {
+  return OPERATORS.has(value);
+}
+
 /**
  * A stored predicate back into an editable tree, or null when it is not one.
  *
@@ -369,10 +377,10 @@ function decodeLeaf(node: Record<string, unknown>): Leaf | null {
   if (typeof field !== "string" || field === "") {
     return null;
   }
-  if (typeof op !== "string" || !OPERATORS.has(op)) {
+  if (typeof op !== "string" || !isFilterOp(op)) {
     return null;
   }
-  return isLeafValue(value) ? newLeaf(field, op as FilterOp, value) : null;
+  return isLeafValue(value) ? newLeaf(field, op, value) : null;
 }
 
 /**

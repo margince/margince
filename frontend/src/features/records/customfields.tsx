@@ -26,6 +26,7 @@ import {
   columnName,
   slug,
 } from "../../lib/customfields.logic";
+import { customFieldsQuery } from "../../lib/customfields.query";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { FieldBuilder, type NewFieldDraft } from "./customfields.builder";
@@ -42,8 +43,6 @@ import {
   STAGED_ID,
 } from "./customfields.table";
 import "./customfields.css";
-
-type CustomFieldList = components["schemas"]["CustomFieldListResponse"];
 
 // The add-field create body (CUSTOM-FIELDS-WIRE-2): a plain manual field carries
 // `source:"manual"` (the FE convention across deals/leads/companies), and the
@@ -150,16 +149,7 @@ export function CustomFieldsAdmin() {
   const [addSeq, setAddSeq] = useState(0);
   const addId = useId();
 
-  const list = useQuery({
-    queryKey: ["custom-fields", object],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/custom-fields", {
-          params: { query: { object } },
-        }),
-      );
-    },
-  });
+  const list = useQuery(customFieldsQuery(object));
 
   const audit = useQuery({
     queryKey: ["cf-audit"],
@@ -178,7 +168,9 @@ export function CustomFieldsAdmin() {
   });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["custom-fields", object] });
+    queryClient.invalidateQueries({
+      queryKey: customFieldsQuery(object).queryKey,
+    });
     queryClient.invalidateQueries({ queryKey: ["cf-audit"] });
     queryClient.invalidateQueries({ queryKey: ANALYTICS_SCHEMA_KEY });
   };
@@ -195,10 +187,10 @@ export function CustomFieldsAdmin() {
       // Key the optimistic write to the DRAFT's object, not the current-render
       // one, so switching objects mid-create still stages, rolls back, and
       // invalidates the right list (m2).
-      const key = ["custom-fields", draft.object];
+      const key = customFieldsQuery(draft.object).queryKey;
       await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<CustomFieldList>(key);
-      queryClient.setQueryData<CustomFieldList>(key, (old) =>
+      const previous = queryClient.getQueryData(key);
+      queryClient.setQueryData(key, (old) =>
         old
           ? { ...old, data: [...old.data, stagedField(draft, meUserId ?? "")] }
           : old,
@@ -213,7 +205,7 @@ export function CustomFieldsAdmin() {
     },
     onSuccess: (_data, draft) => {
       queryClient.invalidateQueries({
-        queryKey: ["custom-fields", draft.object],
+        queryKey: customFieldsQuery(draft.object).queryKey,
       });
       queryClient.invalidateQueries({ queryKey: ["cf-audit"] });
       toast.show(t("cf.added", { label: draft.label }));
@@ -275,8 +267,8 @@ export function CustomFieldsAdmin() {
       );
     },
     onSuccess: (saved, input) => {
-      queryClient.setQueryData<CustomFieldList>(
-        ["custom-fields", input.field.object],
+      queryClient.setQueryData(
+        customFieldsQuery(input.field.object).queryKey,
         (old) =>
           old && {
             ...old,

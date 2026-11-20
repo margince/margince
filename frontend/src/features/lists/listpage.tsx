@@ -17,7 +17,10 @@ import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
-import { customColumnLabel, useFilterVocabulary } from "../../lib/filterdata";
+import {
+  useCustomColumnLabel,
+  useFilterVocabulary,
+} from "../../lib/filterdata";
 import {
   type List,
   useArchiveList,
@@ -324,13 +327,36 @@ function noticeOf(list: List): ListNotice | null {
 }
 
 /**
+ * The fields a list filters on that an admin retired, named by the labels the
+ * catalog still holds for them. One the catalog cannot name reads as its column.
+ */
+function RetiredFieldNotice({ list }: Readonly<{ list: List }>) {
+  const t = useT();
+  const plural = usePlural();
+  const labelOf = useCustomColumnLabel(list.entity_type);
+  const fields = list.retired_fields ?? [];
+  return (
+    <Callout
+      tone="warning"
+      title={t("lists.retiredField.title")}
+      actions={
+        mayEditFilter(list) ? <EditFilterAction list={list} /> : undefined
+      }
+    >
+      {plural("lists.retiredField.body", fields.length, {
+        fields: fields.map(labelOf).join(", "),
+      })}
+    </Callout>
+  );
+}
+
+/**
  * What the list says about itself: archived, broken, looked after by nobody,
  * or filtering on a field that was retired. Every reader reads why; only those
  * allowed to act see the verb that fixes it.
  */
 function ListNotices({ list }: Readonly<{ list: List }>) {
   const t = useT();
-  const plural = usePlural();
   const me = useMe();
   const update = useUpdateList();
   const archive = useArchiveList();
@@ -370,20 +396,7 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
     );
   }
   if (notice === "retired_field") {
-    const fields = list.retired_fields ?? [];
-    return (
-      <Callout
-        tone="warning"
-        title={t("lists.retiredField.title")}
-        actions={
-          mayEditFilter(list) ? <EditFilterAction list={list} /> : undefined
-        }
-      >
-        {plural("lists.retiredField.body", fields.length, {
-          fields: fields.map(customColumnLabel).join(", "),
-        })}
-      </Callout>
-    );
+    return <RetiredFieldNotice list={list} />;
   }
   if (notice !== "ownerless") {
     return null;

@@ -4,6 +4,7 @@
 package reporting
 
 import (
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"testing"
@@ -176,6 +177,9 @@ func TestEvidenceRowsKeepTheirOwnLabels(t *testing.T) {
 // A late page skips most facts, so its cost must not grow with them. It looks
 // up the zone once and allocates nothing for a fact it does not return.
 func TestALateWeeklyEvidencePageAllocatesOnlyForItsRows(t *testing.T) {
+	// AllocsPerRun counts the runtime's own objects too, and the process's
+	// first GC cycle allocates some, so no cycle may start inside the count.
+	defer debug.SetGCPercent(debug.SetGCPercent(-1))
 	frame := crmcontracts.ReportingContext{Timezone: "Europe/Berlin"}
 	allocs := func(count int) float64 {
 		facts := make([]Fact, count)
