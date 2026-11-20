@@ -8429,6 +8429,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "directSend.correctionFailed":
     "Chưa lưu được bản sửa. Mở lại phần kiểm tra để xem tin nhắn và phê duyệt hiện tại.",
   "directSend.open": "Gửi và ghi nhận ngoại lệ",
+  "directSend.alreadySent": "Tin nhắn này đã được gửi.",
+  "directSend.when": "Thời điểm gửi",
+  "directSend.whenLater": "Vào lúc khác",
+  "directSend.whenLaterDetail":
+    "Quyết định của bạn được ghi nhận ngay. Các bước kiểm tra sẽ chạy lại khi tin nhắn được gửi.",
   "directSend.queued": "Đã xếp hàng gửi theo ngoại lệ đã ghi nhận.",
   "directSend.opening": "Đang mở…",
   "directSend.alreadySettled":

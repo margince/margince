@@ -5,10 +5,9 @@
 
 package gates
 
-// The browser groups a thread by its subject with the reply and forward
-// markers removed, and the server does the same. Two lists would fold two
-// different sets of mail into one thread, so the TypeScript list is a mirror
-// of the Go one, compared both ways.
+// The browser and the server both group a thread by its subject without the
+// reply and forward markers. Two lists would fold different mail into one
+// thread. So the TypeScript list mirrors the Go one, compared both ways.
 
 import (
 	"regexp"

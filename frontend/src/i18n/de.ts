@@ -8650,6 +8650,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "directSend.correctionFailed":
     "Die Korrektur wurde nicht gespeichert. Öffne die Prüfung erneut, um die aktuelle Nachricht und Freigabe zu prüfen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
+  "directSend.alreadySent": "Diese Nachricht wurde bereits gesendet.",
+  "directSend.when": "Wann senden",
+  "directSend.whenLater": "Später",
+  "directSend.whenLaterDetail":
+    "Deine Entscheidung wird jetzt festgehalten. Die Prüfungen laufen erneut, wenn die Nachricht gesendet wird.",
   "directSend.queued": "Zum Senden als festgehaltene Ausnahme vorgemerkt.",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":

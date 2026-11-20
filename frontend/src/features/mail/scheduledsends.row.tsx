@@ -208,7 +208,7 @@ function EditVerb({
 /**
  * The review a held message's refusal opened, for a reader the server lets
  * confirm it. The message is already due, so the row says that confirming
- * sends it now rather than at the time it was scheduled for.
+ * sends it now unless the sender picks a later moment in the dialog.
  */
 function HeldReview({ send }: Readonly<{ send: ScheduledSend }>) {
   const t = useT();
@@ -225,6 +225,7 @@ function HeldReview({ send }: Readonly<{ send: ScheduledSend }>) {
       <p className="t-caption">{t("sched.held.confirmSendsNow")}</p>
       <DirectSendAction
         review={review}
+        offerLater
         onSent={() =>
           void queryClient.invalidateQueries({ queryKey: ["scheduled-sends"] })
         }

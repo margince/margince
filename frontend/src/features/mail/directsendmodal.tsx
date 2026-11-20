@@ -32,6 +32,8 @@ import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
 import { useLocale, useT } from "../../i18n";
 import { communicationContextLabel } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
+import type { ScheduleFields } from "./composeschedule";
+import { DirectSendWhen, useSendAnywayWhen } from "./directsendwhen";
 import { refusalCountryText } from "./refusalcountry";
 import { sendReviewOf } from "./sendreview";
 import { WordingCorrectionModal } from "./wordingcorrectionmodal";
@@ -54,14 +56,22 @@ export type DirectSendCommand = Readonly<{
   assessmentRevision?: string;
   // The refusals the director read. A review rewritten since then is stale.
   shownReasons: readonly string[];
+  // A later moment to send at. Absent sends now.
+  later?: ScheduleFields;
 }>;
+
+/** What a Send anyway came to: sent now, waiting for its moment, or gone
+ *  already from another tab. */
+export type DirectSendOutcome = "sent" | "scheduled" | "alreadySent";
 
 // A decision retried after a lost answer reuses its key, whichever reviews
 // were decided in between. The server then replays the send it recorded
 // instead of answering that the review is gone.
 const decisionKeys = intentKeys();
 
-export async function directSend(command: DirectSendCommand): Promise<string> {
+export async function directSend(
+  command: DirectSendCommand,
+): Promise<DirectSendOutcome> {
   const body = {
     reason_code: command.reasonCode as "other",
     explanation: command.explanation,
@@ -72,6 +82,7 @@ export async function directSend(command: DirectSendCommand): Promise<string> {
     // caller reaches this only from the press that is one. That is the
     // modal's confirm once ticked, or Send anyway beside its warning.
     acknowledged: true as const,
+    ...command.later,
   };
   const { data, error, response } = await decisionKeys(
     [command.reviewId, body],
@@ -88,9 +99,12 @@ export async function directSend(command: DirectSendCommand): Promise<string> {
   // undefined data for a bodiless non-2xx, which would otherwise read as a
   // message that went when nothing did.
   if (!response.ok || !data) {
+    if (response.status === 409 && error?.code === "already_sent") {
+      return "alreadySent";
+    }
     throwProblem(error || { title: "The message was not sent." });
   }
-  return data.id;
+  return response.status === 202 ? "scheduled" : "sent";
 }
 
 // REASON_CODES is the closed list the record keeps, in the server's own
@@ -111,15 +125,19 @@ export function DirectSendModal({
   review: initialReview,
   onSent,
   onReviewRefreshed,
+  offerLater,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   review: CommunicationReview;
-  onSent?: (activityId: string) => void;
+  onSent?: (outcome: DirectSendOutcome) => void;
   onReviewRefreshed?: (review: CommunicationReview) => void;
+  /** Offer a later moment, for a message held in the scheduled list. */
+  offerLater?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const when = useSendAnywayWhen();
   const [review, setReview] = useState(initialReview);
   const correction = review.wording_correction;
   const prior = correction ?? {
@@ -182,8 +200,8 @@ export function DirectSendModal({
         setRefreshFailed(true);
       }
     },
-    onSuccess: (activityId) => {
-      onSent?.(activityId);
+    onSuccess: (outcome) => {
+      onSent?.(outcome);
       onClose();
     },
   });
@@ -196,12 +214,9 @@ export function DirectSendModal({
   // and submitting an empty version would be refused by the server with an
   // error about a field the director never saw. Saying so here is the honest
   // answer: there is nothing to read, so there is nothing to acknowledge.
-  const missing = confirmationMissing(
-    Boolean(review.warning),
-    acknowledged,
-    said,
-    t,
-  );
+  const missing =
+    confirmationMissing(Boolean(review.warning), acknowledged, said, t) ??
+    when.missing;
 
   if (editingWording) {
     return (
@@ -220,7 +235,7 @@ export function DirectSendModal({
       onClose={onClose}
       intent="form"
       title={t("directSend.title")}
-      confirmLabel={t("directSend.confirm")}
+      confirmLabel={when.confirmLabel}
       confirmVariant="danger"
       confirmDisabled={Boolean(missing)}
       confirmReason={missing}
@@ -241,6 +256,7 @@ export function DirectSendModal({
           shownReasons: (review.refusals ?? []).map(
             (refusal) => refusal.reason_code,
           ),
+          later: when.chosen.later,
         })
       }
     >
@@ -324,6 +340,7 @@ export function DirectSendModal({
         label={t("directSend.acknowledge")}
         onChange={(e) => setAcknowledged(e.target.checked)}
       />
+      {offerLater && <DirectSendWhen state={when} />}
     </ConfirmModal>
   );
 }

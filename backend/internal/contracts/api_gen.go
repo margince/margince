@@ -50048,6 +50048,16 @@ type DirectCommunicationSendRequest struct {
 	// on a contract clause".
 	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
 
+	// ScheduledAt A future moment to send at instead of now. The decision is recorded now and spent when
+	// the message fires. Absent sends now.
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+
+	// ScheduledTz The IANA zone `scheduled_at` was picked in. Present exactly when it is.
+	ScheduledTz *string `json:"scheduled_tz,omitempty"`
+
 	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
 	// review's refusals changed since then, the decision is refused with `instruction_stale`
 	// and the director opens the review again.

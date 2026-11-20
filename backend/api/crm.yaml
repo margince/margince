@@ -26498,6 +26498,14 @@ paths:
         goes. The next message to the same contact needs its own. A retry under the same
         `Idempotency-Key` answers the recorded 201, so a client whose first answer was lost learns
         the message went.
+
+        LATER, WHEN A MOMENT IS GIVEN. With `scheduled_at` and `scheduled_tz`, or `scheduled_intent`,
+        the decision is recorded now and the held message moves to that moment instead of going now.
+        The answer is 202 with the scheduled message. The engine decides again when it fires, and
+        the recorded decision is spent then. The moment must be in the future.
+
+        ALREADY SENT. When the review's message has gone, from another tab or an earlier press, its
+        sender gets 409 `already_sent` rather than 404.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -26511,6 +26519,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
+        '202':
+          description: The decision is recorded and the held message waits for the moment given.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduledSend' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -76762,6 +76775,16 @@ components:
             The refusal reason codes the director was shown, from the review's `refusals`. When the
             review's refusals changed since then, the decision is refused with `instruction_stale`
             and the director opens the review again.
+        scheduled_intent: { $ref: '#/components/schemas/IntentTime' }
+        scheduled_at:
+          type: string
+          format: date-time
+          description: |
+            A future moment to send at instead of now. The decision is recorded now and spent when
+            the message fires. Absent sends now.
+        scheduled_tz:
+          type: string
+          description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
 
     ConfirmSubmission:
       type: object

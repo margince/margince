@@ -12,8 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
-// Every reply and forward marker the mail code strips is refused as a key,
-// read from the one list rather than a copy of it.
+// Every reply and forward marker that mailsubject strips is refused as a key.
 func TestEveryMailSubjectMarkerIsRefusedAsAKey(t *testing.T) {
 	for _, word := range append(mailsubject.PrefixWords(), "sv") {
 		err := keyWordRefusal(context.Background(), nil, strings.ToUpper(word))

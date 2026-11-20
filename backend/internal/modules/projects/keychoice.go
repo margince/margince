@@ -20,10 +20,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/projectkey"
 )
 
-// subjectWords are words senders put in square brackets for reasons of their
-// own: gateway tags, everyday labels and the reply and forward markers that
-// mailsubject lists, plus two foreign ones. A key spelled as one of them would
-// file every such mail under the project.
+// subjectWords are words senders put in square brackets: gateway tags,
+// everyday labels and two foreign reply markers. The other reply and forward
+// markers come from mailsubject. A key spelled as one would misfile mail.
 var subjectWords = map[string]bool{
 	"sv": true, "tl": true, "ext": true, "extern": true, "external": true, "internal": true,
 	"intern": true, "spam": true, "junk": true, "suspicious": true, "phishing": true,

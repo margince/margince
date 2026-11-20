@@ -18065,6 +18065,14 @@ export interface paths {
          *     goes. The next message to the same contact needs its own. A retry under the same
          *     `Idempotency-Key` answers the recorded 201, so a client whose first answer was lost learns
          *     the message went.
+         *
+         *     LATER, WHEN A MOMENT IS GIVEN. With `scheduled_at` and `scheduled_tz`, or `scheduled_intent`,
+         *     the decision is recorded now and the held message moves to that moment instead of going now.
+         *     The answer is 202 with the scheduled message. The engine decides again when it fires, and
+         *     the recorded decision is spent then. The moment must be in the future.
+         *
+         *     ALREADY SENT. When the review's message has gone, from another tab or an earlier press, its
+         *     sender gets 409 `already_sent` rather than 404.
          */
         post: operations["directCommunicationSend"];
         delete?: never;
@@ -56189,6 +56197,15 @@ export interface components {
              *     and the director opens the review again.
              */
             shown_reasons?: string[];
+            scheduled_intent?: components["schemas"]["IntentTime"];
+            /**
+             * Format: date-time
+             * @description A future moment to send at instead of now. The decision is recorded now and spent when
+             *     the message fires. Absent sends now.
+             */
+            scheduled_at?: string;
+            /** @description The IANA zone `scheduled_at` was picked in. Present exactly when it is. */
+            scheduled_tz?: string;
         };
         /**
          * @description What a subject typed into the confirm link we mailed them, and what somebody decided about
@@ -92161,6 +92178,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Activity"];
+                };
+            };
+            /** @description The decision is recorded and the held message waits for the moment given. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledSend"];
                 };
             };
             403: components["responses"]["Forbidden"];

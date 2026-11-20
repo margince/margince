@@ -17,7 +17,7 @@ import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
-import { DirectSendModal } from "./directsendmodal";
+import { DirectSendModal, type DirectSendOutcome } from "./directsendmodal";
 import type { SendReview } from "./sendreview";
 
 export async function fetchReview(reviewId: string) {
@@ -46,11 +46,14 @@ type CommunicationReview = components["schemas"]["CommunicationReview"];
 export function DirectSendAction({
   review,
   onSent,
+  offerLater,
   open: shownOpen,
   onOpenChange,
 }: Readonly<{
   review: SendReview;
-  onSent?: (activityId: string) => void;
+  onSent?: (outcome: DirectSendOutcome) => void;
+  /** Offer a later moment, for a message held in the scheduled list. */
+  offerLater?: boolean;
   /** Controlled: the composer opens the modal from its own Send press. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -131,6 +134,7 @@ export function DirectSendAction({
           onClose={() => setOpen(false)}
           review={opened.data}
           onSent={onSent}
+          offerLater={offerLater}
           onReviewRefreshed={(updated) =>
             queryClient.setQueryData(
               ["communication-review", review.reviewId],

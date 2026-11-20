@@ -8638,6 +8638,11 @@ export const en = {
   "directSend.correctionFailed":
     "The correction was not saved. Reopen the review to check the current message and approval.",
   "directSend.open": "Send with a recorded exception",
+  "directSend.alreadySent": "This message was already sent.",
+  "directSend.when": "When to send",
+  "directSend.whenLater": "At a later time",
+  "directSend.whenLaterDetail":
+    "Your decision is recorded now. The checks run again when the message goes.",
   "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
