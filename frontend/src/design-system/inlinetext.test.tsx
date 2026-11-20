@@ -108,7 +108,7 @@ describe("a text value edited in a dialog", () => {
       onSave: vi.fn(async () => {
         throw new ProblemError({
           code: "permission_denied",
-          detail: "contact.update: permission denied",
+          detail: "your role does not grant update on contact",
         });
       }),
     });
@@ -118,7 +118,9 @@ describe("a text value edited in a dialog", () => {
     await user.type(box, "Aerospace{Enter}");
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("do not have permission");
-    expect(alert).not.toHaveTextContent("contact.update");
+    expect(alert).not.toHaveTextContent(
+      "your role does not grant update on contact",
+    );
     expect(box).toHaveValue("Aerospace");
     expect(box).toHaveAttribute("aria-invalid", "true");
   });

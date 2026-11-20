@@ -77,6 +77,9 @@ export type CreateField = {
   // reads as one address, where the editor also adds and removes them.
   editLabel?: MessageKey;
   primaryKey?: string;
+  // A repeatable field whose value the server stores once: a second row
+  // holding it is refused before the form sends.
+  rowsUnique?: true;
   typeKey?: string;
   // The kind a new row starts with. It must match the request mapper's own
   // fallback, or an unset row reads differently here than once submitted.

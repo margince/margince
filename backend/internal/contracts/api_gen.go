@@ -32951,7 +32951,7 @@ type AccessPreview struct {
 		Object    string                           `json:"object"`
 	} `json:"field_masks"`
 
-	// IdentityRead Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+	// IdentityRead Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
 	IdentityRead *AccessPreviewIdentityRead `json:"identity_read,omitempty"`
 
 	// MemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
@@ -32971,7 +32971,7 @@ type AccessPreview struct {
 // AccessPreviewFieldMasksCondition defines model for AccessPreview.FieldMasks.Condition.
 type AccessPreviewFieldMasksCondition string
 
-// AccessPreviewIdentityRead Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+// AccessPreviewIdentityRead Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
 type AccessPreviewIdentityRead string
 
 // AccessPreviewMemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
@@ -33329,7 +33329,7 @@ type Activity struct {
 	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
-	// ReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
@@ -33409,7 +33409,7 @@ type ActivityMeetingStatus string
 // a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
 
-// ActivityReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+// ActivityReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 type ActivityReplyChannel string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
@@ -60668,6 +60668,15 @@ type Problem struct {
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
 	// `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
 	// The `Retry-After` header says how many seconds until the call can succeed.
+	//
+	// A 403 that the caller's roles answer carries `missing_grant`: what those roles
+	// lack, in the notation the tool table uses for a tool's requirement, with
+	// alternatives joined by `,`. An object action (`deal.update`, `deal.create|update`)
+	// is a grant an admin adds to a role. `admin` asks for the admin role, and
+	// `scope:team` for a role whose row scope reaches team records or more. Each is
+	// lifted by an admin changing the caller's roles. A refusal that no role change
+	// lifts, such as a Deal Room participant's or a record kind the installation
+	// switched off, carries none.
 	Details *map[string]interface{} `json:"details,omitempty"`
 
 	// Instance URI of the specific occurrence.

@@ -352,7 +352,7 @@ describe("ProductsAdmin", () => {
     // The list itself is never withheld — every seat reads it.
     expect(await screen.findByText("Consulting Day")).toBeTruthy();
     expect(postureLine()).toBeTruthy();
-    expect(newButton()).toBeNull();
+    expect(newButton()?.hasAttribute("disabled")).toBe(true);
     expect(rowMenu()).toBeNull();
     // With both row verbs withheld the column goes too, rather than standing
     // there headed and empty.
@@ -378,7 +378,7 @@ describe("ProductsAdmin", () => {
       await screen.findByRole("button", { name: "Edit product" }),
     ).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Actions" })).toBeTruthy();
-    expect(newButton()).toBeNull();
+    expect(newButton()?.hasAttribute("disabled")).toBe(true);
     expect(archiveButton()).toBeNull();
     expect(postureLine()).toBeNull();
   });
@@ -390,7 +390,7 @@ describe("ProductsAdmin", () => {
     expect(
       await screen.findByRole("button", { name: "Archive product" }),
     ).toBeTruthy();
-    expect(newButton()).toBeNull();
+    expect(newButton()?.hasAttribute("disabled")).toBe(true);
     expect(editButton()).toBeNull();
     expect(postureLine()).toBeNull();
   });
@@ -405,7 +405,7 @@ describe("ProductsAdmin", () => {
     render(<ProductsAdmin />);
     expect(await screen.findByText("Consulting Day")).toBeTruthy();
     expect(postureLine()).toBeTruthy();
-    expect(newButton()).toBeNull();
+    expect(newButton()?.hasAttribute("disabled")).toBe(true);
     expect(rowMenu()).toBeNull();
   });
 

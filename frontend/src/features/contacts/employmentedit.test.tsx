@@ -115,7 +115,7 @@ it("offers the current-employer box only for a role that is still held", () => {
   open(role);
 
   expect(
-    screen.getByRole("checkbox", { name: "This is their current employer" }),
+    screen.getByRole("checkbox", { name: "This is their primary employer" }),
   ).toHaveProperty("disabled", true);
 });
 

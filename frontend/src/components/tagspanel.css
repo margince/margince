@@ -27,13 +27,16 @@
 
 /* The cross that removes the tag: hidden until the pill is hovered or holds
    focus, so a row of tags is a row of words and not a row of verbs. A coarse
-   pointer has no hover, so there it stays on. */
+   pointer has no hover, so there it stays on. It is a control-height target
+   that overhangs the chip line, so wrapped tags stay a compact list. */
 .tagspanel-remove {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-inline-size: var(--controlHeight);
   min-block-size: var(--controlHeight);
+  margin-block: calc((var(--space-6) - var(--controlHeight)) / 2);
   margin-inline-start: var(--space-1);
   padding: 0;
   border: 0;
@@ -42,6 +45,10 @@
   background: none;
   opacity: 0;
   cursor: pointer;
+}
+.tagspanel-remove svg {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
 }
 .tagspanel-combo:hover .tagspanel-remove,
 .tagspanel-combo:focus-within .tagspanel-remove {
@@ -58,6 +65,14 @@
 @media (hover: none) {
   .tagspanel-remove {
     opacity: 1;
+  }
+}
+/* A thumb gets a 44px target from a layer around the cross. */
+@media (pointer: coarse) {
+  .tagspanel-remove::before {
+    content: "";
+    position: absolute;
+    inset: calc((100% - 44px) / 2);
   }
 }
 

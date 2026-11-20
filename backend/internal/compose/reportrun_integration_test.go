@@ -395,9 +395,9 @@ func TestAnUnknownRunHasNoCellToExplain(t *testing.T) {
 // answer refuses, the evidence behind it refuses identically.
 //
 // TWO independent guards hold this, and the test does not distinguish them:
-// ExplainAnalyticsCell asks auth.Require on the population, and the schema
-// derivation drops an entity this caller cannot read so the compile fails with
-// its own denial (deal.read: permission denied). Mutating either alone leaves
+// ExplainAnalyticsCell asks auth.Require on the population. The schema
+// derivation drops an entity this caller cannot read, so the compile fails with
+// its own grant refusal on deal.read. Mutating either alone leaves
 // this green — defence in depth rather than a redundant check to delete.
 func TestACitedCellIsRefusedToAReaderWhoMayNotReadThePopulation(t *testing.T) {
 	e := setupForecast(t)

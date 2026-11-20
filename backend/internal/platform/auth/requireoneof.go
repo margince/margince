@@ -5,9 +5,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
-
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // RequireOneOf admits when the actor holds any one of checks, for a read that
@@ -19,11 +16,11 @@ func RequireOneOf(ctx context.Context, checks ...Check) error {
 	}
 	c := Check{OneOf: checks}
 	noteCheck(ctx, c)
-	if err := refuseBuyer(p, c.String()); err != nil {
+	if err := refuseBuyer(p); err != nil {
 		return refusedOn(ctx, c, err)
 	}
 	if c.HeldBy(p) {
 		return nil
 	}
-	return refusedOn(ctx, c, fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied))
+	return refusedOn(ctx, c, refuseGrant(c))
 }

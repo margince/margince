@@ -158,14 +158,14 @@ func TaskTypeSQL(alias string) string {
 		"' ELSE '" + string(crmcontracts.TaskTypeDo) + "' END) END)"
 }
 
-// ReplyChannelSQL is the kind of the activity a reply task answers, so the
-// answer goes back the way the message came in. Null for any other task, and
-// for a held source, whose kind is not this reader's to see.
+// ReplyChannelSQL is the kind of the activity a reply or reach-out task
+// follows, so the answer goes back the way the conversation went. Null for any
+// other task, and for a held source, whose kind is not this reader's to see.
 func ReplyChannelSQL(alias string) string {
 	taskType := TaskTypeSQL(alias)
 	alias = pgx.Identifier{alias}.Sanitize()
-	return "(CASE WHEN " + taskType + " = '" + string(crmcontracts.TaskTypeReply) +
-		"' THEN (SELECT s.kind FROM activity s WHERE s.id = " + alias + ".source_activity_id AND s.restricted_at IS NULL AND s.kind IN ('" +
+	return "(CASE WHEN " + taskType + " IN ('" + string(crmcontracts.TaskTypeReply) + "', '" +
+		string(crmcontracts.TaskTypeReachOut) + "') THEN (SELECT s.kind FROM activity s WHERE s.id = " + alias + ".source_activity_id AND s.restricted_at IS NULL AND s.kind IN ('" +
 		string(crmcontracts.ActivityKindEmail) + "', '" + string(crmcontracts.ActivityKindCall) + "', '" +
 		string(crmcontracts.ActivityKindMessage) + "')) END)"
 }

@@ -9,9 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"maps"
-	"strings"
 	"testing"
 	"time"
 
@@ -162,17 +160,23 @@ func TestATamperedAnswerOrAnotherReaderIsRefused(t *testing.T) {
 }
 
 func TestAnAnswerAfterTheTaskChangedWritesNothing(t *testing.T) {
-	for name, change := range map[string]string{
-		"dated by hand": `UPDATE activity SET due_at = now() + interval '3 days' WHERE source_id = 'stale'`,
-		"reassigned":    `UPDATE activity SET assignee_id = '` + "%s" + `' WHERE source_id = 'stale'`,
+	for name, change := range map[string]struct {
+		sql   string
+		value func(t *testing.T, e *Env) any
+	}{
+		"dated by hand": {
+			`UPDATE activity SET due_at = $1 WHERE source_id = 'stale'`,
+			func(t *testing.T, _ *Env) any { return clocktest.Now(t).AddDate(0, 0, 3) },
+		},
+		"reassigned": {
+			`UPDATE activity SET assignee_id = $1 WHERE source_id = 'stale'`,
+			func(_ *testing.T, e *Env) any { return e.Rep2 },
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := Setup(t)
 			id, _ := askedFarDate(t, e, "stale", clocktest.Now(t).AddDate(15, 0, 0))
-			if strings.Contains(change, "%s") {
-				change = fmt.Sprintf(change, e.Rep2)
-			}
-			e.WsExec(t, change)
+			e.WsExec(t, change.sql, change.value(t, e))
 			_, err := compose.NewApprovalsServiceWithEffects(e.Pool).Decide(answerAs(e, e.Rep1), id, true, nil)
 			if _, ok := errors.AsType[*approvals.ObsoleteError](err); !ok {
 				t.Fatalf("answering a stale question gave %v, want an obsolete card", err)
