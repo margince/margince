@@ -6439,12 +6439,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.defaultCountryNone":
     "Kein Land gesetzt. Die Standardfirma folgt dem Rechtsraum der Installation.",
   "legalEntities.defaultCountryLink": "Unter Rechtsraum ändern",
-  "jurisdiction.entities.title": "Firmen",
+  "jurisdiction.entities.title": "Unternehmen",
   "jurisdiction.entities.lead":
-    "Das Land jeder Firma bestimmt das Recht für die Mails ihrer Leute und die Datensätze, die sie verantworten.",
+    "Das Land jedes Unternehmens bestimmt das Recht für die Mails seiner Leute und die Datensätze, die es verantwortet.",
   "jurisdiction.entities.default": "{country}, die Auswahl oben",
   "jurisdiction.entities.none": "Kein Land gesetzt",
-  "jurisdiction.entities.edit": "Firmen ändern",
+  "jurisdiction.entities.edit": "Unternehmen ändern",
   "legalEntities.edit": "Bearbeiten",
   "legalEntities.archive": "Archivieren",
   "legalEntities.editTitle": "{name} bearbeiten",
