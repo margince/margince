@@ -5,8 +5,8 @@ package extcapability
 
 // The certification seam for an extension's AI task. The core writes no prompt
 // here, because the unit supplies the system text and the messages. Every unit's
-// call goes through Request, and CertRequest is the one request the certification
-// layer builds with it, so the prompt gate can see that Request is reached.
+// call goes through Request. CertRequest is the one request the certification
+// layer builds with it. That lets the prompt gate see that Request is reached.
 
 import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
