@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // A control drawn smaller than a thumb gets its press target on touch from a
-// `::before` layer that draws nothing: `X::before` inside `@media (pointer:
-// coarse)`, with `X { position: relative }` in the same block. Every such
-// layer is at least TOUCH_TARGET_PX on each axis it fixes.
+// `::before` layer that draws nothing. It is `X::before` inside `@media
+// (pointer: coarse)`, with `X { position: relative }` in the same block. Every
+// such layer is at least TOUCH_TARGET_PX on each axis it fixes.
 
 import { declaredValues, splitTopLevel } from "../../scripts/lib/css-rules";
 import { type CssRule, rulesIn, TOUCH_TARGET_PX } from "../../src/testing/css";
@@ -149,8 +149,8 @@ export function reach(
 }
 
 // The height is read over a control of --controlHeight, the height every
-// control stands at. A width that grows with the control is its own width plus
-// a reach, which a sheet cannot measure, so only a fixed width is held.
+// control stands at. A width that grows with the control cannot be measured from
+// a sheet, so only a fixed width is held.
 function shortfall(layer: TouchLayer, properties: Properties): string[] {
   const height = lengthOf("var(--controlHeight)", 0, properties);
   const tall = reach(layer.body, "block", height, properties);

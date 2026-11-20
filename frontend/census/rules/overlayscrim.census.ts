@@ -3,7 +3,7 @@
 
 // `--overlayScrim` is the one scrim colour, and tokens.test.ts holds that it
 // dims the page in both themes. So no layer that dims the page names a colour
-// of its own: every rule whose subject names a scrim, an overlay or a backdrop
+// of its own. A rule whose subject names a scrim, an overlay or a backdrop
 // paints the token, or `none` for a layer that does not dim.
 
 import {
