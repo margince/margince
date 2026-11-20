@@ -278,7 +278,9 @@ describe("Register a client", () => {
     await fill(user, dialog, { name: "Tool", redirect: GEMINI_REDIRECT });
     const field = form.getByRole("combobox", { name: /Redirect URIs/ });
     await user.type(field, "ftp://x/cb{Enter}");
-    expect(form.queryByRole("button", { name: "Remove ftp://x/cb" })).toBeNull();
+    expect(
+      form.queryByRole("button", { name: "Remove ftp://x/cb" }),
+    ).toBeNull();
     expect((field as HTMLInputElement).value).toBe("ftp://x/cb");
     expect(field.getAttribute("aria-invalid")).toBe("true");
     expect(

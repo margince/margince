@@ -12,7 +12,8 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 // Scheme, then the host of an authority, read from the text as typed: `URL`
 // lower-cases a host and adds the `//` an opaque `https:x` lacks, and Go does
 // neither.
-const AUTHORITY = /^([a-z][a-z0-9+.-]*):\/\/(?:[^@/?#]*@)?(\[[^\]/?#]*\]|[^:/?#]*)/i;
+const AUTHORITY =
+  /^([a-z][a-z0-9+.-]*):\/\/(?:[^@/?#]*@)?(\[[^\]/?#]*\]|[^:/?#]*)/i;
 
 export function acceptsRedirectURI(raw: string): boolean {
   const authority = AUTHORITY.exec(raw);

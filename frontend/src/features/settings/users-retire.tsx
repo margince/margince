@@ -38,7 +38,6 @@ export function RetireMember({
   onClose: () => void;
 }>) {
   const t = useT();
-  const plural = usePlural();
   const toast = useToast();
   const refresh = useMemberRefresh();
   const [target, setTarget] = useState("");
@@ -88,6 +87,8 @@ export function RetireMember({
       await preview.refetch();
     },
   });
+  // The merge dialog names a duplicate; the removal names the member.
+  const addressLabel = merge ? "users.mergeSource" : "users.retirement.address";
   const owned = preview.data?.owned;
   const counts = owned
     ? [
@@ -101,7 +102,6 @@ export function RetireMember({
         [t("users.work.alerts"), preview.data?.signal_count ?? 0],
       ]
     : [];
-  const blockers = preview.data?.blockers ?? [];
   const ready =
     preview.isSuccess &&
     !preview.isFetching &&
@@ -128,19 +128,7 @@ export function RetireMember({
       }
     >
       {/* First, so the reason the confirm is held is the first thing read. */}
-      {blockers.length > 0 && (
-        <Callout
-          tone="warning"
-          kind="standing"
-          title={plural("users.retirement.blocked", blockers.length)}
-        >
-          <ul>
-            {blockers.map((blocker) => (
-              <li key={blocker}>{memberRetirementBlocker(blocker, t)}</li>
-            ))}
-          </ul>
-        </Callout>
-      )}
+      <RetirementBlockers blockers={preview.data?.blockers} />
       <p>{t(merge ? "users.mergeBody" : "users.removeBody")}</p>
       <RetirementTarget
         memberId={member.id}
@@ -167,8 +155,7 @@ export function RetireMember({
       )}
       {merge && <p>{t("users.visibleWorkNote")}</p>}
       <p className="users-retirement-address">
-        {t(merge ? "users.mergeSource" : "users.retirement.address")}:{" "}
-        {preview.data?.source_email ?? member.email}
+        {t(addressLabel)}: {preview.data?.source_email ?? member.email}
       </p>
       {preview.data?.survivor_email && (
         <p className="users-retirement-address">
@@ -179,6 +166,28 @@ export function RetireMember({
         <p key={code}>{memberRetirementConsequence(code, t)}</p>
       ))}
     </ConfirmModal>
+  );
+}
+
+// What holds the confirm, read before anything else in the dialog.
+function RetirementBlockers({
+  blockers,
+}: Readonly<{ blockers: readonly string[] | undefined }>) {
+  const t = useT();
+  const plural = usePlural();
+  if (!blockers?.length) return null;
+  return (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={plural("users.retirement.blocked", blockers.length)}
+    >
+      <ul>
+        {blockers.map((blocker) => (
+          <li key={blocker}>{memberRetirementBlocker(blocker, t)}</li>
+        ))}
+      </ul>
+    </Callout>
   );
 }
 

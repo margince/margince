@@ -395,8 +395,7 @@ describe("a field fault worded from the screen's label and limit", () => {
 describe("a whole number typed in a box", () => {
   const label = "Tokens per full user per month";
   const bounds = { min: 1, max: 1e12 };
-  const fault = (typed: string) =>
-    wholeNumberFault(typed, "en", label, bounds);
+  const fault = (typed: string) => wholeNumberFault(typed, "en", label, bounds);
 
   it("takes a whole number in range, with spaces around it", () => {
     expect(fault("1")).toBeUndefined();

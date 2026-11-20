@@ -23,11 +23,7 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
-import {
-  problemMessageOf,
-  unwrap,
-  wholeNumberFault,
-} from "../../lib/problem";
+import { problemMessageOf, unwrap, wholeNumberFault } from "../../lib/problem";
 import { AiFeatureTable } from "./ai-feature-table";
 import { formatTokens } from "./tokens";
 import "./ai-admin.css";

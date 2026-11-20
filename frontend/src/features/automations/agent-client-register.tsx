@@ -11,7 +11,7 @@ import {
 } from "../../design-system/clipboardcopy";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { type TokenParse, TokenInput } from "../../design-system/tokeninput";
+import { TokenInput, type TokenParse } from "../../design-system/tokeninput";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useConnectorState } from "../../lib/connector-state";
@@ -139,7 +139,9 @@ function RegisterForm({
     event.preventDefault();
     // The cache, not `register.isPending`: a second press can land before the
     // render that would carry the first one's pending state.
-    const out = queryClient.isMutating({ mutationKey: REGISTER_AGENT_CLIENT_KEY });
+    const out = queryClient.isMutating({
+      mutationKey: REGISTER_AGENT_CLIENT_KEY,
+    });
     if (out > 0 || missing !== undefined) {
       return;
     }
