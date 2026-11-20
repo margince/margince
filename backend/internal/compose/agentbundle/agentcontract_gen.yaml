@@ -45241,6 +45241,8 @@ components:
         - initiative_pipeline
         - account_progression
         - source_quality
+        - introductions_made
+        - meetings_booked_for_colleagues
     ReportingBlockKind:
       type: string
       description: |-

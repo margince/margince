@@ -49,6 +49,8 @@ const METRIC_VIEW: Readonly<Record<ReportingMetricID, ReportingView>> = {
   bookings_mix: "sales",
   qualified_opportunities_created: "sales",
   initiative_pipeline: "sales",
+  introductions_made: "partners",
+  meetings_booked_for_colleagues: "partners",
 };
 
 // What each view is called, the tab that opens it, what it asks, and whether
