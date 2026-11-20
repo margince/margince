@@ -232,7 +232,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 			out = unchanged
 			return nil
 		}
-		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract update"); err != nil {
+		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, storekit.LiveOnly, "contract update"); err != nil {
 			return err
 		}
 		out, err = readContractForCaller(ctx, tx, id, today, active)
@@ -257,9 +257,9 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 // over custom-field columns would put their values in front of external
 // subscribers with nothing at the call site saying so.
 func applyContractUpdate(ctx context.Context, tx pgx.Tx, id ids.ContractID,
-	patch *storekit.Patch, ifVersion *int64, what string,
+	patch *storekit.Patch, ifVersion *int64, archived storekit.ArchivedFilter, what string,
 ) error {
-	if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
+	if err := patch.ApplyGuardedIn(ctx, tx, contractTable, id.UUID, ifVersion, archived); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok {
 			return contractCheckError(constraint)
 		}

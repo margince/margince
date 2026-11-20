@@ -23,7 +23,7 @@ func TestACustomFieldNamesItsLabelAndOptionsPerLanguage(t *testing.T) {
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 	created, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "deal", Label: "Services", Type: customfieldsmod.TypePicklist,
+		Object: "contact", Label: "Services", Type: customfieldsmod.TypePicklist,
 		Options: []string{"Consulting", "Support"}, Source: "manual",
 	})
 	if err != nil {

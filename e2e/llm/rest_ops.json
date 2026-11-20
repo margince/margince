@@ -247,6 +247,7 @@
     "GET /v1/context-search": "search_context",
     "GET /v1/contracts/{id}": "get_contract",
     "GET /v1/custom-fields": "read_view",
+    "GET /v1/custom-fields/{id}/choices": "read_view",
     "GET /v1/custom-fields/{id}/lists": "read_view",
     "GET /v1/data-subject-requests": "list_data_subject_requests",
     "GET /v1/data-subject-requests/deadline": "get_data_subject_request_deadline",
