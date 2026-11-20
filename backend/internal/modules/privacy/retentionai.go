@@ -87,19 +87,16 @@ func (s *RetentionService) eraseVoiceSignalContent(ctx context.Context, id ids.U
 // destroys nothing but telemetry.
 //
 // It is what makes the sweep safe under the retain-only posture. ai_call's own
-// columns are routing, spend and served identity — no subject content, which is
-// why ageing them out is hygiene rather than storage limitation. But
-// ai_call_payload FK-CASCADES from ai_call (0089), and a payload row on an embed
-// call holds the INPUT TEXTS that were embedded — record content, and the same
-// special-category-adjacent content the ai_call_payload/content policy governs.
-// So deleting a payload-bearing embed call destroys subject content through the
-// cascade, in the same pass that suppresses the policy which governs exactly
-// those rows.
+// columns are routing, spend and served identity, with no subject content, so
+// ageing them out is hygiene rather than storage limitation. But ai_call_payload
+// FK-CASCADES from ai_call (0089). A payload row on an embed call holds the
+// input texts that were embedded, which is record content under the
+// ai_call_payload/content policy. Deleting that call would destroy it through
+// the cascade, in the pass that suppresses the policy governing those rows.
 //
-// Under the posture the sweep therefore skips any embed call that has a payload
-// row. The task contract declares the embed workload no_payload, so only a row
-// an earlier capture-on release wrote has one, and the volume hygiene this
-// sweep exists for is unaffected.
+// Under the posture the sweep therefore skips any embed call with a payload row.
+// The contract marks embed no_payload, so only a row an earlier capture-on
+// release wrote has one, and the sweep's volume hygiene is unaffected.
 const embedCallWithoutPayload = `
 	AND NOT EXISTS (SELECT 1 FROM ai_call_payload p WHERE p.ai_call_id = ai_call.id)`
 

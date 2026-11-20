@@ -281,9 +281,8 @@ func TestEmbedTraceStaysZeroUsageOnFailure(t *testing.T) {
 	}
 }
 
-// The embed workload is no_payload in the task contract: an input is record
-// text, a mail's subject and body among them, so a capture-on router traces
-// the call and keeps none of what it embedded.
+// The contract marks embed no_payload, because an input is record text such as
+// a mail's subject and body. A capture-on router traces the call and keeps none.
 func TestEmbedLaneKeepsNoPayloadWithCaptureOn(t *testing.T) {
 	fcs := &fakeCallStore{}
 	r := assembleRouter(
@@ -303,8 +302,8 @@ func TestEmbedLaneKeepsNoPayloadWithCaptureOn(t *testing.T) {
 	}
 }
 
-// A batch of short inputs costs almost nothing against the rune budget, so
-// only the count cap bounds the captured array; inputs_truncated says it was cut.
+// Short inputs cost almost nothing against the rune budget. Only the count cap
+// bounds the captured array, and inputs_truncated says it was cut.
 func TestEmbedPayloadCapsInputCountWhenBatchExceedsTheLimit(t *testing.T) {
 	r := assembleRouter(map[Tier]model.Client{}, NewFakeClient(), ProfileEUHosted, &memMeter{}, DefaultMonthlyTokens,
 		&fakeCallStore{}, nil, true, nil)

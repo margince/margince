@@ -34,8 +34,8 @@ func emitEgressDoc(c contract) []byte {
 			decisionCell(def),
 			def.Status)
 	}
-	// embed is a workload, not a task, but its inputs are record text and go
-	// to the bound embeddings provider, so the page owes it a row.
+	// embed is not a task, but its inputs are record text sent to the bound
+	// embeddings provider. So the page owes it a row.
 	fmt.Fprintf(&b, "| `embed` | `%s` | %s | %s | none | %s |\n",
 		c.Embed.Tier, yesNo(staysLocal([]string{c.Embed.Tier})), yesNo(c.Embed.NoPayload), statusShipped)
 	b.WriteString(egressReading)

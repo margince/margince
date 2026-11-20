@@ -122,9 +122,8 @@ func TestCallMeterWritesTraceAndOptInPayload(t *testing.T) {
 	}
 }
 
-// The writer is where no_payload holds: an embed call handed to CallMeter with
-// a mail's text on it, as a lane that skipped CapturesPayload would, is traced
-// and keeps no content.
+// The writer is where no_payload holds. An embed call that reaches CallMeter
+// with a mail's text on it is traced, and its content is not kept.
 func TestCallMeterKeepsNoPayloadForANoPayloadTask(t *testing.T) {
 	e := Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
