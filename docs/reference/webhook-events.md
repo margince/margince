@@ -1253,7 +1253,7 @@ Deprecated: the lead source list no longer feeds the score, and a separate break
 
 Record: `legal_review` · version 1
 
-Payload for legal_review.decided, legal answered a request. It carries the outcome and none of the reviewer's comments.
+Payload for legal_review.decided: legal answered a request. It carries the outcome and none of the reviewer's comments.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1265,7 +1265,7 @@ Payload for legal_review.decided, legal answered a request. It carries the outco
 
 Record: `legal_review` · version 1
 
-Payload for legal_review.requested, a deal's side asked legal to review the deal. It names the deal and the review and nothing the requester wrote: a receiver reads the note under its own scope.
+Payload for legal_review.requested: a deal's side asked legal to review the deal. It names the deal and the review and nothing the requester wrote: a receiver reads the note under its own scope.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1276,7 +1276,7 @@ Payload for legal_review.requested, a deal's side asked legal to review the deal
 
 Record: `legal_review` · version 1
 
-Payload for legal_review.withdrawn, the deal's side took back an open request.
+Payload for legal_review.withdrawn: the deal's side took back an open request.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|

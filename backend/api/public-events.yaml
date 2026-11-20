@@ -362,7 +362,7 @@ components:
       x-entity-type: legal_review
       x-version: 1
       description: >-
-        Payload for legal_review.requested — a deal's side asked legal to review the deal.
+        Payload for legal_review.requested: a deal's side asked legal to review the deal.
         It names the deal and the review and nothing the requester wrote: a receiver
         reads the note under its own scope.
       required:
@@ -385,7 +385,7 @@ components:
       x-entity-type: legal_review
       x-version: 1
       description: >-
-        Payload for legal_review.decided — legal answered a request. It carries the
+        Payload for legal_review.decided: legal answered a request. It carries the
         outcome and none of the reviewer's comments.
       required:
         - deal_id
@@ -411,7 +411,7 @@ components:
       x-entity-type: legal_review
       x-version: 1
       description: >-
-        Payload for legal_review.withdrawn — the deal's side took back an open request.
+        Payload for legal_review.withdrawn: the deal's side took back an open request.
       required:
         - deal_id
         - review_id

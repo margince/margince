@@ -2336,7 +2336,7 @@ type PublicEventLeadUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
-// PublicEventLegalReviewDecided Payload for legal_review.decided — legal answered a request. It carries the outcome and none of the reviewer's comments.
+// PublicEventLegalReviewDecided Payload for legal_review.decided: legal answered a request. It carries the outcome and none of the reviewer's comments.
 type PublicEventLegalReviewDecided struct {
 	// DealId The deal under review.
 	DealId openapi_types.UUID `json:"deal_id"`
@@ -2348,7 +2348,7 @@ type PublicEventLegalReviewDecided struct {
 	ReviewId openapi_types.UUID `json:"review_id"`
 }
 
-// PublicEventLegalReviewRequested Payload for legal_review.requested — a deal's side asked legal to review the deal. It names the deal and the review and nothing the requester wrote: a receiver reads the note under its own scope.
+// PublicEventLegalReviewRequested Payload for legal_review.requested: a deal's side asked legal to review the deal. It names the deal and the review and nothing the requester wrote: a receiver reads the note under its own scope.
 type PublicEventLegalReviewRequested struct {
 	// DealId The deal under review.
 	DealId openapi_types.UUID `json:"deal_id"`
@@ -2357,7 +2357,7 @@ type PublicEventLegalReviewRequested struct {
 	ReviewId openapi_types.UUID `json:"review_id"`
 }
 
-// PublicEventLegalReviewWithdrawn Payload for legal_review.withdrawn — the deal's side took back an open request.
+// PublicEventLegalReviewWithdrawn Payload for legal_review.withdrawn: the deal's side took back an open request.
 type PublicEventLegalReviewWithdrawn struct {
 	// DealId The deal under review.
 	DealId openapi_types.UUID `json:"deal_id"`

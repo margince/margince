@@ -545,6 +545,7 @@ var sarAssemblyFiles = []string{
 	// chapter left off this list is a PII table the census reports as
 	// unexported while the export carries it.
 	"internal/modules/privacy/sarjudgements.go",
+	"internal/modules/privacy/sarlegalreview.go",
 	"internal/modules/privacy/sarcommunication.go",
 	"internal/modules/privacy/sarconsentlinks.go",
 	"internal/modules/privacy/sarmessages.go",

@@ -107,7 +107,7 @@ export interface components {
             /** @description Why the entry was voided; absent for approve and pay. */
             reason?: string;
         };
-        /** @description Payload for legal_review.requested — a deal's side asked legal to review the deal. It names the deal and the review and nothing the requester wrote: a receiver reads the note under its own scope. */
+        /** @description Payload for legal_review.requested: a deal's side asked legal to review the deal. It names the deal and the review and nothing the requester wrote: a receiver reads the note under its own scope. */
         PublicEventLegalReviewRequested: {
             /**
              * Format: uuid
@@ -120,7 +120,7 @@ export interface components {
              */
             review_id: string;
         };
-        /** @description Payload for legal_review.decided — legal answered a request. It carries the outcome and none of the reviewer's comments. */
+        /** @description Payload for legal_review.decided: legal answered a request. It carries the outcome and none of the reviewer's comments. */
         PublicEventLegalReviewDecided: {
             /**
              * Format: uuid
@@ -135,7 +135,7 @@ export interface components {
             /** @description approved or changes_needed. */
             outcome: string;
         };
-        /** @description Payload for legal_review.withdrawn — the deal's side took back an open request. */
+        /** @description Payload for legal_review.withdrawn: the deal's side took back an open request. */
         PublicEventLegalReviewWithdrawn: {
             /**
              * Format: uuid

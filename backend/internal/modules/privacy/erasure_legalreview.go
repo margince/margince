@@ -22,14 +22,12 @@ const subjectDealIDsSQL = `SELECT r.deal_id FROM relationship r
 // only the deals the subject stands in now. Erasure keeps the wider set above.
 const subjectLiveDealIDsSQL = subjectDealIDsSQL + ` AND r.archived_at IS NULL`
 
-// clearSubjectLegalReviewText empties the note and the reviewer's comments of every
-// legal review on a deal the subject is a stakeholder of, and tombstones each row it
-// cleared.
+// clearSubjectLegalReviewText empties the note and comments of every legal review
+// on a deal the subject is a stakeholder of, and tombstones each row it cleared.
 //
-// The text is a colleague's words about the deal and may name the subject, and
-// nothing can tell the sentence that does from the one that does not. The row stays:
-// its outcome settles the deal's stage gate, and the deal is not the subject's.
-// Both erasure acts call this, because neither deletes the deal.
+// The text is a colleague's words about the deal and may name the subject. Nothing
+// can tell which sentence does. The row stays because its outcome settles the
+// deal's stage gate. Both erasure acts call this, as neither deletes the deal.
 func clearSubjectLegalReviewText[ID ids.UUID | ids.ContactID](
 	ctx context.Context, tx pgx.Tx, contactID ID, reason, cause string,
 ) error {
