@@ -29,7 +29,9 @@ function mount() {
   );
   return client;
 }
+const nativeScroll = Element.prototype.scrollIntoView;
 afterEach(() => {
+  Element.prototype.scrollIntoView = nativeScroll;
   cleanup();
   vi.unstubAllGlobals();
 });
@@ -65,6 +67,8 @@ it("shows the manual-policy consequence and sends only the reader's kind prefere
 
 it("opens an explicit include-muted review without changing the preference", async () => {
   const user = userEvent.setup();
+  const scrolled = vi.fn();
+  Element.prototype.scrollIntoView = scrolled;
   const reviews: URL[] = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
     const req = input instanceof Request ? input : new Request(String(input));
@@ -90,6 +94,7 @@ it("opens an explicit include-muted review without changing the preference", asy
   ).toBeTruthy();
   const title = screen.getByRole("heading", { name: /^Muted: / });
   expect(document.activeElement).toBe(title);
+  expect(scrolled).toHaveBeenCalled();
 });
 
 it("keeps the current preference when saving fails and shows the server explanation", async () => {

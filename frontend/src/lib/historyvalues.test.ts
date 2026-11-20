@@ -59,9 +59,16 @@ describe("historyValue", () => {
     expect(
       historyValue("trigger", "human_qualify", ctx({ locale: "de" })),
     ).toBe("Manuell qualifiziert");
-    expect(historyValue("relationship_stage", "no_fit", ctx())).not.toBe(
-      "no_fit",
+  });
+
+  it("names a partner stage through the stage list, or leaves its key", () => {
+    const named = ctx({
+      nameOf: (key) => (key === "board_review" ? "Board review" : undefined),
+    });
+    expect(historyValue("relationship_stage", "board_review", named)).toBe(
+      "Board review",
     );
+    expect(historyValue("relationship_stage", "no_fit", named)).toBe("no_fit");
   });
 
   it("names a change of time precision in words, not wire spellings", () => {

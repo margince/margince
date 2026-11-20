@@ -4,9 +4,13 @@ import { stable } from "../format/collate";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
 import { vi } from "../i18n/vi";
-import { enumCodes, schemaSource, typeMembers } from "./contractschema.testkit";
+import {
+  enumCodes,
+  recordTypesInHistory,
+  schemaSource,
+  typeMembers,
+} from "./contractschema.testkit";
 import { historyValueFields, historyValueLabel } from "./historyvaluelabels";
-import { SHIPPED_LABEL_KEYS } from "./shippedlabels";
 
 // The coverage census for History's values: every closed set of codes a
 // history row can hold has words, in every language.
@@ -16,30 +20,22 @@ import { SHIPPED_LABEL_KEYS } from "./shippedlabels";
 // columns of each record type History serves, the fields their updates write,
 // a partner's, and a lead's qualification trigger.
 
-const RECORD_TYPES = [
-  "Activity",
-  "Company",
-  "Contact",
-  "Deal",
-  "Lead",
-  "Project",
-  "Partner",
-];
-const WRITE_BODIES = [
-  "UpdateActivityRequest",
-  "UpdateCompanyRequest",
-  "UpdateContactRequest",
-  "UpdateDealRequest",
-  "UpdateLeadRequest",
-  "UpdateProjectRequest",
-  "PromoteLeadRequest",
-];
+// The schemas of a record type are named by the contract's own entity-type
+// enum: the entity itself and its `Update<Type>Request`. A type History gains
+// enters the census by itself, and a type with no schema fails it.
+//
+// A partner extends a company, and a qualification request is a lead's.
+// Neither carries its type's name, so they are listed here. The census fails
+// when one stops existing.
+const EXTENSIONS: ReadonlyMap<string, readonly string[]> = new Map([
+  ["company", ["Partner"]],
+  ["lead", ["PromoteLeadRequest"]],
+]);
 
 // Fields History words by another route, so no second table is demanded.
 // `industry` goes through industryWords. A size band is a number range that
-// reads as it is stored.
-// `stage_meaning` is read from the stage a partner stands on and is never a
-// column of the partner, so no history row holds it.
+// reads as it is stored. `stage_meaning` is read from the stage a partner
+// stands on and is never a column, so no history row holds it.
 const WORDED_ELSEWHERE = new Set(["industry", "size_band", "stage_meaning"]);
 
 function isReadOnly(member: ts.PropertySignature): boolean {
@@ -49,25 +45,49 @@ function isReadOnly(member: ts.PropertySignature): boolean {
   );
 }
 
-// Each closed-code field the contract gives a stored column, with its codes.
-function closedFields(): Map<string, Set<string>> {
+function ownersOf(recordType: string): string[] {
+  const entity = `${recordType[0].toUpperCase()}${recordType.slice(1)}`;
+  return [
+    entity,
+    `Update${entity}Request`,
+    ...(EXTENSIONS.get(recordType) ?? []),
+  ];
+}
+
+// Each record type's closed-code fields with their codes.
+function closedFieldsByType(): Map<string, Map<string, Set<string>>> {
   const source = schemaSource();
-  const byField = new Map<string, Set<string>>();
-  const owners = [...RECORD_TYPES, ...WRITE_BODIES];
-  for (const owner of owners) {
-    const columnsOnly = RECORD_TYPES.includes(owner);
-    for (const member of typeMembers(source, owner)) {
-      if (!ts.isIdentifier(member.name)) continue;
-      // A read-only property is computed on read, so no write stores it.
-      if (columnsOnly && isReadOnly(member)) continue;
-      const codes = enumCodes(source, member);
-      if (!codes) continue;
-      const field = member.name.text;
-      byField.set(field, new Set([...(byField.get(field) ?? []), ...codes]));
+  const byType = new Map<string, Map<string, Set<string>>>();
+  for (const recordType of recordTypesInHistory(source)) {
+    const fields = new Map<string, Set<string>>();
+    for (const owner of ownersOf(recordType)) {
+      const members = typeMembers(source, owner);
+      expect(members.length, `${owner} for ${recordType}`).toBeGreaterThan(0);
+      const entityColumns = !owner.endsWith("Request");
+      for (const member of members) {
+        if (!ts.isIdentifier(member.name)) continue;
+        // A read-only property is computed on read, so no write stores it.
+        if (entityColumns && isReadOnly(member)) continue;
+        const codes = enumCodes(source, member);
+        if (!codes) continue;
+        const field = member.name.text;
+        fields.set(field, new Set([...(fields.get(field) ?? []), ...codes]));
+      }
+    }
+    for (const field of WORDED_ELSEWHERE) fields.delete(field);
+    byType.set(recordType, fields);
+  }
+  return byType;
+}
+
+function closedFields(): Map<string, Set<string>> {
+  const merged = new Map<string, Set<string>>();
+  for (const fields of closedFieldsByType().values()) {
+    for (const [field, codes] of fields) {
+      merged.set(field, new Set([...(merged.get(field) ?? []), ...codes]));
     }
   }
-  for (const field of WORDED_ELSEWHERE) byField.delete(field);
-  return byField;
+  return merged;
 }
 
 const LOCALES = [
@@ -114,11 +134,34 @@ describe("history value labels", () => {
     );
   });
 
+  // Words are keyed by field name, since a history row carries no record
+  // type. That is only sound while one field name means one thing, so two
+  // record types may share a field only with disjoint codes.
+  it("never gives two record types the same code under one field", () => {
+    // Company and contact visibility is one setting with one meaning.
+    const sameMeaning = new Set(["visibility"]);
+    const seen = new Map<string, string>();
+    const clashes: string[] = [];
+    for (const [recordType, fields] of closedFieldsByType()) {
+      for (const [field, codes] of fields) {
+        if (sameMeaning.has(field)) continue;
+        for (const code of codes) {
+          const key = `${field}=${code}`;
+          const first = seen.get(key);
+          if (first !== undefined && first !== recordType) {
+            clashes.push(`${key} on ${first} and ${recordType}`);
+          }
+          seen.set(key, recordType);
+        }
+      }
+    }
+    expect(clashes).toEqual([]);
+  });
+
   it("words no field the contract does not give a closed set", () => {
     const closed = new Set(closedFields().keys());
     const extra = historyValueFields()
       .filter((field) => !closed.has(field))
-      .filter((field) => field !== "relationship_stage")
       .filter((field) => !field.startsWith("qualifying_event"))
       .filter(
         (field) => !["occurred_precision", "call_outcome"].includes(field),
@@ -128,27 +171,5 @@ describe("history value labels", () => {
       extra,
       `fields worded with no closed set: ${extra.join(", ")}`,
     ).toEqual([]);
-  });
-
-  it("words every stage the product ships", () => {
-    const stages = SHIPPED_LABEL_KEYS.filter((key) =>
-      key.startsWith("partnerStages.builtin."),
-    ).map((key) => key.slice("partnerStages.builtin.".length));
-    expect(stages.length).toBeGreaterThan(5);
-    for (const stage of stages) {
-      for (const [locale, catalog] of LOCALES) {
-        const key = `partnerStages.builtin.${stage}`;
-        expect(
-          historyValueLabel("relationship_stage", stage, locale),
-          `${stage} (${locale})`,
-        ).toBe(catalog[key as keyof typeof catalog]);
-      }
-    }
-  });
-
-  it("leaves a stage an administrator added as stored", () => {
-    expect(historyValueLabel("relationship_stage", "board_review", "en")).toBe(
-      "board_review",
-    );
   });
 });

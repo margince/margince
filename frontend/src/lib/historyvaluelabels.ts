@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { ACTIVITY_KIND_LABEL } from "../design-system/timelineentry";
 import type { OccurredPrecision } from "../format/activitywhen";
 import { LIFECYCLE_LABELS } from "../format/companylifecycle";
 import { DEAL_STATUS_LABEL } from "../format/dealstatus";
@@ -18,7 +19,6 @@ import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CALL_OUTCOME_LABEL } from "./calloutcome";
 import { KIND_LABELS } from "./partnerstages.queries";
-import { shippedLabel } from "./shippedlabels";
 import { TASK_TYPE_LABELS } from "./tasktype";
 
 // The words for a closed vocabulary a change row stores by its wire spelling,
@@ -79,17 +79,6 @@ const VISIBILITY_WORDS: Readonly<
   owner: "visibility.private",
 };
 
-const KIND_WORDS: Readonly<
-  Record<components["schemas"]["Activity"]["kind"], MessageKey>
-> = {
-  email: "timeline.kind.email",
-  call: "timeline.kind.call",
-  meeting: "timeline.kind.meeting",
-  note: "timeline.kind.note",
-  task: "timeline.kind.task",
-  message: "timeline.kind.message",
-};
-
 // A lead and a deal both store a `status`, and no code of one is a code of the
 // other, so one field name reads both.
 const STATUS_WORDS: Readonly<Record<string, MessageKey>> = {
@@ -120,16 +109,12 @@ const HISTORY_VALUE_LABELS = new Map<
   ["visibility", VISIBILITY_WORDS],
   ["direction", DIRECTION_WORDS],
   ["meeting_status", MEETING_STATUS_WORDS],
-  ["kind", KIND_WORDS],
+  ["kind", ACTIVITY_KIND_LABEL],
 ]);
-
-// The key of a partner stage the product ships. A stage an administrator added
-// has no shipped words, so it keeps the key it is stored under.
-const RELATIONSHIP_STAGE = "relationship_stage";
 
 /** The fields whose stored codes this file words, for the census over the contract. */
 export function historyValueFields(): string[] {
-  return [...HISTORY_VALUE_LABELS.keys(), RELATIONSHIP_STAGE];
+  return [...HISTORY_VALUE_LABELS.keys()];
 }
 
 /** A stored value of a closed vocabulary, in words, or undefined. */
@@ -138,12 +123,6 @@ export function historyValueLabel(
   value: string,
   locale: Locale,
 ): string | undefined {
-  if (field === RELATIONSHIP_STAGE) {
-    return shippedLabel(
-      { label: value, label_key: `partnerStages.builtin.${value}` },
-      (key) => translate(locale, key),
-    );
-  }
   const words = HISTORY_VALUE_LABELS.get(field);
   const key = words && Object.hasOwn(words, value) ? words[value] : undefined;
   if (key === undefined && words === EXCHANGE_WORDS) {

@@ -114,3 +114,18 @@ export function enumCodes(
   }
   return undefined;
 }
+
+// The record types a field-history row can be about, from the contract's own
+// closed enum. A type added upstream widens the corpus.
+export function recordTypesInHistory(source: ts.SourceFile): string[] {
+  const entityType = propertyOf(source, "FieldHistoryEntry", "entity_type");
+  const declared = entityType?.type;
+  if (!declared || !ts.isUnionTypeNode(declared)) {
+    return [];
+  }
+  return declared.types
+    .filter(ts.isLiteralTypeNode)
+    .map((member) => member.literal)
+    .filter(ts.isStringLiteral)
+    .map((literal) => literal.text);
+}

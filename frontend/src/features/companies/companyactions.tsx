@@ -44,7 +44,6 @@ export function NewDealAction({
   onCreated?: (deal: components["schemas"]["Deal"]) => void;
 }>) {
   const t = useT();
-  const added = useAddedNotice();
   const { locale } = useLocale();
   const target = useQuery({ ...pipelinesOptions, select: defaultPipelineOf });
   const leading = useLeadingCurrencies();
@@ -116,12 +115,25 @@ export function NewDealAction({
       create={createDeal}
       fields={fields}
       aboutId={companyId}
-      stay
-      onCreated={
-        onCreated ??
-        ((deal) => added(deal.name, { screen: "deals", id: deal.id }))
-      }
+      stay={onCreated !== undefined}
+      onCreated={onCreated}
       link={link}
+    />
+  );
+}
+
+/**
+ * The Deals tab's verb. The reader stays on the company and is told what was
+ * added, with a way to open it. A deal made from a project still opens.
+ */
+export function CompanyNewDealAction(
+  props: Readonly<{ companyId: string; companyName: string }>,
+) {
+  const added = useAddedNotice();
+  return (
+    <NewDealAction
+      {...props}
+      onCreated={(deal) => added(deal.name, { screen: "deals", id: deal.id })}
     />
   );
 }

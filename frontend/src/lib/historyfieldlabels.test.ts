@@ -2,7 +2,11 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { stable } from "../format/collate";
 import { en } from "../i18n/en";
-import { membersOf, propertyOf, schemaSource } from "./contractschema.testkit";
+import {
+  membersOf,
+  recordTypesInHistory,
+  schemaSource,
+} from "./contractschema.testkit";
 import {
   historyFieldLabel,
   historyFieldLabelKey,
@@ -24,22 +28,6 @@ import {
 //
 // It reads the generated types rather than the six Go stores for the same
 // reason the client does: the contract is the seam between the two trees.
-
-// The record types a field-history row can be ABOUT — the contract's own
-// closed enum, so a type added upstream widens this corpus rather than
-// slipping past it.
-function recordTypesInHistory(source: ts.SourceFile): string[] {
-  const entityType = propertyOf(source, "FieldHistoryEntry", "entity_type");
-  const declared = entityType?.type;
-  if (!declared || !ts.isUnionTypeNode(declared)) {
-    return [];
-  }
-  return declared.types
-    .filter(ts.isLiteralTypeNode)
-    .map((member) => member.literal)
-    .filter(ts.isStringLiteral)
-    .map((literal) => literal.text);
-}
 
 // Body fields that tell the update what else to do and are never a column it
 // writes, so no history row can name them.
