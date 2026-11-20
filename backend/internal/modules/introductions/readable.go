@@ -22,7 +22,8 @@ const (
 
 // ReadableSQL is the predicate over intro_request row alias for the rows the
 // caller may read. An ask is its two colleagues' alone. A recorded
-// introduction is anyone's who may open its contact. load holds one row it
+// introduction is anyone's who may open its contact, its two colleagues
+// included. load holds one row it
 // already read to the same rule. alias is a compile-time literal.
 func ReadableSQL(ctx context.Context, alias string, arg func(any) int) (string, error) {
 	row := pgx.Identifier{alias}.Sanitize()
@@ -41,7 +42,7 @@ func ReadableSQL(ctx context.Context, alias string, arg func(any) int) (string, 
 	}
 	if actor, ok := principal.Actor(ctx); ok && actor.HumanOrItsAgent() && !actor.UserID.IsZero() {
 		seat := fmt.Sprintf("$%d", arg(actor.UserID))
-		readable = fmt.Sprintf(`(%[1]s.requester_user_id = %[2]s OR %[1]s.introducer_user_id = %[2]s OR %[3]s)`, row, seat, readable)
+		readable = fmt.Sprintf(`((%[1]s.origin <> '%[4]s' AND (%[1]s.requester_user_id = %[2]s OR %[1]s.introducer_user_id = %[2]s)) OR %[3]s)`, row, seat, readable, OriginRecorded)
 	}
 	return "(" + row + ".archived_at IS NULL AND " + readable + ")", nil
 }

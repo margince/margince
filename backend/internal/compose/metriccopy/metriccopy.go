@@ -173,14 +173,14 @@ var Definitions = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 		Vi: "Giá trị đang mở đã biết của các deal thành viên thuộc sáng kiến đã chọn tính đến hôm nay, chia theo nguồn gốc của từng deal: có sẵn khi khởi động, do sáng kiến mang về, tạo sau khi khởi động, hoặc thêm sau khi khởi động. Ví dụ: sáng kiến khởi động ngày 1 tháng 5 với 50.000 € deal đang mở, và một lead thành viên được chuyển thành deal 10.000 € vào tháng 6, hiển thị 50.000 € có sẵn và 10.000 € do sáng kiến mang về.",
 	},
 	"introductions_made": {
-		En: "Introductions of a colleague to a contact that took place in the period you picked, counted on the day of the introduction and credited to the colleague who made it. Permission to mention a name does not count. Example: you introduce a teammate to a buyer on 4 June, so June shows 1 for you.",
-		De: "Vorstellungen einer Kollegin oder eines Kollegen bei einem Kontakt im gewählten Zeitraum, gezählt am Tag der Vorstellung und gutgeschrieben der Person, die vorgestellt hat. Die Erlaubnis, einen Namen zu nennen, zählt nicht. Beispiel: Du stellst am 4. Juni jemanden aus deinem Team einer Einkäuferin vor, also zeigt der Juni 1 für dich.",
-		Vi: "Các lần giới thiệu một đồng nghiệp với một liên hệ diễn ra trong khoảng thời gian bạn chọn, tính vào ngày giới thiệu và cho người đã giới thiệu. Việc cho phép nhắc tên không được tính. Ví dụ: ngày 04.06 bạn giới thiệu một đồng nghiệp với một khách hàng, nên tháng 6 hiển thị 1 cho bạn.",
+		En: "Introductions of a colleague to a contact, credited to the colleague who made them. An asked introduction counts on the day it was completed. One recorded afterwards counts on the day it was recorded, not on the date it names, so it cannot fill a past period. Permission to mention a name does not count. Example: on 4 June you record an introduction you made in May, so June shows 1 for you.",
+		De: "Vorstellungen einer Kollegin oder eines Kollegen bei einem Kontakt, gutgeschrieben der Person, die vorgestellt hat. Eine angefragte Vorstellung zählt am Tag, an dem sie abgeschlossen wurde. Eine nachträglich erfasste zählt am Tag der Erfassung, nicht an dem Datum, das sie nennt, und füllt so keinen vergangenen Zeitraum auf. Die Erlaubnis, einen Namen zu nennen, zählt nicht. Beispiel: Du erfasst am 4. Juni eine Vorstellung aus dem Mai, also zeigt der Juni 1 für dich.",
+		Vi: "Các lần giới thiệu một đồng nghiệp với một liên hệ, tính cho người đã giới thiệu. Lời giới thiệu được yêu cầu tính vào ngày hoàn tất. Lời giới thiệu được ghi lại sau đó tính vào ngày ghi, không phải ngày được nêu, nên không thể bù cho kỳ đã qua. Việc cho phép nhắc tên không được tính. Ví dụ: ngày 04.06 bạn ghi lại một lời giới thiệu từ tháng 5, nên tháng 6 hiển thị 1 cho bạn.",
 	},
 	"meetings_booked_for_colleagues": {
-		En: "Meetings booked in the period you picked for another colleague to host, counted on the day of booking and credited to the colleague who booked. A meeting you host yourself does not count, and neither does one entered after it took place. A booking cancelled later still counts. Example: on 3 June you book a demo that a teammate hosts on 10 June, so June shows 1 for you.",
-		De: "Termine, die im gewählten Zeitraum für eine andere Person aus dem Team gebucht wurden, die den Termin leitet, gezählt am Tag der Buchung und gutgeschrieben der Person, die gebucht hat. Ein Termin, den du selbst leitest, zählt nicht, ebenso wenig einer, der erst nach dem Treffen eingetragen wurde. Eine später abgesagte Buchung zählt trotzdem. Beispiel: Du buchst am 3. Juni eine Demo, die jemand aus deinem Team am 10. Juni leitet, also zeigt der Juni 1 für dich.",
-		Vi: "Các cuộc họp được đặt trong khoảng thời gian bạn chọn để một đồng nghiệp khác chủ trì, tính vào ngày đặt và cho người đã đặt. Cuộc họp bạn tự chủ trì không được tính, cuộc họp được nhập sau khi đã diễn ra cũng vậy. Lượt đặt bị hủy sau đó vẫn được tính. Ví dụ: ngày 03.06 bạn đặt một buổi demo do đồng nghiệp chủ trì ngày 10.06, nên tháng 6 hiển thị 1 cho bạn.",
+		En: "Meetings booked in the period you picked for another colleague to host, counted on the day of booking and credited to the colleague who booked. A meeting you host yourself does not count. Neither does one entered after it took place, an imported one, or one from a transcript. A booking cancelled later still counts. Example: on 3 June you book a demo that a teammate hosts on 10 June, so June shows 1 for you.",
+		De: "Termine, die im gewählten Zeitraum für eine andere Person aus dem Team gebucht wurden, die den Termin leitet, gezählt am Tag der Buchung und gutgeschrieben der Person, die gebucht hat. Ein Termin, den du selbst leitest, zählt nicht. Ebenso wenig einer, der erst nach dem Treffen eingetragen wurde, ein importierter oder einer aus einem Transkript. Eine später abgesagte Buchung zählt trotzdem. Beispiel: Du buchst am 3. Juni eine Demo, die jemand aus deinem Team am 10. Juni leitet, also zeigt der Juni 1 für dich.", //nolint:misspell // German translation uses German spelling.
+		Vi: "Các cuộc họp được đặt trong khoảng thời gian bạn chọn để một đồng nghiệp khác chủ trì, tính vào ngày đặt và cho người đã đặt. Cuộc họp bạn tự chủ trì không được tính. Cuộc họp được nhập sau khi đã diễn ra, cuộc họp nhập từ hệ thống khác hoặc từ bản chép lời cũng vậy. Lượt đặt bị hủy sau đó vẫn được tính. Ví dụ: ngày 03.06 bạn đặt một buổi demo do đồng nghiệp chủ trì ngày 10.06, nên tháng 6 hiển thị 1 cho bạn.",
 	},
 }
 
@@ -311,14 +311,14 @@ var Attribution = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 		Vi: "Kết quả tính cho người đang phụ trách và pipeline hiện tại của deal; nguồn gốc của deal được đọc theo thời điểm khởi động và đường cơ sở đã đóng băng, và không bao giờ thay đổi khi chỉnh sửa thành viên.",
 	},
 	"introductions_made": {
-		En: "Credit goes to the colleague who made the introduction, on the day it happened; an introduction recorded afterwards counts on the day it names.",
-		De: "Gutgeschrieben wird die Person, die vorgestellt hat, am Tag der Vorstellung; eine nachträglich erfasste Vorstellung zählt an dem Tag, den sie nennt.",
-		Vi: "Ghi nhận cho người đã giới thiệu, vào ngày giới thiệu; lời giới thiệu được ghi lại sau đó tính vào ngày được ghi.",
+		En: "Credit goes to the colleague who made the introduction: on the day an asked one was completed, or the day a past one was recorded.",
+		De: "Gutgeschrieben wird die Person, die vorgestellt hat: am Tag, an dem eine angefragte Vorstellung abgeschlossen oder eine frühere erfasst wurde.",
+		Vi: "Ghi nhận cho người đã giới thiệu: vào ngày lời giới thiệu được yêu cầu hoàn tất, hoặc ngày lời giới thiệu trước đó được ghi lại.",
 	},
 	"meetings_booked_for_colleagues": {
-		En: "Credit goes to the colleague who booked the meeting, or whose agent booked it, on the day it was booked; the host gets no credit here.",
-		De: "Gutgeschrieben wird die Person, die den Termin gebucht hat oder deren Agent ihn gebucht hat, am Tag der Buchung; die Person, die den Termin leitet, erhält hier nichts.",
-		Vi: "Ghi nhận cho người đã đặt cuộc họp, hoặc người có agent đã đặt thay, vào ngày đặt; người chủ trì không được ghi nhận ở đây.",
+		En: "Credit goes to the colleague who booked the meeting, or whose agent booked it, on the day it was booked. The host the booking named is the one that counts; a later change of host moves no credit.",
+		De: "Gutgeschrieben wird die Person, die den Termin gebucht hat oder deren Agent ihn gebucht hat, am Tag der Buchung. Es zählt die leitende Person, die bei der Buchung genannt wurde; ein späterer Wechsel verschiebt nichts.",
+		Vi: "Ghi nhận cho người đã đặt cuộc họp, hoặc người có agent đã đặt thay, vào ngày đặt. Người chủ trì được nêu khi đặt là người được tính; đổi người chủ trì sau đó không chuyển ghi nhận.",
 	},
 }
 
@@ -449,13 +449,13 @@ var Incomplete = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 		Vi: "Chỉ tính các deal thành viên bạn được phép xem; deal chưa có giá trị vẫn được đếm nhưng không đóng góp giá trị, quy tắc khớp nhiều bản ghi hơn một lần đọc liệt kê sẽ được đánh dấu là bị cắt, và khi chưa chọn sáng kiến thì không có số liệu.",
 	},
 	"introductions_made": {
-		En: "Only introductions you may see are counted: those you asked for or made, and every introduction recorded on a contact you may open. Others mark the figure as incomplete. With a pipeline chosen there is no figure.",
-		De: "Gezählt werden nur Vorstellungen, die du sehen darfst: solche, die du angefragt oder gemacht hast, und jede nachträglich erfasste Vorstellung bei einem Kontakt, den du öffnen darfst. Andere markieren die Zahl als unvollständig. Mit einer gewählten Pipeline gibt es keine Zahl.",
-		Vi: "Chỉ tính các lời giới thiệu bạn được phép xem: lời giới thiệu bạn đã yêu cầu hoặc đã thực hiện, và mọi lời giới thiệu được ghi lại trên liên hệ bạn được mở. Những lời giới thiệu khác khiến số liệu được đánh dấu là chưa đầy đủ. Khi chọn một pipeline thì không có số liệu.",
+		En: "Only introductions you may see are counted: those you asked for or made, and every introduction recorded on a contact you may open. With a pipeline chosen there is no figure.",
+		De: "Gezählt werden nur Vorstellungen, die du sehen darfst: solche, die du angefragt oder gemacht hast, und jede nachträglich erfasste Vorstellung bei einem Kontakt, den du öffnen darfst. Mit einer gewählten Pipeline gibt es keine Zahl.",
+		Vi: "Chỉ tính các lời giới thiệu bạn được phép xem: lời giới thiệu bạn đã yêu cầu hoặc đã thực hiện, và mọi lời giới thiệu được ghi lại trên liên hệ bạn được mở. Khi chọn một pipeline thì không có số liệu.",
 	},
 	"meetings_booked_for_colleagues": {
-		En: "Only meetings you may see are counted; others mark the figure as incomplete. A meeting from a calendar sync or a public booking page was booked by no colleague and is left out. With a pipeline chosen there is no figure.",
-		De: "Gezählt werden nur Termine, die du sehen darfst; andere markieren die Zahl als unvollständig. Einen Termin aus einem Kalenderabgleich oder von einer öffentlichen Buchungsseite hat niemand aus dem Team gebucht, er bleibt außen vor. Mit einer gewählten Pipeline gibt es keine Zahl.",
-		Vi: "Chỉ tính các cuộc họp bạn được phép xem; những cuộc họp khác khiến số liệu được đánh dấu là chưa đầy đủ. Cuộc họp từ đồng bộ lịch hoặc trang đặt lịch công khai không do đồng nghiệp nào đặt nên không được tính. Khi chọn một pipeline thì không có số liệu.",
+		En: "Only meetings you may see are counted. A meeting from a calendar sync, an import, a transcript or a public booking page was booked by no colleague and is left out. With a pipeline chosen there is no figure.",
+		De: "Gezählt werden nur Termine, die du sehen darfst. Einen Termin aus einem Kalenderabgleich, einem Import, einem Transkript oder von einer öffentlichen Buchungsseite hat niemand aus dem Team gebucht, er bleibt außen vor. Mit einer gewählten Pipeline gibt es keine Zahl.", //nolint:misspell // German translation uses German spelling.
+		Vi: "Chỉ tính các cuộc họp bạn được phép xem. Cuộc họp từ đồng bộ lịch, dữ liệu nhập, bản chép lời hoặc trang đặt lịch công khai không do đồng nghiệp nào đặt nên không được tính. Khi chọn một pipeline thì không có số liệu.",
 	},
 }

@@ -17,11 +17,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // workPerms is a rep who may make introductions and log meetings. Its team
-// row scope keeps Team2's contacts out of Rep1's reach.
+// row scope keeps Team2's private contacts out of Rep1's reach.
 var workPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
@@ -32,6 +33,13 @@ var workPerms = principal.Permissions{
 	RowScope: principal.RowScopeTeam,
 }
 
+var (
+	june  = time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	july  = time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	ninth = time.Date(2026, 7, 9, 0, 0, 0, 0, time.UTC)
+	aug   = time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+)
+
 type workEnv struct {
 	e      *integration.Env
 	intros *introductions.Store
@@ -40,7 +48,7 @@ type workEnv struct {
 func setupWork(t *testing.T) workEnv {
 	t.Helper()
 	e := integration.Setup(t)
-	clock := func() time.Time { return time.Date(2026, 8, 2, 12, 0, 0, 0, time.UTC) }
+	clock := func() time.Time { return time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC) }
 	return workEnv{e: e, intros: introductions.NewStore(e.DB(), clock)}
 }
 
@@ -53,8 +61,8 @@ func (w workEnv) seat(user ids.UUID) context.Context {
 }
 
 // read runs figure for reader over [from, until), crediting every seat, and
-// answers what each seat was credited with and whether a row was withheld.
-func (w workEnv) read(reader context.Context, t *testing.T, figure Figure, from, until time.Time) (map[ids.UUID]int, bool) {
+// answers what each seat was credited with.
+func (w workEnv) read(reader context.Context, t *testing.T, figure Figure, from, until time.Time) map[ids.UUID]int {
 	t.Helper()
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -63,7 +71,7 @@ func (w workEnv) read(reader context.Context, t *testing.T, figure Figure, from,
 	if err != nil {
 		t.Fatal(err)
 	}
-	credited, withheld := map[ids.UUID]int{}, false
+	credited := map[ids.UUID]int{}
 	err = w.e.DB().Tx(reader, func(tx pgx.Tx) error {
 		rows, err := tx.Query(reader, query, args...)
 		if err != nil {
@@ -79,10 +87,6 @@ func (w workEnv) read(reader context.Context, t *testing.T, figure Figure, from,
 			if err := rows.Scan(&key, &source, &label, &seat, &name, &at, &precision, &placed, &provenance); err != nil {
 				return err
 			}
-			if provenance == Withheld {
-				withheld = true
-				continue
-			}
 			credited[seat]++
 		}
 		return rows.Err()
@@ -90,86 +94,88 @@ func (w workEnv) read(reader context.Context, t *testing.T, figure Figure, from,
 	if err != nil {
 		t.Fatalf("reading the figure: %v", err)
 	}
-	return credited, withheld
+	return credited
 }
 
-func (w workEnv) record(recorder context.Context, t *testing.T, contact, introducer, introduced ids.UUID, on time.Time) {
+// record writes a recorded introduction dated on, and dates its recording at.
+func (w workEnv) record(recorder context.Context, t *testing.T, introducer, introduced ids.UUID, on, at time.Time) ids.UUID {
 	t.Helper()
-	if _, err := w.intros.Record(recorder, introductions.NewRecorded{ContactID: contact, IntroducerUser: introducer, IntroducedUser: introduced, On: on, Channel: "email"}); err != nil {
+	contact := w.e.SeedContact(t, "Buyer "+at.Format(time.RFC3339), &w.e.Rep1)
+	id, err := w.intros.Record(recorder, introductions.NewRecorded{ContactID: contact, IntroducerUser: introducer, IntroducedUser: introduced, On: on, Channel: "email"})
+	if err != nil {
 		t.Fatalf("recording the introduction: %v", err)
 	}
+	w.e.WsExec(t, `UPDATE intro_request SET created_at = $2 WHERE id = $1`, id, at)
+	return id
 }
 
-// A recorded introduction holds only its date, so it counts in the period
-// that date falls in where the installation is. Read as a UTC instant, 1 July
-// would fall on 30 June in Los Angeles.
-func TestAnIntroductionCountsForItsIntroducerOnTheLocalDayItHappened(t *testing.T) {
-	w := setupWork(t)
-	if _, err := integration.OwnerConn(t).Exec(context.Background(),
-		`UPDATE setting SET value = '"America/Los_Angeles"'::jsonb WHERE key = 'installation.timezone'`); err != nil {
-		t.Fatal(err)
-	}
-	rep1, rep2 := w.seat(w.e.Rep1), w.seat(w.e.Rep2)
-	for _, intro := range []struct {
-		recorder          context.Context
-		introducer, other ids.UUID
-		on                time.Time
-	}{
-		{rep1, w.e.Rep1, w.e.Rep2, time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC)},
-		{rep1, w.e.Rep1, w.e.Rep2, time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)},
-		{rep1, w.e.Rep1, w.e.Rep2, time.Date(2026, 7, 31, 0, 0, 0, 0, time.UTC)},
-		{rep2, w.e.Rep2, w.e.Rep1, time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC)},
-	} {
-		w.record(intro.recorder, t, w.e.SeedContact(t, "Buyer "+intro.on.Format(time.DateOnly), &w.e.Rep1), intro.introducer, intro.other, intro.on)
-	}
-	july, _ := time.LoadLocation("America/Los_Angeles")
-	credited, withheld := w.read(rep1, t, IntroductionsMade, time.Date(2026, 7, 1, 0, 0, 0, 0, july), time.Date(2026, 8, 1, 0, 0, 0, 0, july))
-	if credited[w.e.Rep1] != 2 || credited[w.e.Rep2] != 1 || withheld {
-		t.Errorf("July credits %v (withheld %t), want two for the introducer of 1 and 31 July and one for the other colleague", credited, withheld)
-	}
-}
-
-// An ask is its two colleagues' alone, so a third reads it as left out. A
-// recorded introduction is anyone's who may open its contact.
-func TestAnIntroductionCountsOnlyForAReaderWhoMayReadIt(t *testing.T) {
-	w := setupWork(t)
-	rep1, rep2, rep3 := w.seat(w.e.Rep1), w.seat(w.e.Rep2), w.seat(w.e.Rep3)
-	ask, err := w.intros.Create(rep2, introductions.NewRequest{
-		ContactID: w.e.SeedContact(t, "Asked Buyer", &w.e.Rep2), IntroducerUser: w.e.Rep3, RouteType: "direct",
-		InternalReason: "they run procurement", DueAt: time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC),
+// introduce runs an ask of introducer to its handshake, at the store's clock.
+func (w workEnv) introduce(t *testing.T, asker, introducer, contact ids.UUID) {
+	t.Helper()
+	ask, err := w.intros.Create(w.seat(asker), introductions.NewRequest{
+		ContactID: contact, IntroducerUser: introducer, RouteType: "direct",
+		InternalReason: "they run procurement", DueAt: time.Date(2026, 7, 27, 0, 0, 0, 0, time.UTC),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := w.intros.Decide(rep3, ask, introductions.StatusAccepted, "", nil, 1); err != nil {
+	if err := w.intros.Decide(w.seat(introducer), ask, introductions.StatusAccepted, "", nil, 1); err != nil {
 		t.Fatal(err)
 	}
-	if err := w.intros.Complete(rep3, ask, nil, 2); err != nil {
+	if err := w.intros.Complete(w.seat(introducer), ask, nil, 2); err != nil {
 		t.Fatal(err)
 	}
-	w.record(rep3, t, w.e.SeedContact(t, "Team2 Buyer", &w.e.Rep3), w.e.Rep3, w.e.Rep2, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
-	from, until := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+}
+
+// An ask counts when it was completed, and a recorded introduction when it
+// was recorded. The date a recording names cannot fill a past month.
+func TestAnIntroductionCountsWhenItWasMadeOrRecorded(t *testing.T) {
+	w := setupWork(t)
+	rep1 := w.seat(w.e.Rep1)
+	w.introduce(t, w.e.Rep2, w.e.Rep1, w.e.SeedContact(t, "Asked Buyer", &w.e.Rep1))
+	w.record(rep1, t, w.e.Rep1, w.e.Rep2, time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC), time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC))
+	w.record(w.seat(w.e.Rep2), t, w.e.Rep2, w.e.Rep1, time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC), aug)
+	archived := w.record(rep1, t, w.e.Rep1, w.e.Rep2, ninth, ninth)
+	w.e.WsExec(t, `UPDATE intro_request SET archived_at = now() WHERE id = $1`, archived)
+
+	if credited := w.read(rep1, t, IntroductionsMade, july, aug); credited[w.e.Rep1] != 2 || len(credited) != 1 {
+		t.Errorf("July credits %v, want Rep1's completed ask and the June introduction recorded in July", credited)
+	}
+	if credited := w.read(rep1, t, IntroductionsMade, june, july); len(credited) != 0 {
+		t.Errorf("June credits %v, want none: an introduction recorded in July is not June's", credited)
+	}
+}
+
+// An ask is its two colleagues' alone. A recorded introduction is anyone's who
+// may open its contact.
+func TestAnIntroductionCountsOnlyForAReaderWhoMayReadIt(t *testing.T) {
+	w := setupWork(t)
+	w.introduce(t, w.e.Rep2, w.e.Rep3, w.e.SeedContact(t, "Asked Buyer", &w.e.Rep2))
+	w.record(w.seat(w.e.Rep3), t, w.e.Rep3, w.e.Rep2, ninth, ninth)
 	for _, tc := range []struct {
-		name     string
-		reader   context.Context
-		want     int
-		withheld bool
-	}{{"a colleague in neither", rep1, 1, true}, {"the asker", rep2, 2, false}, {"the introducer", rep3, 2, false}} {
-		credited, withheld := w.read(tc.reader, t, IntroductionsMade, from, until)
-		if credited[w.e.Rep3] != tc.want || withheld != tc.withheld {
-			t.Errorf("%s reads %v (withheld %t), want %d for the introducer (withheld %t)", tc.name, credited, withheld, tc.want, tc.withheld)
+		name   string
+		reader ids.UUID
+		want   int
+	}{{"a colleague in neither", w.e.Rep1, 1}, {"the asker", w.e.Rep2, 2}, {"the introducer", w.e.Rep3, 2}} {
+		if credited := w.read(w.seat(tc.reader), t, IntroductionsMade, july, aug); credited[w.e.Rep3] != tc.want {
+			t.Errorf("%s reads %v, want %d for the introducer", tc.name, credited, tc.want)
 		}
 	}
 }
 
-// meeting logs one meeting as booker for host, and dates its creation at.
-func (w workEnv) meeting(booker context.Context, t *testing.T, host ids.UUID, status string, at time.Time) ids.UUID {
+// meeting logs one meeting as booker for host, starting a week after at, and
+// dates its creation at. shape changes the input before it is logged.
+func (w workEnv) meeting(booker context.Context, t *testing.T, host ids.UUID, at time.Time, shape func(*activities.LogActivityInput)) ids.UUID {
 	t.Helper()
-	subject, hostID, start := "Demo", ids.From[ids.UserKind](host), at.Add(7*24*time.Hour)
-	logged, _, err := w.e.Activities.LogActivity(booker, activities.LogActivityInput{
+	subject, status, hostID, start := "Demo", "booked", ids.From[ids.UserKind](host), at.Add(7*24*time.Hour)
+	in := activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, OccurredAt: &start, MeetingStatus: &status, HostUserID: &hostID, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: w.e.SeedContact(t, "Guest", &w.e.Rep1)}},
-	})
+	}
+	if shape != nil {
+		shape(&in)
+	}
+	logged, _, err := w.e.Activities.LogActivity(booker, in)
 	if err != nil {
 		t.Fatalf("logging the meeting: %v", err)
 	}
@@ -177,40 +183,80 @@ func (w workEnv) meeting(booker context.Context, t *testing.T, host ids.UUID, st
 	return ids.UUID(logged.Id)
 }
 
-// A meeting counts for the seat that booked it, or whose agent did, when a
-// colleague hosts it. Hosting it oneself, logging it once it was held, or a
-// calendar sync on one's behalf is not booking for a colleague.
-func TestAMeetingCountsForTheSeatThatBookedItForAColleague(t *testing.T) {
-	w := setupWork(t)
-	rep1 := w.seat(w.e.Rep1)
-	agent := w.e.AgentOnPassport(t, w.e.Rep1, []ids.UUID{w.e.Team1}, workPerms, ids.From[ids.PassportKind](w.e.AgentPassport))
-	from, until := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
-	w.meeting(rep1, t, w.e.Rep2, "booked", from)
-	w.meeting(agent, t, w.e.Rep2, "booked", time.Date(2026, 7, 9, 0, 0, 0, 0, time.UTC))
-	w.meeting(rep1, t, w.e.Rep1, "booked", time.Date(2026, 7, 9, 0, 0, 0, 0, time.UTC))
-	w.meeting(rep1, t, w.e.Rep2, "held", time.Date(2026, 7, 9, 0, 0, 0, 0, time.UTC))
-	w.meeting(rep1, t, w.e.Rep2, "booked", until)
-	w.meeting(w.e.ConnectorOwnerCtx(w.e.Rep1, "google"), t, w.e.Rep2, "booked", from)
-	credited, withheld := w.read(rep1, t, MeetingsBookedForColleagues, from, until)
-	if credited[w.e.Rep1] != 2 || len(credited) != 1 || withheld {
-		t.Errorf("credits %v (withheld %t), want the two bookings for Rep2 in July, by Rep1 and by Rep1's agent", credited, withheld)
+func sourced(system string) func(*activities.LogActivityInput) {
+	return func(in *activities.LogActivityInput) {
+		id := "event-" + system
+		in.SourceSystem, in.SourceID = &system, &id
 	}
 }
 
-// A meeting whose audience leaves a reader out counts nowhere for them.
-func TestABookingOutsideTheReadersAudienceIsWithheld(t *testing.T) {
+// A meeting counts for the seat that booked it, or whose agent did, when a
+// colleague hosts it. Hosting it oneself is no booking for a colleague, and
+// neither is logging it once it happened. Imports, transcripts, calendar
+// syncs, system work and an agent acting for nobody book nothing.
+func TestAMeetingCountsForTheSeatThatBookedItForAColleague(t *testing.T) {
+	w := setupWork(t)
+	rep1, rep2 := w.seat(w.e.Rep1), w.e.Rep2
+	agent := w.e.AgentOnPassport(t, w.e.Rep1, []ids.UUID{w.e.Team1}, workPerms, ids.From[ids.PassportKind](w.e.AgentPassport))
+	nobodys := principal.WithActor(agent, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:" + w.e.AgentPassport.String(), PassportID: w.e.AgentPassport,
+		SeatType: principal.SeatFull, Permissions: workPerms,
+	})
+	w.meeting(rep1, t, rep2, july, nil)
+	w.meeting(agent, t, rep2, ninth, nil)
+	w.meeting(rep1, t, w.e.Rep1, ninth, nil)
+	w.meeting(rep1, t, rep2, ninth, func(in *activities.LogActivityInput) { in.MeetingStatus = new("held") })
+	w.meeting(rep1, t, rep2, ninth, func(in *activities.LogActivityInput) {
+		in.MeetingStatus, in.OccurredAt = nil, new(ninth.Add(-24*time.Hour))
+	})
+	w.meeting(rep1, t, rep2, aug, nil)
+	w.meeting(rep1, t, rep2, ninth, sourced("mirror:hubspot"))
+	w.meeting(rep1, t, rep2, ninth, sourced(meetingoutcome.TranscriptSourceSystem))
+	w.meeting(w.e.ConnectorOwnerCtx(w.e.Rep1, "google"), t, rep2, july, nil)
+	w.meeting(w.e.AutomationCtx(w.e.Rep1), t, rep2, ninth, nil)
+	w.meeting(nobodys, t, rep2, ninth, nil)
+	archived := w.meeting(rep1, t, rep2, ninth, nil)
+	if _, err := w.e.Activities.ArchiveActivity(w.e.Admin(), ids.From[ids.ActivityKind](archived), nil); err != nil {
+		t.Fatal(err)
+	}
+	if credited := w.read(rep1, t, MeetingsBookedForColleagues, july, aug); credited[w.e.Rep1] != 2 || len(credited) != 1 {
+		t.Errorf("credits %v, want the two bookings for Rep2 in July, by Rep1 and by Rep1's agent", credited)
+	}
+}
+
+// The host is the one the booking named. A later host repair or handover
+// moves no credit, for or against the booker.
+func TestAHostChangeAfterBookingMovesNoCredit(t *testing.T) {
+	w := setupWork(t)
+	rep1 := w.seat(w.e.Rep1)
+	repaired := w.meeting(rep1, t, w.e.Rep2, ninth, nil)
+	handedOver := w.meeting(rep1, t, w.e.Rep2, ninth, nil)
+	self := w.meeting(rep1, t, w.e.Rep1, ninth, nil)
+	w.e.WsExec(t, `UPDATE activity SET host_user_id = $2 WHERE id = ANY($1)`, []ids.UUID{repaired, handedOver}, w.e.Rep1)
+	w.e.WsExec(t, `UPDATE activity SET host_user_id = $2 WHERE id = $1`, self, w.e.Rep2)
+	if credited := w.read(rep1, t, MeetingsBookedForColleagues, july, aug); credited[w.e.Rep1] != 2 || len(credited) != 1 {
+		t.Errorf("credits %v, want the two bookings Rep1 made for Rep2", credited)
+	}
+}
+
+// A meeting the reader may not open counts nowhere for them: one limited to
+// its participants, and one about a contact private to another colleague.
+func TestABookingTheReaderMayNotOpenIsNotCounted(t *testing.T) {
 	w := setupWork(t)
 	rep2 := w.seat(w.e.Rep2)
-	at := time.Date(2026, 7, 9, 0, 0, 0, 0, time.UTC)
-	limited := w.meeting(rep2, t, w.e.Rep3, "booked", at)
+	limited := w.meeting(rep2, t, w.e.Rep3, ninth, nil)
 	if _, err := w.e.Activities.SetAudience(rep2, ids.From[ids.ActivityKind](limited), activities.SetAudienceInput{Audience: "participants"}); err != nil {
 		t.Fatal(err)
 	}
-	from, until := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
-	if credited, withheld := w.read(w.seat(w.e.Rep1), t, MeetingsBookedForColleagues, from, until); len(credited) != 0 || !withheld {
-		t.Errorf("a reader outside the audience was credited %v (withheld %t), want nothing and withheld", credited, withheld)
+	private := w.e.SeedContact(t, "Private Guest", &w.e.Rep3)
+	w.e.MakeCapturePrivate(t, "contact", private, w.e.Rep3)
+	w.meeting(w.seat(w.e.Rep3), t, w.e.Rep2, ninth, func(in *activities.LogActivityInput) {
+		in.Links = []activities.ActivityLinkInput{{EntityType: "contact", EntityID: private}}
+	})
+	if credited := w.read(w.seat(w.e.Rep1), t, MeetingsBookedForColleagues, july, aug); len(credited) != 0 {
+		t.Errorf("a reader who may open neither meeting was credited %v", credited)
 	}
-	if credited, withheld := w.read(rep2, t, MeetingsBookedForColleagues, from, until); credited[w.e.Rep2] != 1 || withheld {
-		t.Errorf("the booker reads %v (withheld %t), want their one booking", credited, withheld)
+	if credited := w.read(rep2, t, MeetingsBookedForColleagues, july, aug); credited[w.e.Rep2] != 1 || credited[w.e.Rep3] != 0 {
+		t.Errorf("Rep2 reads %v, want their own limited booking and not Rep3's private one", credited)
 	}
 }

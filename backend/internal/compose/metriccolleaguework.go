@@ -33,8 +33,7 @@ func readReportingMeetingsBooked(ctx context.Context, tx pgx.Tx, frame crmcontra
 }
 
 // readColleagueWork reads one fact per piece of a figure's work, credited to
-// the seat in the scope that did it. Work the reader may not open counts
-// nowhere and marks the figure as leaving something out.
+// the seat in the scope that did it. Work the reader may not open is not read.
 func readColleagueWork(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, source string, b *reportingBindings, figure colleaguework.Figure, reading colleaguework.Reading) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
 		return nil, noPipelineGap(frame), nil
@@ -49,18 +48,5 @@ func readColleagueWork(ctx context.Context, tx pgx.Tx, frame crmcontracts.Report
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	facts, err := scanOutcomeFacts(ctx, tx, metric, source, query, *b)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	coverage := crmcontracts.ReportingCoverage{Status: "ok"}
-	readable := facts[:0]
-	for _, fact := range facts {
-		if fact.Provenance == colleaguework.Withheld {
-			coverage.Withheld = true
-			continue
-		}
-		readable = append(readable, fact)
-	}
-	return reportingCohorts(frame, readable), coverage, nil
+	return readOutcomeFacts(ctx, tx, frame, metric, source, query, *b)
 }
