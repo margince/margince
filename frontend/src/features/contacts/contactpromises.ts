@@ -55,3 +55,11 @@ export function owedPromises(
     }));
   return [...tasks, ...claims];
 }
+
+/**
+ * Whether owedPromises may hold fewer than are owed: `next_steps` is capped,
+ * and a task past the cap is missing from it. A count of them is then a floor.
+ */
+export function owedPromisesPartial(view: Contact360): boolean {
+  return view.next_steps?.page.has_more === true;
+}

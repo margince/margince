@@ -13,7 +13,7 @@ import {
 import { bucketLabel } from "../../lib/bucketlabel";
 import { valueFor } from "../../lib/labelfor";
 import { omitted } from "./contact360";
-import { owedPromises } from "./contactpromises";
+import { owedPromises, owedPromisesPartial } from "./contactpromises";
 import { directionSentence } from "./contactrail";
 import { changeSentence } from "./relationshipchange";
 
@@ -181,8 +181,11 @@ function promisesDim(
     (owed) => owed.due != null && daysPast(Date.parse(owed.due), asOf).late,
   );
   const label = t("contact.standing.dim.promises");
+  const floor = owedPromisesPartial(view) ? "+" : "";
   const count = (base: PluralBase, n: number) =>
-    translatePlural(locale, base, n, { count: formatNumber(n, locale) });
+    translatePlural(locale, base, n, {
+      count: `${formatNumber(n, locale)}${floor}`,
+    });
   if (open.length === 0) {
     return {
       key: "promises",

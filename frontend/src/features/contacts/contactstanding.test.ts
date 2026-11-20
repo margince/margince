@@ -359,6 +359,32 @@ describe("contactDims", () => {
     ]);
   });
 
+  it("reads the count as a floor when open tasks run past the section's cap", () => {
+    const task = {
+      id: "t-1",
+      kind: "task" as const,
+      subject: "Send the price list",
+      occurred_at: "2026-08-01T09:00:00Z",
+      occurred_precision: "instant" as const,
+      due_at: "2026-08-20T09:00:00Z",
+      is_done: false,
+      offers_email: false,
+      source: "manual",
+      captured_by: "human:u-1",
+      created_at: "2026-08-01T09:00:00Z",
+      updated_at: "2026-08-01T09:00:00Z",
+    };
+    const view: Contact360 = {
+      ...VIEW,
+      claims: [],
+      next_steps: { data: [task], page: { has_more: true } },
+    };
+    expect(contactDims(view, t, "en")[0]).toMatchObject({
+      key: "promises",
+      value: "1+ open",
+    });
+  });
+
   it("does not count recipients of an inbound message as colleagues in touch", () => {
     const dims = contactDims(
       {
