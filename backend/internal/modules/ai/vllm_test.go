@@ -199,7 +199,7 @@ func TestVLLMReportsLocalOnly(t *testing.T) {
 
 // The unbound local path must land on a Gemma-class (non-Chinese)
 // default per ADR-0012/A23; an operator choosing Mistral or anything
-// else does so explicitly in ai-routing.yaml.
+// else does so explicitly in the routing setting.
 func TestLocalProvidersDefaultToGemmaClassModels(t *testing.T) {
 	for provider, wantModel := range map[string]string{
 		"ollama": defaultOllamaModel,

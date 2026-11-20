@@ -36,7 +36,7 @@ type completer interface {
 }
 
 // ModelPath is the wired model surface one process role hands around:
-// each lane is the same router under a task label, so ai-routing.yaml
+// each lane is the same router under a task label, so the routing setting
 // decides the tier per workload, and every lane draws on the
 // seat-derived monthly budget. A lane is named for the ai.Task it rides,
 // so the wiring reads in one vocabulary — the contract's.

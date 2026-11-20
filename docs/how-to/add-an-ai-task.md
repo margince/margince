@@ -88,9 +88,8 @@ one certification run can cover:
    tasks:
      meeting_notes:                       # illustrative — not a shipped task
        ladder: [cheap_cloud, premium]     # ordered capability tiers, not models
-       execution_mode: interactive        # interactive | background
-       on_budget_exhausted: degrade       # pairs with execution_mode, always:
-       status: shipped                    #   interactive↔degrade, background↔queue
+       execution_mode: interactive        # interactive | background; also decides
+       status: shipped                    #   what a spent budget does
        # a bare name is a site of kind one_shot; write
        # {name: chat, kind: multi_turn} for any other kind
        sites: [summarise]

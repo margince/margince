@@ -88,7 +88,7 @@ func WriteDossier(ctx context.Context, lane Completer, in Input, lang string) ([
 	}
 	written, err := writeWithModel(ctx, lane, in, lang)
 	if err != nil {
-		// The declared degrade posture (on_budget_exhausted: degrade), not a
+		// The interactive degrade posture (execution_mode: interactive), not a
 		// swallowed error. A lane that is unavailable, over budget or answering
 		// unparseable JSON must not take the page down: the reader gets the
 		// floor, labelled as the floor's.

@@ -191,7 +191,7 @@ const (
 	ExecutionModeBackground  ExecutionMode = "background"
 )
 
-// Tier is a capability tier (§1.1); ai-routing.yaml binds each to a
+// Tier is a capability tier (§1.1); the routing setting binds each to a
 // provider+model per deployment.
 type Tier string
 
@@ -206,7 +206,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "c0f4b7bc703347f35647d0d22e321bfa1d72eb377518b824a872fc42abbd4402"
+const TaskContractHash = "3b106e7ca812668650ea734365ec8ff4cf5800c4d86a1cb6c4f4e4d7c283957c"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

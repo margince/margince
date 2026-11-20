@@ -192,14 +192,13 @@ type embedDef struct {
 }
 
 // taskDef is one tasks.<name> entry: the routing ladder, the
-// execution mode, budget-exhaustion policy, the declaration fields the census
+// execution mode, the declaration fields the census
 // is built on (status, sites, payload posture, company-context policy,
 // cost-unit rule name), and an optional doc string carried through
 // to the generated constant's comment.
 type taskDef struct {
-	Ladder            []string `yaml:"ladder"`
-	ExecutionMode     string   `yaml:"execution_mode"`
-	OnBudgetExhausted string   `yaml:"on_budget_exhausted"`
+	Ladder        []string `yaml:"ladder"`
+	ExecutionMode string   `yaml:"execution_mode"`
 	// OnOutage is what an interactive task does once no model can answer:
 	// "degrades" says it answers from the record's own facts and reports so,
 	// and absent means it fails fast. A background task waits, so it declares
@@ -347,7 +346,7 @@ func emitGo(c contract, contractHash string) (string, error) {
 	b.WriteString("\tExecutionModeBackground  ExecutionMode = \"background\"\n")
 	b.WriteString(")\n\n")
 
-	b.WriteString("// Tier is a capability tier (§1.1); ai-routing.yaml binds each to a\n")
+	b.WriteString("// Tier is a capability tier (§1.1); the routing setting binds each to a\n")
 	b.WriteString("// provider+model per deployment.\n")
 	b.WriteString("type Tier string\n\n")
 

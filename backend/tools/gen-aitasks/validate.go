@@ -18,9 +18,8 @@ import (
 
 // validate enforces the contract's own invariants: every tier a ladder
 // or degrade_to entry names must be declared in tiers, every task name
-// is a valid Go-identifier source, and on_budget_exhausted is one of the
-// two policies the runtime understands. Execution mode and exhaustion policy
-// are a closed pair: interactive tasks degrade, background tasks queue.
+// is a valid Go-identifier source, and the execution mode is one of the two
+// the runtime understands; it alone decides what a spent budget does.
 // Status and sites are a closed pair too: a shipped task owes at least one
 // uniquely named site of a known kind, a planned task owes none. A declared
 // company-context policy must be internally coherent.
@@ -74,20 +73,8 @@ func validateTask(name string, def taskDef, tierSet map[string]bool) error {
 			return fmt.Errorf("task %q: ladder names unknown tier %q", name, tier)
 		}
 	}
-	switch def.OnBudgetExhausted {
-	case "queue", "degrade":
-	default:
-		return fmt.Errorf("task %q: on_budget_exhausted must be \"queue\" or \"degrade\", got %q", name, def.OnBudgetExhausted)
-	}
 	switch def.ExecutionMode {
-	case "interactive":
-		if def.OnBudgetExhausted != "degrade" {
-			return fmt.Errorf("task %q: interactive execution_mode requires on_budget_exhausted \"degrade\"", name)
-		}
-	case "background":
-		if def.OnBudgetExhausted != "queue" {
-			return fmt.Errorf("task %q: background execution_mode requires on_budget_exhausted \"queue\"", name)
-		}
+	case "interactive", "background":
 	default:
 		return fmt.Errorf("task %q: execution_mode must be \"interactive\" or \"background\", got %q", name, def.ExecutionMode)
 	}

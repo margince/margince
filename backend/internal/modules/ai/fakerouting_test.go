@@ -10,7 +10,7 @@ import "testing"
 // ladder is premium-only, so a config that skipped the premium tier
 // would look fine for every other task and only fail deep-read
 // extraction). UnboundLadderWarnings is the same completeness check the
-// boot path runs over a declared ai-routing.yaml, so reusing it here
+// boot path runs over the stored routing setting, so reusing it here
 // keeps the fake config honest against the SAME contract, not a
 // hand-maintained parallel list of tasks.
 func TestFakeRoutingConfigBindsEveryLadder(t *testing.T) {
