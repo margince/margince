@@ -89,10 +89,11 @@ function isInstallationRead(key: QueryKey): boolean {
 }
 
 // A live work read is read again on every mount, so a screen never opens on an
-// answer fetched before it. The answer the shell prefetched for the screen being
-// opened (app/homeprefetch.ts) serves that mount while under a second old.
+// answer fetched before it. The exception is the answer the shell prefetched
+// for the screen being opened (app/homeprefetch.ts). It serves that mount for
+// as long as a slow load takes to reach it, or each read is sent a second time.
 // Home's day is the exception: it is read again only once HOME_DAY_FRESH_MS old.
-export const LIVE_ANSWER_CURRENT_MS = 1_000;
+export const LIVE_ANSWER_CURRENT_MS = 10_000;
 
 const prefetchedAnswers = new Map<string, number>();
 

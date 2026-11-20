@@ -90,7 +90,7 @@ const (
 // Generated from the same declaration as the constants, so a task cannot
 // be added without a name and the two cannot drift.
 var taskDisplayNames = map[Task]string{
-	TaskAccountScan:                   "Reading what an account needs",
+	TaskAccountScan:                   "Reading what a company needs",
 	TaskAgentLoop:                     "Agent reasoning loop",
 	TaskBriefRanking:                  "Morning brief ranking",
 	TaskCaptureClassify:               "Message classification",
@@ -138,7 +138,7 @@ func DisplayName(t Task) string { return taskDisplayNames[t] }
 // taskSummaries say in plain words what each task does, for a reader
 // deciding which model should serve it.
 var taskSummaries = map[Task]string{
-	TaskAccountScan:                   "Reads an account's recent emails and pipeline to find what it needs from you.",
+	TaskAccountScan:                   "Reads a company's recent emails and pipeline to find what it needs from you.",
 	TaskAgentLoop:                     "Runs the scheduled AI agents that act on your behalf with the tools they are given.",
 	TaskBriefRanking:                  "Orders the morning brief so the most important items come first.",
 	TaskCaptureClassify:               "Sorts each incoming email and meeting into what it is about, so it lands on the right record.",
@@ -206,7 +206,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "3b106e7ca812668650ea734365ec8ff4cf5800c4d86a1cb6c4f4e4d7c283957c"
+const TaskContractHash = "e71d7b1ed851ea4cd5bdb096c1a5c3031bc3a105a034fa4ffb3943f0d1310222"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

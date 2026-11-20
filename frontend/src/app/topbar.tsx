@@ -7,6 +7,7 @@ import {
   useLayoutEffect,
   useRef,
 } from "react";
+import { usePageTitle } from "../components/auth-identity";
 import { AppLink } from "../design-system/applink";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
@@ -169,13 +170,21 @@ export function TopBarSearch({
             not the four-character string "⌘K" in one box. The caps come from the
             keymap the dispatcher reads, so the cap cannot name another key. */}
         <span className="topbar-keys" aria-hidden>
-          {shortcutCaps("search").map((cap) => (
+          {shortcutCaps("search", t).map((cap) => (
             <Kbd key={cap}>{cap}</Kbd>
           ))}
         </span>
       </button>
     </div>
   );
+}
+
+// The browser tab reads the trail from the page back to the product, as the
+// sign-in page does. Tabs and history entries then name different pages.
+function useTrailTitle(crumbs: readonly Crumb[]) {
+  const t = useT();
+  const stops = crumbs.map((crumb) => crumb.label).reverse();
+  usePageTitle([...stops, t("shell.logoAria")].join(" · "));
 }
 
 /** The trail, mounted only where it is drawn, so a phone reads no names for it. */
@@ -185,11 +194,19 @@ function TopBarTrail({
 }: Readonly<{ route: Route; section?: NavSection }>) {
   const t = useT();
   const crumbs = useCrumbs(route, section);
+  useTrailTitle(crumbs);
   return <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />;
 }
 
 /** The company's mark leading home, where a phone has no room for the trail. */
-function TopBarHome() {
+function TopBarHome({
+  route,
+  section,
+}: Readonly<{ route: Route; section?: NavSection }>) {
+  // A phone draws no trail, so its tab names a record's list rather than
+  // asking for the record's name.
+  const named = recordKindOf(route) ? { screen: route.screen } : route;
+  useTrailTitle(useCrumbs(named, section));
   const label = useHomeLinkLabel();
   const chipId = useId();
   const labelId = useId();
@@ -272,11 +289,7 @@ export function TopBar({
             // The shortcut belongs in the tooltip, not in the accessible name:
             // a speech-input user says the words they can read, and "Collapse
             // sidebar ⌘B" is not one of them.
-            title={shortcutTip(
-              toggleLabel,
-              binding("sidebar").keys,
-              t("shell.shortcuts.then"),
-            )}
+            title={shortcutTip(toggleLabel, binding("sidebar").keys, t)}
             aria-expanded={!collapsed}
             onClick={onToggle}
           >
@@ -297,7 +310,7 @@ export function TopBar({
           />
         )}
         {phone ? (
-          <TopBarHome />
+          <TopBarHome route={route} section={section} />
         ) : (
           <TopBarTrail route={route} section={section} />
         )}

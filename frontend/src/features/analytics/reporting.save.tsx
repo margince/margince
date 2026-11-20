@@ -14,6 +14,7 @@ import { useT } from "../../i18n";
 import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
+import { scopeName } from "./analytics.context";
 import { ReportComposition, useComposition } from "./reporting.composition";
 import { useCreateReport } from "./reporting.create";
 import { blocksOf } from "./reporting.layout";
@@ -177,7 +178,7 @@ export function SaveReportingDialog({
           )}
         </Field>
         <p className="t-caption">
-          {selection.scope.label} · {t(`reporting.${selection.period}`)}
+          {scopeName(selection.scope, t)} · {t(`reporting.${selection.period}`)}
         </p>
         <Field label={t("reporting.audience")}>
           {(field) => (

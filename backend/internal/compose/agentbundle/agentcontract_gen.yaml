@@ -807,6 +807,11 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '503':
+          description: 'The model did not read the photo (`code: ai_allowance_used_up`, `provider_out_of_credit`, `provider_unauthorized`, `provider_unavailable` or `assistant_unavailable`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
   /contacts/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -1988,6 +1993,13 @@ paths:
           in: query
           schema: {$ref: '#/components/schemas/PartnerStageMeaning'}
           description: Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise).
+        - name: dormancy
+          in: query
+          schema: {$ref: '#/components/schemas/DormancyRung'}
+          description: |-
+            Companies on this rung of the dormancy ladder today, read from the stored
+            `last_activity_at` by the same rule the company page's `state_strip.dormancy` uses.
+            `stale` includes companies with no activity at all.
         - name: source_system
           in: query
           schema: {type: string, maxLength: 128}
@@ -6500,7 +6512,10 @@ paths:
       security: [{bearerAuth: []}]
       summary: Add an exit criterion to a stage.
       description: |-
-        Requires `pipeline:update`, like every other pipeline-shape edit.
+        Requires `pipeline:update`, like every other pipeline-shape edit. Leave
+        `key` out and Margince makes it from the label, adding a number on a clash
+        in the stage. A `key` you send is validated, and a live clash is
+        `criterion_key_taken`.
 
         Needs the passport permission Change records.
 
@@ -13966,7 +13981,9 @@ paths:
         `svg_text_not_outlined`, because the rasterizer draws shapes and no glyphs, so
         the words would be lost. An SVG the rasterizer cannot draw faithfully (for example
         embedded images, filters, masks or a blank result) is refused as 422 with code
-        `svg_not_drawable`.
+        `svg_not_drawable`. A raster picture past 8,388,608 pixels is refused as 422 with code
+        `too_many_pixels`: scale it down and send it again. An SVG is drawn at a fixed size,
+        so its pixel count is not checked.
 
         Needs the passport permission Change records.
 
@@ -14263,7 +14280,9 @@ paths:
         Multipart upload, decoded and re-encoded exactly as the company logo is: PNG, JPEG,
         GIF, WebP, ICO and SVG are accepted, and anything else is refused as 415. An SVG that
         draws its words as text is refused as 422 `svg_text_not_outlined`, and one with parts
-        the server cannot draw as 422 `svg_not_drawable`.
+        the server cannot draw as 422 `svg_not_drawable`. A raster picture past 8,388,608
+        pixels is refused as 422 with code `too_many_pixels`: scale it down and send it
+        again. An SVG is drawn at a fixed size, so its pixel count is not checked.
 
         Needs the passport permission Change records.
 
@@ -18985,6 +19004,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -19096,6 +19117,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -19128,6 +19151,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -19676,6 +19701,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -20167,6 +20194,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
           description: The member, and whether the new invitation email was handed to the sender.
@@ -26789,7 +26818,8 @@ components:
         Client-supplied key making a mutation safe to retry — an update exactly as much as a
         create. **Scope:** the key is unique within
         `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-        returns the original status + body. Reusing the same key with a *different* request body
+        returns the original status + body. A connected agent's principal is its connection, so a
+        retry on a refreshed token replays too. Reusing the same key with a *different* request body
         returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
         do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
         means the first request under the key is still running and carries `Retry-After`;
@@ -33809,6 +33839,38 @@ components:
           type: [integer, 'null']
           description: >-
             Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities.
+    DormancyRung:
+      type: string
+      enum: [active, cooling, dormant, stale]
+      description: |-
+        How cold an account has gone, counted in calendar days of the installation zone since its
+        stored `last_activity_at`. `active` before the first day of the ladder, `cooling` from it,
+        `dormant` from the second and `stale` from the third. The days are the installation's
+        `contacts.dormancy_days` setting, 30, 60 and 90 by default. An account with no activity at
+        all is `stale`.
+    DormancyReading:
+      type: object
+      description: Where one account stands on the dormancy ladder, with the facts that put it there.
+      required: [rung, silent_days, no_activity, ladder_days]
+      properties:
+        rung: {$ref: '#/components/schemas/DormancyRung'}
+        last_activity_at:
+          type: [string, 'null']
+          format: date-time
+          description: The account's stored last activity the rung is counted from. Null when it has none.
+        silent_days:
+          type: integer
+          minimum: 0
+          description: Calendar days from `last_activity_at` to today in the installation zone. 0 when there is no activity.
+        no_activity:
+          type: boolean
+          description: True when the account has no activity recorded at all, which is why it reads as `stale`.
+        ladder_days:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: {type: integer}
+          description: The silent days on which `cooling`, `dormant` and `stale` begin, each from 1 to 3650 and in rising order, so a reader can see the rule.
     Company360StateStrip:
       type: object
       description: |-
@@ -33828,6 +33890,9 @@ components:
             relationship_types:
               type: array
               items: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
+        dormancy:
+          allOf: [{$ref: '#/components/schemas/DormancyReading'}]
+          description: How cold the account has gone, read from its stored `last_activity_at`.
         engagement:
           type: [object, 'null']
           description: Null when the caller has no activity grant — not assessed, as distinct from never contacted.
@@ -33837,7 +33902,7 @@ components:
               type: string
               enum: [never_contacted, active, waiting_on_them, waiting_on_us, dormant]
               description: >-
-                `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
+                `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting. `dormant` is the dormancy ladder's `dormant` or `stale` rung, so the strip and `dormancy` cannot disagree either.
             last_inbound_at: {type: [string, 'null'], format: date-time}
             last_outbound_at: {type: [string, 'null'], format: date-time}
             last_inbound_precision:
@@ -34108,7 +34173,7 @@ components:
       required: [activity_id, subject, overdue]
       properties:
         activity_id: {type: string, format: uuid}
-        subject: {type: string}
+        subject: {type: string, description: 'The task''s subject. A task Margince wrote is named in the reader''s language, as its History row names it; a task typed by hand reads as written.'}
         body:
           type: [string, 'null']
           description: |-
@@ -34205,9 +34270,9 @@ components:
       properties:
         kind:
           type: string
-          enum: [no_reply, stalled_deal, no_next_step, lifecycle_conflict, commitment_unmet, question_unanswered, risk_raised, need_raised]
+          enum: [no_reply, stalled_deal, no_next_step, lifecycle_conflict, gone_dormant, commitment_unmet, question_unanswered, risk_raised, need_raised]
           description: |-
-            The four RULE kinds, computed from the account's records with no model:
+            The five RULE kinds, computed from the account's records with no model:
         title:
           type: [string, 'null']
           description: |-
@@ -40167,9 +40232,13 @@ components:
       enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom, legal_reviewed]
     CreateStageExitCriterionRequest:
       type: object
-      required: [key, label, kind]
+      required: [label, kind]
       properties:
-        key: {type: string}
+        key:
+          type: string
+          description: |-
+            Optional. Left out, Margince makes the key from the label and adds a
+            number when the stage already has a live criterion under that key.
         label: {type: string}
         kind: {$ref: '#/components/schemas/StageCriterionKind'}
         required: {type: boolean, default: true}
@@ -43166,7 +43235,7 @@ components:
           readOnly: true
           description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         open_task_count: {type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them.'}
-        next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.'}
+        next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader''s language, as its History row names it; a task typed by hand reads as written.'}
         next_task_due_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.'}
         score_reason: {type: [string, 'null'], readOnly: true, description: 'The highest-impact factor in the retained current score explanation, for a compact queue reason.'}
         source: {type: string, description: 'How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from.'}
@@ -50650,7 +50719,7 @@ components:
       properties:
         type: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
         id: {type: string, format: uuid}
-        title: {type: [string, 'null'], description: Display label (name/subject).}
+        title: {type: [string, 'null'], description: 'Display label (name/subject). An activity Margince wrote is titled in the reader''s language, as its History row names it.'}
         snippet: {type: [string, 'null']}
         score: {type: [number, 'null'], description: Relevance score.}
         identifier_match:
@@ -52447,8 +52516,8 @@ components:
         partner_fit_score: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.'}
         partner_fit_score_computed: {type: [integer, 'null'], minimum: 0, maximum: 100, readOnly: true, description: 'Retained machine-computed partner-fit value while a Commercial Judgement override is in force.'}
         partner_fit_override_reason: {type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.'}
-        relationship_health: {type: [string, 'null'], description: 'Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.'}
-        last_contact_at: {type: [string, 'null'], format: date-time}
+        relationship_health: {type: [string, 'null'], deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.'}
+        last_contact_at: {type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.'}
         next_step: {type: [string, 'null'], deprecated: true, description: 'Deprecated as stored text: a value sent here is written as a task on the partner''s company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.'}
         next_step_due_at: {type: [string, 'null'], format: date, deprecated: true, description: 'Deprecated as stored text: the day the next step''s task is due. Sent without `next_step` it is refused.'}
         served_segments: {type: [array, 'null'], items: {type: string}}

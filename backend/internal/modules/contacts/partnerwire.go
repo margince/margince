@@ -54,8 +54,6 @@ func wirePartner(p partnerRow, stages map[string]partnerStageFacts) crmcontracts
 	out.PartnerFitScore = intPtr(p.FitScore)
 	out.PartnerFitScoreComputed = intPtr(p.FitScoreComputed)
 	out.PartnerFitOverrideReason = p.FitOverrideReason
-	out.RelationshipHealth = p.RelationshipHealth
-	out.LastContactAt = p.LastContactAt
 	metrics := map[string]any{"certified_staff": p.CertifiedStaff}
 	if p.RetentionRate != nil {
 		metrics["retention_rate"] = *p.RetentionRate

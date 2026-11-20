@@ -9,6 +9,7 @@ import {
   setSingleKeyShortcutsOn,
   singleKeyShortcutsOn,
 } from "../../lib/shortcuts";
+import { setThemeChoice, useThemeChoice } from "../../lib/theme";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -21,6 +22,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   act(() => setSingleKeyShortcutsOn(true));
+  act(() => setThemeChoice("system"));
 });
 
 it("says so on the save bar and under the field when the account refuses the new language", async () => {
@@ -145,6 +147,40 @@ it("turns single-key shortcuts off for this browser on the flip", async () => {
   expect(shortcuts).not.toBeChecked();
   expect(singleKeyShortcutsOn()).toBe(false);
   expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+});
+
+function ThemeChoiceProbe() {
+  return <output aria-label="Theme in use">{useThemeChoice()}</output>;
+}
+
+// The account menu offers the same choice and applies it on the click, so this
+// row does too and the two never show different themes.
+it("paints the picked appearance at once, with no save bar", async () => {
+  const user = userEvent.setup();
+  installFetchStub({ "GET /me": () => jsonResponse(meFixture({})) });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+        <ThemeChoiceProbe />
+        <PageSaveBar />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  const dark = await screen.findByRole("button", { name: "Dark" });
+
+  await user.click(dark);
+  expect(dark).toHaveAttribute("aria-pressed", "true");
+  expect(
+    screen.getByRole("status", { name: "Theme in use" }),
+  ).toHaveTextContent("dark");
+  expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+
+  act(() => setThemeChoice("light"));
+  expect(screen.getByRole("button", { name: "Light" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 });
 
 it("scrolls to the language and time zone card a setup step points at, then clears the dial", async () => {

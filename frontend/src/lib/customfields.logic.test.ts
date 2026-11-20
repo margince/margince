@@ -4,7 +4,6 @@ import {
   apiKey,
   CF_OBJECTS,
   columnName,
-  ddlPreview,
   looksStructural,
   slug,
 } from "./customfields.logic";
@@ -40,15 +39,6 @@ describe("custom-fields logic", () => {
     expect(columnName("")).toBe("cf_…");
     expect(apiKey("company", "Contract end date")).toBe(
       "company.cf_contract_end_date",
-    );
-  });
-
-  it("renders the pending DDL per object and type", () => {
-    expect(ddlPreview("company", "Contract end date", "date", "EUR")).toBe(
-      "ALTER company ADD COLUMN cf_contract_end_date (date) · backfilled NULL · reversible",
-    );
-    expect(ddlPreview("deal", "Budget ceiling", "currency", "EUR")).toBe(
-      "ALTER deal ADD COLUMN cf_budget_ceiling (numeric · cents · EUR) · backfilled NULL · reversible",
     );
   });
 

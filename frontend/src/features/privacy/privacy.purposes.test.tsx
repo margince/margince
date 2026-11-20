@@ -126,6 +126,16 @@ describe("Add purpose", () => {
     expect(keyBox).not.toHaveAttribute("aria-invalid", "true");
   });
 
+  it("closes through its Cancel, sending nothing", async () => {
+    const posted = stub(refused({}, 500));
+    const { user, dialog } = await addPurpose("", "");
+    await user.click(
+      within(dialog).getByRole("button", { name: en["create.cancel"] }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(posted).toHaveLength(0);
+  });
+
   it("says which fields are still empty instead of a grey button", async () => {
     const posted = stub(refused({}, 500));
     await addPurpose("", "");

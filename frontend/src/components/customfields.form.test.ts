@@ -273,7 +273,7 @@ describe("customFieldsToBody", () => {
   const fields = [
     cf({ type: "text", column_name: "cf_note" }),
     cf({ type: "number", column_name: "cf_score" }),
-    cf({ type: "currency", column_name: "cf_ceiling" }),
+    cf({ type: "currency", column_name: "cf_ceiling", currency: "EUR" }),
     cf({ type: "boolean", column_name: "cf_active" }),
     cf({ type: "date", column_name: "cf_due" }),
   ];

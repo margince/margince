@@ -165,6 +165,53 @@ it("previews both fields before writing the allowance with its revision", async 
     },
   ]);
 });
+it("says at the field what is wrong with an allowance, and why Preview is held", async () => {
+  const user = userEvent.setup({ delay: null });
+  const { mock } = mount();
+  await user.click(
+    await screen.findByRole("button", { name: "Edit allowance" }),
+  );
+  const field = screen.getByLabelText("Tokens per full user per month");
+  await user.clear(field);
+  await user.type(field, "1.5");
+  expect(field).toHaveAccessibleDescription(
+    /Enter a whole number for Tokens per full user per month\./,
+  );
+  expect(screen.getByText("Fix the marked fields to preview.")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  const company = screen.getByLabelText("Fixed company total (optional)");
+  await user.type(company, "-1");
+  expect(company).toHaveAccessibleDescription(
+    /Fixed company total must be from 1 to 1,000,000,000,000\./,
+  );
+
+  await user.clear(field);
+  await user.type(field, " 5 ");
+  await user.clear(company);
+  expect(screen.queryByText("Fix the marked fields to preview.")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  await waitFor(() =>
+    expect(
+      mock.mock.calls.filter(
+        ([input, init]) => new Request(input, init).method === "POST",
+      ),
+    ).toHaveLength(1),
+  );
+});
+it("says one token in the singular", async () => {
+  mount(undefined, false, {
+    ...status,
+    budget: {
+      ...status.budget,
+      config: { ...status.budget.config, tokens_per_full_user: 1 },
+    },
+  });
+  expect(
+    await screen.findByText(
+      "Active full users: 2 × 1 token per user per month.",
+    ),
+  ).toBeTruthy();
+});
 // A carrier the server could not count is named as such, never as zero: a
 // zero would read as "nothing waiting" on a queue nobody looked at.
 it("names a carrier the preview could not count as unavailable", async () => {

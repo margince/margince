@@ -5,7 +5,18 @@ package compose
 
 // What a refusal means for the caller's key, which is not one answer.
 
-import "testing"
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
 
 // A refusal gives the key back so the caller can fix the call and retry. A
 // success, or a refusal after a committed write, is never released.
@@ -27,6 +38,34 @@ func TestARefusalReleasesTheKeyAndASuccessDoesNot(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := claimIsReleased(tc.status, tc.committed); got != tc.release {
 				t.Errorf("released = %v, want %v", got, tc.release)
+			}
+		})
+	}
+}
+
+// A claim that cannot be taken refuses a tool's call, whose caller asked for at
+// most once. A REST request still runs, since a client may not mean its header.
+// A context with no workspace fails the claim before any pool is touched.
+func TestAFailedClaimRefusesOnlyAToolsCall(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		tool, runs bool
+	}{{"a tool's call", true, false}, {"a REST request", false, true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			ran := false
+			mux := chi.NewRouter()
+			mux.With(idempotency(nil, nil, nil)).Post("/v1/lead-sources", func(http.ResponseWriter, *http.Request) { ran = true })
+			ctx := principal.WithActor(context.Background(),
+				principal.Principal{Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String()})
+			if tc.tool {
+				ctx = context.WithValue(ctx, admittedByTheToolKey{}, "POST /v1/lead-sources")
+			}
+			req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/lead-sources", strings.NewReader(`{}`))
+			req.Header.Set(idempotencyKeyHeader, "k1")
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, req)
+			if ran != tc.runs {
+				t.Fatalf("the handler ran = %t, want %t (status %d)", ran, tc.runs, rec.Code)
 			}
 		})
 	}

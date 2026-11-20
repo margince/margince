@@ -25,7 +25,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -39,15 +38,14 @@ const greetingNameField = "greeting_name"
 const greetingNameMaxRunes = values.TextLabelCharacters
 
 // greetingNameOf flattens a typed value to one trimmed line and refuses one
-// past the bound. Nil or blank comes back "", which clears. draftfloor.NameLine
-// because the value is rendered into a greeting line: a line break would open
-// a paragraph the template never wrote, and OneLine alone would drop it and
-// join the two words it separated.
+// past the bound. Nil or blank comes back "", which clears. The value is
+// rendered into a greeting line. A line break there would open a paragraph the
+// template never wrote, so displayNameLine turns it into a space.
 func greetingNameOf(raw *string) (string, error) {
 	if raw == nil {
 		return "", nil
 	}
-	name := draftfloor.NameLine(*raw)
+	name := displayNameLine(*raw)
 	if !fitsGreetingBound(name) {
 		return "", &InvalidGreetingNameError{MaxRunes: greetingNameMaxRunes}
 	}
@@ -127,7 +125,7 @@ func (s *Service) SaveMyGreetingName(ctx context.Context, raw *string) (Seat, er
 func fillGreetingNameFromProvider(
 	ctx context.Context, tx pgx.Tx, userID ids.UserID, provider, givenName string, newLink bool,
 ) error {
-	name := draftfloor.NameLine(givenName)
+	name := displayNameLine(givenName)
 	if !newLink || name == "" || !fitsGreetingBound(name) {
 		return nil
 	}

@@ -8,6 +8,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
+import { homeDayOptions } from "../../lib/worklistday";
+import { taskRow } from "../../testing/brief.fixtures";
 import { MAX_DONE_ROWS, useMarkRowsDone } from "./worklist.donequeries";
 
 afterEach(() => {
@@ -73,5 +76,55 @@ describe("Done on more rows than one call takes", () => {
       { path: "PUT /v1/worklist/done", count: 1 },
       { path: "POST /v1/worklist/done/undo", count: MAX_DONE_ROWS },
     ]);
+  });
+});
+
+describe("Done on a Home row", () => {
+  it("takes the row off the cached Home day before the server answers", async () => {
+    const client = new QueryClient({
+      defaultOptions: { mutations: { retry: false } },
+    });
+    const key = homeDayOptions().queryKey;
+    const item = (id: string) => ({
+      ...taskRow(id, "Deal"),
+      source: "deal_at_risk" as const,
+    });
+    client.setQueryData(key, {
+      pages: [
+        {
+          queue: [item("row-1"), item("row-2")],
+        } as components["schemas"]["Worklist"],
+      ],
+      pageParams: [undefined],
+    });
+    const answer: { release: () => void } = { release: () => {} };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            answer.release = () => resolve(new Response(null, { status: 204 }));
+          }),
+      ),
+    );
+    const { result } = renderHook(() => useMarkRowsDone(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    });
+    const ids = () =>
+      (
+        client.getQueryData<{ pages: { queue: { id: string }[] }[] }>(key)
+          ?.pages[0]?.queue ?? []
+      ).map((row) => row.id);
+    let sent: Promise<void> = Promise.resolve();
+    act(() => {
+      sent = result.current.mutateAsync({
+        rows: [{ source: "deal_at_risk", row_id: "row-1" }],
+      });
+    });
+    await vi.waitFor(() => expect(ids()).toEqual(["row-2"]));
+    answer.release();
+    await act(() => sent);
   });
 });

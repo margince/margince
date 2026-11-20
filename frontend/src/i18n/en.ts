@@ -110,6 +110,9 @@ export const en = {
   "users.retirement.survivor_inactive":
     "The surviving member is deactivated. Reactivate it to restore sign-in and team assignment.",
   "users.retirement.unknown": "Resolve the remaining work before continuing.",
+  "users.retirement.blocked_one": "Resolve this before you continue",
+  "users.retirement.blocked_other": "Resolve these before you continue",
+  "users.retirement.address": "Sign-in address",
   "users.retirement.protected_email":
     "This sign-in address has already been used and cannot be changed here.",
   "users.mergeSource": "Duplicate account",
@@ -207,9 +210,9 @@ export const en = {
   "homeRepair.reason.buyer":
     "The reviewed sources no longer verify a current buyer request.",
   "homeRepair.reason.engagement":
-    "An active contract or delivery contradicts ending the whole account.",
+    "An active contract or delivery contradicts ending the whole company relationship.",
   "homeRepair.reason.workstream":
-    "The evidence ends one engagement, not the whole account.",
+    "The evidence ends one engagement, not the whole company relationship.",
   "homeRepair.reason.evidenceChanged":
     "Newer verified evidence replaces the context of this proposal.",
   "homeRepair.withdraw": "Withdraw automatic proposal",
@@ -652,16 +655,16 @@ export const en = {
   "history.field.closed_at": "Closed on",
   "history.field.amount_minor_base": "Amount in base currency",
   "approval.preview.activeContract":
-    "An agreement is still active. Review it before ending the account relationship.",
+    "An agreement is still active. Review it before ending the company relationship.",
   "approval.preview.activeDelivery":
-    "A project is still in delivery. Review it before ending the account relationship.",
+    "A project is still in delivery. Review it before ending the company relationship.",
   "approval.preview.unknownScope":
-    "The source does not establish that the whole account relationship ended.",
+    "The source does not establish that the whole company relationship ended.",
   "approval.preview.incompleteEvidence":
-    "The current evidence is incomplete. Review the account before changing its lifecycle.",
+    "The current evidence is incomplete. Review the company before changing its lifecycle.",
   "approval.preview.newerEvidence":
     "The source changed after this proposal. Review the current evidence.",
-  "approval.preview.scopeCompany": "Whole account relationship",
+  "approval.preview.scopeCompany": "Whole company relationship",
   "approval.preview.scopeWorkstream": "One engagement",
   "approval.preview.scopeUnknown": "Scope not established",
   "approval.preview.scope": "Scope of the ending",
@@ -1209,9 +1212,9 @@ export const en = {
     "Nothing to draw for this report’s period and metrics yet. Add the chart anyway, or change the period under Customize report.",
   "reporting.chooseChart": "Chart to add",
   "reporting.exportCsv": "Export CSV",
-  "reporting.coverageThresholds": "Account coverage limits",
+  "reporting.coverageThresholds": "Company coverage limits",
   "reporting.coverageThresholdsHelp":
-    "What the Account coverage section counts as at risk. The limits apply from the next read.",
+    "What the Company coverage section counts as at risk. The limits apply from the next read.",
   "reporting.maxEngagedSeats": "Engaged contacts at most",
   "reporting.untouchedDays": "Days without exchange in pipeline",
   "reporting.silentDays": "Days without exchange after a win",
@@ -1791,6 +1794,7 @@ export const en = {
     "The reminder could not be sent. If Margince’s email rules stopped it, your notifications say why. Email the guest directly.",
   "history.field.reminder_status": "Reminder status",
   "scheduling.myLink": "My booking link",
+  "scheduling.setUpMyLink": "Set up my booking link",
   "scheduling.linkIntro":
     "One link for your email signature, messages and website. Anyone can choose a time within your availability.",
   "scheduling.copyLink": "Copy link",
@@ -1984,7 +1988,9 @@ export const en = {
   "aiAdmin.reset": "{date} UTC",
   "aiAdmin.fixed":
     "Fixed company allowance overrides the per-user calculation.",
-  "aiAdmin.formula":
+  "aiAdmin.formula_one":
+    "Active full users: {users} × {tokens} token per user per month.",
+  "aiAdmin.formula_other":
     "Active full users: {users} × {tokens} tokens per user per month.",
   "aiAdmin.floor": "With no eligible users, the allowance counts 1 user.",
   "aiAdmin.degraded": "80% threshold reached: reduced-tier routing is active",
@@ -1998,6 +2004,7 @@ export const en = {
   "aiAdmin.perUser": "Tokens per full user per month",
   "aiAdmin.range": "Whole tokens, from 1 to 1,000,000,000,000.",
   "aiAdmin.company": "Fixed company total (optional)",
+  "aiAdmin.companyName": "Fixed company total",
   "aiAdmin.overrideHint":
     "Leave blank to use the per-user calculation. The per-user value is retained.",
   "aiAdmin.routingStale": "Model bindings changed while you were editing",
@@ -2007,6 +2014,7 @@ export const en = {
   "aiAdmin.reload": "Reload values",
   "aiAdmin.failed": "Change not applied",
   "aiAdmin.preview": "Preview effects",
+  "aiAdmin.fixToPreview": "Fix the marked fields to preview.",
   "aiAdmin.previewHint":
     "Preview of current conditions. Saving checks the latest settings and usage again; this does not reserve capacity or call a model.",
   "aiAdmin.features": "AI by activity",
@@ -2158,7 +2166,7 @@ export const en = {
   "dealSuggestion.field.amount": "Amount",
   "dealSuggestion.field.currency": "Currency",
   "dealSuggestion.field.stage": "Stage",
-  "dealSuggestion.accountOwner": "Account owner",
+  "dealSuggestion.accountOwner": "Company owner",
   "dealSuggestion.unassignedOwner": "Unassigned",
   "dealSuggestion.field.owner": "Owner",
   "dealSuggestion.ownerMe": "Me",
@@ -2411,6 +2419,7 @@ export const en = {
   "agentJob.company_name_promotion": "Company name update",
   "agentJob.contact_share": "Contact share request",
   "agentJob.task_due_date": "Due date question",
+  "agentJob.employer_change": "Employer change question",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website reader",
@@ -2832,6 +2841,7 @@ export const en = {
   "shell.shortcuts.sendEmail": "Send email",
   "shell.shortcuts.submitDialog": "Submit dialog",
   "shell.shortcuts.then": "then",
+  "shell.shortcuts.ctrl": "Ctrl",
   "shell.shortcuts.or": "or",
   "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
   "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
@@ -3101,6 +3111,10 @@ export const en = {
     "Enter the amount without thousands separators, such as {example}.",
   "amount.refused.notNumber": "Enter the amount in digits, such as {example}.",
   "amount.refused.tooLarge": "This amount is too large to store.",
+  "amount.refused.noCurrency": "This amount needs a currency first.",
+  "amount.waitsForCurrency": "Opens once a currency is set.",
+  "amount.currencyUnread":
+    "The currency could not be read, so no amount can be entered yet.",
   "amount.refused.negative": "Enter an amount of zero or more.",
   "number.refused.ambiguous": "Enter the number as {whole} or {fraction}.",
   "number.refused.grouping":
@@ -3205,8 +3219,12 @@ export const en = {
   "share.whoHasAccess": "Shared with",
   "share.grantedBy": "granted by",
   "share.revoke": "Revoke",
+  "share.revokeFor": "Revoke access to {record} for {name}",
   "share.revokeConfirm":
-    "Revoke this access? It ends at the next request and cannot be undone.",
+    "Revoke {access} access to {record} for {name}? It ends at the next request and cannot be undone.",
+  "share.granted": "{name} now has {access} access to {record}.",
+  "share.thisRecord": "this record",
+  "share.until": "Until {date}",
   "share.approvalRequired":
     "This share takes effect only after approval. It is not applied yet.",
   "share.teamMembers_one": "Team · {count} member",
@@ -3216,6 +3234,7 @@ export const en = {
   "share.rosterErrorTeams": "Teams did not load. People are shown below.",
   "share.rosterErrorBoth": "People and teams did not load.",
   "share.rosterEmpty": "No people or teams to share with.",
+  "share.rosterNoMatch": "No member or team matches your search.",
 
   "merge.contact": "Merge contact",
   "merge.company": "Merge company",
@@ -3450,6 +3469,8 @@ export const en = {
     "The AI provider refused the configured credential. Contact your system administrator.",
   "common.providerUnavailable":
     "The AI provider is not answering right now. Try again later or contact your system administrator.",
+  "common.aiAllowanceUsedUp":
+    "The monthly AI allowance is used up. Ask your admin to raise it under Settings → AI, or try again when it renews.",
   "common.gatewayUnavailable":
     "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
   "common.requestTimedOut":
@@ -3694,6 +3715,8 @@ export const en = {
   "company.filterLifecycleAll": "Any stage",
   "company.filterRelTypeAll": "Any type",
   "company.filterSizeBandAll": "Any number of employees",
+  "company.filterDormancyAll": "Any activity",
+  "company.dormancy": "Activity",
   "consent.confirmRecipient": "Send to {address}",
   "consent.guardFailed": "Communication permissions could not be loaded.",
   "consent.permissionScope":
@@ -4101,7 +4124,7 @@ export const en = {
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
   "co.health.reason.lastMet_other": "Last met them {days} days ago.",
   "co.health.reason.singleThreaded":
-    "In contact, but one contact carries the whole account.",
+    "In contact, but one contact carries the whole company relationship.",
   "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
   "co.health.reason.severalContacts_other":
     "{count} contacts here are in touch.",
@@ -4817,6 +4840,7 @@ export const en = {
   "approval.kind.contact_share": "Share a contact",
   "approval.kind.legal_review_request": "Legal review requested",
   "approval.kind.task_due_date": "Check a due date",
+  "approval.kind.employer_change": "Check a new employer",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",
@@ -4883,6 +4907,14 @@ export const en = {
   "approval.field.contact_name": "Contact in CRM",
   "approval.field.connection_position": "Position on LinkedIn",
   "approval.field.contact_title": "Job title in CRM",
+  "approval.field.observed_on": "Mail dated",
+  "approval.field.signature": "Signature line",
+  "approval.field.to_company": "New employer",
+  "approval.field.from_company": "Employer now",
+  "approval.field.from_address": "Sent from",
+  "approval.field.sender_check": "Sender check",
+  "approval.senderCheck.authenticated":
+    "Passed: the sender’s mail domain confirmed this address",
   "approval.linkedin.useAsTitle": "Use as job title",
   "approval.linkedin.useAsEmployer": "Use {company} as employer",
   "approval.linkedin.employerNow": "Works at {company} now",
@@ -4915,6 +4947,7 @@ export const en = {
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "No next step",
   "co.suggest.kind.lifecycle_conflict": "Lifecycle conflict",
+  "co.suggest.kind.gone_dormant": "Gone quiet",
   "co.suggest.kind.commitment_unmet": "Commitment unmet",
   "co.suggest.kind.question_unanswered": "Question unanswered",
   "co.suggest.kind.risk_raised": "Risk raised",
@@ -6150,8 +6183,6 @@ export const en = {
   "lead.qualify.dealName": "Deal name",
   "lead.qualify.amount": "Amount ({currency})",
   "lead.qualify.amountHint": "Optional. In the installation’s base currency.",
-  "lead.qualify.amountNoCurrency":
-    "Opens once the installation’s base currency has loaded.",
   "lead.qualify.why": "Why",
   "lead.qualify.reasonReplied": "Reason: the lead replied on {at}.",
   "lead.qualify.reasonMeetingBooked": "Reason: a meeting was booked for {at}.",
@@ -6279,7 +6310,7 @@ export const en = {
   "deal.room.invited": "{invited} invited",
   "deal.room.nobodyInvited": "Nobody invited yet",
   "deal.room.signedIn": "{active} signed in",
-  "deal.aside.account": "Account",
+  "deal.aside.account": "Company",
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "None",
   "deal.editDetails": "Edit details",
@@ -6332,7 +6363,6 @@ export const en = {
   "deal.standing.figure.probability": "Probability",
   "deal.winProbability": "Probability",
   "deal.winProbability.hint": "Leave empty to use the stage’s probability.",
-  "deal.winProbability.invalid": "Enter a whole number from 0 to 100.",
   "deal.winProbability.source.stage": "from the stage",
   "deal.winProbability.source.human": "set by hand",
   "deal.winProbability.source.you": "set by you",
@@ -8383,6 +8413,7 @@ export const en = {
   "calendar.patternMonth": "MM",
   "calendar.patternYear": "YYYY",
   "calendar.invalidDate": "Enter a date as {pattern}.",
+  "calendar.noSuchDay": "There is no {date} in the calendar.",
   "calendar.patternHour": "hh",
   "calendar.patternMinute": "mm",
   "calendar.invalidTime": "Enter a time as {pattern}.",
@@ -8979,30 +9010,30 @@ export const en = {
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
   "analytics.sectionDelivery": "Delivery",
-  "analytics.sectionAccounts": "Account coverage",
+  "analytics.sectionAccounts": "Company coverage",
   "analytics.accounts.views": "Risk views",
   "analytics.accounts.singleThreaded": "Single-contact deals",
   "analytics.accounts.untouched": "Untouched in pipeline",
   "analytics.accounts.silent": "Won but silent",
-  "analytics.accounts.pending": "Judging the accounts",
+  "analytics.accounts.pending": "Judging the companies",
   "analytics.accounts.thresholds":
     "At risk means: at most {seats} engaged contact on a deal, no exchange in {untouched} days while in pipeline, no exchange in {silent} days after a win within {won} days.",
   "analytics.accounts.singleThreadedPurpose":
-    "Open deals where at most {seats} contact inside the account has exchanged mail or met with you lately.",
+    "Open deals where at most {seats} contact inside the company has exchanged mail or met with you lately.",
   "analytics.accounts.untouchedPurpose":
-    "Accounts with an open deal and no exchange either way in the last {days} days.",
+    "Companies with an open deal and no exchange either way in the last {days} days.",
   "analytics.accounts.silentPurpose":
-    "Accounts with a deal won in the last {won} days, no open deal, and no exchange either way in the last {days} days.",
+    "Companies with a deal won in the last {won} days, no open deal, and no exchange either way in the last {days} days.",
   "analytics.accounts.noActivityGrant":
-    "Judging accounts needs permission to read activities.",
+    "Judging companies needs permission to read activities.",
   "analytics.accounts.none": "Nothing at risk here.",
   "analytics.accounts.truncated":
-    "More accounts than this read judges: the counts cover the largest ones. Narrow the records you chose.",
+    "More companies than this read judges: the counts cover the largest ones. Narrow the records you chose.",
   "analytics.accounts.withheld_one":
     "{count} more deal has contacts you may not see, so it is not judged.",
   "analytics.accounts.withheld_other":
     "{count} more deals have contacts you may not see, so they are not judged.",
-  "analytics.accounts.account": "Account",
+  "analytics.accounts.account": "Company",
   "analytics.accounts.deal": "Deal",
   "analytics.accounts.owner": "Owner",
   "analytics.accounts.engagedSeats": "Engaged contacts",
@@ -9016,8 +9047,8 @@ export const en = {
   "analytics.accounts.factSeats":
     "{engaged} of {named} contacts named on the deal exchanged mail or met with you in the last 90 days.",
   "analytics.accounts.factStage": "The deal is in stage {stage}.",
-  "analytics.accounts.factOpen_one": "{count} open deal on this account.",
-  "analytics.accounts.factOpen_other": "{count} open deals on this account.",
+  "analytics.accounts.factOpen_one": "{count} open deal on this company.",
+  "analytics.accounts.factOpen_other": "{count} open deals on this company.",
   "analytics.accounts.factWon": "{deal} was won on {date}.",
   "analytics.accounts.factInbound": "They last wrote: {date}.",
   "analytics.accounts.factOutbound": "You last wrote: {date}.",
@@ -9343,6 +9374,7 @@ export const en = {
   "analytics.share.listCreated": "Created {date}",
   "analytics.share.listExpires": "Expires {date}",
   "analytics.share.populationCompany": "Whole company",
+  "analytics.scope.workspace": "Whole company",
   "analytics.share.populationTeam": "Team",
   "analytics.share.populationOwner": "Colleague",
   "analytics.share.closeTitle": "Close this link?",
@@ -9589,7 +9621,6 @@ export const en = {
   "settings.signatureReviewUseLatest": "Use latest version",
   "settings.signatureReviewKeepDraft": "Keep my draft",
   "settings.signatureReviewLoading": "Loading the retained signature…",
-  "settings.signatureReviewSaved": "Signature review saved",
   "settings.signatureReviewMember": "the member",
   "settings.signatureChoicePlain":
     "Your own signature goes under every mail you send. Without one, mail closes with a greeting and your name.",
@@ -9610,7 +9641,7 @@ export const en = {
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",
   "settings.signatureLabel": "Sign-off",
-  "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
+  "settings.signaturePlaceholder": "Your name\nCompany · Phone",
   "settings.signatureHint":
     "Plain text. If empty, mail closes with a greeting and your name. AI never adds one.",
   "settings.signatureSaving": "Saving…",
@@ -9630,13 +9661,15 @@ export const en = {
   "delivery.none": "Not by email",
   "delivery.hourLabel": "Routine email time",
   "delivery.scheduleHelp":
-    "Choose a personal time to use your working days and timezone, with a three-hour delivery window. Your previous schedule stays until you change it.",
-  "delivery.legacyTime": "Previous morning schedule (reporting timezone):",
+    "When routine emails such as the Morning brief are sent: within three hours of this time, on your working days and in your time zone. A schedule set earlier stays until you choose a time here.",
+  "delivery.legacyTime": "Previous morning schedule (reporting time zone):",
   "delivery.workingStart": "Start of my working hours",
   "delivery.weekdayLabel": "Weekly review day",
   "delivery.weekdayHelp":
-    "Uses the next working day if your chosen day is off. The reporting week stays fixed; later working days allow catch-up.",
+    "The day the Weekly review is sent. On a day you do not work, it comes on your next working day.",
   "delivery.quietLabel": "Quiet mornings",
+  "delivery.quietHelp":
+    "A morning with nothing to act on sends no email, unless you choose a status summary.",
   "delivery.onlyUseful": "Only when there is useful content",
   "delivery.quietAlso": "Also send a status summary on quiet mornings",
   "delivery.combineLabel": "Combine routine emails",
@@ -9645,6 +9678,8 @@ export const en = {
   "delivery.separate": "Separate routine emails",
   "delivery.combined": "Combine available content",
   "delivery.scopeLabel": "Routine email scope",
+  "delivery.scopeHelp":
+    "Whose work routine emails cover: your own, a team you review, or both.",
   "delivery.scope.personal": "My work",
   "delivery.scope.team": "Selected team",
   "delivery.scope.combined": "My work and selected team",
@@ -10176,6 +10211,7 @@ export const en = {
   "agentClients.enable": "Enable",
   "agentClients.disable": "Disable",
   "agentClients.disabled": "Disabled",
+  "agentClients.active": "Active",
   "agentClients.neverUsed": "Never",
   "agentClients.usersFolded_one": "{count} user",
   "agentClients.usersFolded_other": "{count} users",
@@ -10217,6 +10253,7 @@ export const en = {
   "agentClients.register.redirectInvalid":
     "Use https, or http on localhost or 127.0.0.1, with no fragment.",
   "agentClients.register.redirectCount": "Add 1 to 10 redirect URIs.",
+  "agentClients.register.fixRedirect": "Fix or remove the marked redirect URI.",
   "agentClients.result.title": "Client registered",
   "agentClients.result.secretOnceTitle": "Copy the secret now",
   "agentClients.result.secretOnceBody":
@@ -12065,13 +12102,13 @@ export const en = {
   "retention.create": "Create policy",
   "retention.scope": "Applies to",
   "retention.window": "Window in days",
-  "retention.windowInvalid": "Enter a whole number of days, at least 1.",
   "retention.action": "Action",
   "retention.actionHint":
     "Archive keeps the record. Anonymize and erase destroy data and are held back in retain-only mode.",
   "retention.lawfulBasis": "Lawful basis",
   "retention.lawfulBasisHint":
     "Optional. The Art. 6 basis this window relies on, for auditors reading the policy.",
+  "retention.basis.storage_limitation": "Storage limitation, GDPR Art. 5(1)(e)",
   "retention.enabled": "Enabled",
   "retention.save": "Save policy",
   "retention.delete": "Delete policy",
@@ -12200,14 +12237,16 @@ export const en = {
     "Reload before changing them; the list may be incomplete.",
   "stage.criteria.none": "No exit criteria yet.",
   "stage.criteria.add": "Add criterion",
-  "stage.criteria.key": "Key",
-  "stage.criteria.keyHint":
-    "The name evidence cites. Lowercase letters, digits and underscores. It cannot be changed later.",
   "stage.criteria.label": "Label",
   "stage.criteria.kind": "Kind",
   "stage.criteria.required": "Required",
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hint",
+  "stage.criteria.kindHelp":
+    "What counts as proof. Buyer kinds count only the buyer’s own words.",
+  "stage.criteria.requiredHelp":
+    "A required criterion keeps Margince from moving the deal on by itself.",
+  "stage.criteria.hintHelp": "Guidance for the AI that looks for evidence.",
   "stage.criteria.editOf": "Edit {name}",
   "stage.criteria.removeOf": "Remove {name}",
   "stage.criteria.remove": "Remove",
@@ -13739,6 +13778,10 @@ export const en = {
   "auth.emailPlaceholder": "name@example.com",
   "auth.password": "Password",
   "auth.passwordPlaceholder": "Password",
+  "auth.emailMissing": "Enter your email address.",
+  "auth.emailMalformed":
+    "Enter a full email address, such as name@example.com.",
+  "auth.passwordMissing": "Enter your password.",
   "auth.passwordHint": "12 to 256 characters",
   "auth.showPassword": "Show password",
   "auth.hidePassword": "Hide password",
@@ -13770,15 +13813,18 @@ export const en = {
   "auth.failed": "Sign-in failed",
   "auth.errCredentials":
     "Sign-in failed. Check the email and password and retry.",
-  "auth.errRateLimited": "Too many sign-in attempts. Retry later.",
+  "auth.errRateLimited":
+    "Too many sign-in attempts. Wait a minute, then retry.",
   "auth.errUnreachable":
     "Margince could not be reached. Check the connection and retry.",
   "auth.retry": "Retry",
   "auth.noticeSignedOut": "You have been signed out.",
   "auth.noticeSessionExpired":
     "The session expired. Sign in again to continue.",
+  "auth.noticeResetIncomplete":
+    "This set-password link is incomplete or was already opened. Ask for a new link.",
   "auth.noticeOidcFailed":
-    "Sign-in with Google failed. If you were invited, open the link in the invitation email to complete account setup.",
+    "Sign-in with the provider did not complete. If you were invited, open the link in the invitation email to complete account setup.",
   "auth.connectionTitle": "Margince could not be reached",
   "auth.connectionBody":
     "Check the connection and retry. If the problem continues, the server may be restarting.",
@@ -13819,6 +13865,15 @@ export const en = {
   "password.submit": "Save new password",
   "password.doneTitle": "Password changed",
   "password.changeFailedTitle": "Password not changed",
+  "password.currentWrong":
+    "The current password did not match. Check it, then enter it again.",
+  "password.locked":
+    "The account is locked after too many wrong passwords. Wait 15 minutes, then retry.",
+  "password.unchanged":
+    "The new password is the same as the current one. Choose a different password.",
+  "password.email":
+    "The new password is your email address. Choose a different password.",
+  "password.length": "Use a new password of 12 to 256 characters.",
   // Deliberately says nothing about WHICH field: this is the fallback for a
   // refusal the server did not explain, and naming the current password would
   // send someone hunting a mistake that may not be theirs.
@@ -13917,6 +13972,8 @@ export const en = {
   "setup.errorNetwork":
     "Margince could not be reached. Check the connection and retry.",
   "auth.forgotLink": "Forgot password?",
+  "auth.forgotAskAdmin":
+    "Forgot your password? Ask an administrator for a set-password link.",
   "auth.forgotTitle": "Reset password",
   // Two sentences, sentence-cased, with no dash. VOICE-RULE-5 forbids an em or
   // en dash anywhere in user-facing copy, and a lowercase opening mid-surface
@@ -13928,7 +13985,7 @@ export const en = {
   "auth.forgotSentBody":
     "If that address has an account, a reset link has been sent. It expires in 1 hour.",
   "auth.resetTitle": "Choose new password",
-  "auth.resetSub": "The link is valid. Enter a new password.",
+  "auth.resetSub": "Enter a new password.",
   "auth.newPassword": "New password",
   "auth.setNewPassword": "Set new password",
   "auth.resetFailed": "This reset link is invalid, already used or expired.",
@@ -14619,7 +14676,7 @@ export const en = {
   "cf.builder.open": "New field",
   "cf.builder.noCode": "No code",
   "cf.builder.intro":
-    "A new field is a real column on the existing table. It works in filters, reports, exports and the API like any core field. It is not a new object.",
+    "A new field appears on every record of this kind. It works in filters, reports, exports and the API like any built-in field. You can archive it later, but not bring it back.",
   "cf.label": "Label",
   "cf.apiKey": "API name",
   "cf.apiKeyHint":
@@ -14650,7 +14707,7 @@ export const en = {
     "Choices of “{label}” saved. {count} records changed.",
   "cf.gate.title": "Add this field?",
   "cf.gate.body":
-    "On confirm, it becomes a live column on every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
+    "On confirm, it is added to every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
   "cf.refuse.title": "This looks like a new object or relationship",
   "cf.refuse.body":
     "This builder adds simple fields to existing records only. A new object, a link between objects or a calculated roll-up is a structural change. It ships as a reviewed change in a new Margince version, made by people, not by the product editing its own code.",
@@ -15203,8 +15260,9 @@ export const en = {
     "Leave empty for today. A request logged late keeps the deadline its real arrival gives it.",
   "privacy.earlierDue": "Earlier deadline",
   "privacy.earlierDueHint":
-    "Optional. Only a date before the deadline above is accepted.",
+    "Optional. A day from the one the request arrived on up to the deadline above.",
   "privacy.earlierDueTooLate": "Choose a date before {date}.",
+  "privacy.earlierDueTooEarly": "Choose a date on or after {date}.",
   "privacy.dueRule": "Deadline rule",
   "privacy.dueRuleUnknown": "Typed by hand before deadlines were worked out",
   "privacy.dueOverridden": "Set earlier than the rule gives",
@@ -16317,6 +16375,7 @@ export const en = {
   "settings.companyMarkUnsupported":
     "Use a PNG, JPEG, GIF, WebP, ICO or SVG file.",
   "settings.companyMarkTooLarge": "Use a smaller file.",
+  "settings.companyMarkTooManyPixels": "Use a picture of up to 8 megapixels.",
   "settings.companyMarkSvgNotDrawable":
     "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
   "settings.companyMarkSvgText":
@@ -16881,7 +16940,7 @@ export const en = {
   "signInMethods.title": "Sign-in methods",
   "signInMethods.saveFailed": "Change not saved",
   "signInMethods.sub":
-    "An administrator can turn a provider off but cannot add one. A provider shows on the sign-in screen once its app below is set up.",
+    "An administrator can turn a provider off but cannot add one. A provider shows on the sign-in screen once its app is set up under {apps}.",
   "signInMethods.password": "Email and password",
   "signInMethods.passwordAlways":
     "Always available, so nobody is locked out when another method is off.",
@@ -17053,6 +17112,7 @@ export const en = {
   "signInMethods.onScreen": "On the sign-in screen",
   "signInMethods.offScreen": "Not on the sign-in screen",
   "signInMethods.offScreenReason.noApp": "The {vendor} app is not set up.",
+  "signInMethods.setUpApp": "Set up the {vendor} app",
   "signInMethods.offScreenReason.noDirectory":
     "The Microsoft app is not limited to your company directory.",
   "signInMethods.offScreenReason.unusable":
@@ -17387,6 +17447,8 @@ export const en = {
   "account.pictureWrongType":
     "Picture not uploaded. Use a PNG, JPEG or WebP file.",
   "account.pictureTooLarge": "Picture not uploaded. Use a file up to 5 MB.",
+  "account.pictureTooManyPixels":
+    "Picture not uploaded. Use a picture of up to 8 megapixels.",
   "account.pictureNoStorage":
     "This installation has no file storage for pictures. Contact your system administrator.",
   "account.pictureUploadFailed":
@@ -18464,7 +18526,7 @@ export const en = {
     "Outbound subscriptions that receive signed HTTP POSTs for chosen events.",
   "webhooks.new": "New subscription",
   "webhooks.notConfigured":
-    "Webhooks are not enabled on this installation until a signing key is configured.",
+    "Webhooks need a signing key, which whoever runs your Margince server sets as webhook_key. Nothing can be sent until then.",
   "webhooks.state.active": "Active",
   "webhooks.state.paused": "Paused",
   "webhooks.updated": "Updated {date}",
@@ -20317,7 +20379,7 @@ export const en = {
   "lists.noteHint": "Kept with the change so colleagues can see why.",
   "lists.record.title": "Lists",
   "lists.record.help":
-    "The lists this company is on. Live Lists add it by their rules; you add it to a Shortlist yourself. Use a list to work through accounts one after another.",
+    "The lists this company is on. Live Lists add it by their rules; you add it to a Shortlist yourself. Use a list to work through companies one after another.",
   "lists.record.loading": "Loading lists",
   "lists.record.empty": "Not on any list you can find.",
   "lists.record.check": "Check a Live List",
@@ -21599,7 +21661,7 @@ export const en = {
   "worklist.because.promised": "committed by you",
   "worklist.because.approved_and_failed": "approved but did not run",
   "worklist.because.account_termination":
-    "account termination needs a decision",
+    "ending a company relationship needs a decision",
   "worklist.because.blocks_customer_work": "customer waiting on this",
   "worklist.because.routine": "routine cleanup",
   "worklist.because.repeated_failure": "repeated failure",
@@ -23103,7 +23165,7 @@ export const en = {
   "legalReview.packOlder":
     "This pack was made before agreements, contact and tasks were included.",
   "legalReview.packBinding": "Other offers sent to the buyer",
-  "aiTask.name.account_scan": "Reading what an account needs",
+  "aiTask.name.account_scan": "Reading what a company needs",
   "aiTask.name.agent_loop": "Agent reasoning loop",
   "aiTask.name.brief_ranking": "Morning brief ranking",
   "aiTask.name.capture_classify": "Message classification",
@@ -23185,7 +23247,7 @@ export const en = {
   "standing.peek.partial_other": "Showing {shown} of {count}.",
   "co.standing.peek.inTouch": "Contacts here who have been in touch",
   "standing.peek.lastInTouch": "last in touch {date}",
-  "co.standing.peek.openDeals": "Open deals on this account",
+  "co.standing.peek.openDeals": "Open deals on this company",
   "co.standing.peek.closes": "closes {date}",
   "standing.next.peek": "Other open tasks",
   "standing.next.peek.undated": "No date",
@@ -23242,16 +23304,15 @@ export const en = {
   "deal.verdict.overdueToClose": "Overdue to close",
   "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
   "deal.verdict.notStarted": "Not started",
-  "co.verdict.noContact": "No contact yet",
-  "co.verdict.addedOn":
-    "The account was added {date}. No exchange is recorded yet.",
   "co.verdict.active": "Active",
-  "co.verdict.lastExchange": "The last exchange with this account was {date}.",
-  "co.verdict.goingQuiet": "Going quiet",
-  "co.verdict.quietSince": "Nobody here has had an exchange since {date}.",
+  "co.verdict.lastExchange": "The last activity with this company was {date}.",
+  "co.verdict.cooling": "Cooling",
   "co.verdict.dormant": "Dormant",
-  "co.verdict.dormantSince":
-    "Nothing is open, and there has been no exchange since {date}.",
+  "co.verdict.stale": "Stale",
+  "co.verdict.silentFor":
+    "Nothing has happened with this company for {days} days, since {date}. A company cools from day {cooling}, goes dormant from day {dormant} and stale from day {stale}.",
+  "co.verdict.noActivity":
+    "No activity recorded since the company was added {date}.",
   "project.verdict.startsOn": "The project starts {date}.",
   "project.verdict.overrunning": "Overrunning",
   "project.verdict.endPassed": "The target end, {date}, has passed.",
@@ -23277,7 +23338,7 @@ export const en = {
     "No exchange with this contact is recorded yet.",
   "contactCase.title": "Possible duplicates",
   "contactCase.intro":
-    "Tick the contacts that are the same person. Then choose which record to keep and who owns it.",
+    "Tick the contacts that are the same person. Then choose which one stays and who owns it.",
   "contactCase.loading": "Loading possible duplicates…",
   "contactCase.none": "This contact has no open duplicates.",
   "contactCase.settledElsewhere":
@@ -23314,8 +23375,10 @@ export const en = {
   "contactCase.merge_other": "Merge {count} contacts",
   "contactCase.member.owner": "Owner: {name}",
   "contactCase.member.unowned": "No owner",
-  "contactCase.member.keep": "Keep this record’s details",
-  "contactCase.member.keepNamed": "Keep details of {name}",
+  "contactCase.member.stays": "{name} stays",
+  "contactCase.survivor.legend": "Which contact stays?",
+  "contactCase.survivor.hint":
+    "The other ticked contacts merge into it and are archived.",
   "contactCase.member.dismissedWith":
     "Marked as a different person from {names}.",
   "contactCase.notAllowed.tooLarge":
@@ -23340,11 +23403,13 @@ export const en = {
   "contactCase.field.domain": "Domain",
   "contactCase.field.other": "Detail",
   "contactCase.evidence.title": "Why they look alike",
+  "contactCase.evidence.hint":
+    "Not the same person stops only that pair from being suggested. A contact you leave unticked stays a possible duplicate.",
   "contactCase.evidence.pair": "{left} and {right}",
   "contactCase.evidence.different": "Different people",
   "contactCase.preview.title": "What the merge does",
-  "contactCase.preview.keeps": "{name} remains, owned by {owner}.",
-  "contactCase.preview.mergedTitle": "Merged into it",
+  "contactCase.preview.keeps": "{name} stays, owned by {owner}.",
+  "contactCase.preview.mergedTitle": "Merged into it and archived",
   "contactCase.preview.sharesTitle": "Keeps access",
   "contactCase.preview.noShares": "No other owner.",
   "contactCase.preview.shareWrite": "{name}, can edit",

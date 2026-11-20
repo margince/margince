@@ -144,6 +144,8 @@ func writeTokenResponse(w http.ResponseWriter, issued IssuedPassport, refresh st
 		response[oauthRefreshToken] = refresh
 		response["refresh_expires_in"] = int(refreshTokenTTL.Seconds())
 	}
+	// An answer carrying a token is never cached (OAuth 2.0 token endpoint).
+	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusOK, response)
 }
 

@@ -91,6 +91,7 @@ var labelSections = []labelSection{
 	{heading: "## Status", prefix: "status: "},
 	{heading: "## Claim", prefix: "claim: "},
 	{heading: "## Release", prefix: "release: "},
+	{heading: "## Records", prefix: "records: "},
 	{heading: "## Provenance", prefix: "", bare: true},
 }
 

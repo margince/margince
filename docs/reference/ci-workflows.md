@@ -14,6 +14,7 @@ workflow is outside the gate:
 | `review-coverage.yml` | pull request events, a sent review | No |
 | `closing-declaration.yml` | pull request events | No |
 | `docs-describing.yml` | pull request events | No |
+| `mcp-e2e-stale.yml` | pull request events that touch the MCP catalog or the e2e lane | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
 | `main-health.yml` | `pace.yml`, `main` every six hours, manual dispatch | No |
 | `pace.yml` | every push to `main` | No (runs after the merge) |
@@ -157,6 +158,13 @@ The report comes from [`scripts/check-docs-describing.sh`](../../scripts/check-d
 its evidence from the environment, so a fixture can drive every case (`make test-docs-describing`).
 `make docs-describing` prints the same list for a local branch.
 
+## `mcp-e2e-stale.yml`
+
+What starts it: a pull request that changes `docs/reference/mcp-info.json`, `e2e/llm/`, the MCP verdict folders or `backend/internal/compose/mcpe2e/`. Each committed MCP use-case verdict carries a stamp of what it measured. The workflow holds every verdict against the stamps of the base tree and of the change. It lists the ones that were current before and are not now, with what moved. The list comes from the stamps, never from a list kept by hand.
+
+It warns and never fails, and keeps one comment, deleted once nothing is stale. A base it cannot check out or stamp gives no comment.
+`make e2e-llm-report` prints the state of every verdict for a local branch.
+
 ## `issue-closed.yml`
 
 What starts it: an issue `closed`, a daily check, and manual dispatch. An issue closes by a merged
@@ -234,48 +242,30 @@ asks "is this diff good?", and runs because a diff exists.
 | Home growth (`make bench-growth`) | daily | Home's reads over `4` steps of mail history, each a year more, with a fixed wait per round trip. It fails when the fit expects a read to reach `10 s` soon | A merge gate cannot wait for it, and history grows with the calendar, not with a diff. |
 | `MOBILE-AC-2` budget | weekly | `make bench-mobile`: record open `p95` on a throttled Fast-3G profile at 390px, writing a record | The browser half of the PERF-1 budget, which no merge gate measures. |
 | vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
-| use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
+| use cases a model drives (`scripts/e2e-llm-sweep.sh`) | weekly | Every MCP use case run by a real model in shards, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
 | MCP role sweep (`make test-roles`) | weekly | Every MCP tool and action called as every seeded role, held to the `mcp-tool-roles/` and `toolchecks/` folders | It takes longer than a merge-gate job allows. Each PR still holds the committed table to the registry and to `tools/list`. |
-| weekly records (`records`, `records-pr`) | weekly | Renders the pages built from the three weekly records, then opens one pull request with them | A record reaches `main` only when a maintainer merges it. |
+| weekly records (`records`, `records-pr`) | weekly | Renders the pages built from the weekly records, then opens one pull request for the speed records and one for the MCP verdicts | A record reaches `main` only when a maintainer merges it. |
 
 Notes on the jobs:
 
-- The backend gate on `main` runs in `main-health.yml`, not as a daily job here. It runs the same
-  `make check-backend` on every health check, so a daily copy would only repeat it.
-- No rule a scan can apply finds the next test that needs the clock. "A fixed date in a file that never
-  pins the clock" matches 129 files, and nearly all of them do no harm. So the gate is a second run.
-- Many backend test files read the wall clock, and
-  `backend/gates/testdata/wallclockfixtures.txt` holds the count. Many more compare
-  against the `now()` of Postgres, so the change must reach both clocks. Moving the clock of the
-  runner is the only change that does, and `scripts/clock-drift-host.sh` says why.
-- Downloads finish before the clock moves. One shell moves it, runs the suites for at most 45
-  minutes and puts it back, on failure too. Only a suite that failed at the moved clock files the
-  calendar issue. Other red files "the backend clock-drift lane could not complete".
-- `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane on a laptop with the
-  weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
-- The model lane costs real tokens. It skips, and does not fail, when `CLAUDE_CODE_OAUTH_TOKEN` is
-  missing. So a lane with no money does not turn `main` red every Monday. A skipped job says "not
-  set up" where a red one says "broken".
-- The vendor live check needs the `SURFE_LIVE_KEY` secret. Without it, the job reports "not checked"
-  and opens one issue that says so. That issue never closes the failure issue, because no call ran.
-- The model lane does not give the same result each time: it runs each scenario three times, and
-  passes at two. It uploads each transcript as an artifact, because the result line names the failed
-  scenario, and only the transcript shows what the model did.
+- The backend gate on `main` runs in `main-health.yml`, not as a daily job here. It runs the same `make check-backend` on every health check, so a daily copy would only repeat it.
+- No rule a scan can apply finds the next test that needs the clock. "A fixed date in a file that never pins the clock" matches 129 files, and nearly all of them do no harm. So the gate is a second run.
+- Many backend test files read the wall clock, and `backend/gates/testdata/wallclockfixtures.txt` holds the count. Many more compare against the `now()` of Postgres, so the change must reach both clocks. Moving the clock of the runner is the only change that does, and `scripts/clock-drift-host.sh` says why.
+- Downloads finish before the clock moves. One shell moves it, runs the suites for at most 45 minutes and puts it back, on failure too. Only a suite that failed at the moved clock files the calendar issue. Other red files "the backend clock-drift lane could not complete".
+- `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane on a laptop with the weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
+- The model lane costs real tokens. It skips, and does not fail, when `CLAUDE_CODE_OAUTH_TOKEN` is missing. So a lane with no money does not turn `main` red every Monday. A skipped job says "not set up" where a red one says "broken".
+- The vendor live check needs the `SURFE_LIVE_KEY` secret. Without it, the job reports "not checked" and opens one issue that says so. That issue never closes the failure issue, because no call ran.
+- The model lane does not give the same result each time: it runs each scenario three times, and passes at two. It uploads each transcript as an artifact, because the result line names the failed scenario, and only the transcript shows what the model did.
+- The model lane runs the way a run by hand does. `llm-plan` deals the scenario folder into shards with `e2e/llm/shards.py` (the count is its argument in the workflow). Each shard runs `scripts/e2e-llm-sweep.sh` on a stack bound to `config/presets/openrouter_cloud_eu.yaml`, whose key is the `OPENAI_COMPATIBLE_API_KEY` secret, so search ranks by meaning.
+- A shard's sweep step stops at 100 minutes, before its 120-minute job, so a cut-off still files its outcome. `llm-collect` publishes the verdicts only when every shard finished and every scenario has a fresh verdict. Without the search key the run only warns. Its verdicts stay outside the records tree, and it can open an issue but no pull request.
 
 The three weekly jobs record what they measure, and none of them writes to `main`:
 
-- Each job uploads its record as an artifact: `bench-perf-record`, `bench-mobile-record` and
-  `e2e-llm-verdicts`. A failed job still uploads, because a budget that is over is recorded before its gate fails.
-- `records` puts the records over the tree of the run. A record that matches the committed one counts
-  as not recorded. It runs `make perfdoc` and the MCP tool coverage generator, and hands over a patch.
-  It holds no write token.
-- `records-pr` commits the patch on a `bench/scheduled-<date>-<run>` branch and opens one pull request.
-  The body names each part, how it was measured (route, search mode, runner), and any part that did
-  not record. It runs only on `main`, and opens nothing when nothing recorded.
-- A token from the records GitHub App (secrets `RECORDS_APP_CLIENT_ID`, `RECORDS_APP_PRIVATE_KEY`)
-  opens that pull request, so CI runs on it. The default workflow token stays read-only.
-- The model lane searches by word overlap, because no embedding key reaches the runner. Its verdicts
-  say `search: lexical`, and they replace the verdicts in the same `<model>@<route>` folder.
+- Each job uploads its record as an artifact: `bench-perf-record`, `bench-mobile-record` and `e2e-llm-verdicts`. A failed speed job still uploads, because a budget that is over is recorded before its gate fails. `e2e-llm-verdicts` exists only when the model lane finished whole.
+- `records` puts each part over a clean tree of the run, one at a time. The parts are the speed records and the MCP verdicts; `make perfdoc` renders both speed records into the same pages. A record that matches the committed one counts as not recorded. It runs `make perfdoc` and the MCP tool coverage generator, and hands over one patch per part. For the MCP verdicts it adds a table of the scenarios whose result moved (`e2e/llm/verdictdiff.py`). It holds no write token.
+- `records-pr` opens one pull request per part, each on one fixed branch (`records/weekly-<part>`), so a new week updates the open pull request. Each carries the `records: weekly` label and goes to the maintainer the `RECORDS_OWNER` repository variable names. That maintainer runs the lane by hand when the weekly run cannot, and gives the variable to another maintainer while on leave. It runs only on `main`, and opens nothing when nothing recorded.
+- A token from the records GitHub App (secrets `RECORDS_APP_CLIENT_ID`, `RECORDS_APP_PRIVATE_KEY`) opens that pull request, so CI runs on it. The default workflow token stays read-only.
+- A model run that was cut off files "the weekly model-driven use cases were cut off", publishes nothing and opens no pull request.
 
 Findings become issues (`scripts/scheduled-report.sh`): one open issue per check, keyed on a fixed title, because a red scheduled run tells nobody.
 

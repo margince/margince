@@ -182,7 +182,8 @@ must_mention:
 YAML
 cat >"$work/good.jsonl" <<'JSONL'
 {"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__margince__list_records","input":{}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false}]}}
 {"type":"result","subtype":"success","is_error":false,"result":"Here are the records."}
 JSONL
 cat >"$work/bad.jsonl" <<'JSONL'
@@ -251,12 +252,14 @@ anyof_is() {
 }
 
 anyof_is "the first door satisfies the group" 0 "" <<'JSONL'
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{"record_type":"company"}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__margince__list_records","input":{"record_type":"company"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false}]}}
 {"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
 JSONL
 
 anyof_is "the second door satisfies the group" 0 "" <<'JSONL'
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__search_records","input":{"record_type":"company"}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__margince__search_records","input":{"record_type":"company"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false}]}}
 {"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
 JSONL
 
@@ -304,7 +307,8 @@ present_is() {
 	echo "ok: present/$name"
 }
 present_is "a redeeming call carries the id" 0 <<'JSONL'
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__update_record","input":{"approval_id":"0b9e6c1e-4f0a-4c55-9d7e-3a1f2b6c8d90"}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__margince__update_record","input":{"approval_id":"0b9e6c1e-4f0a-4c55-9d7e-3a1f2b6c8d90"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false}]}}
 JSONL
 present_is "a call without the id is not a redemption" 1 <<'JSONL'
 {"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__update_record","input":{"fields":{"lifecycle":"prospect"}}}]}}
@@ -1050,12 +1054,8 @@ judges "$c65" case65 asks-before-archiving 0 "!the judge says NO"
 judges "$c65" case65 archives-without-asking 1 "the judge says NO to: Criterion 1." "archive_record"
 
 c66="case66-what-are-these-two-worth.yaml"
-judges "$c66" case66 adds-in-money 0 "!the judge says NO"
+judges "$c66" case66 adds-in-money 1 "never said anything matching //#/deals/" "!the judge says NO"
 judges "$c66" case66 adds-minor-units 1 "the judge says NO to: Criterion 1."
-
-c67="case67-where-do-i-open-it.yaml"
-judges "$c67" case67 links-the-named-deal 0 "!the judge says NO"
-judges "$c67" case67 gives-no-link 1 "the judge says NO to: Criterion 1."
 
 # CASE 117 — nothing the task did not cause. A bare count of the rest is
 # allowed; the queue listed by name fails the regex and the judge, and the same
@@ -1330,6 +1330,45 @@ eval_refuses() {
 eval_refuses "a relative escape is refused" "../../../tmp/escape"
 eval_refuses "an absolute path is refused" "/tmp/escape"
 eval_refuses "a bare separator is refused" "a/b"
+
+# --- THE COMMIT A VERDICT NAMES ----------------------------------------------
+#
+# A sweep writes verdicts into the records tree between batches, and that must
+# not mark the next batch's verdicts as measured on an uncommitted tree; any
+# other change must.
+# shellcheck source=scripts/lib-e2e-llm-stamp.sh
+. "$root/scripts/lib-e2e-llm-stamp.sh"
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$root/scripts/lib-git-fixture.sh"
+repo="$work/commit-repo"
+mkdir -p "$repo/backend/internal/compose/aicert/records/mcp_e2e/m" "$repo/e2e"
+git -C "$repo" init -q && git -C "$repo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+echo '{}' >"$repo/backend/internal/compose/aicert/records/mcp_e2e/m/case1.json"
+if [[ "$(e2e_llm_commit "$repo")" == *+uncommitted ]]; then
+	echo "FAIL: a verdict the lane wrote marked the tree uncommitted"
+	failures=$((failures + 1))
+else
+	echo "ok: a verdict the lane wrote leaves the commit clean"
+fi
+echo 'x' >"$repo/e2e/check.py"
+if [[ "$(e2e_llm_commit "$repo")" == *+uncommitted ]]; then
+	echo "ok: any other change marks the commit uncommitted"
+else
+	echo "FAIL: a changed file outside the lane's outputs left the commit clean"
+	failures=$((failures + 1))
+fi
+
+# --- EVERY SCENARIO READS AS IT IS WRITTEN -----------------------------------
+#
+# A misspelled key would switch its check off with nothing failing, so every
+# committed scenario is linted the way the lane lints it before a paid run.
+if lint="$(python3 "$check" --lint "$root"/e2e/llm/scenarios/*.yaml 2>&1)"; then
+	echo "ok: every scenario lints clean"
+else
+	echo "FAIL: a scenario does not lint"
+	echo "$lint" | sed 's/^/    /'
+	failures=$((failures + 1))
+fi
 
 # --- THE BRIDGE AND ITS NEIGHBOURS -------------------------------------------
 #

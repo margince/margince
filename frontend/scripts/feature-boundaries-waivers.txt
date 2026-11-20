@@ -71,7 +71,6 @@ reach features/brief/brief.readings.sideread.test.tsx features/worklist/worklist
 reach features/brief/brief.readings.test.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.readings.test.tsx features/worklist/worklist.tsx
 reach features/brief/brief.readings.tsx features/worklist/worklist.queries.ts
-reach features/brief/brief.readings.tsx features/worklist/worklist.tsx
 reach features/brief/brief.schedule.stories.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.schedule.test.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.schedule.tsx features/worklist/worklist.queries.ts
@@ -401,7 +400,6 @@ reach features/settings/settingssearchbox.stories.tsx app/shell.css
 reach features/settings/settingssignature.ts features/mail/composesignoff.tsx
 reach features/settings/settingssignaturerow.tsx features/mail/composesignoff.tsx
 reach features/settings/writetohost.tsx features/mail/compose.tsx
-reach features/sign-in/auth.test.tsx app/theme-reset.ts
 reach features/sign-in/auth.tsx app/ui-preview.ts
 reach features/sign-in/installation-settings.profile.stories.tsx app/dateformats.tsx
 reach features/sign-in/installation-settings.stories.tsx app/dateformats.tsx

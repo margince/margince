@@ -4,6 +4,7 @@
 import { type ReactNode, Suspense, useCallback, useState } from "react";
 import { lazy } from "../../i18n/lazy";
 import { useMailboxConnected } from "../../lib/connectors";
+import { useFirstScreenSettled } from "../../lib/journeymarks";
 import { WriteToProvider, type WriteToTarget } from "../../lib/writeto";
 
 // Both of the composer's chunks in one load, so the window's does not start
@@ -30,7 +31,9 @@ export function WriteToHost({ children }: Readonly<{ children: ReactNode }>) {
     (WriteToTarget & Readonly<{ seq: number }>) | null
   >(null);
   const [writing, setWriting] = useState(false);
-  const connected = useMailboxConnected();
+  // No address can be pressed before the first screen draws, so the read
+  // waits for it instead of competing with Home's day.
+  const connected = useMailboxConnected(useFirstScreenSettled());
   const writeTo = useCallback((next: WriteToTarget) => {
     setTarget((prior) => ({ ...next, seq: (prior?.seq ?? 0) + 1 }));
     setWriting(true);

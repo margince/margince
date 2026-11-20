@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { LogOut } from "lucide-react";
+import { useExitAsking } from "../components/unsaved";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
@@ -15,6 +16,7 @@ import type { RowSeat } from "./accountseats";
 export function SignOutRow({ seat }: Readonly<{ seat: RowSeat }>) {
   const t = useT();
   const logout = useLogout();
+  const askFirst = useExitAsking();
   return (
     <>
       <button
@@ -23,7 +25,7 @@ export function SignOutRow({ seat }: Readonly<{ seat: RowSeat }>) {
         role="menuitem"
         {...seat}
         disabled={logout.isPending}
-        onClick={() => logout.mutate()}
+        onClick={() => askFirst(() => logout.mutate())}
       >
         <LogOut size={15} aria-hidden />
         {t("shell.signOutAria")}

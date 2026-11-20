@@ -66,9 +66,13 @@ export function useSaveClientMethods() {
   });
 }
 
+/** The register write, so a submit can ask the cache whether one is out. */
+export const REGISTER_AGENT_CLIENT_KEY = ["agent-client-register"] as const;
+
 export function useRegisterAgentClient() {
   const invalidate = useInvalidateAgentClients();
   return useMutation({
+    mutationKey: REGISTER_AGENT_CLIENT_KEY,
     mutationFn: async (body: RegisterAgentClientRequest) =>
       unwrap(await api.POST("/installation/agent-clients", { body })),
     onSuccess: invalidate,

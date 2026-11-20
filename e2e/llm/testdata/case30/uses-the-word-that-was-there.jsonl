@@ -1,5 +1,8 @@
 {"type": "system", "subtype": "init", "tools": ["mcp__margince__read_tags", "mcp__margince__change_tags"]}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_tags", "input": {"mode": "list"}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__change_tags", "input": {"action": "create", "name": "Revisit Q1"}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__change_tags", "input": {"action": "apply", "record_type": "company"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_tags", "input": {"mode": "list"}, "id": "fixture1"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture1", "content": "{}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__change_tags", "input": {"action": "create", "name": "Revisit Q1"}, "id": "fixture2"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture2", "content": "{}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__change_tags", "input": {"action": "apply", "record_type": "company"}, "id": "fixture3"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture3", "content": "{}", "is_error": false}]}}
 {"type": "result", "subtype": "success", "is_error": false, "result": "The workspace already carries the word: K5 Conference 2026. I put that one on Dom Digital, Rheinufer and Vorort Systeme rather than coining a second spelling of it.\n\nI created the new tag Revisit Q1 and applied K5 Conference 2026 to all three, then Revisit Q1 to Dom Digital and Rheinufer.\n\nWorth knowing: there was no existing K5 tag applied to any account yet, which is why the spelling had to come from the tag list rather than off a record.\n\nTo be precise: I created Revisit Q1 as a new tag; K5 Conference 2026 was already there."}

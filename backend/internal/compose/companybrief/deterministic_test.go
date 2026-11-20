@@ -130,7 +130,7 @@ func TestDeterministicLastTouchSurvivesAMissingSubject(t *testing.T) {
 		Name:        "Acme",
 		LastContact: &ActIn{ID: "a-1", Kind: "call", Subject: "Pricing", At: "2026-07-10T09:00:00Z"},
 	}, "en"))
-	if !strings.Contains(withSubject, `"Pricing"`) {
+	if !strings.Contains(withSubject, `“Pricing”`) {
 		t.Errorf("the subject is not quoted as theirs: %q", withSubject)
 	}
 
@@ -317,7 +317,7 @@ func TestDeterministicLastContactSkipsANewerNote(t *testing.T) {
 	if strings.Contains(text, "chasers") {
 		t.Errorf("a note was reported as the last contact: %q", text)
 	}
-	if !strings.Contains(text, `"Pricing"`) {
+	if !strings.Contains(text, `“Pricing”`) {
 		t.Errorf("the call the tile names is missing: %q", text)
 	}
 

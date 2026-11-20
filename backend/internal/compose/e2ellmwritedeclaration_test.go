@@ -22,11 +22,13 @@ import (
 // about what it does, and that is the disagreement this test refuses.
 const (
 	e2eLLMRunnerScript  = "../../../scripts/e2e-llm.sh"
-	e2eLLMWritesReadBy  = "--field writes"
+	e2eLLMWritesReadBy  = `check.py" --lint`
+	e2eLLMLinter        = "../../../e2e/llm/check.py"
+	e2eLLMLintReadsIt   = `data["writes"] not in ("true", "false")`
 	e2eLLMWritesDeclare = "writes: true"
 )
 
-// e2eWritesDeclaration mirrors the runner's `check.py --field writes`, which
+// e2eWritesDeclaration mirrors the lane's `check.py --lint` read of writes:, which
 // this Go test cannot call; a trailing YAML comment is allowed as YAML allows it.
 var e2eWritesDeclaration = regexp.MustCompile(`(?m)^writes:\s*(\S+)\s*(?:#.*)?$`)
 
@@ -119,8 +121,13 @@ func TestEveryWritingScenarioDeclaresThatItWrites(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the lane runner at %s: %v", e2eLLMRunnerScript, err)
 	}
-	if !strings.Contains(string(runner), e2eLLMWritesReadBy) {
-		t.Errorf("%s no longer reads the scenarios' %q with %q, so the declarations this test "+
-			"holds decide nothing", e2eLLMRunnerScript, e2eLLMWritesDeclare, e2eLLMWritesReadBy)
+	linter, err := os.ReadFile(e2eLLMLinter)
+	if err != nil {
+		t.Fatalf("reading the lane's linter at %s: %v", e2eLLMLinter, err)
+	}
+	if !strings.Contains(string(runner), e2eLLMWritesReadBy) || !strings.Contains(string(linter), e2eLLMLintReadsIt) {
+		t.Errorf("%s no longer lints the scenarios' %q with %q, or the lint no longer refuses a value "+
+			"other than true or false, so the declarations this test holds decide nothing",
+			e2eLLMRunnerScript, e2eLLMWritesDeclare, e2eLLMWritesReadBy)
 	}
 }

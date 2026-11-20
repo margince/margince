@@ -45,12 +45,17 @@
      menu in the tree that hosts an absolutely positioned flyout, which a
      scroll container would clip, and its rows are a fixed roster that cannot
      grow past the viewport. */
-  min-inline-size: var(--menuMinInlineSize, 250px);
-  /* The floor above is the comfortable reading measure; this keeps it a measure
-     rather than a promise the viewport cannot keep. A narrow phone at 200% zoom
-     leaves less room than that plus the gutter, and the menu is anchored to an
-     edge, so growing past the viewport clips it on the other side. */
-  max-width: calc(100vw - 2 * var(--space-2));
+  /* The floor is the comfortable reading measure; the viewport term keeps it a
+     measure rather than a promise the viewport cannot keep. A narrow phone at
+     200% zoom leaves less room than that plus the gutter, and the menu is
+     anchored to an edge, so growing past the viewport clips it on the other
+     side. A floor wins over a ceiling it contradicts, so both carry the term.
+     The fixed ceiling makes a long name ellipse rather than widen the menu. */
+  min-inline-size: min(
+    var(--menuMinInlineSize, 250px),
+    calc(100vw - 2 * var(--space-2))
+  );
+  max-width: min(360px, calc(100vw - 2 * var(--space-2)));
   display: flex;
   flex-direction: column;
   padding: var(--controlGap);

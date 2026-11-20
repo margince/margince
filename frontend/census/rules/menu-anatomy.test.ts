@@ -42,7 +42,8 @@ function ruleFor(sheet: string, selector: string): CssRule {
   return found;
 }
 
-/** One declaration's value, or `undefined` where the rule does not set it. */
+/** One declaration's value, or `undefined` where the rule does not set it. Space a
+ * formatter puts inside parentheses means nothing to CSS, so it is folded away. */
 function declaredValue(rule: CssRule, property: string): string | undefined {
   const declarations = rule.body.split(";");
   for (const declaration of declarations.reverse()) {
@@ -52,10 +53,22 @@ function declaredValue(rule: CssRule, property: string): string | undefined {
       return declaration
         .slice(at + 1)
         .trim()
-        .replace(/\s+/g, " ");
+        .replace(/\s+/g, " ")
+        .replace(/\( /g, "(")
+        .replace(/ \)/g, ")");
     }
   }
   return undefined;
+}
+
+/**
+ * The viewport term of a surface's `max-width`, such as `calc(100vw - 2 * var(--space-2))`.
+ * A `min-inline-size` wins over a `max-width` it contradicts. So the floor gives way to
+ * the same term, or the surface outgrows a viewport narrower than the floor.
+ */
+function viewportCap(rule: CssRule): string | undefined {
+  const ceiling = declaredValue(rule, "max-width") ?? "";
+  return /calc\(100vw(?:[^()]|\([^()]*\))*\)/.exec(ceiling)?.[0];
 }
 
 /**
@@ -106,10 +119,11 @@ describe("one menu anatomy", () => {
       expect(declaredValue(rule(), "padding")).toBe(INSET);
     });
 
-    it("stands at the anatomy's floor, or says why not", () => {
+    it("stands at the anatomy's floor within its viewport bound, or says why not", () => {
       const floor = declaredValue(rule(), "min-inline-size");
+      const cap = viewportCap(rule());
       if (surface.floor === null) {
-        expect(floor).toBe(FLOOR);
+        expect(floor).toBe(cap === undefined ? FLOOR : `min(${FLOOR}, ${cap})`);
       } else {
         expect(surface.floor.length).toBeGreaterThan(0);
         expect(floor).not.toBe(FLOOR);

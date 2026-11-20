@@ -56,10 +56,13 @@ export function contactCase(over: Partial<ContactCase> = {}): ContactCase {
       member(DANA, "Mira Kovacs", OWNER_DAN, "Dan Gone", "mira@kovacs.hu"),
     ],
     edges: [
-      edge("p1", ANA, BEN, "open", 0.92),
-      edge("p2", BEN, CLEO, "open", 0.81),
-      edge("p3", CLEO, DANA, "open", 0.74),
-      edge("p4", ANA, DANA, "not_a_duplicate", 0.7),
+      edge("p1", ANA, BEN, "open", 0.92, ["Mira Kovac", "Mira Kovač"]),
+      edge("p2", BEN, CLEO, "open", 0.81, ["Mira Kovač", "M. Kovac"]),
+      edge("p3", CLEO, DANA, "open", 0.74, ["M. Kovac", "Mira Kovacs"]),
+      edge("p4", ANA, DANA, "not_a_duplicate", 0.7, [
+        "Mira Kovac",
+        "Mira Kovacs",
+      ]),
     ],
     owners: [
       owner(OWNER_ANA, "Ana Owner", "full", [ANA]),
@@ -83,6 +86,7 @@ function edge(
   right: string,
   status: "open" | "not_a_duplicate",
   confidence: number,
+  names: readonly [string, string],
 ) {
   return {
     pair_id: pairId,
@@ -95,8 +99,8 @@ function edge(
     evidence: [
       {
         field: "full_name",
-        left_value: "Mira Kovac",
-        right_value: "Mira Kovač",
+        left_value: names[0],
+        right_value: names[1],
         signal: "collide",
         score: confidence,
       },

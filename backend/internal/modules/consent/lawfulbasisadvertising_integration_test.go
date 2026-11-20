@@ -314,7 +314,7 @@ func askConsent(ctx context.Context, t *testing.T, h Handlers, contact ids.Conta
 	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/consent/double-opt-in",
 		strings.NewReader(`{"purpose_id":"`+purpose.String()+`"}`)).WithContext(ctx)
 	req.Header.Set("Content-Type", "application/json")
-	h.IssueDoubleOptIn(rec, req, crmcontracts.Id(contact.UUID))
+	h.IssueDoubleOptIn(rec, req, crmcontracts.Id(contact.UUID), crmcontracts.IssueDoubleOptInParams{})
 	return rec
 }
 
