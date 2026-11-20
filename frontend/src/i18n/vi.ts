@@ -11799,13 +11799,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "retention.create": "Tạo chính sách",
   "retention.scope": "Áp dụng cho",
   "retention.window": "Thời hạn (ngày)",
-  "retention.windowInvalid": "Nhập số ngày nguyên, tối thiểu là 1.",
   "retention.action": "Hành động",
   "retention.actionHint":
     "Chuyển vào kho lưu trữ vẫn giữ lại hồ sơ. Ẩn danh hóa và xóa sẽ hủy dữ liệu và bị tạm chặn ở chế độ chỉ lưu trữ.",
   "retention.lawfulBasis": "Cơ sở pháp lý",
   "retention.lawfulBasisHint":
     "Không bắt buộc. Cơ sở theo Điều 6 mà thời hạn này dựa vào, dành cho kiểm toán viên đọc chính sách.",
+  "retention.basis.storage_limitation": "Hạn chế lưu trữ, Điều 5(1)(e) GDPR",
   "retention.enabled": "Đang bật",
   "retention.save": "Lưu chính sách",
   "retention.delete": "Xóa chính sách",
@@ -17901,7 +17901,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đăng ký gửi đi, nhận HTTP POST có chữ ký cho các sự kiện đã chọn.",
   "webhooks.new": "Đăng ký mới",
   "webhooks.notConfigured":
-    "Webhook chưa được bật trên bản cài đặt này cho đến khi cấu hình khóa ký.",
+    "Webhook cần một khóa ký do người vận hành máy chủ Margince của bạn đặt (webhook_key). Chưa thể gửi gì cho đến lúc đó.",
   "webhooks.state.active": "Đang hoạt động",
   "webhooks.state.paused": "Đã tạm dừng",
   "webhooks.updated": "Đã cập nhật {date}",

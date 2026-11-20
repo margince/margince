@@ -12062,13 +12062,13 @@ export const en = {
   "retention.create": "Create policy",
   "retention.scope": "Applies to",
   "retention.window": "Window in days",
-  "retention.windowInvalid": "Enter a whole number of days, at least 1.",
   "retention.action": "Action",
   "retention.actionHint":
     "Archive keeps the record. Anonymize and erase destroy data and are held back in retain-only mode.",
   "retention.lawfulBasis": "Lawful basis",
   "retention.lawfulBasisHint":
     "Optional. The Art. 6 basis this window relies on, for auditors reading the policy.",
+  "retention.basis.storage_limitation": "Storage limitation, GDPR Art. 5(1)(e)",
   "retention.enabled": "Enabled",
   "retention.save": "Save policy",
   "retention.delete": "Delete policy",
@@ -18207,7 +18207,7 @@ export const en = {
     "Outbound subscriptions that receive signed HTTP POSTs for chosen events.",
   "webhooks.new": "New subscription",
   "webhooks.notConfigured":
-    "Webhooks are not enabled on this installation until a signing key is configured.",
+    "Webhooks need a signing key, which whoever runs your Margince server sets as webhook_key. Nothing can be sent until then.",
   "webhooks.state.active": "Active",
   "webhooks.state.paused": "Paused",
   "webhooks.updated": "Updated {date}",

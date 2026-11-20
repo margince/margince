@@ -12123,13 +12123,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "retention.create": "Regel erstellen",
   "retention.scope": "Gilt für",
   "retention.window": "Frist in Tagen",
-  "retention.windowInvalid": "Gib eine ganze Zahl von Tagen ein, mindestens 1.",
   "retention.action": "Aktion",
   "retention.actionHint":
     "Archivieren behält den Datensatz. Anonymisieren und Löschen vernichten Daten und werden im Nur-Behalten-Modus zurückgehalten.",
   "retention.lawfulBasis": "Rechtsgrundlage",
   "retention.lawfulBasisHint":
     "Optional. Die Rechtsgrundlage nach Art. 6, auf die sich diese Frist stützt, für Personen, die die Regel prüfen.",
+  "retention.basis.storage_limitation":
+    "Speicherbegrenzung, Art. 5 Abs. 1 lit. e DSGVO",
   "retention.enabled": "Aktiv",
   "retention.save": "Regel speichern",
   "retention.delete": "Regel löschen",
@@ -18387,7 +18388,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ausgehende Abonnements, die für ausgewählte Ereignisse signierte HTTP-POSTs erhalten.",
   "webhooks.new": "Neues Abonnement",
   "webhooks.notConfigured":
-    "Webhooks sind in dieser Installation erst aktiv, wenn ein Signaturschlüssel konfiguriert ist.",
+    "Webhooks brauchen einen Signaturschlüssel, den die Person setzt, die deinen Margince-Server betreibt (webhook_key). Bis dahin wird nichts gesendet.",
   "webhooks.state.active": "Aktiv",
   "webhooks.state.paused": "Pausiert",
   "webhooks.updated": "Aktualisiert am {date}",
