@@ -69,7 +69,8 @@ Three things new readers do not expect:
   role has that read switched off.
 
 A refusal on a grant answers 403 with a sentence such as "your role does not grant read on
-pipeline". `details.missing_grant` names the grant as the tool table writes it: `pipeline.read`.
+pipeline". `details.missing_grant` names what the caller's roles lack, as the tool table writes it:
+`pipeline.read`. It can also be `admin` or `scope:team`, a role or row scope rather than a grant.
 MCP has no structured error, so an agent reads the same grant at the end of the refusal text.
 The sentence is built in `platform/auth/grantrefusal.go`.
 

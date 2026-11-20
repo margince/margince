@@ -441,7 +441,7 @@ func stagedReleasePath(staged *workflow.StagedApprovalError) string {
 func faultReferenceSuffix(fault httperr.Fault) string {
 	suffix := reviewSuffix(fault)
 	if grant, ok := fault.Details["missing_grant"].(string); ok && grant != "" {
-		suffix += " (missing grant " + echoSafe(grant, maxBadArgsDetail) + "; an admin adds it to the role)"
+		suffix += " (missing grant " + echoSafe(grant, maxBadArgsDetail) + "; an admin changes your roles to allow it)"
 	}
 	return suffix
 }

@@ -93,7 +93,7 @@ func TestARefusalOnAGrantTellsTheAgentWhichGrantToAskFor(t *testing.T) {
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"deal": {Read: true}}},
 	})
 	got := refusalDetail(auth.Require(rep, "deal", principal.ActionUpdate))
-	want := "permission_denied: your role does not grant update on deal (missing grant deal.update; an admin adds it to the role)"
+	want := "permission_denied: your role does not grant update on deal (missing grant deal.update; an admin changes your roles to allow it)"
 	if got != want {
 		t.Errorf("the agent read %q, want %q", got, want)
 	}
