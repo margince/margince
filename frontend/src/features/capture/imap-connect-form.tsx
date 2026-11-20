@@ -19,6 +19,7 @@ import {
   PORT_RANGE,
   type Range,
   rangeFault,
+  rangeParams,
 } from "../../lib/imapconnect";
 import {
   type FieldLabels,
@@ -155,7 +156,7 @@ export function ImapMailboxForm({
           code,
           locale,
           labels[field],
-          bounds && { min: String(bounds.min), max: String(bounds.max) },
+          bounds && rangeParams(bounds),
         ),
       );
     const rangeOf = (field: string, value: number, bounds: Range) => {

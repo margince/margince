@@ -30,6 +30,11 @@ export function rangeFault(
   return inRange(value, range) ? null : "out_of_range";
 }
 
+// The bounds as the wire words them, for the sentence that states them.
+export function rangeParams(range: Range): Record<string, string> {
+  return { min: String(range.min), max: String(range.max) };
+}
+
 // A pasted web address: the server field takes a host name only.
 export function isWebAddress(host: string): boolean {
   return /^[a-z][a-z0-9+.-]*:\/\//i.test(host.trim()) || host.includes("/");

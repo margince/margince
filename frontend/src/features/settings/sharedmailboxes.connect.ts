@@ -10,6 +10,7 @@ import {
   IMAP_PORT_DEFAULT,
   PORT_RANGE,
   rangeFault,
+  rangeParams,
 } from "../../lib/imapconnect";
 import { valueFor } from "../../lib/labelfor";
 import {
@@ -82,7 +83,7 @@ function valueFault(
     ? null
     : {
         code,
-        params: { min: String(PORT_RANGE.min), max: String(PORT_RANGE.max) },
+        params: rangeParams(PORT_RANGE),
       };
 }
 
