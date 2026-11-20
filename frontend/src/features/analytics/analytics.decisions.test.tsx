@@ -141,3 +141,31 @@ it("can record the first manual decision without drawing an empty table", async 
   await userEvent.setup().click(action);
   expect(await screen.findByRole("dialog")).toBeVisible();
 });
+
+it("refuses a review day before today where the date is typed", async () => {
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-21T09:00:00Z") });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /me": meRoute({ activity: ["read", "create"], deal: ["read"] }),
+    "GET /analytics/decisions": () => jsonResponse({ data: [] }),
+  });
+  render(
+    <StoryProviders>
+      <DecisionsPanel />
+    </StoryProviders>,
+  );
+  const user = userEvent.setup({
+    delay: null,
+    advanceTimers: vi.advanceTimersByTime,
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "Record decision" }),
+  );
+  await user.type(
+    await screen.findByRole("textbox", { name: /^Review on/ }),
+    "01/01/2020",
+  );
+  await user.tab();
+  expect(await screen.findByText("Earliest date: 21/11/2026")).toBeVisible();
+  vi.useRealTimers();
+});

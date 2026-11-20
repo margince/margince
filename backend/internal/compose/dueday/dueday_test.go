@@ -5,8 +5,11 @@ package dueday
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 func TestTheDayAfterAPromisedDayIsTheNextCalendarDay(t *testing.T) {
@@ -45,5 +48,16 @@ func TestOddReadsTheDayInTheWritersZone(t *testing.T) {
 	got, err := Odd(context.Background(), nil, "2036-11-20", "Pacific/Auckland", now)
 	if err != nil || got != "" {
 		t.Errorf("the day ends before the edge in Auckland: Odd = %q, %v; want none", got, err)
+	}
+}
+
+func TestEndOfComingRefusesADayThatIsOver(t *testing.T) {
+	now := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	for day, refused := range map[string]bool{"2026-11-19": true, "2026-11-20": false, "2026-11-21": false} {
+		_, err := EndOfComing(context.Background(), nil, "review_on", day, "UTC", now)
+		var detailed *httperr.DetailedError
+		if got := errors.As(err, &detailed); got != refused {
+			t.Errorf("EndOfComing(%q) refused = %v (%v); want %v", day, got, err, refused)
+		}
 	}
 }

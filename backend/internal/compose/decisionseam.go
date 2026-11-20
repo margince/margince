@@ -272,7 +272,7 @@ func isDone(task crmcontracts.Activity) bool {
 // reviewDue is the end of the review day in the installation's calendar, as
 // a task picked for a day falls due.
 func reviewDue(ctx context.Context, tx pgx.Tx, day time.Time) (time.Time, error) {
-	return dueday.EndOf(ctx, tx, day.Format(time.DateOnly), "")
+	return dueday.EndOfComing(ctx, tx, "review_on", day.Format(time.DateOnly), "", time.Now())
 }
 
 // splitOutcome reads the expected result and, after the marker, the

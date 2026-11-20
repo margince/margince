@@ -25,6 +25,8 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { formatDate } from "../../format/format";
+import { useNow } from "../../format/now";
+import { dayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
@@ -270,6 +272,8 @@ export function RecordDecisionDialog({
   const titleId = useId();
   const formId = useId();
   const client = useQueryClient();
+  // The server refuses a review day before today in the installation's zone.
+  const today = isoOrBlank(dayInZone(useNow(0), useCompanyZone()));
   const [key] = useState(() => crypto.randomUUID());
   const [draft, setDraft] = useState<Draft>({
     decision: "",
@@ -377,6 +381,8 @@ export function RecordDecisionDialog({
             <DateInput
               {...field}
               value={isoOrBlank(draft.reviewOn)}
+              min={today || undefined}
+              today={today || undefined}
               onChange={(event) =>
                 setDraft({ ...draft, reviewOn: event.target.value })
               }

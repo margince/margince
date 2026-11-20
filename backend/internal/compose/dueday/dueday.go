@@ -12,6 +12,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -73,4 +75,18 @@ func DayAfter(day string) (string, error) {
 		return "", fmt.Errorf("compose: commitment due date %q is not a date — write it as YYYY-MM-DD: %w", day, err)
 	}
 	return parsed.AddDate(0, 0, 1).Format(time.DateOnly), nil
+}
+
+// EndOfComing is EndOf for a day that must not be behind now. A day already
+// over is a validation error on field, because its task would be overdue the
+// moment it exists.
+func EndOfComing(ctx context.Context, tx pgx.Tx, field, day, zone string, now time.Time) (time.Time, error) {
+	end, err := EndOf(ctx, tx, day, zone)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if deadline.Passed(&end, now) {
+		return time.Time{}, httperr.Validation(field, "in_the_past", "choose today or a later day")
+	}
+	return end, nil
 }
