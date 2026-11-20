@@ -1,12 +1,13 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { createQueryClient } from "./app/queryclient";
 import { LocaleProvider } from "./i18n";
 import { parseHash, routeHash } from "./lib/router";
+import { resetToSignedOut } from "./lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "./lib/storage";
 import { memoryStorage, teardownApp, wizardRow } from "./testing/appharness";
 import { type GrantSpec, meFixture } from "./testing/mefixture";
@@ -683,6 +684,76 @@ describe("onboarding gate", () => {
       readStored({ family: STORAGE_KEYS.onboardingComplete, member: "other" }),
     ).toBeNull();
   });
+
+  it.each([
+    ["the session lapses", false],
+    ["the last user signs out", true],
+  ])(
+    "never marks the next user finished from the last user's answer when %s",
+    async (_, signsOut) => {
+      window.location.hash = "#/contacts";
+      const first = meFixture({ roles: ["rep"] });
+      const next = { ...first, user: { ...first.user, id: "next-user" } };
+      let signedIn: typeof first | null = first;
+      const rows: string[] = [];
+      let releaseNextRow = () => {};
+      const nextRow = new Promise<void>((resolve) => {
+        releaseNextRow = resolve;
+      });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: Request | string | URL) => {
+          const url = String(input instanceof Request ? input.url : input);
+          const answer = (body: unknown, status = 200) =>
+            new Response(JSON.stringify(body), {
+              status,
+              headers: { "Content-Type": "application/json" },
+            });
+          if (url.endsWith("/v1/me"))
+            return signedIn ? answer(signedIn) : answer({}, 401);
+          if (url.endsWith(ROLLOUT))
+            return answer({ onboarding_enabled: true, read_enabled: true });
+          if (url.endsWith("/v1/onboarding/state")) {
+            rows.push(signedIn?.user.id ?? "");
+            if (signedIn === next) await nextRow;
+            return answer(wizardRow("complete"));
+          }
+          return answer({ data: [], page: {} });
+        }),
+      );
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={client}>
+          <LocaleProvider initial="en">
+            <App />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      await waitFor(() => expect(readStored(finishedMark)).toBe("1"));
+      signedIn = null;
+      await act(async () => {
+        await (signsOut
+          ? resetToSignedOut(client)
+          : client.refetchQueries({ queryKey: ["me"], exact: true }));
+      });
+      await screen.findByLabelText("Email");
+      expect(client.getQueryData(["me"]) === undefined).toBe(signsOut);
+      signedIn = next;
+      await act(async () => {
+        await client.refetchQueries({ queryKey: ["me"], exact: true });
+      });
+      await waitFor(() => expect(rows).toEqual([USER, "next-user"]));
+      const nextMark = {
+        family: STORAGE_KEYS.onboardingComplete,
+        member: "next-user",
+      };
+      expect(readStored(nextMark)).toBeNull();
+      releaseNextRow();
+      await waitFor(() => expect(readStored(nextMark)).toBe("1"));
+    },
+  );
 
   // Serialised behind the company read, the rollout would add a round trip to
   // every admin's splash, so it goes out while the company is still unanswered.

@@ -104,9 +104,9 @@ function rememberLocale(locale: Locale): void {
 }
 
 // A transition keeps the page drawn in the old language until the new one's
-// catalogs arrive, where an urgent update would blank it. A page that already
-// asked for the complete catalog asks for the new one beside the essential.
+// catalogs arrive, where an urgent update would blank it.
 function switchLocale(next: Locale, show: (locale: Locale) => void): void {
+  // A page that read the complete catalog will want the new one beside the essential.
   if (completeRequested(effectiveDisplayLocale())) {
     loadLocale(next).catch((error: unknown) =>
       console.error("The selected language could not be loaded", error),

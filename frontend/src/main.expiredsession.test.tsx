@@ -2,6 +2,8 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+// Transformed while the file is collected, so a case waits on the sign-in screen, not on its first compile.
+import "./features/sign-in/auth";
 
 const roots = vi.hoisted((): Root[] => []);
 vi.mock("react-dom/client", async (original) => {
@@ -73,9 +75,7 @@ it("lands an expired session on sign-in with one session probe when the other re
   const logged = vi.spyOn(console, "error").mockImplementation(() => {});
   const server = expiredSession(SHELL_READS);
   await boot();
-  expect(
-    await screen.findByRole("button", { name: "Sign in" }, { timeout: 15_000 }),
-  ).toBeTruthy();
+  expect(await screen.findByRole("button", { name: "Sign in" })).toBeTruthy();
   server.release();
   await waitFor(() =>
     expect(SHELL_READS.every((path) => server.answered.includes(path))).toBe(
@@ -101,9 +101,7 @@ it("sends one session probe when the other refusals come first", async () => {
     ),
   );
   server.release();
-  expect(
-    await screen.findByRole("button", { name: "Sign in" }, { timeout: 15_000 }),
-  ).toBeTruthy();
+  expect(await screen.findByRole("button", { name: "Sign in" })).toBeTruthy();
   const { queryClient } = await import("./app/queryclient.instance");
   await waitFor(() => expect(queryClient.isFetching()).toBe(0));
   expect(server.sessionProbes()).toBe(1);

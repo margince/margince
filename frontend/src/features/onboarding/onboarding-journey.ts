@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useCompanyContextCapabilities } from "../../lib/companycontextreach";
 import {
   readStored,
@@ -60,11 +60,20 @@ export function useJourneyProgress(
   const remembered = useRememberedFinished(userId);
   const finished = progress.isSuccess && progress.data?.step === "complete";
   const unfinished = walkable && progress.isSuccess && !finished;
+  // An answer held when a new user signs in is the last user's, signed-out gap or not.
+  const [owner, setOwner] = useState({ userId, answeredAfter: 0 });
+  if (userId !== undefined && owner.userId !== userId) {
+    setOwner({
+      userId,
+      answeredAfter: owner.userId === undefined ? 0 : progress.dataUpdatedAt,
+    });
+  }
+  const theirs = progress.dataUpdatedAt > owner.answeredAfter;
   useEffect(() => {
-    if (userId === undefined) return;
+    if (userId === undefined || !theirs) return;
     if (finished) writeStored(finishedKey(userId), "1");
     else if (unfinished) removeStored(finishedKey(userId));
-  }, [userId, finished, unfinished]);
+  }, [userId, theirs, finished, unfinished]);
   return {
     pending:
       wanted &&

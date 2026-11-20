@@ -3,10 +3,11 @@ import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { api } from "../api/client";
 import { useOnboardingProgress } from "../features/onboarding/onboarding-progress";
 import { stable } from "../format/collate";
 import { useCompanyContextCapabilities } from "../lib/companycontextreach";
-import { AuthProbeError, useMe } from "../lib/session";
+import { AuthProbeError, sessionRefusalWatch, useMe } from "../lib/session";
 import { useInstallationSettings } from "../lib/uploadlimit";
 import { meFixture } from "../testing/mefixture";
 import { createQueryClient } from "./queryclient";
@@ -77,24 +78,41 @@ it("asks each read the splash waits for once, and the shell's hooks take those a
   expect([...paths].sort(stable)).toEqual(STARTUP_READS);
 });
 
-it("leaves an expired session's refusals to the sign-in screen, re-asking nothing", async () => {
-  const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-  const paths = serve(() =>
+function refusing(status: 401 | 403, code: string) {
+  return () =>
     Response.json(
-      { status: 401, code: "unauthorized" },
-      { status: 401, headers: { "Content-Type": "application/problem+json" } },
-    ),
-  );
-  const client = freshClient();
-  prefetchStartupReads(client);
-  await waitFor(() =>
-    expect(
-      STARTUP_READS.map((path) => paths.filter((p) => p === path).length),
-    ).toEqual([1, 1, 1, 1]),
-  );
-  await waitFor(() => expect(client.isFetching()).toBe(0));
-  expect(paths.filter((path) => path === "/v1/me")).toHaveLength(1);
-  // The session probe's own refusal is the one line, as on any signed-out load.
-  for (const call of logged.mock.calls)
-    expect(call.some((value) => value instanceof AuthProbeError)).toBe(true);
-});
+      { status, code },
+      { status, headers: { "Content-Type": "application/problem+json" } },
+    );
+}
+
+it.each([
+  ["an expired session", refusing(401, "unauthorized")],
+  [
+    "a session locked until it enrols a factor",
+    refusing(403, "mfa_enrolment_required"),
+  ],
+])(
+  "leaves %s to its own screen: one probe, and no log but the probe's",
+  async (_, refusal) => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const paths = serve(refusal);
+    const client = freshClient();
+    const watch = sessionRefusalWatch(client);
+    api.use(watch);
+    try {
+      prefetchStartupReads(client);
+      await waitFor(() =>
+        expect(
+          STARTUP_READS.map((path) => paths.filter((p) => p === path).length),
+        ).toEqual([1, 1, 1, 1]),
+      );
+      await waitFor(() => expect(client.isFetching()).toBe(0));
+    } finally {
+      api.eject(watch);
+    }
+    expect(paths.filter((path) => path === "/v1/me")).toHaveLength(1);
+    for (const call of logged.mock.calls)
+      expect(call.some((value) => value instanceof AuthProbeError)).toBe(true);
+  },
+);

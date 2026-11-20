@@ -49,6 +49,7 @@ if (route.screen === "analytics") {
   });
   registerStartupSession(preparation.catch(fail));
 } else if (sessionSeenNow()) {
+  // Without a past session these reads would only answer 401 before sign-in.
   const preparation = Promise.all([
     import("./app/startup-reads"),
     import("./app/queryclient.instance"),

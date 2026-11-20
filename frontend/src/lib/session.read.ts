@@ -64,8 +64,8 @@ export async function readPreparedAnalyticsSession(signal?: AbortSignal) {
   return { data, dataUpdatedAt: Date.now() };
 }
 
-/** Query meta for a read the startup asks with the probe: sign-in shows its 401. */
-export const signInShowsRefusal = { [SHOWN_REFUSALS]: [401] };
+/** Query meta for a read the startup asks with the probe: sign-in or the lock shows its refusal. */
+export const signInShowsRefusal = { [SHOWN_REFUSALS]: [401, 403] };
 
 /** Whether this browser held a session when it last asked. */
 export function sessionSeenNow(): boolean {

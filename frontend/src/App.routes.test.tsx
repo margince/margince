@@ -9,18 +9,52 @@ import { screenOfAddress, screenWithLocale } from "./App.views";
 import { CompleteLocale } from "./i18n";
 import { parseHash, routeHash, SCREENS } from "./lib/router";
 
-// Every routed screen is a lazy chunk, and a renamed export only fails when a
-// reader first opens that page. Loading each chunk here fails the build first.
-describe("the routed chunks", () => {
-  it("each resolves to a component", async () => {
-    expect(screens.ROUTE_CHUNKS.length).toBeGreaterThan(20);
-    const modules = await Promise.all(
-      screens.ROUTE_CHUNKS.map((load) => load()),
-    );
-    for (const module of modules) {
-      const { default: component } = module as { default?: unknown };
-      expect(component).toBeTruthy();
+// React's own lazy shape: `_init` throws the pending load, then returns the
+// module's `default`. Read so a renamed export fails here, not on a first visit.
+type LazyScreen = { _init: (payload: unknown) => unknown; _payload: unknown };
+
+function isLazyScreen(value: unknown): value is LazyScreen {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "$$typeof" in value &&
+    value.$$typeof === Symbol.for("react.lazy") &&
+    "_init" in value &&
+    typeof value._init === "function" &&
+    "_payload" in value
+  );
+}
+
+async function loadedComponent(screen: LazyScreen): Promise<unknown> {
+  for (;;) {
+    try {
+      return screen._init(screen._payload);
+    } catch (pending) {
+      if (!(pending instanceof Promise)) throw pending;
+      await pending;
     }
+  }
+}
+
+describe("the routed screens", () => {
+  it("each loads its module and finds the component it names", async () => {
+    const routeParts = [
+      screens.DealsRoute({}),
+      screens.DealsRoute({ id: "d1" }),
+      screens.DealsRoute({ id: "d1", id2: "room" }),
+      screens.ShareRoute({ id: "deal", id2: "d1" }),
+    ].map((element) => (isValidElement(element) ? element.type : undefined));
+    const lazies = [...Object.values(screens), ...routeParts].flatMap(
+      (value) => (isLazyScreen(value) ? [value] : []),
+    );
+    expect(lazies.length).toBeGreaterThan(30);
+    for (const screen of lazies)
+      expect(await loadedComponent(screen)).toBeTruthy();
+  }, 60_000);
+
+  it("names a module that loads under every entry of the code map", async () => {
+    for (const load of Object.values(SCREEN_CODE))
+      expect(await load()).toBeTruthy();
   }, 60_000);
 });
 
