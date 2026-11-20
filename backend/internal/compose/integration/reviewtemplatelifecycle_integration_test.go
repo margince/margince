@@ -292,8 +292,8 @@ func TestAReviewOpenedOnOneTemplateIsRefusedOnTheNext(t *testing.T) {
 	}
 }
 
-// Two admins adding a template for one outcome at once: one wins, the other is
-// told the list changed, and the outcome still asks one template.
+// Two admins add a template for one outcome at once. One wins and the other
+// gets a conflict. The outcome still asks one template.
 func TestTwoConcurrentAddsForOneOutcomeLeaveOneActiveTemplate(t *testing.T) {
 	e := Setup(t)
 	keepReviewTemplates(t)
