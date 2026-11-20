@@ -188,7 +188,9 @@ describe("Add purpose", () => {
   });
 });
 
-function stubCounts(allow: Record<string, string[]>): string[] {
+function stubCounts(
+  allow: NonNullable<Parameters<typeof meFixture>[0]>["allow"],
+): string[] {
   const asked: string[] = [];
   vi.stubGlobal(
     "fetch",
