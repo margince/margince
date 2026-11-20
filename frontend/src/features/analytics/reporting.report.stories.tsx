@@ -11,7 +11,10 @@ import {
   reportingExecutions,
   reportingSchedule,
 } from "./reporting.scenarios";
-import { reportingStoryRoutes } from "./reporting.story-fixtures";
+import {
+  reportingStoryReport,
+  reportingStoryRoutes,
+} from "./reporting.story-fixtures";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Saved report detail" };
 export default meta;
@@ -19,6 +22,25 @@ type Story = StoryObj;
 export const Default: Story = {
   render: () => {
     installFetchStub(reportingStoryRoutes());
+    return (
+      <StoryProviders>
+        <ReportingReportDetail reportId="report" />
+      </StoryProviders>
+    );
+  },
+};
+
+// A name with no space in it wraps, and the actions drop under it.
+export const LongName: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/reports/report": () =>
+        jsonResponse({
+          ...reportingStoryReport,
+          name: "Quarterly-pipeline-review-".repeat(5),
+        }),
+    });
     return (
       <StoryProviders>
         <ReportingReportDetail reportId="report" />

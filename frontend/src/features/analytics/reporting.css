@@ -57,6 +57,14 @@
   align-items: start;
   gap: var(--space-5);
   margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+/* The name is the author's text and may be one unbroken run; it takes the row
+   down to a column's width, and the actions drop under it past that. */
+.reporting-title {
+  flex: 1 1 20rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 /* The author's line breaks are kept; a long purpose wraps at reading width. */
 .reporting-description {
@@ -128,6 +136,9 @@
 @media (max-width: 520px) {
   .reporting-header {
     flex-direction: column;
+  }
+  .reporting-title {
+    flex: none;
   }
   .reporting-toolbar > * {
     flex: 1;
