@@ -14974,6 +14974,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.documents.readFailed":
     "Das Dokument konnte nicht geladen werden.",
   "jurisdiction.documents.note": "Für {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* Die Regeln, Fristen und Dokumente auf dieser Seite sind KI-generierte Entwürfe und keine Rechtsberatung. Lass sie von einer Anwältin oder einem Anwalt prüfen, bevor du dich auf sie verlässt.",
   "jurisdiction.audience.employer": "den Arbeitgeber",
   "jurisdiction.audience.operator": "die betreibende Stelle",
   "jurisdiction.audience.employee": "Beschäftigte",

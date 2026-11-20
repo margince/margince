@@ -86,11 +86,7 @@ func (w *meetingDeliveryWorker) remind(ctx context.Context, store *activities.St
 			if errors.Is(err, apperrors.ErrPermissionDenied) {
 				err = errors.Join(err, store.RefuseMeetingReminder(ctx, reminder))
 			}
-			// A refusal by the send check is held for its host to review, so it
-			// is handled, not a fault of this run.
-			if !errors.Is(err, apperrors.ErrConsentNotGranted) {
-				faults = append(faults, err)
-			}
+			faults = append(faults, err)
 		}
 	}
 	return errors.Join(faults...)

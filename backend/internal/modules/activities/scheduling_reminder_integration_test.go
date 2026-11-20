@@ -119,9 +119,8 @@ func TestMeetingReminderRecordsARefusalWithoutSending(t *testing.T) {
 func TestARefusedMeetingReminderIsHeldForItsHost(t *testing.T) {
 	f, meeting, _ := reminderFixture(t)
 	stager := &reviewRecordingStager{recordingStager: recordingStager{err: apperrors.ErrConsentNotGranted}}
-	err := f.store.SendMeetingReminder(f.ctx, ids.UUID(meeting.Id), stubConsentGate{}, stager)
-	if !errors.Is(err, apperrors.ErrConsentNotGranted) {
-		t.Fatalf("the reminder answered %v, want the consent refusal", err)
+	if err := f.store.SendMeetingReminder(f.ctx, ids.UUID(meeting.Id), stubConsentGate{}, stager); err != nil {
+		t.Fatalf("a held reminder failed the job run: %v", err)
 	}
 	var held int
 	if err := f.env.owner.QueryRow(f.ctx, `SELECT count(*) FROM scheduled_send WHERE status = 'held'`).Scan(&held); err != nil {

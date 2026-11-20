@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -93,7 +94,12 @@ func (s *Store) SendMeetingReminder(ctx context.Context, id ids.UUID, gate Conse
 		return writeMeetingReminder(ctx, tx, current, "queued")
 	})
 	if err != nil {
-		return errors.Join(s.holdRefusal(ctx, origin, input, stager, err), s.markMeetingReminderUnavailable(ctx, row))
+		// A reminder the send check refuses waits, held, for its host to review.
+		// That is handled, not a fault of the job run.
+		if err = s.holdRefusal(ctx, origin, input, stager, err); errors.Is(err, apperrors.ErrConsentNotGranted) {
+			err = nil
+		}
+		return errors.Join(err, s.markMeetingReminderUnavailable(ctx, row))
 	}
 	return nil
 }

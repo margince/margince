@@ -137,6 +137,17 @@ describe("the jurisdiction page", () => {
     ).toBeInTheDocument();
   });
 
+  it("marks its rules as AI-generated drafts, not legal advice", async () => {
+    stub(UNSET);
+    render();
+    expect(
+      await screen.findByText(en["jurisdiction.legalNote"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`${en["jurisdiction.effects.title"]} *`),
+    ).toBeInTheDocument();
+  });
+
   it("names what a change weakens before it sends it", async () => {
     const sent = stub(UNSET);
     const user = userEvent.setup();

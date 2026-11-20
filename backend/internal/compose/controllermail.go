@@ -187,8 +187,7 @@ func stagingRequest(in consent.ConfirmationSend, body string) commsauthz.Request
 		Recipients: []connector.Recipient{{Email: in.Recipient}},
 		Context:    in.Category,
 		Evidence:   commsauthz.Evidence{LeadID: in.LeadID.UUID},
-		// The entity that answers for the record, so the decision is judged
-		// and recorded under its law.
+		// The record's entity, so the decision is judged under its law.
 		SendingEntity: in.Entity,
 		Subject:       in.Rendered.Subject,
 		Body:          body,
@@ -230,11 +229,9 @@ func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Re
 	return mail, nil
 }
 
-// controllerLetterheadTx is the name and logo a controller mail is headed by.
-// The controller's legal name heads it once it is stated, so the brand line and
-// "This message is from" cannot name two companies. Refusing the send instead
-// would withhold a notice the law owes the subject over a branding setting. The
-// company logo stays only while the company is the controller.
+// controllerLetterheadTx is the name and logo a controller mail is headed by:
+// the stated legal name, so the brand line and "This message is from" agree.
+// Refusing instead would withhold a notice the law owes over a branding setting.
 func controllerLetterheadTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (string, string, error) {
 	if further, name, key, err := contacts.FurtherEntityLetterheadTx(ctx, tx, entity); err != nil || further {
 		return name, key, err

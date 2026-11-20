@@ -14899,6 +14899,8 @@ export const en = {
   "jurisdiction.documents.close": "Close",
   "jurisdiction.documents.readFailed": "The document could not be loaded.",
   "jurisdiction.documents.note": "For {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* The rules, deadlines and documents on this page are AI-generated drafts, not legal advice. Have a lawyer check them before you rely on them.",
   "jurisdiction.audience.employer": "the employer",
   "jurisdiction.audience.operator": "the operator",
   "jurisdiction.audience.employee": "staff",
