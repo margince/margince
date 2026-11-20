@@ -4289,7 +4289,7 @@
   "setup.step.languageDone": "Ngôn ngữ của bạn đã được lưu.",
   "setup.step.permissions": "Xem Margince được làm gì",
   "setup.caption.permissions": "Margince đọc gì, ghi gì và cách hoàn tác.",
-  "setup.action.permissions": "Đọc",
+  "setup.action.permissions": "Xem",
   "setup.step.permissionsDone": "Bạn đã đọc Margince được làm gì.",
   "setup.permissions.title": "Margince đọc và ghi gì",
   "setup.permissions.reads": "Margince đọc email và lịch bạn kết nối, tệp bạn tải lên và trang web công khai của công ty. Bạn có thể ngắt kết nối email và lịch bất cứ lúc nào trong Cài đặt, mục Kết nối.",

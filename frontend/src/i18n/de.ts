@@ -3121,7 +3121,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "board.count_one": "Deal: {count}",
   "board.count_other": "Deals: {count}",
   "board.weightedLabel": "gewichtet",
-  "board.ratesOn": "Kurse vom {date}",
+  "board.ratesOn": "Wechselkurse vom {date}",
   "board.unpriced_one": "{count} ohne Preis",
   "board.unpriced_other": "{count} ohne Preis",
   "board.totalsTip":
@@ -3954,7 +3954,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Die drei Aussagen, mit denen die Übersicht beginnt, und was das
   // Ausführen eines Vorschlags bedeutet.
   "co.strip.title": "Unternehmensstatus",
-  "co.strip.convertedAsOf": "{count} umgerechnet, Kurse vom {date}",
+  "co.strip.convertedAsOf": "{count} umgerechnet, Wechselkurse vom {date}",
   "co.strip.noOpenDeals": "Keine",
   "co.strip.pipeline": "Offene Deals",
   "co.description.label": "Beschreibung",
@@ -17050,7 +17050,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.step.permissions": "Sieh, was Margince darf",
   "setup.caption.permissions":
     "Was es liest, was es schreibt und wie du es rückgängig machst.",
-  "setup.action.permissions": "Lesen",
+  "setup.action.permissions": "Ansehen",
   "setup.step.permissionsDone": "Du hast gelesen, was Margince darf.",
   "account.keepChoice": "{value} behalten",
   "setup.permissions.title": "Was Margince liest und schreibt",
@@ -20844,8 +20844,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Aufgabe war am {due} fällig und ist noch offen.",
   "worklist.happened.task.undated": "Die Aufgabe hat kein Fälligkeitsdatum.",
   "worklist.happened.deal": "{deal}: {figures}.",
-  "worklist.happened.lastFrom": "Letzter Kontakt von {name}: {when}.",
-  "worklist.happened.lastTo": "Letzter Kontakt an {name}: {when}.",
+  "worklist.happened.lastFrom": "Letzter Kontakt von {name}: {when}",
+  "worklist.happened.lastTo": "Letzter Kontakt an {name}: {when}",
   "worklist.happened.noneFrom":
     "Letzter Kontakt von {name}: keiner, den du öffnen kannst.",
   "worklist.happened.noneTo":

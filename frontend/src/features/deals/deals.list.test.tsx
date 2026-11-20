@@ -442,7 +442,7 @@ describe("DealsScreen", () => {
     render(<DealsScreen />);
     fireEvent.focus(await screen.findByText("€100"));
     expect(screen.getByRole("tooltip").textContent).toContain(
-      `Converted at rates as of ${day}.`,
+      `Converted at exchange rates as of ${day}.`,
     );
   });
 

@@ -16592,7 +16592,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.step.languageDone": "Ngôn ngữ của bạn đã được lưu.",
   "setup.step.permissions": "Xem Margince được làm gì",
   "setup.caption.permissions": "Margince đọc gì, ghi gì và cách hoàn tác.",
-  "setup.action.permissions": "Đọc",
+  "setup.action.permissions": "Xem",
   "setup.step.permissionsDone": "Bạn đã đọc Margince được làm gì.",
   "account.keepChoice": "Giữ {value}",
   "setup.permissions.title": "Margince đọc và ghi gì",
