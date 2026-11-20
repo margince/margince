@@ -18430,7 +18430,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.containersUnreadableBody":
     "In dieser Liste fehlen möglicherweise Ordner, da der E-Mail-Anbieter nicht geantwortet hat. Bitte versuche es gleich erneut oder schließe E-Mails nach Absendeadresse oder Domain aus.",
   "captureExclusions.kindLabel": "Typ",
-  "captureExclusions.addLabel": "Adresse oder Domain ausschließen",
+  "captureExclusions.title.address": "Adresse ausschließen",
+  "captureExclusions.title.domain": "Domain ausschließen",
+  "captureExclusions.title.container": "Ordner oder Label ausschließen",
+  "captureExclusions.field.address": "Adresse",
+  "captureExclusions.field.domain": "Domain",
+  "captureExclusions.noMailbox": "Verbinde zuerst ein Postfach.",
   "captureExclusions.placeholder.address": "name@beispiel.example",
   "captureExclusions.placeholder.domain": "beispiel.example",
   "captureExclusions.add": "Ausschließen",

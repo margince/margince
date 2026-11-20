@@ -42,6 +42,10 @@ export function PurgeDialog({
   // A preview has been seen when one came back saying so; the button below
   // then asks for the real thing.
   const previewed = outcome?.preview === true;
+  // Nothing to delete, release or anonymise leaves no act to confirm.
+  const actionable =
+    outcome !== null &&
+    outcome.destroyed + outcome.released + outcome.anonymised > 0;
   // Escape and the backdrop wait for the server too: leaving mid-purge loses
   // the receipt of what it destroyed and kept.
   const close = () => {
@@ -83,7 +87,7 @@ export function PurgeDialog({
       <div className="actions">
         <span className="actions-pair">
           <Button type="button" onClick={onClose} disabled={purge.isPending}>
-            {previewed || !outcome
+            {(previewed && actionable) || !outcome
               ? t("create.cancel")
               : t("capturePurge.done")}
           </Button>
@@ -97,7 +101,7 @@ export function PurgeDialog({
               {t("capturePurge.preview")}
             </Button>
           )}
-          {previewed && (
+          {previewed && actionable && (
             <Button
               type="button"
               variant="danger"

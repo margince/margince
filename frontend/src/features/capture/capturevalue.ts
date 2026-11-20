@@ -29,7 +29,8 @@ const SHAPE_REFUSALS: Readonly<
   },
   domain: {
     copy: "captureValue.refusedDomain",
-    reason: /^give a (bare )?domain\b| is not a domain$/,
+    reason:
+      /^give a (bare )?domain\b| is not a domain$| is not a usable domain name$/,
   },
 };
 

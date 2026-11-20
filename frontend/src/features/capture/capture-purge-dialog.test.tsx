@@ -79,3 +79,43 @@ it("says nothing was destroyed when the purge is refused", async () => {
   expect(await screen.findByText(/nothing was destroyed/i)).toBeInTheDocument();
   expect(screen.queryByText(/may already have been destroyed/i)).toBeNull();
 });
+
+// A check that finds nothing leaves no act to confirm, so no red button.
+it("offers only Close when the check counts nothing to delete", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            preview: true,
+            destroyed: 0,
+            released: 0,
+            anonymised: 0,
+            kept: {
+              held: 0,
+              under_statute: 0,
+              under_request: 0,
+              under_undetermined_floor: 0,
+            },
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
+    ),
+  );
+  const user = userEvent.setup();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <PurgeDialog ruleId="ex-2" ruleValue="example.test" onClose={vi.fn()} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Check first" }));
+
+  expect(await screen.findByText(/0 messages would be/)).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Delete permanently" }),
+  ).toBeNull();
+  expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(2);
+});

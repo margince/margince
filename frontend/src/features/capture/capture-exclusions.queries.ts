@@ -95,6 +95,7 @@ export function useFolderOptions(enabled: boolean) {
   } = useMailboxes(enabled);
   const containers = useContainers(mailboxes, enabled);
   return {
+    mailboxCount: mailboxes.length,
     options: mailboxes.flatMap((mailbox, index) =>
       (containers[index]?.data?.containers ?? []).map((container) => ({
         value: `${mailbox.id}/${mailbox.provider}:${container.id}`,

@@ -18250,7 +18250,12 @@ export const en = {
   "captureExclusions.containersUnreadableBody":
     "The mail provider did not answer, so this list may be missing folders. Try again in a moment, or keep senders out by address or domain instead.",
   "captureExclusions.kindLabel": "Kind",
-  "captureExclusions.addLabel": "Exclude address or domain",
+  "captureExclusions.title.address": "Exclude an address",
+  "captureExclusions.title.domain": "Exclude a domain",
+  "captureExclusions.title.container": "Exclude a folder or label",
+  "captureExclusions.field.address": "Address",
+  "captureExclusions.field.domain": "Domain",
+  "captureExclusions.noMailbox": "Connect a mailbox first.",
   "captureExclusions.placeholder.address": "name@example.com",
   "captureExclusions.placeholder.domain": "example.com",
   "captureExclusions.add": "Exclude",

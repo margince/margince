@@ -17940,7 +17940,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.containersUnreadableBody":
     "Nhà cung cấp thư không phản hồi, nên danh sách này có thể thiếu thư mục. Thử lại sau giây lát, hoặc loại trừ theo địa chỉ hay tên miền.",
   "captureExclusions.kindLabel": "Loại",
-  "captureExclusions.addLabel": "Loại trừ địa chỉ hoặc tên miền",
+  "captureExclusions.title.address": "Loại trừ một địa chỉ",
+  "captureExclusions.title.domain": "Loại trừ một tên miền",
+  "captureExclusions.title.container": "Loại trừ một thư mục hoặc nhãn",
+  "captureExclusions.field.address": "Địa chỉ",
+  "captureExclusions.field.domain": "Tên miền",
+  "captureExclusions.noMailbox": "Hãy kết nối hộp thư trước.",
   "captureExclusions.placeholder.address": "ten@example.com",
   "captureExclusions.placeholder.domain": "vidu.com",
   "captureExclusions.add": "Loại trừ",
