@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics/handoffassignee.tsx backend/internal/compose/memberhandoff/handlers.go frontend/src/features/settings/users-handover.tsx backend/internal/compose/handover.go frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go frontend/src/app/licensebanner.tsx -->
+<!-- describes: frontend/src/features/analytics/handoffassignee.tsx backend/internal/compose/memberhandoff/handlers.go frontend/src/features/settings/users-handover.tsx backend/internal/compose/handover.go frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/attachscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go frontend/src/app/licensebanner.tsx -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -195,15 +195,15 @@ Two exceptions count for every role, Admin included:
 - **A captured contact still private to its owner.** A connection creates a
   contact from a message that nothing has judged yet. The contact belongs to the colleague whose mailbox made it, until Margince judges the sender or the owner makes it public. An admin cannot open it either. So when you connect a mailbox with a year of history, the whole company does not see everyone in its mail history. That may include a lawyer or a doctor.
 
-A shared pipeline is the default. A share on one record can widen access further.
-
-Saved views, automations and your writing voice keep the owner rule; a shared list shows each reader only the records they may see.
+A shared pipeline is the default. A share on one record can widen access further. Saved views, automations and your writing voice keep the owner rule; a shared list shows each reader only the records they may see.
 
 **Only Team lead has team scope.** A Team lead reads and works on the records of everyone who shares a live team with them, with no share set up first. A Team lead who belongs to no team reaches only their own records.
 
 **User has the scope own.** For every role but Team lead, being on a team with someone does not by itself let you edit their records. That takes a share made for it, or a seat with no row limit.
 
 Everyone can read a record with **no owner**, and nobody can write to it until someone claims it.
+
+**Adding to a record counts as changing it.** Logging an activity, note or task on a record, adding a file, or moving an activity onto it needs the right to edit the record. You have it when you own the record, when your team owns it and you are its Team lead, or through a write share. On a record you can only read, these buttons are off, and an agent working for you is refused the same way. You can still name the record on your own new deal, lead or project. Mail and meetings Margince reads from your mailbox are still filed on it, and so is a reply you send to a message filed there.
 
 ## The owner and responsibility roles
 

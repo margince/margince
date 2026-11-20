@@ -3092,6 +3092,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền dùng mục này. Liên hệ quản trị viên để được cấp thêm quyền.",
   "contact.attachRefused":
     "Bạn chỉ có quyền xem liên hệ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
+  "record.attachRefused":
+    "Bạn chỉ có quyền xem hồ sơ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
   "record.logActivityRefused":
     "Bạn không có quyền ghi nhận hoạt động trên hồ sơ này.",
   "record.share": "Chia sẻ",

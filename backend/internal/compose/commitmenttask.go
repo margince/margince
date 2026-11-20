@@ -137,6 +137,7 @@ func writeCommitmentTask(
 	// The promiser's own task waits for them as a task made by hand would,
 	// also before they first sign in.
 	in.AdmitInvitedAssignee()
+	in.ContinueFiling(sourceActivity)
 	if t.DueConfirmed {
 		in.AdmitConfirmedDue()
 	}

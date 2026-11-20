@@ -3096,6 +3096,8 @@ export const en = {
     "Your role does not include this action. Ask an administrator for the right.",
   "contact.attachRefused":
     "You can only read this contact. Ask its owner for write access.",
+  "record.attachRefused":
+    "You can only read this record. Ask its owner for write access.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",

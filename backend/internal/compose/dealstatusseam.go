@@ -97,9 +97,9 @@ func dealSeatReader(pool *pgxpool.Pool) dealstatus.SeatReader {
 // seatsThisReaderMayFileAgainst answers, for every seated contact at once,
 // whether this reader may attach work to them.
 //
-// READING A CONTACT IS NOT PERMISSION TO FILE AGAINST THEM. A share marked
-// read-only shows somebody a contact and does not let them add to that
-// contact's record, and activity_link's own writer enforces exactly that
+// READING A CONTACT IS NOT PERMISSION TO FILE AGAINST THEM. Every seat reads
+// a contact another team owns, and a read-only share shows one too; neither
+// lets the reader add to that contact's record, and activity_link's own writer enforces exactly that
 // (auth.EnsureAttachTarget). A card that offered a task linked to such a
 // contact would render a button that fails only once it is pressed, which
 // reads to whoever pressed it as the product being broken rather than as

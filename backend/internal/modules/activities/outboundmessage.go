@@ -55,6 +55,8 @@ type outboundMessage struct {
 	advertising bool
 	to          []string
 	links       []ActivityLinkInput
+	// anchor is the message a reply answers, zero on an account-started send.
+	anchor ids.ActivityID
 	// provider is the mailbox this send goes out through, resolved once per
 	// send. It names the DELIVERY only: the timeline row's natural key is the
 	// transport-independent mail identity (connector.EmailSourceSystem), so the
@@ -100,6 +102,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		Body:                 &recorded,
 		Direction:            &direction,
 		Links:                m.links,
+		continues:            m.continues(),
 		Source:               sourceManual,
 		SourceSystem:         &sourceSystem,
 		SourceID:             &m.messageID,
@@ -113,6 +116,14 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		CounterpartyEmail:            primaryCounterparty(m.to, m.in.Recipients),
 		CounterpartyOutboundAttested: true,
 	})
+}
+
+// continues is the reply's anchor, whose links the reply inherits.
+func (m outboundMessage) continues() *ids.UUID {
+	if m.anchor.IsZero() {
+		return nil
+	}
+	return &m.anchor.UUID
 }
 
 // SentRecord is the timeline row a send stores. Its subject and body are masked

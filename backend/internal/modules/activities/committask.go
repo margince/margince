@@ -56,6 +56,13 @@ func (in *LogActivityInput) AdmitInvitedAssignee() {
 	in.invitedAssignee = true
 }
 
+// ContinueFiling marks the message a task is made from, so the task may be
+// filed wherever that message already is (mayCarry). The commitment writer
+// calls it: the links are the extractor's, read off the message.
+func (in *LogActivityInput) ContinueFiling(message ids.UUID) {
+	in.continues = &message
+}
+
 // AdmitConfirmedDue lets the task keep a due date outside the window. Only a
 // writer acting for the human who was shown that date and kept it may call it.
 func (in *LogActivityInput) AdmitConfirmedDue() {

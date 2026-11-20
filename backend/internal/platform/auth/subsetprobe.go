@@ -70,21 +70,6 @@ func PassingSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.UU
 	return idsWhere(ctx, tx, table, "id", terms, args)
 }
 
-// AttachableSubset is EnsureAttachTarget over many live rows.
-func AttachableSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	terms := []string{fmt.Sprintf("id = ANY($%d)", arg(rowIDs)), "archived_at IS NULL"}
-	clause, err := AttachClauseFor(ctx, table, "", arg)
-	if err != nil {
-		return nil, err
-	}
-	if clause != "" {
-		terms = append(terms, clause)
-	}
-	return idsWhere(ctx, tx, table, "id", terms, args)
-}
-
 // ActivityContentSubset is EnsureActivityContentVisible, or its Live twin, over
 // many activities.
 func ActivityContentSubset(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, live bool) (map[ids.UUID]bool, error) {
