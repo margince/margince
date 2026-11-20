@@ -14,7 +14,7 @@ import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { PageZones } from "../../design-system/pagezones";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { FlatPanelHeads, Panel, PanelBody } from "../../design-system/panel";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
@@ -306,15 +306,13 @@ function PersonalMorning({
           </>
         }
         aside={
-          <>
+          // Every rail card opens with the one flat head, so a card added here
+          // cannot draw a band its neighbours do not.
+          <FlatPanelHeads value>
             {/* The day's meetings first: the work is read against them. */}
             <ScheduleWithMeetings day={day} state={state} />
             {day && (
-              <Panel
-                title={t("brief.rail.numbers")}
-                flatHead
-                className="brief-overview"
-              >
+              <Panel title={t("brief.rail.numbers")} className="brief-overview">
                 <PanelBody>
                   <BriefReadingsStrip day={day} />
                   <BriefCoverage
@@ -331,7 +329,6 @@ function PersonalMorning({
               <div aria-hidden="true">
                 <Panel
                   title={t("brief.rail.numbers")}
-                  flatHead
                   className="brief-overview"
                 >
                   <PanelBody>
@@ -343,7 +340,7 @@ function PersonalMorning({
             <CustomerPaymentsCard
               enabled={dayAnswered(state, [handled, ...dealReads])}
             />
-          </>
+          </FlatPanelHeads>
         }
       />
       {linkedTask && (
