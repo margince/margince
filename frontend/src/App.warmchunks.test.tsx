@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment happy-dom */
+/**
+ * @vitest-environment happy-dom
+ * @vitest-environment-options {"settings":{"disableCSSFileLoading":true}}
+ */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  type ScreenChunks,
   screenChunksTag,
   screenCodeSpecifiers,
 } from "../scripts/vite-screen-chunks";
 import { SCREEN_CODE } from "./App.screencode";
 import { useWarmRouteChunks, WARM_ORDER } from "./App.warmchunks";
+import type { ScreenChunks } from "./lib/screenchunks";
 
 type IdleCallback = () => void;
 
@@ -44,11 +47,15 @@ function stubIdle() {
 }
 
 // The shell's map as the build plugin writes it, one file per screen and a shared one.
-function emit(screens: readonly string[]) {
+function emit(screens: readonly string[], sheets: readonly string[] = []) {
   const map: ScreenChunks = { files: ["/assets/shared.js"], screens: {} };
   for (const screen of screens) {
     map.files.push(`/assets/${screen}.js`);
     map.screens[screen] = [map.files.length - 1, 0];
+    if (sheets.includes(screen)) {
+      map.files.push(`/assets/${screen}.css`);
+      map.screens[screen].push(map.files.length - 1);
+    }
   }
   const tag = screenChunksTag(map);
   const block = document.createElement("script");
@@ -99,7 +106,15 @@ describe("the warm-up order", () => {
       (key) => !WARM_ORDER.some((warmed) => warmed === key),
     );
     expect(new Set(left)).toEqual(
-      new Set(["settings", "book", "oauthConsent", "unsubscribe", "confirm"]),
+      new Set([
+        "settings",
+        "book",
+        "oauthConsent",
+        "unsubscribe",
+        "confirm",
+        "onboarding",
+        "buyerRoom",
+      ]),
     );
     expect(new Set(WARM_ORDER).size).toBe(WARM_ORDER.length);
   });
@@ -134,6 +149,41 @@ describe("useWarmRouteChunks", () => {
       "/assets/shared.js",
       "/assets/leads.js",
     ]);
+  });
+
+  // A style preload fetches the sheet and applies nothing until the screen links it.
+  it("preloads a screen's stylesheet as a style, beside its modules", async () => {
+    const idle = stubIdle();
+    emit(["deals"], ["deals"]);
+
+    renderHook(() => useWarmRouteChunks());
+    await idle.goIdle();
+
+    const style = document.head.querySelector<HTMLLinkElement>(
+      'link[rel="preload"]',
+    );
+    expect(style?.as).toBe("style");
+    expect(style?.crossOrigin).toBe("");
+    expect(new URL(style?.href ?? "").pathname).toBe("/assets/deals.css");
+    expect(preloads()).toEqual(["/assets/deals.js", "/assets/shared.js"]);
+    expect(document.head.querySelector('link[rel="stylesheet"]')).toBeNull();
+  });
+
+  it("adds no second preload for a stylesheet the document already has", async () => {
+    const idle = stubIdle();
+    emit(["deals"], ["deals"]);
+    const sheet = document.createElement("link");
+    sheet.rel = "preload";
+    sheet.as = "style";
+    sheet.href = "/assets/deals.css";
+    document.head.append(sheet);
+
+    renderHook(() => useWarmRouteChunks());
+    await idle.goIdle();
+
+    expect(document.head.querySelectorAll('link[rel="preload"]')).toHaveLength(
+      1,
+    );
   });
 
   it("never preloads a screen left out of the order", async () => {

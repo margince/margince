@@ -5,13 +5,13 @@ import type { HtmlTagDescriptor, Plugin, Rolldown } from "vite";
 
 type Bundle = Rolldown.OutputBundle;
 
-/** The CSS a chunk and its static imports carry, imports first, as Vite links an entry's. */
-export function stylesheetsOf(
+/** A chunk and every chunk it imports statically, imports first: what loading it fetches. */
+export function staticChunks(
   bundle: Bundle,
   chunk: Rolldown.OutputChunk,
-): string[] {
+): Rolldown.OutputChunk[] {
   const seen = new Set<string>();
-  const sheets: string[] = [];
+  const found: Rolldown.OutputChunk[] = [];
   const walk = (current: Rolldown.OutputChunk) => {
     if (seen.has(current.fileName)) return;
     seen.add(current.fileName);
@@ -19,12 +19,24 @@ export function stylesheetsOf(
       const next = bundle[imported];
       if (next?.type === "chunk") walk(next);
     }
-    for (const sheet of current.viteMetadata?.importedCss ?? []) {
-      if (!sheets.includes(sheet)) sheets.push(sheet);
-    }
+    found.push(current);
   };
   walk(chunk);
-  return sheets;
+  return found;
+}
+
+/** The CSS those chunks carry, in the cascade order Vite links an entry's. */
+export function stylesheetsOf(
+  bundle: Bundle,
+  chunk: Rolldown.OutputChunk,
+): string[] {
+  return [
+    ...new Set(
+      staticChunks(bundle, chunk).flatMap((current) => [
+        ...(current.viteMetadata?.importedCss ?? []),
+      ]),
+    ),
+  ];
 }
 
 function startupSheets(bundle: Bundle, entries: readonly string[]): string[] {

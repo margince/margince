@@ -6,11 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { build } from "vite";
 import { afterEach, beforeEach, expect, it } from "vitest";
-import {
-  SCREEN_CHUNKS_ID,
-  screenChunks,
-  screenCodeSpecifiers,
-} from "./vite-screen-chunks";
+import { SCREEN_CHUNKS_ID } from "../src/lib/screenchunks";
+import { screenChunks, screenCodeSpecifiers } from "./vite-screen-chunks";
 
 let dir = "";
 
@@ -46,12 +43,13 @@ async function shell(screenCode: string, files: Record<string, string>) {
   return { markup: String(html.source), outputs };
 }
 
-it("writes each screen's chunk and its static imports into the shell as data", async () => {
+it("writes each screen's chunk, its static imports and their CSS into the shell as data", async () => {
   const { markup, outputs } = await shell(
     'export const SCREEN_CODE = { deals: () => import("./deals.js"), leads: () => import("./leads.js") }; globalThis.screens = SCREEN_CODE;',
     {
       "deals.js":
-        'import { shared } from "./shared.js"; export const deals = shared;',
+        'import { shared } from "./shared.js"; import "./deals.css"; export const deals = shared;',
+      "deals.css": ".deals { color: red; }",
       "leads.js":
         'import { shared } from "./shared.js"; export const leads = shared + 1;',
       "shared.js": "export const shared = globalThis.seed ?? 1;",
@@ -71,13 +69,17 @@ it("writes each screen's chunk and its static imports into the shell as data", a
   const files = (screen: string) =>
     (map.screens[screen] ?? []).map((index) => map.files[index]);
   expect(Object.keys(map.screens)).toEqual(["deals", "leads"]);
+  const sheet = outputs.find(
+    (file) => file.type === "asset" && file.fileName.endsWith(".css"),
+  )?.fileName;
   expect(files("deals")).toEqual([
-    `/crm/${fileOf("deals.js")}`,
     `/crm/${fileOf("shared.js")}`,
+    `/crm/${fileOf("deals.js")}`,
+    `/crm/${sheet}`,
   ]);
   expect(files("leads")).toEqual([
-    `/crm/${fileOf("leads.js")}`,
     `/crm/${fileOf("shared.js")}`,
+    `/crm/${fileOf("leads.js")}`,
   ]);
 });
 
@@ -87,7 +89,7 @@ it("fails the build on a screen whose code is not one import()", async () => {
       'export const SCREEN_CODE = { deals: () => import("./deals.js"), gone: () => Promise.resolve() };',
       { "deals.js": "export const deals = 1;" },
     ),
-  ).rejects.toThrow("SCREEN_CODE has an entry that is not");
+  ).rejects.toThrow('SCREEN_CODE.gone is not `() => import("…")`');
 });
 
 it("fails the build when a screen's module does not resolve", async () => {

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { SCREEN_CODE } from "./App.screencode";
+import { SCREEN_CHUNKS_ID } from "./lib/screenchunks";
 import { COARSE_POINTER } from "./lib/viewport";
 
 type ScreenKey = keyof typeof SCREEN_CODE;
@@ -19,6 +20,8 @@ const NEVER: readonly ScreenKey[] = [
   "oauthConsent",
   "unsubscribe",
   "confirm",
+  "onboarding",
+  "buyerRoom",
 ];
 
 const isScreenKey = (key: string): key is ScreenKey =>
@@ -31,12 +34,12 @@ export const WARM_ORDER: readonly ScreenKey[] = [
     .filter((key) => !FIRST.includes(key) && !NEVER.includes(key)),
 ];
 
-// The build writes this block (scripts/vite-screen-chunks.ts); the dev server writes none.
-const SCREEN_CHUNKS_ID = "screen-chunks";
+const isHref = (value: unknown): value is string => typeof value === "string";
 
 const isIndexList = (value: unknown): value is number[] =>
   Array.isArray(value) && value.every((index) => Number.isInteger(index));
 
+// The dev server writes no map, so there the warm-up does nothing.
 function emittedScreenFiles(): Map<string, string[]> {
   const text = document.getElementById(SCREEN_CHUNKS_ID)?.textContent;
   const found = new Map<string, string[]>();
@@ -53,19 +56,18 @@ function emittedScreenFiles(): Map<string, string[]> {
   const screens = "screens" in map ? map.screens : undefined;
   if (!Array.isArray(files) || typeof screens !== "object" || !screens)
     return found;
+  const listed: unknown[] = files;
   for (const [key, indexes] of Object.entries(screens)) {
     if (!isIndexList(indexes)) continue;
-    const hrefs = indexes.map((index) => files[index]);
-    if (hrefs.every((href) => typeof href === "string")) found.set(key, hrefs);
+    const hrefs = indexes.map((index) => listed[index]);
+    if (hrefs.every(isHref)) found.set(key, hrefs);
   }
   return found;
 }
 
 function linked(href: string): boolean {
   const url = new URL(href, document.baseURI).href;
-  return [
-    ...document.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"]'),
-  ]
+  return [...document.querySelectorAll<HTMLLinkElement>("link[href]")]
     .map((link) => link.href)
     .concat(
       [...document.querySelectorAll<HTMLScriptElement>("script[src]")].map(
@@ -78,7 +80,14 @@ function linked(href: string): boolean {
 function preload(href: string): Promise<void> {
   return new Promise((settled) => {
     const link = document.createElement("link");
-    link.rel = "modulepreload";
+    // A style preload fetches the sheet without applying it. It uses the CORS
+    // mode of Vite's own stylesheet link, which is then served from it.
+    if (href.endsWith(".css")) {
+      link.rel = "preload";
+      link.as = "style";
+    } else {
+      link.rel = "modulepreload";
+    }
     link.crossOrigin = "";
     link.href = href;
     link.addEventListener("load", () => settled());

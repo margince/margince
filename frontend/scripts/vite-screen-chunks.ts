@@ -2,43 +2,69 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { readFileSync } from "node:fs";
+import type * as TS from "typescript";
 import type { HtmlTagDescriptor, Plugin, Rolldown } from "vite";
+import { SCREEN_CHUNKS_ID, type ScreenChunks } from "../src/lib/screenchunks";
+import { staticChunks, stylesheetsOf } from "./vite-startup-styles";
 
-export const SCREEN_CHUNKS_ID = "screen-chunks";
+function objectLiteral(
+  ts: typeof TS,
+  file: TS.SourceFile,
+  name: string,
+): TS.ObjectLiteralExpression | undefined {
+  for (const statement of file.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      let value = declaration.initializer;
+      if (value && ts.isAsExpression(value)) value = value.expression;
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === name &&
+        value &&
+        ts.isObjectLiteralExpression(value)
+      )
+        return value;
+    }
+  }
+  return undefined;
+}
 
-/** What the shell carries: every file once, and each screen's files by index. */
-export type ScreenChunks = {
-  files: string[];
-  screens: Record<string, number[]>;
-};
-
-type TypeScript = typeof import("typescript");
-
-function entry(
-  ts: TypeScript,
-  property: import("typescript").ObjectLiteralElementLike,
-): [string, string] {
-  const body =
-    ts.isPropertyAssignment(property) &&
-    ts.isArrowFunction(property.initializer)
-      ? property.initializer.body
-      : undefined;
-  const specifier =
-    body &&
-    ts.isCallExpression(body) &&
-    body.expression.kind === ts.SyntaxKind.ImportKeyword
-      ? body.arguments[0]
-      : undefined;
+function importSpecifier(
+  ts: typeof TS,
+  property: TS.ObjectLiteralElementLike,
+): string | undefined {
   if (
-    !property.name ||
-    !ts.isIdentifier(property.name) ||
-    !specifier ||
-    !ts.isStringLiteral(specifier)
+    !ts.isPropertyAssignment(property) ||
+    !ts.isArrowFunction(property.initializer)
   )
-    throw new Error(
-      `SCREEN_CODE has an entry that is not \`key: () => import("…")\`: ${property.getText()}`,
-    );
-  return [property.name.text, specifier.text];
+    return undefined;
+  const { body } = property.initializer;
+  if (
+    !ts.isCallExpression(body) ||
+    body.expression.kind !== ts.SyntaxKind.ImportKeyword
+  )
+    return undefined;
+  const [argument] = body.arguments;
+  return argument && ts.isStringLiteral(argument) ? argument.text : undefined;
+}
+
+/**
+ * Each entry of the object literal `name` declares in `file`, with the module
+ * its `() => import("…")` names; undefined for an entry of any other shape.
+ */
+export function importMapEntries(
+  ts: typeof TS,
+  file: TS.SourceFile,
+  name: string,
+): Map<string, string | undefined> | undefined {
+  const literal = objectLiteral(ts, file, name);
+  if (!literal) return undefined;
+  const entries = new Map<string, string | undefined>();
+  for (const property of literal.properties) {
+    if (property.name && ts.isIdentifier(property.name))
+      entries.set(property.name.text, importSpecifier(ts, property));
+  }
+  return entries;
 }
 
 export async function screenCodeSpecifiers(
@@ -49,47 +75,16 @@ export async function screenCodeSpecifiers(
     "screencode.ts",
     source,
     ts.ScriptTarget.Latest,
-    true,
   );
   const specifiers = new Map<string, string>();
-  const visit = (node: import("typescript").Node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === "SCREEN_CODE" &&
-      node.initializer
-    ) {
-      const literal = ts.isAsExpression(node.initializer)
-        ? node.initializer.expression
-        : node.initializer;
-      if (!ts.isObjectLiteralExpression(literal))
-        throw new Error("SCREEN_CODE is not an object literal");
-      for (const property of literal.properties)
-        specifiers.set(...entry(ts, property));
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(file);
+  for (const [key, specifier] of importMapEntries(ts, file, "SCREEN_CODE") ??
+    []) {
+    if (specifier === undefined)
+      throw new Error(`SCREEN_CODE.${key} is not \`() => import("…")\``);
+    specifiers.set(key, specifier);
+  }
   if (specifiers.size === 0) throw new Error("no SCREEN_CODE entry was read");
   return specifiers;
-}
-
-/** A chunk and every chunk it imports statically: what loading it fetches. */
-function closure(
-  bundle: Rolldown.OutputBundle,
-  start: Rolldown.OutputChunk,
-): string[] {
-  const files: string[] = [];
-  const walk = (chunk: Rolldown.OutputChunk) => {
-    if (files.includes(chunk.fileName)) return;
-    files.push(chunk.fileName);
-    for (const imported of chunk.imports) {
-      const next = bundle[imported];
-      if (next?.type === "chunk") walk(next);
-    }
-  };
-  walk(start);
-  return files;
 }
 
 export function screenChunksTag(map: ScreenChunks): HtmlTagDescriptor {
@@ -136,17 +131,21 @@ export function screenChunks(screenCodeFile: string): Plugin {
           (output): output is Rolldown.OutputChunk => output.type === "chunk",
         );
         const map: ScreenChunks = { files: [], screens: {} };
+        const indexOf = (file: string) => {
+          const href = `${base}${file}`;
+          if (!map.files.includes(href)) map.files.push(href);
+          return map.files.indexOf(href);
+        };
         for (const [key, id] of modules) {
           const holder = chunks.find((chunk) =>
             Object.hasOwn(chunk.modules, id),
           );
           if (!holder)
             throw new Error(`no chunk holds SCREEN_CODE.${key} (${id})`);
-          map.screens[key] = closure(bundle, holder).map((file) => {
-            const href = `${base}${file}`;
-            if (!map.files.includes(href)) map.files.push(href);
-            return map.files.indexOf(href);
-          });
+          map.screens[key] = [
+            ...staticChunks(bundle, holder).map((chunk) => chunk.fileName),
+            ...stylesheetsOf(bundle, holder),
+          ].map(indexOf);
         }
         return [screenChunksTag(map)];
       },

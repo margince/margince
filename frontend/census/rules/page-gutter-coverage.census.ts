@@ -27,6 +27,7 @@
 import { join } from "node:path";
 import ts from "typescript";
 import { resolveRelative } from "../../scripts/lib/source-tree";
+import { importMapEntries } from "../../scripts/vite-screen-chunks";
 import { stable } from "../../src/format/collate";
 import {
   type CensusFile,
@@ -245,9 +246,11 @@ function codeMapTarget(
     ) {
       const binding = imported.get(child.expression.expression.text);
       const map = binding && walk.at(binding.file);
-      const entry =
-        map && mapEntry(map, binding.exported, child.expression.name.text);
-      const specifier = entry && dynamicImportSpecifier(entry);
+      const specifier =
+        map &&
+        importMapEntries(ts, map, binding.exported)?.get(
+          child.expression.name.text,
+        );
       if (map && specifier)
         target = resolveRelative(map.fileName, specifier, walk.exists);
     }
@@ -255,36 +258,6 @@ function codeMapTarget(
   };
   visit(node);
   return target;
-}
-
-function mapEntry(
-  map: ts.SourceFile,
-  exported: string,
-  key: string,
-): ts.Expression | undefined {
-  for (const statement of map.statements) {
-    if (!ts.isVariableStatement(statement)) continue;
-    for (const declaration of statement.declarationList.declarations) {
-      let value = declaration.initializer;
-      if (value && ts.isAsExpression(value)) value = value.expression;
-      if (
-        !ts.isIdentifier(declaration.name) ||
-        declaration.name.text !== exported ||
-        !value ||
-        !ts.isObjectLiteralExpression(value)
-      )
-        continue;
-      for (const property of value.properties) {
-        if (
-          ts.isPropertyAssignment(property) &&
-          ts.isIdentifier(property.name) &&
-          property.name.text === key
-        )
-          return property.initializer;
-      }
-    }
-  }
-  return undefined;
 }
 
 function dynamicImportSpecifier(node: ts.Node): string | undefined {
