@@ -28,11 +28,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// asPassport binds an agent principal presenting one passport — what taskPassport
+// asPassport binds an agent principal presenting one passport — what taskOwnerOf
 // reads to decide whose handle this is.
 func asPassport(e *integration.Env, passport ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -118,4 +119,59 @@ func seedTaskPassport(t *testing.T, e *integration.Env, label string) ids.UUID {
 		t.Fatalf("seeding the %s passport: %v", label, err)
 	}
 	return id
+}
+
+// asConnection binds the passport a connection's token exchange or refresh
+// issued: the principal AuthenticateAgent builds for it names the grant too.
+func asConnection(e *integration.Env, passport, grant ids.UUID) context.Context {
+	ctx := asPassport(e, passport)
+	actor, _ := principal.Actor(ctx)
+	actor.ConnectionID = grant
+	return principal.WithActor(ctx, actor)
+}
+
+// seedRefreshedPassport is the replacement a refresh mints under an existing
+// grant, beside the passport it retires.
+func seedRefreshedPassport(t *testing.T, e *integration.Env, grant ids.UUID) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.Pool.Exec(context.Background(), `
+		INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
+		VALUES ($1, $2, $2, 'oauth:claude', ARRAY['read']::text[], $3, now() + interval '1 day', $4)`,
+		id, e.Rep1, "hash-"+id.String(), grant); err != nil {
+		t.Fatalf("seeding the refreshed passport: %v", err)
+	}
+	return id
+}
+
+func TestATaskHandleOutlivesItsConnectionsTokenRefresh(t *testing.T) {
+	e := integration.Setup(t)
+	tasks := toolTasks(e.Pool)
+	first, grant := seedConnectionPassport(t, e)
+	held, err := tasks.Create(asConnection(e, first, grant), agents.NewTask{
+		ApprovalID: stageApprovalForTask(t, e), Tool: "disqualify_lead",
+		StatusMessage: "staged for a human", ExpiresAt: time.Now().Add(time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("creating the handle: %v", err)
+	}
+
+	refreshed := asConnection(e, seedRefreshedPassport(t, e, grant), grant)
+	got, err := tasks.Load(refreshed, held.ID)
+	if err != nil {
+		t.Fatalf("the refreshed passport polled its own connection's task and got %v", err)
+	}
+	if got.ID != held.ID {
+		t.Fatalf("the refreshed passport read task %s, want %s", got.ID, held.ID)
+	}
+	cancelled, err := tasks.Cancel(refreshed, held.ID, time.Minute, "no longer needed")
+	if err != nil || !cancelled {
+		t.Fatalf("the refreshed passport cancelling its connection's task → %v, %v; want cancelled", cancelled, err)
+	}
+
+	// Another connection of the same human is another agent, and is answered nothing.
+	stranger, strangerGrant := seedConnectionPassport(t, e)
+	if _, err := tasks.Load(asConnection(e, stranger, strangerGrant), held.ID); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("another connection read the task → %v, want not found", err)
+	}
 }

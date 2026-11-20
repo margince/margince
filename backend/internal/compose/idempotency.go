@@ -108,7 +108,7 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 			// key per request-path, so /deals/A and /deals/B never collide.
 			endpoint := r.Method + " " + r.URL.Path
 
-			outcome, hold, stored, err := claimKey(r.Context(), pool, actor.ID, key, endpoint, digest)
+			outcome, hold, stored, err := claimKey(r.Context(), pool, retryHolder(actor), key, endpoint, digest)
 			if err != nil {
 				// Degraded, not refused: idempotency is a retry-safety layer,
 				// and refusing the request because the layer itself hiccupped
