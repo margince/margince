@@ -21,7 +21,7 @@ of the rule.
 
 Mail that a colleague holds as personal does not count. Neither does a message on a deal that was
 marked as not about that deal. It still counts when it is also filed on the company or on one of
-its people.
+its contacts.
 
 On **Companies**, the **Activity** filter lists the companies on one of these steps.
 

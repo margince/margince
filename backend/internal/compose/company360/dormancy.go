@@ -84,12 +84,13 @@ func ownerHoldsOpenTask(
 	if err != nil {
 		return false, err
 	}
-	var held bool
-	err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT EXISTS (
+	current := activities.CurrentTaskClause("a", now, identities, arg)
+	query := fmt.Sprintf(`SELECT EXISTS (
 		SELECT 1 FROM activity a
 		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND a.assignee_id = $%d
-		   AND %s AND %s)`, ownerPos, activities.CompanyLinkedActivityExists(companyPos),
-		activities.CurrentTaskClause("a", now, identities, arg)), args...).Scan(&held)
+		   AND %s AND %s)`, ownerPos, activities.CompanyLinkedActivityExists(companyPos), current)
+	var held bool
+	err = tx.QueryRow(ctx, query, args...).Scan(&held)
 	if err != nil {
 		return false, fmt.Errorf("read whether the account's owner already holds a task on it: %w", err)
 	}
