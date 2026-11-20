@@ -97,6 +97,44 @@ describe("a contact nobody here reaches", () => {
     expect(document.querySelector(".chapter-card")).toBeNull();
   });
 
+  it("draws no map when only the contact's own colleagues are known", async () => {
+    renderTab({
+      contact_id: CONTACT,
+      nodes: [
+        anchor,
+        {
+          id: "contact:018f3a1b-0000-7000-8000-000000000031",
+          type: "contact",
+          group: "account",
+          label: "Lena Vogt",
+          contact_id: "018f3a1b-0000-7000-8000-000000000031",
+        },
+      ],
+      edges: [],
+      routes: [],
+      groups_omitted: [],
+    });
+
+    await screen.findByText(NO_ROUTE);
+    expect(
+      screen.queryByRole("group", { name: en["contact.intro.mapRegion"] }),
+    ).toBeNull();
+  });
+
+  it("draws the map when who corresponds is withheld from the reader", async () => {
+    renderTab({
+      contact_id: CONTACT,
+      nodes: [anchor],
+      edges: [],
+      routes: [],
+      groups_omitted: ["direct"],
+    });
+
+    expect(
+      await screen.findByRole("group", { name: en["contact.intro.mapRegion"] }),
+    ).toBeTruthy();
+  });
+
   it("keeps the Retry of an introduction list that could not be read", async () => {
     renderTab(
       {

@@ -48,9 +48,12 @@ export function readGraph(
     },
     legacy: routes.length === 0 ? data.route : undefined,
     withheld,
-    // A map of the contact alone, and a handoff whose first step picks from no
-    // routes, would only restate the way-in answer in two pictures.
-    lonely: nodes.every((n) => n.group === "anchor"),
+    // With no colleague corresponding and no peer to record, a map and a
+    // handoff picking from no routes would restate the way-in answer. Their
+    // company's staff offer nothing to act on; a withheld direct group is unknown.
+    lonely:
+      nodes.every((n) => n.group === "anchor" || n.group === "account") &&
+      !(data.groups_omitted ?? []).includes("direct"),
     showRelay: open !== undefined || routes.length > 0 || !!data.route,
     // Whether the working grid has a left column at all.
     hasMain: alternatives || withheld,
