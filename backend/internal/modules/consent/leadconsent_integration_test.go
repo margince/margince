@@ -5,7 +5,7 @@
 
 package consent
 
-// The lead arm of consent (E12.20) over a real migrated Postgres. A grant
+// The lead arm of consent over a real migrated Postgres. A grant
 // recorded against a lead lands lead-scoped (contact_id NULL) and stays
 // idempotent on re-assertion. It reads back through LeadConsent.
 // A DOI purpose is refused unless a spent confirm link backs it.
