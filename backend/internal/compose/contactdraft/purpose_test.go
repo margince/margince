@@ -4,6 +4,7 @@
 package contactdraft
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -84,5 +85,49 @@ func TestAFollowUpWithNoPurposeStillLeadsWithTheHistory(t *testing.T) {
 	}
 	if !strings.Contains(user, deliveryAsk) {
 		t.Errorf("the history no longer reaches the model:\n%s", user)
+	}
+}
+
+func TestAChangedPurposeRedraftKeepsTheModelsNewSubject(t *testing.T) {
+	view := viewWith(withBody(
+		mail(crmcontracts.ActivityDirectionInbound, draftedAt.Add(-48*time.Hour), "Lieferung"), deliveryAsk))
+	answer := `{"subject":"Ein Gedicht über den Mond","body":"Hallo Jonas Becker,\n\nder Mond hängt still im Nachtgewand.\n\nViele Grüße","reasoning":[]}`
+	envelope := envelopeAt(textlang.German, convstate.BandFresh)
+
+	redraft := FromView(view, Request{Envelope: envelope, Intent: poemPurpose, RewriteOf: staleRedraft, Subject: "Lieferung"})
+	draft, _, err := Write(context.Background(), &sequencedLane{answers: []string{answer}}, redraft, draftvoice.Context{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if draft.Subject != "Ein Gedicht über den Mond" {
+		t.Errorf("the redraft kept the composer's old subject %q over the model's new one", draft.Subject)
+	}
+
+	first := FromView(view, Request{Envelope: envelope, Intent: poemPurpose, Subject: "Lieferung"})
+	draft, _, err = Write(context.Background(), &sequencedLane{answers: []string{answer}}, first, draftvoice.Context{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if draft.Subject != "Lieferung" {
+		t.Errorf("a first draft must keep the subject the rep wrote, got %q", draft.Subject)
+	}
+}
+
+func TestTheFloorLeavesHistoryOutWhenAnIntentIsGiven(t *testing.T) {
+	in := Input{
+		Recipient: RecipientIn{ID: "c1", FirstName: "Jonas", LastName: "Becker"},
+		Envelope:  envelopeAt(textlang.English, convstate.BandFresh),
+		Claims:    []ClaimIn{{Kind: ourCommitment, Body: "send the scope document", Overdue: true}},
+		Deal:      &DealIn{ID: "d1", Name: "Seat expansion"},
+	}
+	without := Deterministic(in).Body
+	if !strings.Contains(without, "scope document") {
+		t.Fatalf("the control floor no longer opens on the overdue promise, so this test proves nothing:\n%s", without)
+	}
+	in.Intent = poemPurpose
+	for _, history := range []string{"scope document", "Seat expansion"} {
+		if body := Deterministic(in).Body; strings.Contains(body, history) {
+			t.Errorf("the floor opened on %q although the intent asks for something else:\n%s", history, body)
+		}
 	}
 }

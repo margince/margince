@@ -567,6 +567,10 @@ func TestAReplyToASelectedMessageStaysAnchoredOnThatMessage(t *testing.T) {
 	if !strings.Contains(system, "Answer that exact message") {
 		t.Error("a reply is no longer told to answer the selected message")
 	}
+	if !strings.Contains(system, draftrules.ReplyRewrite) || strings.Contains(system, draftrules.Rewrite) ||
+		strings.Contains(system, "names a different topic or format") {
+		t.Error("a reply redraft may be told to write a new message instead of answering the selected one")
+	}
 	if strings.Contains(system, draftrules.Purpose) {
 		t.Error("the new-email purpose rule leaked into a reply, which answers its selected message by design")
 	}
