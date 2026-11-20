@@ -9997,6 +9997,24 @@ func (e CreateActivityRequestMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for CreateActivityReviewTemplateRequestOutcome.
+const (
+	CreateActivityReviewTemplateRequestOutcomeLost CreateActivityReviewTemplateRequestOutcome = "lost"
+	CreateActivityReviewTemplateRequestOutcomeWon  CreateActivityReviewTemplateRequestOutcome = "won"
+)
+
+// Valid indicates whether the value is a known member of the CreateActivityReviewTemplateRequestOutcome enum.
+func (e CreateActivityReviewTemplateRequestOutcome) Valid() bool {
+	switch e {
+	case CreateActivityReviewTemplateRequestOutcomeLost:
+		return true
+	case CreateActivityReviewTemplateRequestOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateCaptureCounterpartyHoldRequestKind.
 const (
 	CreateCaptureCounterpartyHoldRequestKindAddress CreateCaptureCounterpartyHoldRequestKind = "address"
@@ -25512,6 +25530,7 @@ const (
 	UndoabilityReasonNotWritableByCaller     UndoabilityReason = "not_writable_by_caller"
 	UndoabilityReasonNullUnwritableByModule  UndoabilityReason = "null_unwritable_by_module"
 	UndoabilityReasonRecordArchived          UndoabilityReason = "record_archived"
+	UndoabilityReasonRestoreArchiverRequired UndoabilityReason = "restore_archiver_required"
 	UndoabilityReasonSuperseded              UndoabilityReason = "superseded"
 	UndoabilityReasonUnsupportedRecordType   UndoabilityReason = "unsupported_record_type"
 )
@@ -25542,6 +25561,8 @@ func (e UndoabilityReason) Valid() bool {
 	case UndoabilityReasonNullUnwritableByModule:
 		return true
 	case UndoabilityReasonRecordArchived:
+		return true
+	case UndoabilityReasonRestoreArchiverRequired:
 		return true
 	case UndoabilityReasonSuperseded:
 		return true
@@ -28145,6 +28166,7 @@ func (e WorklistView) Valid() bool {
 const (
 	WorklistBandBandBuildPipeline WorklistBandBand = "build_pipeline"
 	WorklistBandBandKeepMomentum  WorklistBandBand = "keep_momentum"
+	WorklistBandBandMore          WorklistBandBand = "more"
 	WorklistBandBandNow           WorklistBandBand = "now"
 	WorklistBandBandReview        WorklistBandBand = "review"
 )
@@ -28155,6 +28177,8 @@ func (e WorklistBandBand) Valid() bool {
 	case WorklistBandBandBuildPipeline:
 		return true
 	case WorklistBandBandKeepMomentum:
+		return true
+	case WorklistBandBandMore:
 		return true
 	case WorklistBandBandNow:
 		return true
@@ -28391,6 +28415,7 @@ func (e WorklistItemActions) Valid() bool {
 const (
 	WorklistItemBandBuildPipeline WorklistItemBand = "build_pipeline"
 	WorklistItemBandKeepMomentum  WorklistItemBand = "keep_momentum"
+	WorklistItemBandMore          WorklistItemBand = "more"
 	WorklistItemBandNow           WorklistItemBand = "now"
 	WorklistItemBandReview        WorklistItemBand = "review"
 )
@@ -28401,6 +28426,8 @@ func (e WorklistItemBand) Valid() bool {
 	case WorklistItemBandBuildPipeline:
 		return true
 	case WorklistItemBandKeepMomentum:
+		return true
+	case WorklistItemBandMore:
 		return true
 	case WorklistItemBandNow:
 		return true
@@ -40665,8 +40692,8 @@ type ChatEpisode struct {
 
 // CitedProvision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
 // for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+// pack's next review is overdue, or the law has not taken effect or has expired. On a
 // review it is the citation shown when the refusal was assessed, never today's.
 type CitedProvision struct {
 	// Instrument The law or decree, as a regulator cites it. Not translated.
@@ -41055,7 +41082,7 @@ type CommunicationReview struct {
 
 	// Warnings Every warning this review is served with to this reader; a decision may name any of their
 	// versions and no other. `warning` is always among them. The sender of a held message is
-	// also served the composer's short warning (`inline-v1`), which a decision from any other
+	// also served the composer's short warning (`inline-v2`), which a decision from any other
 	// reader is refused for naming.
 	Warnings *[]OverrideWarning `json:"warnings,omitempty"`
 
@@ -46663,6 +46690,20 @@ type CreateActivityRequestLinksEntityType string
 // CreateActivityRequestMeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 type CreateActivityRequestMeetingStatus string
 
+// CreateActivityReviewTemplateRequest defines model for CreateActivityReviewTemplateRequest.
+type CreateActivityReviewTemplateRequest struct {
+	// Key Derived from the label when omitted.
+	Key   *string `json:"key,omitempty"`
+	Label string  `json:"label"`
+
+	// Outcome Which outcome the template is asked for.
+	Outcome   CreateActivityReviewTemplateRequestOutcome `json:"outcome"`
+	Questions []ReviewQuestion                           `json:"questions"`
+}
+
+// CreateActivityReviewTemplateRequestOutcome Which outcome the template is asked for.
+type CreateActivityReviewTemplateRequestOutcome string
+
 // CreateAutomationRequest defines model for CreateAutomationRequest.
 type CreateAutomationRequest struct {
 	Key    string                 `json:"key"`
@@ -47357,6 +47398,14 @@ type CreateOutcomeReviewRequest struct {
 
 	// SubmissionId The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
 	SubmissionId openapi_types.UUID `json:"submission_id"`
+
+	// TemplateKey Key of the template shown when the form opened. A template added or restored since then
+	// is a different template, possibly at the same version, so a key that is not the live
+	// template's returns 409. Optional: a client that omits it keeps the version-only check, so
+	// a client built before this field keeps working. That client cannot tell a swap to another
+	// template at the same version; its answers are still checked against the live questions,
+	// and an answer to a question the live template does not ask is refused 422.
+	TemplateKey *string `json:"template_key,omitempty"`
 
 	// TemplateVersion Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
 	TemplateVersion *int64 `json:"template_version,omitempty"`
@@ -50209,8 +50258,8 @@ type DraftContentFinding struct {
 
 	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
 	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+	// pack's next review is overdue, or the law has not taken effect or has expired. On a
 	// review it is the citation shown when the refusal was assessed, never today's.
 	Provision *CitedProvision `json:"provision,omitempty"`
 
@@ -51785,8 +51834,8 @@ type FooterFinding struct {
 
 	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
 	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+	// pack's next review is overdue, or the law has not taken effect or has expired. On a
 	// review it is the citation shown when the refusal was assessed, never today's.
 	Provision *CitedProvision `json:"provision,omitempty"`
 }
@@ -54990,6 +55039,9 @@ type JurisdictionRetentionClass struct {
 	// Keep The ISO 8601 period the class keeps, e.g. `P6Y`.
 	Keep string `json:"keep"`
 
+	// Law The statute and article that set the period. Absent when the pack names none.
+	Law *string `json:"law,omitempty"`
+
 	// Name The class, e.g. `commercial_correspondence`.
 	Name string `json:"name"`
 }
@@ -57691,11 +57743,6 @@ type MeResponse struct {
 
 	// DataResetAvailable True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
 	DataResetAvailable *bool `json:"data_reset_available,omitempty"`
-
-	// InlineSendReview The `activities.inline_send_review` setting: whether the email composer is decided at
-	// Send, with a refusal shown inline from the embedded review. Absent or false keeps the
-	// check while writing and the confirmation dialog.
-	InlineSendReview *bool `json:"inline_send_review,omitempty"`
 
 	// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
 	InstallationBrand *InstallationBrand `json:"installation_brand,omitempty"`
@@ -69565,12 +69612,12 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
 type UndoabilityReason string
 
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.
@@ -69654,9 +69701,11 @@ type UpdateActivityRequestCallOutcome string
 // refuses it like any status other than `held` or `no_show`.
 type UpdateActivityRequestMeetingStatus string
 
-// UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
+// UpdateActivityReviewTemplateRequest Every field but `version` is optional; an omitted one is left alone.
 type UpdateActivityReviewTemplateRequest struct {
-	Questions []ReviewQuestion `json:"questions"`
+	// Active false retires the template; true makes it the one its outcome asks.
+	Active    *bool             `json:"active,omitempty"`
+	Questions *[]ReviewQuestion `json:"questions,omitempty"`
 
 	// Version Last read template version.
 	Version int64 `json:"version" minimum:"1"`
@@ -73698,9 +73747,12 @@ type WorklistItem struct {
 	// scanning for "what must happen now" should not have to know which levels mean that.
 	//
 	// Derived from the level and the row's own subject, so it cannot disagree with the order:
-	// the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-	// interleave prospecting and deal follow-up. A client
-	// draws a heading when the band changes and never re-sorts.
+	// the queue arrives already sorted, and across the pages of one walk a band never comes
+	// back once a later band has started. `more` heads the rows past the ranked top, which a
+	// walk reaches after every ranked row. They follow each store's own date order, are not
+	// ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+	// `due_group` still say what each one is. A client draws a heading when the band changes
+	// and never re-sorts.
 	Band *WorklistItemBand `json:"band,omitempty"`
 
 	// Batch A group of routine decisions that read alike, standing on the queue as one row.
@@ -74108,9 +74160,12 @@ type WorklistItemActions string
 // scanning for "what must happen now" should not have to know which levels mean that.
 //
 // Derived from the level and the row's own subject, so it cannot disagree with the order:
-// the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-// interleave prospecting and deal follow-up. A client
-// draws a heading when the band changes and never re-sorts.
+// the queue arrives already sorted, and across the pages of one walk a band never comes
+// back once a later band has started. `more` heads the rows past the ranked top, which a
+// walk reaches after every ranked row. They follow each store's own date order, are not
+// ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+// `due_group` still say what each one is. A client draws a heading when the band changes
+// and never re-sorts.
 type WorklistItemBand string
 
 // WorklistItemBriefActions defines model for WorklistItem.BriefActions.
@@ -75417,6 +75472,33 @@ type SendMessageParams struct {
 	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// CreateActivityReviewTemplateParams defines parameters for CreateActivityReviewTemplate.
+type CreateActivityReviewTemplateParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // GetAutomaticWorkHealthParams defines parameters for GetAutomaticWorkHealth.
@@ -84003,6 +84085,9 @@ type PreviewSendAuthorizationJSONRequestBody = PreviewSendRequest
 
 // SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
 type SendMessageJSONRequestBody = SendMessageRequest
+
+// CreateActivityReviewTemplateJSONRequestBody defines body for CreateActivityReviewTemplate for application/json ContentType.
+type CreateActivityReviewTemplateJSONRequestBody = CreateActivityReviewTemplateRequest
 
 // UpdateActivityReviewTemplateJSONRequestBody defines body for UpdateActivityReviewTemplate for application/json ContentType.
 type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateRequest
@@ -99003,7 +99088,10 @@ type ServerInterface interface {
 	// The question sets an outcome review can ask.
 	// (GET /activity-review-templates)
 	ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request)
-	// Edit the questions for future outcome reviews.
+	// Add the question set an outcome's reviews ask from now on.
+	// (POST /activity-review-templates)
+	CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, params CreateActivityReviewTemplateParams)
+	// Edit the questions for future outcome reviews, or retire or restore a template.
 	// (PATCH /activity-review-templates/{id})
 	UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id)
 	// Per colleague and day, how much work automation handed out and what became of it.
@@ -102486,7 +102574,13 @@ func (_ Unimplemented) ListActivityReviewTemplates(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Edit the questions for future outcome reviews.
+// Add the question set an outcome's reviews ask from now on.
+// (POST /activity-review-templates)
+func (_ Unimplemented) CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, params CreateActivityReviewTemplateParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Edit the questions for future outcome reviews, or retire or restore a template.
 // (PATCH /activity-review-templates/{id})
 func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110964,6 +111058,55 @@ func (siw *ServerInterfaceWrapper) ListActivityReviewTemplates(w http.ResponseWr
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListActivityReviewTemplates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateActivityReviewTemplate operation middleware
+func (siw *ServerInterfaceWrapper) CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateActivityReviewTemplateParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateActivityReviewTemplate(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -158436,6 +158579,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activity-review-templates", wrapper.ListActivityReviewTemplates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activity-review-templates", wrapper.CreateActivityReviewTemplate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activity-review-templates/{id}", wrapper.UpdateActivityReviewTemplate)

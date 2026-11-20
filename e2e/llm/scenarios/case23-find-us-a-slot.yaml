@@ -22,6 +22,7 @@
 # both when it looked and when it did not, and a case whose evidence is
 # indistinguishable from its absence measures nothing.
 name: case23_find_us_a_slot
+title: Find us a slot
 criteria: [1, 2]
 
 # WRITES: nothing — this case only reads. Said out loud because a scenario that

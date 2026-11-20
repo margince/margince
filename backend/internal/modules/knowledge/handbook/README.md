@@ -40,6 +40,7 @@ Settings in Margince, by page:
 - How many days are left of the trial, and how do I get a licence? → [The trial](the-trial.md)
 - How do I add an AI provider's key, connect OpenRouter, or choose a Vertex location? → [AI providers](ai-providers.md)
 - What happens to an AI task while its provider is down? → [AI providers](ai-providers.md)
+- Which AI model should I choose, and which AI assistant can I connect? → [Which AI can I use with Margince?](which-ai-you-can-use.md)
 
 Records, deals and mail in Margince, by page:
 - How do record links appear in a message? → [Sharing record links](sharing-record-links.md)
@@ -149,6 +150,8 @@ Records, deals and mail in Margince, by page:
 - [What the AI does, and what it does not](what-the-ai-does.md): what the AI
   makes for you: drafts, document reads and the overnight brief. How every claim
   it works out carries its evidence.
+- [Which AI can I use with Margince?](which-ai-you-can-use.md): the two ways AI works with
+  Margince. Which model setups and assistants we tested, and how each did.
 - [AI providers](ai-providers.md): what each provider needs. That is a key, a
   host for an OpenAI-compatible service or decision model, or the OpenRouter
   hosts that keep data in the EU. Gemini on Vertex AI needs a location.

@@ -68,13 +68,17 @@ it("submits each choice intact and retains the opening template and closing", as
   await user.click(screen.getByLabelText("Fit, scope"));
   await user.click(screen.getByLabelText("Trust"));
   rendered.rerender(
-    view({ ...template, version: 3, questions: [] }, "later-close"),
+    view(
+      { ...template, key: "win_review_2", version: 3, questions: [] },
+      "later-close",
+    ),
   );
   await user.click(screen.getByRole("button", { name: "Save review" }));
   await vi.waitFor(() => expect(submitted).toHaveLength(1));
   expect(submitted[0]).toMatchObject({
     closing_occurrence_id: "first-close",
     template_version: 2,
+    template_key: "win_review",
     answers: {},
     choice_answers: { reasons: ["Fit, scope", "Trust"] },
   });

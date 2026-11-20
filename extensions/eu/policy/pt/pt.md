@@ -3,18 +3,36 @@ jurisdiction: pt
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Lei n.º 41/2004, de 18 de agosto"
     provision: "art. 13.º-A"
+    source-url: https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2004-106523049
   - name: "Decreto-Lei n.º 7/2004, de 7 de janeiro"
     provision: "art. 22.º"
 fixtures:
   - finding: objection_route
     triggers: pt/fixtures/advertising-without-objection-route.md
     clears: pt/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Lei n.º 41/2004, de 18 de agosto"
+    provision: "art. 13.º-A, n.º 1"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Lei n.º 41/2004, de 18 de agosto"
+    provision: "art. 13.º-A, n.º 1"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Lei n.º 41/2004, de 18 de agosto"
+    provision: "art. 13.º-A, n.º 1"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Lei n.º 41/2004, de 18 de agosto"
+    provision: "art. 13.º-A, n.º 1"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Lei n.º 41/2004, de 18 de agosto"
+    provision: "art. 13.º-A, n.º 4"
 ---
 
 # What Portuguese law requires of an outbound message

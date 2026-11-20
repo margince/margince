@@ -52,6 +52,9 @@ import (
 // comment. Adding it here is a product decision about frozen weekly reviews, not
 // a test fix.
 var scrubbedEntityTypes = map[string]bool{
+	// A review has no restore endpoint, and weekly deal reconstruction reads none
+	// of its audit images.
+	"legal_review": true,
 	// These records have no restore endpoint. Their audit readers stop at erasure;
 	// weekly deal reconstruction reads none of their images.
 	"data_subject_request":   true,

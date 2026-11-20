@@ -22,7 +22,7 @@ See [self-hosting](../explanation/self-hosting.md) for the role layout and [conf
 | File | Purpose |
 |---|---|
 | `Dockerfile` (target `api`) | `cmd/api` (HTTP) + bundled `cmd/migrate`; applies migrations at boot |
-| `Dockerfile` (target `worker`) | `cmd/worker`. Outbox relay, retention, Surface-B AI (no HTTP) |
+| `Dockerfile` (target `worker`) | `cmd/worker`. Outbox relay, retention, the scheduled agents of Margince AI (no HTTP) |
 | `Dockerfile` (target `web`) | the Vite SPA behind nginx-unprivileged |
 | `scripts/deploy/api-entrypoint.sh` | migrate as owner, then serve the API as app |
 | `scripts/deploy/worker-entrypoint.sh` | start the worker as app (no owner credential) |

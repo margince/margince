@@ -1,8 +1,9 @@
-// Pure helpers for the custom-fields admin screen — no React, unit-tested in
-// isolation so the screen's derivations (immutable API key, the pending DDL
-// preview, and the structural-word refusal) are proven independently.
+// Pure helpers for custom fields, with no React. The admin screen's derivations
+// (immutable API key, pending DDL preview, structural-word refusal) are tested
+// here in isolation.
 
 import type { components } from "../api/schema";
+import { translatedLabel } from "./labeltranslation";
 
 export type CfObject = components["schemas"]["CustomField"]["object"];
 
@@ -22,6 +23,19 @@ export const CF_OBJECTS: readonly CfObject[] = [
   "contract",
   "activity",
 ];
+
+/** A record key's custom-field catalog, where that record type has one. */
+export function catalogOfRecord(recordKey: string): CfObject | undefined {
+  return CF_OBJECTS.find((object) => object === recordKey);
+}
+
+/** A field's label as the reader sees it. */
+export function customFieldLabel(
+  field: components["schemas"]["CustomField"],
+  locale: string,
+): string {
+  return translatedLabel(field.label, field.label_translations, locale);
+}
 
 // The type set mirrors fieldcatalog.Types() in the backend, in its order.
 // backend/gates/frontendcustomfieldtypes_test.go fails when the two differ in

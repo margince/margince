@@ -13,6 +13,7 @@
 # and the second as a deal that left the quarter, and says so; the case is that
 # the answer reports those, deal by deal, and does not describe a slip as a loss.
 name: case50_what_moved_my_quarter
+title: What moved my quarter
 criteria: [1, 2, 3]
 
 # WRITES: the author's own statement that this case changes the world. It is not

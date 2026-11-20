@@ -42,7 +42,7 @@ it("dates a bulk task at the end of the picked day on the picker's clock", async
   );
   await user.type(
     screen.getByRole("textbox", { name: "Due date" }),
-    "15/09/2026{Enter}",
+    "15/09/2026{Tab}",
   );
   await user.click(screen.getByRole("button", { name: "Preview" }));
 

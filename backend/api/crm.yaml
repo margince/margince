@@ -32480,10 +32480,37 @@ paths:
       summary: The question sets an outcome review can ask.
       responses:
         '200':
-          description: Every live template.
+          description: Every template, active and retired.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ActivityReviewTemplateListResponse' }
+    post:
+      tags: [Activities]
+      operationId: createActivityReviewTemplate
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Add the question set an outcome's reviews ask from now on.
+      description: |
+        Requires custom_field create permission. A closing asks one review, so an outcome has at
+        most one active template: the new one is asked from now on, and the template asked before
+        is retired in the same write. Reviews already written keep their frozen questions. A key
+        another template uses answers 409.
+      x-mcp-tool: { verb: create_activity_review_template, router: change_settings, action: create_review_template, tier: auto_execute, scope: write, served_by: route }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateActivityReviewTemplateRequest' }
+      responses:
+        '201':
+          description: Created template.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivityReviewTemplate' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activity-review-templates/{id}:
     parameters:
@@ -32492,8 +32519,13 @@ paths:
       tags: [Activities]
       operationId: updateActivityReviewTemplate
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Edit the questions for future outcome reviews.
-      description: Requires custom_field update permission. Version conflicts return 409; submitted reviews retain their frozen questions and answers.
+      summary: Edit the questions for future outcome reviews, or retire or restore a template.
+      description: |
+        Requires custom_field update permission. Version conflicts return 409; submitted reviews
+        retain their frozen questions and answers. `active: false` retires the template: a closing
+        with that outcome asks no review until a template for it is active again. There is no
+        delete, so an old review always names a template the list still shows. `active: true`
+        makes the template the one its outcome asks and retires the one asked before.
       x-mcp-tool: { verb: update_activity_review_template, router: change_settings, action: update_review_template, tier: auto_execute, scope: write, served_by: route }
       requestBody:
         required: true
@@ -33255,14 +33287,10 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamWeeklyReview
-      # No screen reads the team week any more. The operation stays for
-      # clients built against it until its notice window ends.
-      deprecated: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
       description: |
-        Deprecated: no screen reads the team week. The operation stays callable through
-        the notice window in the API compatibility policy.
+        Home, Weekly reads it when a lead or an overseer picks a team.
 
         The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
         live and recomputed on every open; this answers what last week WAS, written once when
@@ -62741,8 +62769,8 @@ components:
       description: |
         The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
         for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-        Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-        review is overdue or not yet done, or the law has not taken effect or has expired. On a
+        Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+        pack's next review is overdue, or the law has not taken effect or has expired. On a
         review it is the citation shown when the refusal was assessed, never today's.
       required: [instrument, provision, source_url]
       properties:
@@ -63689,9 +63717,23 @@ components:
 
     UpdateActivityReviewTemplateRequest:
       type: object
-      required: [version, questions]
+      description: Every field but `version` is optional; an omitted one is left alone.
+      required: [version]
       properties:
         version: { type: integer, format: int64, minimum: 1, description: Last read template version. }
+        questions: { type: array, minItems: 1, items: { $ref: '#/components/schemas/ReviewQuestion' } }
+        active: { type: boolean, description: 'false retires the template; true makes it the one its outcome asks.' }
+
+    CreateActivityReviewTemplateRequest:
+      type: object
+      required: [label, outcome, questions]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{0,62}$'
+          description: Derived from the label when omitted.
+        label: { type: string, minLength: 1, maxLength: 120 }
+        outcome: { type: string, enum: [won, lost], description: 'Which outcome the template is asked for.' }
         questions: { type: array, minItems: 1, items: { $ref: '#/components/schemas/ReviewQuestion' } }
 
     ActivityReviewTemplateListResponse:
@@ -63732,6 +63774,15 @@ components:
       required: [closing_occurrence_id, submission_id, answers]
       properties:
         template_version: { type: integer, format: int64, description: 'Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.' }
+        template_key:
+          type: string
+          description: |
+            Key of the template shown when the form opened. A template added or restored since then
+            is a different template, possibly at the same version, so a key that is not the live
+            template's returns 409. Optional: a client that omits it keeps the version-only check, so
+            a client built before this field keeps working. That client cannot tell a swap to another
+            template at the same version; its answers are still checked against the live questions,
+            and an answer to a question the live template does not ask is refused 422.
         closing_occurrence_id: { type: string, format: uuid, description: 'The closing being reviewed. Must be the one the deal is on now, else 409.' }
         submission_id: { type: string, format: uuid, description: 'The client''s own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.' }
         choice_answers: { type: object, additionalProperties: { type: array, items: { type: string } }, description: 'Selected options by question key; values must belong to the frozen question vocabulary.' }
@@ -68606,12 +68657,6 @@ components:
         reader_rendering_available:
           type: boolean
           description: Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
-        inline_send_review:
-          type: boolean
-          description: |
-            The `activities.inline_send_review` setting: whether the email composer is decided at
-            Send, with a refusal shown inline from the embedded review. Absent or false keeps the
-            check while writing and the confirmation dialog.
         analytics_startup: { $ref: '#/components/schemas/AnalyticsStartup' }
         user: { $ref: '#/components/schemas/User' }
         workspace_name:
@@ -72480,11 +72525,14 @@ components:
             receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose
             earlier text held a credential: history keeps it masked, and the record keeps the
             text as typed, so putting it back would write the mask over the record.
+            `restore_archiver_required` refuses undoing an archive to a caller who may edit
+            the record but holds no delete grant, when someone else made the archive: only the
+            colleague who archived it, or a delete holder, may bring it back.
           enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
                  behind_erasure_boundary, already_undone, not_restorable_by_this_path,
                  record_archived, null_unwritable_by_module, not_writable_by_caller,
-                 edge_relink_unsupported, later_company_change, no_restore_snapshot,
-                 credential_not_kept, null]
+                 restore_archiver_required, edge_relink_unsupported, later_company_change,
+                 no_restore_snapshot, credential_not_kept, null]
           x-extensible-enum: true
         detail:
           type: [string, 'null']
@@ -76417,7 +76465,7 @@ components:
           description: |
             Every warning this review is served with to this reader; a decision may name any of their
             versions and no other. `warning` is always among them. The sender of a held message is
-            also served the composer's short warning (`inline-v1`), which a decision from any other
+            also served the composer's short warning (`inline-v2`), which a decision from any other
             reader is refused for naming.
 
     OverrideWarning:
@@ -77098,6 +77146,7 @@ components:
         name: { type: string, description: 'The class, e.g. `commercial_correspondence`.' }
         keep: { type: string, description: 'The ISO 8601 period the class keeps, e.g. `P6Y`.' }
         from_year_end: { type: boolean, description: 'The period counts from the end of the calendar year.' }
+        law: { type: string, description: 'The statute and article that set the period. Absent when the pack names none.' }
 
     RetentionFloorPolicy:
       type: object
@@ -82189,8 +82238,8 @@ components:
           $ref: '#/components/schemas/TeamWeekReach'
           deprecated: true
           description: |
-            Deprecated: no screen opens the team week, and the operation it describes,
-            `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
+            Deprecated: read `team_week` from `GET /me`, which carries the same answer
+            without assembling the day.
         filter: { type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming, website_inquiries], x-extensible-enum: true, description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         view: { type: string, enum: [today, decisions, system], x-extensible-enum: true, description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
@@ -82780,7 +82829,7 @@ components:
         the rows it received could not say it.
       required: [band, shown]
       properties:
-        band: { type: string, enum: [now, build_pipeline, keep_momentum, review], x-extensible-enum: true }
+        band: { type: string, enum: [now, build_pipeline, keep_momentum, review, more], x-extensible-enum: true }
         shown: { type: integer, description: 'How many rows of this band are on the page.' }
 
     WorklistCount:
@@ -83735,7 +83784,7 @@ components:
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string
-          enum: [now, build_pipeline, keep_momentum, review]
+          enum: [now, build_pipeline, keep_momentum, review, more]
           x-extensible-enum: true
           description: |
             The heading this row sits under, as an OUTCOME rather than a priority number.
@@ -83745,9 +83794,12 @@ components:
             scanning for "what must happen now" should not have to know which levels mean that.
 
             Derived from the level and the row's own subject, so it cannot disagree with the order:
-            the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-            interleave prospecting and deal follow-up. A client
-            draws a heading when the band changes and never re-sorts.
+            the queue arrives already sorted, and across the pages of one walk a band never comes
+            back once a later band has started. `more` heads the rows past the ranked top, which a
+            walk reaches after every ranked row. They follow each store's own date order, are not
+            ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+            `due_group` still say what each one is. A client draws a heading when the band changes
+            and never re-sorts.
         dispositions:
           type: array
           items:

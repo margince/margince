@@ -1,4 +1,9 @@
-# The German compliance package
+# Compliance documents for employee email capture
+
+Open **Settings → Compliance → Jurisdiction** to read or download the documents for the
+selected country.
+
+## Germany
 
 The German pack in `extensions/eu` ships these documents. An installation whose jurisdiction is set to
 Germany lists them on the Jurisdiction settings page, to read and download there.
@@ -15,6 +20,15 @@ sign.
 | [betriebsvereinbarung-vorlage.md](../../extensions/eu/documents/de/de/betriebsvereinbarung-vorlage.md) | [works-agreement.md](../../extensions/eu/documents/de/en/works-agreement.md) | The works council agreement (§87(1) Nr. 6 BetrVG) |
 | [verarbeitungsverzeichnis-und-dsfa.md](../../extensions/eu/documents/de/de/verarbeitungsverzeichnis-und-dsfa.md) | [processing-record-and-dpia.md](../../extensions/eu/documents/de/en/processing-record-and-dpia.md) | The Art. 30 record and Art. 35 impact assessment |
 | [empfangsbestaetigung.md](../../extensions/eu/documents/de/de/empfangsbestaetigung.md) | [acknowledgement-of-receipt.md](../../extensions/eu/documents/de/en/acknowledgement-of-receipt.md) | Proof the information was handed out, signed before the mailbox is connected (Art. 13, Art. 5(2)) |
+
+## Vietnam
+
+The Vietnam pack in `extensions/apac` ships these templates. Fill in the employer's details and
+review the notice against the employer's mailbox settings before giving it to employees.
+
+- [Vietnamese employee notice](../../extensions/apac/documents/vn/vi/thong-bao-cho-nguoi-lao-dong.md)
+- [English reading copy](../../extensions/apac/documents/vn/en/employee-notice.md)
+- [Vietnamese acknowledgment of receipt](../../extensions/apac/documents/vn/vi/xac-nhan-da-nhan-thong-bao.md)
 
 Margince checks none of them. See [the handbook](../handbook/compliance.md) for why that is a decision
 rather than an omission.

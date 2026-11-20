@@ -218,9 +218,9 @@ An archived record leaves the live list; turn on **Show archived** on the list t
 Also called: remove, hide, deactivate a record.
 
 ### Can I restore or unarchive an archived record?
-Yes, for a contact, company or deal. Open the record with **Show archived** and go to its history. Find the entry that archived it and press **Undo**. The record comes back.
+Yes, for a contact, company or deal. Open the record with **Show archived**, find the entry that archived it in its history, and press **Undo**. An archived deal also shows **Restore deal** beside "This deal is archived and takes no changes." Anyone with the delete right, such as a manager, may bring back any archive. With edit rights alone, you may bring back only a record you own and archived yourself. If someone else archived it, the history says "Only the colleague who archived this record, or a manager, can restore it."
 
-Its email addresses, phone numbers, links, list members and tags come back too, where they still can. Anything that could not come back is named in the history. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
+Its email addresses, phone numbers, links, list members and tags come back too, where they still can. A list or tag archived since stays archived, and the record does not go back on it. Anything that could not come back is named in the history, and **Restore deal** says how many items stayed behind. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
 
 Margince archives some records on its own, such as emails it judged to be of no use. Those show under **Done for you** on Home, with the other work Margince did for you. A contact, company or deal there has its own **Undo**.
 
@@ -266,7 +266,7 @@ To read a whole note, call or meeting from a contact's **Overview** in Margince,
 Also called: open a note, see the full call notes, read a meeting in full.
 
 ### How do I add a task on a record?
-To add a task in Margince, open the contact, company, lead, deal or project, choose **More actions** in its header, then **Add task**. Enter a **Subject** (required), a **Task type**, a **Due date**, an optional **Time** and an **Assignee** (or **Unassigned**), then choose **Add task**. History labels tasks **Open** or **Completed**; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done**, **Snooze 1 day** and **Move to**, which also takes a time. A snoozed task moves one day later, or to tomorrow if that is later, and keeps its time.
+To add a task in Margince, open the contact, company, lead, deal or project, choose **More actions** in its header, then **Add task**. Enter a **Subject** (required), a **Task type**, a **Due date**, an optional **Time** and an **Assignee** (or **Unassigned**), then choose **Add task**. History marks tasks **Open** or **Completed** and names an open one's holder and due day; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done**, **Snooze 1 day** and **Move to**, which also takes a time. A snoozed task moves one day later, or to tomorrow if that is later, and keeps its time.
 Also called: create a to-do, follow-up, reminder.
 
 On a contact's or company's **Overview**, the **Next** bar shows a task's subject and the email it came from, with **View full thread**. A past meeting is never the next step. On a deal, lead or project with nothing next, the last exchange shows above the bar, such as **Last meeting** with **View meeting**. It adds **Waiting on them** if you wrote last, or **Your turn to answer** if they did. A contact shows that exchange under **What was said**, and a company under **Last contact**. With no open task, a contact's bar offers **Add follow-up** if you may log activity, under **No follow-up task recorded.**

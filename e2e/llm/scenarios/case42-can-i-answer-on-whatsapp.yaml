@@ -23,6 +23,7 @@
 # transport finding — a true sentence about the credential in place of the
 # finding about the product.
 name: case42_can_i_answer_on_whatsapp
+title: Can I answer her on WhatsApp?
 criteria: [1, 2]
 
 # WRITES: the author's own statement that this case changes the world. It is not

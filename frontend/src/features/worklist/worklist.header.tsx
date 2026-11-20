@@ -162,6 +162,7 @@ export function WorklistHeader({
   onFilter,
   owner,
   onOwner,
+  embedded = false,
 }: Readonly<{
   day: Worklist;
   // The cards on screen, which grow as the reader pages.
@@ -174,6 +175,8 @@ export function WorklistHeader({
   onScope: (next: WorklistScope) => void;
   onFilter: (next: WorklistFilter) => void;
   onOwner: (next: string) => void;
+  // Home's drawer draws the dials after the view tabs, so they follow them here.
+  embedded?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -181,6 +184,35 @@ export function WorklistHeader({
   const completeness = completenessText(day, filter, t, locale, loaded, view);
   const pills: readonly ViewPill[] = VIEW_PILLS[view];
   const [head, inColumn] = useLanesColumn();
+  const dials = (
+    <div className="worklist-header-dials">
+      {/* Drawn only when there is a choice: a rep who can see only their
+        own work is never offered a switch that would refuse when
+        pressed. */}
+      {scopes.length > 1 && owner === "" && (
+        <SegmentedControl
+          options={scopes}
+          value={scope}
+          onChange={onScope}
+          label={t("worklist.scope.label")}
+          labels={{
+            mine: t("worklist.scope.mine"),
+            unassigned: t("worklist.scope.unassigned"),
+            team: t("worklist.scope.team"),
+            all: t("worklist.scope.all"),
+          }}
+        />
+      )}
+      {/* Whose queue. Offered on the same tier the server admits a named
+          owner on — `team` in the options means this reader reaches past
+          themselves — so the control and the refusal cannot disagree. It
+          replaces the scope switch rather than sitting beside it: a named
+          owner outranks the scope word, and the pair is a 422. */}
+      {scopes.includes("team") && (
+        <OwnerPicker owner={owner} onOwner={onOwner} scope={scope} />
+      )}
+    </div>
+  );
   return (
     // The stack the lanes column takes is keyed on this class rather than on a
     // width: `useLanesColumn` reads the wrapper's own computed display, which
@@ -206,33 +238,7 @@ export function WorklistHeader({
             claiming a row of the page. The owner picker was full width under
             the sentence, where a control as wide as the page read as a switch
             over the pills below it rather than as a dial on the day above. */}
-        <div className="worklist-header-dials">
-          {/* Drawn only when there is a choice: a rep who can see only their
-            own work is never offered a switch that would refuse when
-            pressed. */}
-          {scopes.length > 1 && owner === "" && (
-            <SegmentedControl
-              options={scopes}
-              value={scope}
-              onChange={onScope}
-              label={t("worklist.scope.label")}
-              labels={{
-                mine: t("worklist.scope.mine"),
-                unassigned: t("worklist.scope.unassigned"),
-                team: t("worklist.scope.team"),
-                all: t("worklist.scope.all"),
-              }}
-            />
-          )}
-          {/* Whose queue. Offered on the same tier the server admits a named
-              owner on — `team` in the options means this reader reaches past
-              themselves — so the control and the refusal cannot disagree. It
-              replaces the scope switch rather than sitting beside it: a named
-              owner outranks the scope word, and the pair is a 422. */}
-          {scopes.includes("team") && (
-            <OwnerPicker owner={owner} onOwner={onOwner} scope={scope} />
-          )}
-        </div>
+        {!embedded && dials}
       </div>
       {scope === "unassigned" && owner === "" && (
         <p className="worklist-completeness">
@@ -245,6 +251,7 @@ export function WorklistHeader({
           strip. */}
       <div className="worklist-header-cuts">
         <WorklistViewPicker day={day} view={view} onView={onView} />
+        {embedded && dials}
         {pills.length > 0 && (
           <FilterPills
             pills={pills.map((value) => ({

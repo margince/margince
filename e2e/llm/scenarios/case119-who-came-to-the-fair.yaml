@@ -7,6 +7,7 @@
 # its own cursor; find_records pages too, and a larger limit reads all thirty at once.
 # Every one of those is right, so no tool is pinned and the answer is scored.
 name: case119_who_came_to_the_fair
+title: Who would be on the fair list?
 criteria: [1]
 
 setup: fair_guests_tagged

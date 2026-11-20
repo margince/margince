@@ -27,6 +27,35 @@ fixtures:
   - finding: advertiser_contact
     triggers: nz/fixtures/advertising-without-advertiser-contact.md
     clears: nz/fixtures/advertising-complete.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Unsolicited Electronic Messages Act 2007"
+    provision: "s. 9"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Unsolicited Electronic Messages Act 2007"
+    provision: "s. 9"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Unsolicited Electronic Messages Act 2007"
+    provision: "s. 9"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Unsolicited Electronic Messages Act 2007"
+    provision: "s. 9"
+  - code: advertiser_contact
+    territorial-test: any_sender
+    instrument: "Unsolicited Electronic Messages Act 2007"
+    provision: "s. 10"
+  - code: objection_route
+    territorial-test: any_sender
+    instrument: "Unsolicited Electronic Messages Act 2007"
+    provision: "s. 11"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Unsolicited Electronic Messages Act 2007"
+    provision: "s. 11"
 ---
 
 # What New Zealand law requires of an outbound message

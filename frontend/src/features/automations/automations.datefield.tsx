@@ -3,13 +3,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { api } from "../../api/client";
 import { AppLink } from "../../design-system/applink";
 import type { FieldControl } from "../../design-system/atoms";
 import type { SelectOption } from "../../design-system/select";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { unwrap } from "../../lib/problem";
+import { customFieldsQuery } from "../../lib/customfields.query";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import "./automations.datefield.css";
@@ -27,12 +26,8 @@ import "./automations.datefield.css";
 // server-side, since the endpoint's own filter vocabulary is object + status
 // only (no field-type filter).
 
-// The query param's own closed enum (listCustomFields, crm.yaml), which is
-// the backend engine's allowlist — NOT customfields.logic.ts's CF_OBJECTS,
-// which does not yet offer "project" in its picker. An `object` value
-// outside this set can never resolve to a real /custom-fields page, so the
-// picker degrades to its disabled, hinted state rather than issuing a query
-// the endpoint would refuse.
+// An `object` outside this set never asks /custom-fields: the picker shows its
+// disabled, hinted state instead.
 const CUSTOM_FIELD_QUERY_OBJECTS = new Set([
   "contact",
   "company",
@@ -85,27 +80,7 @@ export function DateFieldSelect({
 }>) {
   const t = useT();
   const known = isCustomFieldQueryObject(object);
-  const fields = useQuery({
-    queryKey: ["custom-fields", object],
-    enabled: known,
-    queryFn: async () => {
-      // Narrow inside the closure, not with a cast at the call site: the
-      // compiler proves the object query param is a real
-      // CustomFieldQueryObject here, rather than trusting `enabled: known`
-      // to have kept queryFn from ever running otherwise — a guarantee
-      // that would silently stop holding if either changed later.
-      if (!isCustomFieldQueryObject(object)) {
-        throw new Error(
-          "DateFieldSelect queryFn ran for an unsupported object",
-        );
-      }
-      return unwrap(
-        await api.GET("/custom-fields", {
-          params: { query: { object } },
-        }),
-      );
-    },
-  });
+  const fields = useQuery(customFieldsQuery(known ? object : undefined));
 
   const options: SelectOption[] = known
     ? (fields.data?.data ?? [])

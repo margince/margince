@@ -17,8 +17,13 @@
 
 import { useCompanyMarksByID } from "../../components/companymarks";
 import { type ListColumn, ListTable } from "../../design-system/listtable";
+import {
+  formatDateAbbrev,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
-import { useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { ENTITY, type EntityKind, isEntityKind } from "../../lib/entity";
 import {
@@ -29,6 +34,7 @@ import {
 } from "../../lib/filterdata";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { navigate, routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ReferenceCell } from "./filterresultcell";
 
 /** A preview row: schema-derived, so its values span every type the table holds. */
@@ -145,14 +151,16 @@ export function FilterResults({
   scopeKey,
 }: FilterResultsProps) {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
   const rows: readonly PreviewRow[] = preview?.rows ?? [];
   const opening = previewColumnNames(preview?.columns ?? [], named);
   const names = [
     ...opening,
     ...(preview?.columns ?? []).filter((name) => !opening.includes(name)),
   ];
-  const referenceOf = (name: string) =>
-    fields.find((field) => field.name === name)?.references;
+  const fieldOf = (name: string) => fields.find((field) => field.name === name);
+  const referenceOf = (name: string) => fieldOf(name)?.references;
   // Every company the page names, read in one batch rather than one request
   // per cell.
   const companies = useCompanyMarksByID(
@@ -183,7 +191,7 @@ export function FilterResults({
             companies={companies}
           />
         ) : (
-          cellText(value, name === INDUSTRY_FIELD ? t : undefined)
+          cellText(row, name, fieldOf(name), { t, locale, zone })
         );
       },
     };
@@ -244,8 +252,14 @@ function headerFor(
   return known ? fieldLabel(known, t) : historyFieldLabel(name, t);
 }
 
+type Reading = Readonly<{
+  t: Translator;
+  locale: Locale;
+  zone: string;
+}>;
+
 /**
- * One cell, as text.
+ * One cell, as text, read by the field's type the way the record lists read it.
  *
  * A null reads as a dash rather than as blank, because an empty cell cannot be
  * told apart from a column that failed to render — and "nothing here" is exactly
@@ -253,12 +267,70 @@ function headerFor(
  * stringified rather than dropped: a jsonb column is rare in a preview, and
  * showing its shape beats showing nothing.
  */
-function cellText(value: unknown, industryT?: ReturnType<typeof useT>): string {
+function cellText(
+  row: PreviewRow,
+  name: string,
+  field: VocabularyField | undefined,
+  reading: Reading,
+): string {
+  const value = row[name];
+  const { t, locale, zone } = reading;
   if (value === null || value === undefined) {
     return "—";
+  }
+  if (typeof value === "boolean") {
+    return t(value ? "field.yes" : "field.no");
+  }
+  if (typeof value === "number") {
+    return numberText(value, row, name, field, locale);
   }
   if (typeof value === "object") {
     return JSON.stringify(value);
   }
-  return industryT ? industryWords(industryT, String(value)) : String(value);
+  const text = String(value);
+  if (isDateColumn(name, field)) {
+    return dateText(text, locale, zone);
+  }
+  return name === INDUSTRY_FIELD ? industryWords(t, text) : text;
+}
+
+// The vocabulary types only the filterable columns; the schema names the rest of
+// its timestamps and days `*_at`, `*_date` or `*_until`.
+function isDateColumn(name: string, field: VocabularyField | undefined) {
+  return field?.type === "date" || /_(at|date|until)$/.test(name);
+}
+
+// A `date` column arrives as midnight UTC. Read as an instant, it would show the
+// day before to a reader west of Greenwich.
+const MIDNIGHT_UTC_DAY = /^(\d{4}-\d{2}-\d{2})(T00:00:00(\.0+)?Z)?$/;
+const INSTANT = /^\d{4}-\d{2}-\d{2}T/;
+
+function dateText(text: string, locale: Locale, zone: string): string {
+  const day = MIDNIGHT_UTC_DAY.exec(text)?.[1];
+  if (day) {
+    return formatDateAbbrev(day, locale, zone);
+  }
+  return INSTANT.test(text) ? formatDateAbbrev(text, locale, zone) : text;
+}
+
+/**
+ * A figure in the reader's grouping. Money is shown only where its currency is
+ * known: a custom field's own, or the `currency` a deal's `*_minor` columns pair
+ * with. Any other count of minor units stays as stored, since its scale is
+ * unknown without its currency.
+ */
+function numberText(
+  value: number,
+  row: PreviewRow,
+  name: string,
+  field: VocabularyField | undefined,
+  locale: Locale,
+): string {
+  if (field?.type === "currency") {
+    return formatMoneyOrAbsent(value, field.currency, locale);
+  }
+  if (name.endsWith("_minor") && typeof row.currency === "string") {
+    return formatMoneyOrAbsent(value, row.currency, locale);
+  }
+  return field?.type === "number" ? formatNumber(value, locale) : String(value);
 }

@@ -39,7 +39,7 @@ func TestFilingRestoredTwinsCarriesTheRestoreRight(t *testing.T) {
 	reader := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{entityContact: {Read: true, Update: true}},
+			Objects:  map[string]principal.ObjectGrant{entityContact: {Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})

@@ -272,4 +272,30 @@ describe("saving with lists switched on", () => {
     expect(posted(written, "/lists")[0]).toMatchObject({ sharing: "private" });
     expect(posted(written, "/lists")[0]).not.toHaveProperty("team_id");
   });
+
+  it("starts a reader in no team on only them, with a team on offer but barred", async () => {
+    const { written } = mount({ listsOn: true });
+    const user = userEvent.setup();
+    await openSave(user);
+    await user.click(screen.getByRole("radio", { name: /^Live List/ }));
+    await user.type(screen.getByRole("textbox", { name: NAME }), "Mine");
+    const sharing = screen.getByRole("combobox", {
+      name: en["lists.sharingLabel"],
+    });
+    expect(sharing).toHaveTextContent(en["lists.sharing.private"]);
+    expect(sharing).toHaveAccessibleDescription(
+      `${en["lists.sharing.noTeamHint"]} ${en["lists.sharingHint"]}`,
+    );
+    await user.click(sharing);
+    expect(
+      await screen.findByRole("option", { name: en["lists.sharing.team"] }),
+    ).toHaveAttribute("aria-disabled", "true");
+    await user.keyboard("{Escape}");
+    await user.click(
+      screen.getByRole("button", { name: en["filters.saveListConfirm"] }),
+    );
+
+    await waitFor(() => expect(posted(written, "/lists")).toHaveLength(1));
+    expect(posted(written, "/lists")[0]).toMatchObject({ sharing: "private" });
+  });
 });

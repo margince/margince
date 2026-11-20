@@ -110,7 +110,7 @@ export const RestoredWhole: Story = {
     await expect(dialog.getByText("seat-pricing.pdf")).toBeInTheDocument();
     await expect(
       dialog.getByRole("combobox", { name: "Reason for contact" }),
-    ).toHaveTextContent("Follow-up they requested");
+    ).toHaveTextContent("They asked for it");
   },
 };
 

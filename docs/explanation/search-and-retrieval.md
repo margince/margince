@@ -176,7 +176,7 @@ held back.
 The **merged** path (`Store.HybridSearch`) is reached through the `shared/ports/retrieval` seam
 (`search.Retriever`), which is what the AI layers build their answers on. `cmd/api` connects it to the
 embedder of the resolved model path for the offer draft surface. `cmd/worker` connects it as the
-source for the Surface-B runner. The agent intent tools in `compose/registry.go` are built with a
+source for the runner of the night helpers. The agent intent tools in `compose/registry.go` are built with a
 **nil** embedder. They use the context graph walk, which needs no embed lane.
 
 ## Row scope is not a filter on the results

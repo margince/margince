@@ -133,6 +133,8 @@ var erasureCascadeFiles = []string{
 	// transaction, so it counts here; leaving it off would let a table look
 	// uncovered the moment its purge moved file.
 	"internal/modules/privacy/erasuretimeline.go",
+	// The note and comments of a legal review on a deal the subject holds a stake in.
+	"internal/modules/privacy/erasure_legalreview.go",
 	// The webhook bodies rendered from the subject, cleared through the
 	// purger seam, and the call that reaches it.
 	"internal/modules/privacy/retentioncopies.go",

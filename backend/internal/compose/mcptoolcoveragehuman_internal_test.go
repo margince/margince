@@ -72,8 +72,8 @@ func TestAModelRunTwoWaysNamesBothRoutes(t *testing.T) {
 	}
 }
 
-// Every job on the page is named by its scenario's first line; one that breaks
-// the convention would render a row with no name and fail nothing.
+// Every job on the page is named by its scenario's `title:` line. A reader
+// that missed it would render a row with no name and fail nothing.
 func TestEveryScenarioNamesItsJob(t *testing.T) {
 	cases, err := readE2ELLMCases(e2eLLMScenarioDir, e2eLLMRecordDir)
 	if err != nil {
@@ -84,7 +84,7 @@ func TestEveryScenarioNamesItsJob(t *testing.T) {
 	}
 	for _, c := range cases {
 		if c.Title == "" {
-			t.Errorf("%s: its first line is not `# CASE <n> — <the job in a contact's words>.`", c.File)
+			t.Errorf("%s: the page read no `title:` line from it", c.File)
 		}
 	}
 }

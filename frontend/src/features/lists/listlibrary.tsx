@@ -49,6 +49,7 @@ import {
 import {
   type ListAudience,
   ListAudienceFields,
+  useDefaultAudience,
   useListAudienceLabel,
 } from "./listsharing";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
@@ -370,13 +371,11 @@ export function ListPulseBadge({
 /**
  * "New Shortlist": an empty list of chosen records, named and typed here and
  * filled from a selection or a record page. A Live List is made from the
- * builder instead, where its filter is previewed before it is saved. It
- * starts with the audience its caller names.
+ * builder instead, where its filter is previewed before it is saved.
  */
-export function NewShortlistAction({
-  defaultAudience,
-}: Readonly<{ defaultAudience: ListAudience }>) {
+export function NewShortlistAction() {
   const t = useT();
+  const defaultAudience = useDefaultAudience();
   const create = useCreateList();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -385,7 +384,20 @@ export function NewShortlistAction({
   const [audience, setAudience] = useState<ListAudience>(defaultAudience);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("lists.newShortlist")}</Button>
+      <Button
+        onClick={() => {
+          // Every opening starts from nothing typed before: a kept draft under
+          // a reset audience would be shared wider than the reader chose.
+          setName("");
+          setPurpose("");
+          setEntityType("contact");
+          setAudience(defaultAudience);
+          create.reset();
+          setOpen(true);
+        }}
+      >
+        {t("lists.newShortlist")}
+      </Button>
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}

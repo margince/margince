@@ -202,6 +202,10 @@ type RetentionClass struct {
 	// Anchor is where Keep starts counting; zero = the record's own
 	// occurrence.
 	Anchor Anchor
+
+	// Law names the statute and article that set Keep, as the Jurisdiction
+	// page shows it. Empty shows the floor with no source.
+	Law string
 }
 
 // ProtectedSince returns the earliest record timestamp still protected
