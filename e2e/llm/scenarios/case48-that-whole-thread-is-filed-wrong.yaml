@@ -12,6 +12,7 @@
 # The move applies at once. Filing on a company is undoable, so nothing is held
 # for approval and the answer says the whole thread moved.
 name: case48_that_whole_thread_is_filed_wrong
+title: That whole thread is filed wrong
 criteria: [1]
 
 # WRITES: the author's own statement that this case changes the world. It is not

@@ -461,20 +461,19 @@ func isToolNameByte(b byte) bool {
 // writeCoverageSurfaces is the section this page did not have, and the reason
 // its headline number was unreadable.
 //
-// There are TWO surfaces and they are not comparable. Surface A is the MCP
-// catalog a user's assistant is offered: broad, because a user is there to
-// correct a wrong reach. Surface B is a scheduled agent's declared allowlist:
-// five to seven tools, because the run is unattended and every listed tool is
-// paid for on every step of every run. Reporting one coverage number over both
-// reports a menu nobody is served.
+// There are TWO menus and they are not comparable. Your AI assistant is
+// offered the whole MCP catalog, because a user is there to correct a wrong
+// reach. A night helper gets its declared allowlist of five to seven tools.
+// Its run is unattended, and every listed tool is paid for on every step.
+// One coverage number over both reports a menu nobody is served.
 //
 // It also states what this page CANNOT see, rather than leaving the reader to
 // infer that silence means zero: the units' tools, and the scope filter.
 func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
-	p.WriteString("## The two surfaces\n\n")
-	p.WriteString("A tool being \"untried\" means something different on each, so the numbers above " +
-		"are Surface A's.\n\n")
-	p.WriteString("| | Surface A: MCP | Surface B: scheduled agents |\n|---|---|---|\n")
+	p.WriteString("## Your AI assistant and the night helpers\n\n")
+	p.WriteString("A tool being \"untried\" means something different for each, so the numbers above " +
+		"are your AI assistant's.\n\n")
+	p.WriteString("| | Your AI assistant, over MCP | The night helpers: scheduled agents of Margince AI |\n|---|---|---|\n")
 	p.WriteString("| Who drives it | a user, watching | a job on a timer, unattended |\n")
 	fmt.Fprintf(p, "| Menu | %d tools, the whole catalog | %s tools, declared per agent |\n",
 		r.Totals.Tools, agentMenuRange(r.Agents))
@@ -482,7 +481,7 @@ func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("| Graded by | the use-case lane on this page | " +
 		"[ai-certification.md](ai-certification.md) |\n\n")
 
-	p.WriteString("### Surface B, as the contract declares it\n\n")
+	p.WriteString("### The night helpers, as the contract declares them\n\n")
 	p.WriteString("From `backend/api/ai-tasks.yaml`. The allowlist narrows and never grants: every " +
 		"call still passes the same admission gate\n")
 	p.WriteString("against the same passport. An empty one is a build error, because it would " +

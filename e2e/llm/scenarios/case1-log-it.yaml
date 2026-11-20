@@ -11,6 +11,7 @@
 # deck's hosts draw: Plaud is the assistant's business and the server cannot
 # tell a paste from an upload.
 name: case1_log_it
+title: Log it while it is fresh
 criteria: [8]
 
 # WRITES: the author's own statement that this case changes the world. It is not

@@ -31,6 +31,7 @@
 #
 # The three leads are seeded in e2e/llm/seed-llm-fixtures.sh.
 name: case40_sort_the_queue
+title: Sort the lead queue
 criteria: [1, 2, 3]
 
 # WRITES: the author's own statement that this case changes the world. It is not

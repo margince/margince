@@ -2,6 +2,7 @@
 # member, then share the one company at read access. Read was asked, so write
 # access is more than the user gave.
 name: case114_the_fleet_team
+title: Set up the fleet team
 criteria: [1, 2]
 writes: true
 

@@ -22,8 +22,9 @@ the research behind it. The plan to add it to the app, one pull request per step
 web app parts is in
 [frontend/src/design-system/README.md](../frontend/src/design-system/README.md).
 
-**New to the backend?** Start with [tutorials/getting-started.md](tutorials/getting-started.md), then
-follow the [reading order](#reading-order-for-a-new-developer) below.
+**AI in Margince?** Start at [reference/which-ai-you-can-use.md](reference/which-ai-you-can-use.md): which AI to use, and its grade. How we test it: [explanation/ai-certification.md](explanation/ai-certification.md) and [explanation/how-we-test-your-ai-assistant.md](explanation/how-we-test-your-ai-assistant.md).
+
+**New to the backend?** Start with [tutorials/getting-started.md](tutorials/getting-started.md), then follow the [reading order](#reading-order-for-a-new-developer) below.
 
 ## Map
 
@@ -199,11 +200,10 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.
-- [ai-certification.md](reference/ai-certification.md): which AI features each model passed. Generated.
+- [ai-certification.md](reference/ai-certification.md): the grade of each Margince AI feature on each model. Generated.
 - [mcp-parity.md](reference/mcp-parity.md): how much of the web app an agent can do through MCP. Generated.
 - [mcp-tool-roles.md](reference/mcp-tool-roles.md): which role can use which MCP tool, measured by a test. Generated.
-- [mcp-tool-coverage.md](reference/mcp-tool-coverage.md): which MCP tools the tests use, and how they
-  score. Generated.
+- [mcp-tool-coverage.md](reference/mcp-tool-coverage.md): the score of each AI tool a user can connect, per job. Generated.
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
 - [performance-budgets.md](reference/performance-budgets.md): each speed limit and its last
   score. Generated.
@@ -296,7 +296,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
   and links the modules.
 - [job-fleet.md](explanation/job-fleet.md): how a job is declared, run and failed.
 - [prompt-shape.md](explanation/prompt-shape.md): how a prompt is built.
-- [ai-certification.md](explanation/ai-certification.md): how an AI feature gets its grade.
+- [ai-certification.md](explanation/ai-certification.md): how we test Margince AI, and how a feature gets its grade.
 - [prompt-principles.md](explanation/prompt-principles.md): the rules a prompt keeps, and the checks
   before a merge.
 - [raw-capture-part-slimming.md](explanation/raw-capture-part-slimming.md): how a stored mail holds its

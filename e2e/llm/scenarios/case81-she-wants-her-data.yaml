@@ -1,5 +1,6 @@
 # CASE 81 — A subject asking for their data opens a request in the queue. It is not a task and not a note.
 name: case81_she_wants_her_data
+title: She wants to see her data
 criteria: [1]
 writes: true
 

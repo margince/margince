@@ -159,7 +159,7 @@ type coverageTotals struct {
 
 type caseRow struct {
 	Name string `json:"name"`
-	// Title is the scenario's own first line, the job in a contact's words.
+	// Title is the scenario's `title:` line, the job in a user's words.
 	Title string `json:"title"`
 	File  string `json:"file"`
 	// Passport is the credential the scenario asks the lane to present: empty for
@@ -206,6 +206,8 @@ type caseModelRun struct {
 // model is whether the driving SUCCEEDED, and only that is reported per model.
 type modelCoverage struct {
 	Model         string `json:"model"`
+	Name          string `json:"name"`
+	Trust         string `json:"trust"`
 	CasesRecorded int    `json:"cases_with_a_committed_run"`
 	CasesHeld     int    `json:"cases_that_reached_their_bar"`
 	CasesBelowBar int    `json:"cases_below_their_bar"`
@@ -246,14 +248,14 @@ type mcpToolCoverage struct {
 	// UnitTools are the agent tools the shipped units contribute, read from
 	// each unit's published manifest.
 	UnitTools []unitTool `json:"unit_tools"`
-	// Agents is Surface B: the scheduled agents and the allowlist each one is
+	// Agents are the night helpers: the scheduled agents and the allowlist each one is
 	// narrowed to. A scheduled run never sees the whole catalog, so reporting
 	// one coverage number over both surfaces reports a menu nobody is served.
 	Agents []agentSurfaceRow `json:"scheduled_agent_surface"`
 }
 
-// agentSurfaceRow is one scheduled agent's declared allowlist — Surface B as
-// the contract states it, not as a run happened to use it.
+// agentSurfaceRow is one night helper's declared allowlist, as the contract
+// states it and not as a run happened to use it.
 type agentSurfaceRow struct {
 	Name  string   `json:"name"`
 	Tools []string `json:"tools"`
@@ -582,7 +584,7 @@ var (
 	e2eMustCallDeclared = regexp.MustCompile(`(?m)^must_call:`)
 	e2eToolItem         = regexp.MustCompile(`(?m)^\s*-\s*(\S+)\s*$`)
 	e2eCriterion        = regexp.MustCompile(`\d+`)
-	e2eScenarioTitle    = regexp.MustCompile(`\A# CASE \d+ — (.+?)\.?\n`)
+	e2eScenarioTitle    = regexp.MustCompile(`(?m)^title:[ \t]*(.*?)[ \t]*$`)
 )
 
 // verdictKey is what a committed verdict is filed under. The model is half of
@@ -939,6 +941,7 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 	}
 	sort.Strings(summary.BelowBar)
 	summary.Route = strings.Join(sortedCopy(routes), " + ")
+	summary.Name, summary.Trust = modelName(model), trustVerdict(summary.CasesHeld, summary.CasesRecorded, len(cases))
 	return summary
 }
 

@@ -13,6 +13,7 @@
 # whole assertion, and the answer's figure is not graded: the seed holds no
 # accepted handoff, so a correct answer may well say none.
 name: case62_held_meetings_to_opportunities
+title: Held meetings that became opportunities
 criteria: [1]
 writes: false
 

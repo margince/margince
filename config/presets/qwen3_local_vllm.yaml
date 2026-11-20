@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=../margince.schema.json
+# Model setup: Qwen3 on your own server, through vLLM
 # config/presets/qwen3_local_vllm.yaml — Qwen3-14B on the operator's own box,
 # through vLLM on loopback, embeddings through a second vLLM. Zero egress.
 #

@@ -27,6 +27,7 @@
 # It stays in may_call, and criterion 4 holds what matters — a claim is checked
 # against the records and cited, never confirmed from memory.
 name: case49_who_can_introduce_us
+title: Who can introduce us, and what is going cold
 criteria: [1, 2, 3, 4]
 
 # WRITES: the author's own statement that this case changes the world. It is not

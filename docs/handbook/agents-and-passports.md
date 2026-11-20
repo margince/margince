@@ -5,7 +5,8 @@
 Margince is made to be worked in by AI agents as much as by humans. Here you find what an agent is allowed to do, and what waits for you. You also find what it is refused outright, and how a passport is created and revoked.
 
 For what the AI makes (drafts, document reads, briefs), see
-[What the AI does, and what it does not](what-the-ai-does.md).
+[What the AI does, and what it does not](what-the-ai-does.md). Which assistants we
+tested, and how well each did, is on [Which AI can I use with Margince?](which-ai-you-can-use.md).
 
 There is one rule under everything here:
 
