@@ -12,7 +12,10 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import type { InstallationSettings } from "./installation-settings";
+import type {
+  InstallationPart,
+  InstallationSettings,
+} from "./installation-settings";
 import { InstallationProfileDialog } from "./installation-settings.profile";
 
 const SETTINGS: InstallationSettings = {
@@ -44,10 +47,12 @@ const SETTINGS: InstallationSettings = {
 
 function ProfileForm({
   locale,
+  part = "regional",
   start = SETTINGS,
   refused = new Map(),
 }: Readonly<{
   locale?: "de" | "vi";
+  part?: InstallationPart;
   start?: InstallationSettings;
   refused?: ReadonlyMap<string, string>;
 }>) {
@@ -56,9 +61,10 @@ function ProfileForm({
     <StoryProviders locale={locale}>
       <DateFormatsProvider>
         <InstallationProfileDialog
+          part={part}
           settings={SETTINGS}
           draft={draft}
-          focus="base_currency"
+          focus={part === "forecast" ? "forecast_likely_threshold" : "timezone"}
           canManage
           dirty={false}
           pending={false}
@@ -109,6 +115,7 @@ export const FiscalStartMoved: Story = {
 export const ThresholdRefused: Story = {
   render: () => (
     <ProfileForm
+      part="forecast"
       start={{ ...SETTINGS, forecast_likely_threshold: 0 }}
       refused={
         new Map([

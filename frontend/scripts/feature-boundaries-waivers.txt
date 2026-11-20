@@ -71,7 +71,6 @@ reach features/brief/brief.readings.sideread.test.tsx features/worklist/worklist
 reach features/brief/brief.readings.test.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.readings.test.tsx features/worklist/worklist.tsx
 reach features/brief/brief.readings.tsx features/worklist/worklist.queries.ts
-reach features/brief/brief.readings.tsx features/worklist/worklist.tsx
 reach features/brief/brief.schedule.stories.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.schedule.test.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.schedule.tsx features/worklist/worklist.queries.ts

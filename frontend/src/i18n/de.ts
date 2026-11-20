@@ -131,6 +131,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das verbleibende Mitglied ist deaktiviert. Für Anmeldung und Teamzuordnung wieder aktivieren.",
   "users.retirement.unknown":
     "Die verbleibende Arbeit vor dem Fortfahren klären.",
+  "users.retirement.blocked_one": "Kläre das, bevor du weitermachst",
+  "users.retirement.blocked_other": "Kläre diese Punkte, bevor du weitermachst",
+  "users.retirement.address": "Anmeldeadresse",
   "users.retirement.protected_email":
     "Diese Anmeldeadresse wurde bereits verwendet und kann hier nicht geändert werden.",
   "users.mergeSource": "Doppeltes Konto",
@@ -2072,7 +2075,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.reset": "{date} UTC",
   "aiAdmin.fixed":
     "Ein festes Kontingent für das Unternehmen ersetzt die Berechnung pro Nutzerkonto.",
-  "aiAdmin.formula":
+  "aiAdmin.formula_one":
+    "Aktive Nutzende mit vollem Platz: {users} × {tokens} Token pro Nutzerkonto und Monat.",
+  "aiAdmin.formula_other":
     "Aktive Nutzende mit vollem Platz: {users} × {tokens} Tokens pro Nutzerkonto und Monat.",
   "aiAdmin.floor":
     "Ohne berechtigte Nutzende wird das Kontingent für 1 Nutzerkonto berechnet.",
@@ -2089,6 +2094,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.perUser": "Tokens pro vollem Platz und Monat",
   "aiAdmin.range": "Ganze Tokens, von 1 bis 1.000.000.000.000.",
   "aiAdmin.company": "Fester Gesamtwert für das Unternehmen (optional)",
+  "aiAdmin.companyName": "Fester Gesamtwert für das Unternehmen",
   "aiAdmin.overrideHint":
     "Leer lassen, um die Berechnung pro Nutzerkonto zu verwenden. Der Wert pro Nutzerkonto bleibt erhalten.",
   "aiAdmin.routingStale":
@@ -2099,6 +2105,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.reload": "Werte neu laden",
   "aiAdmin.failed": "Änderung nicht übernommen",
   "aiAdmin.preview": "Auswirkungen vorab ansehen",
+  "aiAdmin.fixToPreview": "Korrigiere die markierten Felder für die Vorschau.",
   "aiAdmin.previewHint":
     "Vorschau auf Basis der aktuellen Bedingungen. Beim Speichern werden Einstellungen und Nutzung erneut geprüft. Die Vorschau reserviert keine Kapazität und ruft kein Modell auf.",
   "aiAdmin.features": "KI nach Tätigkeit",
@@ -2508,6 +2515,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.company_name_promotion": "Aktualisierung des Firmennamens",
   "agentJob.contact_share": "Anfrage zum Teilen eines Kontakts",
   "agentJob.task_due_date": "Frage zum Fälligkeitsdatum",
+  "agentJob.employer_change": "Frage zum Arbeitgeberwechsel",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website-Analyse",
@@ -3768,6 +3776,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.filterLifecycleAll": "Jede Phase",
   "company.filterRelTypeAll": "Jeder Typ",
   "company.filterSizeBandAll": "Jede Mitarbeiterzahl",
+  "company.filterDormancyAll": "Jede Aktivität",
+  "company.dormancy": "Aktivität",
   "consent.confirmRecipient": "An {address} senden",
   "consent.guardFailed": "Die Kontakterlaubnis konnte nicht geladen werden.",
   "consent.permissionScope":
@@ -4874,6 +4884,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
+  "approval.kind.employer_change": "Neuen Arbeitgeber prüfen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
@@ -4941,6 +4952,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.contact_name": "Kontakt im CRM",
   "approval.field.connection_position": "Position auf LinkedIn",
   "approval.field.contact_title": "Jobtitel im CRM",
+  "approval.field.observed_on": "E-Mail vom",
+  "approval.field.signature": "Signaturzeile",
+  "approval.field.to_company": "Neuer Arbeitgeber",
+  "approval.field.from_company": "Arbeitgeber jetzt",
+  "approval.field.from_address": "Gesendet von",
+  "approval.field.sender_check": "Absenderprüfung",
+  "approval.senderCheck.authenticated":
+    "Bestanden: Die Absendedomain hat diese Adresse bestätigt",
   "approval.linkedin.useAsTitle": "Als Jobtitel übernehmen",
   "approval.linkedin.useAsEmployer": "{company} als Arbeitgeber übernehmen",
   "approval.linkedin.employerNow": "Arbeitet jetzt bei {company}",
@@ -4976,6 +4995,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.suggest.kind.stalled_deal": "Stockender Deal",
   "co.suggest.kind.no_next_step": "Kein nächster Schritt",
   "co.suggest.kind.lifecycle_conflict": "Widerspruch im Lebenszyklus",
+  "co.suggest.kind.gone_dormant": "Ruhig geworden",
   "co.suggest.kind.commitment_unmet": "Zusage nicht eingehalten",
   "co.suggest.kind.question_unanswered": "Frage unbeantwortet",
   "co.suggest.kind.risk_raised": "Risiko angesprochen",
@@ -10194,6 +10214,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentClients.enable": "Aktivieren",
   "agentClients.disable": "Deaktivieren",
   "agentClients.disabled": "Deaktiviert",
+  "agentClients.active": "Aktiv",
   "agentClients.neverUsed": "Nie",
   "agentClients.usersFolded_one": "Nutzende: {count}",
   "agentClients.usersFolded_other": "Nutzende: {count}",
@@ -10238,6 +10259,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verwende https oder http auf localhost oder 127.0.0.1, ohne Fragment.",
   "agentClients.register.redirectCount":
     "Füge 1 bis 10 Weiterleitungs-URIs hinzu.",
+  "agentClients.register.fixRedirect":
+    "Korrigiere oder entferne die markierte Weiterleitungs-URI.",
   "agentClients.result.title": "Client registriert",
   "agentClients.result.secretOnceTitle": "Kopiere das Secret jetzt",
   "agentClients.result.secretOnceBody":
@@ -12132,13 +12155,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "retention.create": "Regel erstellen",
   "retention.scope": "Gilt für",
   "retention.window": "Frist in Tagen",
-  "retention.windowInvalid": "Gib eine ganze Zahl von Tagen ein, mindestens 1.",
   "retention.action": "Aktion",
   "retention.actionHint":
     "Archivieren behält den Datensatz. Anonymisieren und Löschen vernichten Daten und werden im Nur-Behalten-Modus zurückgehalten.",
   "retention.lawfulBasis": "Rechtsgrundlage",
   "retention.lawfulBasisHint":
     "Optional. Die Rechtsgrundlage nach Art. 6, auf die sich diese Frist stützt, für Personen, die die Regel prüfen.",
+  "retention.basis.storage_limitation":
+    "Speicherbegrenzung, Art. 5 Abs. 1 lit. e DSGVO",
   "retention.enabled": "Aktiv",
   "retention.save": "Regel speichern",
   "retention.delete": "Regel löschen",
@@ -18681,7 +18705,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ausgehende Abonnements, die für ausgewählte Ereignisse signierte HTTP-POSTs erhalten.",
   "webhooks.new": "Neues Abonnement",
   "webhooks.notConfigured":
-    "Webhooks sind in dieser Installation erst aktiv, wenn ein Signaturschlüssel konfiguriert ist.",
+    "Webhooks brauchen einen Signaturschlüssel (webhook_key), den das Team setzt, das deinen Margince-Server betreibt. Bis dahin wird nichts gesendet.",
   "webhooks.state.active": "Aktiv",
   "webhooks.state.paused": "Pausiert",
   "webhooks.updated": "Aktualisiert am {date}",
@@ -23612,18 +23636,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.verdict.closePassed":
     "Das erwartete Abschlussdatum ({date}) ist verstrichen.",
   "deal.verdict.notStarted": "Nicht begonnen",
-  "co.verdict.noContact": "Noch kein Kontakt",
-  "co.verdict.addedOn":
-    "Das Unternehmen wurde am {date} erstellt. Bisher ist kein Austausch erfasst.",
   "co.verdict.active": "Aktiv",
   "co.verdict.lastExchange":
-    "Der letzte Austausch mit diesem Unternehmen war am {date}.",
-  "co.verdict.goingQuiet": "Wird ruhig",
-  "co.verdict.quietSince":
-    "Seit {date} gab es mit niemandem hier einen Austausch.",
+    "Die letzte Aktivität mit diesem Unternehmen war am {date}.",
+  "co.verdict.cooling": "Kühlt ab",
   "co.verdict.dormant": "Ruhend",
-  "co.verdict.dormantSince":
-    "Es gibt keinen offenen Deal und seit {date} keinen Austausch.",
+  "co.verdict.stale": "Eingeschlafen",
+  "co.verdict.silentFor":
+    "Mit diesem Unternehmen ist seit {days} Tagen nichts passiert, seit dem {date}. Ein Unternehmen kühlt ab Tag {cooling} ab, ruht ab Tag {dormant} und gilt ab Tag {stale} als eingeschlafen.",
+  "co.verdict.noActivity":
+    "Keine Aktivität erfasst, seit das Unternehmen am {date} angelegt wurde.",
   "project.verdict.startsOn": "Das Projekt beginnt am {date}.",
   "project.verdict.overrunning": "Überzogen",
   "project.verdict.endPassed": "Das geplante Ende ({date}) ist verstrichen.",

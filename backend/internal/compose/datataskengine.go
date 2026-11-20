@@ -145,7 +145,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
 		dealclockrefold.DataTask(), dealclockrefold.PersonalMeetingsTask(),
-		companyclockrefold.DataTask(),
+		companyclockrefold.DataTask(), companyclockrefold.PersonalMailTask(),
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),

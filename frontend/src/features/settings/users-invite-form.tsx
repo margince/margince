@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
@@ -159,7 +159,10 @@ export function InviteUserForm({
   // Asked only beside the name: the setup journey derives the name from the
   // address, and the member's first sign-in can fill this instead.
   const greetingName = askName ? greeting.trim() : "";
+  const queryClient = useQueryClient();
+  const inviteKey = ["member-invite", formId];
   const invite = useMutation({
+    mutationKey: inviteKey,
     mutationFn: async (
       choice: Readonly<{
         email: string;
@@ -230,7 +233,9 @@ export function InviteUserForm({
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          if (invite.isPending) return;
+          // The cache, not `invite.isPending`: a second click can land before
+          // the render that would carry the first one's pending state.
+          if (queryClient.isMutating({ mutationKey: inviteKey }) > 0) return;
           const member = { email: email.trim(), display_name: displayName };
           const checks = new Map(memberChecks(member, labels, locale));
           if (!offersRole) {
