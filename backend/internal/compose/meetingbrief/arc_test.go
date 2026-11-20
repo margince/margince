@@ -48,6 +48,18 @@ func TestTheCapturesThreadKeyDecidesBeforeTheSubject(t *testing.T) {
 	}
 }
 
+// A forward and a reply carry one subject, so they fold into one thread with it.
+func TestRepliesAndForwardsFoldUnderTheSharedSubjectPrefixes(t *testing.T) {
+	history := []HistoryIn{
+		mail(activityID, 3, "Requirements", "inbound"),
+		mail(dealID, 4, "AW: WG: Requirements", "outbound"),
+		mail(contactID, 5, "FW: Re: Requirements", "inbound"),
+	}
+	if got := threadsOf(history); len(got) != 1 {
+		t.Fatalf("threads = %d, want 1: prefixes are not a new subject", len(got))
+	}
+}
+
 // Merging every subjectless note into one bucket would invent a conversation
 // nobody had.
 func TestNotesWithNoSubjectNeverMerge(t *testing.T) {
