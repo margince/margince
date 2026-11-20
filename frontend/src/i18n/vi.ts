@@ -131,6 +131,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.retirement.survivor_inactive":
     "Thành viên giữ lại đang bị tắt. Bật lại để đăng nhập và thêm vào nhóm.",
   "users.retirement.unknown": "Xử lý công việc còn lại trước khi tiếp tục.",
+  "users.retirement.blocked_one": "Xử lý các mục này trước khi tiếp tục",
+  "users.retirement.blocked_other": "Xử lý các mục này trước khi tiếp tục",
+  "users.retirement.address": "Địa chỉ đăng nhập",
   "users.retirement.protected_email":
     "Địa chỉ đăng nhập này đã được sử dụng và không thể sửa tại đây.",
   "users.mergeSource": "Tài khoản trùng lặp",
@@ -2016,7 +2019,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.reset": "{date} theo giờ UTC",
   "aiAdmin.fixed":
     "Hạn mức cố định của công ty thay cho cách tính theo người dùng.",
-  "aiAdmin.formula":
+  "aiAdmin.formula_one":
+    "Người dùng đầy đủ đang hoạt động: {users} × {tokens} token mỗi người dùng mỗi tháng.",
+  "aiAdmin.formula_other":
     "Người dùng đầy đủ đang hoạt động: {users} × {tokens} token mỗi người dùng mỗi tháng.",
   "aiAdmin.floor":
     "Khi không có người dùng đủ điều kiện, hạn mức tính là 1 người dùng.",
@@ -2031,6 +2036,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.perUser": "Token mỗi người dùng đầy đủ mỗi tháng",
   "aiAdmin.range": "Số token nguyên, từ 1 đến 1.000.000.000.000.",
   "aiAdmin.company": "Tổng cố định của công ty (không bắt buộc)",
+  "aiAdmin.companyName": "Tổng cố định của công ty",
   "aiAdmin.overrideHint":
     "Để trống để tính theo người dùng. Giá trị theo người dùng vẫn giữ nguyên.",
   "aiAdmin.routingStale": "Gán mô hình đã thay đổi trong lúc đang sửa",
@@ -2040,6 +2046,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.reload": "Tải lại giá trị",
   "aiAdmin.failed": "Không thể áp dụng thay đổi",
   "aiAdmin.preview": "Xem trước tác động",
+  "aiAdmin.fixToPreview": "Sửa các ô được đánh dấu để xem trước.",
   "aiAdmin.previewHint":
     "Xem trước theo điều kiện hiện tại. Khi lưu, hệ thống kiểm tra lại cài đặt và mức sử dụng mới nhất; thao tác này không giữ trước năng lực xử lý và không gọi mô hình.",
   "aiAdmin.features": "AI theo hoạt động",
@@ -9903,6 +9910,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentClients.enable": "Bật",
   "agentClients.disable": "Tắt",
   "agentClients.disabled": "Đã tắt",
+  "agentClients.active": "Đang hoạt động",
   "agentClients.neverUsed": "Chưa dùng",
   "agentClients.usersFolded_one": "{count} thành viên",
   "agentClients.usersFolded_other": "{count} thành viên",
@@ -9944,6 +9952,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentClients.register.redirectInvalid":
     "Dùng https, hoặc http trên localhost hay 127.0.0.1, không có phân đoạn sau dấu #.",
   "agentClients.register.redirectCount": "Thêm từ 1 đến 10 URI chuyển hướng.",
+  "agentClients.register.fixRedirect":
+    "Sửa hoặc xóa URI chuyển hướng được đánh dấu.",
   "agentClients.result.title": "Đã đăng ký ứng dụng",
   "agentClients.result.secretOnceTitle": "Sao chép khóa bí mật ngay",
   "agentClients.result.secretOnceBody":
@@ -11799,13 +11809,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "retention.create": "Tạo chính sách",
   "retention.scope": "Áp dụng cho",
   "retention.window": "Thời hạn (ngày)",
-  "retention.windowInvalid": "Nhập số ngày nguyên, tối thiểu là 1.",
   "retention.action": "Hành động",
   "retention.actionHint":
     "Chuyển vào kho lưu trữ vẫn giữ lại hồ sơ. Ẩn danh hóa và xóa sẽ hủy dữ liệu và bị tạm chặn ở chế độ chỉ lưu trữ.",
   "retention.lawfulBasis": "Cơ sở pháp lý",
   "retention.lawfulBasisHint":
     "Không bắt buộc. Cơ sở theo Điều 6 mà thời hạn này dựa vào, dành cho kiểm toán viên đọc chính sách.",
+  "retention.basis.storage_limitation": "Hạn chế lưu trữ, Điều 5(1)(e) GDPR",
   "retention.enabled": "Đang bật",
   "retention.save": "Lưu chính sách",
   "retention.delete": "Xóa chính sách",
@@ -17901,7 +17911,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đăng ký gửi đi, nhận HTTP POST có chữ ký cho các sự kiện đã chọn.",
   "webhooks.new": "Đăng ký mới",
   "webhooks.notConfigured":
-    "Webhook chưa được bật trên bản cài đặt này cho đến khi cấu hình khóa ký.",
+    "Webhook cần một khóa ký (webhook_key) do bên vận hành máy chủ Margince của bạn đặt. Chưa thể gửi gì cho đến lúc đó.",
   "webhooks.state.active": "Đang hoạt động",
   "webhooks.state.paused": "Đã tạm dừng",
   "webhooks.updated": "Đã cập nhật {date}",

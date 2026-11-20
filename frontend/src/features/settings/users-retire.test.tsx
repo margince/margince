@@ -185,3 +185,54 @@ it("searches removal receivers by name and lets the administrator clear the hand
   await user.click(screen.getByRole("button", { name: en["users.remove"] }));
   await waitFor(() => expect(saved).toEqual([{ preview_token: "preview" }]));
 });
+
+it("puts a blocker at the top of the removal dialog and labels the address as the member's", async () => {
+  const routed = backend([]);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (new URL(request.url).pathname.endsWith("/retirement-preview")) {
+        return jsonResponse({
+          source_email: "rep2@example.test",
+          owned: {
+            contact: 0,
+            company: 0,
+            lead: 0,
+            deal: 0,
+            project: 0,
+            task: 0,
+          },
+          signal_count: 0,
+          blockers: ["deactivate_first"],
+          consequences: [],
+          token: "preview",
+        });
+      }
+      return routed(input, init);
+    }),
+  );
+  render(
+    <RetireMember
+      member={{ ...SOURCE, status: "active" }}
+      members={[SOURCE]}
+      merge={false}
+      onClose={() => undefined}
+    />,
+  );
+  const blocker = await screen.findByText(
+    en["users.retirement.deactivate_first"],
+  );
+  const callout = blocker.closest(".callout");
+  if (!callout) throw new Error("the blocker is not inside a callout");
+  expect(callout.textContent).toContain(en["users.retirement.blocked_one"]);
+  const body = screen.getByText(en["users.removeBody"]);
+  expect(
+    callout.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    screen.getByText(`${en["users.retirement.address"]}: rep2@example.test`),
+  ).toBeTruthy();
+  expect(screen.queryByText(new RegExp(en["users.mergeSource"]))).toBeNull();
+});

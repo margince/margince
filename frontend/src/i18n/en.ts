@@ -110,6 +110,9 @@ export const en = {
   "users.retirement.survivor_inactive":
     "The surviving member is deactivated. Reactivate it to restore sign-in and team assignment.",
   "users.retirement.unknown": "Resolve the remaining work before continuing.",
+  "users.retirement.blocked_one": "Resolve this before you continue",
+  "users.retirement.blocked_other": "Resolve these before you continue",
+  "users.retirement.address": "Sign-in address",
   "users.retirement.protected_email":
     "This sign-in address has already been used and cannot be changed here.",
   "users.mergeSource": "Duplicate account",
@@ -1984,7 +1987,9 @@ export const en = {
   "aiAdmin.reset": "{date} UTC",
   "aiAdmin.fixed":
     "Fixed company allowance overrides the per-user calculation.",
-  "aiAdmin.formula":
+  "aiAdmin.formula_one":
+    "Active full users: {users} × {tokens} token per user per month.",
+  "aiAdmin.formula_other":
     "Active full users: {users} × {tokens} tokens per user per month.",
   "aiAdmin.floor": "With no eligible users, the allowance counts 1 user.",
   "aiAdmin.degraded": "80% threshold reached: reduced-tier routing is active",
@@ -1998,6 +2003,7 @@ export const en = {
   "aiAdmin.perUser": "Tokens per full user per month",
   "aiAdmin.range": "Whole tokens, from 1 to 1,000,000,000,000.",
   "aiAdmin.company": "Fixed company total (optional)",
+  "aiAdmin.companyName": "Fixed company total",
   "aiAdmin.overrideHint":
     "Leave blank to use the per-user calculation. The per-user value is retained.",
   "aiAdmin.routingStale": "Model bindings changed while you were editing",
@@ -2007,6 +2013,7 @@ export const en = {
   "aiAdmin.reload": "Reload values",
   "aiAdmin.failed": "Change not applied",
   "aiAdmin.preview": "Preview effects",
+  "aiAdmin.fixToPreview": "Fix the marked fields to preview.",
   "aiAdmin.previewHint":
     "Preview of current conditions. Saving checks the latest settings and usage again; this does not reserve capacity or call a model.",
   "aiAdmin.features": "AI by activity",
@@ -10174,6 +10181,7 @@ export const en = {
   "agentClients.enable": "Enable",
   "agentClients.disable": "Disable",
   "agentClients.disabled": "Disabled",
+  "agentClients.active": "Active",
   "agentClients.neverUsed": "Never",
   "agentClients.usersFolded_one": "{count} user",
   "agentClients.usersFolded_other": "{count} users",
@@ -10215,6 +10223,7 @@ export const en = {
   "agentClients.register.redirectInvalid":
     "Use https, or http on localhost or 127.0.0.1, with no fragment.",
   "agentClients.register.redirectCount": "Add 1 to 10 redirect URIs.",
+  "agentClients.register.fixRedirect": "Fix or remove the marked redirect URI.",
   "agentClients.result.title": "Client registered",
   "agentClients.result.secretOnceTitle": "Copy the secret now",
   "agentClients.result.secretOnceBody":
@@ -12063,13 +12072,13 @@ export const en = {
   "retention.create": "Create policy",
   "retention.scope": "Applies to",
   "retention.window": "Window in days",
-  "retention.windowInvalid": "Enter a whole number of days, at least 1.",
   "retention.action": "Action",
   "retention.actionHint":
     "Archive keeps the record. Anonymize and erase destroy data and are held back in retain-only mode.",
   "retention.lawfulBasis": "Lawful basis",
   "retention.lawfulBasisHint":
     "Optional. The Art. 6 basis this window relies on, for auditors reading the policy.",
+  "retention.basis.storage_limitation": "Storage limitation, GDPR Art. 5(1)(e)",
   "retention.enabled": "Enabled",
   "retention.save": "Save policy",
   "retention.delete": "Delete policy",
@@ -18208,7 +18217,7 @@ export const en = {
     "Outbound subscriptions that receive signed HTTP POSTs for chosen events.",
   "webhooks.new": "New subscription",
   "webhooks.notConfigured":
-    "Webhooks are not enabled on this installation until a signing key is configured.",
+    "Webhooks need a signing key, which whoever runs your Margince server sets as webhook_key. Nothing can be sent until then.",
   "webhooks.state.active": "Active",
   "webhooks.state.paused": "Paused",
   "webhooks.updated": "Updated {date}",

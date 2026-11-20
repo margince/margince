@@ -23,6 +23,7 @@ import { useLastSubject } from "../../design-system/presence";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { STAGE_CHANCES_KEY } from "../../lib/activitykeys";
 import {
   fieldCheckSentence,
   isVersionSkew,
@@ -171,6 +172,7 @@ export function StageCreate({
     onSuccess: () => {
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+      queryClient.invalidateQueries({ queryKey: STAGE_CHANCES_KEY });
       toast.show(t("stage.added"));
     },
   });
@@ -329,6 +331,7 @@ export function useStageRemoval(
       // The refetched ladder first, then the dialog: closing it hands focus to
       // a row that must already be drawn.
       await queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+      void queryClient.invalidateQueries({ queryKey: STAGE_CHANCES_KEY });
       setRemoving(null);
     },
     // Held pending until the re-read lands, so a second press cannot resend

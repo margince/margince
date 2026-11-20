@@ -212,6 +212,9 @@ function PurposeCreateForm({
         {rest && <ErrorLine>{rest}</ErrorLine>}
       </form>
       <div className="actions">
+        <Button onClick={onDone} disabled={create.isPending}>
+          {t("create.cancel")}
+        </Button>
         <Button
           type="submit"
           form={formId}
