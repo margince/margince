@@ -16,6 +16,7 @@ import { navigate } from "../../lib/router";
 import type { ChosenFile } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
 import { composedLinks, type SendGrounding } from "./composelinks";
+import type { Meeting } from "./composemeeting";
 import { refusalOf } from "./composerefusal";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
@@ -67,7 +68,13 @@ async function sendFrom(args: SendRequest, keyed: IntentKeys) {
 
 // What the send is waiting for, in reading order. A pressed Send names each
 // field on the field, so the button never refuses by going grey.
-export type MissingField = "to" | "subject" | "body" | "context" | "deal";
+export type MissingField =
+  | "to"
+  | "subject"
+  | "body"
+  | "context"
+  | "deal"
+  | "meeting";
 
 export function missingToSend(
   isChannelReply: boolean,
@@ -81,6 +88,8 @@ export function missingToSend(
     asksContext: boolean;
     // An Active deal claim with a deal to choose and none chosen.
     needsDeal?: boolean;
+    // "We met in person" without saying where.
+    needsMeeting?: boolean;
   },
 ): readonly MissingField[] {
   const missing: MissingField[] = [];
@@ -99,6 +108,9 @@ export function missingToSend(
   }
   if (fields.needsDeal) {
     missing.push("deal");
+  }
+  if (fields.needsMeeting) {
+    missing.push("meeting");
   }
   return missing;
 }
@@ -127,6 +139,7 @@ export function useComposeSend({
   projectId,
   needsDeal,
   savedDraft,
+  meeting,
   onSent,
   onClose,
 }: Readonly<{
@@ -146,6 +159,8 @@ export function useComposeSend({
   projectId: string;
   needsDeal: boolean;
   savedDraft: ReturnType<typeof useSavedDraft>;
+  /** A meeting face to face to note on the contact before the send. */
+  meeting?: Meeting;
   onSent?: () => void;
   onClose: () => void;
 }>) {
@@ -237,6 +252,7 @@ export function useComposeSend({
     context: fields.context,
     asksContext: asksWhy(anchorActivity),
     needsDeal,
+    needsMeeting: meeting?.missing,
   });
   const links = composedLinks(
     { entityType, entityId, dealId },
@@ -289,7 +305,16 @@ export function useComposeSend({
     if (hold.blocks) {
       return;
     }
-    send.mutate(request);
+    if (!meeting?.on) {
+      send.mutate(request);
+      return;
+    }
+    // The meeting is the evidence the send is judged on, so it is noted
+    // first. A failed note sends nothing and says so beside the meeting.
+    meeting.record().then(
+      () => send.mutate(request),
+      () => undefined,
+    );
   };
   // What this client already knows will stop the send. The mark beside Send
   // makes no passed claim while any of it stands.

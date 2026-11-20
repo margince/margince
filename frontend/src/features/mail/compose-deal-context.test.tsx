@@ -109,7 +109,7 @@ describe("the deal a message to a contact is about", () => {
     await writeToAnna(user);
     expect(screen.queryByRole("combobox", { name: DEAL_PICK })).toBeNull();
 
-    await pickWhy(user, "Active deal");
+    await pickWhy(user, "Open deal");
     const pick = await screen.findByRole("combobox", { name: DEAL_PICK });
     await user.click(pick);
     expect(
@@ -138,7 +138,7 @@ describe("the deal a message to a contact is about", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = openContactComposer();
     await writeToAnna(user);
-    await pickWhy(user, "Active deal");
+    await pickWhy(user, "Open deal");
     await screen.findByRole("combobox", { name: DEAL_PICK });
 
     await pressSend(user);
@@ -153,7 +153,7 @@ describe("the deal a message to a contact is about", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = openContactComposer();
     await writeToAnna(user);
-    await pickWhy(user, "Follow-up they requested");
+    await pickWhy(user, "They asked for it");
     expect(screen.queryByRole("combobox", { name: DEAL_PICK })).toBeNull();
 
     await pressSend(user);
@@ -171,7 +171,7 @@ describe("the deal a message to a contact is about", () => {
     await user.tab();
     await user.type(screen.getByLabelText("Subject"), "Re: Next steps");
     writeMessage("Body", "Picking this up again.");
-    await pickWhy(user, "Follow-up they requested");
+    await pickWhy(user, "They asked for it");
 
     await pressSend(user);
     await user.click(await screen.findByRole("button", { name: "Send" }));
@@ -196,7 +196,7 @@ describe("the deal a message to a contact is about", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = openContactComposer(undefined, view);
     await writeToAnna(user);
-    await pickWhy(user, "Active deal");
+    await pickWhy(user, "Open deal");
     await screen.findByRole("combobox", { name: DEAL_PICK });
 
     await pressSend(user);
@@ -285,7 +285,7 @@ it("saves the chosen deal and uses the same filing after reopening", async () =>
   );
   const first = render(composer());
   await writeToAnna(user);
-  await pickWhy(user, "Active deal");
+  await pickWhy(user, "Open deal");
   await pickOption(
     user,
     await screen.findByRole("combobox", { name: DEAL_PICK }),

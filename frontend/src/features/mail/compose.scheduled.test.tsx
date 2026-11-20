@@ -45,7 +45,7 @@ type Activity = components["schemas"]["Activity"];
 
 // A reason that carries no unsubscribe surface, so the form is sendable with
 // nothing else filled in.
-const WHY_LABEL = "Active deal";
+const WHY_LABEL = "Open deal";
 
 const ACTIVITY: Activity = {
   occurred_precision: "instant",

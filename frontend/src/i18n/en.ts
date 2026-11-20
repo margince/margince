@@ -8237,6 +8237,25 @@ export const en = {
   "compose.why.contract": "Their contract",
   "compose.why.account": "Their customer relationship",
   "compose.why.marketing": "Marketing",
+  "compose.why.met": "We met in person",
+  "compose.why.asked": "They asked for it",
+  "compose.why.openDeal": "Open deal",
+  "compose.why.customer": "Existing customer",
+  "compose.whyHint.met":
+    "Personal mail, no unsubscribe link. The meeting is saved on the contact.",
+  "compose.whyHint.asked":
+    "Personal mail, no unsubscribe link. Their request must be on record.",
+  "compose.whyHint.openDeal":
+    "Personal mail about the deal, no unsubscribe link.",
+  "compose.whyHint.customer": "Service mail, no unsubscribe link.",
+  "compose.whyHint.marketing":
+    "Adds an unsubscribe link and the company footer. Needs their consent or a past purchase.",
+  "compose.met.where": "Where did you meet?",
+  "compose.met.wherePlaceholder": "Trade fair, customer visit, event",
+  "compose.met.when": "Date",
+  "compose.met.missing": "Say where you met.",
+  "compose.met.failed":
+    "The meeting was not saved, so nothing was sent. Try again.",
   "sendPermission.stopWithReason": "Sending needs your reason",
   "sendPermission.refused": "Message cannot be sent",
   "sendPermission.sayWhy": "Record reason for contact",

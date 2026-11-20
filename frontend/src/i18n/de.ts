@@ -8241,6 +8241,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Vertrag der Gegenseite",
   "compose.why.account": "Kundenbeziehung der Gegenseite",
   "compose.why.marketing": "Marketing",
+  "compose.why.met": "Persönlich getroffen",
+  "compose.why.asked": "Auf ihre Anfrage",
+  "compose.why.openDeal": "Offener Deal",
+  "compose.why.customer": "Bestandskunde",
+  "compose.whyHint.met":
+    "Persönliche Mail, ohne Abmeldelink. Das Treffen wird beim Kontakt gespeichert.",
+  "compose.whyHint.asked":
+    "Persönliche Mail, ohne Abmeldelink. Die Anfrage muss gespeichert sein.",
+  "compose.whyHint.openDeal": "Persönliche Mail zum Deal, ohne Abmeldelink.",
+  "compose.whyHint.customer": "Service-Mail, ohne Abmeldelink.",
+  "compose.whyHint.marketing":
+    "Fügt einen Abmeldelink und die Firmenangaben hinzu. Braucht ihre Einwilligung oder einen früheren Kauf.",
+  "compose.met.where": "Wo war das Treffen?",
+  "compose.met.wherePlaceholder": "Messe, Kundenbesuch, Veranstaltung",
+  "compose.met.when": "Datum",
+  "compose.met.missing": "Gib an, wo das Treffen war.",
+  "compose.met.failed":
+    "Das Treffen wurde nicht gespeichert, daher wurde nichts gesendet. Versuch es erneut.",
   "sendPermission.stopWithReason": "Senden braucht deine Begründung",
   "sendPermission.refused": "Nachricht kann nicht gesendet werden",
   "sendPermission.sayWhy": "Kontaktgrund erfassen",

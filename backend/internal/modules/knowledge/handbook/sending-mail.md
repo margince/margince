@@ -152,18 +152,15 @@ Once you pick a language, **Draft email**, **Redraft**, the rewrites and a saved
 Also called: draft in another language, write the email in German, change the email language.
 
 ### Why are you writing?
-The **Reason for contact** field says why you are writing. The answers are:
+The **Reason for contact** field says why you are writing. The line beside it says what your answer does to the email. The answers are:
 
-- Follow-up they requested
-- Active deal
-- Quote or proposal they requested
-- Support for a purchase
-- Invoice or payment
-- Their contract
-- Their customer relationship
-- Marketing
+- **We met in person**: you were with them in person, for example at an event or a visit, and have their card. Say where in **Where did you meet?** and pick the **Date**. **Send** saves the meeting on the contact, then sends. This covers personal mail for a year after the meeting, never marketing.
+- **They asked for it**: they asked you to write, or asked for a quote. Their request must be on record.
+- **Open deal**: the email is about a deal they are on. Pick it in **Deal this follow-up is about**.
+- **Existing customer**: support, an invoice, a contract or their account.
+- **Marketing**: an offer or a newsletter. Only this answer adds an unsubscribe link and the full company footer. It needs their consent or a past purchase.
 
-A reply to their own message needs no reason. When you ask the assistant to move a meeting, such as "Termin verschieben", the draft picks **Follow-up they requested**. On a contact's page, **Active deal** adds **Deal this follow-up is about**: pick their open deal before **Send**.
+A reply to their own message needs no reason. When you ask the assistant to move a meeting, such as "Termin verschieben", the draft picks **They asked for it**. **We met in person** shows only when you write from a contact or a lead.
 
 Margince checks the email once, when you press **Send**. Nothing is checked while you write. The check reads your reason, the record and the law where each recipient lives. When it allows every recipient, the email is queued and the composer closes. When it does not, the email is not sent, and the bar above **Send** says why (below). Your text, recipients and attachments stay.
 

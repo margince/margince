@@ -8037,6 +8037,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Hợp đồng của họ",
   "compose.why.account": "Quan hệ khách hàng của họ",
   "compose.why.marketing": "Tiếp thị",
+  "compose.why.met": "Đã gặp trực tiếp",
+  "compose.why.asked": "Họ đã yêu cầu",
+  "compose.why.openDeal": "Deal đang mở",
+  "compose.why.customer": "Khách hàng hiện tại",
+  "compose.whyHint.met":
+    "Thư cá nhân, không có liên kết hủy đăng ký. Cuộc gặp được lưu vào liên hệ.",
+  "compose.whyHint.asked":
+    "Thư cá nhân, không có liên kết hủy đăng ký. Cần có yêu cầu của họ trong hồ sơ.",
+  "compose.whyHint.openDeal":
+    "Thư cá nhân về deal, không có liên kết hủy đăng ký.",
+  "compose.whyHint.customer": "Thư dịch vụ, không có liên kết hủy đăng ký.",
+  "compose.whyHint.marketing":
+    "Thêm liên kết hủy đăng ký và thông tin công ty. Cần sự đồng ý của họ hoặc một lần mua trước đó.",
+  "compose.met.where": "Bạn đã gặp ở đâu?",
+  "compose.met.wherePlaceholder": "Hội chợ, thăm khách hàng, sự kiện",
+  "compose.met.when": "Ngày",
+  "compose.met.missing": "Hãy cho biết bạn đã gặp ở đâu.",
+  "compose.met.failed": "Cuộc gặp chưa được lưu nên chưa gửi gì. Hãy thử lại.",
   "sendPermission.stopWithReason": "Cần lý do của bạn để gửi",
   "sendPermission.refused": "Không thể gửi tin nhắn",
   "sendPermission.sayWhy": "Ghi lý do liên hệ",

@@ -221,7 +221,7 @@ export const activity202: Activity = {
 // the categories the engine reasons about, not consent purposes. The record
 // decides what is allowed, and a key a rep picked never did.
 export const WHY_LABEL = {
-  requestedFollowup: "Follow-up they requested",
+  requestedFollowup: "They asked for it",
   marketing: "Marketing",
 } as const;
 

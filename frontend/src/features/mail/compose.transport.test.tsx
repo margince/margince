@@ -265,7 +265,7 @@ describe("the composer's transport dial", () => {
     await pickOption(
       user,
       screen.getByLabelText("Reason for contact"),
-      "Active deal",
+      "Open deal",
     );
     await pressSend(user);
 
