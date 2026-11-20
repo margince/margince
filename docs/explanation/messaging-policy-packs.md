@@ -30,7 +30,7 @@ Two countries judge each recipient, each for its own kind of rule:
 |---|---|---|
 | Marketing: consent or an exception, the advertising cap, the subject label, the objection route | The recipient's country | Anti-spam law applies where the mail is received. The sender's own anti-spam law does not follow its mail abroad. |
 | The lawful basis: legitimate interest or not, the evidence windows, the lawful-basis warning | The recipient's country and the sending entity's, the stricter winning | The recipient's data-protection law reaches them where they are, such as GDPR Art. 3(2). The sender's binds the sender wherever the recipient is, such as GDPR Art. 3(1) or Vietnam's Law 91/2025/QH15 Art. 1. |
-| Who the controller is, who answers about the data, request deadlines | The sending entity's country | The controller owes them under its own law. |
+| Who the controller is, who answers about the data, request deadlines | The sending entity's country, except the deadlines below | The controller owes them under its own law. |
 
 `recipientRequestCountry` in `backend/internal/modules/consent/pinnedsubject.go` resolves both
 countries once per recipient. It takes the sending entity's country from `senderCountryOf` and puts

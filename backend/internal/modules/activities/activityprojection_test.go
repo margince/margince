@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
@@ -364,7 +365,8 @@ func stringOf[T ~string](v *T) *string {
 // arity error somewhere else, at a call site that has nothing to do with the
 // omission.
 func TestTheSelectListAndTheScanAgreeOnLength(t *testing.T) {
-	columns, err := activityColumns(principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem}), "coalesce(a.audience = 'workspace', false)", func(any) int { return 1 })
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem})
+	columns, err := activityColumns(ctx, "coalesce(a.audience = 'workspace', false)", func(any) int { return 1 })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -390,13 +392,24 @@ func TestTheSelectListAndTheScanAgreeOnLength(t *testing.T) {
 		}
 	}
 	// And each declared column is actually in it, so a rename cannot keep the
-	// count while selecting something else.
+	// count while selecting something else. The reply channel is substituted per
+	// query with the caller's audience on the source, so its gated form is what
+	// the list names.
+	sourceAudience, err := auth.ActivityAudienceArm(ctx, "s", func(any) int { return 1 })
+	if err != nil {
+		t.Fatal(err)
+	}
+	replyChannel := storekit.ReplyChannelSQL("a", "")
 	for _, c := range activityProjection {
 		if c.sql == "" {
 			continue
 		}
-		if !strings.Contains(columns, c.sql) {
-			t.Errorf("the projection declares %s and the select list does not name it", c.sql)
+		want := c.sql
+		if c.sql == replyChannel {
+			want = storekit.ReplyChannelSQL("a", sourceAudience)
+		}
+		if !strings.Contains(columns, want) {
+			t.Errorf("the projection declares %s and the select list does not name it", want)
 		}
 	}
 	if !strings.HasSuffix(columns, "AS content_available") {

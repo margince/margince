@@ -1089,6 +1089,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.daysUnit": "Tage",
   "reporting.countUnit": "Anzahl",
   "reporting.wholeCount": "Gib eine ganze Anzahl ein.",
+  "reporting.needsChart": "Füge mindestens ein Diagramm hinzu.",
+  "reporting.needsInterval":
+    "Gib dem eigenen Zeitraum ein Ende nach seinem Start.",
   "reporting.retired": "Ziel stillgelegt",
   "reporting.comparisonHelp":
     "Wähle benachbarte abgeschlossene Zeiträume. Snapshots desselben Zeitraums zeigen keinen Periodenvergleich.",
@@ -1864,7 +1867,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.reminder.pending": "E-Mail-Erinnerung geplant.",
   "scheduling.reminder.queued": "E-Mail-Erinnerung zum Versand vorgemerkt.",
   "scheduling.reminder.unavailable":
-    "Die Erinnerung konnte nicht gesendet werden. Prüfe deine E-Mail-Verbindung und schreibe dem Gast direkt.",
+    "Die Erinnerung konnte nicht gesendet werden. Haben die E-Mail-Regeln von Margince sie gestoppt, steht der Grund in deinen Benachrichtigungen. Schreib dem Gast direkt.",
   "history.field.reminder_status": "Erinnerungsstatus",
   "scheduling.myLink": "Dein Buchungslink",
   "scheduling.linkIntro":
@@ -3233,6 +3236,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
     "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
+  "record.attachRefused":
+    "Du kannst diesen Datensatz nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -6434,6 +6439,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
+  "legalEntities.defaultCountry":
+    "Land: {country}. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
+  "legalEntities.defaultCountryNone":
+    "Kein Land gesetzt. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
+  "legalEntities.defaultCountryLink": "Unter Rechtsraum ändern",
+  "jurisdiction.entities.title": "Unternehmen",
+  "jurisdiction.entities.lead":
+    "Das Land jedes Unternehmens bestimmt das Recht für die Mails seines Teams und die Datensätze, die sie verantworten.",
+  "jurisdiction.entities.default": "{country}, die Auswahl oben",
+  "jurisdiction.entities.none": "Kein Land gesetzt",
+  "jurisdiction.entities.edit": "Unternehmen ändern",
   "legalEntities.edit": "Bearbeiten",
   "legalEntities.archive": "Archivieren",
   "legalEntities.editTitle": "{name} bearbeiten",
@@ -6477,9 +6493,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.logoEmpty": "Bild hier ablegen oder auswählen",
   "legalEntities.logoRemove": "Logo entfernen",
   "legalEntities.countryPlaceholder": "Land auswählen",
-  "legalEntities.countryInstallation": "Land der Installation",
-  "legalEntities.countryInstallationHint":
-    "Lass das Land der Installation stehen, außer dieses Unternehmen hat seinen Sitz anderswo.",
   "legalEntities.archiveTitle": "{name} archivieren?",
   "legalEntities.archiveBody":
     "Er verschwindet aus dieser Liste, und niemand kann ihm mehr zugeordnet werden.",
@@ -7092,6 +7105,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.view.weekly": "Woche",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
+  "brief.updating": "Wird aktualisiert…",
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
@@ -9106,9 +9120,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
   "analytics.field.partner_sourced": "Von Partnern vermittelt",
-  "analytics.field.period_month": "Abschlussmonat",
-  "analytics.field.period_quarter": "Abschlussquartal",
-  "analytics.field.period_year": "Abschlussjahr",
+  "analytics.field.period_month": "Monat",
+  "analytics.field.period_quarter": "Quartal",
+  "analytics.field.period_year": "Jahr",
   "analytics.field.phase": "Phase",
   "analytics.field.pipeline_id": "Pipeline",
   "analytics.field.project": "Projektkennung",
@@ -14958,7 +14972,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.rule.pack": "Regelwerk {rule}",
   "jurisdiction.documents.title": "Dokumente",
   "jurisdiction.documents.empty":
-    "Das Paket dieses Rechtsraums enthält keine Dokumente.",
+    "Für dieses Land sind keine integrierten Compliance-Vorlagen verfügbar.",
   "jurisdiction.documents.emptyUnset":
     "Es gibt keine Dokumente zum Anzeigen, da kein Rechtsraum festgelegt ist.",
   "jurisdiction.documents.read": "Lesen",
@@ -14966,6 +14980,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.documents.readFailed":
     "Das Dokument konnte nicht geladen werden.",
   "jurisdiction.documents.note": "Für {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* Die Regeln, Fristen und Dokumente auf dieser Seite sind KI-generierte Entwürfe und keine Rechtsberatung. Lass sie von einer Anwältin oder einem Anwalt prüfen, bevor du dich auf sie verlässt.",
   "jurisdiction.audience.employer": "den Arbeitgeber",
   "jurisdiction.audience.operator": "die betreibende Stelle",
   "jurisdiction.audience.employee": "Beschäftigte",
@@ -16060,6 +16076,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.deactivateNote":
     "Beim Deaktivieren wird nichts davon verschoben. Übergib es vorher oder später über dieses Menü.",
   "users.handover.done": "{records} an {name} übergeben.",
+  "users.handover.draftsNote":
+    "Gespeicherte E-Mail-Entwürfe werden erst verschoben, wenn {name} deaktiviert ist. Hat das Mitglied, das du wählst, schon einen Entwurf an derselben Stelle, bleibt dieser, und der von {name} wird gelöscht.",
+  "users.handover.draftsDiscarded_one":
+    "{count} gespeicherter E-Mail-Entwurf wurde gelöscht, weil {name} an derselben Stelle schon einen Entwurf hatte.",
+  "users.handover.draftsDiscarded_other":
+    "{count} gespeicherte E-Mail-Entwürfe wurden gelöscht, weil {name} an derselben Stelle schon einen Entwurf hatte.",
   "users.handover.nothingMoved": "Es war nichts mehr zu übergeben.",
   "users.handover.left":
     "Noch bei {name}: {records}. Diese darfst du nicht ändern.",
@@ -16081,6 +16103,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.handoffs_other": "{count} offene Übergaben",
   "users.handover.responsibilities_one": "{count} Datensatzverantwortung",
   "users.handover.responsibilities_other": "{count} Datensatzverantwortungen",
+  "users.handover.drafts_one": "{count} gespeicherter E-Mail-Entwurf",
+  "users.handover.drafts_other": "{count} gespeicherte E-Mail-Entwürfe",
   "users.handover.lists_one": "{count} Liste",
   "users.handover.lists_other": "{count} Listen",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
@@ -18270,6 +18294,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bearbeitung fehlgeschlagen. Vor dem Wiederholen den Lauf prüfen.",
   "inquiry.handling": "Anfragen bearbeiten",
   "inquiry.review": "Bearbeitung prüfen",
+  "inquiry.stillNeeded": "Erforderlich: {fields}",
   "inquiry.pausedConversionWarning":
     "Wenn du diesen Plan speicherst, ersetzt er die bisherige Lead-Bearbeitung dieses Formulars. Mit „Pausiert speichern“ bleibt der Plan aus: Neue Anfragen erhalten erst nach dem Einschalten automatisch eine Aufgabe.",
   "inquiry.savePaused": "Pausiert speichern",

@@ -34,7 +34,7 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 		{name: "read share", private: true, share: "read"},
 		{name: "write share", private: true, share: "write", want: true},
 		{name: "owner", private: true, owner: true, want: true},
-		{name: "workspace contact on another team", want: true},
+		{name: "workspace contact on another team"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := Setup(t)

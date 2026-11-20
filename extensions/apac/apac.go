@@ -28,6 +28,7 @@ func New() extension.Extension {
 		Jurisdictions: packsFor(messagingRules()),
 		Messaging:     messagingRules(),
 		SubjectRights: []subjectrights.Rules{vietnameseSubjectRights()},
+		Documents:     vietnameseDocuments(),
 	}
 }
 

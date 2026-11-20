@@ -176,7 +176,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",
 	"internal/modules/identity:resetLockoutStreak":         "failed_login_count = 0 and locked_until = NULL on a successful sign-in are constants, and two sign-ins clearing one lockout clear it once",
 	"internal/modules/identity:countFailure":               "every caller reads the streak it folds under its own app_user FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), one hop past what this witness's AST walk follows",
-	"internal/modules/identity:Authenticate":               "the idle window rolls forward in SQL from now(), never from a value read into Go, so two requests on one session both move it forward",
 	"internal/modules/integrations:applyOneStored":         "applied_at = now() marks one stored row as applied, and the selector that chose it will not choose it again",
 	"internal/modules/integrations:discardClaims":          "claims_unwritten = true and next_attempt_at = NULL are constants naming what the run could not do, not a state this caller read",
 	"internal/modules/knowledge:replacePage":               "the handbook seeder replaces a page with the file it just read, which is the source of truth rather than a value read from this row",

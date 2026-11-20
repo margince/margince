@@ -7699,7 +7699,10 @@ export interface paths {
          * The caller's own unsent message for one place the composer opens.
          * @description A draft is the composer's state, kept so that closing it does not lose a message. It
          *     is not an activity, not a scheduled send and never on a timeline, and only the seat
-         *     that wrote it can read it. There is at most one per author and anchor.
+         *     that wrote it can read, change or discard it: not a colleague, an admin, or an agent
+         *     acting for someone else. There is at most one per author and anchor. Once the author has
+         *     left, a handover of their work (`handOverUserWork`) moves their drafts to the colleague
+         *     who takes over, who from then on is the only one who reads them.
          *
          *     The AI drafting routes still persist nothing. A draft exists because the rep's composer
          *     saved one here, or because an agent acting for the rep drafted a first message to a
@@ -20391,7 +20394,7 @@ export interface paths {
         /**
          * Count the live records a member still owns.
          * @description How many live leads, contacts, companies, deals and projects the member owns that the
-         *     caller can see. For a member who left, it also counts the contacts and companies only
+         *     caller can see, and how many composer drafts they saved (a count only). For a member who left, it also counts the contacts and companies only
          *     they can see (captured and never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
          *     this to say what would be left behind. Works for any non-archived member, deactivated or
          *     not, because work is best handed over before the account is closed.
@@ -20408,7 +20411,12 @@ export interface paths {
          *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
          *     owner (an active human seat that can write), else `422`
          *     with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
-         *     caller may not change stays with the member. Automations and deal-room stewardships are not moved.
+         *     caller may not change stays with the member. For a member who left, their saved composer
+         *     drafts move too, and from then on only the new holder reads them. Where the new holder
+         *     already has a draft in the same place, theirs stays and the member's is discarded, counted
+         *     in `mail_draft_discarded`. An active member keeps every draft, and so does a draft a
+         *     scheduled or held message still waits on; both count in `left`. Automations and deal-room
+         *     stewardships are not moved.
          */
         post: operations["handOverUserWork"];
         delete?: never;
@@ -42308,6 +42316,8 @@ export interface components {
             sdr_handoff: number;
             /** @description Current user responsibilities on records. */
             record_assignment: number;
+            /** @description Unsent messages the member saved in the composer. Only the count is shown; the words stay readable by the author alone until a handover moves them. */
+            mail_draft: number;
         };
         UserHandover: {
             owned: components["schemas"]["HandoverCounts"];
@@ -42322,6 +42332,8 @@ export interface components {
         UserHandoverResult: {
             moved: components["schemas"]["HandoverCounts"];
             left: components["schemas"]["HandoverCounts"];
+            /** @description The member's saved drafts deleted because the receiver already had a draft in the same place. */
+            mail_draft_discarded: number;
         };
         /**
          * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
@@ -45707,7 +45719,10 @@ export interface components {
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
-            /** @description The law the recipient's pack cites for `reason_code`, absent when none may be shown. */
+            /**
+             * @description The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+             *     when only that pack cites one. Absent when none may be shown.
+             */
             provision?: components["schemas"]["CitedProvision"];
             /**
              * @description Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
@@ -51376,7 +51391,10 @@ export interface components {
             category?: string;
             /** @description The category the sender claimed. */
             requested_category?: string;
-            /** @description The first law cited for `reason_code`, absent when none may be shown. */
+            /**
+             * @description The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+             *     when only that pack cites one. Absent when none may be shown.
+             */
             provision?: components["schemas"]["CitedProvision"];
             /** @description Every law cited for `reason_code`, `provision` first. Absent when none may be shown. */
             provisions?: components["schemas"]["CitedProvision"][];
@@ -55942,7 +55960,10 @@ export interface components {
             /** Format: uuid */
             subject_id?: string;
             reason_code: string;
-            /** @description The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed. */
+            /**
+             * @description The first law cited for `reason_code` when the refusal was assessed: the recipient's
+             *     pack's, or the sending entity's when only that pack cites one.
+             */
             provision?: components["schemas"]["CitedProvision"];
             /**
              * @description Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
@@ -61279,7 +61300,7 @@ export interface components {
             as_of: string;
             /**
              * @description True when this answer is Home's kept answer past its five-minute freshness,
-             *     served while the server reads it again. It still holds every access rule the
+             *     or older than the reader's own latest write, served while the server reads it again. It still holds every access rule the
              *     fresh read would apply. A client asks again a few seconds later for the fresh
              *     answer. Absent or false means the answer is fresh.
              */

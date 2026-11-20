@@ -11,6 +11,7 @@
 # the user's own seat only, which no agent tool reads; the Go integration test
 # TestATimeZoneSaysItsAgentOnTheUsersOwnSeatOnly holds them.
 name: case109_show_my_times_in_lisbon
+title: Show my times in Lisbon time
 criteria: [1]
 
 writes: true

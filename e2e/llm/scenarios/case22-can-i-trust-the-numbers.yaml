@@ -24,6 +24,7 @@
 # measuring the seat boundary, which is a different and deterministic question
 # the Go suite already owns.
 name: case22_can_i_trust_the_numbers
+title: Can I trust the numbers
 criteria: [1, 2]
 
 # WRITES: nothing — this case only reads. Said out loud because a scenario that

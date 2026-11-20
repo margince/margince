@@ -36,7 +36,7 @@ func lossEventsSpec() reportSpec {
 		fieldCompanyID:  colCompanyID,
 		fieldLossReason: "h.lost_reason_code_at_change",
 	}
-	maps.Copy(dimensions, periodDimensions(colLossAt))
+	withPeriodDimensions(dimensions, colLossAt)
 	filters := maps.Clone(dimensions)
 	dimensions[fieldDealID] = colRowID
 	// Each column read off the history row names its own deal, so the deal's

@@ -8,6 +8,7 @@ import { ifMatch, requireVersion } from "../../api/version";
 import {
   type ActivityGate,
   useActivityGate,
+  writableTarget,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
 import { useRailRename } from "../../components/railfield";
@@ -131,7 +132,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const nextVerbs = useNextTaskVerbs(view, taskUpdate, canUpdateTask);
   // Log in the strip and Add task in the menu open one drawer. The page holds
   // that drawer and the gate both verbs read.
-  const activity = useActivityGate();
+  const activity = useActivityGate(writableTarget(project));
   const [logDrawer, setLogDrawer] = useState<LogDrawer>(null);
   const edit = useProjectEdit(project);
   const rename = useRailRename(edit, "name", t("project.name"));

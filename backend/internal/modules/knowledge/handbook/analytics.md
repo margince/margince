@@ -138,9 +138,9 @@ missing, this line is not shown.
 It names no currency, because one report can show deals in their own currency
 beside totals turned into yours.
 
-Activity reports count meetings and tasks, never email. Messages, calls and
-notes are not counted either. An activity report or custom question that asks
-for one of those kinds is refused, and the refusal names the kinds you can use.
+Activity reports count meetings and tasks, never email. Messages, calls and notes are not counted either. An activity report or custom question that asks for one of those kinds is refused, and the refusal names the kinds you can use.
+
+A custom report can group or filter by **Year**, **Quarter** or **Month**. Won and lost deals count in the period they closed. Meetings and tasks count in the period they happened, and one logged with only a date counts on that date. Periods follow the company's time zone, so a deal won late on the last evening of the year counts in that year. Year and quarter follow the financial year: in a year that opens in April, March is in the fourth quarter. A month is the same month whatever the financial year.
 
 ## Explain this number
 

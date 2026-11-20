@@ -212,10 +212,9 @@ describe("the value at rest", () => {
       readOnlyReason: "Archived.",
     });
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.getByText("€48,000.00")).toHaveAttribute(
-      "title",
-      "Archived.",
-    );
+    const value = screen.getByText("€48,000.00");
+    expect(value).toHaveAccessibleDescription("Archived.");
+    expect(value).toHaveAttribute("tabindex", "0");
   });
 
   it("stands a suggested value in for an empty one, muted, for editor and reader alike", () => {

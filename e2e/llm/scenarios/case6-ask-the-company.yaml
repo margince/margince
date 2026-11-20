@@ -13,6 +13,7 @@
 # repeated a human's faulty memory back to the contact about to walk into the
 # meeting.
 name: case6_ask_the_company
+title: Ask the company
 criteria: [1, 3, 5]
 
 # WRITES: nothing — this case only reads. Said out loud because a scenario that

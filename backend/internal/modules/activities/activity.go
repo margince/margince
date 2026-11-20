@@ -80,6 +80,10 @@ type LogActivityInput struct {
 	audienceOf *ids.ActivityID
 	// recordsMeeting is the meeting a transcript records (records_meeting_id).
 	recordsMeeting *ids.ActivityID
+	// continues is the activity this one carries on: a reply's anchor, a
+	// transcript's meeting, a reminder's message. Only internal writers set it,
+	// because the links that activity holds skip the write check (mayCarry).
+	continues *ids.UUID
 	// inheritedProject is the deal's project the activity is filed under too.
 	inheritedProject ids.UUID
 	// Automatic notes can also record a meeting that already has its outcome.

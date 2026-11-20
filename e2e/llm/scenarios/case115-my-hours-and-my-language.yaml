@@ -1,6 +1,7 @@
 # CASE 115 — A user's own hours and own language are theirs alone, so both go to
 # change_my_settings. No workspace setting moves, and no colleague's language.
 name: case115_my_hours_and_my_language
+title: My working hours and my language
 criteria: [1, 2]
 writes: true
 

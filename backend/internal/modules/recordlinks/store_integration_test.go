@@ -206,14 +206,17 @@ func TestBothEndsGateALink(t *testing.T) {
 	e := setupLinks(t)
 	own := e.seat(e.rep, false, full())
 
-	// Reading a deal is open to every seat; changing one is the owner's. So a
-	// link from a colleague's deal is refused, and a link to it is a filing.
+	// Reading a deal is open to every seat; changing one is the owner's. A
+	// link shows on both deals, so it is refused from or to a colleague's deal.
 	fromTheirs := NewLink{FromType: "deal", FromID: e.theirs, ToType: "deal", ToID: e.renewal, LinkType: "related_to"}
 	if _, err := e.store.Create(own, fromTheirs); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a link from a deal the caller does not own gave %v, want permission denied", err)
 	}
-	if _, err := e.store.Create(own, e.dealLink(e.theirs, "related_to")); err != nil {
-		t.Errorf("a link to a colleague's deal was refused: %v", err)
+	if _, err := e.store.Create(own, e.dealLink(e.theirs, "related_to")); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a link to a colleague's deal gave %v, want permission denied", err)
+	}
+	if _, err := e.store.Create(own, e.dealLink(e.deal, "related_to")); err != nil {
+		t.Errorf("a link between two of the caller's deals was refused: %v", err)
 	}
 	if _, err := e.store.Create(own, e.dealLink(ids.NewV7(), "related_to")); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("a link to a deal that does not exist gave %v, want not found", err)
@@ -223,7 +226,7 @@ func TestBothEndsGateALink(t *testing.T) {
 		t.Errorf("a link by a seat that may not update the deal gave %v, want permission denied", err)
 	}
 	if n := e.count(t, `SELECT count(*) FROM record_link`); n != 1 {
-		t.Errorf("record_link holds %d rows, want only the link to the colleague's deal", n)
+		t.Errorf("record_link holds %d rows, want only the link between the caller's deals", n)
 	}
 }
 

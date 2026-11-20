@@ -23,6 +23,7 @@
 #   case turns on WHICH side is reported as owing, which is the distinction a
 #   window over the prose cannot make.
 name: case5_before_the_meeting
+title: Before the meeting
 criteria: [1, 2, 3, 5]
 
 # WRITES: nothing — this case only reads. Said out loud because a scenario that

@@ -47,6 +47,7 @@ bounty
 branch
 break
 brief
+browser
 bug
 build
 built

@@ -18,6 +18,7 @@
 #
 # Needs the wide passport: invite_meeting is send-scoped.
 name: case46_get_us_in_a_room
+title: Get us in a room
 criteria: [1, 2, 3]
 passport: wide
 

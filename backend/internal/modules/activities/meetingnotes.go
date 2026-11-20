@@ -157,7 +157,7 @@ func (s *Store) LandMeetingNotesTx(ctx context.Context, tx pgx.Tx, in MeetingNot
 		Kind: KindMeeting, Subject: &title, Body: &body, OccurredAt: &meeting.OccurredAt,
 		SourceSystem: new(transcriptSourceSystem), SourceID: &in.URL,
 		Source: meetingNotesSource, Links: linksOfKinds(meeting, []string{linkEntityContact}),
-		recordsMeeting: &in.Meeting, keepRecordedOutcome: true,
+		recordsMeeting: &in.Meeting, keepRecordedOutcome: true, continues: &in.Meeting.UUID,
 		Raw: &map[string]any{meetingNotesRawKey: map[string]any{
 			"meeting_id": in.Meeting.String(), "revision_id": in.Revision,
 		}},

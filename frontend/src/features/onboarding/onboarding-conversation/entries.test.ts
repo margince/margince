@@ -33,7 +33,7 @@ function expandsAsynchronously(
 }
 
 afterEach(() => {
-  document.body.innerHTML = "";
+  document.body.replaceChildren();
   vi.unstubAllGlobals();
 });
 

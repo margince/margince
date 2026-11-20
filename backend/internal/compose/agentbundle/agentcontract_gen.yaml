@@ -7831,7 +7831,10 @@ paths:
       description: |-
         A draft is the composer's state, kept so that closing it does not lose a message. It
         is not an activity, not a scheduled send and never on a timeline, and only the seat
-        that wrote it can read it. There is at most one per author and anchor.
+        that wrote it can read, change or discard it: not a colleague, an admin, or an agent
+        acting for someone else. There is at most one per author and anchor. Once the author has
+        left, a handover of their work (`handOverUserWork`) moves their drafts to the colleague
+        who takes over, who from then on is the only one who reads them.
       parameters:
         - name: anchor_type
           in: query
@@ -20089,7 +20092,7 @@ paths:
       summary: Count the live records a member still owns.
       description: |-
         How many live leads, contacts, companies, deals and projects the member owns that the
-        caller can see. For a member who left, it also counts the contacts and companies only
+        caller can see, and how many composer drafts they saved (a count only). For a member who left, it also counts the contacts and companies only
         they can see (captured and never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
         this to say what would be left behind. Works for any non-archived member, deactivated or
         not, because work is best handed over before the account is closed.
@@ -20117,7 +20120,12 @@ paths:
         in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
         owner (an active human seat that can write), else `422`
         with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
-        caller may not change stays with the member. Automations and deal-room stewardships are not moved.
+        caller may not change stays with the member. For a member who left, their saved composer
+        drafts move too, and from then on only the new holder reads them. Where the new holder
+        already has a draft in the same place, theirs stays and the member's is discarded, counted
+        in `mail_draft_discarded`. An active member keeps every draft, and so does a draft a
+        scheduled or held message still waits on; both count in `left`. Automations and deal-room
+        stewardships are not moved.
 
         Needs the passport permission Change records.
 
@@ -39717,7 +39725,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task, webhook, list, sdr_handoff, record_assignment]
+      required: [lead, contact, company, deal, project, task, webhook, list, sdr_handoff, record_assignment, mail_draft]
       properties:
         lead: {type: integer, minimum: 0}
         contact: {type: integer, minimum: 0}
@@ -39729,6 +39737,7 @@ components:
         list: {type: integer, minimum: 0, description: Live lists owned by the member.}
         sdr_handoff: {type: integer, minimum: 0, description: Waiting prospect handoffs assigned to the member.}
         record_assignment: {type: integer, minimum: 0, description: Current user responsibilities on records.}
+        mail_draft: {type: integer, minimum: 0, description: 'Unsent messages the member saved in the composer. Only the count is shown; the words stay readable by the author alone until a handover moves them.'}
     UserHandover:
       type: object
       required: [owned]
@@ -39741,10 +39750,11 @@ components:
         to_user_id: {type: string, format: uuid, description: 'The colleague who takes the work over.'}
     UserHandoverResult:
       type: object
-      required: [moved, left]
+      required: [moved, left, mail_draft_discarded]
       properties:
         moved: {$ref: '#/components/schemas/HandoverCounts'}
         left: {$ref: '#/components/schemas/HandoverCounts'}
+        mail_draft_discarded: {type: integer, minimum: 0, description: "The member's saved drafts deleted because the receiver already had a draft in the same place."}
     BulkRecordType:
       type: string
       description: |-
@@ -42773,7 +42783,9 @@ components:
       properties:
         provision:
           allOf: [{$ref: '#/components/schemas/CitedProvision'}]
-          description: The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+          description: |-
+            The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+            when only that pack cites one. Absent when none may be shown.
         provisions:
           type: array
           items: {$ref: '#/components/schemas/CitedProvision'}
@@ -48830,7 +48842,9 @@ components:
         requested_category: {type: string, description: The category the sender claimed.}
         provision:
           allOf: [{$ref: '#/components/schemas/CitedProvision'}]
-          description: The first law cited for `reason_code`, absent when none may be shown.
+          description: |-
+            The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+            when only that pack cites one. Absent when none may be shown.
         provisions:
           type: array
           items: {$ref: '#/components/schemas/CitedProvision'}
@@ -52937,7 +52951,9 @@ components:
         reason_code: {type: string}
         provision:
           allOf: [{$ref: '#/components/schemas/CitedProvision'}]
-          description: The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
+          description: |-
+            The first law cited for `reason_code` when the refusal was assessed: the recipient's
+            pack's, or the sending entity's when only that pack cites one.
         provisions:
           type: array
           items: {$ref: '#/components/schemas/CitedProvision'}
@@ -56325,7 +56341,7 @@ components:
           type: boolean
           description: |-
             True when this answer is Home's kept answer past its five-minute freshness,
-            served while the server reads it again. It still holds every access rule the
+            or older than the reader's own latest write, served while the server reads it again. It still holds every access rule the
             fresh read would apply. A client asks again a few seconds later for the fresh
             answer. Absent or false means the answer is fresh.
         scope:

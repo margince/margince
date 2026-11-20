@@ -51,7 +51,9 @@ describe("a choice edited in a dialog", () => {
   it("shows a reader who may not edit the value as plain text", () => {
     renderChoice({ canEdit: false, readOnlyReason: "Archived." });
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.getByText("Prospect")).toHaveAttribute("title", "Archived.");
+    const value = screen.getByText("Prospect");
+    expect(value).toHaveAccessibleDescription("Archived.");
+    expect(value).toHaveAttribute("tabindex", "0");
   });
 
   it("names the trigger by the verb and the value", () => {

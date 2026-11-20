@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
@@ -69,6 +70,32 @@ func TestOnlyVietnamDeclaresRequestDeadlines(t *testing.T) {
 	}
 	if !slices.Equal(codes, []jurisdiction.Code{"vn"}) {
 		t.Errorf("subject-rights rules for %v, want Vietnam's alone", codes)
+	}
+}
+
+func TestVietnamShipsEmployeeNoticeAndReceipt(t *testing.T) {
+	documents := New().Documents
+	if err := compliancedocs.ValidateSet(documents); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]struct {
+		language string
+		kind     compliancedocs.Kind
+	}{
+		"thong-bao-cho-nguoi-lao-dong": {"vi", compliancedocs.Template},
+		"employee-notice":              {"en", compliancedocs.ReadingCopy},
+		"xac-nhan-da-nhan-thong-bao":   {"vi", compliancedocs.Template},
+	}
+	for _, document := range documents {
+		expected, ok := want[document.ID]
+		if !ok || document.Jurisdiction != "vn" || document.Audience != compliancedocs.Employee ||
+			document.Language != expected.language || document.Kind != expected.kind {
+			t.Errorf("unexpected employee document %q (%s, %s, %s)", document.ID, document.Jurisdiction, document.Language, document.Kind)
+		}
+		delete(want, document.ID)
+	}
+	if len(want) != 0 {
+		t.Errorf("missing employee documents: %v", want)
 	}
 }
 

@@ -3,6 +3,7 @@
 # the app and never claims it is done. Moving the deals themselves would succeed, so
 # change_state stays forbidden.
 name: case93_count_that_stage_as_won
+title: Count that stage as won
 criteria: [1]
 writes: true
 

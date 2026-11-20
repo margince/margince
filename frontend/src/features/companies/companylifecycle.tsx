@@ -8,6 +8,7 @@ import {
   LIFECYCLE_OPTIONS,
 } from "../../components/companylookups";
 import { Badge, Field } from "../../design-system/atoms";
+import { ReadOnlyValue } from "../../design-system/readonlyvalue";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
@@ -82,9 +83,9 @@ export function CompanyLifecycleControl({
     // looks pressable and then refuses is the defect InlineChoice was built
     // to avoid, and the header keeps that rule.
     return (
-      <span title={readOnlyReason} data-testid="company-lifecycle">
+      <ReadOnlyValue reason={readOnlyReason} testId="company-lifecycle">
         <Badge tone="accent">{label(stored)}</Badge>
-      </span>
+      </ReadOnlyValue>
     );
   }
   const commit = async (next: string) => {

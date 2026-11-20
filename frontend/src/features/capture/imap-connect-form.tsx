@@ -252,9 +252,7 @@ export function ImapMailboxForm({
             {(control) => (
               <TextInput
                 {...control}
-                type="number"
-                min={PORT_RANGE.min}
-                max={PORT_RANGE.max}
+                inputMode="numeric"
                 value={port}
                 onChange={(event) => setPort(event.target.value)}
               />
@@ -308,9 +306,7 @@ export function ImapMailboxForm({
             {(control) => (
               <TextInput
                 {...control}
-                type="number"
-                min={MAX_MESSAGES_RANGE.min}
-                max={MAX_MESSAGES_RANGE.max}
+                inputMode="numeric"
                 value={maxMessages}
                 onChange={(event) => setMaxMessages(event.target.value)}
               />

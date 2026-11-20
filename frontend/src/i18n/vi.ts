@@ -1062,6 +1062,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.daysUnit": "Ngày",
   "reporting.countUnit": "Số lượng",
   "reporting.wholeCount": "Nhập số nguyên.",
+  "reporting.needsChart": "Thêm ít nhất một biểu đồ.",
+  "reporting.needsInterval":
+    "Ngày kết thúc của khoảng tùy chỉnh phải sau ngày bắt đầu.",
   "reporting.retired": "Mục tiêu đã ngừng",
   "reporting.comparisonHelp":
     "Chọn các kỳ đã hoàn tất liền kề nhau. Ảnh chụp của cùng một kỳ không cho thấy thay đổi giữa các kỳ.",
@@ -1819,7 +1822,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.reminder.pending": "Đã lên lịch email nhắc.",
   "scheduling.reminder.queued": "Đang chờ gửi email nhắc.",
   "scheduling.reminder.unavailable":
-    "Không thể gửi lời nhắc. Kiểm tra kết nối email và gửi email trực tiếp cho khách.",
+    "Không thể gửi lời nhắc. Nếu quy tắc email của Margince đã chặn, thông báo của bạn sẽ nêu lý do. Hãy gửi email trực tiếp cho khách.",
   "history.field.reminder_status": "Trạng thái lời nhắc",
   "scheduling.myLink": "Liên kết đặt lịch của tôi",
   "scheduling.linkIntro":
@@ -3134,6 +3137,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không đọc được quyền truy cập của bạn. Tải lại trang để kiểm tra lại.",
   "contact.attachRefused":
     "Bạn chỉ có quyền xem liên hệ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
+  "record.attachRefused":
+    "Bạn chỉ có quyền xem hồ sơ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
   "record.logActivityRefused":
     "Bạn không có quyền ghi nhận hoạt động trên hồ sơ này.",
   "record.share": "Chia sẻ",
@@ -6262,6 +6267,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.displayName": "Tên",
   "legalEntities.legalName": "Tên pháp lý",
   "legalEntities.country": "Quốc gia",
+  "legalEntities.defaultCountry":
+    "Quốc gia: {country}. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultCountryNone":
+    "Chưa đặt quốc gia. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultCountryLink": "Đổi ở mục Khu vực pháp lý",
+  "jurisdiction.entities.title": "Pháp nhân",
+  "jurisdiction.entities.lead":
+    "Quốc gia của mỗi công ty quyết định luật áp dụng cho thư nhân viên gửi và hồ sơ họ phụ trách.",
+  "jurisdiction.entities.default": "{country}, theo lựa chọn ở trên",
+  "jurisdiction.entities.none": "Chưa đặt quốc gia",
+  "jurisdiction.entities.edit": "Đổi pháp nhân",
   "legalEntities.edit": "Sửa",
   "legalEntities.archive": "Lưu trữ",
   "legalEntities.editTitle": "Sửa {name}",
@@ -6305,9 +6321,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.logoEmpty": "Thả ảnh vào đây hoặc chọn ảnh",
   "legalEntities.logoRemove": "Gỡ logo",
   "legalEntities.countryPlaceholder": "Chọn quốc gia",
-  "legalEntities.countryInstallation": "Quốc gia của bản cài đặt",
-  "legalEntities.countryInstallationHint":
-    "Giữ quốc gia của bản cài đặt, trừ khi công ty này đặt trụ sở ở nơi khác.",
   "legalEntities.archiveTitle": "Lưu trữ {name}?",
   "legalEntities.archiveBody":
     "Pháp nhân này rời khỏi danh sách và không ai được gán vào nữa.",
@@ -6911,6 +6924,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.view.weekly": "Tuần",
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
+  "brief.updating": "Đang cập nhật…",
   "brief.briefedAt": "Margince tóm tắt lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
@@ -8861,9 +8875,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.owner_id": "Người chịu trách nhiệm",
   "analytics.field.partner_company_id": "Công ty đối tác",
   "analytics.field.partner_sourced": "Do đối tác mang về",
-  "analytics.field.period_month": "Tháng chốt",
-  "analytics.field.period_quarter": "Quý chốt",
-  "analytics.field.period_year": "Năm chốt",
+  "analytics.field.period_month": "Tháng",
+  "analytics.field.period_quarter": "Quý",
+  "analytics.field.period_year": "Năm",
   "analytics.field.phase": "Giai đoạn dự án",
   "analytics.field.pipeline_id": "Pipeline",
   "analytics.field.project": "Nhãn dự án",
@@ -14557,13 +14571,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.rule.pack": "Bộ quy tắc {rule}",
   "jurisdiction.documents.title": "Tài liệu",
   "jurisdiction.documents.empty":
-    "Gói của khu vực pháp lý này không có tài liệu.",
+    "Không có mẫu tài liệu tuân thủ tích hợp sẵn cho quốc gia này.",
   "jurisdiction.documents.emptyUnset":
     "Chưa đặt khu vực pháp lý, nên không có tài liệu để hiển thị.",
   "jurisdiction.documents.read": "Đọc",
   "jurisdiction.documents.close": "Đóng",
   "jurisdiction.documents.readFailed": "Không tải được tài liệu.",
   "jurisdiction.documents.note": "Cho {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* Các quy tắc, thời hạn và tài liệu trên trang này là bản nháp do AI tạo, không phải tư vấn pháp lý. Hãy nhờ luật sư kiểm tra trước khi dựa vào chúng.",
   "jurisdiction.audience.employer": "doanh nghiệp",
   "jurisdiction.audience.operator": "đơn vị vận hành",
   "jurisdiction.audience.employee": "nhân viên",
@@ -15627,6 +15643,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.deactivateNote":
     "Vô hiệu hóa không chuyển hồ sơ nào. Hãy bàn giao trước, hoặc sau đó từ menu này.",
   "users.handover.done": "Đã bàn giao {records} cho {name}.",
+  "users.handover.draftsNote":
+    "Bản nháp email đã lưu chỉ được chuyển sau khi {name} bị vô hiệu hóa. Nếu đồng nghiệp bạn chọn đã có bản nháp ở cùng chỗ, bản của họ được giữ và bản của {name} bị xóa.",
+  "users.handover.draftsDiscarded_one":
+    "Đã xóa {count} bản nháp email đã lưu, vì {name} đã có bản nháp ở cùng chỗ.",
+  "users.handover.draftsDiscarded_other":
+    "Đã xóa {count} bản nháp email đã lưu, vì {name} đã có bản nháp ở cùng chỗ.",
   "users.handover.nothingMoved": "Không còn gì để bàn giao.",
   "users.handover.left":
     "Vẫn ở chỗ {name}: {records}. Bạn không được thay đổi những hồ sơ này.",
@@ -15648,6 +15670,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.handoffs_other": "{count} lượt bàn giao đang chờ",
   "users.handover.responsibilities_one": "{count} trách nhiệm đối với hồ sơ",
   "users.handover.responsibilities_other": "{count} trách nhiệm đối với hồ sơ",
+  "users.handover.drafts_one": "{count} bản nháp email đã lưu",
+  "users.handover.drafts_other": "{count} bản nháp email đã lưu",
   "users.handover.lists_one": "{count} danh sách",
   "users.handover.lists_other": "{count} danh sách",
   "users.removeMfa": "Gỡ đăng nhập hai bước",
@@ -17790,6 +17814,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.result.failed": "Xử lý thất bại. Xem lần chạy trước khi thử lại.",
   "inquiry.handling": "Xử lý yêu cầu",
   "inquiry.review": "Xem lại cách xử lý",
+  "inquiry.stillNeeded": "Bắt buộc: {fields}",
   "inquiry.pausedConversionWarning":
     "Lưu kế hoạch này sẽ thay thế cách xử lý lead trước đây của biểu mẫu. Nếu lưu ở trạng thái tạm dừng, yêu cầu mới sẽ chưa có việc tự động cho đến khi bạn bật kế hoạch.",
   "inquiry.savePaused": "Lưu và tạm dừng",
