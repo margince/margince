@@ -83,9 +83,8 @@ func packRulesFor(country RecipientCountry) packRules {
 	return out
 }
 
-// shorterOf is the core default shortened by a pack's window. Zero means the
-// pack says nothing about it, which is not a pack asking for zero: Validate
-// refuses a negative one and the contract documents zero as the core default.
+// shorterOf is the core default shortened by a pack's window. A zero window
+// says nothing, and the contract documents it as the core default.
 func shorterOf(core, declared time.Duration) time.Duration {
 	if declared > 0 && declared < core {
 		return declared

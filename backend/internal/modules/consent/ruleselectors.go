@@ -9,8 +9,8 @@ package consent
 // advertising label, the objection route) follow the recipient's country. Data
 // protection (who the controller is, who answers about the data, request
 // deadlines) follows the country of the sending legal entity. The lawful basis
-// a message needs answers to both laws, the stricter winning: the recipient's
-// reaches them where they are, the sender's binds the sender wherever the
+// a message needs answers to both laws, and the stricter wins. The recipient's
+// law reaches them where they are. The sender's binds the sender wherever the
 // recipient is. Each recipient of a message is put to the selectors on their own.
 //
 // A recipient's country comes from the record, unless the sender stated or

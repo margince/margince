@@ -258,8 +258,8 @@ function provisionsOf(refusal: RefusedRecipient) {
   ];
 }
 
-// The country the leading refusal was judged under and where it was read, so
-// the rep sees why this law applies and can correct it on the chip.
+// The country the leading refusal was judged under and where it was read. The
+// rep sees why this law applies and can correct it on the chip.
 function LeadCountry({ refusal }: Readonly<{ refusal: RefusedRecipient }>) {
   const t = useT();
   const { locale } = useLocale();

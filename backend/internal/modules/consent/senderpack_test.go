@@ -16,8 +16,8 @@ import (
 )
 
 // senderPacks registers a recipient pack that grants legitimate interests and
-// an existing-customer exception, and a sender pack that grants neither and
-// declares a shorter reply window. Both cite the lawful-basis finding and a
+// an existing-customer exception. The sender pack grants neither and declares
+// a shorter reply window. Both cite the lawful-basis finding and a
 // marketing finding, each under its own law.
 var senderPacks = sync.OnceValue(func() [2]jurisdiction.Code {
 	instruments := []messagingrules.Instrument{

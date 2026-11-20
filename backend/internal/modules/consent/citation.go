@@ -95,9 +95,8 @@ func packCitation(pack jurisdiction.Code, code string, where citationContext) (m
 }
 
 // senderCitesFinding reports whether the sending entity's own pack is asked
-// for code: a finding about the lawful basis or the controller, which its
-// data-protection law settles. Its marketing rules never follow a message
-// abroad, so a marketing finding cites the recipient's pack alone.
+// for code. That is a finding its data-protection law settles, such as the
+// lawful basis. Its marketing rules never follow a message abroad.
 func senderCitesFinding(code string) bool {
 	switch code {
 	case commsauthz.ReasonNoEvidence, commsauthz.ReasonDealNotRequested, commsauthz.ReasonLawfulBasisUnconfirmed,

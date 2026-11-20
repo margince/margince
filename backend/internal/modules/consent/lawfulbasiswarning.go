@@ -144,7 +144,7 @@ func (s *Store) confirmOneTx(ctx context.Context, tx pgx.Tx, user ids.UUID, subj
 
 // warningMayApplyTx reports whether the warning can apply to this recipient
 // for any legal entity a message may go out for. The request names no entity,
-// so a confirmation is kept wherever staging may ask for one; staging spends it
+// so a confirmation is kept wherever staging may ask for one. Staging spends it
 // only on a send its own decision flags.
 func (s *Store) warningMayApplyTx(ctx context.Context, tx pgx.Tx, country RecipientCountry) (bool, error) {
 	senders, err := s.entityCountriesTx(ctx, tx)
