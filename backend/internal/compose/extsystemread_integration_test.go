@@ -594,17 +594,17 @@ func TestAModelCallNamesTheUnitInTheAuditTrail(t *testing.T) {
 	lane := &countingLane{}
 	composeNeeds(t, extensionRuntimeBinding{}, extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."})
 	ctx := e.Admin()
-	rt := runtimeFor(ctx, "summaries", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: e.Pool, models: lane})
+	rt := runtimeFor(ctx, "summaries", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: e.Pool, models: laneOf(lane)})
 	defer rt.release()
 	const rows = `SELECT count(*) FROM system_log WHERE action = 'extension_model_call' AND detail->>'extension' = 'summaries'`
-	if text, err := rt.Models().Complete(ctx, oneMessage); err != nil || text != "ok" {
+	if text, err := rt.Models().Complete(ctx, askTask, oneMessage); err != nil || text != "ok" {
 		t.Fatalf("Complete = %q, %v, want the lane's answer", text, err)
 	}
 	if n := e.WsCount(t, rows); n != 1 {
 		t.Errorf("%d audit rows naming the unit after one call, want 1", n)
 	}
 	setComposedExtensions(nil)
-	if _, err := rt.Models().Complete(ctx, oneMessage); !errors.Is(err, extension.ErrNotDeclared) {
+	if _, err := rt.Models().Complete(ctx, askTask, oneMessage); !errors.Is(err, extension.ErrNotDeclared) {
 		t.Fatalf("a call after the declaration was removed: err = %v, want ErrNotDeclared", err)
 	}
 	if n := e.WsCount(t, rows); n != 1 {

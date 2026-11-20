@@ -397,7 +397,7 @@ var vanillaStubs = []struct {
 }{
 	{
 		rel:   "composition/extensions_gen.go",
-		emit:  func() []byte { return extensionsGen(nil, nil, nil) },
+		emit:  func() []byte { return extensionsGen(nil, nil, nil, nil) },
 		align: "align the committed stub with tools/gen-composition",
 	},
 	{

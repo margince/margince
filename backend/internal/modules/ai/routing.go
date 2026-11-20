@@ -411,10 +411,10 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 // startup error — a deployment legitimately narrows to only the
 // workloads it actually runs — but it must be loud: an operator should
 // read the gap off the boot log, not discover it from a refused call at
-// 3am. AllTasks()'s sorted order keeps the result deterministic.
+// 3am. RoutedTasks()'s sorted order keeps the result deterministic.
 func (cfg RoutingConfig) UnboundLadderWarnings() []string {
 	var warnings []string
-	for _, task := range AllTasks() {
+	for _, task := range RoutedTasks() {
 		ladder := taskLadders[task]
 		bound := false
 		for _, tier := range ladder {

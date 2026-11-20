@@ -64,7 +64,7 @@ func New() extension.Extension { return extension.Extension{Name:"demo", Version
 			"contract":  {contracts["crm.yaml"], "/ext/demo/ping"},
 			"workspace": {work, "extensions/demo"},
 			"screens":   {extScreensGen(units, nil, nil), "@margince-ext/demo"},
-			"Go wiring": {extensionsGen(units, nil, nil), "example.test/ext/demo"},
+			"Go wiring": {extensionsGen(units, nil, nil, nil), "example.test/ext/demo"},
 		} {
 			if strings.Contains(string(value.content), value.needle) != development {
 				t.Errorf("development=%t artifact=%s carries wrong example selection", development, artifact)

@@ -84,6 +84,11 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
 		return err
 	}
+	// The tasks the units declare join the router's tables here, before the
+	// model path is resolved, so Settings lists them and the budget counts them.
+	if err := compose.RegisterExtensionAITasks(extensions, composition.AITasks()); err != nil {
+		return err
+	}
 
 	// The flush is deferred before the pool and the other closers, so it runs
 	// last. Events logged while shutting down still leave.

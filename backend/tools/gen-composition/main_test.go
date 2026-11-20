@@ -22,8 +22,8 @@ func TestVanillaOutputMatchesTheCommittedStub(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(stub, extensionsGen(nil, nil, nil)) {
-		t.Fatalf("composition/extensions_gen.go differs from the generator's vanilla output:\n--- stub ---\n%s\n--- generated ---\n%s", stub, extensionsGen(nil, nil, nil))
+	if !bytes.Equal(stub, extensionsGen(nil, nil, nil, nil)) {
+		t.Fatalf("composition/extensions_gen.go differs from the generator's vanilla output:\n--- stub ---\n%s\n--- generated ---\n%s", stub, extensionsGen(nil, nil, nil, nil))
 	}
 }
 
@@ -31,7 +31,7 @@ func TestExtensionsGenWiresUnitsInSortedOrder(t *testing.T) {
 	got := string(extensionsGen([]extensionUnit{
 		{Name: "alpha", ModulePath: "example.test/ext/alpha"},
 		{Name: "beta", ModulePath: "example.test/ext/beta"},
-	}, nil, nil))
+	}, nil, nil, nil))
 	for _, want := range []string{
 		"ext0 \"example.test/ext/alpha\"",
 		"ext1 \"example.test/ext/beta\"",
@@ -59,7 +59,7 @@ func TestExtensionsGenSortsImportsByPathNotByAlias(t *testing.T) {
 		{Name: "alpha", ModulePath: "zebra.test/ext/alpha"},
 		{Name: "beta", ModulePath: "aardvark.test/ext/beta"},
 	}
-	got := string(extensionsGen(units, nil, nil))
+	got := string(extensionsGen(units, nil, nil, nil))
 	if _, err := canonicalGoSource("extensions_gen.go", []byte(got)); err != nil {
 		t.Fatalf("the emitted wiring is not canonical gofmt: %v\n%s", err, got)
 	}
@@ -90,7 +90,7 @@ func TestEmittedWiringIsCanonicalGoSource(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := canonicalGoSource("extensions_gen.go", extensionsGen(units, nil, nil)); err != nil {
+			if _, err := canonicalGoSource("extensions_gen.go", extensionsGen(units, nil, nil, nil)); err != nil {
 				t.Fatal(err)
 			}
 		})

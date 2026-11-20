@@ -65,6 +65,13 @@ func Verbs() []extension.Verb {
 // exactly the terms the verb literals are emitted on: compose/extjobs.go's two
 // boot refusals read Tier and RequestedScope, and a bare role binary ships no
 // repository to read the merged contract back from.
+const extensionsGenAITasksDoc = `
+// AITasks returns every AI task the enabled units' ai-tasks.yaml fragments
+// declare, read out of the merged contract at generation time and re-emitted
+// here as literals, so the boot registers them in the router with no file I/O.
+func AITasks() []extension.AITaskDeclaration {
+`
+
 const extensionsGenJobsDoc = `
 // Jobs returns every scheduled job the enabled units' jobs.yaml fragments
 // declare, read out of the merged contract at generation time and re-emitted
@@ -205,6 +212,7 @@ type composition struct {
 	Files     map[string][]byte
 	Verbs     []declaredVerb
 	Jobs      []extension.JobDeclaration
+	AITasks   []extension.AITaskDeclaration
 	Manifests []derivedManifest
 }
 
@@ -232,6 +240,12 @@ func composedFiles(root string) (composition, error) {
 	// The same read, on the jobs contract: a scheduled job's mechanics are
 	// declared in the merged document and nowhere in Go.
 	jobDecls, err := extensionJobs(units, contracts)
+	if err != nil {
+		return composition{}, err
+	}
+	// And on the AI task contract: a task's ladder, mode and budget posture are
+	// declared in the merged document and nowhere in Go.
+	taskDecls, err := extensionAITasks(units, contracts)
 	if err != nil {
 		return composition{}, err
 	}
@@ -276,7 +290,7 @@ func composedFiles(root string) (composition, error) {
 	if err := checkInstrumentFrontends(manifests); err != nil {
 		return composition{}, err
 	}
-	wiring, err := canonicalGoSource("backend/extensions_gen.go", extensionsGen(units, verbs, jobDecls))
+	wiring, err := canonicalGoSource("backend/extensions_gen.go", extensionsGen(units, verbs, jobDecls, taskDecls))
 	if err != nil {
 		return composition{}, err
 	}
@@ -294,7 +308,7 @@ func composedFiles(root string) (composition, error) {
 	for base, content := range contracts {
 		files["api/"+base] = content
 	}
-	return composition{Files: files, Verbs: verbs, Jobs: jobDecls, Manifests: manifests}, nil
+	return composition{Files: files, Verbs: verbs, Jobs: jobDecls, AITasks: taskDecls, Manifests: manifests}, nil
 }
 
 // canonicalGoSource parses emitted Go source and requires it to already
@@ -379,7 +393,7 @@ func composedGoMod(goVersion string) []byte {
 // pinned to its extensions/<name> directory — composition.json and the
 // boot inventory attribute the unit by that name, so a declaration
 // disagreeing with it must not compose under a different identity.
-func extensionsGen(units []extensionUnit, verbs []declaredVerb, jobDecls []extension.JobDeclaration) []byte {
+func extensionsGen(units []extensionUnit, verbs []declaredVerb, jobDecls []extension.JobDeclaration, taskDecls []extension.AITaskDeclaration) []byte {
 	var b strings.Builder
 	b.WriteString(extensionsGenHeader)
 	if anySchema(verbs) {
@@ -425,6 +439,8 @@ func extensionsGen(units []extensionUnit, verbs []declaredVerb, jobDecls []exten
 		b.WriteString("\treturn nil\n}\n")
 		b.WriteString(extensionsGenJobsDoc)
 		b.WriteString("\treturn nil\n}\n")
+		b.WriteString(extensionsGenAITasksDoc)
+		b.WriteString("\treturn nil\n}\n")
 		return []byte(b.String())
 	}
 	b.WriteString("\treturn []extension.Extension{\n")
@@ -439,6 +455,8 @@ func extensionsGen(units []extensionUnit, verbs []declaredVerb, jobDecls []exten
 	if len(jobDecls) > 0 {
 		b.WriteString(extensionsGenDurationHelper)
 	}
+	b.WriteString(extensionsGenAITasksDoc)
+	writeAITaskLiterals(&b, taskDecls)
 	b.WriteString(`
 // mustBe pins a unit to its extensions/<name> directory: a declaration
 // whose Name disagrees with the directory it shipped in is a wiring

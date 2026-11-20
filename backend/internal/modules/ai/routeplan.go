@@ -147,7 +147,7 @@ func FeatureRoutes(normalConfig, effectiveConfig RoutingConfig, band string) []c
 
 func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBand, band string) []crmcontracts.AiFeatureRoute {
 	out := make([]crmcontracts.AiFeatureRoute, 0)
-	tasks := append(AllTasks(), TaskEmbeddings)
+	tasks := append(RoutedTasks(), TaskEmbeddings)
 	for _, task := range tasks {
 		if task != TaskEmbeddings && Status(task) != StatusShipped {
 			continue

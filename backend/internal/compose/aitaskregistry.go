@@ -8,7 +8,6 @@ package compose
 import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/chatsummary"
-	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/reportsetup"
 	"github.com/margince/margince/backend/internal/compose/rewrite"
@@ -50,7 +49,6 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskDraftReply, "intro", introDraftCases{})
 	oneShot(ai.TaskDraftReply, "intro_note", introNoteCases{})
 	oneShot(ai.TaskRewrite, "rewrite", rewrite.CertCases{})
-	oneShot(ai.TaskExtensionCall, "extension_call", extcapability.CertCases{})
 	oneShot(ai.TaskChatSummary, "episode", chatsummary.CertCases{})
 	oneShot(ai.TaskProposeRoles, "committee", proposeRolesCases{})
 	oneShot(ai.TaskNlSearch, "filter_propose", filterProposeCases{})

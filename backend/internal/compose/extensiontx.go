@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/compose/unitsql"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -86,9 +87,22 @@ func (r *callRuntime) needed(ctx context.Context, capability extension.Capabilit
 //nolint:ireturn // returning the published port IS the seam: a unit holds extension.Models, never a core type.
 func (r *callRuntime) Models() extension.Models {
 	return extcapability.Models{
-		Lane: r.deps.models, Unit: r.unit,
-		Gate:  func(ctx context.Context) (context.Context, error) { return r.needed(ctx, extension.CapabilityModels) },
-		Trace: func(ctx context.Context) error { return extcapability.Trace(ctx, r.deps.pool, r.unit) },
+		Lane: func(task ai.Task) extcapability.Lane {
+			if r.deps.models == nil {
+				return nil
+			}
+			lane := r.deps.models(task)
+			if lane == nil {
+				return nil
+			}
+			return lane
+		},
+		Unit:       r.unit,
+		Unattended: r.unattended,
+		Gate:       func(ctx context.Context) (context.Context, error) { return r.needed(ctx, extension.CapabilityModels) },
+		Trace: func(ctx context.Context, task ai.Task) error {
+			return extcapability.Trace(ctx, r.deps.pool, r.unit, task)
+		},
 	}
 }
 

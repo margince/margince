@@ -31,3 +31,10 @@ func Verbs() []extension.Verb {
 func Jobs() []extension.JobDeclaration {
 	return nil
 }
+
+// AITasks returns every AI task the enabled units' ai-tasks.yaml fragments
+// declare, read out of the merged contract at generation time and re-emitted
+// here as literals, so the boot registers them in the router with no file I/O.
+func AITasks() []extension.AITaskDeclaration {
+	return nil
+}
