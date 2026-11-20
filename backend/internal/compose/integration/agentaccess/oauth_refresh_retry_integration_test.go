@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // renewedAccess presents the refresh token and returns the pair it was swapped for.
@@ -46,7 +47,7 @@ func (o *oauthEnv) createContactTool(t *testing.T, accessToken, name, key string
 func TestAToolRetryAfterATokenRefreshReplaysTheFirstWrite(t *testing.T) {
 	o := setupOAuth(t)
 	access, refresh := o.connect(t)
-	const name = "Refresh Retry Tool Contact"
+	name := "Refresh Retry Tool Contact " + ids.NewV7().String()
 
 	first := o.createContactTool(t, access, name, "lost-answer-1")
 	access, _ = o.renewedAccess(t, refresh)
@@ -61,7 +62,7 @@ func TestAToolRetryAfterATokenRefreshReplaysTheFirstWrite(t *testing.T) {
 func TestARESTRetryAfterATokenRefreshReplaysTheFirstWrite(t *testing.T) {
 	o := setupOAuth(t)
 	access, refresh := o.connect(t)
-	const name = "Refresh Retry REST Contact"
+	name := "Refresh Retry REST Contact " + ids.NewV7().String()
 	create := func(bearer string) string {
 		var created struct {
 			ID string `json:"id"`

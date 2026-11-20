@@ -20,17 +20,20 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/redistest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestARouteBackedWriteRepeatedUnderItsRetryKeyWritesOnce(t *testing.T) {
 	// A real meter, so the test sees what the replay charged.
 	e := setupConnectorWith(t, compose.WithAgentVolume(agentvolume.New(redistest.Client(t), agentvolume.Limits{}, time.Hour)))
 	bearer, passport := apptest.PassportWithID(t, e.AppEnv, "retrying client", "read", "write")
-	const label = "Retry Keyed Lead Source"
+	// Unique per run, because a lead source's label is unique and the lane repeats tests.
+	run := ids.NewV7().String()
+	label, key := "Retry Keyed Lead Source "+run, "lost-answer-"+run
 	create := func() string {
 		got := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp", fmt.Sprintf(
 			`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"change_settings","arguments":{`+
-				`"action":"create_lead_source","idempotency_key":"lost-answer-3","request_body":{"label":%q}}}}`, label),
+				`"action":"create_lead_source","idempotency_key":%q,"request_body":{"label":%q}}}}`, key, label),
 			withContentType(bearer))
 		if got.StatusCode != http.StatusOK {
 			t.Fatalf("tools/call → %d %s", got.StatusCode, got.Body)
