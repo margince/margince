@@ -49,8 +49,11 @@ export function LegalReviewRequestRow({
     <Card className="approval-row">
       <p className="t-body">{approval.summary}</p>
       {!decided && (
-        <div className="row-actions">
-          <a className="button" href={routeHash({ screen: "legal-reviews" })}>
+        <div className="actions">
+          <a
+            className="btn btn-ghost"
+            href={routeHash({ screen: "legal-reviews" })}
+          >
             {t("legalReview.openQueue")}
           </a>
           <Button
