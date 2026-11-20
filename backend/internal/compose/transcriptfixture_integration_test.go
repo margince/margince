@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -20,12 +19,7 @@ func (e *transcriptEnv) linkTranscriptContact(t *testing.T, contact ids.UUID) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The meeting's author files onto the contact, so they need a write share.
-	if _, err := identity.NewServiceFor(e.DB()).CreateRecordGrant(e.Admin(), identity.CreateGrantInput{
-		RecordType: "contact", RecordID: contact, SubjectType: "user", SubjectID: e.Rep1, Access: "write",
-	}); err != nil {
-		t.Fatalf("sharing the contact with the meeting's author: %v", err)
-	}
+	e.ShareForWriting(t, "contact", contact, "user", e.Rep1)
 	links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
 	if original.Links != nil {
 		for _, link := range *original.Links {

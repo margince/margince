@@ -152,7 +152,6 @@ func TestAcceptingAMeetingPromiseOnAColleaguesRecordsCarriesItsLinks(t *testing.
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("want one staged proposal, got %d (%v)", len(read.ProposalIDs), read.StatusDetail)
 	}
-
 	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), true, nil); err != nil {
 		t.Fatalf("accepting a promise from a meeting on a colleague's records: %v", err)
 	}

@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -122,8 +121,8 @@ func TestAcceptingOpensTheDealWithTheRepsCorrections(t *testing.T) {
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	erik := e.employee(t, "Erik Buyer", acme)
-	e.shareForWriting(t, dana, e.Rep1)
-	e.shareForWriting(t, erik, e.Rep3)
+	e.ShareForWriting(t, "contact", dana, "user", e.Rep1)
+	e.ShareForWriting(t, "contact", erik, "user", e.Rep3)
 	rep1 := e.rep(e.Rep1, e.Team1)
 	ours := e.meeting(rep1, t, "Scoping workshop", &dana, e.daysAgo(3))
 	theirs := e.meeting(e.rep(e.Rep3, e.Team2), t, "Intro call", &erik, e.daysAgo(4))
@@ -210,7 +209,7 @@ func TestASuggestionIsShownOnlyToAReaderWhoMaySeeAllOfItsEvidence(t *testing.T) 
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	rep1, rep3 := e.rep(e.Rep1, e.Team1), e.rep(e.Rep3, e.Team2)
-	e.shareForWriting(t, dana, e.Rep1)
+	e.ShareForWriting(t, "contact", dana, "user", e.Rep1)
 	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(5))
 	private := e.meeting(rep1, t, "Pricing call", &dana, e.daysAgo(3))
 	e.buyerPair(t, acme, e.daysAgo(6))
@@ -288,7 +287,7 @@ func TestASuggestionFromSignalsIsHiddenWhenAMessageTheyCiteIsLimited(t *testing.
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	rep1, rep3 := e.rep(e.Rep1, e.Team1), e.rep(e.Rep3, e.Team2)
 	buyer := e.employee(t, "Mira Buyer", acme)
-	e.shareForWriting(t, buyer, e.Rep1)
+	e.ShareForWriting(t, "contact", buyer, "user", e.Rep1)
 	subject, inbound, at := "Next steps", "inbound", e.daysAgo(6)
 	mail, _, err := e.Activities.LogActivity(rep1, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",
@@ -314,16 +313,5 @@ func TestASuggestionFromSignalsIsHiddenWhenAMessageTheyCiteIsLimited(t *testing.
 	}
 	if shown := e.suggestions(rep3, t, acme); len(shown) != 0 {
 		t.Fatalf("a colleague who may not read the cited mail is shown %d suggestions", len(shown))
-	}
-}
-
-// shareForWriting shares an ownerless contact with one rep at `write`, so that
-// rep may file onto it and nobody else may.
-func (e *scoutEnv) shareForWriting(t *testing.T, contact, user ids.UUID) {
-	t.Helper()
-	if _, err := identity.NewServiceFor(e.DB()).CreateRecordGrant(e.Admin(), identity.CreateGrantInput{
-		RecordType: "contact", RecordID: contact, SubjectType: "user", SubjectID: user, Access: "write",
-	}); err != nil {
-		t.Fatalf("sharing the contact: %v", err)
 	}
 }

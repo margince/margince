@@ -103,7 +103,7 @@ func TestTheReadersCalendarSaysWhetherItFeedsTheMeetingsCount(t *testing.T) {
 func horizonContacts(t *testing.T, e *integration.Env) (visible, hidden ids.UUID) {
 	t.Helper()
 	visible = partiesContact(t, e, "Blair Shared", ids.UUID{}, nil)
-	shareWithBothTeams(t, e, visible)
+	e.ShareForWriting(t, "contact", visible, "team", e.Team1, e.Team2)
 	hidden = partiesContact(t, e, "Alex Private", e.Rep3, nil)
 	private := "owner"
 	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](hidden),
@@ -152,7 +152,7 @@ func TestAnEmptyDayNamesTheNextCustomerMeetingWithOnlyVisibleAttendees(t *testin
 	// Linked to a record, but only a colleague is on it.
 	trustOwnDomain(t, e)
 	bea := addressedContact(t, e, "Colleague Bea", "bea@"+colleagueTestDomain)
-	shareWithBothTeams(t, e, bea)
+	e.ShareForWriting(t, "contact", bea, "team", e.Team1)
 	bookOwnMeeting(t, e, "One to one", now.Add(50*time.Hour), "", bea)
 	bookOwnMeeting(t, e, "Called off", now.Add(60*time.Hour), "canceled", visible)
 	// Booked by the colleague who owns the private buyer, onto Rep1's calendar.
