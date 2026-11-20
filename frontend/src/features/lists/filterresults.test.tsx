@@ -234,10 +234,11 @@ describe("a cell read by its field's type", () => {
     );
   }
 
-  it("shows a timestamp as the day it fell on, as the record lists do", () => {
-    renderTyped({ created_at: "2026-11-16T13:19:20.700242Z" });
+  it("shows a timestamp as the day it fell on in the reader's zone", () => {
+    renderTyped({ created_at: "2026-11-16T01:19:20.700242Z" });
 
-    expect(screen.getByText("16 Nov 2026")).toBeTruthy();
+    expect(screen.getByText("15 Nov 2026")).toBeTruthy();
+    expect(screen.queryByText("16 Nov 2026")).toBeNull();
     expect(screen.queryByText(/2026-11-16T/)).toBeNull();
   });
 
