@@ -117,11 +117,11 @@ export const rule: CensusRule = {
     ...(corpus.length > 100 ? [] : ["fewer than 100 modules were read"]),
     ...(corpus.some(
       (file) =>
-        file.rel === "src/format/format.ts" &&
+        file.rel === "src/format/percent.ts" &&
         file.text.includes('style: "percent"'),
     )
       ? []
-      : ["src/format/format.ts no longer formats a percent with Intl"]),
+      : ["src/format/percent.ts no longer formats a percent with Intl"]),
   ],
   visit: sitesIn,
   advice:
