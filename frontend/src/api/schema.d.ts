@@ -7019,11 +7019,14 @@ export interface paths {
         put?: never;
         /**
          * Say a captured message is not about a deal, or about none of the deals its question offered.
-         * @description With `deal_id`, the message is not about that deal. Its link to the deal comes off, and no
-         *     automatic pass (capture, the refile pass, the repair) files it on that deal again. Other
-         *     deals stay open to it, and a colleague's own relink still files it anywhere.
+         * @description With `deal_id`, the message is not about that deal. Its link to the deal stays and is marked
+         *     `unrelated` by a human, as `setActivityDealRelevance` marks it, so the deal's timeline still
+         *     shows the message and "About this deal" takes it back. A link marked so keeps the deal
+         *     alive in no reading of it. No automatic pass (capture, the refile pass, the repair, the
+         *     topic recheck) files the message on that deal again or changes the mark. A colleague's own
+         *     relink still files it anywhere.
          *
-         *     A project link that came from the deal comes off with it, through the same rules as the
+         *     A project link that came from the deal comes off, through the same rules as the
          *     project-filing undo. It stays when the project was filed some other way, when a retention
          *     rule keeps it, or when the caller cannot read the project. An agent's decline takes it off
          *     as a member's does. `project_kept` says so.
@@ -7033,9 +7036,50 @@ export interface paths {
          *     message and on each unfiled message of the conversation, and the question is done. A
          *     message with no open question answers 422.
          *
-         *     Declining a deal already declined is the same success and writes nothing.
+         *     Declining a deal already declined is the same success and writes nothing. With `deal_id`,
+         *     the caller needs the right to change the deal too, as for `setActivityDealRelevance`.
          */
         post: operations["declineActivityDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/deal-relevance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say whether an activity linked to a deal is about that deal, or take that back.
+         * @description Marks the activity's link to `deal_id` as `relevant` or `unrelated`, with `human` as its
+         *     source. The link is never taken off: the deal's timeline still shows the activity with its
+         *     mark, and the opposite call is the undo. A link marked `unrelated`, or `uncertain` by the
+         *     classifier, warms the deal in no reading of it: its last-activity date, the quiet and
+         *     stalled rules, a meeting ahead and engagement all leave it out. The deal's last-activity
+         *     date moves back at once. Only `unrelated` also leaves it out of the silent close, so the
+         *     classifier's doubt never closes a deal.
+         *
+         *     `unrelated` is the same act as `declineActivityDeal` with a `deal_id`: the decline is
+         *     recorded, and a project link that came from the deal comes off under the project-filing
+         *     undo's rules. `relevant` files the activity on the deal's project again when it has none
+         *     and the caller is a member who may.
+         *
+         *     The classifier never changes a mark a human set, and no automatic pass takes a link a human
+         *     judged off the activity. Needs `activity.update` and the right to change both the activity
+         *     and the deal; a deal the caller cannot see answers 404. An activity with no link to the deal
+         *     answers 404. Setting the mark the link already has is the same success with `changed`
+         *     false.
+         */
+        put: operations["setActivityDealRelevance"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -42843,6 +42887,18 @@ export interface components {
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
+            /**
+             * @description On a deal link only: whether the activity is about the deal. Absent when nobody judged
+             *     it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+             *     it; only `unrelated` also leaves it out of the silent close.
+             * @enum {string}
+             */
+            deal_relevance?: "relevant" | "unrelated" | "uncertain";
+            /**
+             * @description Who set `deal_relevance`. The classifier never changes a mark a human set.
+             * @enum {string}
+             */
+            relevance_source?: "human" | "classifier";
         };
         /**
          * @description The destination for every writable, non-archived activity of one conversation thread.
@@ -44097,11 +44153,50 @@ export interface components {
              */
             deal_id?: string;
         };
+        SetActivityDealRelevanceRequest: {
+            /**
+             * Format: uuid
+             * @description The deal whose link to the activity is judged.
+             */
+            deal_id: string;
+            /**
+             * @description `relevant` says the activity is about the deal; `unrelated` says it is not.
+             * @enum {string}
+             */
+            deal_relevance: "relevant" | "unrelated";
+        };
+        ActivityDealRelevance: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * @description The link's mark after the call.
+             * @enum {string}
+             */
+            deal_relevance: "relevant" | "unrelated" | "uncertain";
+            /**
+             * @description Who set the mark. Always `human` after this call.
+             * @enum {string}
+             */
+            relevance_source: "human" | "classifier";
+            /** @description The call changed the mark. */
+            changed: boolean;
+            /** @description The project link that came from the deal came off the activity. */
+            project_unfiled: boolean;
+            /** @description A project link came from the deal and stays, because a retention rule keeps it or the caller cannot read the project. */
+            project_kept: boolean;
+            /** @description The activity was filed on the deal's project again. */
+            project_filed: boolean;
+        };
         ActivityDealDecline: {
             /** @description The deals this call declined on the message. A deal declined before is not listed again. */
             declined_deal_ids: string[];
-            /** @description A deal link came off the message. */
+            /**
+             * @deprecated
+             * @description Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
+             */
             unlinked: boolean;
+            /** @description A deal link of the message is now marked `unrelated` by a human. */
+            marked_unrelated: boolean;
             /** @description The project link that came from a declined deal came off the message. */
             project_unfiled: boolean;
             /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
@@ -75064,6 +75159,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityDealDecline"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
+    setActivityDealRelevance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetActivityDealRelevanceRequest"];
+            };
+        };
+        responses: {
+            /** @description The link's mark after the call. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityDealRelevance"];
                 };
             };
             401: components["responses"]["Unauthorized"];

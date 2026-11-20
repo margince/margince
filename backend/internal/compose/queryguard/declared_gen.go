@@ -1012,6 +1012,7 @@ var Declared = map[string][]string{
 	"POST /v1/worklist/ready/undo":                                             {},
 	"POST /v1/workspace-queries":                                               {},
 	"PUT /v1/activities/{id}/calendar-response":                                {},
+	"PUT /v1/activities/{id}/deal-relevance":                                   {},
 	"PUT /v1/activities/{id}/disposition":                                      {},
 	"PUT /v1/ai/budget":                                                        {},
 	"PUT /v1/ai/price-sync":                                                    {},

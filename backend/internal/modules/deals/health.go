@@ -324,7 +324,7 @@ func healthInputs(ctx context.Context, tx pgx.Tx, now time.Time, in *dealHealthI
 		       (SELECT a.id FROM activity a
 		          JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
 		         WHERE a.archived_at IS NULL AND `+relstrength.ExternalActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", nowPos))+`
-		           AND `+relstrength.DealEvidenceSQL("a")+`
+		           AND `+relstrength.DealEvidenceSQL("a", "l.deal_id")+`
 		           `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
 		         ORDER BY a.occurred_at DESC, a.id DESC
 		         LIMIT 1),

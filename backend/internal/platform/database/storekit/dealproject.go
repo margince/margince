@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // DealsProject is the one live project the live deals roll up to, among the
@@ -28,10 +29,11 @@ func DealsProject(ctx context.Context, tx pgx.Tx, deals []ids.UUID) (ids.UUID, e
 	return projectOfDeals(ctx, tx, "d.id = ANY($1)", deals)
 }
 
-// ActivityDealsProject is DealsProject over the deals the activity is filed on.
+// ActivityDealsProject is DealsProject over the deals the activity is filed on
+// and not marked unrelated to.
 func ActivityDealsProject(ctx context.Context, tx pgx.Tx, activity ids.ActivityID) (ids.UUID, error) {
 	return projectOfDeals(ctx, tx, `d.id IN (SELECT l.deal_id FROM activity_link l
-		 WHERE l.activity_id = $1 AND l.entity_type = 'deal')`, activity)
+		 WHERE l.activity_id = $1 AND l.entity_type = 'deal' AND `+relstrength.DealLinkStandsSQL("l")+`)`, activity)
 }
 
 // projectOfDeals reads the one project of the deals dealsWhere selects; $1 is

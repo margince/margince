@@ -337,6 +337,7 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.send_offer":                         {Words: langcopy.Phrase{En: "Send offer", De: "Angebot versenden", Vi: "Gửi báo giá"}},
 	"act.verbs.send_privacy_notice":                {Words: langcopy.Phrase{En: "Send privacy notice", De: "Datenschutzhinweis senden", Vi: "Gửi thông báo về quyền riêng tư"}},
 	"act.verbs.set_activity_audience":              {Words: langcopy.Phrase{En: "Set activity audience", De: "Leserkreis einer Aktivität festlegen", Vi: "Đặt người được xem hoạt động"}},
+	"act.verbs.set_activity_deal_relevance":        {Words: langcopy.Phrase{En: "Set activity deal relevance", De: "Sagen, ob eine Aktivität zu einem Deal gehört", Vi: "Cho biết hoạt động có thuộc về một thương vụ không"}},
 	"act.verbs.set_activity_disposition":           {Words: langcopy.Phrase{En: "Set activity disposition", De: "Nachricht zurücklegen", Vi: "Để tin nhắn sang một bên"}},
 	"act.verbs.set_ai_model_rate":                  {Words: langcopy.Phrase{En: "Set ai model rate", De: "KI-Modellpreis festlegen", Vi: "Đặt giá mô hình AI"}},
 	"act.verbs.set_ai_price_sync":                  {Words: langcopy.Phrase{En: "Set ai price sync", De: "Tägliche Preisaktualisierung umschalten", Vi: "Bật hoặc tắt cập nhật giá hằng ngày"}},

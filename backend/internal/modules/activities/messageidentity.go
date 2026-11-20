@@ -309,10 +309,10 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_link
-		  (activity_id, entity_type, contact_id, company_id, deal_id, lead_id, project_id)
+		  (activity_id, entity_type, contact_id, company_id, deal_id, lead_id, project_id, deal_relevance, relevance_source)
 		SELECT $1, echo_link.entity_type,
 		       echo_link.contact_id, echo_link.company_id, echo_link.deal_id,
-		       echo_link.lead_id, echo_link.project_id
+		       echo_link.lead_id, echo_link.project_id, echo_link.deal_relevance, echo_link.relevance_source
 		  FROM activity_link echo_link
 		 WHERE echo_link.activity_id = $2
 		   AND NOT EXISTS (

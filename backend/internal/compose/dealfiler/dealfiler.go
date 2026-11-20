@@ -21,9 +21,9 @@ type Activities struct{}
 
 // FileOnDealIfUnfiled is activities.FileOnDealIfUnfiledTx.
 func (Activities) FileOnDealIfUnfiled(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any,
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any, relevance string,
 ) (landed, filed bool, err error) {
-	outcome, err := activities.FileOnDealIfUnfiledTx(ctx, tx, id, deal, evidence)
+	outcome, err := activities.FileOnDealIfUnfiledTx(ctx, tx, id, deal, evidence, relevance)
 	return outcome == activities.DealFilingLanded, outcome == activities.DealFilingAlreadyFiled, err
 }
 
@@ -39,4 +39,11 @@ func (Activities) RetractMachineDeal(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any,
 ) (bool, error) {
 	return activities.RetractMachineDealTx(ctx, tx, id, deal, evidence)
+}
+
+// MarkDealLink is activities.MarkDealLinkTx.
+func (Activities) MarkDealLink(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, relevance string, evidence map[string]any,
+) (bool, error) {
+	return activities.MarkDealLinkTx(ctx, tx, id, deal, relevance, evidence)
 }

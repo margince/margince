@@ -122,7 +122,7 @@ func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *
 		  FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		 WHERE l.deal_id = $1 AND a.archived_at IS NULL AND a.kind IN ('email', 'meeting', 'call', 'note')
 		   AND `+visibleToAllSQL("a")+` AND `+relstrength.OriginIsEngagementSQL("a")+` AND a.origin <> 'agent'
-		   AND `+relstrength.DealEvidenceSQL("a")+`
+		   AND `+relstrength.DealEvidenceSQL("a", "l.deal_id")+`
 		 ORDER BY a.occurred_at DESC, a.id DESC LIMIT $3`, deal, dealVerdictBodyChars, dealVerdictActivities)
 	if err != nil {
 		return fmt.Errorf("compose: reading the deal's activities: %w", err)

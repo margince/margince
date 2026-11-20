@@ -22822,13 +22822,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiServing.previewFailed":
     "Der Server konnte diesen Wert nicht prüfen: {reason} Speichern bleibt deaktiviert, bis der Server den Wert prüfen kann.",
   "dealDecline.action": "Gehört nicht zu diesem Deal",
-  "dealDecline.title": "E-Mail von diesem Deal lösen?",
-  "dealDecline.body":
-    "Die E-Mail wird von diesem Deal gelöst, und Margince ordnet sie ihm nicht wieder zu. Eine Projektzuordnung, die sie über diesen Deal bekommen hat, wird ebenfalls gelöst.",
-  "dealDecline.confirm": "Vom Deal lösen",
-  "dealDecline.done": "E-Mail vom Deal gelöst",
+  "dealDecline.done":
+    "Als nicht zu diesem Deal gehörig markiert. Der Eintrag hält den Deal nicht mehr aktiv.",
   "dealDecline.doneProjectKept":
-    "E-Mail vom Deal gelöst. Die Projektzuordnung bleibt.",
+    "Als nicht zu diesem Deal gehörig markiert. Die Projektzuordnung bleibt.",
+  "dealRelevance.about": "Gehört zu diesem Deal",
+  "dealRelevance.restored":
+    "Als zu diesem Deal gehörig markiert. Der Eintrag zählt wieder für den Deal.",
+  "dealRelevance.unrelated": "Gehört nicht zu diesem Deal",
+  "dealRelevance.uncertain": "Gehört vielleicht nicht zu diesem Deal",
   "projectFiling.action": "Ablage rückgängig machen",
   "projectFiling.title": "Projektablage rückgängig machen?",
   "projectFiling.loading":

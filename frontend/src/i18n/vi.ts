@@ -22207,13 +22207,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiServing.previewFailed":
     "Máy chủ không thể kiểm tra giá trị này: {reason} Nút Lưu sẽ tắt cho đến khi kiểm tra được.",
   "dealDecline.action": "Không thuộc deal này",
-  "dealDecline.title": "Gỡ email khỏi deal này?",
-  "dealDecline.body":
-    "Email rời khỏi deal này và Margince sẽ không gắn lại vào đây. Liên kết dự án có từ deal này cũng bị gỡ.",
-  "dealDecline.confirm": "Gỡ khỏi deal",
-  "dealDecline.done": "Đã gỡ email khỏi deal",
+  "dealDecline.done":
+    "Đã đánh dấu là không thuộc deal này. Mục này không còn giữ deal hoạt động.",
   "dealDecline.doneProjectKept":
-    "Đã gỡ email khỏi deal. Liên kết dự án vẫn giữ nguyên.",
+    "Đã đánh dấu là không thuộc deal này. Liên kết dự án vẫn giữ nguyên.",
+  "dealRelevance.about": "Thuộc deal này",
+  "dealRelevance.restored":
+    "Đã đánh dấu là thuộc deal này. Mục này lại được tính cho deal.",
+  "dealRelevance.unrelated": "Không thuộc deal này",
+  "dealRelevance.uncertain": "Có thể không thuộc deal này",
   "projectFiling.action": "Hoàn tác xếp vào dự án",
   "projectFiling.title": "Hoàn tác xếp vào dự án?",
   "projectFiling.loading": "Đang kiểm tra căn cứ lưu trữ hoạt động này…",
