@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 var dealUnarchive = storekit.UnarchiveShape{
@@ -39,7 +38,9 @@ var dealUnarchive = storekit.UnarchiveShape{
 func (s *Store) RestoreDealTx(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
+	// The archive's own authority: whoever could archive the deal may bring
+	// it back, which with edit rights alone is its owner.
+	if err := auth.RequireArchiveGrant(ctx, auth.DealArchive); err != nil {
 		return storekit.RestoreReport{}, err
 	}
 	// Locked before the write check, which then judges the row under the lock.
@@ -50,6 +51,9 @@ func (s *Store) RestoreDealTx(
 	// Not the live twin: the row is archived by definition, and bringing it
 	// back is the write that reaches it on purpose.
 	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+		return storekit.RestoreReport{}, err
+	}
+	if err := auth.EnsureArchivable(ctx, tx, auth.DealArchive, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
 	shape := dealUnarchive

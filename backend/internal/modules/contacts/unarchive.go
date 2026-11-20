@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // restoreRelationship brings a link back only while every record it links is
@@ -101,7 +100,7 @@ func (s *Store) RestoreContactTx(
 func (s *Store) RestoreContactLeavingTwinsTx(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
-	if err := ensureRestorable(ctx, tx, contactEntity, id.UUID); err != nil {
+	if err := ensureRestorable(ctx, tx, auth.ContactArchive, contactEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
 	if err := refuseRestoreOverLead(ctx, tx, id); err != nil {
@@ -120,7 +119,7 @@ func (s *Store) RestoreContactLeavingTwinsTx(
 func (s *Store) FileRestoredEmployerTwinsTx(ctx context.Context, tx pgx.Tx, restored []ids.ContactID) error {
 	// The restore's own right: only a caller that brought these contacts back
 	// files what the restore created.
-	if err := auth.Require(ctx, contactEntity, principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ContactArchive); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -181,18 +180,22 @@ func refuseRestoreOverLead(ctx context.Context, tx pgx.Tx, id ids.ContactID) err
 func (s *Store) RestoreCompanyTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
-	if err := ensureRestorable(ctx, tx, companyEntity, id.UUID); err != nil {
+	if err := ensureRestorable(ctx, tx, auth.CompanyArchive, companyEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
 	return storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, with)
 }
 
-// ensureRestorable asks what the archive asks: the delete grant on the type
-// and write authority on the row. Not the live twin — the row is archived by
+// ensureRestorable asks what the archive asks: its rule's grant, write
+// authority on the row, and the rule's own arm. So an owner who archived with
+// edit rights may restore. Not the live twin: the row is archived by
 // definition, and bringing it back is the write that reaches it on purpose.
-func ensureRestorable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	if err := auth.Require(ctx, table, principal.ActionDelete); err != nil {
+func ensureRestorable(ctx context.Context, tx pgx.Tx, rule auth.ArchiveRule, table string, id ids.UUID) error {
+	if err := auth.RequireArchiveGrant(ctx, rule); err != nil {
 		return err
 	}
-	return auth.EnsureWritable(ctx, tx, table, id)
+	if err := auth.EnsureWritable(ctx, tx, table, id); err != nil {
+		return err
+	}
+	return auth.EnsureArchivable(ctx, tx, rule, id)
 }
