@@ -12299,7 +12299,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hinweis",
   "stage.criteria.kindHelp":
-    "Was als Beleg zählt. Käufer-Typen zählen nur die eigenen Worte des Käufers.",
+    "Was als Beleg zählt. Bei den Typen der Käuferseite zählt nur, was die Käuferseite selbst sagt.",
   "stage.criteria.requiredHelp":
     "Ein erforderliches Kriterium hält Margince davon ab, den Deal von selbst weiterzuschieben.",
   "stage.criteria.hintHelp": "Anleitung für die KI, die nach Belegen sucht.",
