@@ -32,10 +32,17 @@ export function usePopoverDismiss(
       dismiss();
     };
     // Outside clicks only: a press inside the popover acts on it. A click that
-    // should both act and close (a destination) says so at the call site.
+    // should both act and close (a destination) says so at the call site. A
+    // dialog raised over the popover answers its own presses, as it does Escape.
+    // The row that opened it then stays mounted to show what follows.
     const onClick = (event: globalThis.MouseEvent) => {
       const target = event.target;
       if (target instanceof Node && panel.current?.contains(target)) {
+        return;
+      }
+      const layer =
+        target instanceof Element ? target.closest(".overlay") : null;
+      if (layer && !layer.contains(panel.current)) {
         return;
       }
       dismiss();

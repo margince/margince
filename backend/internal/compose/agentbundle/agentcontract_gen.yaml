@@ -13976,7 +13976,9 @@ paths:
         `svg_text_not_outlined`, because the rasterizer draws shapes and no glyphs, so
         the words would be lost. An SVG the rasterizer cannot draw faithfully (for example
         embedded images, filters, masks or a blank result) is refused as 422 with code
-        `svg_not_drawable`.
+        `svg_not_drawable`. A raster picture past 8,388,608 pixels is refused as 422 with code
+        `too_many_pixels`: scale it down and send it again. An SVG is drawn at a fixed size,
+        so its pixel count is not checked.
 
         Needs the passport permission Change records.
 
@@ -14273,7 +14275,9 @@ paths:
         Multipart upload, decoded and re-encoded exactly as the company logo is: PNG, JPEG,
         GIF, WebP, ICO and SVG are accepted, and anything else is refused as 415. An SVG that
         draws its words as text is refused as 422 `svg_text_not_outlined`, and one with parts
-        the server cannot draw as 422 `svg_not_drawable`.
+        the server cannot draw as 422 `svg_not_drawable`. A raster picture past 8,388,608
+        pixels is refused as 422 with code `too_many_pixels`: scale it down and send it
+        again. An SVG is drawn at a fixed size, so its pixel count is not checked.
 
         Needs the passport permission Change records.
 

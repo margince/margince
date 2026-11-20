@@ -103,6 +103,8 @@ func (r rawJSON) MarshalJSON() ([]byte, error) { return []byte(r), nil }
 // capture save through a loop variable. The census fails when one gains a surface.
 var unsurfaced = []string{
 	"consent.authorization_modes",
+	"contacts.dormancy_days",
+	"contacts.dormancy_follow_up_enabled",
 	"deals.stage_autopilot_enabled",
 	"deals.maintenance_writes_enabled",
 	"deals.silent_close_days",

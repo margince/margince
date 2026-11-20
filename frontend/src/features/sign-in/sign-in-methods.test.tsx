@@ -194,6 +194,17 @@ describe("the sign-in methods card", () => {
       await screen.findByText("The Google app is not set up."),
     ).toBeTruthy();
     expect(screen.getByText("Not on the sign-in screen")).toBeTruthy();
+    const setUp = screen.getByRole("link", { name: "Set up the Google app" });
+    expect(setUp.getAttribute("href")).toContain(
+      "settings/authentication/apps",
+    );
+  });
+
+  it("points to the Sign-in apps tab where a provider's app is set up", async () => {
+    mount([GOOGLE], {}, undefined, { app: "none" });
+    expect(
+      await screen.findByText(/once its app is set up under Sign-in apps\./),
+    ).toBeTruthy();
   });
 
   it("says a Microsoft app with no directory keeps its button off the screen", async () => {

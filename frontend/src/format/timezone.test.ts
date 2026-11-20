@@ -8,11 +8,11 @@ import {
   FALLBACK_COMPANY_ZONE,
   sameWallClockOnDay,
   startOfDayInZone,
-  timezoneOptions,
   wallClockIntent,
   zoneNameAndOffset,
   zoneOffsetMs,
 } from "./timezone";
+import { timezoneOptions } from "./timezoneoptions";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -282,6 +282,28 @@ describe("timezone choices", () => {
       "Eastern (US) · UTC-5",
     );
     expect(zones.filter((zone) => zone.value === "UTC")).toHaveLength(1);
+  });
+
+  it("lists a renamed zone under its current name and finds it by the old one", () => {
+    const zones = timezoneOptions("en", "", new Date("2026-01-15T12:00:00Z"));
+    const values = zones.map((zone) => zone.value);
+    expect(values).toContain("Asia/Ho_Chi_Minh");
+    expect(values).toContain("Asia/Kolkata");
+    expect(values).toContain("Europe/Kyiv");
+    expect(values).not.toContain("Asia/Saigon");
+    expect(values).not.toContain("Europe/Kiev");
+    const vietnam = zones.find((zone) => zone.value === "Asia/Ho_Chi_Minh");
+    expect(vietnam?.label).toBe("Ho Chi Minh (Asia) · UTC+7");
+    expect(vietnam?.keywords).toEqual(
+      expect.arrayContaining(["Asia/Ho_Chi_Minh", "Saigon"]),
+    );
+  });
+
+  it("can be found by the IANA id", () => {
+    const zones = timezoneOptions("en", "", new Date("2026-01-15T12:00:00Z"));
+    expect(
+      zones.find((zone) => zone.value === "America/New_York")?.keywords,
+    ).toContain("America/New_York");
   });
 });
 

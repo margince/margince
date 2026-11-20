@@ -451,6 +451,46 @@ describe("Top bar trail", () => {
   });
 });
 
+// The browser tab reads the trail from the page back, so two tabs, the
+// history list and a bookmark name different pages differently.
+describe("Top bar browser tab title", () => {
+  it("names a section entry before its section and the product", () => {
+    renderTopBar(
+      { screen: "settings", id: "account" },
+      { section: fixtureSection("account"), onToggle: ignoreToggle },
+    );
+    expect(document.title).toBe("Account · Settings · Margince");
+  });
+
+  it("names a record by its name once the trail has it", () => {
+    const client = newClient();
+    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
+    renderWith(
+      client,
+      <TopBar
+        route={{ screen: "contacts", id: "p-anna" }}
+        collapsed={false}
+        onOpenSearch={ignoreSearch}
+      />,
+    );
+    expect(document.title).toBe("Anna Weber · Contacts · Margince");
+  });
+
+  it("names the list on a phone's record page, which reads no record name", () => {
+    stubPhoneViewport();
+    renderTopBar({ screen: "contacts", id: "p-anna" });
+    expect(document.title).toBe("Contacts · Margince");
+  });
+
+  it("gives the title back when the shell goes away", () => {
+    document.title = "Margince";
+    const { unmount } = renderTopBar({ screen: "deals" });
+    expect(document.title).toBe("Deals · Margince");
+    unmount();
+    expect(document.title).toBe("Margince");
+  });
+});
+
 // A focused filter page and one list sit BELOW the Filters and views library,
 // so their trail leads back to it and ends in the page. A name is the page's
 // own read, watched under the page's own key: the trail asks for nothing, so

@@ -19,6 +19,7 @@ import {
   RedirectAddressesDialog,
   RemoveOAuthAppDialog,
 } from "./oauth-app-drawer";
+import { UnsavedGuard } from "./unsaved";
 
 afterEach(() => {
   cleanup();
@@ -130,9 +131,14 @@ function mount(
   });
   vi.stubGlobal("fetch", fetchMock);
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // The settings page's own guard, so a claim the drawer makes reaches it.
   const Wrap = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={qc}>
-      <LocaleProvider>{children}</LocaleProvider>
+      <LocaleProvider>
+        <UnsavedGuard address="settings" onKeep={() => undefined}>
+          {() => children}
+        </UnsavedGuard>
+      </LocaleProvider>
     </QueryClientProvider>
   );
   const onClose = vi.fn();
@@ -146,6 +152,13 @@ function mount(
     wrapper: Wrap,
   });
   return { calls, qc, onClose };
+}
+
+// Whether the page asks before a reload, which it does only over a claim.
+function reloadIsHeld(): boolean {
+  const reload = new Event("beforeunload", { cancelable: true });
+  globalThis.dispatchEvent(reload);
+  return reload.defaultPrevented;
 }
 
 // The reads an app write changes besides its own. The connector roster decides
@@ -336,6 +349,33 @@ describe("the app setup drawer", () => {
     await waitFor(() => expect(dependentsRefreshed(qc)).toBe(true));
   });
 
+  it("asks before Escape drops a typed pair", async () => {
+    const user = userEvent.setup();
+    const { onClose } = mount(absent(), "google", { view: "drawer" });
+    await user.type(await openFields(), CLIENT_ID);
+    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
+    await user.keyboard("{Escape}");
+
+    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("asks before Cancel drops a typed pair, and Discard then closes", async () => {
+    const user = userEvent.setup();
+    const { onClose } = mount(absent(), "google", { view: "drawer" });
+    await user.type(await openFields(), CLIENT_ID);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(
+      within(question).getByRole("button", { name: "Discard changes" }),
+    );
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
   it("cannot be dismissed while the save is on its way", async () => {
     const user = userEvent.setup();
     let answer = () => {};
@@ -359,6 +399,49 @@ describe("the app setup drawer", () => {
 
     answer();
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps its draft claimed while the save is out, and closes unasked once saved", async () => {
+    const user = userEvent.setup();
+    let answer = () => {};
+    const held = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    const { calls, onClose } = mount(absent(), "google", {
+      view: "drawer",
+      holdWrites: held,
+    });
+    await user.type(await openFields(), CLIENT_ID);
+    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
+    await user.click(screen.getByRole("button", { name: "Save Google app" }));
+    await waitFor(() => expect(calls.length).toBe(1));
+    expect(reloadIsHeld()).toBe(true);
+
+    answer();
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(
+      screen.queryByRole("dialog", { name: "Discard unsaved changes?" }),
+    ).toBeNull();
+  });
+
+  it("keeps the draft and its claim after a refused save", async () => {
+    const user = userEvent.setup();
+    const { calls, onClose } = mount(absent(), "google", {
+      view: "drawer",
+      refuseWrites: true,
+    });
+    await user.type(await openFields(), CLIENT_ID);
+    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
+    await user.click(screen.getByRole("button", { name: "Save Google app" }));
+    await waitFor(() => expect(calls.length).toBe(1));
+
+    expect(await screen.findAllByText(/client_id invalid/)).not.toHaveLength(0);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Client secret")).toHaveProperty(
+      "value",
+      "GOCSPX-secret",
+    );
+    expect(reloadIsHeld()).toBe(true);
   });
 
   it("will not save until both halves of the pair are there", async () => {

@@ -9,7 +9,6 @@ import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useSaveDraft } from "../../design-system/savepage";
-import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { sameEditValue } from "../../lib/independentedit";
 import {
@@ -34,7 +33,6 @@ export function RetainedSignaturePanel({ id }: Readonly<{ id: string }>) {
 
 function RetainedSignatureReview({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const toast = useToast();
   const cache = useQueryClient();
   const [draft, setDraft] = useState<ReviewDraft>();
   const missingVersion = t("settings.signatureReviewReload");
@@ -50,7 +48,6 @@ function RetainedSignatureReview({ id }: Readonly<{ id: string }>) {
     onSuccess: (saved) => {
       cache.setQueryData(queryKey(saved.id), saved);
       setDraft(undefined);
-      toast.show(t("settings.signatureReviewSaved"));
     },
   });
   const dirty =

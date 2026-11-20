@@ -3420,6 +3420,7 @@
   "unsaved.saveBody": "This page has changes you have not saved yet.",
   "unsaved.stay": "Stay",
   "unsaved.saveRefused": "Not saved. Stay on the page to see why.",
+  "settings.saved": "Saved",
   "settings.installAppAction": "Install",
   "installHint.title": "Install Margince as an app",
   "installHint.value": "Opens from your home screen with one tap, in its own window. No app store, nothing to download.",

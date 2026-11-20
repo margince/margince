@@ -3420,6 +3420,7 @@
   "unsaved.saveBody": "Trang này có thay đổi chưa được lưu.",
   "unsaved.stay": "Ở lại",
   "unsaved.saveRefused": "Chưa lưu được. Ở lại trang để xem lý do.",
+  "settings.saved": "Đã lưu",
   "settings.installAppAction": "Cài đặt",
   "installHint.title": "Cài Margince thành ứng dụng",
   "installHint.value": "Mở bằng một lần chạm trên màn hình chính, trong cửa sổ riêng. Không cần cửa hàng ứng dụng, không phải tải xuống.",

@@ -200,6 +200,34 @@ describe("AccountMenu", () => {
     },
   );
 
+  // A seat that never made a link has nothing paused; the row says what it
+  // opens, the page that makes one.
+  it("offers to set up a booking link while none exists", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(["me"], meFixture(BOOKER));
+    client.setQueryData(["scheduling-profile"], {
+      ...bookingProfile,
+      enabled: false,
+      slug: "",
+    });
+    rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <AccountMenu />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await openMenu(user, railTrigger());
+    const link = screen.getByRole("menuitem", {
+      name: "Set up my booking link",
+    });
+    expect(link.getAttribute("href")).toBe("/#/settings/meetings");
+    expect(link.textContent).not.toContain("Paused");
+  });
+
   // GET /scheduling/profile answers only a seat holding activity:create, so a
   // seat without it is neither offered the link nor sends the read.
   it("leaves out the booking link for a seat that may not book", async () => {

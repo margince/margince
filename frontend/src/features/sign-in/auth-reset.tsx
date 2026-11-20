@@ -55,11 +55,13 @@ export function ResetForm({
   token,
   onDone,
   onRestart,
+  onBack,
   selfServiceAvailable,
 }: Readonly<{
   token: string;
   onDone: () => void;
   onRestart: () => void;
+  onBack: () => void;
   // Whether the forgot-password flow exists at all. A token-bearing link is
   // redeemable on an installation with no outbound email (the admin issues it
   // by hand), but self-service recovery there is not.
@@ -166,6 +168,9 @@ export function ResetForm({
         >
           {t("auth.setNewPassword")}
         </Button>
+        <button type="button" className="auth-link" onClick={onBack}>
+          {t("auth.backToLogin")}
+        </button>
       </div>
     </form>
   );
