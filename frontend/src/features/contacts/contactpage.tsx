@@ -208,7 +208,7 @@ export function ContactPageV2({
     return <ContactOpening id={id} {...openingIdentity(record, view)} />;
   }
   if (reads === "notOpened" || !view.data) {
-    return <ContactNotOpened gone={readsNoRecord(record.error)} />;
+    return <ContactNotOpened gone={readsGone(record, view)} />;
   }
 
   const contact = view.data.contact;
@@ -447,8 +447,17 @@ function ContactRecordView({
   return <RecordView {...view} rename={rename} />;
 }
 
-// A row read no retry can answer says the contact is not there; any other
-// failure keeps the page's own sentence.
+// A failed row read decides. After a live row, the 360 can still find the
+// contact gone, since it can go between the two reads.
+function readsGone(
+  record: Readonly<{ isError: boolean; error: unknown }>,
+  view: Readonly<{ error: unknown }>,
+): boolean {
+  return readsNoRecord(record.isError ? record.error : view.error);
+}
+
+// A read no retry can answer says the contact is not there; any other failure
+// keeps the page's own sentence.
 function ContactNotOpened({ gone }: Readonly<{ gone: boolean }>) {
   const t = useT();
   return (

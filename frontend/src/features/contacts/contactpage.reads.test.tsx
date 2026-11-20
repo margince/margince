@@ -123,6 +123,24 @@ describe("the contact page's row read", () => {
     expect(window.location.hash).toBe("#/contacts");
   });
 
+  // The contact can go between the two reads: the row answered, then the 360
+  // found it gone.
+  it("says the contact is not there when the 360 answers 404 after the row", async () => {
+    const routes = liveRoutes();
+    routes["GET /contacts/p-1/360"] = () =>
+      jsonResponse({ status: 404, code: "not_found" }, 404);
+    const client = createQueryClient();
+    client.setDefaultOptions({
+      queries: { ...client.getDefaultOptions().queries, retry: false },
+    });
+    mount(routes, client);
+
+    expect(await screen.findByText(en["record.gone.contact"])).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Back to Contacts" }),
+    ).toBeTruthy();
+  });
+
   // The sentence replaces the page's wait, so it is announced as it arrives.
   // The way back is something to reach, not something to hear.
   it("announces that the contact is not there, with the way back outside it", async () => {
