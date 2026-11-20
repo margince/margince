@@ -72,7 +72,7 @@ func TestTheReliabilityCellPrintsTheWilsonInterval(t *testing.T) {
 	}
 }
 
-// A printed end on the edge is the edge exactly, on every CPU. Without it, 0
+// A printed end on the edge is the edge itself, on every CPU. Without it, 0
 // of 9 printed a lower bound of about -5e-18 on one machine and 0 on another,
 // and the committed report could not match both.
 func TestAPrintedIntervalAtTheEdgeIsTheEdgeExactly(t *testing.T) {
