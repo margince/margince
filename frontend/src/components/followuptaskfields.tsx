@@ -136,8 +136,8 @@ export function TaskTimeField({
       {(control) => (
         <TimeInput
           {...control}
-          // A fresh box once the day is gone, so the text and refusal the reader
-          // left in it do not outlive the day that made the time meaningful.
+          // A fresh box once the day is gone, so a refused text does not
+          // outlive the day that made the time meaningful.
           key={day === "" ? "no-day" : "day"}
           value={clockOrBlank(value)}
           disabled={day === ""}
