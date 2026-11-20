@@ -644,7 +644,37 @@ describe("AskMarginceModal", () => {
     expect(screen.queryByText(/of 1,000 characters/)).toBeNull();
     await user.click(box);
     await user.paste("x".repeat(900));
-    expect(screen.getByText("904 of 1,000 characters")).toBeTruthy();
+    // Announced as it changes: the reader is still typing in the box.
+    expect(
+      screen.getByText("904 of 1,000 characters").getAttribute("role"),
+    ).toBe("status");
+  });
+
+  // The box's limit holds what a reader types, not what the palette put there.
+  it("asks nothing for a carried question past the limit until the reader shortens it", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ASKER);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(
+      <AskMarginceModal
+        open
+        onClose={() => {}}
+        carriedQuestion={"x".repeat(1001)}
+      />,
+    );
+    const box = await screen.findByLabelText(/your question/i);
+    await waitFor(() => expect(box).toHaveValue("x".repeat(1001)));
+    const ask = screen.getByRole("button", { name: "Ask" });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your question: at most 1,000 characters.",
+    );
+    expect(ask).toBeDisabled();
+
+    await user.type(box, "{Backspace}");
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    await waitFor(() => expect(ask).toBeEnabled());
+    expect(backend.asked).toHaveLength(0);
   });
 
   it("says nothing read the passages when no writer was in the path", async () => {

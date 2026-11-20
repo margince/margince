@@ -87,6 +87,8 @@ export function AskMarginceModal({
   const [corpusId, setCorpusId] = useState("");
   const [question, setQuestion] = useState("");
   const questionLength = question.length;
+  // `maxLength` holds what a reader types, not a question the palette carried.
+  const tooLong = questionLength > QUESTION_MAX;
   // Which citation the document pane is showing, by its position in the answer.
   // Null is "nothing picked yet", which is a different pane from "picked one
   // that turned out to have no passage".
@@ -194,6 +196,16 @@ export function AskMarginceModal({
           <p className="t-sub">{t("corpusAsk.sub")}</p>
           <Field
             label={t("corpusAsk.question")}
+            // Announced as it changes, since the reader is typing in the box.
+            hintLive
+            error={
+              tooLong
+                ? t("common.fieldTooLongMax", {
+                    field: t("corpusAsk.question"),
+                    max: formatNumber(QUESTION_MAX, locale),
+                  })
+                : undefined
+            }
             hint={
               questionLength >= QUESTION_COUNTED_FROM
                 ? plural("common.characterCount", questionLength, {
@@ -217,7 +229,7 @@ export function AskMarginceModal({
               // The one AI call to action on this surface: the model does the
               // reading and writes the sentence.
               variant="ai"
-              disabled={question.trim() === "" || corpusId === ""}
+              disabled={question.trim() === "" || tooLong || corpusId === ""}
               pending={ask.isPending}
               onClick={runAsk}
             >
