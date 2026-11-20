@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -45,13 +44,9 @@ func TestARefusalReleasesTheKeyAndASuccessDoesNot(t *testing.T) {
 }
 
 // A claim that cannot be taken refuses a tool's call, whose caller asked for at
-// most once, and still runs a REST request, whose header a client may not mean.
+// most once. A REST request still runs, since a client may not mean its header.
+// A context with no workspace fails the claim before any pool is touched.
 func TestAFailedClaimRefusesOnlyAToolsCall(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), "postgres://nobody@127.0.0.1:1/none?connect_timeout=1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(pool.Close)
 	for _, tc := range []struct {
 		name       string
 		tool, runs bool
@@ -59,8 +54,8 @@ func TestAFailedClaimRefusesOnlyAToolsCall(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ran := false
 			mux := chi.NewRouter()
-			mux.With(idempotency(pool, nil, nil)).Post("/v1/lead-sources", func(http.ResponseWriter, *http.Request) { ran = true })
-			ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()),
+			mux.With(idempotency(nil, nil, nil)).Post("/v1/lead-sources", func(http.ResponseWriter, *http.Request) { ran = true })
+			ctx := principal.WithActor(context.Background(),
 				principal.Principal{Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String()})
 			if tc.tool {
 				ctx = context.WithValue(ctx, admittedByTheToolKey{}, "POST /v1/lead-sources")

@@ -192,9 +192,9 @@ func (r *Registry) Explain(ctx context.Context, tool string, err error) string {
 	return RunRefusal(err)
 }
 
-// RunRefusal is a refusal in words a run can act on: the taxonomy's code and
-// detail, bounded and escaped as the MCP door bounds them, or one sentence for
-// a fault the taxonomy does not know. It names no MCP method and no human.
+// RunRefusal is a refusal in words a run can act on. That is the taxonomy's code
+// and detail, bounded and escaped as the MCP door bounds them. A fault the
+// taxonomy does not know is one sentence. It names no MCP method and no human.
 func RunRefusal(err error) string {
 	if fault, known := httperr.Classify(err); known {
 		return faultExplanation(fault)

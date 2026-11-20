@@ -16,8 +16,8 @@ import (
 )
 
 // A task handle and a retry key handed out before the change still answer after
-// it: live ones move to the agent's connection, and a passport a human minted
-// keeps what it had.
+// it. Live ones move to the agent's connection. A passport a human minted keeps
+// what it had.
 func TestTheConnectionHolderBackfillMovesOnlyLiveConnectedRows(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)

@@ -55,7 +55,7 @@ func observeRefusal(win *window, step modelStep, explained string, err error, me
 	if directive != "" {
 		suffix = " — " + directive
 	}
-	// The trace is read by people, so it keeps the real cause the model never sees.
+	// A human reads the trace, so it keeps the real cause the model never sees.
 	recorded := truncateTo("tool call refused: "+err.Error(), traceObservationLimit-len(suffix)) + suffix
 	return Step{
 		Tool: step.Tool, Args: step.Args, Observation: recorded,

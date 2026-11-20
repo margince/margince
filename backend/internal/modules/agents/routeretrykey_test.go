@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// keyedRoute stands in for a route whose idempotency middleware claims the key:
-// the first call under a key runs, and a repeat replays and notes no effect.
+// keyedRoute stands in for a route whose idempotency middleware claims the key.
+// The first call under a key runs; a repeat replays and notes no effect.
 type keyedRoute struct{ keys []string }
 
 func (k *keyedRoute) run(ctx context.Context, _ RouteCall) (json.RawMessage, error) {

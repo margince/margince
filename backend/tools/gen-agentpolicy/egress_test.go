@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-// `egress: false` is one answer with one reader: it lowers a send or enrich cap,
-// and only on a route-backed verb, the one kind of tool whose egress the contract sets.
+// `egress: false` has one reader. It lowers a send or enrich cap, and only on a
+// route-backed verb, the one kind of tool whose egress the contract sets.
 func TestTheEgressFlagIsReadOnlyWhereItHasAReader(t *testing.T) {
 	for _, c := range []struct {
 		name, scope, servedBy, egress string

@@ -30,10 +30,8 @@ import (
 type Registry struct {
 	mu    sync.RWMutex
 	tools map[string]mcp.Tool
-	// specs[tool] is what every surface is SERVED for that tool: its own spec
-	// with the declared output shape wrapped in the result envelope. Held here
-	// rather than re-derived per request because tools/list embeds it verbatim
-	// and a client caches it — one derivation, one set of bytes, forever.
+	// specs[tool] is what every surface serves for that tool: its spec, with its
+	// output shape in the envelope. tools/list embeds it as is, so it is derived once.
 	specs map[string]mcp.ToolSpec
 	// idArgs[tool] is what that tool's schema says about its uuid arguments,
 	// read off the schema once at registration. Invoke enforces it, so the
@@ -65,9 +63,8 @@ type Registry struct {
 	// must not diverge: what the schema advertises (withRetryKey) and what a
 	// call carrying `idempotency_key` is answered with (refuseUnkeyableCall).
 	unitOwned map[string]bool
-	// routeServed names the verbs that run a REST route's own handler and whose
-	// route claims no retry key. Their answers carry no replay evidence, so
-	// withRetryKey and refuseUnkeyableCall both read this one set.
+	// routeServed names the route verbs whose route claims no retry key; their
+	// answers carry no replay evidence (withRetryKey, refuseUnkeyableCall).
 	routeServed map[string]bool
 	// routeKeyed names the route verbs whose route claims a retry key.
 	routeKeyed map[string]bool

@@ -217,15 +217,12 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 	return policies, defects
 }
 
-// capDefect refuses a tool operation whose cap is not stated plainly.
+// capDefect refuses a tool operation whose cap is not stated plainly. With no
+// scope, the gate's default would admit it; that is how an outbound verb once
+// ran on the write cap. So there is no default: say which cap the act spends.
 //
-// A tool operation without a scope would be admitted under the gate's default.
-// That is how an outbound verb came to run on the write cap. There is no
-// defensible default, so there is no default: say which cap the act spends.
-//
-// The outbound caps leave the workspace unless an operation says it does not.
-// So an operation may declare `egress: false`, only on a send or enrich cap, and
-// only where a route verb reads it: a registry tool states its own egress.
+// An outbound cap leaves the workspace unless the operation declares `egress:
+// false`. Only a route verb reads that, on a send or enrich cap.
 func capDefect(scope, servedBy string, declared *bool) string {
 	switch {
 	case scope == "":
