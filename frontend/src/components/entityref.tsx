@@ -207,52 +207,43 @@ function RosterRef({
   id,
   name,
 }: Readonly<{ kind: RosterKind; id: string; name?: string | null }>) {
-  if (kind === "user") {
-    return <UserRef id={id} name={name} />;
-  }
-  return <TeamRef id={id} name={name} />;
-}
-
-// A resolved name as plain text, or the reading `UnnamedRef` owes a reader who
-// gets none, shared by both roster arms so neither draws its fallback
-// differently from the other.
-function resolvedOrFallback(
-  id: string,
-  resolved: string | null,
-  reading: NameReading,
-) {
+  const { name: resolved, reading } = useRosterName(kind, id, name);
   if (resolved == null) {
     return <UnnamedRef id={id} reading={reading} />;
   }
   return <span>{resolved}</span>;
 }
 
-function UserRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
-  // A caller-supplied name wins here exactly as it does for a record: the
-  // connection graph returns its own labels rather than a raw uuid until the
-  // by-id read resolves.
-  const supplied = usableName(name);
-  const query = useMemberName(supplied == null ? id : null);
-  return resolvedOrFallback(
-    id,
-    supplied ?? usableName(query.data),
-    readingOf(query),
-  );
-}
-
-function TeamRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
-  const supplied = usableName(name);
-  const roster = useRosterWalk("team", supplied == null);
-  const match = roster.data?.entries.find((entry) => entry.id === id);
+/**
+ * The name a colleague or team reference shows, and the reading that stands in
+ * when there is none. Exported so a label that names the same id (an
+ * accessible name, a question) says what the reference on screen says.
+ *
+ * A user is named by id, so a departed or invited seat still has its name. A
+ * team is named off the roster walk. A caller-supplied name wins, as it does
+ * for a record: the connection graph returns its own labels.
+ */
+export function useRosterName(
+  kind: RosterKind,
+  id: string,
+  supplied?: string | null,
+): { name: string | null; reading: NameReading } {
+  const given = usableName(supplied);
+  const member = useMemberName(kind === "user" && given == null ? id : null);
+  const teams = useRosterWalk("team", kind === "team" && given == null);
+  if (given != null) {
+    return { name: given, reading: "unnamed" };
+  }
+  if (kind === "user") {
+    return { name: usableName(member.data), reading: readingOf(member) };
+  }
+  const match = teams.data?.entries.find((entry) => entry.id === id);
   // `match` is `User | Team`; only a Team has `name`, so the property check
   // narrows it without a cast.
-  const resolved =
-    supplied ?? (match && "name" in match ? usableName(match.name) : null);
-  return resolvedOrFallback(
-    id,
-    resolved,
-    rosterReading(roster, roster.data?.partial === true),
-  );
+  return {
+    name: match && "name" in match ? usableName(match.name) : null,
+    reading: rosterReading(teams, teams.data?.partial === true),
+  };
 }
 
 /** A record with a 360 behind it: a resolved name is also the backlink. */

@@ -125,6 +125,13 @@
   flex-wrap: wrap;
 }
 
+/* A reason is free text, and one long word must break inside the row rather
+   than run out of it under the Revoke button. */
+.share-acl-reason {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .share-reason {
   width: 100%;
   resize: vertical;
