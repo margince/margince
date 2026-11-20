@@ -15517,6 +15517,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.handoffs_other": "{count} lượt bàn giao đang chờ",
   "users.handover.responsibilities_one": "{count} trách nhiệm đối với hồ sơ",
   "users.handover.responsibilities_other": "{count} trách nhiệm đối với hồ sơ",
+  "users.handover.drafts_one": "{count} bản nháp email đã lưu",
+  "users.handover.drafts_other": "{count} bản nháp email đã lưu",
   "users.handover.lists_one": "{count} danh sách",
   "users.handover.lists_other": "{count} danh sách",
   "users.removeMfa": "Gỡ đăng nhập hai bước",

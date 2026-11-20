@@ -122,6 +122,9 @@ func (s handoverSeam) countOwned(ctx context.Context, tx pgx.Tx, member ids.UUID
 	if counts.RecordAssignment, err = assignments.OwnedMemberAssignmentsTx(ctx, tx, member); err != nil {
 		return crmcontracts.HandoverCounts{}, err
 	}
+	if counts.MailDraft, err = s.tasks.MailDraftsWrittenBy(ctx, tx, ids.From[ids.UserKind](member)); err != nil {
+		return crmcontracts.HandoverCounts{}, err
+	}
 	for table, count := range handoverTally(&counts) {
 		if table == string(recordTypeList) || table == handoverHandoffTable || table == handoverAssignmentTable {
 			continue
@@ -251,6 +254,9 @@ func (s handoverSeam) handOverInTx(
 		return crmcontracts.UserHandoverResult{}, err
 	}
 	moved.SdrHandoff, moved.RecordAssignment = staffing.SdrHandoff, staffing.RecordAssignment
+	if moved.MailDraft, err = s.tasks.HandOverMailDraftsTx(ctx, tx, ids.From[ids.UserKind](member), receiver); err != nil {
+		return crmcontracts.UserHandoverResult{}, err
+	}
 	// Either failure aborts the transaction, so both are reported together.
 	var taskErr error
 	moved.Task, taskErr = s.tasks.HandOverOpenTasksTx(ctx, tx, ids.From[ids.UserKind](member), receiver)

@@ -15839,6 +15839,8 @@ export const en = {
   "users.handover.handoffs_other": "{count} pending handoffs",
   "users.handover.responsibilities_one": "{count} record responsibility",
   "users.handover.responsibilities_other": "{count} record responsibilities",
+  "users.handover.drafts_one": "{count} saved email draft",
+  "users.handover.drafts_other": "{count} saved email drafts",
   "users.handover.lists_one": "{count} list",
   "users.handover.lists_other": "{count} lists",
   "users.removeMfa": "Remove two-step sign-in",

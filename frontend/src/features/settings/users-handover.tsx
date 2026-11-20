@@ -33,6 +33,7 @@ const COUNTED = [
   ["list", "users.handover.lists"],
   ["sdr_handoff", "users.handover.handoffs"],
   ["record_assignment", "users.handover.responsibilities"],
+  ["mail_draft", "users.handover.drafts"],
 ] as const;
 
 /** The records in a count as one phrase ("16 deals and 4 leads"); "" for none. */

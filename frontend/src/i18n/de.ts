@@ -15953,6 +15953,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.handoffs_other": "{count} offene Übergaben",
   "users.handover.responsibilities_one": "{count} Datensatzverantwortung",
   "users.handover.responsibilities_other": "{count} Datensatzverantwortungen",
+  "users.handover.drafts_one": "{count} gespeicherter E-Mail-Entwurf",
+  "users.handover.drafts_other": "{count} gespeicherte E-Mail-Entwürfe",
   "users.handover.lists_one": "{count} Liste",
   "users.handover.lists_other": "{count} Listen",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",

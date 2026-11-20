@@ -7699,7 +7699,10 @@ export interface paths {
          * The caller's own unsent message for one place the composer opens.
          * @description A draft is the composer's state, kept so that closing it does not lose a message. It
          *     is not an activity, not a scheduled send and never on a timeline, and only the seat
-         *     that wrote it can read it. There is at most one per author and anchor.
+         *     that wrote it can read, change or discard it: not a colleague, an admin, or an agent
+         *     acting for someone else. There is at most one per author and anchor. A handover of the
+         *     author's work (`handOverUserWork`) moves their drafts to the colleague who takes over,
+         *     who from then on is the only one who reads them.
          *
          *     The AI drafting routes still persist nothing. A draft exists because the rep's composer
          *     saved one here, or because an agent acting for the rep drafted a first message to a
@@ -20361,7 +20364,7 @@ export interface paths {
         /**
          * Count the live records a member still owns.
          * @description How many live leads, contacts, companies, deals and projects the member owns that the
-         *     caller can see. For a member who left, it also counts the contacts and companies only
+         *     caller can see, and how many composer drafts they saved (a count only). For a member who left, it also counts the contacts and companies only
          *     they can see (captured and never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
          *     this to say what would be left behind. Works for any non-archived member, deactivated or
          *     not, because work is best handed over before the account is closed.
@@ -20378,7 +20381,10 @@ export interface paths {
          *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
          *     owner (an active human seat that can write), else `422`
          *     with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
-         *     caller may not change stays with the member. Automations and deal-room stewardships are not moved.
+         *     caller may not change stays with the member. The member's saved composer drafts move too,
+         *     and from then on only the new holder reads them; where the new holder already has a draft
+         *     in the same place, theirs stays and the member's is discarded. Automations and deal-room
+         *     stewardships are not moved.
          */
         post: operations["handOverUserWork"];
         delete?: never;
@@ -42271,6 +42277,8 @@ export interface components {
             sdr_handoff: number;
             /** @description Current user responsibilities on records. */
             record_assignment: number;
+            /** @description Unsent messages the member saved in the composer. Only the count is shown; the words stay readable by the author alone until a handover moves them. */
+            mail_draft: number;
         };
         UserHandover: {
             owned: components["schemas"]["HandoverCounts"];
