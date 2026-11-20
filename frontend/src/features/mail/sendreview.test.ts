@@ -91,6 +91,33 @@ describe("sendReviewOf", () => {
     expect(review?.refusals[1]).not.toHaveProperty("provision");
   });
 
+  it("keeps every whole law a refusal cites, in the server's order", () => {
+    const first = {
+      instrument: "GDPR",
+      provision: "Art. 6(1)",
+      source_url: "https://example.org/gdpr",
+    };
+    const second = {
+      instrument: "PDPL",
+      provision: "Art. 9",
+      source_url: "https://example.org/pdpl",
+    };
+    const review = sendReviewOf(
+      refusal({
+        review_id: "r-10",
+        refusals: [
+          {
+            address: "ana@example.test",
+            reason_code: "no_compatible_evidence",
+            provision: first,
+            provisions: [first, { instrument: "broken" }, second],
+          },
+        ],
+      }),
+    );
+    expect(review?.refusals[0]?.provisions).toEqual([first, second]);
+  });
+
   // An agent, or a refusal with no message to decide about. The reference still
   // travels so a human reading the transcript can pick the review up; what is
   // absent is the shortcut.

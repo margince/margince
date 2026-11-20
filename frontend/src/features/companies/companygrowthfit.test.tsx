@@ -567,7 +567,10 @@ describe("what the fit is judged on", () => {
     });
 
     expect(
-      screen.getAllByText(translate("en", "record.notYoursToChange")),
+      screen.getAllByText(translate("en", "record.notYoursToChange"), {
+        // Each read-only value keeps it as a hidden description; on screen once.
+        ignore: "script, style, [hidden]",
+      }),
     ).toHaveLength(1);
     // The gaps still show, with no editor that could only fail at the save.
     expect(screen.getAllByText("Missing")).toHaveLength(4);

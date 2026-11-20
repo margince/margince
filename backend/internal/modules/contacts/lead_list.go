@@ -148,7 +148,7 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 			return leadListWhere(ctx, in, active, sorted, policy, arg)
 		},
 		scan: func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]crmcontracts.Lead, []*string, error) {
-			return scanLeadPage(rows, active, sorted, policy)
+			return scanLeadPage(rows, active, sorted, policy, slaNow(ctx))
 		},
 		attach: attachLeadRows,
 		cursorKey: func(last crmcontracts.Lead) (time.Time, ids.UUID) {
@@ -310,7 +310,7 @@ func leadQuickFindClause(query string, arg func(any) int) string {
 
 // scanLeadPage drains one list query's rows: each lead plus, under a
 // non-default sort, the row's trailing __cursor_key.
-func scanLeadPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort, policy leadSLAPolicy) ([]crmcontracts.Lead, []*string, error) {
+func scanLeadPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort, policy leadSLAPolicy, now time.Time) ([]crmcontracts.Lead, []*string, error) {
 	var leads []crmcontracts.Lead
 	var cursorKeys []*string
 	for rows.Next() {
@@ -319,7 +319,7 @@ func scanLeadPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.
 		if sorted != nil {
 			extra = append(extra, &key)
 		}
-		l, err := scanLead(rows, active, policy, extra...)
+		l, err := scanLead(rows, active, policy, now, extra...)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -45639,8 +45639,9 @@ export interface components {
             provision?: components["schemas"]["CitedProvision"];
         };
         /**
-         * @description The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-         *     for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+         * @description The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+         *     for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+         *     data-protection law settles. Shown beside the engine's sentence; it decides nothing.
          *     Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
          *     pack's next review is overdue, or the law has not taken effect or has expired. On a
          *     review it is the citation shown when the refusal was assessed, never today's.
@@ -45671,11 +45672,21 @@ export interface components {
             /** @description Missing contact methods, such as email, phone or web. */
             missing_means: string[];
             provision?: components["schemas"]["CitedProvision"];
+            /** @description Every law cited for `kind`, `provision` first. Absent when none may be shown. */
+            provisions?: components["schemas"]["CitedProvision"][];
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
-            /** @description The law the recipient's pack cites for `reason_code`, absent when none may be shown. */
+            /**
+             * @description The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+             *     when only that pack cites one. Absent when none may be shown.
+             */
             provision?: components["schemas"]["CitedProvision"];
+            /**
+             * @description Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
+             *     sending entity's for a finding its data-protection law settles. Absent when none may be shown.
+             */
+            provisions?: components["schemas"]["CitedProvision"][];
             /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
             footer_findings?: components["schemas"]["FooterFinding"][];
             /** Format: email */
@@ -51338,6 +51349,13 @@ export interface components {
             category?: string;
             /** @description The category the sender claimed. */
             requested_category?: string;
+            /**
+             * @description The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+             *     when only that pack cites one. Absent when none may be shown.
+             */
+            provision?: components["schemas"]["CitedProvision"];
+            /** @description Every law cited for `reason_code`, `provision` first. Absent when none may be shown. */
+            provisions?: components["schemas"]["CitedProvision"][];
         };
         /**
          * @description A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
@@ -55888,8 +55906,16 @@ export interface components {
             /** Format: uuid */
             subject_id?: string;
             reason_code: string;
-            /** @description The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed. */
+            /**
+             * @description The first law cited for `reason_code` when the refusal was assessed: the recipient's
+             *     pack's, or the sending entity's when only that pack cites one.
+             */
             provision?: components["schemas"]["CitedProvision"];
+            /**
+             * @description Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
+             *     recipient's pack, then the sending entity's for a finding its data-protection law settles.
+             */
+            provisions?: components["schemas"]["CitedProvision"][];
             category?: string;
             /** Format: uuid */
             sending_entity_id?: string;

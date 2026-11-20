@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
+import { policyTargets } from "./scripts/browser-targets.ts";
 import {
   chunkBudgets,
   entryChunks,
@@ -117,6 +118,9 @@ const testExclude = ["**/node_modules/**", "e2e/**", "census/**"];
 
 export default defineConfig({
   build: {
+    // The oldest browsers .browserslistrc supports. Without it Vite lowers to
+    // its own default, which no Margince decision chose.
+    target: policyTargets(),
     // nginx.conf's font-src 'self' refuses a font inlined as a data: URL.
     assetsInlineLimit: (file) =>
       /\.(?:woff2?|ttf|otf)$/.test(file) ? false : undefined,

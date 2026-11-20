@@ -116,6 +116,7 @@ func wireRefusal(refusal RefusedRecipient) crmcontracts.RefusedRecipient {
 		wire.FooterFindings = commsauthzwire.FooterFindings(refusal.FooterFindings)
 	}
 	wire.Provision = commsauthzwire.Provision(refusal.Provision)
+	wire.Provisions = commsauthzwire.Provisions(refusal.Provisions)
 	if refusal.SendingEntity != nil {
 		id := openapi_types.UUID(*refusal.SendingEntity)
 		wire.SendingEntityId = &id

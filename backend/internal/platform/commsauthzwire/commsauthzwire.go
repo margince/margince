@@ -22,6 +22,7 @@ func FooterFindings(findings []commsauthz.FooterFinding) *[]crmcontracts.FooterF
 		}
 		out = append(out, crmcontracts.FooterFinding{
 			Kind: f.Kind, Language: f.Language, MissingMeans: means, Provision: Provision(f.Provision),
+			Provisions: Provisions(f.Provisions),
 		})
 	}
 	return &out
@@ -33,4 +34,18 @@ func Provision(p commsauthz.Provision) *crmcontracts.CitedProvision {
 		return nil
 	}
 	return &crmcontracts.CitedProvision{Instrument: p.Instrument, Provision: p.Provision, SourceUrl: p.SourceURL}
+}
+
+// Provisions renders every citation shown, or nil when none is.
+func Provisions(cited []commsauthz.Provision) *[]crmcontracts.CitedProvision {
+	out := make([]crmcontracts.CitedProvision, 0, len(cited))
+	for _, p := range cited {
+		if wire := Provision(p); wire != nil {
+			out = append(out, *wire)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return &out
 }
