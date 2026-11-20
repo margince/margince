@@ -103,7 +103,7 @@ func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 	if req, err = withSendFacts(ctx, tx, req); err != nil {
 		return set, err
 	}
-	countries, err := g.store.recipientCountries(ctx, tx, req.Recipients, func(connector.Recipient) commsauthz.Request { return req })
+	countries, err := g.store.resolveRecipientCountries(ctx, tx, req.Recipients, func(connector.Recipient) commsauthz.Request { return req })
 	if err != nil {
 		return set, err
 	}

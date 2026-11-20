@@ -15,6 +15,7 @@ import type { SectionFlow } from "../../components/sectionedit";
 import { fetchGrants } from "../../components/share.parts";
 import { Badge } from "../../design-system/atoms";
 import { IdentityLine } from "../../design-system/identityline";
+import { ReadOnlyValue } from "../../design-system/readonlyvalue";
 import { useT } from "../../i18n";
 import { useCanWrite, useWriteRefusal } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
@@ -160,12 +161,12 @@ export function LeadOwnerReading({
 }: Readonly<{ lead: Lead; writer: LeadWriter; terminalReasonId: string }>) {
   const { reason } = useOwnerRefusal(lead, writer);
   return (
-    <span
-      title={reason}
-      aria-describedby={lead.archived_at ? terminalReasonId : undefined}
+    <ReadOnlyValue
+      reason={reason || undefined}
+      describedBy={lead.archived_at ? terminalReasonId : undefined}
     >
       <LeadOwnerName lead={lead} />
-    </span>
+    </ReadOnlyValue>
   );
 }
 

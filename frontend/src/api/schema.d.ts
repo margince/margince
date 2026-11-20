@@ -45719,7 +45719,10 @@ export interface components {
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
-            /** @description The law the recipient's pack cites for `reason_code`, absent when none may be shown. */
+            /**
+             * @description The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+             *     when only that pack cites one. Absent when none may be shown.
+             */
             provision?: components["schemas"]["CitedProvision"];
             /**
              * @description Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
@@ -51388,7 +51391,10 @@ export interface components {
             category?: string;
             /** @description The category the sender claimed. */
             requested_category?: string;
-            /** @description The first law cited for `reason_code`, absent when none may be shown. */
+            /**
+             * @description The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+             *     when only that pack cites one. Absent when none may be shown.
+             */
             provision?: components["schemas"]["CitedProvision"];
             /** @description Every law cited for `reason_code`, `provision` first. Absent when none may be shown. */
             provisions?: components["schemas"]["CitedProvision"][];
@@ -55954,7 +55960,10 @@ export interface components {
             /** Format: uuid */
             subject_id?: string;
             reason_code: string;
-            /** @description The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed. */
+            /**
+             * @description The first law cited for `reason_code` when the refusal was assessed: the recipient's
+             *     pack's, or the sending entity's when only that pack cites one.
+             */
             provision?: components["schemas"]["CitedProvision"];
             /**
              * @description Every law cited for `reason_code` when the refusal was assessed, `provision` first: the

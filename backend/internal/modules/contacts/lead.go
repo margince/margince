@@ -394,7 +394,7 @@ func (s *Store) FindLeadByLinkedInURL(ctx context.Context, rawURL string) (*crmc
 		l, err := scanLead(tx.QueryRow(ctx,
 			`SELECT `+columns+` FROM lead
 			 WHERE linkedin_url = $1 AND archived_at IS NULL AND `+scope+`
-			 ORDER BY created_at ASC, id ASC LIMIT 1`, args...), nil, policy)
+			 ORDER BY created_at ASC, id ASC LIMIT 1`, args...), nil, policy, slaNow(ctx))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}

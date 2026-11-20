@@ -50,7 +50,7 @@ What the switch cannot promise:
 
 Also called: works council, Betriebsrat, figures per rep, team figures.
 
-## The four compliance documents, in order
+## Staff mail capture documents for Germany
 
 1. **Tell the colleagues whose mail will be read**: the
    *Beschäftigteninformation* (Art. 13 GDPR). Do it before a mailbox is
@@ -83,6 +83,12 @@ Jurisdiction**, to read and download. The English set is for reading and for
 passing around inside the company; the German versions are the ones to sign.
 They are drafts written by AI, not legal advice, so have a lawyer check
 them first.
+
+## Vietnamese staff mail capture documents
+
+Choose the Vietnamese rules in **Settings → Compliance → Jurisdiction** to find the
+staff notice, its English copy and the receipt. Fill in the Vietnamese notice and give
+it to staff before connecting their mailboxes. Keep the signed receipt as a record.
 
 ## What Margince gives you to point at
 

@@ -46,6 +46,7 @@
 # there was no legal way to answer it. All three models scored zero here, and
 # none of them was wrong to.
 name: case20_put_it_in_the_board_pack
+title: Put it in the board pack
 criteria: [1, 3]
 
 # WRITES: the author's own statement that this case changes the world. It is not

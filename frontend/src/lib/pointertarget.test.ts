@@ -39,7 +39,7 @@ describe("startPointerTarget", () => {
   let stop = () => {};
   afterEach(() => {
     stop();
-    document.body.innerHTML = "";
+    document.body.replaceChildren();
   });
 
   it("marks only the innermost element the pointer is over", () => {

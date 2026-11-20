@@ -8,6 +8,7 @@
 # and no duplicate: no company in it may share a name word with a seeded one,
 # or the import's fuzzy match counts it as already in the CRM.
 name: case3_spreadsheet
+title: A spreadsheet arrives
 criteria: [1, 6]
 
 # WRITES: the author's own statement that this case changes the world. It is not

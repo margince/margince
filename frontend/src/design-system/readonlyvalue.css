@@ -1,0 +1,7 @@
+/* A read-only value with a reason takes a tab stop (readonlyvalue.tsx), so it
+   shows the app's focus ring, as the board's money figure does. */
+.readonly-value:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}

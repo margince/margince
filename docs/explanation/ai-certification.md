@@ -1,9 +1,10 @@
 <!-- prose:plain -->
 <!-- describes: backend/internal/compose/aicert/score.go backend/internal/compose/aicert/thresholds.go backend/internal/compose/aicert/judge.go backend/internal/compose/aicert/adaptive.go backend/internal/compose/aicert/readiness.go backend/internal/compose/aicert/recordbuild.go backend/internal/compose/aicert/promptversion.go -->
-# How AI certification works
+# How we test Margince AI
 
-The [certification page](../reference/ai-certification.md) grades every AI feature under every preset.
-Here, in plain words, is how one grade is made. To run the lane, see
+This is how AI certification works. [Margince AI: test results](../reference/ai-certification.md) grades
+every feature of Margince AI under every model setup. Here, in plain words, is how one grade is made.
+An AI assistant a user connects is tested another way: [How we test your AI assistant](how-we-test-your-ai-assistant.md). To run the lane, see
 [certify-an-ai-model.md](../how-to/certify-an-ai-model.md); to write a case, see
 [write-a-certification-case.md](../how-to/write-a-certification-case.md). The full rule and its numbers
 are in `backend/internal/compose/aicert/score.go` and `thresholds.go`, and the certification page prints

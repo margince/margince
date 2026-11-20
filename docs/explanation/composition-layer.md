@@ -13,7 +13,7 @@ binaries and puts in every edge between modules. Below: how it starts and where 
 - The edges between modules, put in as small adapters so no module imports another.
 - The data source `Provider`: the system-of-record seam the agent and MCP surface bind to.
 - The MCP tool registry: the governed tool surface, shared by the `/mcp` transport and the REST agent gate.
-- The background wiring each binary needs: the River job runner, the Surface-B runner, the
+- The background wiring each binary needs: the River job runner, the runner of the night helpers, the
   workflow engine, the capture registry.
 - The `Option` set for each role: how each binary changes the wiring.
 
@@ -103,7 +103,7 @@ The store of the module that owns the data backs it, so neither module names the
 | `signals` | the relationship score of contacts | `signalStrength{contacts: contacts.NewStore(pool)}` adapter |
 | IMAP connect | the connector registry of capture (vault under `WithKeyvault`) | `imapConnectHandlers{registry: NewCaptureRegistry(pool, vault)}` |
 | filtered export | the source of stored views and lists in `collections` | `filteredExportHandlers{collections: collections.NewStore(pool)}` |
-| everything that calls a model | the tiered router of `ai` (routing, budget, use count, removing secrets) | the `Brain` seam (`brain.go`); Surface-B, the search embed and the first pass over a new workspace all use one router |
+| everything that calls a model | the tiered router of `ai` (routing, budget, use count, removing secrets) | the `Brain` seam (`brain.go`); the night helpers, the search embed and the first pass over a new workspace all use one router |
 | AI task prompts | the company context of contacts (filtered by scope, with a fingerprint) | `companycontextprompt.go` (+ the `company_context.rollout` off switch, `WithCompanyContextRollout`) |
 | reply drafting | evidence from activities + the model path of `ai` + the voice profile | `replydraft.go` (`WithReplyDraft`) |
 | `deepread` | the site reads of contacts + the budget defer of `ai` (River schedules it again) | `deepreadtransport.go`, `deepreadbudget.go` (`WithDeepRead`) |
@@ -134,7 +134,7 @@ Each binary composes only what its role needs, all through this one layer:
 | `NewProvider(pool)` | the `datasource.SystemOfRecordProvider` (contacts, deals, activities, reports) | the agent gate + MCP registry |
 | `NewRegistry(pool)` | the MCP tool registry | the `/mcp` transport + the REST agent gate |
 | `NewJobRunner(pool, log, …)` | the River jobs that run on a schedule (close date sweep, `reconcile`) | `cmd/worker` |
-| `NewRunnerService(pool, brain, retriever, log)` | the Surface-B runner that does the model work | `cmd/worker` |
+| `NewRunnerService(pool, brain, retriever, log)` | the runner of the night helpers, which does the model work | `cmd/worker` |
 | `NewWorkflowEngine(pool)` | the workflow dispatcher | `cmd/worker` |
 | `NewCaptureRegistry(pool, vault)` | the connector registry | `cmd/worker` backfill, `api` IMAP connect |
 

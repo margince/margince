@@ -76,9 +76,8 @@ func writeCoverageAssistants(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("| Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |\n")
 	p.WriteString("|---|---|---:|---|---|\n")
 	for _, m := range r.Models {
-		fmt.Fprintf(p, "| `%s` | %s | %d of %d | %s | %s |\n", modelName(m.Model), m.Route,
-			m.CasesRecorded, len(r.Cases), trustVerdict(m.CasesHeld, m.CasesRecorded, len(r.Cases)),
-			plainWords(m, titles))
+		fmt.Fprintf(p, "| `%s` | %s | %d of %d | %s | %s |\n", m.Name, m.Route,
+			m.CasesRecorded, len(r.Cases), m.Trust, plainWords(m, titles))
 	}
 	p.WriteString("\nAn assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was " +
 		"reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough " +
