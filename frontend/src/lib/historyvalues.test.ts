@@ -141,6 +141,21 @@ describe("historyValue", () => {
     );
   });
 
+  // A calendar day names no instant, so no zone moves it to a neighbour.
+  it("renders a calendar day the way the record page dates it, in every zone", () => {
+    for (const zone of ["Pacific/Kiritimati", "Pacific/Honolulu"]) {
+      expect(historyValue("target_end_date", "2026-01-01", ctx({ zone }))).toBe(
+        "1 Jan 2026",
+      );
+    }
+  });
+
+  it("leaves a day-shaped value that names no real day as stored", () => {
+    expect(historyValue("target_end_date", "2026-02-31", ctx())).toBe(
+      "2026-02-31",
+    );
+  });
+
   it("renders a JSON array as its items joined with a comma", () => {
     expect(historyValue("tags", '["customer"]', ctx())).toBe("customer");
     expect(historyValue("tags", '["customer","partner"]', ctx())).toBe(
