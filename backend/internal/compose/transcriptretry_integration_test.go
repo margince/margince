@@ -5,8 +5,8 @@
 
 package compose
 
-// A transcript reading's failed model call, try by try: handed back for the
-// next try, closed with a reason on the last, asleep when told "not now".
+// A transcript reading's failed model call, try by try. It is handed back,
+// closed with a reason on the last try, and asleep when told "not now".
 
 import (
 	"context"
@@ -57,8 +57,8 @@ func (e *transcriptEnv) queueReading(t *testing.T) ids.UUID {
 }
 
 // River repeats a failed try a second later, inside the claim's lease. The
-// repeat must find a reading it can claim, or it takes it for somebody else's,
-// ends as success, and the rep watches "reading…" with no job behind it.
+// repeat must find a reading it can claim. Else it ends as success, and the
+// rep watches "reading…" with no job behind it.
 func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) {
 	e := setupTranscript(t)
 	readID := e.queueReading(t)
@@ -71,7 +71,7 @@ func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) 
 	}
 }
 
-// The last try leaves no job to hand the reading back to, so it closes the
+// The last try leaves no job to hand the reading back to. It closes the
 // reading with a sentence, and the rep can press Read again.
 func TestATranscriptReadingWhoseLastTryFailedSaysSo(t *testing.T) {
 	e := setupTranscript(t)
@@ -82,8 +82,8 @@ func TestATranscriptReadingWhoseLastTryFailedSaysSo(t *testing.T) {
 	}
 }
 
-// The budget stop is not a failed try: even on its last try the job sleeps
-// until the next budget window, and the reading waits queued for it.
+// The budget stop is not a failed try. Even on its last try the job sleeps
+// until the next budget window, and the reading waits queued.
 func TestATranscriptReadingToldNotNowSleepsInsteadOfFailing(t *testing.T) {
 	e := setupTranscript(t)
 	deferral := &ai.BudgetDeferralError{Task: ai.TaskTranscriptPropose, NextAttemptAt: clocktest.Now(t).Add(240 * time.Hour)}

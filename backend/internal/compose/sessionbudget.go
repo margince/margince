@@ -45,8 +45,8 @@ func (w sessionBudgetWorker[T]) Work(ctx context.Context, job *river.Job[T]) err
 		ctx = context.WithValue(ctx, sessionBudgetKey{}, w.slots)
 	}
 	ctx = database.WithSessionBudget(ctx, takeSessionSlot)
-	// Every registered worker passes here, so a "not now" from the router that
-	// a worker hands back sleeps rather than spends one of the job's tries.
+	// Every registered worker passes here. A deferral it hands back sleeps
+	// instead of spending one of the job's tries.
 	err := snoozeWhileDeferred(w.work.Work(ctx, job), w.now())
 	return jobs.FaultForKind(ctx, job.Args.Kind(), err)
 }

@@ -25,14 +25,13 @@ func Write(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, Refusal(r.Context(), err))
 }
 
-// Refusal is err as a caller should read it: a model lane that produced no
-// answer becomes a 503 with a code the client has copy for, and anything else
-// is returned unchanged. A handler outside compose, which cannot import this
+// Refusal is err as a caller should read it. A model lane that produced no
+// answer becomes a 503 with a code the client has copy for. Anything else is
+// returned unchanged. A handler outside compose, which cannot import this
 // package, is handed its reader's errors through it.
 //
-// A model this installation cannot use is a DEPENDENCY that is down, not a
-// fault in the request, and httperr has no sentinel for it, so it would fall
-// through to an opaque 500 whose body names nothing.
+// A model this installation cannot use is a dependency that is down, not a
+// fault in the request. httperr would answer it as an opaque 500.
 func Refusal(ctx context.Context, err error) error {
 	if !unanswered(err) {
 		return err
@@ -89,12 +88,11 @@ func providerDown(down *ai.ProviderDownError) error {
 // unanswered reports whether err is the model lane ending without an answer
 // rather than this request being wrong.
 //
-// Matched by sentinel, never by message: ai.ErrAllTiersFailed when the walk
-// reached the end of the bound rungs, and the outcomes that stop it sooner — a
-// reply the models declined or the validator refused (ai.ModelDeclined), a
-// request rejected, an account out of budget, a provider the router has blocked
-// or a task the budget stop deferred — and the embed lane, which has no walk to
-// end, failing to answer (ai.ErrEmbedLaneFailed).
+// Matched by sentinel, never by message. ai.ErrAllTiersFailed is a walk that
+// reached the end of the bound rungs. Other outcomes stop it sooner. A reply
+// is declined or refused (ai.ModelDeclined), or a request rejected. Or an
+// account is out of budget, or the router deferred the call. The embed lane
+// has no walk, and fails with ai.ErrEmbedLaneFailed.
 func unanswered(err error) bool {
 	return errors.Is(err, ai.ErrAllTiersFailed) ||
 		errors.Is(err, ai.ErrEmbedLaneFailed) ||

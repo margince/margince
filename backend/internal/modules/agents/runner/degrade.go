@@ -47,10 +47,9 @@ func invalidOutputReason(attempts int) string {
 		"the server log carries the parser's error", attempts)
 }
 
-// ErrAllowanceUsedUp and ErrProviderBlocked are what a Brain wraps a step in
-// when the router declined it without calling a provider: the budget stop, or
-// a provider it has blocked. The runner may not import the router, so the
-// adapter names the refusal in these terms.
+// ErrAllowanceUsedUp and ErrProviderBlocked wrap a step the router declined
+// without calling a provider: the budget stop, or a blocked provider. The
+// runner may not import the router, so the Brain names the refusal.
 var (
 	ErrAllowanceUsedUp = errors.New("runner: the monthly AI allowance is used up")
 	ErrProviderBlocked = errors.New("runner: the AI provider is blocked")

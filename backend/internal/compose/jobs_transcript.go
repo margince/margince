@@ -140,9 +140,8 @@ func (w *transcriptProposeWorker) declineUnread(ctx context.Context, args Transc
 	return w.closeUnread(ctx, args, activities.TranscriptFailureNoModel)
 }
 
-// closeUnread fails a reading no worker will read, with the reason why. Failing
-// it visibly is the point: a queued row nobody will ever pick up is
-// indistinguishable, to the rep watching it, from one still being worked.
+// closeUnread fails a reading no worker will read, with the reason why. To the
+// rep, a queued row nobody picks up looks the same as one being worked.
 func (w *transcriptProposeWorker) closeUnread(ctx context.Context, args TranscriptProposeArgs, code string) error {
 	if _, err := w.activities.BeginTranscriptRead(ctx, args.TranscriptReadID, activities.TranscriptReadLease); err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {

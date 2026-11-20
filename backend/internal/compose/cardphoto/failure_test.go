@@ -60,10 +60,8 @@ func importCardPhotoThrough(t *testing.T, lane ai.ImageLane) *httptest.ResponseR
 	return rec
 }
 
-// A user waiting on a card photo is told why the reading did not happen and
-// what to do: the budget stop, a provider the router blocked and a lane that
-// ended without an answer each answer 503 with a code the screen has copy for,
-// never 500 "internal".
+// A user waiting on a card photo is told why it was not read. Each way the
+// lane ends without an answer is a 503 with a code the screen has copy for.
 func TestACardPhotoTheModelDidNotReadSaysWhy(t *testing.T) {
 	cases := map[string]struct {
 		err  error

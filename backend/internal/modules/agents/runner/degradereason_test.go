@@ -226,9 +226,9 @@ func (b outcomeBrain) Complete(context.Context, model.Request) (model.Response, 
 }
 
 // A withheld step is the provider declining, and the reader is owed that rather
-// than "did not answer"; so is a step the router declined without a call. A
-// rejected request is our own defect, so the reader gets
-// the ordinary failure while the operator log carries it at error level.
+// than "did not answer". So is a step the router declined without a call. A
+// rejected request is our own defect: the reader gets the ordinary failure,
+// and the operator log carries it at error level.
 func TestAProviderOutcomeDegradesOnItsOwnReason(t *testing.T) {
 	for _, tc := range []struct {
 		name       string

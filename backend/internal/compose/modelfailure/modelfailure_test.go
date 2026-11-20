@@ -164,8 +164,8 @@ func TestAProviderTheRouterBlockedIsAnsweredWithItsReason(t *testing.T) {
 	}
 }
 
-// The budget stop is a reason of its own: the reader is told the allowance is
-// used up, not that the assistant failed, and the code has its own copy.
+// The budget stop is a reason of its own. The reader is told the allowance is
+// used up, not that the assistant failed.
 func TestABudgetStopIsAnsweredAsTheAllowanceUsedUp(t *testing.T) {
 	t.Parallel()
 	deferred := &ai.BudgetDeferralError{Task: ai.TaskDocumentExtract}

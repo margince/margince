@@ -52,9 +52,8 @@ func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcrip
 }
 
 // retryable hands the reading back before handing the job its fault, as
-// DocumentExtractor.retryable does and for its reason: a reading left running
-// is refused to the job's next try as somebody else's, and that try ends as
-// success with the rep watching "reading…".
+// DocumentExtractor.retryable does. A reading left running is refused to the
+// next try as somebody else's. That try then ends as success, on "reading…".
 func (p *TranscriptProposer) retryable(
 	ctx context.Context, store transcriptReadStore, claim activities.TranscriptRead, cause error,
 ) error {
