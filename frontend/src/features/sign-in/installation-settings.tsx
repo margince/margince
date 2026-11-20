@@ -26,6 +26,7 @@ import { useCurrencyNote } from "../../lib/installation-settings.currency";
 import {
   type FieldLabels,
   percentLimit,
+  type RefusalSentences,
   refusalSentences,
   unwrap,
 } from "../../lib/problem";
@@ -97,6 +98,50 @@ function factLabels(t: ReturnType<typeof useT>, locale: Locale): FieldLabels {
       label: t("installationSettings.likelyThreshold"),
       limit: percentLimit(locale),
     },
+  };
+}
+
+const FORECAST_FACTS: readonly EditedFact[] = [
+  "forecast_forward_measure",
+  "forecast_likely_threshold",
+];
+
+// The server names a refused setting by its key (`installation.timezone`) and
+// the form keys its fields by the patch name (`timezone`). Labels only for the
+// facts this dialog draws, so a refusal naming any other field reaches the foot.
+function drawnLabels(labels: FieldLabels, part: InstallationPart): FieldLabels {
+  const drawn = Object.entries(labels).filter(
+    ([fact]) =>
+      FORECAST_FACTS.some((forecast) => forecast === fact) ===
+      (part === "forecast"),
+  );
+  return Object.fromEntries(
+    drawn.flatMap(([fact, label]) => [
+      [fact, label],
+      [`installation.${fact}`, label],
+    ]),
+  );
+}
+
+function installationRefusal(
+  error: unknown,
+  t: ReturnType<typeof useT>,
+  labels: FieldLabels,
+  part: InstallationPart,
+): RefusalSentences {
+  const { byField, rest } = refusalSentences(
+    error,
+    t,
+    drawnLabels(labels, part),
+  );
+  return {
+    byField: new Map(
+      [...byField].map(([field, sentence]) => [
+        field.replace(/^installation\./, ""),
+        sentence,
+      ]),
+    ),
+    rest,
   };
 }
 
@@ -281,7 +326,7 @@ function InstallationSettingsForm({
       return sentence === undefined ? [] : [[fact, sentence] as const];
     }),
   );
-  const blanket = refusalSentences(update.error, t, labels).rest;
+  const blanket = installationRefusal(update.error, t, labels, part).rest;
   const edit = (next: InstallationSettings) => {
     for (const fact of EDITABLE_FACTS) {
       if (next[fact] !== draft[fact]) faults.edited(fact);
@@ -321,7 +366,7 @@ function InstallationSettingsForm({
     }
     update.mutate(patch, {
       onError: (error) =>
-        faults.show(refusalSentences(error, t, labels).byField),
+        faults.show(installationRefusal(error, t, labels, part).byField),
     });
   };
 

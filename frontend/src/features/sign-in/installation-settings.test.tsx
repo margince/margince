@@ -521,6 +521,55 @@ describe("InstallationSettingsCard", () => {
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
+  it("marks the field a server refusal names by its setting key", async () => {
+    const user = userEvent.setup();
+    const sentence =
+      '"Mars/Olympus" is not an IANA zone name this server knows — use one like Europe/Berlin';
+    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
+      refuse: [
+        {
+          field: "installation.timezone",
+          code: "setting_invalid",
+          message: sentence,
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
+    await user.clear(zone);
+    await user.type(zone, "Mars/Olympus");
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await within(dialog).findByText(/use one like Europe\/Berlin/);
+    expect(zone.getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("shows a refusal naming a field the dialog does not draw", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
+      refuse: [
+        {
+          field: "installation.fiscal_year_start_month",
+          code: "setting_invalid",
+          message: "Month out of range.",
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
+    await user.type(zone, "x");
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await within(dialog).findByText(/Month out of range/);
+    expect(zone.getAttribute("aria-invalid")).not.toBe("true");
+  });
+
   it("says a refusal once — on the field, or in the summary, never both", async () => {
     const user = userEvent.setup();
     const { fetchMock } = backendFor(SETTINGS_EDITOR, {
