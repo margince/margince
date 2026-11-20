@@ -420,6 +420,8 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/acquisition-sources":       {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/acquisition-sources/{id}": {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/loss-reasons":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	//nolint:goconst // a route key, as every key of this map is; the generated tables repeat it as their own data
+	"POST /v1/activity-review-templates": {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/partner-stages":            {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/partner-stages/{id}":      {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/loss-reasons/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},

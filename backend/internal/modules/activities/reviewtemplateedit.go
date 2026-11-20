@@ -169,7 +169,7 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 		if raw != nil {
 			now[reviewQuestionsField] = result.Questions
 		}
-		return recordReviewTemplateWrite(ctx, tx, "update", id, was, now)
+		return recordReviewTemplateUpdate(ctx, tx, id, was, now)
 	})
 	return result, err
 }

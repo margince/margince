@@ -89,7 +89,7 @@ func (s *Store) CreateReviewTemplate(ctx context.Context, req crmcontracts.Creat
 		if err != nil {
 			return fmt.Errorf("insert template: %w", err)
 		}
-		return recordReviewTemplateWrite(ctx, tx, "create", ids.UUID(result.Id), nil, map[string]any{
+		return recordReviewTemplateCreate(ctx, tx, ids.UUID(result.Id), map[string]any{
 			reviewKeyField: key, "label": label, reviewOutcomeField: outcome, reviewQuestionsField: result.Questions,
 		})
 	})
@@ -111,7 +111,7 @@ func retireAskedTemplate(ctx context.Context, tx pgx.Tx, outcome string) error {
 		return fmt.Errorf("retire the asked template: %w", err)
 	}
 	for _, id := range retired {
-		if err := recordReviewTemplateWrite(ctx, tx, "update", id,
+		if err := recordReviewTemplateUpdate(ctx, tx, id,
 			map[string]any{reviewActiveField: true}, map[string]any{reviewActiveField: false}); err != nil {
 			return err
 		}
@@ -119,13 +119,26 @@ func retireAskedTemplate(ctx context.Context, tx pgx.Tx, outcome string) error {
 	return nil
 }
 
-// recordReviewTemplateWrite is the audit and event half of every template
-// write. reporting.changed tells a reader of the template list to read it again.
-func recordReviewTemplateWrite(ctx context.Context, tx pgx.Tx, action string, id ids.UUID, before, after map[string]any) error {
-	auditID, err := storekit.Audit(ctx, tx, action, reviewTemplateObject, id, before, after)
+// recordReviewTemplateCreate and recordReviewTemplateUpdate are the audit and
+// event half of every template write. reporting.changed tells a reader of the
+// template list to read it again.
+func recordReviewTemplateCreate(ctx context.Context, tx pgx.Tx, id ids.UUID, after map[string]any) error {
+	auditID, err := storekit.Audit(ctx, tx, "create", reviewTemplateObject, id, nil, after)
 	if err != nil {
 		return err
 	}
+	return announceReviewTemplateChange(ctx, tx, auditID, "create", id)
+}
+
+func recordReviewTemplateUpdate(ctx context.Context, tx pgx.Tx, id ids.UUID, before, after map[string]any) error {
+	auditID, err := storekit.Audit(ctx, tx, "update", reviewTemplateObject, id, before, after)
+	if err != nil {
+		return err
+	}
+	return announceReviewTemplateChange(ctx, tx, auditID, "update", id)
+}
+
+func announceReviewTemplateChange(ctx context.Context, tx pgx.Tx, auditID ids.UUID, action string, id ids.UUID) error {
 	return storekit.Emit(ctx, tx, auditID, "reporting.changed", reviewTemplateObject, id,
 		crmcontracts.InternalEventReportingChanged{Object: reviewTemplateObject, Action: action})
 }
