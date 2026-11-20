@@ -37,6 +37,7 @@ import {
 import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
+import { useRecordCarriesTags } from "../../lib/tags.queries";
 import { useViewerZone } from "../../lib/viewerzone";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
@@ -72,6 +73,7 @@ export function useContactAboutSections(
     : proposedEmployer(view, view.employments?.data ?? [], employmentZone);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
   const edits = useSectionEdits(view, employer, proposed);
+  const tagsRows = useTagsRows(contact);
   const field = (
     key: string,
     term: string,
@@ -122,6 +124,9 @@ export function useContactAboutSections(
             />
           ),
         }),
+        field("first_name", t("create.firstName"), contact.first_name),
+        field("last_name", t("create.lastName"), contact.last_name),
+        ...tagsRows,
       ],
     },
     {
@@ -171,6 +176,22 @@ export function useContactAboutSections(
   return { sections, element: edits.element };
 }
 
+// An archived contact is closed to the reads its tags hang off.
+function useTagsRows(contact: Contact): DetailRow[] {
+  const t = useT();
+  const tagged = useRecordCarriesTags("contact", contact.id, contact.tags);
+  if (contact.archived_at) return [];
+  return [
+    {
+      key: "tags",
+      term: t("tags.panelTitle"),
+      block: true,
+      empty: !tagged,
+      value: <ContactTagsSection contact={contact} />,
+    },
+  ];
+}
+
 // Each group's Edit over the contact's one edit. A proposed employer is
 // settled by its own row's verbs, so the dialog offers no employer then.
 function useSectionEdits(
@@ -184,7 +205,15 @@ function useSectionEdits(
   const changeEmployer = proposed ? undefined : employerChange.open;
   const about = useSectionEdit(edit, {
     label: t("record.details.about"),
-    keys: ["employer", "emails", "phones", "social.linkedin", "title"],
+    keys: [
+      "employer",
+      "emails",
+      "phones",
+      "social.linkedin",
+      "title",
+      "first_name",
+      "last_name",
+    ],
     flows: changeEmployer && {
       employer: {
         label: t("contact.rail.employer"),
@@ -377,7 +406,6 @@ export function ContactDetails({
           ),
         }}
         canEdit={edit.canEdit}
-        // Tags as one more row of the card: filing beside the facts it files.
         extraRows={
           <>
             {/* What a provider sold that no field holds: shown as bought facts
@@ -386,11 +414,6 @@ export function ContactDetails({
               profiles={profiles}
               runs={contact.bought_fields}
             />
-            {contact.archived_at ? null : (
-              <FieldRow label={t("tags.panelTitle")} align="top">
-                <ContactTagsSection contact={contact} />
-              </FieldRow>
-            )}
             <FieldRow label={t("list.created")}>
               {formatDateAbbrev(contact.created_at, locale, zone)}
             </FieldRow>

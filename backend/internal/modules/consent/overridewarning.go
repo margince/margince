@@ -70,16 +70,20 @@ const overrideWarningTextV1 = "The engine refused this message, and that refusal
 	"message are written to a record that cannot be edited afterwards. This covers this message " +
 	"alone — the next one to the same recipient is judged from scratch."
 
-// InlineWarningVersion is the short warning the composer shows beside its Send
-// anyway button. It is its own version because a client that shows these words
-// must not record that the modal's longer ones were shown.
+// InlineWarningVersion is the composer's words beside its Send anyway button.
+// It is its own version because a client that shows these words must not
+// record that the modal's longer ones were shown.
 //
 // MOVE IT WHENEVER inlineWarningText CHANGES, in the same commit.
-const InlineWarningVersion = "inline-v1"
+const InlineWarningVersion = "inline-v2"
 
-// inlineWarningText says what overrideWarningText says, in the composer's
-// shorter form.
-const inlineWarningText = "The send check still blocks this message. Send anyway sends only this message " +
+// inlineWarningText is the question the composer puts over the reason field.
+// The finding and its law stand above it; nothing else is shown.
+const inlineWarningText = "Why send this one message anyway?"
+
+// inlineWarningTextV1 is the text inline-v1 named. Kept word for word, because
+// an instruction recorded under it says somebody read these words.
+const inlineWarningTextV1 = "The send check still blocks this message. Send anyway sends only this message " +
 	"and grants no permission for later ones. Your name, your reason and the message are kept in a " +
 	"record that cannot be edited."
 
@@ -92,6 +96,7 @@ const inlineWarningText = "The send check still blocks this message. Send anyway
 var overrideWarnings = map[string]string{
 	"override-v1":          overrideWarningTextV1,
 	OverrideWarningVersion: overrideWarningText,
+	"inline-v1":            inlineWarningTextV1,
 	InlineWarningVersion:   inlineWarningText,
 }
 

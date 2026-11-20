@@ -10,7 +10,7 @@ import {
   ListTableHarness,
   render,
 } from "../testing/listquery.testkit";
-import { mineEmptyNote } from "./recordlist";
+import { mineEmptyLine } from "./recordlist";
 import { RefusedFiltersNote } from "./refusedfiltersnote";
 
 // Each press below takes its own button away. Focus goes to the list's title,
@@ -93,7 +93,7 @@ describe("a press that takes its own button away", () => {
         title="Contacts"
         fetchPage={fetchPage}
         emptyNote={(state) =>
-          mineEmptyNote({
+          mineEmptyLine({
             t: (key, params) => translate("en", key, params),
             state,
             viewerId: "u-1",

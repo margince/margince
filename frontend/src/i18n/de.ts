@@ -5,6 +5,7 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
   "systemJob.promise_kept":
     "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
@@ -2546,6 +2547,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.undo.redo": "Erneut anwenden",
   "history.undo.busy": "Änderung wird rückgängig gemacht…",
   "history.undo.confirmTitle": "Diese Änderung rückgängig machen?",
+  "history.undo.redoConfirmTitle": "Diese Änderung erneut anwenden?",
+  "history.undo.redoConfirmBody_one":
+    "{count} Feld erhält wieder seinen Wert vor dem Rückgängigmachen:",
+  "history.undo.redoConfirmBody_other":
+    "{count} Felder erhalten wieder ihre Werte vor dem Rückgängigmachen:",
   "history.undo.confirmEdgeBody":
     "Damit ändert sich die Verknüpfung mit {other}. Beide Datensätze bleiben bestehen, nur die Verknüpfung zwischen ihnen ändert sich.",
   "history.undo.confirmCreateBody":
@@ -2584,6 +2590,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Änderung lässt sich nicht rückgängig machen, da dabei ein Pflichtfeld leer würde.",
   "history.undo.notWritableByCaller":
     "Du hast keine Berechtigung, diese Felder zu ändern.",
+  "history.undo.restoreArchiverRequired":
+    "Nur wer diesen Datensatz archiviert hat oder eine Führungskraft kann ihn wiederherstellen.",
   "history.undo.edgeRelinkUnsupported":
     "Eine entfernte Verknüpfung lässt sich nicht rückgängig machen. Füge die Verknüpfung auf diesem Datensatz erneut hinzu.",
   "history.undo.laterCompanyChange":
@@ -3219,6 +3227,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
+  "record.accessUnknown":
+    "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
     "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.attachRefused":
@@ -3246,6 +3256,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.ceiling.noWider": "nicht weiter",
   "share.ceiling.post": ".",
   "share.unknownRecord": "Dieser Datensatz kann nicht geteilt werden.",
+  "share.missingRecord":
+    "Diesen Datensatz gibt es nicht, oder er ist nicht mit dir geteilt.",
   "share.grantAccess": "Zugriff gewähren",
   "share.subject": "Person oder Team",
   "share.holdsRead": "Hat Lesezugriff",
@@ -4852,6 +4864,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
   "approval.kind.contact_share": "Kontakt teilen",
+  "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
@@ -7109,6 +7122,96 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.feed.caughtUpDetail":
     "Als Margince um {time} nachsah, wartete niemand auf dich.",
   "teamweekly.pickTeam": "Team auswählen",
+  "teamweekly.agenda.copied": "Kopiert",
+  "teamweekly.agenda.copy": "Agenda kopieren",
+  "teamweekly.agenda.copyFailed":
+    "Die Agenda konnte nicht kopiert werden. Markiere die Liste und kopiere sie manuell.",
+  "teamweekly.agenda.empty":
+    "Für dieses Team konnte keine Woche eines Mitglieds geladen werden, daher gibt es keine Agenda.",
+  "teamweekly.agenda.summary_one":
+    "{count} Punkt für Montag, beginnend mit {first}.",
+  "teamweekly.agenda.summary_other":
+    "{count} Punkte für Montag, beginnend mit {first}.",
+  "teamweekly.agenda.title": "Agenda für Montag",
+  "teamweekly.card.commitments": "Eingehaltene Zusagen",
+  "teamweekly.card.commitmentsBasis": "Im Plan fällig",
+  "teamweekly.card.firstResponse": "Beantwortete Leads",
+  "teamweekly.card.firstResponseBasis": "Über der Zielzeit: {breached}",
+  "teamweekly.card.meetings": "Termine mit Follow-up",
+  "teamweekly.card.meetingsBasis": "Aufgabe vor Ende der Woche verknüpft",
+  "teamweekly.card.noCommitments": "Keine fällig",
+  "teamweekly.card.noLeads": "Keine eingegangen",
+  "teamweekly.card.noMeetings": "Keine erfasst",
+  "teamweekly.card.reps": "Gezählte Mitglieder",
+  "teamweekly.card.repsBasis": "Ganze Woche erfasst",
+  "teamweekly.card.won": "Gewonnen",
+  "teamweekly.card.wonBasis": "Verloren: {lost} · Wert nicht verfügbar",
+  "teamweekly.card.wonBasisValue": "{value} · Verloren: {lost}",
+  "teamweekly.commitmentRate": "Erledigte fällige Zusagen: {done} von {total}.",
+  "teamweekly.coverage.atRisk": "Deckung gefährdet gegenüber {basis}",
+  "teamweekly.coverage.basis.historical_median": "dem historischen Median",
+  "teamweekly.coverage.basis.manager_call":
+    "der Einschätzung der Führungskraft",
+  "teamweekly.coverage.holds": "Deckung ausreichend gegenüber {basis}",
+  "teamweekly.coverage.month": "Monat",
+  "teamweekly.coverage.notAuthorized":
+    "Die Einschätzung für diesen Zeitraum konnte beim Wochenabschluss nicht gelesen werden.",
+  "teamweekly.coverage.percent": "{percent} des benötigten Dealwerts",
+  "teamweekly.coverage.quarter": "Quartal",
+  "teamweekly.coverage.replan": "Neuplanung empfohlen",
+  "teamweekly.coverage.title": "Deckung des Dealwerts",
+  "teamweekly.focus.close_dates_provisional": "Abschlusstermine vorläufig",
+  "teamweekly.focus.commitments_missed": "Verpasste Planzusagen",
+  "teamweekly.focus.deals_at_risk": "Rettung gefährdeter Deals",
+  "teamweekly.focus.forecast_downgrades": "Prognose herabgestuft",
+  "teamweekly.focus.help_requested": "Hilfe angefragt",
+  "teamweekly.focus.leads_breached": "Zielzeiten für Antworten verfehlt",
+  "teamweekly.focus.meetings_without_next_step": "Beleg für Follow-up fehlt",
+  "teamweekly.focus.no_next_step_coverage": "Nächste Schritte fehlen",
+  "teamweekly.focus.quiet_week": "Keine Priorität erkannt",
+  "teamweekly.focus.stage_regressions": "Deals zurückgefallen",
+  "teamweekly.focus.strong_week": "Starke Woche",
+  "teamweekly.forbidden":
+    "Du kannst die Woche dieses Teams nicht mehr öffnen. Teamwochen sehen die Teamleitung und Rollen, die alle Teams überblicken.",
+  "teamweekly.funnel.line": "{stage} → {next}: {rep} gegenüber {team} im Team",
+  "teamweekly.funnel.lineLast": "{stage}: {rep} gegenüber {team} im Team",
+  "teamweekly.headline.notRecorded":
+    "Einige Zahlen wurden für diese Woche nicht erfasst und fehlen hier.",
+  "teamweekly.headline.partial":
+    "Unvollständige Abdeckung. Diese Zahlen betreffen die unten gezählten Mitglieder.",
+  "teamweekly.headline.plain":
+    "Es wurden keine Termine oder fälligen Zusagen erfasst.",
+  "teamweekly.headline.unmeasured":
+    "Für diese Woche liegen keine Snapshots der Mitglieder vor. Die Leistung wird nicht gemessen.",
+  "teamweekly.loading": "Teamwoche wird geladen…",
+  "teamweekly.meetingRate":
+    "Termine mit erfasstem nächsten Schritt: {done} von {total}.",
+  "teamweekly.mine": "Meine Woche",
+  "teamweekly.movement.leads": "Verteilte Leads",
+  "teamweekly.movement.lost": "Verloren",
+  "teamweekly.movement.meetings": "Abgehaltene Termine",
+  "teamweekly.movement.moved": "Vorangebracht",
+  "teamweekly.movement.title": "Aktivität der Woche",
+  "teamweekly.movement.won": "Gewonnen",
+  "teamweekly.noPriority": "Die erfassten Kennzahlen zeigen keine Priorität",
+  "teamweekly.noSnapshot":
+    "Für dieses Team und diese Woche ist kein gespeicherter Rückblick verfügbar. Wähle eine andere Woche oder prüfe die aktuelle Arbeit des Teams.",
+  "teamweekly.ofTotal": "{part} von {whole}",
+  "teamweekly.outcomes":
+    "Gewonnen: {won} · Verloren: {lost} · Deals bewegt: {moved} · Leads zugewiesen: {leads}",
+  "teamweekly.quality.accepted": "Vorschläge angenommen",
+  "teamweekly.quality.basis": "Mit der Woche eingefroren",
+  "teamweekly.quality.notMeasured": "Nicht gemessen",
+  "teamweekly.quality.rejected": "Vorschläge abgelehnt",
+  "teamweekly.quality.reversals": "Automatische Änderungen rückgängig gemacht",
+  "teamweekly.quality.title": "Datenqualität",
+  "teamweekly.repsUnread_one":
+    "Die Woche von {count} Mitglied konnte nicht gelesen werden. Diese Zahlen umfassen die {counted} gezählten Mitglieder.",
+  "teamweekly.repsUnread_other":
+    "Die Wochen von {count} Mitgliedern konnten nicht gelesen werden. Diese Zahlen umfassen die {counted} gezählten Mitglieder.",
+  "teamweekly.week": "Woche ab",
+  "teamweekly.weekOf": "{team} · Woche vom {day}",
+  "teamweekly.whose": "Wessen Woche",
 
   "plan.loading": "Plan wird geladen…",
   "plan.empty": "Noch nichts im Plan.",
@@ -7513,12 +7616,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.companyPicked":
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
   "create.companyNew":
-    "Erstellt ein neues Unternehmen, sofern keines aus der Liste ausgewählt wird.",
+    "Verknüpft das Unternehmen mit diesem Namen oder legt es an, wenn es keines gibt.",
   "create.companyPrefilled":
     "Über die Domain der geschäftlichen E-Mail-Adresse einem bestehenden Unternehmen zugeordnet.",
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
   "create.amountNegative": "Gib einen Betrag von null oder mehr ein.",
+  "create.emailNamesNoOne":
+    "Diese Adresse gehört zu einem Versandsystem, an dem niemand antwortet. Gib die eigene Adresse des Kontakts ein.",
+  "create.addressErased":
+    "Dieser Wert wurde auf Wunsch der betroffenen Person gelöscht und kann nicht wieder gespeichert werden.",
+  "create.linkedinMalformed":
+    "Das ist kein Link. Füge die Adresse der LinkedIn-Seite ein.",
+  "create.linkedinNotLinkedin":
+    "Gib einen Link zu einer Seite auf linkedin.com ein.",
+  "create.linkedinNotProfile":
+    "Gib einen Link zu einem persönlichen Profil ein, etwa linkedin.com/in/name.",
+  "create.dateRangeReversed":
+    "Das Enddatum liegt vor dem Startdatum. Wähle ein späteres Enddatum.",
+  "create.countryCodeInvalid":
+    "Gib das Land als Code aus zwei Buchstaben ein, etwa DE oder US.",
   "create.referenceNotFound":
     "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",
@@ -7527,6 +7644,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.expectedClose": "Erwarteter Abschluss",
 
   "keyCode.label": "Schlüssel: {key}",
+  "field.rowRepeated": "{value} steht in zwei Zeilen. Entferne eine davon.",
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",
   "field.editEmails": "E-Mail-Adressen bearbeiten",
@@ -8057,16 +8175,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
-  "compose.fact.open": "Gespräch festhalten",
-  "compose.fact.title": "Gespräch mit {address} festhalten",
-  "compose.fact.scope":
-    "Hält den Austausch mit {address} für das sendende Unternehmen fest. Sendet keine E-Mail, erfasst keine Werbeeinwilligung und erstellt keine Ausnahme.",
-  "compose.fact.kind": "Was ist passiert?",
-  "compose.fact.request": "Der Kontakt hat um eine Nachricht gebeten",
-  "compose.fact.quoteRequest": "Der Kontakt hat um dieses Angebot gebeten",
   "compose.fact.met": "Persönlich getroffen",
-  "compose.fact.note": "Was wurde vereinbart?",
-  "compose.fact.save": "Gespräch festhalten",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
   "compose.draftReply": "Antwort entwerfen",
@@ -8298,6 +8407,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Vertrag der Gegenseite",
   "compose.why.account": "Kundenbeziehung der Gegenseite",
   "compose.why.marketing": "Marketing",
+  "compose.why.met": "Persönlich getroffen",
+  "compose.why.asked": "Auf ihre Anfrage",
+  "compose.why.openDeal": "Offener Deal",
+  "compose.why.customer": "Bestandskunde",
+  "compose.whyHint.met":
+    "Persönliche Mail, ohne Abmeldelink. Das Treffen wird beim Kontakt gespeichert.",
+  "compose.whyHint.asked":
+    "Persönliche Mail, ohne Abmeldelink. Die Anfrage muss gespeichert sein.",
+  "compose.whyHint.openDeal": "Persönliche Mail zum Deal, ohne Abmeldelink.",
+  "compose.whyHint.customer": "Service-Mail, ohne Abmeldelink.",
+  "compose.whyHint.marketing":
+    "Fügt einen Abmeldelink und die Firmenangaben hinzu. Braucht ihre Einwilligung oder einen früheren Kauf.",
+  "compose.met.failed":
+    "Das Treffen wurde nicht gespeichert, daher wurde nichts gesendet. Versuch es erneut.",
   "sendPermission.stopWithReason": "Senden braucht deine Begründung",
   "sendPermission.refused": "Nachricht kann nicht gesendet werden",
   "sendPermission.sayWhy": "Kontaktgrund erfassen",
@@ -8337,19 +8460,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.recheck": "Erneut prüfen",
   "compose.sendWithReason": "Mit Begründung senden…",
   "compose.scheduleWithReason": "Mit Begründung planen…",
-  "compose.holdForCheck": "Senden wartet auf die Versandprüfung.",
   "compose.legacyFooter":
     "Diese Version von Margince kann E-Mails mit fehlenden Angaben zum Unternehmen noch nicht mit einer Begründung senden. Dein Entwurf bleibt erhalten. Frag einen Admin nach einem Update von Margince. Versuche es danach erneut.",
-  "compose.holdRefused":
-    "Senden ist gesperrt. Behebe, was die Prüfung oben nennt, oder entferne diese Empfangsadresse.",
-  "compose.holdWithReason":
-    "Die Prüfung hat diese Nachricht abgelehnt. Senden fragt nach deiner Begründung, und sie gilt nur für diese eine Nachricht.",
   "sendPermission.appliesToSome_one":
     "Das betrifft {count} von {total} Empfangsadressen.",
   "sendPermission.appliesToSome_other":
     "Das betrifft {count} von {total} Empfangsadressen.",
-  "sendPermission.ready": "Empfangsadressen geprüft",
-  "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
   "lawfulBasis.title": "Keine gültige Grundlage erfasst",
@@ -8523,17 +8639,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Nachricht kann so nicht an {address} gesendet werden.",
   "compose.sendAnyway.finding.none":
     "Diese Nachricht kann so nicht gesendet werden.",
-  "compose.sendAnyway.cited":
-    "Achtung: Eine E-Mail an {address} verstößt vielleicht gegen",
   "compose.citation.law": "Vorschrift:",
-  "compose.sendAnyway.warning":
-    "Die Versandprüfung blockiert diese Nachricht weiterhin. Trotzdem senden sendet nur diese Nachricht und erlaubt keine späteren. Dein Name, deine Begründung und die Nachricht werden in einem Eintrag gespeichert, der nicht geändert werden kann.",
   "compose.sendAnyway.editOnly":
     "Bearbeite die Nachricht oder entferne diese Empfangsadresse, um sie zu senden.",
   "compose.sendAnyway.more_one": "{count} weiterer Befund",
   "compose.sendAnyway.more_other": "{count} weitere Befunde",
-  "compose.sendAnyway.details": "Details",
-  "compose.sendAnyway.reasonLabel": "Grund für den Versand",
   "compose.sendAnyway.confirm": "Trotzdem senden",
   "compose.sendAnyway.marked": "im Hinweis genannt",
   "compose.sendAnyway.failed":
@@ -8544,7 +8654,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendAnyway.retry": "Erneut versuchen",
   "compose.sendAnyway.unreviewed":
     "Diese Nachricht wurde nicht gesendet. Dein Entwurf bleibt erhalten. Wende dich an einen Admin, um Margince zu aktualisieren, und sende dann erneut.",
-  "compose.reviewReference": "Prüfung",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",
   "compose.draftUnsupportedHere":
@@ -8556,8 +8665,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapableGoto": "Postfach neu verbinden",
   "compose.sharedUnsubscribeToken":
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
-  "compose.newContact":
-    "{address} steht noch in keinem Datensatz. Beim Senden wird die Adresse als dein Kontakt angelegt.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget":
     "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",
@@ -8574,9 +8681,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.missingSubject": "Gib einen Betreff ein.",
   "compose.missingBody": "Gib vor dem Senden eine Nachricht ein.",
   "compose.missingWhy": "Wähle den Kontaktgrund aus.",
-  "compose.reasonSwitchText":
-    "Für diese Nachricht steht schon ein anderer Grund im Datensatz.",
-  "compose.reasonSwitch": "Stattdessen „{reason}“ verwenden",
   "compose.missingDeal": "Wähle den Deal, um den es in diesem Follow-up geht.",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",
@@ -8587,6 +8691,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.log.action": "Ergebnis erfassen",
   "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
+  "tasks.log.noRecord": "Ohne Datensatz erfassen",
+  "tasks.log.pickRecord": "Datensatz wählen",
+  "tasks.log.back": "Zurück",
   "tasks.log.leftOpen":
     "Die Aktivität wurde erfasst. Die Aufgabe bleibt offen, bis alle Dateien angehängt sind. Versuche es erneut.",
   "tasks.log.completeFailed":
@@ -14521,10 +14628,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.home.seatLabel": "Dein Platz",
   "settings.home.seat.full": "Voller Platz: Änderungen erlaubt",
   "settings.home.seat.read": "Leseplatz: nur ansehen",
-  "settings.home.reachLabel": "Sichtbare Datensätze",
-  "settings.home.reach.own": "Deine eigenen Datensätze",
-  "settings.home.reach.team": "Datensätze deines Teams",
-  "settings.home.reach.all": "Alle Datensätze des Unternehmens",
+  "settings.home.reachLabel": "Datensätze, die du ändern darfst",
+  "settings.home.reach.none": "Keine",
+  "settings.home.reach.own": "Deine eigenen",
+  "settings.home.reach.team": "Deine und die deines Teams",
+  "settings.home.reach.all": "Alle im Unternehmen",
+  "settings.home.readLabel": "Datensätze, die du lesen darfst",
+  "settings.home.read.some":
+    "Alle {kinds}, außer privaten anderer, die nicht mit dir geteilt sind",
+  "settings.home.read.none": "Keine",
   "settings.home.access": "Dein Zugriff",
   "settings.home.accessLoading": "Dein Zugriff wird geladen…",
   "settings.boundary.deniedTitle": "Kein Zugriff auf diese Einstellungsseite",
@@ -15242,7 +15354,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "license.check.failed":
     "Das Lizenz-Token ließ sich nicht neu einlesen. Das letzte Ergebnis gilt weiter, und das Server-Log nennt den Grund.",
   "license.counting":
-    "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
+    "Volle Plätze, die nicht deaktiviert oder gesperrt sind. Agenten und Leseplätze zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",
   "settings.rates.fxIntro":
     "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später. Ein früheres Datum geht nur vor dem ersten Kurs der Währung. Ein Kurs, der schon gilt, ändert sich nie.",
@@ -15639,7 +15751,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.renameSubmit": "Name speichern",
   "roles.scopeTitle": "Wessen Datensätze Mitglieder ändern",
   "roles.scopeSub":
-    "Kontakte, Unternehmen, Leads und Deals bleiben für jede Rolle lesbar, die sie lesen darf. Diese Einstellung legt fest, was Mitglieder ändern dürfen und welche Projekte sie sehen.",
+    "Jede Rolle, die Kontakte, Unternehmen, Leads, Deals und Projekte lesen darf, liest alle davon. Diese Einstellung legt fest, welche davon Mitglieder ändern dürfen.",
   "roles.scope.own": "Eigene",
   "roles.scope.ownSub": "Datensätze, die dem Mitglied gehören.",
   "roles.scope.team": "Die der Teammitglieder",
@@ -15845,8 +15957,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.notArchived": "Team nicht archiviert",
   "users.teamNotChanged": "Mitgliedschaft nicht geändert",
   "users.access.title": "Zugriff des Mitglieds",
-  "users.access.identity":
-    "Liest alle Kontakte, Unternehmen, Leads und Deals dieses Unternehmens.",
+  "users.access.reads": "Liest alle {kinds} dieses Unternehmens.",
+  "users.access.readsNone": "Liest keine Datensätze.",
+  "users.access.writesNone": "Ändert keine Datensätze.",
   "users.access.writesAll": "Bearbeitet alle Datensätze.",
   "users.access.writesTeam":
     "Bearbeitet eigene Datensätze und die der Teams {teams}.",
@@ -18655,6 +18768,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Entscheidung der Käuferseite zu einem Dokument",
   "webhooks.event.deal_room.decision_recorded.when":
     "Wird derzeit nicht gesendet. Bleibt für Empfangssysteme erhalten, die noch ältere Ereignisse lesen.",
+  "webhooks.eventGroup.legal_reviews": "Rechtsprüfungen",
+  "webhooks.event.legal_review.requested.label": "Rechtsprüfung angefragt",
+  "webhooks.event.legal_review.requested.when":
+    "Ein Deal wird zur Prüfung an die Rechtsabteilung geschickt.",
+  "webhooks.event.legal_review.decided.label": "Rechtsprüfung beantwortet",
+  "webhooks.event.legal_review.decided.when":
+    "Die Rechtsabteilung gibt einen Deal frei oder verlangt Änderungen.",
+  "webhooks.event.legal_review.withdrawn.label": "Rechtsprüfung zurückgezogen",
+  "webhooks.event.legal_review.withdrawn.when":
+    "Eine Anfrage an die Rechtsabteilung wird zurückgenommen.",
   "webhooks.eventGroup.introductions": "Vorstellungen",
   "webhooks.event.intro_request.created.label": "Vorstellung angefragt",
   "webhooks.event.intro_request.created.when":
@@ -19304,7 +19427,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.employer": "Arbeitgeber",
   "contact.rail.allCompaniesConnected":
     "Alle Treffer sind bereits mit diesem Kontakt verknüpft.",
-  "contact.rail.isCurrentEmployer": "Das ist der aktuelle Arbeitgeber",
+  "contact.rail.isPrimaryEmployer": "Das ist der Hauptarbeitgeber",
   "contact.rail.markEnded": "Als beendet markieren",
   "contact.rail.removeEmploymentTitle":
     "Verknüpfung zum Unternehmen entfernen?",
@@ -19938,6 +20061,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",
   "filters.date.daysAgoCount": "{field}: Tage vor heute",
+  "filters.date.daysAgoInvalid":
+    "Gib eine ganze Zahl von 0 bis {max} Tagen ein.",
   "filters.saveListConfirm": "Liste speichern",
   "filters.propose.label": "Beschreibe die {records}, die du suchst",
   "filters.propose.hint":
@@ -19987,6 +20112,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.sharing.private": "Privat",
   "lists.sharing.team": "Ein Team",
   "lists.sharing.workspace": "Alle",
+  "lists.sharing.noTeamHint": "Du bist in keinem Team.",
   "lists.sharingLabel": "Wer sie finden kann",
   "lists.sharingHint":
     "Wer eine Liste sieht, sieht dadurch keinen Datensatz, den er nicht schon sehen durfte.",
@@ -21034,6 +21160,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.band.build_pipeline": "Akquise",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
+  "worklist.band.more": "Weiteres in deiner Liste",
   "worklist.disposition.verb.snooze": "Zurückstellen",
   "worklist.disposition.snoozeForDays_one": "{value} Tag zurückstellen",
   "worklist.disposition.snoozeForDays_other": "{value} Tage zurückstellen",
@@ -22904,6 +23031,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.status.approved": "Freigegeben",
   "legalReview.status.changes_needed": "Änderungen nötig",
   "legalReview.status.withdrawn": "Zurückgezogen",
+  "legalReview.openQueue": "Rechtsprüfungen öffnen",
+  "legalReview.dismissRequest": "Ausblenden",
   "legalReview.queueTitle": "Rechtsprüfungen",
   "legalReview.queueOpen": "Offen",
   "legalReview.queueDecided": "Beantwortet",
@@ -23965,11 +24094,4 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "particulars.translationIntro":
     "E-Mails und Seiten auf {language} zeigen diesen Text, wo du ihn ausfüllst. Werbung, die auf {language} sein muss, geht erst raus, wenn Ablehnung und Kontaktdaten des werbenden Unternehmens hier ausgefüllt sind.",
   "particulars.objectionExample": "Beispiel: {example}",
-  "compose.contentFinding.title": "Werberegeln für diese E-Mail",
-  "compose.contentFinding.claim":
-    "„{words}“ darfst du nur mit Nachweis behaupten. Ergänze Name, Nummer und Datum des Nachweises in der E-Mail.",
-  "compose.contentFinding.language":
-    "Schreibe diese E-Mail zuerst auf {language}. Text in einer anderen Sprache steht darunter und ist nicht größer als der Text auf {language}.",
-  "compose.contentFinding.foreignAdvertiser":
-    "Dein Unternehmen ist nicht in {country} niedergelassen. Ein ausländisches Unternehmen, das in {country} nicht tätig ist, darf dort nur über ein Werbeunternehmen aus {country} werben. Dafür ist dein Unternehmen verantwortlich.",
 };

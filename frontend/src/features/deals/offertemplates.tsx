@@ -212,18 +212,17 @@ export function OfferTemplatesAdmin() {
       className="listsection"
       title={t("template.title")}
       titleAction={
-        canCreate ? (
-          <CreateAction
-            label={t("template.new")}
-            invalidate="offer-templates"
-            // `stay`: a fresh template has no page of its own to open. The list
-            // it joins is already on screen.
-            screen="settings"
-            stay
-            create={createTemplate}
-            fields={fields}
-          />
-        ) : undefined
+        <CreateAction
+          label={t("template.new")}
+          requires={{ object: "offer_template", action: "create" }}
+          invalidate="offer-templates"
+          // `stay`: a fresh template has no page of its own to open. The list
+          // it joins is already on screen.
+          screen="settings"
+          stay
+          create={createTemplate}
+          fields={fields}
+        />
       }
     >
       <PanelBody className="listsection-intro">

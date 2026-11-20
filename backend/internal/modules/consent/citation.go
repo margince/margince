@@ -7,11 +7,14 @@ package consent
 //
 // A citation is shown to a rep beside the engine's own sentence and never
 // changes a verdict. One code can rest on different law in two markets, so the
-// lookup asks the recipient's own pack. That pack may narrow a citation to a
-// sender established in its country, or outside it.
+// lookup asks the recipient's own pack first. That pack may narrow a citation
+// to a sender established in its country, or outside it. For a finding about
+// the lawful basis, the sending entity's own pack is asked too: its
+// data-protection law binds the sender wherever the recipient is.
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -32,11 +35,9 @@ const (
 	// citationNotDeclared is no pack for the recipient, or none citing this
 	// code for this sender.
 	citationNotDeclared citationOutcome = "not_declared"
-	// citationNotYetReviewed is a pack whose review is dated after the lookup.
-	// A review that has not happened yet approves nothing.
-	citationNotYetReviewed citationOutcome = "not_yet_reviewed"
-	// citationReviewOverdue is a pack whose review fell due. The pack still
-	// applies; only its citations are withheld.
+	// citationReviewOverdue is a reviewed pack whose next review fell due. The
+	// pack still applies; only its citations are withheld. A draft has no
+	// review to fall due, and cites.
 	citationReviewOverdue citationOutcome = "review_overdue"
 	// citationLawExpired is an instrument whose ExpiresFrom has passed.
 	citationLawExpired citationOutcome = "law_expired"
@@ -54,9 +55,13 @@ type citationContext struct {
 
 // citationFor returns the citation of the recipient's pack for code, with its
 // provision and source filled from the instrument, or the reason there is none.
-// An unreviewed pack has none to return: Register refuses one that cites.
 func citationFor(code string, where citationContext) (messagingrules.Citation, citationOutcome) {
-	rules, _, found := applicableRules(where.Recipient.Code)
+	return packCitation(where.Recipient.Code, code, where)
+}
+
+// packCitation is the citation one pack declares for code, for this sender.
+func packCitation(pack jurisdiction.Code, code string, where citationContext) (messagingrules.Citation, citationOutcome) {
+	rules, _, found := applicableRules(pack)
 	if !found {
 		return messagingrules.Citation{}, citationNotDeclared
 	}
@@ -64,10 +69,7 @@ func citationFor(code string, where citationContext) (messagingrules.Citation, c
 		if declared.Code != code || !senderTerritoryHolds(declared.Territory, rules.Jurisdiction, where.Sender) {
 			continue
 		}
-		if where.At.Before(rules.Provenance.ReviewedAt) {
-			return messagingrules.Citation{}, citationNotYetReviewed
-		}
-		if due := rules.Provenance.ReviewDue; !due.IsZero() && deadline.Passed(&due, where.At) {
+		if reviewOverdue(rules.Provenance, where.At) {
 			return messagingrules.Citation{}, citationReviewOverdue
 		}
 		// Register validated the pack, so this fails only for a citation that
@@ -92,51 +94,88 @@ func citationFor(code string, where citationContext) (messagingrules.Citation, c
 	return messagingrules.Citation{}, citationNotDeclared
 }
 
-// citationsFor resolves every code the recipient's pack cites, for the entity
-// the message goes out for, and keeps the ones shown. A pack that cites
-// nothing returns before the sender is read.
-func (g *Gate) citationsFor(ctx context.Context, tx pgx.Tx, country RecipientCountry, entity ids.UUID) (map[string]commsauthz.Provision, error) {
-	codes := citedCodes(country)
-	if len(codes) == 0 {
-		return nil, nil //nolint:nilnil // no citation is the answer for a pack that cites nothing
+// senderCitesFinding reports whether the sending entity's own pack is asked
+// for code. That is a finding its data-protection law settles, such as the
+// lawful basis. Its marketing rules never follow a message abroad.
+func senderCitesFinding(code string) bool {
+	switch code {
+	case commsauthz.ReasonNoEvidence, commsauthz.ReasonDealNotRequested, commsauthz.ReasonLawfulBasisUnconfirmed,
+		commsauthz.ReasonRestricted, commsauthz.ReasonConsentWithdrawn:
+		return true
 	}
-	sender, err := g.store.senderCountryOf(ctx, tx, entity)
-	if err != nil {
-		return nil, err
-	}
-	return provisionsShown(codes, citationContext{Recipient: country, Sender: sender, At: g.store.now()}), nil
+	return dataProtectionDisclosure(messagingrules.DisclosureKind(code))
 }
 
-// citedCodes are the codes the recipient's own pack declares a citation for.
-func citedCodes(country RecipientCountry) []string {
-	rules, _, found := applicableRules(country.Code)
-	if !found {
-		return nil
+// reviewOverdue reports whether a reviewed pack's next review fell due by at.
+// A draft carries no review stamp, so it has no due date to miss.
+func reviewOverdue(p messagingrules.Provenance, at time.Time) bool {
+	if p.ReviewedAt.IsZero() || p.ReviewDue.IsZero() {
+		return false
 	}
-	codes := make([]string, 0, len(rules.Citations))
-	for _, declared := range rules.Citations {
-		codes = append(codes, declared.Code)
+	return deadline.Passed(&p.ReviewDue, at)
+}
+
+// citationsFor resolves every code the packs binding this recipient cite, for
+// the entity the message goes out for, and keeps the ones shown. Packs that
+// cite nothing return before the sender is read.
+func (g *Gate) citationsFor(ctx context.Context, tx pgx.Tx, country RecipientCountry, entity ids.UUID) (map[string][]commsauthz.Provision, error) {
+	if len(citedCodes(country.dataProtectionCodes()...)) == 0 {
+		return nil, nil //nolint:nilnil // no citation is the answer for packs that cite nothing
+	}
+	sender := country.Sender
+	if sender == "" {
+		var err error
+		if sender, err = g.store.senderCountryOf(ctx, tx, entity); err != nil {
+			return nil, err
+		}
+	}
+	return provisionsShown(citationContext{Recipient: country, Sender: sender, At: g.store.now()}), nil
+}
+
+// citedCodes are the codes these packs declare a citation for.
+func citedCodes(packs ...jurisdiction.Code) []string {
+	var codes []string
+	for _, pack := range packs {
+		rules, _, found := applicableRules(pack)
+		if !found {
+			continue
+		}
+		for _, declared := range rules.Citations {
+			if !slices.Contains(codes, declared.Code) {
+				codes = append(codes, declared.Code)
+			}
+		}
 	}
 	return codes
 }
 
-// provisionsShown keeps each code whose citation is shown at where. An
-// overdue, unreviewed or expired one is left out, and the surface then shows
-// its facts without a citation.
-func provisionsShown(codes []string, where citationContext) map[string]commsauthz.Provision {
-	out := make(map[string]commsauthz.Provision, len(codes))
-	for _, code := range codes {
-		if shown := shownProvision(code, where); shown.Cited() {
-			out[code] = shown
+// provisionsShown keeps, for each cited code, the citations shown at where:
+// the recipient's pack's, then the sender's for a finding it settles. An
+// overdue, expired or not yet binding one is left out, and the surface then
+// shows its facts without it.
+func provisionsShown(where citationContext) map[string][]commsauthz.Provision {
+	packs := []jurisdiction.Code{where.Recipient.Code}
+	if where.Sender != "" && where.Sender != where.Recipient.Code {
+		packs = append(packs, where.Sender)
+	}
+	out := map[string][]commsauthz.Provision{}
+	for _, code := range citedCodes(packs...) {
+		for i, pack := range packs {
+			if i > 0 && !senderCitesFinding(code) {
+				continue
+			}
+			if shown := shownProvision(pack, code, where); shown.Cited() && !slices.Contains(out[code], shown) {
+				out[code] = append(out[code], shown)
+			}
 		}
 	}
 	return out
 }
 
-// shownProvision is citationFor as a surface shows it: the provision when the
+// shownProvision is packCitation as a surface shows it: the provision when the
 // citation is shown, and the zero value for every other outcome.
-func shownProvision(code string, where citationContext) commsauthz.Provision {
-	cited, outcome := citationFor(code, where)
+func shownProvision(pack jurisdiction.Code, code string, where citationContext) commsauthz.Provision {
+	cited, outcome := packCitation(pack, code, where)
 	if outcome != citationShown {
 		return commsauthz.Provision{}
 	}

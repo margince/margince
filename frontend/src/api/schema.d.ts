@@ -22591,9 +22591,7 @@ export interface paths {
         };
         /**
          * A team's week, frozen — what each member's week came to, and the one thing to raise.
-         * @deprecated
-         * @description Deprecated: no screen reads the team week. The operation stays callable through
-         *     the notice window in the API compatibility policy.
+         * @description Home, Weekly reads it when a lead or an overseer picks a team.
          *
          *     The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
          *     live and recomputed on every open; this answers what last week WAS, written once when
@@ -33944,6 +33942,15 @@ export interface components {
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
              *     `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
              *     The `Retry-After` header says how many seconds until the call can succeed.
+             *
+             *     A 403 that the caller's roles answer carries `missing_grant`: what those roles
+             *     lack, in the notation the tool table uses for a tool's requirement, with
+             *     alternatives joined by `,`. An object action (`deal.update`, `deal.create|update`)
+             *     is a grant an admin adds to a role. `admin` asks for the admin role, and
+             *     `scope:team` for a role whose row scope reaches team records or more. Each is
+             *     lifted by an admin changing the caller's roles. A refusal that no role change
+             *     lifts, such as a Deal Room participant's or a record kind the installation
+             *     switched off, carries none.
              */
             details?: {
                 [key: string]: unknown;
@@ -43509,7 +43516,7 @@ export interface components {
             /** @description Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`. */
             readonly task_type?: components["schemas"]["TaskType"];
             /**
-             * @description Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+             * @description Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
              * @enum {string|null}
              */
             readonly reply_channel?: "email" | "call" | "message" | null;
@@ -45632,10 +45639,11 @@ export interface components {
             provision?: components["schemas"]["CitedProvision"];
         };
         /**
-         * @description The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-         *     for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-         *     Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-         *     review is overdue or not yet done, or the law has not taken effect or has expired. On a
+         * @description The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+         *     for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+         *     data-protection law settles. Shown beside the engine's sentence; it decides nothing.
+         *     Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+         *     pack's next review is overdue, or the law has not taken effect or has expired. On a
          *     review it is the citation shown when the refusal was assessed, never today's.
          */
         CitedProvision: {
@@ -45664,11 +45672,18 @@ export interface components {
             /** @description Missing contact methods, such as email, phone or web. */
             missing_means: string[];
             provision?: components["schemas"]["CitedProvision"];
+            /** @description Every law cited for `kind`, `provision` first. Absent when none may be shown. */
+            provisions?: components["schemas"]["CitedProvision"][];
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
             /** @description The law the recipient's pack cites for `reason_code`, absent when none may be shown. */
             provision?: components["schemas"]["CitedProvision"];
+            /**
+             * @description Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
+             *     sending entity's for a finding its data-protection law settles. Absent when none may be shown.
+             */
+            provisions?: components["schemas"]["CitedProvision"][];
             /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
             footer_findings?: components["schemas"]["FooterFinding"][];
             /** Format: email */
@@ -50157,7 +50172,7 @@ export interface components {
             /** @enum {string} */
             row_scope: "own" | "team" | "all";
             /**
-             * @description Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+             * @description Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
              * @enum {string}
              */
             identity_read?: "workspace";
@@ -50298,12 +50313,6 @@ export interface components {
             license_lapsed?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;
-            /**
-             * @description The `activities.inline_send_review` setting: whether the email composer is decided at
-             *     Send, with a refusal shown inline from the embedded review. Absent or false keeps the
-             *     check while writing and the confirmation dialog.
-             */
-            inline_send_review?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
             user: components["schemas"]["User"];
             /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
@@ -51337,6 +51346,10 @@ export interface components {
             category?: string;
             /** @description The category the sender claimed. */
             requested_category?: string;
+            /** @description The first law cited for `reason_code`, absent when none may be shown. */
+            provision?: components["schemas"]["CitedProvision"];
+            /** @description Every law cited for `reason_code`, `provision` first. Absent when none may be shown. */
+            provisions?: components["schemas"]["CitedProvision"][];
         };
         /**
          * @description A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
@@ -52833,10 +52846,10 @@ export interface components {
         Undoability: {
             undoable: boolean;
             /**
-             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
+             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
              * @enum {string|null}
              */
-            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | "edge_relink_unsupported" | "later_company_change" | "no_restore_snapshot" | "credential_not_kept" | null;
+            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | "restore_archiver_required" | "edge_relink_unsupported" | "later_company_change" | "no_restore_snapshot" | "credential_not_kept" | null;
             /** @description The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says. */
             detail?: string | null;
         };
@@ -55889,6 +55902,11 @@ export interface components {
             reason_code: string;
             /** @description The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed. */
             provision?: components["schemas"]["CitedProvision"];
+            /**
+             * @description Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
+             *     recipient's pack, then the sending entity's for a finding its data-protection law settles.
+             */
+            provisions?: components["schemas"]["CitedProvision"][];
             category?: string;
             /** Format: uuid */
             sending_entity_id?: string;
@@ -55955,7 +55973,7 @@ export interface components {
             /**
              * @description Every warning this review is served with to this reader; a decision may name any of their
              *     versions and no other. `warning` is always among them. The sender of a held message is
-             *     also served the composer's short warning (`inline-v1`), which a decision from any other
+             *     also served the composer's short warning (`inline-v2`), which a decision from any other
              *     reader is refused for naming.
              */
             warnings?: components["schemas"]["OverrideWarning"][];
@@ -56576,6 +56594,8 @@ export interface components {
             keep: string;
             /** @description The period counts from the end of the calendar year. */
             from_year_end: boolean;
+            /** @description The statute and article that set the period. Absent when the pack names none. */
+            law?: string;
         };
         /**
          * @description The correspondence floor in force. With no jurisdiction selected it is the strictest floor
@@ -61244,8 +61264,8 @@ export interface components {
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
             /**
              * @deprecated
-             * @description Deprecated: no screen opens the team week, and the operation it describes,
-             *     `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
+             * @description Deprecated: read `team_week` from `GET /me`, which carries the same answer
+             *     without assembling the day.
              */
             team_week?: components["schemas"]["TeamWeekReach"];
             /**
@@ -61762,7 +61782,7 @@ export interface components {
          */
         WorklistBand: {
             /** @enum {string} */
-            band: "now" | "build_pipeline" | "keep_momentum" | "review";
+            band: "now" | "build_pipeline" | "keep_momentum" | "review" | "more";
             /** @description How many rows of this band are on the page. */
             shown: number;
         };
@@ -62631,12 +62651,15 @@ export interface components {
              *     scanning for "what must happen now" should not have to know which levels mean that.
              *
              *     Derived from the level and the row's own subject, so it cannot disagree with the order:
-             *     the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-             *     interleave prospecting and deal follow-up. A client
-             *     draws a heading when the band changes and never re-sorts.
+             *     the queue arrives already sorted, and across the pages of one walk a band never comes
+             *     back once a later band has started. `more` heads the rows past the ranked top, which a
+             *     walk reaches after every ranked row. They follow each store's own date order, are not
+             *     ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+             *     `due_group` still say what each one is. A client draws a heading when the band changes
+             *     and never re-sorts.
              * @enum {string}
              */
-            band?: "now" | "build_pipeline" | "keep_momentum" | "review";
+            band?: "now" | "build_pipeline" | "keep_momentum" | "review" | "more";
             /**
              * @description The ways this row can be PUT DOWN, as the server declares them. A client
              *     never infers this from `source`: which rows a rep may judge is a server

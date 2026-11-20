@@ -11,8 +11,8 @@
       "covered": 41,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 939,
-      "web_app_calls_open": 765,
+      "web_app_calls": 940,
+      "web_app_calls_open": 766,
       "web_app_calls_ask_first": 108,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 146,
@@ -20,7 +20,7 @@
       "parity_signed_in_percent": 81,
       "parity_web_app_percent": 81.4
     },
-    "open_with_no_web_app_call_found": 107,
+    "open_with_no_web_app_call_found": 106,
     "parity_web_app_counting_covered_percent": 84.3,
     "parity_web_app_once_pending_is_open_percent": 84.3
   },
@@ -41,8 +41,8 @@
       "covered": 28,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 512,
-      "web_app_calls_open": 465,
+      "web_app_calls": 513,
+      "web_app_calls_open": 466,
       "web_app_calls_ask_first": 37,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 28,
@@ -461,8 +461,8 @@
           "covered": 1,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 35,
-          "web_app_calls_open": 35,
+          "web_app_calls": 36,
+          "web_app_calls_open": 36,
           "web_app_calls_ask_first": 0,
           "web_app_calls_pending": 0,
           "web_app_calls_security": 0,
@@ -8551,7 +8551,7 @@
       "verb": "record_qualifying_event",
       "router": "change_compliance",
       "action": "record_qualifying_event",
-      "web_app": "inferred"
+      "web_app": "direct"
     },
     {
       "method": "POST",
@@ -12827,7 +12827,7 @@
       "verb": "record_lead_qualifying_event",
       "router": "change_compliance",
       "action": "record_lead_qualifying_event",
-      "web_app": "inferred"
+      "web_app": "direct"
     },
     {
       "method": "POST",
@@ -19499,7 +19499,8 @@
       "scope": "read",
       "verb": "get_team_weekly_review",
       "router": "read_details",
-      "action": "team_weekly_review"
+      "action": "team_weekly_review",
+      "web_app": "direct"
     },
     {
       "method": "GET",

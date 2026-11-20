@@ -25530,6 +25530,7 @@ const (
 	UndoabilityReasonNotWritableByCaller     UndoabilityReason = "not_writable_by_caller"
 	UndoabilityReasonNullUnwritableByModule  UndoabilityReason = "null_unwritable_by_module"
 	UndoabilityReasonRecordArchived          UndoabilityReason = "record_archived"
+	UndoabilityReasonRestoreArchiverRequired UndoabilityReason = "restore_archiver_required"
 	UndoabilityReasonSuperseded              UndoabilityReason = "superseded"
 	UndoabilityReasonUnsupportedRecordType   UndoabilityReason = "unsupported_record_type"
 )
@@ -25560,6 +25561,8 @@ func (e UndoabilityReason) Valid() bool {
 	case UndoabilityReasonNullUnwritableByModule:
 		return true
 	case UndoabilityReasonRecordArchived:
+		return true
+	case UndoabilityReasonRestoreArchiverRequired:
 		return true
 	case UndoabilityReasonSuperseded:
 		return true
@@ -28163,6 +28166,7 @@ func (e WorklistView) Valid() bool {
 const (
 	WorklistBandBandBuildPipeline WorklistBandBand = "build_pipeline"
 	WorklistBandBandKeepMomentum  WorklistBandBand = "keep_momentum"
+	WorklistBandBandMore          WorklistBandBand = "more"
 	WorklistBandBandNow           WorklistBandBand = "now"
 	WorklistBandBandReview        WorklistBandBand = "review"
 )
@@ -28173,6 +28177,8 @@ func (e WorklistBandBand) Valid() bool {
 	case WorklistBandBandBuildPipeline:
 		return true
 	case WorklistBandBandKeepMomentum:
+		return true
+	case WorklistBandBandMore:
 		return true
 	case WorklistBandBandNow:
 		return true
@@ -28409,6 +28415,7 @@ func (e WorklistItemActions) Valid() bool {
 const (
 	WorklistItemBandBuildPipeline WorklistItemBand = "build_pipeline"
 	WorklistItemBandKeepMomentum  WorklistItemBand = "keep_momentum"
+	WorklistItemBandMore          WorklistItemBand = "more"
 	WorklistItemBandNow           WorklistItemBand = "now"
 	WorklistItemBandReview        WorklistItemBand = "review"
 )
@@ -28419,6 +28426,8 @@ func (e WorklistItemBand) Valid() bool {
 	case WorklistItemBandBuildPipeline:
 		return true
 	case WorklistItemBandKeepMomentum:
+		return true
+	case WorklistItemBandMore:
 		return true
 	case WorklistItemBandNow:
 		return true
@@ -32948,7 +32957,7 @@ type AccessPreview struct {
 		Object    string                           `json:"object"`
 	} `json:"field_masks"`
 
-	// IdentityRead Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+	// IdentityRead Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
 	IdentityRead *AccessPreviewIdentityRead `json:"identity_read,omitempty"`
 
 	// MemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
@@ -32968,7 +32977,7 @@ type AccessPreview struct {
 // AccessPreviewFieldMasksCondition defines model for AccessPreview.FieldMasks.Condition.
 type AccessPreviewFieldMasksCondition string
 
-// AccessPreviewIdentityRead Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+// AccessPreviewIdentityRead Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
 type AccessPreviewIdentityRead string
 
 // AccessPreviewMemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
@@ -33326,7 +33335,7 @@ type Activity struct {
 	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
-	// ReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
@@ -33406,7 +33415,7 @@ type ActivityMeetingStatus string
 // a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
 
-// ActivityReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+// ActivityReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 type ActivityReplyChannel string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
@@ -40646,10 +40655,11 @@ type ChatEpisode struct {
 	Url string `json:"url"`
 }
 
-// CitedProvision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+// CitedProvision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+// for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+// data-protection law settles. Shown beside the engine's sentence; it decides nothing.
+// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+// pack's next review is overdue, or the law has not taken effect or has expired. On a
 // review it is the citation shown when the refusal was assessed, never today's.
 type CitedProvision struct {
 	// Instrument The law or decree, as a regulator cites it. Not translated.
@@ -41038,7 +41048,7 @@ type CommunicationReview struct {
 
 	// Warnings Every warning this review is served with to this reader; a decision may name any of their
 	// versions and no other. `warning` is always among them. The sender of a held message is
-	// also served the composer's short warning (`inline-v1`), which a decision from any other
+	// also served the composer's short warning (`inline-v2`), which a decision from any other
 	// reader is refused for naming.
 	Warnings *[]OverrideWarning `json:"warnings,omitempty"`
 
@@ -50212,10 +50222,11 @@ type DraftContentFinding struct {
 	// Language The language the draft must lead with, for `advertising_language_first`.
 	Language *string `json:"language,omitempty"`
 
-	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// Provision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+	// for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+	// data-protection law settles. Shown beside the engine's sentence; it decides nothing.
+	// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+	// pack's next review is overdue, or the law has not taken effect or has expired. On a
 	// review it is the citation shown when the refusal was assessed, never today's.
 	Provision *CitedProvision `json:"provision,omitempty"`
 
@@ -51788,12 +51799,16 @@ type FooterFinding struct {
 	// MissingMeans Missing contact methods, such as email, phone or web.
 	MissingMeans []string `json:"missing_means"`
 
-	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
-	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
-	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// Provision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+	// for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+	// data-protection law settles. Shown beside the engine's sentence; it decides nothing.
+	// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+	// pack's next review is overdue, or the law has not taken effect or has expired. On a
 	// review it is the citation shown when the refusal was assessed, never today's.
 	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `kind`, `provision` first. Absent when none may be shown.
+	Provisions *[]CitedProvision `json:"provisions,omitempty"`
 }
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
@@ -54995,6 +55010,9 @@ type JurisdictionRetentionClass struct {
 	// Keep The ISO 8601 period the class keeps, e.g. `P6Y`.
 	Keep string `json:"keep"`
 
+	// Law The statute and article that set the period. Absent when the pack names none.
+	Law *string `json:"law,omitempty"`
+
 	// Name The class, e.g. `commercial_correspondence`.
 	Name string `json:"name"`
 }
@@ -57696,11 +57714,6 @@ type MeResponse struct {
 
 	// DataResetAvailable True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
 	DataResetAvailable *bool `json:"data_reset_available,omitempty"`
-
-	// InlineSendReview The `activities.inline_send_review` setting: whether the email composer is decided at
-	// Send, with a refusal shown inline from the embedded review. Absent or false keeps the
-	// check while writing and the confirmation dialog.
-	InlineSendReview *bool `json:"inline_send_review,omitempty"`
 
 	// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
 	InstallationBrand *InstallationBrand `json:"installation_brand,omitempty"`
@@ -60664,6 +60677,15 @@ type Problem struct {
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
 	// `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
 	// The `Retry-After` header says how many seconds until the call can succeed.
+	//
+	// A 403 that the caller's roles answer carries `missing_grant`: what those roles
+	// lack, in the notation the tool table uses for a tool's requirement, with
+	// alternatives joined by `,`. An object action (`deal.update`, `deal.create|update`)
+	// is a grant an admin adds to a role. `admin` asks for the admin role, and
+	// `scope:team` for a role whose row scope reaches team records or more. Each is
+	// lifted by an admin changing the caller's roles. A refusal that no role change
+	// lifts, such as a Deal Room participant's or a record kind the installation
+	// switched off, carries none.
 	Details *map[string]interface{} `json:"details,omitempty"`
 
 	// Instance URI of the specific occurrence.
@@ -62681,7 +62703,11 @@ type RefusedRecipient struct {
 	FooterPreview *[]string `json:"footer_preview,omitempty"`
 
 	// Provision The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
-	Provision         *CitedProvision              `json:"provision,omitempty"`
+	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
+	// recipient's pack, then the sending entity's for a finding its data-protection law settles.
+	Provisions        *[]CitedProvision            `json:"provisions,omitempty"`
 	ReasonCode        string                       `json:"reason_code"`
 	RequestedCategory *string                      `json:"requested_category,omitempty"`
 	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
@@ -66596,6 +66622,10 @@ type SendAuthorizationPreviewRecipient struct {
 	// Provision The law the recipient's pack cites for `reason_code`, absent when none may be shown.
 	Provision *CitedProvision `json:"provision,omitempty"`
 
+	// Provisions Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
+	// sending entity's for a finding its data-protection law settles. Absent when none may be shown.
+	Provisions *[]CitedProvision `json:"provisions,omitempty"`
+
 	// ReasonCode Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
 	// `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
 	// the lawful next action it can offer; it is deliberately not a sentence about the
@@ -67161,8 +67191,14 @@ type SendRefusalRecipient struct {
 	CanBeOverruled bool `json:"can_be_overruled"`
 
 	// Category The category the engine resolved.
-	Category   *string `json:"category,omitempty"`
-	ReasonCode string  `json:"reason_code"`
+	Category *string `json:"category,omitempty"`
+
+	// Provision The first law cited for `reason_code`, absent when none may be shown.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `reason_code`, `provision` first. Absent when none may be shown.
+	Provisions *[]CitedProvision `json:"provisions,omitempty"`
+	ReasonCode string            `json:"reason_code"`
 
 	// RequestedCategory The category the sender claimed.
 	RequestedCategory *string `json:"requested_category,omitempty"`
@@ -69561,12 +69597,12 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
 type UndoabilityReason string
 
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.
@@ -73696,9 +73732,12 @@ type WorklistItem struct {
 	// scanning for "what must happen now" should not have to know which levels mean that.
 	//
 	// Derived from the level and the row's own subject, so it cannot disagree with the order:
-	// the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-	// interleave prospecting and deal follow-up. A client
-	// draws a heading when the band changes and never re-sorts.
+	// the queue arrives already sorted, and across the pages of one walk a band never comes
+	// back once a later band has started. `more` heads the rows past the ranked top, which a
+	// walk reaches after every ranked row. They follow each store's own date order, are not
+	// ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+	// `due_group` still say what each one is. A client draws a heading when the band changes
+	// and never re-sorts.
 	Band *WorklistItemBand `json:"band,omitempty"`
 
 	// Batch A group of routine decisions that read alike, standing on the queue as one row.
@@ -74102,9 +74141,12 @@ type WorklistItemActions string
 // scanning for "what must happen now" should not have to know which levels mean that.
 //
 // Derived from the level and the row's own subject, so it cannot disagree with the order:
-// the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-// interleave prospecting and deal follow-up. A client
-// draws a heading when the band changes and never re-sorts.
+// the queue arrives already sorted, and across the pages of one walk a band never comes
+// back once a later band has started. `more` heads the rows past the ranked top, which a
+// walk reaches after every ranked row. They follow each store's own date order, are not
+// ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+// `due_group` still say what each one is. A client draws a heading when the band changes
+// and never re-sorts.
 type WorklistItemBand string
 
 // WorklistItemBriefActions defines model for WorklistItem.BriefActions.

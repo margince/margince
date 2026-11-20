@@ -180,9 +180,13 @@ func retentionClassesOf(code jurisdiction.Code) *[]crmcontracts.JurisdictionRete
 		return &classes
 	}
 	for _, c := range pack.Retention().Classes() {
-		classes = append(classes, crmcontracts.JurisdictionRetentionClass{
+		class := crmcontracts.JurisdictionRetentionClass{
 			Name: string(c.Name), Keep: c.Keep.String(), FromYearEnd: c.Anchor == jurisdiction.AnchorCalendarYearEnd,
-		})
+		}
+		if c.Law != "" {
+			class.Law = &c.Law
+		}
+		classes = append(classes, class)
 	}
 	return &classes
 }

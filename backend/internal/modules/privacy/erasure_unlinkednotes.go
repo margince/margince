@@ -22,17 +22,23 @@ const (
 	erasedTextParameter  = "erased"
 )
 
-func redactUnlinkedNotes(ctx context.Context, tx pgx.Tx, keys subjectKeys) ([]ids.UUID, error) {
-	patterns := addressPatterns(keys.emails)
-	if keys.displayName != erasedName {
-		if name, ok := values.FullNameTextPattern(keys.displayName, 2); ok {
+// subjectTextPattern matches the subject's addresses and full name inside free
+// text, or is empty when the subject has neither to match.
+func subjectTextPattern(emails []string, displayName string) string {
+	patterns := addressPatterns(emails)
+	if displayName != erasedName {
+		if name, ok := values.FullNameTextPattern(displayName, 2); ok {
 			patterns = append(patterns, name)
 		}
 	}
-	if len(patterns) == 0 {
+	return strings.Join(patterns, "|")
+}
+
+func redactUnlinkedNotes(ctx context.Context, tx pgx.Tx, keys subjectKeys) ([]ids.UUID, error) {
+	pattern := subjectTextPattern(keys.emails, keys.displayName)
+	if pattern == "" {
 		return nil, nil
 	}
-	pattern := strings.Join(patterns, "|")
 	locked, err := lockNoteMentions(ctx, tx, pattern)
 	if err != nil {
 		return nil, err

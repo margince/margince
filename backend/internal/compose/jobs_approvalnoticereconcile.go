@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/approvalseat"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -93,17 +94,13 @@ func (w *approvalNoticeReconcileWorker) Work(ctx context.Context, job *river.Job
 func (w *approvalNoticeReconcileWorker) reconcilePage(ctx context.Context, after ids.UUID) (ids.UUID, int64, error) {
 	var page notices.OutstandingApprovalPage
 	var pending map[ids.ApprovalID]bool
-	var asked map[approvals.AskedPair]bool
 	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		page, err = w.notices.OutstandingApprovalNotices(ctx, tx, after, approvalNoticePageSize)
 		if err != nil {
 			return err
 		}
-		if pending, err = w.approvals.StillPending(ctx, tx, page.ApprovalIDs); err != nil {
-			return err
-		}
-		asked, err = w.approvals.StillAskedOf(ctx, tx, askedPairs(page.Notices))
+		pending, err = w.approvals.StillPending(ctx, tx, page.ApprovalIDs)
 		return err
 	})
 	if err != nil {
@@ -121,7 +118,7 @@ func (w *approvalNoticeReconcileWorker) reconcilePage(ctx context.Context, after
 		retracted += count
 	}
 	for _, held := range page.Notices {
-		if !pending[held.Approval] || asked[approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient}] {
+		if !pending[held.Approval] {
 			continue
 		}
 		count, err := w.retractUnasked(ctx, held)
@@ -141,8 +138,13 @@ func (w *approvalNoticeReconcileWorker) retractUnasked(ctx context.Context, held
 	var taken int64
 	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
 		asked, err := w.approvals.StillAskedOf(ctx, tx, []approvals.AskedPair{pair})
-		if err != nil || asked[pair] {
+		if err != nil {
 			return err
+		}
+		if asked[pair] {
+			if decidable, err := approvalseat.StillDecidable(ctx, tx, w.identity, w.approvals, held.Approval, held.Recipient); err != nil || decidable {
+				return err
+			}
 		}
 		taken, err = w.notices.RetractCopy(ctx, tx, held.ID)
 		return err
@@ -151,12 +153,4 @@ func (w *approvalNoticeReconcileWorker) retractUnasked(ctx context.Context, held
 		return 0, fmt.Errorf("approval notice reconcile: %w", err)
 	}
 	return taken, nil
-}
-
-func askedPairs(copies []notices.OutstandingApprovalNotice) []approvals.AskedPair {
-	pairs := make([]approvals.AskedPair, 0, len(copies))
-	for _, held := range copies {
-		pairs = append(pairs, approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient})
-	}
-	return pairs
 }

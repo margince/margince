@@ -4,12 +4,14 @@
 import {
   type KeyboardEvent,
   type MouseEvent,
+  type ReactNode,
   useEffect,
   useId,
   useRef,
 } from "react";
 import type { components } from "../../api/schema";
-import { CitedAttention, CitedLaws } from "../../components/citedlaw";
+import { CitedLaws, FindingWithLaw } from "../../components/citedlaw";
+import { lawsOf } from "../../components/citedprovisions";
 import { Button, Field, Textarea } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { describedByIds } from "../../design-system/describedby";
@@ -27,7 +29,10 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { addressKey } from "../../lib/addresskey";
 import { ComposeOutcome } from "./compose.parts";
-import type { InlineReview } from "./composeinlinereview";
+import {
+  INLINE_WARNING_VERSION,
+  type InlineReview,
+} from "./composeinlinereview";
 import type { Refusal } from "./composerefusal";
 import { refusalCountryText } from "./refusalcountry";
 import "./compose.css";
@@ -85,22 +90,28 @@ export function markedRecipients(
  * with, and nothing asked while the rep writes.
  */
 export function InlineBlockers({
+  isChannelReply,
   refusal,
   sendUnavailable,
   bodyKey,
+  children,
   ...rows
 }: Readonly<{
+  isChannelReply: boolean;
   refusal: Refusal;
   sendUnavailable: boolean;
   bodyKey: MessageKey;
   state: InlineReview;
   explanation: string;
   onExplanationChange: (text: string) => void;
+  /** What the message still needs before Send, such as its reason. */
+  children?: ReactNode;
 }>) {
   return (
     <div className="compose-blockers">
+      {children}
       <ComposeOutcome
-        isChannelReply={false}
+        isChannelReply={isChannelReply}
         bodyKey={bodyKey}
         sendUnavailable={sendUnavailable}
         refusal={refusal}
@@ -125,7 +136,6 @@ export function SendAnywayRows({
   onExplanationChange: (text: string) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   const warningId = useId();
   if (!state.shown) return null;
   if (state.loading) {
@@ -166,30 +176,22 @@ export function SendAnywayRows({
         live="status"
         id={warningId}
         title={
-          lead?.provision ? (
-            <CitedAttention address={lead.address} provision={lead.provision} />
-          ) : lead ? (
-            t(findingKey(lead.reason_code), { address: lead.address })
+          lead ? (
+            <FindingWithLaw
+              sentence={t(findingKey(lead.reason_code), {
+                address: lead.address,
+              })}
+              provisions={lawsOf(lead)}
+            />
           ) : (
             t("compose.sendAnyway.finding.none")
           )
         }
       >
-        {lead?.provision && (
-          <p>{t(findingKey(lead.reason_code), { address: lead.address })}</p>
-        )}
-        <p>
-          {t(
-            state.canSendAnyway
-              ? "compose.sendAnyway.warning"
-              : "compose.sendAnyway.editOnly",
-          )}
-        </p>
-        {lead && refusalCountryText(lead, t, locale) && (
-          <p>{refusalCountryText(lead, t, locale)}</p>
-        )}
+        {lead && <LeadCountry refusal={lead} />}
+        {!state.canSendAnyway && <p>{t("compose.sendAnyway.editOnly")}</p>}
         {state.changed && <p>{t("directSend.changed")}</p>}
-        <EveryFinding refusals={review.refusals} />
+        <MoreFindings refusals={review.refusals.slice(1)} />
       </Callout>
       {state.canSendAnyway && (
         <ReasonRow
@@ -215,25 +217,20 @@ function withCountry(
   return country ? ` ${country}` : null;
 }
 
-// Every finding, and every message-wide footer finding, behind one count.
-function EveryFinding({
+// The findings after the leading one, behind one count. The leading finding
+// is already the warning's own text, so it is not listed again.
+function MoreFindings({
   refusals,
 }: Readonly<{ refusals: readonly RefusedRecipient[] }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const more = refusals.length - 1;
-  const footers = refusals.some((refusal) => refusal.footer_findings?.length);
-  if (more < 1 && !footers) return null;
+  if (refusals.length === 0) return null;
   return (
     <Disclosure
-      summary={
-        more > 0
-          ? plural("compose.sendAnyway.more", more, {
-              count: formatNumber(more, locale),
-            })
-          : t("compose.sendAnyway.details")
-      }
+      summary={plural("compose.sendAnyway.more", refusals.length, {
+        count: formatNumber(refusals.length, locale),
+      })}
     >
       <ul>
         {refusals.map((refusal) => (
@@ -256,9 +253,18 @@ function EveryFinding({
 // The law the refusal and each of its footer findings cite, where any does.
 function provisionsOf(refusal: RefusedRecipient) {
   return [
-    refusal.provision,
-    ...(refusal.footer_findings ?? []).map((finding) => finding.provision),
+    ...lawsOf(refusal),
+    ...(refusal.footer_findings ?? []).flatMap(lawsOf),
   ];
+}
+
+// The country the leading refusal was judged under and where it was read. The
+// rep sees why this law applies and can correct it on the chip.
+function LeadCountry({ refusal }: Readonly<{ refusal: RefusedRecipient }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const country = refusalCountryText(refusal, t, locale);
+  return country ? <p>{country}</p> : null;
 }
 
 // The reason and the button. Keyed by the review's revision, so a refreshed
@@ -283,7 +289,8 @@ function ReasonRow({
   return (
     <div className="compose-sendanyway-row">
       <Field
-        label={t("compose.sendAnyway.reasonLabel")}
+        // The served words, verbatim: the decision records that these were shown.
+        label={servedQuestion(state)}
         className="compose-sendanyway-reason"
         required
       >
@@ -360,5 +367,15 @@ function FreshPressButton({
     >
       {children}
     </Button>
+  );
+}
+
+// The question the review was served with for this composer. Send anyway is
+// offered only where it was served, so it is always there when the row is.
+function servedQuestion(state: InlineReview): string {
+  return (
+    state.review?.warnings?.find(
+      (warning) => warning.version === INLINE_WARNING_VERSION,
+    )?.text ?? ""
   );
 }

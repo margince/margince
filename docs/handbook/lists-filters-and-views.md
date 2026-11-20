@@ -300,16 +300,16 @@ Also called: dynamic list, smart list, saved segment, audience.
 
 ### How do I start a Shortlist?
 To start a Shortlist in Margince, open **Filters and views** and press **New Shortlist** next to **New filter**.
-1. Type a **Name**, pick the **Record type**, and if you like say **What it is for**. **Who can find it** starts on **A team**; pick **Only me** to keep it to yourself.
+1. Type a **Name**, pick the **Record type**, and if you like say **What it is for**. **Who can find it** starts on **A team**; pick **Only me** to keep it to yourself. If you are in no team, it starts on **Only me**, and you cannot pick **A team**.
 2. Press **Create list**.
 3. Add records from a record's page: press **Add to Shortlist** and pick the Shortlist (or **A new Shortlist…**).
 Add a note under **Why (optional)** and press **Add**. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows. On a contact, company, deal or lead page, **Lists** also holds **Add to Shortlist** and **All lists**.
 Also called: static list, hand-picked list, target list, account list.
 
 ### Who can find a list?
-Each list in Margince says **Who can find it**: **Only me**, **A team** (one of your teams, or all of the owner's teams) or **Everyone**. Change it with **Edit list** under **⋯** on the list's page.
-Sharing a list shows nobody a record they could not already see. Each reader sees only the members they may see, and **Records** on the list's page says how many that is ("12 companies"). So two colleagues can see different numbers on the same list. A contact, company, deal or lead page shows the lists that record is on under **Lists**, again only those you can find.
+Each list in Margince says **Who can find it**: **Only me**, **A team** (one of your teams, or all of the owner's teams) or **Everyone**. Change it with **Edit list** under **⋯** on the list's page. While you are in no team, a team list you own that names no team reaches only you and its steward. It then says **Only me**, or **You and its steward** if someone else looks after it.
 
+Sharing a list shows nobody a record they could not already see. Each reader sees only the members they may see, and **Records** on the list's page says how many that is ("12 companies"). So two colleagues can see different numbers on the same list. A contact, company, deal or lead page shows the lists that record is on under **Lists**, again only those you can find.
 Also called: share a list, list permissions, private list, team list.
 
 ### What is a list's steward?

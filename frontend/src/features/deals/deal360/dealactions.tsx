@@ -31,7 +31,7 @@ import { ListPopover } from "../../../design-system/listpopover";
 import { useToast } from "../../../design-system/toast";
 import { useLocale, useT } from "../../../i18n";
 import { dealStageMoveKeys } from "../../../lib/activitykeys";
-import { useCanWrite, useCanWriteRecord } from "../../../lib/capability";
+import { useCanWriteRecord } from "../../../lib/capability";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { useShortcut } from "../../../lib/shortcuts";
@@ -40,7 +40,6 @@ import { ShareAction } from "../../records/share";
 import { advanceNote } from "../dealprobability";
 import { archiveDeal } from "../deals.write";
 import { CorrectCloseDayAction } from "./correctcloseday";
-import { RestoreDealAction } from "./dealrestore";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
@@ -240,9 +239,6 @@ export function DealActions({
 }>) {
   const t = useT();
   const canWrite = useCanWriteRecord("deal", deal);
-  // The server marks an archived deal not writable, so the way back rests on
-  // the archive grant alone.
-  const canRestore = useCanWrite("deal", "delete");
   const refusedByArchive = deal.archived_at ? refusedReasonId : undefined;
   // The log/task drawer's own state: one drawer with two doors, the same
   // shape companyheaderactions.tsx and leads.tsx keep for the identical pair.
@@ -380,7 +376,6 @@ export function DealActions({
         {canWrite && !deal.archived_at && (
           <DealArchiveAction deal={deal} refusedReasonId={refusedReasonId} />
         )}
-        {canRestore && deal.archived_at && <RestoreDealAction deal={deal} />}
       </OverflowMenu>
     </>
   );

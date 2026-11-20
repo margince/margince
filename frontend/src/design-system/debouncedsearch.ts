@@ -38,12 +38,12 @@ export const SEARCH_DEBOUNCE_MS = 250;
  * `typed`, held back until it has stood still for SEARCH_DEBOUNCE_MS: as a query
  * key it is one request per pause, where the raw text is one per keystroke.
  */
-export function useSettledValue<T>(typed: T): T {
+export function useSettledValue<T>(typed: T, restMs = SEARCH_DEBOUNCE_MS): T {
   const [settled, setSettled] = useState(typed);
   useEffect(() => {
-    const timer = setTimeout(() => setSettled(typed), SEARCH_DEBOUNCE_MS);
+    const timer = setTimeout(() => setSettled(typed), restMs);
     return () => clearTimeout(timer);
-  }, [typed]);
+  }, [typed, restMs]);
   return settled;
 }
 

@@ -16,13 +16,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
-func recorded(contentType, disposition string, body []byte) *cappedRecorder {
+func recorded(status int, contentType, disposition string, body []byte) *cappedRecorder {
 	rec := &cappedRecorder{ResponseRecorder: httptest.NewRecorder(), fileLimit: agents.MaxInlineFileBytes}
 	rec.Header().Set("Content-Type", contentType)
 	if disposition != "" {
 		rec.Header().Set("Content-Disposition", disposition)
 	}
-	rec.WriteHeader(http.StatusOK)
+	rec.WriteHeader(status)
 	if _, err := rec.Write(body); err != nil {
 		panic(err)
 	}
@@ -31,7 +31,7 @@ func recorded(contentType, disposition string, body []byte) *cappedRecorder {
 
 func TestARouteThatAnswersAFileAnswersItsBytesAndName(t *testing.T) {
 	content := []byte{0x25, 0x50, 0x44, 0x46, 0x00, 0xff}
-	raw, err := routeAnswer(agents.RouteVerb{Verb: "download_offer_pdf", Method: http.MethodGet}, recorded("application/pdf", `attachment; filename="offer.pdf"`, content))
+	raw, err := routeAnswer(agents.RouteVerb{Verb: "download_offer_pdf", Method: http.MethodGet}, recorded(http.StatusOK, "application/pdf", `attachment; filename="offer.pdf"`, content))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestARouteThatAnswersAFileAnswersItsBytesAndName(t *testing.T) {
 }
 
 func TestAnEmptyFileIsStillAFile(t *testing.T) {
-	raw, err := routeAnswer(agents.RouteVerb{Verb: "download_attachment", Method: http.MethodGet}, recorded("text/csv", "", nil))
+	raw, err := routeAnswer(agents.RouteVerb{Verb: "download_attachment", Method: http.MethodGet}, recorded(http.StatusOK, "text/csv", "", nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestAnEmptyFileIsStillAFile(t *testing.T) {
 }
 
 func TestAFilePastTheLimitIsRefusedNotCut(t *testing.T) {
-	raw, err := routeAnswer(agents.RouteVerb{Verb: "download_attachment", Method: http.MethodGet}, recorded("application/pdf", "", make([]byte, agents.MaxInlineFileBytes+1)))
+	raw, err := routeAnswer(agents.RouteVerb{Verb: "download_attachment", Method: http.MethodGet}, recorded(http.StatusOK, "application/pdf", "", make([]byte, agents.MaxInlineFileBytes+1)))
 	if err == nil {
 		t.Fatalf("an oversized file answered %d bytes instead of a refusal", len(raw))
 	}
@@ -74,7 +74,7 @@ func TestAFilePastTheLimitIsRefusedNotCut(t *testing.T) {
 }
 
 func TestAFileAtTheLimitIsAnsweredWhole(t *testing.T) {
-	raw, err := routeAnswer(agents.RouteVerb{Verb: "download_attachment", Method: http.MethodGet}, recorded("application/pdf", "", make([]byte, agents.MaxInlineFileBytes)))
+	raw, err := routeAnswer(agents.RouteVerb{Verb: "download_attachment", Method: http.MethodGet}, recorded(http.StatusOK, "application/pdf", "", make([]byte, agents.MaxInlineFileBytes)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestAFileAtTheLimitIsAnsweredWhole(t *testing.T) {
 }
 
 func TestAWritesJSONAnswerPastItsCapStaysACutSuccess(t *testing.T) {
-	raw, err := routeAnswer(agents.RouteVerb{Verb: "make_thing", Method: http.MethodPost}, recorded("application/json", "", make([]byte, maxViewAnswerBytes+1)))
+	raw, err := routeAnswer(agents.RouteVerb{Verb: "make_thing", Method: http.MethodPost}, recorded(http.StatusOK, "application/json", "", make([]byte, maxViewAnswerBytes+1)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,16 +124,11 @@ func TestAFileTypeDeclaredWithNoBodyIsStillAFile(t *testing.T) {
 }
 
 // A route this installation does not serve answers 501, which no retry changes,
-// so the caller is told that rather than that the server failed.
+// so the caller is told that rather than that the server failed. A refusal keeps
+// the route's structured details, such as the grant a 403 names.
 func TestARouteThatIsNotOfferedHereSaysSoAndAServerFaultDoesNot(t *testing.T) {
 	answered := func(status int) *cappedRecorder {
-		rec := &cappedRecorder{ResponseRecorder: httptest.NewRecorder(), fileLimit: agents.MaxInlineFileBytes}
-		rec.Header().Set("Content-Type", "application/problem+json")
-		rec.WriteHeader(status)
-		if _, err := rec.Write([]byte(`{"code":"not_implemented","detail":"no connector is configured"}`)); err != nil {
-			t.Fatal(err)
-		}
-		return rec
+		return recorded(status, "application/problem+json", "", []byte(`{"code":"not_implemented","detail":"no connector is configured","details":{"missing_grant":"deal.update"}}`))
 	}
 	verb := agents.RouteVerb{Verb: "list_connectors", Method: http.MethodGet}
 	_, err := routeAnswer(verb, answered(http.StatusNotImplemented))
@@ -145,11 +140,15 @@ func TestARouteThatIsNotOfferedHereSaysSoAndAServerFaultDoesNot(t *testing.T) {
 	if _, classified := httperr.Classify(err); classified {
 		t.Fatalf("a 500 answered %v as a classified refusal, want a fault of the server", err)
 	}
+	_, err = routeAnswer(verb, answered(http.StatusForbidden))
+	if fault, _ := httperr.Classify(err); fault.Status != http.StatusForbidden || fault.Details["missing_grant"] != "deal.update" {
+		t.Fatalf("a routed 403 answered %+v, want a 403 that keeps missing_grant", fault)
+	}
 }
 
 // A JSON media type of any kind reads as JSON, as the generator publishes it.
 func TestASchemaJSONAnswerPassesAsItsDocument(t *testing.T) {
-	raw, err := routeAnswer(agents.RouteVerb{Verb: "get_ai_routing_schema", Method: http.MethodGet}, recorded("application/schema+json", "", []byte(`{"$defs":{}}`)))
+	raw, err := routeAnswer(agents.RouteVerb{Verb: "get_ai_routing_schema", Method: http.MethodGet}, recorded(http.StatusOK, "application/schema+json", "", []byte(`{"$defs":{}}`)))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -44,6 +44,16 @@ func ReliabilityIntervalOf(passed, runs int) *ReliabilityInterval {
 		return nil
 	}
 	lower, upper := wilsonBounds(passed, runs)
+	// The last digits of the formula differ between CPUs, and the committed
+	// report must read the same on every machine. Six decimals is far finer
+	// than any report prints. An end on 0 or 1 is the edge itself.
+	if passed == 0 {
+		lower = 0
+	}
+	if passed == runs {
+		upper = 1
+	}
+	lower, upper = roundReported(lower), roundReported(upper)
 	return &ReliabilityInterval{Lower: lower, Upper: upper}
 }
 
@@ -100,4 +110,9 @@ func tQuantile(df int) float64 {
 		df = len(tQuantile90)
 	}
 	return tQuantile90[df-1]
+}
+
+// roundReported rounds a printed bound to six decimals.
+func roundReported(bound float64) float64 {
+	return math.Round(bound*1e6) / 1e6
 }

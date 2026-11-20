@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // NoticeSubject is the contact or website lead a notice link names.
@@ -118,7 +119,13 @@ func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *Privac
 	out.DataCategories = append(out.DataCategories, held.Categories...)
 	out.Retention = append(out.Retention, held.Retention...)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		uses, err := settleUsesTx(ctx, tx, subject, held.Uses)
+		// The page has no sending entity, so the default entity's country is the
+		// sender's, as senderCountryOf answers for a zero entity.
+		sender, err := s.senderCountryOf(ctx, tx, ids.UUID{})
+		if err != nil {
+			return err
+		}
+		uses, err := settleUsesTx(ctx, tx, subject, held.Uses, sender)
 		if err != nil {
 			return err
 		}
@@ -127,11 +134,12 @@ func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *Privac
 }
 
 // settleUsesTx is the uses the page lists, judged as the send engine judges
-// them. Under a pack without legitimate interests, a use is shown only on a
-// basis that pack accepts (keptUnderPack). A reader with no use left is shown
+// them, under the recipient's pack and the sender's. Under a pack without
+// legitimate interests, a use is shown only on a basis that pack accepts
+// (keptUnderPack). A reader with no use left is shown
 // business correspondence, so the page always names a purpose
 // (GDPR Art. 14(1)(c)). Its basis is defaultUseBasis.
-func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []NoticeUse) ([]NoticeUse, error) {
+func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []NoticeUse, sender jurisdiction.Code) ([]NoticeUse, error) {
 	who := subjectRef{Kind: entityContact, ID: subject.ContactID.String()}
 	if subject.ContactID.IsZero() {
 		who = subjectRef{Kind: entityLead, ID: subject.LeadID.String()}
@@ -140,7 +148,8 @@ func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []
 	if err != nil {
 		return nil, err
 	}
-	rules, _, found := applicableRules(country.Code)
+	country.Sender = sender
+	rules, _, found := applicableRules(country.dataProtectionCodes()...)
 	noInterests := found && rules.NoLegitimateInterests
 	kept := make([]NoticeUse, 0, len(uses))
 	for _, use := range uses {

@@ -51,7 +51,14 @@ type Routes = Parameters<typeof installFetchStub>[0];
 
 function openList(listID: string, routes: Routes) {
   installFetchStub({
-    "GET /me": listsMe(true),
+    // The bar's verbs ask the grants their server admission asks.
+    "GET /me": listsMe(true, [], {
+      allow: {
+        list: ["read", "create", "update", "delete"],
+        company: ["read", "update", "delete"],
+        activity: ["read", "create"],
+      },
+    }),
     [`GET /lists/${LIVE_ID}`]: () => jsonResponse(liveList),
     [`GET /lists/${SHORTLIST_ID}`]: () => jsonResponse(shortlist),
     [`GET /lists/${LIVE_ID}/history`]: () =>
@@ -70,6 +77,70 @@ function openList(listID: string, routes: Routes) {
 }
 
 const selectMiTek = en["bulk.selectRow"].replace("{name}", "MiTek");
+
+describe("a Live List's field columns", () => {
+  it("head a retired custom field with the label its catalog still holds", async () => {
+    openList(LIVE_ID, {
+      "GET /filters/vocabulary": () =>
+        jsonResponse({ resource: "company", fields: [] }),
+      "GET /custom-fields": () =>
+        jsonResponse({
+          data: [
+            {
+              column_name: "cf_last_touch",
+              label: "Last Touch",
+              label_translations: {},
+              object: "company",
+              type: "date",
+              status: "retired",
+            },
+          ],
+          page: { has_more: false },
+        }),
+    });
+
+    expect(
+      await screen.findByRole("columnheader", { name: "Last Touch" }),
+    ).toBeInTheDocument();
+  });
+
+  it("head a custom field with its catalog label", async () => {
+    openList(LIVE_ID, {
+      "GET /filters/vocabulary": () =>
+        jsonResponse({
+          resource: "company",
+          fields: [
+            {
+              name: "cf_last_touch",
+              type: "date",
+              operators: ["lt"],
+              custom: true,
+            },
+          ],
+        }),
+      "GET /custom-fields": () =>
+        jsonResponse({
+          data: [
+            {
+              column_name: "cf_last_touch",
+              label: "Last Touch",
+              label_translations: {},
+              object: "company",
+              type: "date",
+            },
+          ],
+          page: { has_more: false },
+        }),
+    });
+
+    expect(
+      await screen.findByRole("columnheader", { name: "Last Touch" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "last touch" }),
+    ).toBeNull();
+  });
+});
 
 describe("acting on a list's members", () => {
   it("draws the members table as the Members panel's own content", async () => {

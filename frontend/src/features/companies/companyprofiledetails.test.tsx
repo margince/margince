@@ -36,7 +36,7 @@ const writableSeat = () =>
   });
 
 describe("CompanyProfileDetails", () => {
-  it("draws the eight fields the details column leaves out, set or not", async () => {
+  it("draws the seven fields the details column leaves out, set or not", async () => {
     stub();
     render(
       <CompanyProfileDetails
@@ -64,7 +64,6 @@ describe("CompanyProfileDetails", () => {
       en["create.phone"],
       en["create.email"],
       en["co.profileField.registered_address"],
-      en["tags.panelTitle"],
     ]) {
       expect(panel && within(panel).getByText(label)).toBeVisible();
     }

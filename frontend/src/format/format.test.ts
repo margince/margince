@@ -25,6 +25,7 @@ import {
   MONEY_ABSENT,
   ordinalNumber,
 } from "./format";
+import { formatMonthAbbrev } from "./format.dates";
 import { formatDayFull, formatTimeRange } from "./meetingtime";
 import { type DateFormat, setDateTimePreferences } from "./preferences";
 
@@ -316,6 +317,27 @@ describe("date/time formatting (B-EP09.17/19)", () => {
     expect(written("dmy")).toBe("03.11.2026");
     expect(written("mdy")).toBe("11/03/2026");
     expect(written("ymd")).toBe("2026-11-03");
+  });
+
+  it("writes a date known only to its month as the month and year", () => {
+    expect(formatMonthAbbrev("2021-03-01", "en")).toBe("Mar 2021");
+    expect(formatMonthAbbrev("2021-03-01T00:00:00Z", "de")).toBe("März 2021");
+    // The first of the month at UTC midnight stays in that month everywhere.
+    expect(formatMonthAbbrev("2021-01-01", "en")).toBe("Jan 2021");
+  });
+
+  it("writes a month in a fixed date format's order, without the day", () => {
+    const written = (dateFormat: DateFormat) => {
+      setDateTimePreferences({ dateFormat, timeFormat: "locale" });
+      try {
+        return formatMonthAbbrev("2021-03-01", "en");
+      } finally {
+        setDateTimePreferences({ dateFormat: "locale", timeFormat: "locale" });
+      }
+    };
+    expect(written("dmy")).toBe("03.2021");
+    expect(written("mdy")).toBe("03/2021");
+    expect(written("ymd")).toBe("2021-03");
   });
 
   it("writes a day and month in a fixed date format's order, without the year", () => {

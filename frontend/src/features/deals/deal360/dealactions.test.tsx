@@ -206,14 +206,9 @@ describe("the deal's record keys", () => {
   });
 });
 
-// The server marks an archived deal not writable, so the way back must not
-// wait on the write gate that the archive already closed.
-describe("an archived deal's way back", () => {
-  const archived: Partial<Deal> = {
-    archived_at: "2026-11-01T09:00:00Z",
-    writable: false,
-  };
-
+// The way back from an archive is on the page's band, beside the sentence
+// that says the deal is archived. So the menu offers neither verb then.
+describe("an archived deal's menu", () => {
   async function openMore() {
     const user = userEvent.setup();
     await user.click(
@@ -222,22 +217,16 @@ describe("an archived deal's way back", () => {
     await screen.findByRole("button", { name: en["log.addTask"] });
   }
 
-  it("offers Restore deal to a reader who may archive deals", async () => {
-    mount({ deal: ["read", "update", "delete"] }, archived);
+  it("offers neither Archive deal nor Restore deal on an archived deal", async () => {
+    mount(
+      { deal: ["read", "update", "delete"] },
+      { archived_at: "2026-11-01T09:00:00Z", writable: false },
+    );
     await openMore();
 
-    expect(
-      await screen.findByRole("button", { name: en["deal.restore"] }),
-    ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: en["deal.archive"] }),
     ).toBeNull();
-  });
-
-  it("offers no Restore deal to a reader who may not archive deals", async () => {
-    mount({ deal: ["read", "update"] }, archived);
-    await openMore();
-
     expect(
       screen.queryByRole("button", { name: en["deal.restore"] }),
     ).toBeNull();

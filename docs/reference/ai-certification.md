@@ -2670,7 +2670,7 @@ Records (14):
 | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 4635ms | 7681ms | 6 | 0 | 0 | 0 |
 | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3919ms | 23387ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 [0.79, 1.00] | 1932ms | 6353ms | 6 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 9 | 0 | 0.00 [-0.00, 0.15] | 5753ms | 30271ms | 0 | 0 | 9 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 9 | 0 | 0.00 [0.00, 0.15] | 5753ms | 30271ms | 0 | 0 | 9 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1435ms | 4154ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 15 | 15 | 1.00 [0.90, 1.00] | 1556ms | 3315ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 9 | 8 | 0.89 [0.69, 0.97] | 4568ms | 12191ms | 8 | 1 | 0 | 0 |
@@ -3740,7 +3740,7 @@ Records (13):
 | `gemini · gemini-3.6-flash · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 5269ms | 10554ms | 3 | 0 | 0 | 0 |
 | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3598ms | 9509ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 3014ms | 7342ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 9 | 0 | 0.00 [-0.00, 0.15] | 8803ms | 20071ms | 0 | 9 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/1 | `not_supported` | 9 | 0 | 0.00 [0.00, 0.15] | 8803ms | 20071ms | 0 | 9 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 1756ms | 4147ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 [0.85, 1.00] | 3283ms | 5733ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 [0.65, 1.00] | 7653ms | 22625ms | 3 | 0 | 0 | 0 |

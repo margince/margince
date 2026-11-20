@@ -99,6 +99,14 @@ export function useEmploymentActions(contactId: string) {
     });
     await queryClient.invalidateQueries({ queryKey: ["companies"] });
   };
+  // A job that ends or changes moves its company's contact count, which the
+  // row reads from the company's own record.
+  const invalidateWithCompany = async (companyId: string) => {
+    await Promise.all([
+      invalidate(),
+      queryClient.invalidateQueries({ queryKey: ["company", companyId] }),
+    ]);
+  };
   const create = useMutation({
     mutationFn: async (body: CreateRelationshipRequest) => {
       return unwrap(await api.POST("/relationships", { body }));
@@ -108,7 +116,8 @@ export function useEmploymentActions(contactId: string) {
   const end = useMutation({
     mutationFn: (employment: Employment) =>
       patchEmployment(employment, contactId, { ended_at: today(zone) }, t),
-    onSuccess: invalidate,
+    onSuccess: (_saved, employment) =>
+      invalidateWithCompany(employment.company_id),
   });
   const update = useMutation({
     mutationFn: ({
@@ -118,7 +127,8 @@ export function useEmploymentActions(contactId: string) {
       employment: Employment;
       body: UpdateRelationshipRequest;
     }) => patchEmployment(employment, contactId, body, t),
-    onSuccess: invalidate,
+    onSuccess: (_saved, { employment }) =>
+      invalidateWithCompany(employment.company_id),
   });
   const remove = useMutation({
     mutationFn: async (relationshipId: string) => {
@@ -130,7 +140,7 @@ export function useEmploymentActions(contactId: string) {
     },
     onSuccess: invalidate,
   });
-  return { create, end, update, remove, invalidate };
+  return { create, end, update, remove, invalidate, invalidateWithCompany };
 }
 
 export type EmploymentActions = ReturnType<typeof useEmploymentActions>;
@@ -209,6 +219,10 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
         lastHeld.get(a.company_id) ?? "",
       ) ||
       stable(a.company_id, b.company_id) ||
+      // Within one company a role still held leads, dated or not: the first
+      // row's badge stands for the company.
+      Number(stillHeld(b, employmentZone)) -
+        Number(stillHeld(a, employmentZone)) ||
       stable(b.started_at ?? "", a.started_at ?? ""),
   );
   const adding = useAddEmployment(contact.id, actions.create, employments);
@@ -343,7 +357,9 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             open={editingOpen}
             contactId={contact.id}
             onClose={() => setEditingOpen(false)}
-            onSaved={actions.invalidate}
+            onSaved={() =>
+              actions.invalidateWithCompany(editing.row.company_id)
+            }
           />
         )}
         {adding.modal}

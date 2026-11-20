@@ -480,7 +480,7 @@ export function ReportingReportDetail({
 function ReportTitle({ report }: Readonly<{ report: ReportingReport }>) {
   const t = useT();
   return (
-    <div>
+    <div className="reporting-title">
       <Heading as="h2" size="large">
         {report.name}
       </Heading>

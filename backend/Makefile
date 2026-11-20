@@ -133,7 +133,7 @@ TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(T
 
 .DEFAULT_GOAL := help
 
-.PHONY: mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: preflight-gates mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -181,7 +181,8 @@ check: ## The merge gate: everything a PR must pass
 	$(MAKE) build
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
-	$(MAKE) -j4 $(CHECK_LEGS)
+	# -k: one red leg does not stop the others, so a run names every finding.
+	$(MAKE) -k -j4 $(CHECK_LEGS)
 	@bash ../scripts/phase-timer.sh stop
 ifneq ($(CHECK_TREE_GATES),off)
 ifndef CHECK_WRITERS_RAN
@@ -330,6 +331,12 @@ test-uncached: composition
 	# near it spends the run collecting: 3GiB cost 1.4x the wall time of 4GiB
 	# for the same 4 GB peak. A CI job with a runner to itself passes 6GiB.
 	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(TEST_SHUFFLE_FLAGS) $(UNCACHED_TEST_PKGS)
+
+# The gates a few added lines turn red, asked alone: they answer in the time
+# the gates package takes to link, where the full package takes minutes.
+PREFLIGHT_GATE_TESTS := TestTheRootComposePackageDoesNotGrow
+preflight-gates: composition ## The size gates a small diff trips, in seconds; `make check` still runs them
+	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -run '^($(PREFLIGHT_GATE_TESTS))$$' ./gates
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this
@@ -757,7 +764,7 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # issues — with that checkout's path, and therefore without the //nolint: and
 # path-anchored waivers that path carried. This lane is exposed to it exactly
 # as the module lane is, so it is guarded in the same place rather than twice.
-CHECK_BASE_REF ?= origin/main
+CHECK_BASE_REF ?= $(shell ../scripts/check-base-ref.sh)
 
 lint: lint-base lint-strict ## golangci-lint: repo-wide baseline + new-code strict set
 

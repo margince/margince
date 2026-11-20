@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import { TaskTerms } from "../../components/taskassignee";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import { EmptyState, PendingBody } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
@@ -178,6 +179,7 @@ export function useRecordChronology({
   const changeRows = enabled
     ? (changes.data?.pages.flatMap((page) => page.data ?? []) ?? [])
     : [];
+  const byId = new Map(activities.map((activity) => [activity.id, activity]));
   // The contacts on each exchange, named through the resolver the change rows
   // use for their stored ids. Both cuts then name a contact the same way.
   const activityEntries = activityTimeline(
@@ -192,13 +194,19 @@ export function useRecordChronology({
           locale: values.locale,
         }
       : undefined,
-  ).map((entry) =>
+  ).map((entry) => {
+    const activity = byId.get(entry.id);
     // Only an email has a drawer to open, and only when the caller has one to
     // open it in.
-    onOpenEmail && entry.emailSummary
-      ? { ...entry, onOpenEmail: () => onOpenEmail(entry.id) }
-      : entry,
-  );
+    const opened =
+      onOpenEmail && entry.emailSummary
+        ? { ...entry, onOpenEmail: () => onOpenEmail(entry.id) }
+        : entry;
+    // A done task's past due day beside Completed would read as missed.
+    return entry.kind === "task" && activity && !activity.is_done
+      ? { ...opened, terms: <TaskTerms task={activity} /> }
+      : opened;
+  });
   // What installed extensions add rides with the exchanges: the Changes cut is
   // the record's own edits and stays that.
   const extensionHistory = useExtensionHistory(

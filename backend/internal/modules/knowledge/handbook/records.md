@@ -49,7 +49,7 @@ To add a new contact in Margince, open **Contacts** in the sidebar and choose **
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
 4. Fill any custom fields, then choose **Create**. Create stays off until the name and a contact channel are filled.
 
-The **Company** box lists the companies that match what you type: pick one to link it, or type a name to create one. Until you use the box, a work email fills it with the company whose domain covers the address, such as `example.com` for `dana@eu.example.com`. Margince never makes up a company from a domain alone. On a company's **Contacts** tab, **New contact** files the contact under that company, without the box.
+The **Company** box lists the companies that match what you type: pick one to link it. A typed name links the company of that name, or creates one if there is none. Until you use the box, a work email fills it with the company whose domain covers the address, such as `example.com` for `dana@eu.example.com`. Margince never makes up a company from a domain alone. On a company's **Contacts** tab, **New contact** files the contact under that company, without the box.
 
 If the contact is already in Margince, **View existing record** opens it instead. If a live lead holds the email or LinkedIn profile, Margince offers **Convert the lead**. It does not create another contact. An email that belongs to a sending system, such as `noreply@` or `receipts@`, is refused.
 
@@ -65,9 +65,9 @@ To add a contact quickly in Margince, open **Contacts** and choose **Quick captu
 To edit a contact in Margince, open it and press **Edit** in a section of the **Details** panel next to the record. The sections are **About**, **Address**, **Ownership** and **Consent and channels**. Each **Edit** opens a dialog with only the fields of its section.
 1. If the panel is hidden, choose **Show details**.
 2. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing in the dialog is stored before that, even a choice from a list. **Cancel** or `Esc` closes the dialog without saving. **Change Employer** closes the dialog and opens its own, which stores the employer on its own **Save**.
-3. **About** holds **Employer**, **Email**, **Phone**, **LinkedIn** and **Title**. Each email or phone is one row with **Type**, **Primary** and buttons to move or remove it. The panel shows them in one card under **Employer**, one line each with its type, **Primary** first. Past three of a kind, a **more** link opens the rest. Pressing an address or number starts a message or call.
+3. **About** holds **Employer**, **Email**, **Phone**, **LinkedIn**, **Title**, **First name** and **Last name**. Each email or phone is one row with **Type**, **Primary** and buttons to move or remove it. The panel shows them in one card under **Employer**, one line each with its type, **Primary** first. Past three of a kind, a **more** link opens the rest. Pressing an address or number starts a message or call.
 
-**Ownership** holds **Owner**, and **Edit** in **Consent and channels** opens **Manage consent and proof history**. Custom fields change on the **Research** tab, where you press the value. To rename the contact, press the **Full name** at the top of the page; first and last name are set only when it is created. **LinkedIn** shows as a chip with the LinkedIn logo and the record's name, and the chip opens the profile. A company's **LinkedIn URL** and a lead's LinkedIn show the same chip, but a lead's cannot be changed. An address on another host shows as plain text.
+**Ownership** holds **Owner**, and **Edit** in **Consent and channels** opens **Manage consent and proof history**. Custom fields change on the **Research** tab, where you press the value. To rename the contact, press the **Full name** at the top; a stored first or last name the new name leaves out is dropped. **LinkedIn** shows as a chip with the LinkedIn logo and the record's name, and the chip opens the profile. A company's **LinkedIn URL** and a lead's LinkedIn show the same chip, but a lead's cannot be changed. An address on another host shows as plain text.
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator."
 
@@ -79,8 +79,8 @@ New contacts use the same company check from every source. A company name can fi
 To link a contact to a company in Margince, open the contact's **Companies** tab and choose **Add company** under **Work history**. The same list shows the companies they worked at before, with role and dates. When the first page holds the whole list, the number on the tab counts them.
 1. Under **Employer**, search for the company and pick it. It must already be in Margince; create it first under **Companies** if it is not.
 2. If you like, enter the **Role** and a **Start date** (`YYYY-MM` or `YYYY-MM-DD`).
-3. Tick **This is their current employer** if it is.
-4. Choose **Create**.
+3. For a past job, set **Employment status** to **Former** and enter the **End date**.
+4. Tick **This is their primary employer** if it is their main job now, and choose **Create**.
 To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**. To move a contact, press **Edit** in **About**, then **Change Employer**, and pick the company or tick **No current employer**. Then say if they left the old one or it was never their employer. In **Edit employment**, choose **Current** or **Former**. An imported link marked **Status unknown** needs a choice before you save.
 
 A company name Margince read for a contact with no current job shows under **Work history** on the **Companies** tab and under **Employer** in **About**. **Link** opens **Add company** already searching for that name, and **Dismiss** removes the offer for good. **Create and link** creates and links the company, with the domain of the contact's work email unless that is consumer mail, blocked or another company's. If you can open the company that holds the domain, Margince uses it and links the contact. **Link** and **Create and link** also confirm the read company, as **Confirm value** does. Also called: set a contact's company, assign to an account, employer, company from a signature, past employers, former companies, job history.
@@ -93,7 +93,7 @@ Purchased job history can name an employer Margince cannot match. Then the conta
 
 Also called: unresolved employer, imported job history.
 
-Emails have the types **work, personal or other**; phones **work, mobile, home or other**. One number may show two times under two types, such as a main number that is both work and mobile. Editing the list keeps the two entries apart. The contact header says **who can see this contact**: only its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
+Emails have the types **work, personal or other**; phones **work, mobile, home or other**. One number may show two times under two types, such as a main number that is both work and mobile. Editing the list keeps the two entries apart. An email address or a company domain goes in one row only; the form marks a repeat and saves once it is removed. The contact header says **who can see this contact**: only its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
 
 A contact's job title shows in two places. The title on the contact record is a copy, there to save you time. The one that counts is on the job link with the company. A contact can have one current main employer, or none. Margince reads a contact's job title from the signature in their newest mail, and from up to two older mails when that one states none. An older mail only fills an empty title, and mail Margince could not read in full or newsletter mail is never used.
 
@@ -218,9 +218,9 @@ An archived record leaves the live list; turn on **Show archived** on the list t
 Also called: remove, hide, deactivate a record.
 
 ### Can I restore or unarchive an archived record?
-Yes, for a contact, company or deal. Open the record with **Show archived** and go to its history. Find the entry that archived it and press **Undo**. The record comes back.
+Yes, for a contact, company or deal. Open the record with **Show archived**, find the entry that archived it in its history, and press **Undo**. An archived deal also shows **Restore deal** beside "This deal is archived and takes no changes." Anyone with the delete right, such as a manager, may bring back any archive. With edit rights alone, you may bring back only a record you own and archived yourself. If someone else archived it, the history says "Only the colleague who archived this record, or a manager, can restore it."
 
-Its email addresses, phone numbers, links, list members and tags come back too, where they still can. Anything that could not come back is named in the history. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
+Its email addresses, phone numbers, links, list members and tags come back too, where they still can. A list or tag archived since stays archived, and the record does not go back on it. Anything that could not come back is named in the history, and **Restore deal** says how many items stayed behind. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
 
 Margince archives some records on its own, such as emails it judged to be of no use. Those show under **Done for you** on Home, with the other work Margince did for you. A contact, company or deal there has its own **Undo**.
 
@@ -266,7 +266,7 @@ To read a whole note, call or meeting from a contact's **Overview** in Margince,
 Also called: open a note, see the full call notes, read a meeting in full.
 
 ### How do I add a task on a record?
-To add a task in Margince, open the contact, company, lead, deal or project, choose **More actions** in its header, then **Add task**. Enter a **Subject** (required), a **Task type**, a **Due date**, an optional **Time** and an **Assignee** (or **Unassigned**), then choose **Add task**. History labels tasks **Open** or **Completed**; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done**, **Snooze 1 day** and **Move to**, which also takes a time. A snoozed task moves one day later, or to tomorrow if that is later, and keeps its time.
+To add a task in Margince, open the contact, company, lead, deal or project, choose **More actions** in its header, then **Add task**. Enter a **Subject** (required), a **Task type**, a **Due date**, an optional **Time** and an **Assignee** (or **Unassigned**), then choose **Add task**. History marks tasks **Open** or **Completed** and names an open one's holder and due day; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done**, **Snooze 1 day** and **Move to**, which also takes a time. A snoozed task moves one day later, or to tomorrow if that is later, and keeps its time.
 Also called: create a to-do, follow-up, reminder.
 
 On a contact's or company's **Overview**, the **Next** bar shows a task's subject and the email it came from, with **View full thread**. A past meeting is never the next step. On a deal, lead or project with nothing next, the last exchange shows above the bar, such as **Last meeting** with **View meeting**. It adds **Waiting on them** if you wrote last, or **Your turn to answer** if they did. A contact shows that exchange under **What was said**, and a company under **Last contact**. With no open task, a contact's bar offers **Add follow-up** if you may log activity, under **No follow-up task recorded.**
@@ -311,7 +311,7 @@ To undo a change in Margince, open the record's history and choose **Undo** on t
 1. Find the entry and choose **Undo**.
 <!-- prose:allow residue quotes the Undo this change? dialog title as the screen shows it -->
 2. If it changed more than one field, or a link between records, confirm in **Undo this change?**.
-A change you have undone shows **Redo**. Where **Undo** is refused, the button says why before you press it. Only a human can undo; an agent cannot.
+An undone change folds into one line with its undo; press **Show both changes**, then **Redo** on the undo. If it changed more than one field, confirm the question that names them. Where **Undo** is refused, the button says why before you press it. Only a human can undo; an agent cannot.
 Also called: revert, roll back, put a change back.
 
 Every Margince record keeps a history of what changed, who changed it and when. You can put back a single **entry** as a whole; you cannot take the record back to a point in time. There is no undo for a single field: if one change changed four fields, all four go back together, and the question lists them:
@@ -364,7 +364,7 @@ Also called: delete a picklist value, retire an option.
 A tag is a shared word this company files records under. Anyone can put one on a record; **only admin and ops seats** add, rename or retire them. Every tag has its own page that lists the records with it, grouped by type.
 
 ### How do I tag a record?
-To tag a contact or company in Margince, open the record, find its **Tags** panel and choose **Add tag**. On a deal or lead, press **Edit** in its **Registration** section, then **Change Tags**, then **Add tag**.
+To tag a contact or company in Margince, open the record and choose **Add tag** under **Tags** in **About**. While a record has no tags, the row waits behind **Show N empty fields**. On a deal or lead, press **Edit** in its **Registration** section, then **Change Tags**, then **Add tag**.
 1. Type in **Search tags** and pick a tag. A tag the record already has shows **Already added**.
 2. After you tag a contact, Margince may ask "Also tag {company} with {tag}?". It asks when you may change their current company and the company has no such tag yet. **Tag {company}** adds it there too. **Not now** changes nothing.
 3. After you tag a company that has contacts, Margince asks "Also tag contacts at this company with {tag}?". **Choose contacts** lists who works there now, each with a box to tick. A contact who already has the tag shows "(already tagged)". **Continue** previews the change like any bulk change. The preview names each contact you may not change, and the result offers **Undo**.

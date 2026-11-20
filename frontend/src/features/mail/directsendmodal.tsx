@@ -21,7 +21,8 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { intentKeys } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
-import { CitedAttention, CitedLaws } from "../../components/citedlaw";
+import { CitedLaws, FindingWithLaw } from "../../components/citedlaw";
+import { lawsOf } from "../../components/citedprovisions";
 import { Button, Checkbox, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
@@ -39,6 +40,7 @@ import { WordingCorrectionModal } from "./wordingcorrectionmodal";
 // serves for it. Taken from the generated contract rather than restated, so a
 // field the server renames cannot go on being read here.
 type CommunicationReview = components["schemas"]["CommunicationReview"];
+type RefusedRecipient = CommunicationReview["refusals"][number];
 
 // DirectSendCommand is what the server is told. The whole of it travels as a
 // variable rather than closed over render state: a mutation reading the reason
@@ -258,16 +260,7 @@ export function DirectSendModal({
         <div
           key={`${refusal.address}-${refusal.subject_id ?? ""}-${refusal.category ?? ""}`}
         >
-          <p>
-            {refusal.provision ? (
-              <CitedAttention
-                address={refusal.address}
-                provision={refusal.provision}
-              />
-            ) : (
-              refusal.address
-            )}
-          </p>
+          <p>{refusal.address}</p>
           {refusalCountryText(refusal, t, locale) && (
             <p className="t-caption">
               {refusalCountryText(refusal, t, locale)}
@@ -275,13 +268,7 @@ export function DirectSendModal({
           )}
           <ConfirmationFooter refusal={refusal} />
           <p className="t-caption">
-            {t(
-              sendPermissionReasonKey(
-                refusal.reason_code,
-                {},
-                refusal.category,
-              ),
-            )}
+            <ReasonWithLaw refusal={refusal} />
           </p>
           <p className="t-caption">
             {communicationContextLabel(
@@ -361,11 +348,7 @@ function ConfirmationFooter({
       {refusal.footer_findings?.length ? (
         <p>
           {footerFindingsText(refusal.footer_findings, t, locale)}{" "}
-          <CitedLaws
-            provisions={refusal.footer_findings.map(
-              (finding) => finding.provision,
-            )}
-          />
+          <CitedLaws provisions={refusal.footer_findings.flatMap(lawsOf)} />
         </p>
       ) : null}
     </>
@@ -397,4 +380,14 @@ function confirmationMissing(
   if (!acknowledged) return t("directSend.needsAcknowledgement");
   if (!explanation) return t("directSend.needsReason");
   return undefined;
+}
+
+// Why the engine refused this recipient, with the laws it rests on where a pack
+// binding the message cites one.
+function ReasonWithLaw({ refusal }: Readonly<{ refusal: RefusedRecipient }>) {
+  const t = useT();
+  const sentence = t(
+    sendPermissionReasonKey(refusal.reason_code, {}, refusal.category),
+  );
+  return <FindingWithLaw sentence={sentence} provisions={lawsOf(refusal)} />;
 }

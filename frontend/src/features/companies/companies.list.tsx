@@ -28,7 +28,7 @@ import { useOwnerChips } from "../../components/ownerdials";
 import {
   createdColumn,
   lastActivityColumn,
-  mineEmptyNote,
+  mineEmptyLine,
   ownerColumn,
   standardViews,
   tagsColumn,
@@ -180,7 +180,7 @@ export function CompaniesScreen({
         state={state}
         unit="unit.companies"
         unitOne="unit.company"
-        emptyNote={mineEmptyNote({
+        emptyLine={mineEmptyLine({
           t,
           state,
           viewerId,
@@ -193,6 +193,7 @@ export function CompaniesScreen({
             </Button>
             <CreateAction
               label={t("create.company")}
+              requires={{ object: "company", action: "create" }}
               invalidate="companies"
               screen="companies"
               listCreate={{ open: startCreating }}

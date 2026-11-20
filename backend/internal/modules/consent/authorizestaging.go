@@ -100,7 +100,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	}
 	// Each recipient's country, resolved once: the decision and its recorded
 	// stamp read this one answer.
-	countries, err := recipientCountries(ctx, tx, req.Recipients, func(connector.Recipient) commsauthz.Request { return req })
+	countries, err := g.store.recipientCountries(ctx, tx, req.Recipients, func(connector.Recipient) commsauthz.Request { return req })
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
@@ -204,7 +204,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 		// is absent here rather than being handed to a phase that runs as the
 		// system principal. See authorizeevidencecarry.go, and decideOne's own
 		// note on why the two differ.
-		evidence, err := evidenceJSON(d.Evidence)
+		evidence, err := evidenceJSON(d.Evidence, countries[i].Sender)
 		if err != nil {
 			return err
 		}
