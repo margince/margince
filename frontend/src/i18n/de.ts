@@ -2074,7 +2074,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.reset": "{date} UTC",
   "aiAdmin.fixed":
     "Ein festes Kontingent für das Unternehmen ersetzt die Berechnung pro Nutzerkonto.",
-  "aiAdmin.formula":
+  "aiAdmin.formula_one":
+    "Aktive Nutzende mit vollem Platz: {users} × {tokens} Token pro Nutzerkonto und Monat.",
+  "aiAdmin.formula_other":
     "Aktive Nutzende mit vollem Platz: {users} × {tokens} Tokens pro Nutzerkonto und Monat.",
   "aiAdmin.floor":
     "Ohne berechtigte Nutzende wird das Kontingent für 1 Nutzerkonto berechnet.",
@@ -2091,6 +2093,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.perUser": "Tokens pro vollem Platz und Monat",
   "aiAdmin.range": "Ganze Tokens, von 1 bis 1.000.000.000.000.",
   "aiAdmin.company": "Fester Gesamtwert für das Unternehmen (optional)",
+  "aiAdmin.companyName": "Fester Gesamtwert für das Unternehmen",
   "aiAdmin.overrideHint":
     "Leer lassen, um die Berechnung pro Nutzerkonto zu verwenden. Der Wert pro Nutzerkonto bleibt erhalten.",
   "aiAdmin.routingStale":
@@ -2101,6 +2104,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.reload": "Werte neu laden",
   "aiAdmin.failed": "Änderung nicht übernommen",
   "aiAdmin.preview": "Auswirkungen vorab ansehen",
+  "aiAdmin.fixToPreview": "Korrigiere die markierten Felder für die Vorschau.",
   "aiAdmin.previewHint":
     "Vorschau auf Basis der aktuellen Bedingungen. Beim Speichern werden Einstellungen und Nutzung erneut geprüft. Die Vorschau reserviert keine Kapazität und ruft kein Modell auf.",
   "aiAdmin.features": "KI nach Tätigkeit",

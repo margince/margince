@@ -2019,7 +2019,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.reset": "{date} theo giờ UTC",
   "aiAdmin.fixed":
     "Hạn mức cố định của công ty thay cho cách tính theo người dùng.",
-  "aiAdmin.formula":
+  "aiAdmin.formula_one":
+    "Người dùng đầy đủ đang hoạt động: {users} × {tokens} token mỗi người dùng mỗi tháng.",
+  "aiAdmin.formula_other":
     "Người dùng đầy đủ đang hoạt động: {users} × {tokens} token mỗi người dùng mỗi tháng.",
   "aiAdmin.floor":
     "Khi không có người dùng đủ điều kiện, hạn mức tính là 1 người dùng.",
@@ -2034,6 +2036,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.perUser": "Token mỗi người dùng đầy đủ mỗi tháng",
   "aiAdmin.range": "Số token nguyên, từ 1 đến 1.000.000.000.000.",
   "aiAdmin.company": "Tổng cố định của công ty (không bắt buộc)",
+  "aiAdmin.companyName": "Tổng cố định của công ty",
   "aiAdmin.overrideHint":
     "Để trống để tính theo người dùng. Giá trị theo người dùng vẫn giữ nguyên.",
   "aiAdmin.routingStale": "Gán mô hình đã thay đổi trong lúc đang sửa",
@@ -2043,6 +2046,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.reload": "Tải lại giá trị",
   "aiAdmin.failed": "Không thể áp dụng thay đổi",
   "aiAdmin.preview": "Xem trước tác động",
+  "aiAdmin.fixToPreview": "Sửa các ô được đánh dấu để xem trước.",
   "aiAdmin.previewHint":
     "Xem trước theo điều kiện hiện tại. Khi lưu, hệ thống kiểm tra lại cài đặt và mức sử dụng mới nhất; thao tác này không giữ trước năng lực xử lý và không gọi mô hình.",
   "aiAdmin.features": "AI theo hoạt động",

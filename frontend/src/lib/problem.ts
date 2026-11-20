@@ -25,6 +25,7 @@ export {
   fieldCheckSentence,
   moneyLimit,
   percentLimit,
+  wholeNumberFault,
 } from "./faultsentence";
 export type { FieldProblem } from "./problembody";
 export {

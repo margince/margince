@@ -160,6 +160,30 @@ export function fieldCheckSentence(
   );
 }
 
+/**
+ * What is wrong with a whole number typed in a box, worded as the server's
+ * refusal of it would be; nothing when it is a whole number from `min` to
+ * `max`. Spaces around it are allowed. A blank box is the caller's to judge.
+ */
+export function wholeNumberFault(
+  typed: string,
+  locale: Locale,
+  label: FieldLabel,
+  bounds: Readonly<{ min: number; max: number }>,
+): string | undefined {
+  const trimmed = typed.trim();
+  if (!/^-?\d+$/.test(trimmed)) {
+    return fieldCheckSentence("not_integer", locale, label);
+  }
+  const value = Number(trimmed);
+  return value < bounds.min || value > bounds.max
+    ? fieldCheckSentence("out_of_range", locale, label, {
+        min: String(bounds.min),
+        max: String(bounds.max),
+      })
+    : undefined;
+}
+
 function codeMessage(
   fault: FieldProblem,
   locale: Locale,

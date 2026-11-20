@@ -1987,7 +1987,9 @@ export const en = {
   "aiAdmin.reset": "{date} UTC",
   "aiAdmin.fixed":
     "Fixed company allowance overrides the per-user calculation.",
-  "aiAdmin.formula":
+  "aiAdmin.formula_one":
+    "Active full users: {users} × {tokens} token per user per month.",
+  "aiAdmin.formula_other":
     "Active full users: {users} × {tokens} tokens per user per month.",
   "aiAdmin.floor": "With no eligible users, the allowance counts 1 user.",
   "aiAdmin.degraded": "80% threshold reached: reduced-tier routing is active",
@@ -2001,6 +2003,7 @@ export const en = {
   "aiAdmin.perUser": "Tokens per full user per month",
   "aiAdmin.range": "Whole tokens, from 1 to 1,000,000,000,000.",
   "aiAdmin.company": "Fixed company total (optional)",
+  "aiAdmin.companyName": "Fixed company total",
   "aiAdmin.overrideHint":
     "Leave blank to use the per-user calculation. The per-user value is retained.",
   "aiAdmin.routingStale": "Model bindings changed while you were editing",
@@ -2010,6 +2013,7 @@ export const en = {
   "aiAdmin.reload": "Reload values",
   "aiAdmin.failed": "Change not applied",
   "aiAdmin.preview": "Preview effects",
+  "aiAdmin.fixToPreview": "Fix the marked fields to preview.",
   "aiAdmin.previewHint":
     "Preview of current conditions. Saving checks the latest settings and usage again; this does not reserve capacity or call a model.",
   "aiAdmin.features": "AI by activity",

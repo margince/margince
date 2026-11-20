@@ -25,10 +25,10 @@ import { useCanWrite } from "../../lib/capability";
 import { useCurrencyNote } from "../../lib/installation-settings.currency";
 import {
   type FieldLabels,
-  fieldCheckSentence,
   percentLimit,
   refusalSentences,
   unwrap,
+  wholeNumberFault,
 } from "../../lib/problem";
 // Shared with every upload form, which reads the ceiling off this same record.
 // One query, one key: two hooks on one key would let whichever mounted first
@@ -82,7 +82,7 @@ const EDITABLE_FACTS = [
 export type EditedFact = (typeof EDITABLE_FACTS)[number];
 
 // The server's bounds on the Likely threshold, in percent.
-const LIKELY_THRESHOLD = { min: "1", max: "100" } as const;
+const LIKELY_THRESHOLD = { min: 1, max: 100 } as const;
 
 function factLabels(t: ReturnType<typeof useT>, locale: Locale): FieldLabels {
   return {
@@ -107,12 +107,9 @@ function thresholdFault(
   locale: Locale,
 ): string | undefined {
   const label = labels.forecast_likely_threshold;
-  if (!Number.isInteger(percent)) {
-    return fieldCheckSentence("not_integer", locale, label);
-  }
-  return percent < 1 || percent > 100
-    ? fieldCheckSentence("out_of_range", locale, label, LIKELY_THRESHOLD)
-    : undefined;
+  return label === undefined
+    ? undefined
+    : wholeNumberFault(String(percent), locale, label, LIKELY_THRESHOLD);
 }
 
 // Exported for the onboarding's preferences act, which writes the same sparse
