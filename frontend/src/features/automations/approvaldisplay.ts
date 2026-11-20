@@ -10,6 +10,10 @@ import {
   commercialPreviewDisplay,
   stagedDealMove,
 } from "../../lib/approvalpreview";
+import {
+  CONTACT_EMPLOYER_DISPLAY,
+  textRow,
+} from "./approvaldisplay.employerchange";
 import { humanizeKind } from "./approvalkind";
 import {
   commitmentResponsibility,
@@ -34,11 +38,6 @@ const CLOSE_DATE_FLAGS = {
   unrealistic_soon: "approval.field.closeDateFlag.unrealistic_soon",
   unrealistic_stale: "approval.field.closeDateFlag.unrealistic_stale",
 } as const satisfies Readonly<Record<string, MessageKey>>;
-
-// A field whose value is already a word, under its caption.
-function textRow(field: string, label: MessageKey): DisplayField {
-  return { field, label, as: "text" };
-}
 
 export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
   {
@@ -131,15 +130,7 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       { field: "due_date", label: "approval.field.due_date", as: "date" },
     ],
     ownership_transfer: [textRow("note", "approval.field.note")],
-    // Two records that look like one contact. The names are the comparison; the
-    // position and the title beside them are what "Use as job title" weighs.
-    linkedin_match: [
-      textRow("connection_name", "approval.field.connection_name"),
-      textRow("connection_company", "approval.field.connection_company"),
-      textRow("connection_position", "approval.field.connection_position"),
-      textRow("contact_name", "approval.field.contact_name"),
-      textRow("contact_title", "approval.field.contact_title"),
-    ],
+    ...CONTACT_EMPLOYER_DISPLAY,
     // A message that was scheduled and then stopped. Why it stopped is the whole
     // question, and the SUMMARY already carries that sentence: the server maps
     // the reason code to prose in one place (compose/scheduledsendheld.go,
