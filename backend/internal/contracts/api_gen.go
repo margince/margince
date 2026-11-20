@@ -46170,6 +46170,9 @@ type ControllerSend struct {
 // is final against the machine — a later run may add claims but never overwrites or
 // resurrects a corrected one while its evidence fingerprint is unchanged.
 type ConversationClaim struct {
+	// AutoKept Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+	AutoKept *ConversationClaimAutoKept `json:"auto_kept,omitempty"`
+
 	// Body What the claim says, in the reader's language. The verbatim evidence is `source_quote`, beside it.
 	Body string `json:"body"`
 
@@ -46191,7 +46194,7 @@ type ConversationClaim struct {
 	// dropped from the product.
 	Kind ConversationClaimKind `json:"kind"`
 
-	// LooksKept A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+	// LooksKept A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
 	LooksKept *ConversationClaimLooksKept `json:"looks_kept,omitempty"`
 
 	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
@@ -46227,6 +46230,12 @@ type ConversationClaim struct {
 // ConversationClaimStatus `open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.
 type ConversationClaimStatus string
 
+// ConversationClaimAutoKept Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+type ConversationClaimAutoKept struct {
+	// Evidence A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
+	Evidence *ConversationClaimLooksKept `json:"evidence,omitempty"`
+}
+
 // ConversationClaimKind The eight kinds one extraction mechanism produces (ADR-0097 D1). They share a
 // lifecycle — extracted → cited → correctable → dismissible — and differ only here.
 //
@@ -46240,7 +46249,7 @@ type ConversationClaimStatus string
 // dropped from the product.
 type ConversationClaimKind string
 
-// ConversationClaimLooksKept A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+// ConversationClaimLooksKept A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
 type ConversationClaimLooksKept struct {
 	GuestName string             `json:"guest_name"`
 	MeetingAt time.Time          `json:"meeting_at"`
@@ -99493,6 +99502,9 @@ type ServerInterface interface {
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
+	// Undo Margince's close of a promise.
+	// (POST /claims/{id}/reopen)
+	ReopenConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
 	// Say a promise was kept, or that it no longer stands.
 	// (POST /claims/{id}/settle)
 	SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
@@ -103681,6 +103693,12 @@ func (_ Unimplemented) FileChannelMessage(w http.ResponseWriter, r *http.Request
 // Which messaging transports THIS installation has registered.
 // (GET /channel-providers)
 func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Undo Margince's close of a promise.
+// (POST /claims/{id}/reopen)
+func (_ Unimplemented) ReopenConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -121146,6 +121164,38 @@ func (siw *ServerInterfaceWrapper) ListChannelProviders(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListChannelProviders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReopenConversationClaim operation middleware
+func (siw *ServerInterfaceWrapper) ReopenConversationClaim(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReopenConversationClaim(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -158842,6 +158892,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-providers", wrapper.ListChannelProviders)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/claims/{id}/reopen", wrapper.ReopenConversationClaim)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/claims/{id}/settle", wrapper.SettleConversationClaim)

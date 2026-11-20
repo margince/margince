@@ -34871,7 +34871,7 @@ components:
     ConversationClaimLooksKept:
       type: object
       description: >-
-        A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+        A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
       required: [meeting_id, guest_name, meeting_at, meeting_precision]
       properties:
         meeting_id: {type: string, format: uuid}
@@ -34880,6 +34880,12 @@ components:
         meeting_precision:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           description: How to read `meeting_at`. `day` means only its date is known.
+    ConversationClaimAutoKept:
+      type: object
+      description: >-
+        Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+      properties:
+        evidence: {$ref: '#/components/schemas/ConversationClaimLooksKept'}
     ConversationClaim:
       type: object
       description: |-
@@ -34917,6 +34923,7 @@ components:
           format: date-time
           description: When a human typed over the machine. Set means the claim is theirs, not the extractor's.
         looks_kept: {$ref: '#/components/schemas/ConversationClaimLooksKept'}
+        auto_kept: {$ref: '#/components/schemas/ConversationClaimAutoKept'}
         task_activity_id:
           type: [string, 'null']
           format: uuid

@@ -15,6 +15,7 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.promise_kept": "Đóng cam kết mà cuộc họp cho thấy đã thực hiện",
   "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
   "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
@@ -2427,6 +2428,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentJob.coldstart": "Tiếp cận đầu tiên",
   "agentJob.company_name_promotion": "Cập nhật tên công ty",
   "agentJob.contact_share": "Yêu cầu chia sẻ liên hệ",
+  "agentJob.task_due_date": "Câu hỏi về hạn",
   "agentJob.deal_scout": "Trinh sát deal",
   "agentJob.dealscout": "Trinh sát deal",
   "agentJob.deepread": "Trình đọc trang web",
@@ -4533,6 +4535,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "commitment.looksKept":
     "Có vẻ đã làm xong: {name} đã chấp nhận cuộc họp ngày {date}.",
   "commitment.markKept": "Đánh dấu đã làm",
+  "commitment.autoKept":
+    "Margince đã đánh dấu việc này là xong: {name} đã chấp nhận cuộc họp ngày {date}.",
+  "commitment.autoKeptPlain": "Margince đã đánh dấu việc này là xong.",
+  "commitment.undo": "Hoàn tác",
   "commitment.quote": "“{quote}”",
   "co.brief.by.model": "Do Margince viết",
   "co.brief.by.deterministic": "Tổng hợp từ hồ sơ CRM",
@@ -4688,6 +4694,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
   "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
+  "approval.kind.task_due_date": "Kiểm tra hạn",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",
@@ -10714,6 +10721,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ghi dữ liệu nhập",
   "jobs.kind.import_undo": "Hoàn tác lượt nhập",
   "jobs.kind.import_validate": "Chạy thử dữ liệu nhập",
+  "jobs.kind.promise_kept_sweep": "Cam kết đã thực hiện qua cuộc họp",
   "jobs.kind.transcript_audience_sweep": "Quyền xem ghi chú cuộc họp",
   "jobs.kind.meeting_profile_retract_sweep": "Trường công ty từ cuộc họp",
   "jobs.kind.initiative_enrolment_sweep": "Ngày tham gia sáng kiến",
@@ -21602,6 +21610,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",
   "approval.commitment.noDueDay": "Chưa nêu ngày",
   "approval.commitment.strength": "Mức chắc chắn",
+  "approval.commitment.oddDue": "Ngày này có vẻ quá xa: giữ, đổi hoặc xóa",
   "approval.commitment.tentative": "Chưa chắc chắn: họ nói sẽ cố gắng",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
   "approval.commitment.notFulfilled":

@@ -4,6 +4,7 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
   "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
   "systemJob.meeting_profile":
     "Removing company values whose meeting lost its readers",
@@ -2405,6 +2406,7 @@ export const en = {
   "agentJob.coldstart": "First approach",
   "agentJob.company_name_promotion": "Company name update",
   "agentJob.contact_share": "Contact share request",
+  "agentJob.task_due_date": "Due date question",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website reader",
@@ -4605,6 +4607,10 @@ export const en = {
   "commitment.takenOverUnnamed": "Taken on {date}",
   "commitment.looksKept": "Looks kept: {name} accepted the {date} meeting.",
   "commitment.markKept": "Mark kept",
+  "commitment.autoKept":
+    "Margince marked this kept: {name} accepted the {date} meeting.",
+  "commitment.autoKeptPlain": "Margince marked this kept.",
+  "commitment.undo": "Undo",
   "commitment.quote": "“{quote}”",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Compiled from CRM records",
@@ -4760,6 +4766,7 @@ export const en = {
   "approval.kind.capture_counterparty": "Add contact from mail",
   "approval.kind.ownership_transfer": "Hand over a record",
   "approval.kind.contact_share": "Share a contact",
+  "approval.kind.task_due_date": "Check a due date",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",
@@ -10990,6 +10997,7 @@ export const en = {
   "jobs.kind.import_commit": "Import commit",
   "jobs.kind.import_undo": "Import undo",
   "jobs.kind.import_validate": "Import test run",
+  "jobs.kind.promise_kept_sweep": "Commitments kept by meetings",
   "jobs.kind.transcript_audience_sweep": "Meeting notes readers",
   "jobs.kind.meeting_profile_retract_sweep": "Company fields from meetings",
   "jobs.kind.initiative_enrolment_sweep": "Initiative membership dates",
@@ -21892,6 +21900,8 @@ export const en = {
   "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",
   "approval.commitment.noDueDay": "No day stated",
   "approval.commitment.strength": "How firm",
+  "approval.commitment.oddDue":
+    "This date looks far off: keep it, change it or clear it",
   "approval.commitment.tentative": "Tentative: they said they would try",
   "approval.commitment.promiseStatus": "Commitment status",
   "approval.commitment.notFulfilled":

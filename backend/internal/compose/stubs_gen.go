@@ -1135,6 +1135,10 @@ func (stubs) ListChannelProviders(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "ListChannelProviders")
 }
 
+func (stubs) ReopenConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReopenConversationClaim")
+}
+
 func (stubs) SettleConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SettleConversationClaim")
 }
