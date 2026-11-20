@@ -286,7 +286,7 @@ func TestAReadOnlyPassportSeesTheQueueAndCannotAnswerIt(t *testing.T) {
 
 // A passport does what its holder could do unaided. Relinking an activity onto
 // a contact, a company or a deal costs no human decision. Filing under a
-// project marks the activity as commercial correspondence, so on a passport it
+// project marks the activity as commercial correspondence. On a passport it
 // waits for a human, and automatic work with no passport behind it is refused.
 //
 // Each attach after a logged meeting once staged a card the app would never

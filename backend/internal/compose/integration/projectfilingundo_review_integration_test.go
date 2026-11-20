@@ -313,9 +313,9 @@ func waitUntilBlockedBy(t *testing.T, holder interface {
 	}
 }
 
-// A credential's filing under a project waits for a human, and once approved
-// it files the activity as its colleague could in the app, also while an
-// erasure is open on the activity's contact.
+// A credential's filing under a project waits for a human. Once approved, it
+// files the activity as its colleague could in the app. An open erasure on the
+// activity's contact does not stop it.
 func TestACredentialFilesAnActivityUnderErasureOnceAHumanApproves(t *testing.T) {
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
