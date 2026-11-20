@@ -155,9 +155,11 @@
   font-weight: var(--fontWeightMedium);
 }
 /* A disabled option stays listed and stays readable — a choice this workspace
-   cannot make right now is information — but it takes no hover treatment,
-   because a highlight is a promise that a click will do something. */
+   cannot make right now is information — but in the secondary ink, as a day
+   the calendar refuses, so it reads apart from the live ones. It takes no hover
+   treatment, because a highlight is a promise that a click will do something. */
 .select-option.is-disabled {
+  color: var(--textSecondary);
   cursor: not-allowed;
   background: none;
 }

@@ -12,6 +12,7 @@ import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
+import { useInNoTeam, useNewListSharing } from "../../lib/listaudience";
 import type { List } from "../../lib/lists.queries";
 import { useMe } from "../../lib/session";
 import { ownedByReader } from "./library";
@@ -33,17 +34,9 @@ export type ListAudience = Readonly<{
 const TEAM_AUDIENCE: ListAudience = { sharing: "team", teamId: null };
 const PRIVATE_AUDIENCE: ListAudience = { sharing: "private", teamId: null };
 
-/** Whether the signed-in reader is known to belong to no team. */
-function useInNoTeam(): boolean {
-  return useMe().data?.teams.length === 0;
-}
-
-/**
- * What a new list starts with: the reader's teams, or only the reader when
- * they are in no team. A team list would then reach nobody else.
- */
+/** What a new list starts with: the reader's default sharing, naming no team. */
 export function useDefaultAudience(): ListAudience {
-  return useInNoTeam() ? PRIVATE_AUDIENCE : TEAM_AUDIENCE;
+  return useNewListSharing() === "private" ? PRIVATE_AUDIENCE : TEAM_AUDIENCE;
 }
 
 // A Select value cannot be null, so the owner's-teams choice needs a spelling
