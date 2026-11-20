@@ -57482,11 +57482,6 @@ type MeResponse struct {
 	// DataResetAvailable True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
 	DataResetAvailable *bool `json:"data_reset_available,omitempty"`
 
-	// InlineSendReview The `activities.inline_send_review` setting: whether the email composer is decided at
-	// Send, with a refusal shown inline from the embedded review. Absent or false keeps the
-	// check while writing and the confirmation dialog.
-	InlineSendReview *bool `json:"inline_send_review,omitempty"`
-
 	// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
 	InstallationBrand *InstallationBrand `json:"installation_brand,omitempty"`
 
