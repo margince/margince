@@ -2,121 +2,63 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The reader's own action on a row Home lists. Home leaves the row at once and
-// shows the Updating mark; the day read after the write brings the fresh day.
+// shows the Updating mark. Once the write answered, the server's day is read
+// again. A failed write so brings the row back from the server, not a kept copy.
 
 import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 import type { components } from "../api/schema";
-import { isHomeDayRead, worklistKey } from "./workkeys";
+import { homeDayOptions } from "./worklistday";
 
 type Worklist = components["schemas"]["Worklist"];
 type WorklistItem = components["schemas"]["WorklistItem"];
 
-/** A row by the id the lanes give it. Without a source, any lane's id matches. */
-export type HomeRow = Readonly<{ id: string; source?: string }>;
+/** A row by its identity: the lanes mint ids independently, so both parts count. */
+export type HomeRow = Readonly<{ source: string; id: string }>;
 
-/** What an action does with the hidden rows once its write answered. */
-export type HomeHide = Readonly<{
-  /** The write succeeded: the next fresh day may end the hiding. */
-  settle: () => void;
-  /** The write failed: the rows come back. */
-  restore: () => void;
-}>;
-
-type Hidden = HomeRow & { settled: boolean; expiresAt: number };
-
-// A kept day that still lists the row can answer before the fresh one. These
-// rows stay out of every answer until a fresh first page arrives after the write.
-const HIDE_LIMIT_MS = 2 * 60_000;
-let hidden: Hidden[] = [];
-
-const isHidden = (item: WorklistItem) =>
-  hidden.some(
-    (row) =>
-      row.id === item.id &&
-      (row.source === undefined || row.source === item.source),
-  );
-
-function withoutHidden(page: Worklist): Worklist {
-  const focus = page.focus
-    ? { ...page.focus, items: page.focus.items.filter((i) => !isHidden(i)) }
-    : undefined;
-  return {
+function without(rows: readonly HomeRow[]) {
+  const leaves = (item: WorklistItem) =>
+    rows.some((row) => row.id === item.id && row.source === item.source);
+  return (page: Worklist): Worklist => ({
     ...page,
-    queue: page.queue.filter((item) => !isHidden(item)),
-    ...(focus ? { focus } : {}),
-  };
+    queue: page.queue.filter((item) => !leaves(item)),
+    ...(page.focus
+      ? {
+          focus: {
+            ...page.focus,
+            items: page.focus.items.filter((i) => !leaves(i)),
+          },
+        }
+      : {}),
+  });
 }
-
-/** A page just read, without the rows the reader has acted on since. */
-export function withoutActedOnRows(
-  page: Worklist,
-  isFirstPage: boolean,
-  now: number = Date.now(),
-): Worklist {
-  hidden = hidden.filter((row) => row.expiresAt > now);
-  if (isFirstPage && !page.served_stale) {
-    hidden = hidden.filter((row) => !row.settled);
-  }
-  return hidden.length === 0 ? page : withoutHidden(page);
-}
-
-function isDay(data: unknown): data is InfiniteData<Worklist> {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "pages" in data &&
-    Array.isArray(data.pages)
-  );
-}
-
-function marked(data: InfiniteData<Worklist>): InfiniteData<Worklist> {
-  const pages = data.pages.map((page, at) =>
-    at === 0
-      ? { ...withoutHidden(page), served_stale: true }
-      : withoutHidden(page),
-  );
-  return { ...data, pages };
-}
-
-const homeDays = {
-  queryKey: worklistKey,
-  predicate: (query: { queryKey: readonly unknown[] }) =>
-    isHomeDayRead(query.queryKey),
-};
 
 /**
- * Takes the rows out of every cached Home day and marks the day as updating.
- * The caller refetches once the write answered (invalidating worklistKey), and
- * calls settle on success or restore on failure.
+ * Takes the rows out of the cached Home day and marks it as updating. Returns
+ * the call that reads the day again; make it when the write answered, whether it
+ * succeeded or not.
+ *
+ * Only a query found before the wait is written, and only while the cache
+ * still holds it. A sign-out in between so leaves nothing behind.
  */
 export async function hideHomeRows(
   client: QueryClient,
   rows: readonly HomeRow[],
-  now: number = Date.now(),
-): Promise<HomeHide> {
-  const added = rows.map((row) => ({
-    ...row,
-    settled: false,
-    expiresAt: now + HIDE_LIMIT_MS,
-  }));
-  hidden = [...hidden, ...added];
-  await client.cancelQueries(homeDays);
-  const before = client.getQueriesData<InfiniteData<Worklist>>(homeDays);
-  client.setQueriesData<InfiniteData<Worklist>>(homeDays, (data) =>
-    isDay(data) ? marked(data) : data,
-  );
-  return {
-    settle: () => {
-      for (const row of added) row.settled = true;
-    },
-    restore: () => {
-      hidden = hidden.filter((row) => !added.includes(row));
-      for (const [key, data] of before) client.setQueryData(key, data);
-    },
+): Promise<() => void> {
+  const { queryKey } = homeDayOptions();
+  const cache = client.getQueryCache();
+  const found = cache.find<InfiniteData<Worklist>>({ queryKey, exact: true });
+  await client.cancelQueries({ queryKey, exact: true });
+  const data = found?.state.data;
+  if (found && data && cache.get(found.queryHash) === found) {
+    const drop = without(rows);
+    client.setQueryData<InfiniteData<Worklist>>(queryKey, {
+      ...data,
+      pages: data.pages.map((page, at) =>
+        at === 0 ? { ...drop(page), served_stale: true } : drop(page),
+      ),
+    });
+  }
+  return () => {
+    void client.invalidateQueries({ queryKey, exact: true });
   };
-}
-
-/** Forgets every hidden row. For tests. */
-export function forgetHiddenHomeRows(): void {
-  hidden = [];
 }

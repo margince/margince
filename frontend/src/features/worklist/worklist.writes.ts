@@ -269,6 +269,7 @@ export function useSetDisposition() {
     mutationFn: async (input: {
       activityId: string;
       disposition: WorklistDisposition;
+      source: string;
       snoozedUntil?: string;
       snoozedIntent?: components["schemas"]["IntentTime"];
       reopenOn?: ReopenCondition;
@@ -294,12 +295,14 @@ export function useSetDisposition() {
         }),
       );
     },
-    onMutate: (input) => hideHomeRows(queryClient, [{ id: input.activityId }]),
-    onSuccess: (_data, _input, hide) => {
-      hide?.settle();
+    onMutate: (input) =>
+      hideHomeRows(queryClient, [
+        { source: input.source, id: input.activityId },
+      ]),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });
     },
-    onError: (_error, _input, hide) => hide?.restore(),
+    onSettled: (_data, _error, _input, settle) => settle?.(),
   });
 }
 

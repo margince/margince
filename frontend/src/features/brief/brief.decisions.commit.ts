@@ -37,9 +37,12 @@ export function decidedRows(tray: {
     if (!item || decision.verdict === "skip" || decision.verdict === "edit") {
       return [];
     }
-    const members = approvalsOf(item).map((approval) => ({ id: approval.id }));
+    const members = approvalsOf(item).map((approval) => ({
+      source: "approval",
+      id: approval.id,
+    }));
     return item.kind === "bundle"
-      ? [{ id: item.bundleId }, ...members]
+      ? [{ source: "batch", id: item.bundleId }, ...members]
       : members;
   });
 }

@@ -238,9 +238,10 @@ function DecidableApprovalRow({
         }),
       );
     },
-    onMutate: () => hideHomeRows(queryClient, [{ id: approval.id }]),
-    onSuccess: (data, input, hide) => {
-      hide?.settle();
+    onMutate: () =>
+      hideHomeRows(queryClient, [{ source: "approval", id: approval.id }]),
+    onSettled: (_data, _error, _input, settle) => settle?.(),
+    onSuccess: (data, input) => {
       void invalidateApprovalViews(queryClient);
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
@@ -248,8 +249,7 @@ function DecidableApprovalRow({
       if (input.verdict === "approve")
         announceApproval(toast, t, data, undoTarget);
     },
-    onError: (error, _input, hide) => {
-      hide?.restore();
+    onError: (error) => {
       const problem = error instanceof ProblemError ? error.problem : null;
       const alreadyDecided = problem && isAlreadyDecided(problem);
       if (alreadyDecided) onAlreadyDecided?.();

@@ -8,7 +8,6 @@
 import { infiniteQueryOptions } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
-import { withoutActedOnRows } from "./homerows";
 import { unwrap } from "./problem";
 import { HOME_DAY_FRESH_MS, isLiveWorkRead, worklistKey } from "./workkeys";
 import {
@@ -105,11 +104,9 @@ export async function readWorklistPage(
       signal,
     }),
   );
-  const read =
-    view === undefined || page.view !== undefined
-      ? page
-      : withinView(page, view);
-  return withoutActedOnRows(read, cursor === undefined);
+  return view === undefined || page.view !== undefined
+    ? page
+    : withinView(page, view);
 }
 
 /** The day's optional reconnections, the one part a day read omits. */

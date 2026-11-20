@@ -78,13 +78,12 @@ export function useMarkRowsDone() {
             queryClient,
             input.rows.map((row) => ({ source: row.source, id: row.row_id })),
           ),
-    onSuccess: (_data, _input, hide) => {
-      hide?.settle();
+    onSettled: (_data, _error, _input, settle) => settle?.(),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });
     },
     // A row on no list is stale on screen, so the list is read again.
-    onError: (error, _input, hide) => {
-      hide?.restore();
+    onError: (error) => {
       if (doneFailure(error).key === "worklist.disposition.gone") {
         queryClient.invalidateQueries({ queryKey: worklistKey });
       }

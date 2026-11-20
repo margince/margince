@@ -1,110 +1,117 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type InfiniteData, QueryClient } from "@tanstack/react-query";
-import { afterEach, describe, expect, it } from "vitest";
-import type { components } from "../api/schema";
 import {
-  forgetHiddenHomeRows,
-  hideHomeRows,
-  withoutActedOnRows,
-} from "./homerows";
+  type InfiniteData,
+  InfiniteQueryObserver,
+  QueryClient,
+} from "@tanstack/react-query";
+import { describe, expect, it } from "vitest";
+import type { components } from "../api/schema";
+import { hideHomeRows } from "./homerows";
+import { resetToSignedOut } from "./session";
+import { worklistKey } from "./workkeys";
 import { homeDayOptions } from "./worklistday";
 
 type Worklist = components["schemas"]["Worklist"];
-type WorklistItem = components["schemas"]["WorklistItem"];
+type Day = InfiniteData<Worklist>;
 
-afterEach(forgetHiddenHomeRows);
+const row = (id: string, source = "task") =>
+  ({ id, source }) as Worklist["queue"][number];
 
-const row = (id: string, source = "task") => ({ id, source }) as WorklistItem;
-
-function day(queue: string[], focus: string[] = []): Worklist {
+function day(...rows: Worklist["queue"]): Day {
   return {
-    queue: queue.map((id) => row(id)),
-    focus: { items: focus.map((id) => row(id)) },
-  } as Worklist;
+    pages: [{ queue: rows, focus: { items: rows } } as Worklist],
+    pageParams: [undefined],
+  };
 }
 
-function cached(client: QueryClient, pages: Worklist[]) {
-  const key = homeDayOptions().queryKey;
-  client.setQueryData<InfiniteData<Worklist>>(key, {
-    pages,
-    pageParams: pages.map(() => undefined),
+const homeKey = homeDayOptions().queryKey;
+const ids = (client: QueryClient, key: readonly unknown[] = homeKey) =>
+  client
+    .getQueryData<Day>(key)
+    ?.pages[0]?.queue.map((r) => `${r.source}:${r.id}`);
+
+// A Home day read that answers with whatever `server.rows` holds.
+function watchHome(client: QueryClient, server: { rows: Worklist["queue"] }) {
+  const observer = new InfiniteQueryObserver(client, {
+    queryKey: homeKey,
+    queryFn: async () => day(...server.rows).pages[0] as Worklist,
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: () => undefined,
   });
-  return key;
+  return observer.subscribe(() => {});
 }
-
-const idsOf = (data: InfiniteData<Worklist> | undefined) =>
-  data?.pages.flatMap((p) => [
-    ...p.queue.map((i) => i.id),
-    ...(p.focus?.items.map((i) => i.id) ?? []),
-  ]);
 
 describe("a row the reader acted on", () => {
-  it("leaves the cached Home day at once, queue and Focus, and the day shows Updating", async () => {
+  it("leaves the Home day at once, queue and Focus, and the day shows Updating", async () => {
     const client = new QueryClient();
-    const key = cached(client, [day(["a", "b"], ["a"]), day(["c"])]);
-    await hideHomeRows(client, [{ id: "a" }]);
-    const after = client.getQueryData<InfiniteData<Worklist>>(key);
-    expect(idsOf(after)).toEqual(["b", "c"]);
-    expect(after?.pages[0]?.served_stale).toBe(true);
-    expect(after?.pages[1]?.served_stale).toBeUndefined();
+    client.setQueryData(homeKey, day(row("a"), row("b")));
+    await hideHomeRows(client, [{ source: "task", id: "a" }]);
+    const page = client.getQueryData<Day>(homeKey)?.pages[0];
+    expect(page?.queue.map((r) => r.id)).toEqual(["b"]);
+    expect(page?.focus?.items.map((r) => r.id)).toEqual(["b"]);
+    expect(page?.served_stale).toBe(true);
   });
 
-  it("matches the lane only when the action names one", async () => {
+  it("is matched by source and id, so another lane's row with that id stays", async () => {
     const client = new QueryClient();
-    const key = cached(client, [
-      {
-        queue: [row("x", "task"), row("x", "meeting")],
-      } as Worklist,
-    ]);
-    await hideHomeRows(client, [{ id: "x", source: "meeting" }]);
-    const after = client.getQueryData<InfiniteData<Worklist>>(key);
-    expect(after?.pages[0]?.queue.map((i) => i.source)).toEqual(["task"]);
+    client.setQueryData(homeKey, day(row("x", "task"), row("x", "meeting")));
+    await hideHomeRows(client, [{ source: "task", id: "x" }]);
+    expect(ids(client)).toEqual(["meeting:x"]);
   });
 
-  it("comes back, unmarked, when the write fails", async () => {
+  it("leaves every other Worklist read alone", async () => {
     const client = new QueryClient();
-    const key = cached(client, [day(["a", "b"])]);
-    const hide = await hideHomeRows(client, [{ id: "a" }]);
-    hide.restore();
-    const after = client.getQueryData<InfiniteData<Worklist>>(key);
-    expect(idsOf(after)).toEqual(["a", "b"]);
-    expect(after?.pages[0]?.served_stale).toBeUndefined();
+    const screen = [...worklistKey, "mine", "all", "", "today"];
+    const team = [...worklistKey, "team", "all", "", "today"];
+    client.setQueryData(homeKey, day(row("a")));
+    client.setQueryData(screen, day(row("a")));
+    client.setQueryData(team, day(row("a")));
+    await hideHomeRows(client, [{ source: "task", id: "a" }]);
+    expect(ids(client, screen)).toEqual(["task:a"]);
+    expect(ids(client, team)).toEqual(["task:a"]);
+  });
+
+  it("comes back from the server when the write failed, with no copy kept", async () => {
+    const client = new QueryClient();
+    const server = { rows: [row("a"), row("b")] };
+    client.setQueryData(homeKey, day(...server.rows));
+    const stop = watchHome(client, server);
+    const settle = await hideHomeRows(client, [{ source: "task", id: "a" }]);
+    expect(ids(client)).toEqual(["task:b"]);
+    settle();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ids(client)).toEqual(["task:a", "task:b"]);
     expect(
-      idsOf({ pages: [withoutActedOnRows(day(["a"]), true)] } as never),
-    ).toEqual(["a"]);
+      client.getQueryData<Day>(homeKey)?.pages[0]?.served_stale,
+    ).toBeUndefined();
+    stop();
   });
 
-  it("stays out of a kept day read afterwards, and returns with the first fresh one", async () => {
+  it("ends with the server's truth when two actions run and one fails", async () => {
     const client = new QueryClient();
-    cached(client, [day(["a", "b"])]);
-    const hide = await hideHomeRows(client, [{ id: "a" }]);
-    hide.settle();
-    const stale = { ...day(["a", "b"]), served_stale: true } as Worklist;
-    expect(withoutActedOnRows(stale, true).queue.map((i) => i.id)).toEqual([
-      "b",
-    ]);
-    const fresh = day(["a", "b"]);
-    expect(withoutActedOnRows(fresh, true).queue.map((i) => i.id)).toEqual([
-      "a",
-      "b",
-    ]);
+    const server = { rows: [row("a"), row("b"), row("c")] };
+    client.setQueryData(homeKey, day(...server.rows));
+    const stop = watchHome(client, server);
+    const first = await hideHomeRows(client, [{ source: "task", id: "a" }]);
+    const second = await hideHomeRows(client, [{ source: "task", id: "b" }]);
+    expect(ids(client)).toEqual(["task:c"]);
+    server.rows = [row("a"), row("c")];
+    second();
+    first();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ids(client)).toEqual(["task:a", "task:c"]);
+    stop();
   });
 
-  it("stays out of every read while the write is still on its way", async () => {
+  it("writes nothing for a member who signed out while it waited", async () => {
     const client = new QueryClient();
-    cached(client, [day(["a"])]);
-    await hideHomeRows(client, [{ id: "a" }]);
-    expect(withoutActedOnRows(day(["a", "b"]), true).queue).toHaveLength(1);
-  });
-
-  it("is forgotten after two minutes", async () => {
-    const client = new QueryClient();
-    cached(client, [day(["a"])]);
-    await hideHomeRows(client, [{ id: "a" }], 0);
-    expect(withoutActedOnRows(day(["a"]), true, 3 * 60_000).queue).toHaveLength(
-      1,
-    );
+    client.setQueryData(homeKey, day(row("a"), row("b")));
+    const hiding = hideHomeRows(client, [{ source: "task", id: "a" }]);
+    await resetToSignedOut(client);
+    const settle = await hiding;
+    settle();
+    expect(client.getQueryData(homeKey)).toBeUndefined();
   });
 });

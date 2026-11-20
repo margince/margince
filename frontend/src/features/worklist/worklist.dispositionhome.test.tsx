@@ -8,24 +8,29 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { forgetHiddenHomeRows } from "../../lib/homerows";
 import { homeDayOptions } from "../../lib/worklistday";
 import { useSetDisposition } from "./worklist.writes";
 
 afterEach(() => {
   cleanup();
-  forgetHiddenHomeRows();
   vi.unstubAllGlobals();
 });
 
 describe("Hide on a Home row", () => {
-  it("takes the row off the cached Home day and marks the day, and keeps it off after the write", async () => {
+  it("takes the row off the cached Home day and marks the day,", async () => {
     const client = new QueryClient({
       defaultOptions: { mutations: { retry: false } },
     });
     const key = homeDayOptions().queryKey;
     client.setQueryData(key, {
-      pages: [{ queue: [{ id: "mail-1" }, { id: "mail-2" }] }],
+      pages: [
+        {
+          queue: [
+            { id: "mail-1", source: "awaiting_reply" },
+            { id: "mail-2", source: "awaiting_reply" },
+          ],
+        },
+      ],
       pageParams: [undefined],
     });
     vi.stubGlobal(
@@ -40,6 +45,7 @@ describe("Hide on a Home row", () => {
     await act(() =>
       result.current.mutateAsync({
         activityId: "mail-1",
+        source: "awaiting_reply",
         disposition: "dismissed" as never,
       }),
     );

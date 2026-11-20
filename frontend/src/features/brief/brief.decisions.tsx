@@ -255,12 +255,10 @@ export function DecisionsSection({
     mutationFn: commitTray,
     onMutate: async (tray) => ({
       from: fromHere(),
-      hide: await hideHomeRows(queryClient, decidedRows(tray)),
+      settle: await hideHomeRows(queryClient, decidedRows(tray)),
     }),
-    onError: (_error, _tray, sent) => sent?.hide.restore(),
+    onSettled: (_result, _error, _tray, sent) => sent?.settle(),
     onSuccess: (result, _tray, sent) => {
-      if (result.failure) sent?.hide.restore();
-      else sent?.hide.settle();
       setAlreadyDecided(result.alreadyDecided);
       if (result.alreadyDecided) {
         onAlreadyDecided();

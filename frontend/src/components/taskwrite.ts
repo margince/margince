@@ -62,21 +62,19 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
     // A completed task leaves Home at once; every other edit keeps its row.
     onMutate: (input) =>
       input.body.is_done
-        ? hideHomeRows(queryClient, [{ id: input.id }])
+        ? hideHomeRows(queryClient, [{ source: "task", id: input.id }])
         : undefined,
     // Returned, so the mutation stays pending until the reads have landed.
     // Until then the row keeps the version it was fetched at. A second press
     // in that window would re-send it and be refused as skew.
-    onSuccess: (_data, input, hide) => {
-      hide?.settle();
-      return input.body.due_at
+    onSuccess: (_data, input) =>
+      input.body.due_at
         ? undefined
-        : refetchAfterWrite(queryClient, invalidateKeys, input.id);
-    },
+        : refetchAfterWrite(queryClient, invalidateKeys, input.id),
+    onSettled: (_data, _error, _input, settle) => settle?.(),
     // A stale press is not a failed one: the task moved on under it, so the
     // reads are refreshed to show where it is now.
-    onError: (error, input, hide) => {
-      hide?.restore();
+    onError: (error, input) => {
       if (problemCodeOf(error) === "version_skew") {
         return refetchAfterWrite(queryClient, invalidateKeys, input.id);
       }
