@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -77,7 +78,7 @@ func (s *Store) SendMeetingReminder(ctx context.Context, id ids.UUID, gate Conse
 	}
 	prepared, err := s.PrepareSend(ctx, origin, input, gate, stager)
 	if err != nil {
-		return errors.Join(err, s.markMeetingReminderUnavailable(ctx, row))
+		return s.meetingReminderNotSent(ctx, row, err)
 	}
 	err = s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
 		current, err := readInvitation(ctx, tx, id, true)
@@ -93,9 +94,18 @@ func (s *Store) SendMeetingReminder(ctx context.Context, id ids.UUID, gate Conse
 		return writeMeetingReminder(ctx, tx, current, "queued")
 	})
 	if err != nil {
-		return errors.Join(err, s.markMeetingReminderUnavailable(ctx, row))
+		return s.meetingReminderNotSent(ctx, row, err)
 	}
 	return nil
+}
+
+// meetingReminderNotSent marks the reminder unavailable. A refusal by the send
+// rules is handled once the host is told; any other failure is the job's fault.
+func (s *Store) meetingReminderNotSent(ctx context.Context, row invitationRow, err error) error {
+	if errors.Is(err, apperrors.ErrConsentNotGranted) {
+		return s.markMeetingReminderRefused(ctx, row)
+	}
+	return errors.Join(err, s.markMeetingReminderUnavailable(ctx, row))
 }
 
 func (s *Store) meetingReminderInput(ctx context.Context, row invitationRow) (SendEmailInput, error) {
@@ -125,6 +135,25 @@ func (s *Store) markMeetingReminderUnavailable(ctx context.Context, observed inv
 			return nil
 		}
 		return writeMeetingReminder(ctx, tx, row, "unavailable")
+	})
+}
+
+// markMeetingReminderRefused tells the host, in the transaction that marks the
+// reminder unavailable, that the send rules stopped it. The reminder is not held
+// for later, because a held copy could go out after the meeting moved.
+func (s *Store) markMeetingReminderRefused(ctx context.Context, observed invitationRow) error {
+	if s.invitationAttention == nil {
+		return errors.New("meeting reminder: nothing is wired to tell the host of a refused reminder")
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		row, err := readInvitation(ctx, tx, observed.ID, true)
+		if err != nil || row.Version != observed.Version || row.ReminderStatus != invitationPending {
+			return err
+		}
+		if err := writeMeetingReminder(ctx, tx, row, "unavailable"); err != nil {
+			return err
+		}
+		return s.invitationAttention.InvitationAttentionTx(ctx, tx, row.Host, row.ID, ids.NewV7(), AttentionReminderRefused)
 	})
 }
 
