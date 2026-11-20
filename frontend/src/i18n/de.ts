@@ -8524,8 +8524,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bearbeite die Nachricht oder entferne diese Empfangsadresse, um sie zu senden.",
   "compose.sendAnyway.more_one": "{count} weiterer Befund",
   "compose.sendAnyway.more_other": "{count} weitere Befunde",
-  "compose.sendAnyway.reasonLabel":
-    "Warum diese eine Nachricht trotzdem senden?",
   "compose.sendAnyway.confirm": "Trotzdem senden",
   "compose.sendAnyway.marked": "im Hinweis genannt",
   "compose.sendAnyway.failed":

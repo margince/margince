@@ -111,7 +111,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Directive 2002/58/EC",
 			Provision:  "Art. 13(4)",
 		}},
-		Digest: "169aeb8226af07efc10dbe0fa44a0b8fab23acba262e86dd834eca356ea0a405",
+		Digest: "697f008405920cd282604ae5e4505a8262a8939d7d79bbcdc87c5e1462d35286",
 	}, {
 		Jurisdiction: "be",
 		Version:      1,
@@ -218,7 +218,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Code de droit économique / Wetboek van economisch recht",
 			Provision:  "art. XII.13, § 2",
 		}},
-		Digest: "c0b233c3e2927c11887dcb7489a3a38b2af952e7da3dd3b0f164f0d600381a1a",
+		Digest: "7771f6a2ffbe1ed054fd719fa7cbf40c1eb3047bc92ea4e1c35037b7e4dad8fe",
 	}, {
 		Jurisdiction: "bg",
 		Version:      1,
@@ -317,7 +317,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Directive 2002/58/EC",
 			Provision:  "Art. 13(4)",
 		}},
-		Digest: "b699288ceff03aefd402a888c56a4985e85a4a8f2c2c7db42ef937b073b1cb44",
+		Digest: "e957a196f2e7f9ad5c9d6341f3519dbb51020a92d4b4800e69c0859aba62a8ca",
 	}, {
 		Jurisdiction: "cy",
 		Version:      1,
@@ -421,7 +421,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Directive 2002/58/EC",
 			Provision:  "Art. 13(4)",
 		}},
-		Digest: "8efe1e1b9454503022c725d57b89b1056956fa427e4994cd0a81949f67de3f90",
+		Digest: "345be1b72d5919f73d6e7776db7db2e964b995286e34f3d731d251b6b8be6653",
 	}, {
 		Jurisdiction: "cz",
 		Version:      1,
@@ -526,7 +526,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Zákon č. 480/2004 Sb., o některých službách informační společnosti",
 			Provision:  "§ 7 odst. 4 písm. b) a c)",
 		}},
-		Digest: "e17abd08bf4a2487dab7c85733fb0d4a881b3e607c9734427d90ee57f850bf79",
+		Digest: "0e1592f697b29f7c7c1998dda1a50038003b464222021dac8c0b7c844d1a28f4",
 	}, {
 		Jurisdiction: "de",
 		Version:      2,
@@ -631,7 +631,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)",
 			Provision:  "§ 7 Abs. 2 Nr. 3 Buchst. c",
 		}},
-		Digest: "427992f3cec48be0efdaba2c57c7b6b949f45fca8653bdf82b98cc0249eca70b",
+		Digest: "e5e5261c5a13e5bd8639c6258da116750aa9a6017ff904926fd6953618716a6b",
 	}, {
 		Jurisdiction: "dk",
 		Version:      1,
@@ -736,7 +736,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Markedsføringsloven",
 			Provision:  "§ 10, stk. 3",
 		}},
-		Digest: "34868dd4039675906b99ac8eb3f022c4950c6343d0a37ad448fcdad78f3acd9f",
+		Digest: "667ff41c49af26491e62095e16ce431854a0b26e433dbe0a48016b5fd64b74eb",
 	}, {
 		Jurisdiction: "ee",
 		Version:      1,
@@ -844,7 +844,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Elektroonilise side seadus (Electronic Communications Act)",
 			Provision:  "§ 103¹ lg 4",
 		}},
-		Digest: "1298c89bf4e85b4d7a2550309d9c19f25f7112d3df9444aa83db331ac641aae3",
+		Digest: "04f4f35c6155d7fca34a0f51ffc48cd9759b101559fc320d078eaa27523441a1",
 	}, {
 		Jurisdiction: "es",
 		Version:      1,
@@ -958,7 +958,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)",
 			Provision:  "art. 20.1",
 		}},
-		Digest: "b456ae0cbd78e5061edb3cde396df1a93ca0b2a4c6eff5c7fb232f6ef2f7f497",
+		Digest: "8639484e4bbe282224b3cc99d71816ee4d75c3a3bd18efc8b3d1a6fd2c51a66f",
 	}, {
 		Jurisdiction: "fi",
 		Version:      1,
@@ -1063,7 +1063,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Directive 2002/58/EC",
 			Provision:  "Art. 13(4)",
 		}},
-		Digest: "d1c62cf029720ff2d18e87b44e4f6515bbfff7e501ed34cda61ccfea09eaa495",
+		Digest: "f06065280fd8413a1668d0272a62bb4b7591a95498b57bf91ccf8be46037e2fa",
 	}, {
 		Jurisdiction: "fr",
 		Version:      1,
@@ -1171,7 +1171,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Directive 2002/58/EC",
 			Provision:  "Art. 13(4)",
 		}},
-		Digest: "ceecb043104b88afa3465fd5eb2c8fcd033cc27a96f3bc70c5622863be24b2b6",
+		Digest: "a24649ade74a25cc402b0046f54d4a61fe1357c3a80c01799dce1dbbb3b672af",
 	}, {
 		Jurisdiction: "gr",
 		Version:      1,
@@ -1276,7 +1276,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Directive 2002/58/EC",
 			Provision:  "Art. 13(4)",
 		}},
-		Digest: "3d098ade67fb2e3544aeea1f61b62f0041d06b426112dbc3204672bdf27ee31f",
+		Digest: "6830946bd1b7dfa44efe56d1f98bce87074d131c427407e7046b85b7fda652e5",
 	}, {
 		Jurisdiction: "hr",
 		Version:      1,
@@ -1380,7 +1380,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Zakon o elektroničkim komunikacijama (NN 76/22)",
 			Provision:  "članak 50. stavak 3.",
 		}},
-		Digest: "2e13e0e9d73f4dd142db3cddb2edc0550be281c19957d4d140b28442ce1bf493",
+		Digest: "f9fcc499a498632dff977243b15e235a6c64e96bed5fb778e13b8f1d807193c6",
 	}, {
 		Jurisdiction: "hu",
 		Version:      1,
@@ -1481,7 +1481,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Directive 2002/58/EC",
 			Provision:  "Art. 13(4)",
 		}},
-		Digest: "fc960065c838a6460ba65b80c6cf1580485c248b149550b1d19a64cd2d470ddd",
+		Digest: "1ea6650d0913b098e26625da2ef634f4c58746bdd0c5ec067e5120ff8e358012",
 	}, {
 		Jurisdiction: "ie",
 		Version:      1,
@@ -1579,7 +1579,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011",
 			Provision:  "Regulation 13(12)",
 		}},
-		Digest: "b8c64f9e130190f1a2c7b8bd11cecce356300c6e052e10765681b5c47df0badb",
+		Digest: "902e5a89ebdbf43ecdb5d3d75c0eac428322d0655fdf04aecee74cdb88a0024f",
 	}, {
 		Jurisdiction: "it",
 		Version:      1,
@@ -1685,7 +1685,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)",
 			Provision:  "art. 130, comma 5",
 		}},
-		Digest: "6b38f032cdefb4ed75f3f5261e3eca8ea76c539d38097634f8e6d1c43222e3ad",
+		Digest: "b29df2801db29627a1e511d1084e3d6b9bc74168a5df1eb5f5806527ea3db65c",
 	}, {
 		Jurisdiction: "lt",
 		Version:      1,
@@ -1788,7 +1788,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Directive 2002/58/EC",
 			Provision:  "Art. 13(4)",
 		}},
-		Digest: "0a28666f018eeaeb8e2bc04ca59dcce5f113ce1915fb956da315f1bcba70f6d3",
+		Digest: "ae6ec5962bd8bfcf3d370b9b9de63f2296d5246b4ed7d3437964537daeabe0e4",
 	}, {
 		Jurisdiction: "lu",
 		Version:      1,
@@ -1893,7 +1893,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques",
 			Provision:  "art. 11, paragraphe 4",
 		}},
-		Digest: "69ca5753e9db4a4668e442d17573eacbf159af502a7a1b1498a82a09e7c342bb",
+		Digest: "19103ef6fc1ea7b533c0686c56f0d371ff7c0f656ac3592645afd0e49fbfa000",
 	}, {
 		Jurisdiction: "lv",
 		Version:      1,
@@ -1998,7 +1998,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Informācijas sabiedrības pakalpojumu likums",
 			Provision:  "9. panta ceturtā daļa",
 		}},
-		Digest: "a751a52c228f2d935591e6b26e64fe198a99f7ac4418b28f827ccf606c9e171d",
+		Digest: "ebcec8f7b17d0d9fc6aa090aaef9292af4d058453d6bbefd8480b6cfbe0cab69",
 	}, {
 		Jurisdiction: "mt",
 		Version:      1,
@@ -2103,7 +2103,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Processing of Personal Data (Electronic Communications Sector) Regulations, S.L. 586.01",
 			Provision:  "regulation 9(4)",
 		}},
-		Digest: "0130ab2b57f2835d7e2f2e669aac2ef21de40d46386d3909f98e6ee4db8315bd",
+		Digest: "f00e84524f58c3be6cb0c30a97b8fdd92e59539de27abef3275a6229a5e1e742",
 	}, {
 		Jurisdiction: "nl",
 		Version:      1,
@@ -2208,7 +2208,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Telecommunicatiewet",
 			Provision:  "art. 11.7, zevende lid",
 		}},
-		Digest: "c194a5a5b33fed561f8043d528e2374f6f1cad3ad6afb31258a2fdf691ce1647",
+		Digest: "190f69a059f37564158f34abd08471f5de9f6b3f500de8de9a36dc5af97a1f1f",
 	}, {
 		Jurisdiction: "pl",
 		Version:      1,
@@ -2306,7 +2306,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Directive 2002/58/EC",
 			Provision:  "Art. 13(4)",
 		}},
-		Digest: "3b22b7b8cb4365f99a43a926b647a133d5ccf3260eadb637ef69c0b5dd04bdbc",
+		Digest: "616280786243f00c938dad8e5cdf0217075c6b93961eb314be6a0ea76703ba43",
 	}, {
 		Jurisdiction: "pt",
 		Version:      1,
@@ -2414,7 +2414,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Lei n.º 41/2004, de 18 de agosto",
 			Provision:  "art. 13.º-A, n.º 4",
 		}},
-		Digest: "601101a0a0d178904eae2a8e1b86879edc8bb1fd73fb3129f9e98c506e1ad236",
+		Digest: "e355bb84258930fa116972421dfee26c698372c65a32c23b43b7088d00fb972d",
 	}, {
 		Jurisdiction: "ro",
 		Version:      1,
@@ -2519,7 +2519,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Legea nr. 506/2004 privind prelucrarea datelor cu caracter personal și protecția vieții private în sectorul comunicațiilor electronice",
 			Provision:  "art. 12 alin. (3)",
 		}},
-		Digest: "fb01a4ea8bbe8a610e751b1c9b31cc4c23350b5986cb582743cd0dfc6bffa945",
+		Digest: "6b552133644d82dfe6ea734ca091576c7645cf87d9b5f9375ebee77da8519e47",
 	}, {
 		Jurisdiction: "se",
 		Version:      1,
@@ -2624,7 +2624,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Marknadsföringslagen (2008:486)",
 			Provision:  "20 §",
 		}},
-		Digest: "2523209b6dd6f6bc54cdfcb881b732bdb9a00a42956137dd674e0c936cf5635e",
+		Digest: "913acea4a50300cdb1ee52ace719a8ff8cd1780b14aed2250e4dd2bb499d4520",
 	}, {
 		Jurisdiction: "si",
 		Version:      1,
@@ -2728,7 +2728,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)",
 			Provision:  "226. člen, (5) odstavek",
 		}},
-		Digest: "611c3405b91ca09b68214a3c378695b009be9cbe4b996bf7665d17897327182f",
+		Digest: "661ef62ababa71050dee18f4bf2d3a787194400c6fb243060f96e57255f717fb",
 	}, {
 		Jurisdiction: "sk",
 		Version:      1,
@@ -2833,6 +2833,6 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách",
 			Provision:  "§ 116 ods. 15",
 		}},
-		Digest: "e47e3d4c3ed893f1eef892fdb7ba40a84a3764c7e42bd26590c6013a194aceaa",
+		Digest: "2104f7a7d576ef086ee2c86be857b35b12f0e130058270afc74f681b3c725af8",
 	}}
 }

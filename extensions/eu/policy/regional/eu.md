@@ -154,5 +154,5 @@ disclosures and windows in the words of UWG §7, and they compile to the same ru
 
 ## Review
 
-Every pack in this folder is a draft: no layer states `reviewed` or `reviewer`, so no citation is
-shown to a rep. A legal review stamps them.
+Every pack in this folder is a draft: no layer states `reviewed` or `reviewer`. Its citations are
+shown all the same. The release refresh checks the sources and stamps the packs.

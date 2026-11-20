@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { api } from "../../api/client";
 import { useCan, useCanMutate } from "../../lib/capability";
 import { contact360Query } from "../../lib/contact.queries";
@@ -27,7 +27,7 @@ export function useMeeting(open: boolean, subject: MeetingSubject | null) {
   const mayWriteLead = useCan("lead", "update");
   const [on, setOn] = useState(false);
   const [failed, setFailed] = useState(false);
-  const recorded = useRef("");
+  const [recorded, setRecorded] = useState("");
   // A closed composer forgets the meeting, so the next message starts unpicked.
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
@@ -35,7 +35,7 @@ export function useMeeting(open: boolean, subject: MeetingSubject | null) {
     if (!open) {
       setOn(false);
       setFailed(false);
-      recorded.current = "";
+      setRecorded("");
     }
   }
   const canRecord =
@@ -45,7 +45,7 @@ export function useMeeting(open: boolean, subject: MeetingSubject | null) {
   const record = async () => {
     if (!subject || !on) return;
     const key = `${subject.kind}:${subject.id}`;
-    if (recorded.current === key) return;
+    if (recorded === key) return;
     setFailed(false);
     const path = { params: { path: { id: subject.id } } };
     const body = {
@@ -71,7 +71,7 @@ export function useMeeting(open: boolean, subject: MeetingSubject | null) {
       setFailed(true);
       throw error;
     }
-    recorded.current = key;
+    setRecorded(key);
     if (subject.kind === "contact") {
       await queries.invalidateQueries({
         queryKey: contact360Query(subject.id).queryKey,

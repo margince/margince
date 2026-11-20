@@ -88,6 +88,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "auto.renewal.authorizer",
     // A duplicate case asks whether two contacts are the same human being.
     "contactCase.intro",
+    // "In person" says the rep and the contact were in one room.
+    "compose.why.met",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
     "contactCase.member.dismissedWith",

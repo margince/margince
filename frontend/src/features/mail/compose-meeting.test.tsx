@@ -21,7 +21,7 @@ import {
 import { MEETING_NOTE } from "./composemeeting";
 import { ComposeWindow } from "./composewindow";
 
-// The reason picker offers five answers. "We met in person" notes the meeting
+// The reason picker offers five answers. "Met in person" notes the meeting
 // on the contact before the send. The line under the pick says what the answer
 // does: only Marketing adds an unsubscribe link.
 
@@ -49,6 +49,7 @@ function Composer({
         entityType={entityType as "contact"}
         entityId="c-1"
         contactId="c-1"
+        recordAddress="a@x.com"
         open
         onClose={() => {}}
       />
@@ -56,10 +57,14 @@ function Composer({
   );
 }
 
-async function openAndWrite(user: UserEvent, entityType?: string) {
+async function openAndWrite(
+  user: UserEvent,
+  entityType?: string,
+  to = "a@x.com",
+) {
   render(<Composer entityType={entityType} />);
   await screen.findByRole("combobox", { name: WHY_ASK });
-  await user.type(screen.getByLabelText("To"), "a@x.com");
+  await user.type(screen.getByLabelText("To"), to);
   await user.tab();
   await user.type(screen.getByLabelText("Subject"), "Good to meet you");
   writeMessage("Body", "As promised at the fair, here is the overview.");
@@ -81,7 +86,7 @@ describe("we met in person", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes(CONTACT_WRITER);
     await openAndWrite(user);
-    await pickWhy(user, "We met in person");
+    await pickWhy(user, "Met in person");
 
     expect(screen.queryByRole("textbox", { name: /where/i })).toBeNull();
     expect(screen.queryByLabelText("Date")).toBeNull();
@@ -94,7 +99,7 @@ describe("we met in person", () => {
       [MEETING]: () => jsonResponse({ id: "q-1" }, 201),
     });
     await openAndWrite(user);
-    await pickWhy(user, "We met in person");
+    await pickWhy(user, "Met in person");
     await pressSend(user);
 
     await waitFor(() => expect(count(sent, "POST /emails")).toBe(1));
@@ -118,7 +123,7 @@ describe("we met in person", () => {
         problemResponse({ title: "Unavailable", status: 503 }, 503),
     });
     await openAndWrite(user);
-    await pickWhy(user, "We met in person");
+    await pickWhy(user, "Met in person");
     await pressSend(user);
     await waitFor(() => expect(count(sent, "POST /emails")).toBe(1));
     await pressSend(user);
@@ -135,7 +140,7 @@ describe("we met in person", () => {
         problemResponse({ title: "Forbidden", status: 403 }, 403),
     });
     await openAndWrite(user);
-    await pickWhy(user, "We met in person");
+    await pickWhy(user, "Met in person");
     await pressSend(user);
 
     expect(
@@ -152,12 +157,33 @@ describe("we met in person", () => {
     await openAndWrite(user, "company");
     await user.click(screen.getByRole("combobox", { name: WHY_ASK }));
 
-    expect(screen.queryByRole("option", { name: "We met in person" })).toBe(
-      null,
-    );
+    expect(screen.queryByRole("option", { name: "Met in person" })).toBe(null);
     expect(
       screen.getByRole("option", { name: "They asked for it" }),
     ).toBeTruthy();
+  });
+});
+
+describe("a meeting is noted only on the person the mail goes to", () => {
+  it("is not offered when the mail goes to someone other than the record", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    stubRoutes(CONTACT_WRITER);
+    await openAndWrite(user, "contact", "bob@x.com");
+    await user.click(screen.getByRole("combobox", { name: WHY_ASK }));
+
+    expect(screen.queryByRole("option", { name: "Met in person" })).toBe(null);
+  });
+
+  it("is not offered once someone else is copied", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    stubRoutes(CONTACT_WRITER);
+    await openAndWrite(user);
+    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    await user.type(screen.getByLabelText("Cc"), "bob@x.com");
+    await user.tab();
+    await user.click(screen.getByRole("combobox", { name: WHY_ASK }));
+
+    expect(screen.queryByRole("option", { name: "Met in person" })).toBe(null);
   });
 });
 

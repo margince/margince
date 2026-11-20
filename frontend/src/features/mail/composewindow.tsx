@@ -5,7 +5,6 @@ import { useId, useState } from "react";
 import { useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
 import { useVoiceProfile } from "../../lib/voice-profile";
-import type { Activity } from "./compose";
 import { ChannelDraftNotice } from "./compose.notices";
 import {
   useComposeThread,
@@ -18,26 +17,19 @@ import {
   useCarriageBlocks,
 } from "./composeattachments";
 import { useKeptDraft } from "./composeautosave";
-import {
-  ComposeDeal,
-  type DealChoiceState,
-  useDealChoice,
-} from "./composedeal";
+import { useDealChoice } from "./composedeal";
 import { type ComposeFields, useComposeFields } from "./composefields";
 import { useAccountRecipient, useComposeRecords } from "./composefiling";
 import { useInlineReview, useOverrideExplanation } from "./composeinlinereview";
 import { groundingOf } from "./composelinks";
-import {
-  type Meeting,
-  type MeetingSubject,
-  useMeeting,
-} from "./composemeeting";
+import { useMeeting } from "./composemeeting";
 import type { ComposeProps } from "./composeprops";
+import { ComposeQuestions, meetingSubjectOf } from "./composequestions";
 import { useRecipientOffer } from "./composerecipientoffer";
 import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
 import { savedFieldsOf } from "./composesaveddraftfields";
 import { ScheduleDialogOnDemand } from "./composeschedule";
-import { type ComposeSend, useComposeSend } from "./composesend";
+import { useComposeSend } from "./composesend";
 import { InlineBlockers, markedRecipients } from "./composesendanyway";
 import { sendWording } from "./composesendhold";
 import {
@@ -48,8 +40,6 @@ import {
 } from "./composetarget";
 import { ThreadBar } from "./composethreadbar";
 import { useDraftOnOpen, useVoiceDraft } from "./composevoicedraft";
-import { ComposeWhy } from "./composewhy";
-import { pickReason } from "./reasonanchor";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
 import {
@@ -98,13 +88,16 @@ export function ComposeWindow({
   const dial = useTransportDial({ open, transports, initialTransportId, kind });
   const { isChannelReply } = dial;
   const reason = useOverrideExplanation(open);
-  const meeting = useMeeting(open, meetingSubjectOf(entityType, entityId));
   const fields = useComposeFields({
     initialMessage,
     initialReason,
     askedIntent,
     edit,
   });
+  const meeting = useMeeting(
+    open,
+    meetingSubjectOf(entityType, entityId, recordAddress, fields),
+  );
   const { answering, choose, sourceBlocked } = useAnswerTarget({
     open,
     channelAnchorId: dial.channel?.anchorId,
@@ -473,51 +466,4 @@ function startsInTo(
   to: readonly string[],
 ): boolean {
   return newMessage && account.nothingOffered && to.length === 0;
-}
-
-// What the message must say before Send: why it is written, and the deal a
-// follow-up is about. Nothing is checked until Send is pressed.
-function ComposeQuestions({
-  meeting,
-  fields,
-  send,
-  anchorActivity,
-  dealChoice,
-}: Readonly<{
-  meeting: Meeting;
-  fields: ComposeFields;
-  send: ComposeSend;
-  anchorActivity: Activity | undefined;
-  dealChoice: DealChoiceState;
-}>) {
-  return (
-    <>
-      <ComposeWhy
-        anchorActivity={anchorActivity}
-        needsReason={fields.context !== ""}
-        flagged={send.flagged}
-        context={fields.context}
-        onContextChange={pickReason(fields)}
-        meeting={meeting}
-      />
-      <ComposeDeal
-        choice={dealChoice}
-        onDealChange={fields.account.setDealId}
-        flagged={send.flagged}
-      />
-    </>
-  );
-}
-
-// The record a meeting is noted on: the contact or lead the composer was
-// opened from. Anywhere else "We met in person" is not offered.
-function meetingSubjectOf(
-  entityType: string,
-  entityId: string,
-): MeetingSubject | null {
-  if (entityId === "") return null;
-  if (entityType === "contact" || entityType === "lead") {
-    return { kind: entityType, id: entityId };
-  }
-  return null;
 }

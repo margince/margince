@@ -52,3 +52,21 @@ func TestAMarketingClaimHasNoSiblings(t *testing.T) {
 		t.Errorf("resolved %q, want the marketing claim kept", got.Category)
 	}
 }
+
+// A narrow claim never widens to the broad one. An invoice claim with no
+// invoice behind it, to a contact at a customer, stays an unsupported invoice
+// claim: the customer relationship is no evidence about this invoice.
+//
+// Mutation: let validateFamily try every family member and this fails.
+func TestANarrowClaimNeverSettlesOnTheBroadOne(t *testing.T) {
+	e := setupResolve(t)
+	company := e.company(t)
+	e.employ(t, company)
+	e.contract(t, company, nil)
+
+	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryInvoiceOrPayment})
+
+	if got.Supported || got.Category != commsauthz.CategoryInvoiceOrPayment {
+		t.Fatalf("resolved %q supported=%v, want the unsupported invoice claim kept", got.Category, got.Supported)
+	}
+}

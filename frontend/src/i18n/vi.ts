@@ -8300,7 +8300,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.sendAnyway.editOnly": "Sửa tin nhắn hoặc bỏ địa chỉ này để gửi.",
   "compose.sendAnyway.more_one": "Thêm {count} kết quả",
   "compose.sendAnyway.more_other": "Thêm {count} kết quả",
-  "compose.sendAnyway.reasonLabel": "Vì sao vẫn gửi riêng thư này?",
   "compose.sendAnyway.confirm": "Vẫn gửi",
   "compose.sendAnyway.marked": "có trong cảnh báo",
   "compose.sendAnyway.failed": "Chưa gửi được tin nhắn. Chọn Vẫn gửi lần nữa.",

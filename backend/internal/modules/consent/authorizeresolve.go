@@ -22,7 +22,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -221,26 +220,28 @@ func (g *Gate) resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req co
 	return resolutionForClass(purpose.Class), nil
 }
 
-// claimFamilies are the categories one answer in the composer stands for. A rep
-// says "they asked for it" or "existing customer"; which category the record
-// bears out is the engine's to find. Every member of a family rests on the same
-// kind of ground, so settling on a sibling is never a step down.
+// claimFamilies are the categories one answer in the composer stands for. The
+// first of each is the broad answer a rep gives: "they asked for it" or
+// "existing customer". Which narrower category the record bears out is the
+// engine's to find. A narrow claim never widens: an invoice claim with no
+// invoice stays an unsupported invoice claim.
 var claimFamilies = [][]commsauthz.Category{
 	{commsauthz.CategoryRequestedFollowup, commsauthz.CategoryPrecontractQuote},
 	{commsauthz.CategoryCustomerService, commsauthz.CategoryInvoiceOrPayment, commsauthz.CategoryContractNotice, commsauthz.CategoryAccountNotice},
 }
 
-// validateFamily validates the claim, then each sibling of its family in
-// order, and answers the first the record bears out. With none, it answers the
-// claim's own refusal, so the review names what the rep claimed.
+// validateFamily validates the claim, then, for a broad claim, each narrower
+// member of its family in order, and answers the first the record bears out.
+// With none, it answers the claim's own refusal, so the review names what the
+// rep claimed.
 func (g *Gate) validateFamily(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	rules := packRulesFor(subject.Country)
 	claimed, err := g.validate(ctx, tx, req, subject, req.Context, rules)
 	if err != nil || claimed.Supported {
 		return claimed, err
 	}
-	for _, sibling := range siblingsOf(req.Context) {
-		found, err := g.validate(ctx, tx, req, subject, sibling, rules)
+	for _, narrower := range narrowerThan(req.Context) {
+		found, err := g.validate(ctx, tx, req, subject, narrower, rules)
 		if err != nil || found.Supported {
 			return found, err
 		}
@@ -248,11 +249,12 @@ func (g *Gate) validateFamily(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	return claimed, nil
 }
 
-// siblingsOf answers the other members of claim's family, in family order.
-func siblingsOf(claim commsauthz.Category) []commsauthz.Category {
+// narrowerThan answers the narrower members of the family a broad claim heads,
+// and nothing for any other claim.
+func narrowerThan(claim commsauthz.Category) []commsauthz.Category {
 	for _, family := range claimFamilies {
-		if slices.Contains(family, claim) {
-			return slices.DeleteFunc(slices.Clone(family), func(c commsauthz.Category) bool { return c == claim })
+		if family[0] == claim {
+			return family[1:]
 		}
 	}
 	return nil

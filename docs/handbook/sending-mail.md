@@ -154,13 +154,13 @@ Also called: draft in another language, write the email in German, change the em
 ### Why are you writing?
 The **Reason for contact** field says why you are writing. The line beside it says what your answer does to the email. The answers are:
 
-- **We met in person**: you were with them in person, for example at an event or a visit, and have their card. **Send** saves the meeting on the contact, then sends. This covers personal mail for a year after the meeting, never marketing.
+- **Met in person**: you were with them in person, for example at an event or a visit, and have their card. **Send** saves the meeting on the contact, then sends. This covers personal mail for a year after the meeting, never marketing.
 - **They asked for it**: they asked you to write, or asked for a quote. Their request must be on record.
 - **Open deal**: the email is about a deal they are on. Pick it in **Deal this follow-up is about**.
 - **Existing customer**: support, an invoice, a contract or their account.
 - **Marketing**: an offer or a newsletter. Only this answer adds an unsubscribe link and the full company footer. It needs their consent or a past purchase.
 
-A reply to their own message needs no reason. When you ask the assistant to move a meeting, such as "Termin verschieben", the draft picks **They asked for it**. **We met in person** shows only when you write from a contact or a lead.
+A reply to their own message needs no reason. When you ask the assistant to move a meeting, such as "Termin verschieben", the draft picks **They asked for it**. **Met in person** shows only when you write from a contact or a lead, to their own address alone.
 
 Margince checks the email once, when you press **Send**. Nothing is checked while you write. The check reads your reason, the record and the law where each recipient lives. When it allows every recipient, the email is queued and the composer closes. When it does not, the email is not sent, and the bar above **Send** says why (below). Your text, recipients and attachments stay.
 

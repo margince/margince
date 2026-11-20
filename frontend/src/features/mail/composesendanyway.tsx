@@ -28,7 +28,10 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { addressKey } from "../../lib/addresskey";
 import { ComposeOutcome } from "./compose.parts";
-import type { InlineReview } from "./composeinlinereview";
+import {
+  INLINE_WARNING_VERSION,
+  type InlineReview,
+} from "./composeinlinereview";
 import type { Refusal } from "./composerefusal";
 import { refusalCountryText } from "./refusalcountry";
 import "./compose.css";
@@ -277,7 +280,8 @@ function ReasonRow({
   return (
     <div className="compose-sendanyway-row">
       <Field
-        label={t("compose.sendAnyway.reasonLabel")}
+        // The served words, verbatim: the decision records that these were shown.
+        label={servedQuestion(state)}
         className="compose-sendanyway-reason"
         required
       >
@@ -354,5 +358,15 @@ function FreshPressButton({
     >
       {children}
     </Button>
+  );
+}
+
+// The question the review was served with for this composer. Send anyway is
+// offered only where it was served, so it is always there when the row is.
+function servedQuestion(state: InlineReview): string {
+  return (
+    state.review?.warnings?.find(
+      (warning) => warning.version === INLINE_WARNING_VERSION,
+    )?.text ?? ""
   );
 }
