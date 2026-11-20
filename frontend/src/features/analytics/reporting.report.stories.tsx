@@ -30,7 +30,7 @@ export const Default: Story = {
   },
 };
 
-// A name with no space in it wraps, and the actions drop under it.
+// A name with no space in it wraps beside the actions.
 export const LongName: Story = {
   render: () => {
     installFetchStub({

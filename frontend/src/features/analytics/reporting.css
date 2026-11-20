@@ -57,12 +57,10 @@
   align-items: start;
   gap: var(--space-5);
   margin-bottom: var(--space-5);
-  flex-wrap: wrap;
 }
-/* The name is the author's text and may be one unbroken run; it takes the row
-   down to a column's width, and the actions drop under it past that. */
+/* The name is the author's text and may be one unbroken run; it gives way to
+   the actions instead of pushing them off the row. */
 .reporting-title {
-  flex: 1 1 20rem;
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -136,9 +134,6 @@
 @media (max-width: 520px) {
   .reporting-header {
     flex-direction: column;
-  }
-  .reporting-title {
-    flex: none;
   }
   .reporting-toolbar > * {
     flex: 1;
