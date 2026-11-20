@@ -919,8 +919,7 @@ func syncMCPToolCoverage(t *testing.T, path string, want []byte, command string)
 		path, command, firstMCPInfoDifference(string(got), string(want)))
 }
 
-// verdictKey is what a committed verdict is filed under. The model is half of
-// it: a pass rate belongs to the model that produced it.
+// verdictKey files a verdict by model too: a pass rate belongs to its model.
 type verdictKey struct {
 	model    string
 	scenario string
@@ -942,9 +941,7 @@ func readE2ELLMVerdicts(dir string) (map[verdictKey]mcpe2e.Verdict, error) {
 }
 
 // runsFor collects each model's result on one scenario, ordered by model name.
-// Whether a verdict is stale is not here: it moves with every copy edit. A
-// committed page holding it would fail every such pull request, so the stale
-// workflow and `make e2e-llm-report` say it instead.
+// Staleness is `make e2e-llm-report`'s: on this page it would fail every copy edit.
 func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string) []caseModelRun {
 	var out []caseModelRun
 	for key, v := range verdicts {
@@ -953,8 +950,7 @@ func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string) []caseMode
 		}
 		out = append(out, caseModelRun{
 			Model: v.Folder, Runs: v.Runs, Passed: v.Passed, PassAt: v.PassAt,
-			Held:   v.PassAt > 0 && v.Passed >= v.PassAt,
-			Driver: v.Driver, Search: v.Search, SelfJudged: v.SelfJudged,
+			Held: v.PassAt > 0 && v.Passed >= v.PassAt, Driver: v.Driver, Search: v.Search, SelfJudged: v.SelfJudged,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
