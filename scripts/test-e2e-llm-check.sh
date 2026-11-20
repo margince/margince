@@ -1288,6 +1288,33 @@ eval_refuses "a relative escape is refused" "../../../tmp/escape"
 eval_refuses "an absolute path is refused" "/tmp/escape"
 eval_refuses "a bare separator is refused" "a/b"
 
+# --- THE COMMIT A VERDICT NAMES ----------------------------------------------
+#
+# A sweep writes verdicts into the records tree between batches, and that must
+# not mark the next batch's verdicts as measured on an uncommitted tree; any
+# other change must.
+# shellcheck source=scripts/lib-e2e-llm-stamp.sh
+. "$root/scripts/lib-e2e-llm-stamp.sh"
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$root/scripts/lib-git-fixture.sh"
+repo="$work/commit-repo"
+mkdir -p "$repo/backend/internal/compose/aicert/records/mcp_e2e/m" "$repo/e2e"
+git -C "$repo" init -q && git -C "$repo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+echo '{}' >"$repo/backend/internal/compose/aicert/records/mcp_e2e/m/case1.json"
+if [[ "$(e2e_llm_commit "$repo")" == *+uncommitted ]]; then
+	echo "FAIL: a verdict the lane wrote marked the tree uncommitted"
+	failures=$((failures + 1))
+else
+	echo "ok: a verdict the lane wrote leaves the commit clean"
+fi
+echo 'x' >"$repo/e2e/check.py"
+if [[ "$(e2e_llm_commit "$repo")" == *+uncommitted ]]; then
+	echo "ok: any other change marks the commit uncommitted"
+else
+	echo "FAIL: a changed file outside the lane's outputs left the commit clean"
+	failures=$((failures + 1))
+fi
+
 # --- EVERY SCENARIO READS AS IT IS WRITTEN -----------------------------------
 #
 # A misspelled key would switch its check off with nothing failing, so every

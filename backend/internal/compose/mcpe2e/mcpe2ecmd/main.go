@@ -5,7 +5,7 @@
 // product. It is a go-run-only developer tool, run from backend/:
 //
 //	go run ./internal/compose/mcpe2e/mcpe2ecmd report            every verdict, current or stale
-//	go run ./internal/compose/mcpe2e/mcpe2ecmd stamps -out FILE  the stamps a run files (the lane)
+//	go run ./internal/compose/mcpe2e/mcpe2ecmd stamps -door mcp|rest -out FILE  the stamps a run files
 //	go run ./internal/compose/mcpe2e/mcpe2ecmd newly-stale -base DIR
 //	                                    the verdicts this tree makes stale against DIR, as Markdown
 //
@@ -30,6 +30,7 @@ func main() {
 	root := flags.String("root", "..", "the repository root (relative to backend/)")
 	out := flags.String("out", "", "stamps: the file to write")
 	base := flags.String("base", "", "newly-stale: the base tree's repository root")
+	door := flags.String("door", string(mcpe2e.DoorMCP), "stamps: the door the run reaches Margince through (mcp or rest)")
 	if err := flags.Parse(os.Args[2:]); err != nil {
 		fail(err.Error())
 	}
@@ -44,7 +45,7 @@ func main() {
 		if *out == "" {
 			fail("stamps needs -out")
 		}
-		if err := mcpe2e.WriteStamps(*root, *out); err != nil {
+		if err := mcpe2e.WriteStamps(*root, mcpe2e.Door(*door), *out); err != nil {
 			fail(err.Error())
 		}
 	case "newly-stale":
@@ -67,7 +68,7 @@ func newlyStaleMarkdown(lines []mcpe2e.Line) string {
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "This change makes %d MCP end-to-end verdicts stale. They no longer describe what "+
-		"the assistant is served, and the coverage page marks them re-check pending.\n\n", len(lines))
+		"the assistant is served.\n\n", len(lines))
 	b.WriteString("| Verdict | Scenario | What moved |\n|---|---|---|\n")
 	for _, line := range lines {
 		fmt.Fprintf(&b, "| `%s/%s` | `%s` | %s |\n", line.Tree, line.Folder, line.Scenario, strings.Join(line.Why, ", "))

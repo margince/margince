@@ -52,6 +52,12 @@ class RecordedStampTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "carry no case1_x"):
                 check.recorded_stamp("case1_x")
 
+    def test_the_judge_is_the_one_that_graded(self):
+        stamps = written(json.dumps({"case1_x": {**STAMP, "judge": "claude-haiku-5-5"}, "case2_y": STAMP}), ".json")
+        with unittest.mock.patch.dict(os.environ, {"E2E_LLM_STAMPS": stamps, "E2E_LLM_JUDGE_MODEL": "gpt-judge"}):
+            self.assertEqual(check.recorded_stamp("case1_x")["judge"], "gpt-judge")
+            self.assertEqual(check.recorded_stamp("case2_y")["judge"], "")
+
     def test_the_time_is_utc_to_the_second(self):
         stamps = written(json.dumps({"case1_x": STAMP}), ".json")
         moment = datetime.datetime(2026, 11, 20, 9, 8, 53, 999, tzinfo=datetime.timezone.utc)

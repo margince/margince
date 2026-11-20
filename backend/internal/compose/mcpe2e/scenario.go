@@ -3,8 +3,8 @@
 
 // Package mcpe2e stamps the verdicts of the MCP end-to-end lane (e2e/llm) with
 // what they measured, and says which verdicts no longer describe the product.
-// The lane, the coverage page and `make e2e-llm-report` all compute the stamp
-// here. It reads committed files only, so a pull request learns for free which
+// The lane, `make e2e-llm-report` and the stale-verdict workflow all compute
+// the stamp here. It reads committed files only, so a pull request learns for free which
 // verdicts it makes stale.
 package mcpe2e
 

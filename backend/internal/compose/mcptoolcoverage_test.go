@@ -203,10 +203,8 @@ type caseModelRun struct {
 	// empty on a verdict filed before the lane recorded them.
 	Driver string `json:"driver,omitempty"`
 	Search string `json:"search,omitempty"`
-	// SelfJudged is a judge of the model's own family; Recheck is why the
-	// verdict no longer describes the product, empty while it still does.
-	SelfJudged bool     `json:"self_judged,omitempty"`
-	Recheck    []string `json:"recheck_pending,omitempty"`
+	// SelfJudged is a judge of the model's own family decided its criteria.
+	SelfJudged bool `json:"self_judged,omitempty"`
 }
 
 // modelCoverage is the whole lane as ONE model ran it. Driven/never-driven is
@@ -233,10 +231,8 @@ type modelCoverage struct {
 	// of its runs had search degraded to word overlap.
 	Route  string `json:"route"`
 	Search string `json:"search,omitempty"`
-	// RecheckPending counts the verdicts that no longer describe the product,
-	// and SelfJudged is true when a judge of its own family decided any of them.
-	RecheckPending int  `json:"cases_recheck_pending"`
-	SelfJudged     bool `json:"self_judged"`
+	// SelfJudged is true when a judge of its own family decided any of them.
+	SelfJudged bool `json:"self_judged"`
 }
 
 type mcpToolCoverage struct {
@@ -615,10 +611,6 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	stamps, err := currentStamps(scenarioDir, verdicts)
-	if err != nil {
-		return nil, err
-	}
 	entries, err := os.ReadDir(scenarioDir)
 	if err != nil {
 		return nil, err
@@ -649,7 +641,7 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 			}
 		}
 		row.Requires, row.RequiresOneOf = requiredTools(text)
-		row.ByModel = runsFor(verdicts, row.Name, stamps)
+		row.ByModel = runsFor(verdicts, row.Name)
 		cases = append(cases, row)
 	}
 	sort.Slice(cases, func(i, j int) bool { return cases[i].File < cases[j].File })
@@ -853,9 +845,6 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 			if run.Search == "lexical" {
 				summary.Search = "lexical"
 			}
-			if len(run.Recheck) > 0 {
-				summary.RecheckPending++
-			}
 			summary.SelfJudged = summary.SelfJudged || run.SelfJudged
 			summary.Runs += run.Runs
 			summary.Passed += run.Passed
@@ -952,10 +941,11 @@ func readE2ELLMVerdicts(dir string) (map[verdictKey]mcpe2e.Verdict, error) {
 	return out, nil
 }
 
-// runsFor collects each model's result on one scenario, ordered by model
-// name. A verdict whose stamp no longer matches the scenario's current one
-// carries why, so the page says it waits for a re-check.
-func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string, current map[string]mcpe2e.Stamp) []caseModelRun {
+// runsFor collects each model's result on one scenario, ordered by model name.
+// Whether a verdict is stale is not here: it moves with every copy edit. A
+// committed page holding it would fail every such pull request, so the stale
+// workflow and `make e2e-llm-report` say it instead.
+func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string) []caseModelRun {
 	var out []caseModelRun
 	for key, v := range verdicts {
 		if key.scenario != scenario {
@@ -965,19 +955,8 @@ func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string, current ma
 			Model: v.Folder, Runs: v.Runs, Passed: v.Passed, PassAt: v.PassAt,
 			Held:   v.PassAt > 0 && v.Passed >= v.PassAt,
 			Driver: v.Driver, Search: v.Search, SelfJudged: v.SelfJudged,
-			Recheck: mcpe2e.Recheck(v.Stamp, current[scenario], true),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
 	return out
-}
-
-// currentStamps is what every scenario would be stamped with on this tree. It
-// is read only when a verdict needs comparing, because a planted scenario
-// folder has none of the committed files a stamp is made from.
-func currentStamps(scenarioDir string, verdicts map[verdictKey]mcpe2e.Verdict) (map[string]mcpe2e.Stamp, error) {
-	if len(verdicts) == 0 {
-		return map[string]mcpe2e.Stamp{}, nil
-	}
-	return mcpe2e.CurrentStamps(filepath.Join(scenarioDir, "..", "..", ".."))
 }

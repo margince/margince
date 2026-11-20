@@ -704,9 +704,15 @@ class PanelReadersTest(unittest.TestCase):
     def test_a_list_member_is_found_by_the_records_name(self):
         lists = {("read_lists", "find"): {"result": {"data": [{"id": "L1", "name": "Messe", "entity_type": "contact"}]}},
                  ("read_lists", "members"): {"result": {"data": [{"entity_id": "n1"}], "page": {"has_more": False}}}}
-        self.assertEqual(self.read(lists, ['list "Messe" member=Nora Feld', 'list "Messe" nonmember=Gone Name']), [])
+        self.assertEqual(self.read(lists, ['list "Messe" member=Nora Feld', 'list "Messe" members=1']), [])
         self.assertEqual(self.read(lists, ['list "Messe" nonmember=Nora Feld']), ['ended with Nora Feld on list "Messe"'])
         self.assertEqual(self.read(lists, ['list "Messe" member=Gone Name']), ['ended with no contact named "Gone Name"'])
+        self.assertEqual(self.read(lists, ['list "Messe" members=2']), ['ended with 1 members on list "Messe", wanted 2'])
+
+    def test_a_nonmember_nobody_can_find_fails(self):
+        lists = {("read_lists", "find"): {"result": {"data": [{"id": "L1", "name": "Messe", "entity_type": "contact"}]}},
+                 ("read_lists", "members"): {"result": {"data": [], "page": {"has_more": False}}}}
+        self.assertEqual(self.read(lists, ['list "Messe" nonmember=Gone Name']), ['ended with no contact named "Gone Name"'])
 
     def test_the_newest_rate_from_a_currency_is_compared_as_a_number(self):
         rates = {("read_workspace", "fx_rates"): {"data": [
@@ -715,6 +721,13 @@ class PanelReadersTest(unittest.TestCase):
         self.assertEqual(self.read(rates, ['fx_rate "USD" rate=0.92']), [])
         self.assertEqual(self.read(rates, ['fx_rate "USD" rate=0.93']), ["ended with USD rate=0.9200000000, wanted 0.93"])
         self.assertEqual(self.read(rates, ['fx_rate "CHF" rate=1']), ["ended with no CHF rate on the sheet"])
+
+    def test_two_rates_on_the_newest_date_are_unreadable_not_a_guess(self):
+        rates = {("read_workspace", "fx_rates"): {"data": [
+            {"from_currency": "USD", "rate": "0.9100000000", "effective_date": "2026-11-20"},
+            {"from_currency": "USD", "rate": "0.9200000000", "effective_date": "2026-11-20"}]}}
+        with self.assertRaises(endstate.Unreadable):
+            self.read(rates, ['fx_rate "USD" rate=0.92'])
 
     def test_a_projects_health_is_its_judged_state(self):
         health = {("read_project", "overview"): {"health": {"judged": True, "state": "at_risk"}}}

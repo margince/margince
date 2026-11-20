@@ -275,8 +275,8 @@ of the published entries of the tools its checks name (`docs/reference/mcp-info.
 a hash of the server instructions and of the grading harness, the judge model, the commit and the
 time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
 
-A verdict whose stamp no longer matches the tree, or that has none, is stale. The page marks it
-*re-check pending*, and `make e2e-llm-report` names what moved. A pull request that makes a verdict
+A verdict whose stamp no longer matches the tree, or that has none, is stale.
+`make e2e-llm-report` names what moved. A pull request that makes a verdict
 stale gets a comment that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you
 do not run them again.
 

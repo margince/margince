@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // tree plants the committed files a stamp is read from, with one tool served
@@ -34,7 +36,7 @@ func tree(t *testing.T) string {
 		`{"name":"read_record","description":"Read one record."}]}}`)
 	write(routesFile, `{"routers":{"change_deal":{"field":"action","actions":{"move":"move_deal"}}}}`)
 	write(candidatesFile, `{"judge":{"judge_routes":{"api":{"model":"judge-1"}}}}`)
-	for _, name := range harnessFiles {
+	for _, name := range append(append(append([]string{}, harnessFiles...), restTools...), restSkill...) {
 		write(name, "# "+name)
 	}
 	write(filepath.Join(ScenarioDir, "case1-log.yaml"), "name: case1_log\nprompt: |\n  Log it.\n"+
@@ -45,7 +47,12 @@ func tree(t *testing.T) string {
 
 func stampsOf(t *testing.T, root string) map[string]Stamp {
 	t.Helper()
-	stamps, err := CurrentStamps(root)
+	return stampsAt(t, root, DoorMCP)
+}
+
+func stampsAt(t *testing.T, root string, door Door) map[string]Stamp {
+	t.Helper()
+	stamps, err := CurrentStamps(root, door)
 	if err != nil {
 		t.Fatalf("stamping: %v", err)
 	}
@@ -127,7 +134,7 @@ func TestNewlyStaleListsOnlyWhatTheChangeMoved(t *testing.T) {
 	base := tree(t)
 	head := tree(t)
 	stamps := stampsOf(t, base)
-	dir := filepath.Join(head, VerdictTrees[0], "model-a")
+	dir := filepath.Join(head, VerdictTrees[DoorMCP], "model-a")
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatal(err)
 	}
@@ -184,6 +191,10 @@ func TestTheReaderTakesEveryToolKeyAndItsSpelling(t *testing.T) {
 // The real tree stamps whole: every scenario reads, and the published catalog
 // carries the instructions the stamp needs.
 func TestTheCommittedTreeStampsEveryScenario(t *testing.T) {
+	// Go's test cache never rechecks a file outside this module.
+	if err := gatekit.DeclareInputs(os.Getenv, "../../../../docs", "../../../../e2e"); err != nil {
+		t.Fatal(err)
+	}
 	stamps := stampsOf(t, filepath.Join("..", "..", "..", ".."))
 	files, err := filepath.Glob(filepath.Join("..", "..", "..", "..", ScenarioDir, "*.yaml"))
 	if err != nil {
@@ -201,5 +212,27 @@ func TestTheCatalogsLayoutIsNotToolCopy(t *testing.T) {
 		"{\n  \"description\": \"Read one record.\",\n  \"name\": \"read_record\"\n}")
 	if got := before["case2_read"].Moved(stampsOf(t, root)["case2_read"]); len(got) != 0 {
 		t.Errorf("re-indenting the catalog moved %v, want nothing", got)
+	}
+}
+
+func TestTheRestDoorIsStampedWithWhatItsModelReads(t *testing.T) {
+	root := tree(t)
+	before := stampsAt(t, root, DoorREST)
+	edit(t, root, mcpInfoFile, "Log one thing.", "Log one thing, once.")
+	edit(t, root, mcpInfoFile, "Be careful.", "Be very careful.")
+	if got := before["case1_log"].Moved(stampsAt(t, root, DoorREST)["case1_log"]); len(got) != 0 {
+		t.Errorf("MCP copy moved a REST stamp: %v", got)
+	}
+	for _, tc := range []struct{ file, part string }{
+		{"e2e/llm/rest_ops.json", "tool copy"},
+		{"e2e/llm/restmap.py", "tool copy"},
+		{"backend/internal/compose/agentbundle/SKILL.md.tmpl", "server instructions"},
+	} {
+		root := tree(t)
+		before := stampsAt(t, root, DoorREST)
+		edit(t, root, tc.file, "# ", "# edited ")
+		if got := before["case1_log"].Moved(stampsAt(t, root, DoorREST)["case1_log"]); !reflect.DeepEqual(got, []string{tc.part}) {
+			t.Errorf("editing %s moved %v of a REST stamp, want [%s]", tc.file, got, tc.part)
+		}
 	}
 }

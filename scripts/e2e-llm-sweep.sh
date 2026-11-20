@@ -58,6 +58,15 @@ finished() {
   return 1
 }
 
+# What the sweep measures is worked out once, before the first batch, and every
+# batch files it. A batch that worked it out again would compile the compose
+# test package once a batch.
+# shellcheck source=scripts/lib-e2e-llm-stamp.sh
+. "$root/scripts/lib-e2e-llm-stamp.sh"
+export E2E_LLM_STAMP_DIR="$logs/$slug.stamp"
+rm -rf "$E2E_LLM_STAMP_DIR"
+e2e_llm_stamp "$root" "${E2E_LLM_DOOR:-mcp}" "$E2E_LLM_STAMP_DIR" || exit 1
+
 stalled=0
 waits=0
 max_waits="${E2E_SWEEP_MAX_WAITS:-8}"

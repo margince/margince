@@ -244,7 +244,7 @@ asks "is this diff good?", and runs because a diff exists.
 | vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
 | use cases a model drives (`scripts/e2e-llm-sweep.sh`) | weekly | Every MCP use case run by a real model in shards, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
 | MCP role sweep (`make test-roles`) | weekly | Every MCP tool and action called as every seeded role, held to the `mcp-tool-roles/` and `toolchecks/` folders | It takes longer than a merge-gate job allows. Each PR still holds the committed table to the registry and to `tools/list`. |
-| weekly records (`records`, `records-pr`) | weekly | Renders the pages built from the three weekly records, then opens one pull request for each | A record reaches `main` only when a maintainer merges it. |
+| weekly records (`records`, `records-pr`) | weekly | Renders the pages built from the weekly records, then opens one pull request for the speed records and one for the MCP verdicts | A record reaches `main` only when a maintainer merges it. |
 
 Notes on the jobs:
 
@@ -262,7 +262,7 @@ Notes on the jobs:
 The three weekly jobs record what they measure, and none of them writes to `main`:
 
 - Each job uploads its record as an artifact: `bench-perf-record`, `bench-mobile-record` and `e2e-llm-verdicts`. A failed speed job still uploads, because a budget that is over is recorded before its gate fails. `e2e-llm-verdicts` exists only when the model lane finished whole.
-- `records` puts each record over a clean tree of the run, one part at a time. A record that matches the committed one counts as not recorded. It runs `make perfdoc` and the MCP tool coverage generator, and hands over one patch per part. For the MCP verdicts it adds a table of the scenarios whose result moved (`e2e/llm/verdictdiff.py`). It holds no write token.
+- `records` puts each part over a clean tree of the run, one at a time. The parts are the speed records and the MCP verdicts; `make perfdoc` renders both speed records into the same pages. A record that matches the committed one counts as not recorded. It runs `make perfdoc` and the MCP tool coverage generator, and hands over one patch per part. For the MCP verdicts it adds a table of the scenarios whose result moved (`e2e/llm/verdictdiff.py`). It holds no write token.
 - `records-pr` opens one pull request per part, each on one fixed branch (`records/weekly-<part>`), so a new week updates the open pull request. Each carries the `records: weekly` label and goes to the maintainer the `RECORDS_OWNER` repository variable names. That maintainer runs the lane by hand when the weekly run cannot, and gives the variable to another maintainer while on leave. It runs only on `main`, and opens nothing when nothing recorded.
 - A token from the records GitHub App (secrets `RECORDS_APP_CLIENT_ID`, `RECORDS_APP_PRIVATE_KEY`) opens that pull request, so CI runs on it. The default workflow token stays read-only.
 - A model run that was cut off files "the weekly model-driven use cases were cut off", publishes nothing and opens no pull request.

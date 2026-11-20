@@ -73,8 +73,8 @@ More names read a panel, and not a stored field:
 | `contact "Name" consent=marketing_email:granted` | that consent purpose has that state |
 | `contact "Name" stop=subject_request` | the contact has a stop of that kind |
 | `contact "Name" data_subject_request=access` | one open request of that kind names the contact, by id or by one of its addresses |
-| `list "Name" member=Jens Falk` | the record of that name is on the list; `nonmember=` is the reverse |
-| `fx_rate "USD" rate=0.92` | the newest rate from that currency is that number |
+| `list "Name" member=Jens Falk` | the record of that name is on the list; `nonmember=` is the reverse, and both fail when no record or two carry the name. `members=12` counts the members |
+| `fx_rate "USD" rate=0.92` | the newest rate from that currency is that number. Two rates on that date stop the read |
 
 A `me` entry reads more of the seat than `whoami` gives. `working_days=1,2,3,4` and
 `working_hours=09:00-17:00` read the seat's own hours. `unread_notices=N` counts its unread

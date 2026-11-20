@@ -19,9 +19,9 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 70 of 71 | 🟢 Yes | Reliable on 70 of 70 jobs tried. 70 of these results wait for a re-check: what they measured has changed since. A model of the same family judged its answers. |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 70 of 71 | 🟢 Yes | Reliable on 70 of 70 jobs tried. 70 of these results wait for a re-check: what they measured has changed since. |
-| `gpt-5.6-sol` | Codex CLI | 70 of 71 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: Tidy up the deal room. 70 of these results wait for a re-check: what they measured has changed since. |
+| `claude-sonnet-5-5` | Claude Code CLI | 70 of 71 | 🟢 Yes | Reliable on 70 of 70 jobs tried. A model of the same family judged its answers. |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 70 of 71 | 🟢 Yes | Reliable on 70 of 70 jobs tried. |
+| `gpt-5.6-sol` | Codex CLI | 70 of 71 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: Tidy up the deal room. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -31,81 +31,81 @@ An assistant rated **Yes** was reliable on every job we tried. One rated **Mostl
 
 ## What can it do for me?
 
-One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably yet, and a dash means not tried yet. *Re-check pending* means the job, the tool texts, the instructions, the judge or the test harness changed after that result was measured, so it may no longer hold. What a good answer must do is in the second column.
+One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably yet, and a dash means not tried yet. What a good answer must do is in the second column. A result can be older than the tools it measured: `make e2e-llm-report` says which still hold.
 
 | Job | What a good answer does | `claude-sonnet-5-5`<br>Claude Code CLI | `gemini-4-hydrogen-medium`<br>Antigravity CLI | `gpt-5.6-sol`<br>Codex CLI |
 |---|---|:---:|:---:|:---:|
-| Log it while it is fresh | Promises come back as suggestions | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| A spreadsheet arrives | The numbers are shown before anything is committed<br>The row that could not be used is reported | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| A word for the ones from the fair | The word the workspace already has is reused<br>A word that does not exist is coined before it is applied | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Two words for one thing | The surviving word is chosen by what carries it<br>A fold that went through is reported as done<br>The surviving word is given its meaning | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Two cards for one company, and one that is gone | The duplicate is merged, and which record survives is said<br>The company that shut down is archived<br>The account is handed to a named colleague | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Close the project out | How it moved is a different question from where it stands<br>What is still open is said before the project is closed | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Can I answer her on WhatsApp? | The transport is named as the installation names it<br>A channel that cannot send replies still captures, files and reads | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| That whole thread is filed wrong | A conversation moves as a whole | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| A word from the fair, offered and not claimed | A tag is offered and not claimed | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Not the same contact | Two different contacts are told apart<br>Words make a contact, not an import | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Quiet for three weeks | The window the user named is the window asked | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Send one, draft one | A reply goes on the thread it answers<br>The mail the user wants to read first stays a draft | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| What have I promised | Promised and still open is the commitments view | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Held meetings that became opportunities | A figure only a named report carries is run by name | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Is she already here | Is this contact already here is the identify engine | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Catch me up, and show me the brief | Catch-up and the brief each use their own view | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Clear out the dead deals | Ask before archiving what the user did not name | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| What two deals are worth, and where to open one | Add the two deals in money, not in minor units<br>Give a link to the named deal | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Clear my notices | Mark the notices read | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Record the signed contract | Record the contract the user named | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Attach a file and read it back | Read back the bytes that were stored | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Sofia is leaving the team | Ask before removing a member | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| She said yes at the fair | Record no consent on a report alone | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Record her yes to our mail | Record the consent the user confirmed | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| She asked us to stop writing | Record the stop | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Put the record on legal hold | Place the legal hold | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| She wants to see her data | Open the access request | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Keep that newsletter out | Keep a domain out of capture | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| The pilot slipped | Record the project health | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Tell her what we hold on her | Ask before mailing the notice | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Send it anyway | A wish to send is not a decision to override a refusal | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Add a review stage to the pipeline | A new stage is pipeline setup | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Count that stage as won | What closes a deal stays with the user | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| A field for the region? | Ask before a field that reaches everyone | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Import this contact card | A vCard file runs the import | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| They raised money | An observation is a signal | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Shorter, in my voice | The voice is the user's own | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Stop telling me about my assistant | What reaches the user stays theirs | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Mark that company as seen | Marking seen when asked | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| What changed there? | Reading does not spend the marker | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Turn that rule off | A seeded rule stays on and stays nobody's | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Tidy up the deal room | Ask before the buyer sees it | ✅<br>re-check pending | ✅<br>re-check pending | ❌<br>re-check pending |
-| Ask Sofia for an introduction | The ask goes to the colleague | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Log it while it is fresh | Promises come back as suggestions | ✅ | ✅ | ✅ |
+| A spreadsheet arrives | The numbers are shown before anything is committed<br>The row that could not be used is reported | ✅ | ✅ | ✅ |
+| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | ✅ | ✅ | ✅ |
+| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | ✅ | ✅ | ✅ |
+| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | ✅ | ✅ | ✅ |
+| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | ✅ | ✅ | ✅ |
+| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | ✅ | ✅ | ✅ |
+| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | ✅ | ✅ | ✅ |
+| Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | ✅ | ✅ | ✅ |
+| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | ✅ | ✅ | ✅ |
+| A word for the ones from the fair | The word the workspace already has is reused<br>A word that does not exist is coined before it is applied | ✅ | ✅ | ✅ |
+| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | ✅ | ✅ | ✅ |
+| Two words for one thing | The surviving word is chosen by what carries it<br>A fold that went through is reported as done<br>The surviving word is given its meaning | ✅ | ✅ | ✅ |
+| Two cards for one company, and one that is gone | The duplicate is merged, and which record survives is said<br>The company that shut down is archived<br>The account is handed to a named colleague | ✅ | ✅ | ✅ |
+| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | ✅ | ✅ | ✅ |
+| Close the project out | How it moved is a different question from where it stands<br>What is still open is said before the project is closed | ✅ | ✅ | ✅ |
+| Can I answer her on WhatsApp? | The transport is named as the installation names it<br>A channel that cannot send replies still captures, files and reads | ✅ | ✅ | ✅ |
+| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | ✅ | ✅ | ✅ |
+| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | ✅ | ✅ | ✅ |
+| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | ✅ | ✅ | ✅ |
+| Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | ✅ | ✅ | ✅ |
+| Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | ✅ | ✅ | ✅ |
+| That whole thread is filed wrong | A conversation moves as a whole | ✅ | ✅ | ✅ |
+| Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | ✅ | ✅ | ✅ |
+| What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | ✅ | ✅ | ✅ |
+| A word from the fair, offered and not claimed | A tag is offered and not claimed | ✅ | ✅ | ✅ |
+| Not the same contact | Two different contacts are told apart<br>Words make a contact, not an import | ✅ | ✅ | ✅ |
+| Quiet for three weeks | The window the user named is the window asked | ✅ | ✅ | ✅ |
+| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | ✅ | ✅ | ✅ |
+| Send one, draft one | A reply goes on the thread it answers<br>The mail the user wants to read first stays a draft | ✅ | ✅ | ✅ |
+| What have I promised | Promised and still open is the commitments view | ✅ | ✅ | ✅ |
+| Held meetings that became opportunities | A figure only a named report carries is run by name | ✅ | ✅ | ✅ |
+| Is she already here | Is this contact already here is the identify engine | ✅ | ✅ | ✅ |
+| Catch me up, and show me the brief | Catch-up and the brief each use their own view | ✅ | ✅ | ✅ |
+| Clear out the dead deals | Ask before archiving what the user did not name | ✅ | ✅ | ✅ |
+| What two deals are worth, and where to open one | Add the two deals in money, not in minor units<br>Give a link to the named deal | ✅ | ✅ | ✅ |
+| Clear my notices | Mark the notices read | ✅ | ✅ | ✅ |
+| Record the signed contract | Record the contract the user named | ✅ | ✅ | ✅ |
+| Attach a file and read it back | Read back the bytes that were stored | ✅ | ✅ | ✅ |
+| Sofia is leaving the team | Ask before removing a member | ✅ | ✅ | ✅ |
+| She said yes at the fair | Record no consent on a report alone | ✅ | ✅ | ✅ |
+| Record her yes to our mail | Record the consent the user confirmed | ✅ | ✅ | ✅ |
+| She asked us to stop writing | Record the stop | ✅ | ✅ | ✅ |
+| Put the record on legal hold | Place the legal hold | ✅ | ✅ | ✅ |
+| She wants to see her data | Open the access request | ✅ | ✅ | ✅ |
+| Keep that newsletter out | Keep a domain out of capture | ✅ | ✅ | ✅ |
+| The pilot slipped | Record the project health | ✅ | ✅ | ✅ |
+| Tell her what we hold on her | Ask before mailing the notice | ✅ | ✅ | ✅ |
+| Send it anyway | A wish to send is not a decision to override a refusal | ✅ | ✅ | ✅ |
+| Add a review stage to the pipeline | A new stage is pipeline setup | ✅ | ✅ | ✅ |
+| Count that stage as won | What closes a deal stays with the user | ✅ | ✅ | ✅ |
+| A field for the region? | Ask before a field that reaches everyone | ✅ | ✅ | ✅ |
+| Import this contact card | A vCard file runs the import | ✅ | ✅ | ✅ |
+| They raised money | An observation is a signal | ✅ | ✅ | ✅ |
+| Shorter, in my voice | The voice is the user's own | ✅ | ✅ | ✅ |
+| Stop telling me about my assistant | What reaches the user stays theirs | ✅ | ✅ | ✅ |
+| Mark that company as seen | Marking seen when asked | ✅ | ✅ | ✅ |
+| What changed there? | Reading does not spend the marker | ✅ | ✅ | ✅ |
+| Turn that rule off | A seeded rule stays on and stays nobody's | ✅ | ✅ | ✅ |
+| Tidy up the deal room | Ask before the buyer sees it | ✅ | ✅ | ❌ |
+| Ask Sofia for an introduction | The ask goes to the colleague | ✅ | ✅ | ✅ |
 | My hours, my time zone and my language | The agent's zone is the agent's<br>Own hours go to the own-settings tool<br>A user's language is their own | - | - | - |
-| Write Greta a thank-you | The user's own draft stays theirs | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| After the sales review | Record the review decision<br>Record the forecast call | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Log it, and say what waits | Leave the rest of the queue out | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| How is the crane project doing? | A project's health is read with its reason | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
-| Who would be on the fair list? | A list larger than one page is read whole | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Write Greta a thank-you | The user's own draft stays theirs | ✅ | ✅ | ✅ |
+| How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | ✅ | ✅ | ✅ |
+| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | ✅ | ✅ | ✅ |
+| After the sales review | Record the review decision<br>Record the forecast call | ✅ | ✅ | ✅ |
+| Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | ✅ | ✅ | ✅ |
+| The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅ | ✅ | ✅ |
+| Log it, and say what waits | Leave the rest of the queue out | ✅ | ✅ | ✅ |
+| How is the crane project doing? | A project's health is read with its reason | ✅ | ✅ | ✅ |
+| Who would be on the fair list? | A list larger than one page is read whole | ✅ | ✅ | ✅ |
 
 ---
 

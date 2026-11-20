@@ -176,21 +176,17 @@ cleanup() {
 trap cleanup EXIT
 
 # THE STAMP SAYS WHAT EACH VERDICT MEASURED: the scenario, the copy of the tools
-# it names, the server instructions, the judge and the grading harness, read
-# from committed files by the one generator the coverage page also uses. The
-# published catalog is checked against what this tree serves first, or a stamp
-# would name copy the model never saw.
-echo "==> stamping what this run measures"
-if ! (cd "$ROOT/backend" && go test ./internal/compose/ -run '^TestPublishedMCPSurfaceMatchesWhatAClientIsServed$' \
-  -count=1 >"$WORK/surface.log" 2>&1); then
-  echo "docs/reference/mcp-info.json is not what this tree serves, so a stamp would name copy no model saw:" >&2
-  tail -20 "$WORK/surface.log" >&2
-  echo "  regenerate it: cd backend && go test ./internal/compose/ -run TestPublishedMCPSurface -update-mcp-info" >&2
-  exit 1
+# it names, the instructions, the judge and the grading harness, read from
+# committed files by the generator `make e2e-llm-report` uses. A sweep works it
+# out once and hands it over in E2E_LLM_STAMP_DIR; a lone run works it out here.
+# shellcheck source=scripts/lib-e2e-llm-stamp.sh
+. "$ROOT/scripts/lib-e2e-llm-stamp.sh"
+STAMP_DIR="${E2E_LLM_STAMP_DIR:-$WORK/stamp}"
+if [[ ! -s "$STAMP_DIR/stamps.json" || ! -s "$STAMP_DIR/commit" ]]; then
+  echo "==> stamping what this run measures"
+  e2e_llm_stamp "$ROOT" "$DOOR" "$STAMP_DIR" || exit 1
 fi
-(cd "$ROOT/backend" && go run ./internal/compose/mcpe2e/mcpe2ecmd stamps -out "$WORK/stamps.json")
-COMMIT="$(git -C "$ROOT" rev-parse HEAD)"
-[[ -z "$(git -C "$ROOT" status --porcelain)" ]] || COMMIT="$COMMIT+uncommitted"
+COMMIT="$(cat "$STAMP_DIR/commit")"
 
 # --- the stack ---------------------------------------------------------------
 #
@@ -868,9 +864,15 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
-    E2E_LLM_STAMPS="$WORK/stamps.json" E2E_LLM_COMMIT="$COMMIT" \
+    E2E_LLM_STAMPS="$STAMP_DIR/stamps.json" E2E_LLM_COMMIT="$COMMIT" \
     python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$made" \
-    ${transcripts[@]+"${transcripts[@]}"} > "$VERDICT_DIR/${name}.json"
+    ${transcripts[@]+"${transcripts[@]}"} > "$WORK/${name}.verdict.json" || {
+    echo "HARNESS: the verdict of $name could not be written; the committed one is unchanged." >&2
+    exit 2
+  }
+  # Moved into place whole: a redirect into the committed file would empty it
+  # before the writer ran, and a writer that crashed would leave it empty.
+  mv "$WORK/${name}.verdict.json" "$VERDICT_DIR/${name}.json"
 
   # And the same total in prose while the reason for it is still on screen. The
   # line is formatted by check.py, which owns what a usage total means, rather

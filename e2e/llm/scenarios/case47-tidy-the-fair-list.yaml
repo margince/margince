@@ -70,10 +70,12 @@ judge:
   - "Criterion 3. The answer reports the hand-over to Sofia Meier as covering everybody who stayed on the list plus Jens Falk, and not Mara Voigt. Answer no if it hands Mara to Sofia, hands over only some of the people, or says nothing about who was handed over."
 
 # Mara is a lead again, and everyone else on the list, Jens included, is
-# Sofia's.
+# Sofia's. Her contact row is gone once the conversion is undone, so no name
+# finds it: the count says she left. The seed puts twelve on the list, Mara
+# among them, and Jens takes her place.
 must_end_with:
   - list "Messe Hannover 2026" member=Jens Falk
-  - list "Messe Hannover 2026" nonmember=Mara Voigt
+  - list "Messe Hannover 2026" members=12
   - lead "Mara Voigt" records=1
   - contact "Mara Voigt" records=0
   - contact "Ralf Thiel" owner=Sofia Meier

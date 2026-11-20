@@ -46,7 +46,7 @@ human sees. More are not stored fields either:
     - contact "Katrin Sommer" consent=marketing_email:granted   a purpose's state
     - contact "Mai Nguyen" stop=subject_request  a stop of that kind on the contact
     - contact "Katrin Sommer" data_subject_request=access   one open request names her
-    - list "Messe Hannover 2026" member=Jens Falk   or nonmember=, a member by its name
+    - list "Messe Hannover 2026" member=Jens Falk   or nonmember=, a member by its name; members=12 counts
     - fx_rate "USD" rate=0.92                    the newest rate from that currency
 
 An activity is also found on a company or a contact, by every page of the
@@ -128,7 +128,7 @@ _AUTOMATION, _ME = "automation", "me"
 _SAVED_QUESTIONS = "saved_questions"
 _WORKING_DAYS, _WORKING_HOURS = "working_days", "working_hours"
 _PIPELINE = "pipeline"
-_LIST, _NONMEMBER = "list", "nonmember"
+_LIST, _NONMEMBER, _MEMBERS = "list", "nonmember", "members"
 _FX_RATE = "fx_rate"
 # Fields a me entry reads somewhere other than whoami.
 _UNREAD_NOTICES, _CAPTURE_EXCLUDED, _VOICE, _FORECAST_CALL = (
@@ -186,8 +186,10 @@ def parse(entry):
         if parent_type is not None or field != _MEMBER:
             raise ValueError(f"must_end_with entry {entry!r}: a team is read only as member=<colleague's name>")
     elif record_type == _LIST:
-        if parent_type is not None or field not in (_MEMBER, _NONMEMBER):
-            raise ValueError(f"must_end_with entry {entry!r}: a list is read only as member= or nonmember=<record name>")
+        if parent_type is not None or field not in (_MEMBER, _NONMEMBER, _MEMBERS) \
+                or (field == _MEMBERS and not value.isdigit()):
+            raise ValueError(f"must_end_with entry {entry!r}: a list is read only as member=, nonmember=<record name> "
+                             "or members=<count>")
     elif record_type == _FX_RATE:
         if parent_type is not None or field != "rate" or not _is_decimal(value):
             raise ValueError(f"must_end_with entry {entry!r}: an fx_rate is read only as rate=<decimal>")
@@ -694,16 +696,20 @@ def _list_problem(session, want):
     lists = [row for row in (found or {}).get("data") or () if row.get("name") == want.name]
     if len(lists) != 1:
         return f'ended with {len(lists)} lists named "{want.name}"'
+    members = _pages(session, "read_lists", {"mode": "members", "list_id": lists[0]["id"], "limit": _PAGE_LIMIT},
+                     "data", "read_lists members")
+    if want.field == _MEMBERS:
+        return "" if len(members) == int(want.value) else \
+            f'ended with {len(members)} members on list "{want.name}", wanted {want.value}'
     member_type = lists[0].get("entity_type")
     if member_type not in _NAME_FIELD:
         raise Unreadable(f'list "{want.name}" holds {member_type!r} records, which this reader cannot find by name')
+    # Both directions need the one record of that name: a nonmember nobody can
+    # find would pass whatever the list holds.
     member_id, problem = _named(session, member_type, want.value)
-    if problem and want.field == _MEMBER:
+    if problem:
         return problem
-    members = _pages(session, "read_lists", {"mode": "members", "list_id": lists[0]["id"], "limit": _PAGE_LIMIT},
-                     "data", "read_lists members")
-    # A record that no longer exists under that name is on no list.
-    on = bool(member_id) and any(m.get("entity_id") == member_id for m in members)
+    on = any(m.get("entity_id") == member_id for m in members)
     if on == (want.field == _MEMBER):
         return ""
     return f'ended with {want.value} {"not " if not on else ""}on list "{want.name}"'
@@ -716,6 +722,10 @@ def _fx_rate_problem(session, want):
     if not rates:
         return f"ended with no {want.name} rate on the sheet"
     newest = max(rates, key=lambda r: str(r.get("effective_date")))
+    # The sheet keeps one rate per currency and date (an upsert on both), so
+    # two on the newest date is a sheet this reader does not understand.
+    if sum(1 for r in rates if r.get("effective_date") == newest.get("effective_date")) > 1:
+        raise Unreadable(f"the sheet holds two {want.name} rates for {newest.get('effective_date')}")
     if _is_decimal(str(newest.get("rate"))) and decimal.Decimal(str(newest["rate"])) == decimal.Decimal(want.value):
         return ""
     return f"ended with {want.name} rate={newest.get('rate')}, wanted {want.value}"

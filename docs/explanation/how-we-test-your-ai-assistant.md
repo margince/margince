@@ -81,7 +81,7 @@ fault of the product.
 - **A moment in time.** The tests cost real model use and run when someone starts them. So a result
   can be older than the assistant or the product, and a new version of either can do better or worse.
   Each result records what it measured: the job, the tool texts, the instructions, the judge and the
-  test itself. When one of them changes, the result page marks the result *re-check pending*.
+  test itself. When one of them changes, the result is out of date, and a change that causes it is told so.
 - **The rights of the user.** The tests show what an assistant does well. What it may do is a separate
   rule: it can do what the user behind it could do, and nothing more
   ([agent-surface.md](agent-surface.md)).

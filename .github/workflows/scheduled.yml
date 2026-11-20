@@ -588,7 +588,7 @@ jobs:
             export E2E_LLM_ALLOW_LEXICAL=1
           fi
           # shellcheck disable=SC2086 # CASES is a list of case numbers
-          scripts/e2e-llm-sweep.sh "ci$SHARD" $CASES 2>&1 | tee sweep.log
+          scripts/e2e-llm-sweep.sh "ci$SHARD" $CASES 2>&1 | tee "$RUNNER_TEMP/sweep.log"
       # What this shard did, read from the sweep's own lines: LANE DONE only once
       # every case has a verdict, and a FAIL line for a case below its bar. No
       # LANE DONE is a lane that was stopped or cut off, and it publishes nothing.
@@ -600,10 +600,11 @@ jobs:
         run: |
           out="$RUNNER_TEMP/shard"
           mkdir -p "$out/verdicts"
-          if grep -q '^LANE DONE' sweep.log 2>/dev/null; then
-            if grep -qE '^ci[0-9]+ +case[0-9]+_[a-z0-9_]+: FAIL' sweep.log; then outcome=scenario-failed; else outcome=ok; fi
+          log="$RUNNER_TEMP/sweep.log"
+          if grep -q '^LANE DONE' "$log" 2>/dev/null; then
+            if grep -qE '^ci[0-9]+ +case[0-9]+_[a-z0-9_]+: FAIL' "$log"; then outcome=scenario-failed; else outcome=ok; fi
             cp "$RUNNER_TEMP"/verdicts/*.json "$out/verdicts/"
-          elif [ "$STEP" = failure ] && ! grep -q '^LANE STOPPED' sweep.log 2>/dev/null; then
+          elif [ "$STEP" = failure ] && ! grep -q '^LANE STOPPED' "$log" 2>/dev/null; then
             outcome=cut-off
           else
             outcome=lane-failed
@@ -1107,8 +1108,9 @@ jobs:
           path: ${{ runner.temp }}/verdicts
           merge-multiple: true
       # ONE PATCH PER PART, each rendered on a clean tree, so a good speed
-      # record never waits on a model verdict a reviewer wants to keep out. A
-      # part counts as recorded only when its files differ from the tree.
+      # record never waits on a model verdict a reviewer wants to keep out. The
+      # perf and mobile records are one part: `make perfdoc` renders both into
+      # the same pages. A part counts as recorded only when its files differ.
       - name: Render the pages each record feeds
         id: render
         env:
@@ -1120,14 +1122,14 @@ jobs:
           folder="$(python3 -c 'import sys; sys.path.insert(0, "e2e/llm"); import candidates; print(candidates.resolve("claude", "cli").folder)')"
           verdicts="backend/internal/compose/aicert/records/mcp_e2e/$folder"
           parts=""
-          for part in perf mobile llm; do
+          for part in speed llm; do
             git reset -q --hard && git clean -qfd -- docs backend e2e
             case "$part" in
-              perf | mobile)
-                file="bench-$part.json"
-                [ -f "$RUNNER_TEMP/perfbench/$file" ] || continue
-                cp "$RUNNER_TEMP/perfbench/$file" "$perfbench/$file"
-                [ -n "$(git status --porcelain -- "$perfbench/$file")" ] || continue
+              speed)
+                for file in bench-perf.json bench-mobile.json; do
+                  [ -f "$RUNNER_TEMP/perfbench/$file" ] && cp "$RUNNER_TEMP/perfbench/$file" "$perfbench/$file"
+                done
+                [ -n "$(git status --porcelain -- "$perfbench")" ] || continue
                 make perfdoc
                 git add -A -- docs/reference
                 ;;
@@ -1224,10 +1226,8 @@ jobs:
           git config user.email "${bot_id}+${APP_SLUG}[bot]@users.noreply.github.com"
           for part in $PARTS; do
             case "$part" in
-              perf) title="PERF-3/PERF-7 speed records"
-                how="\`make bench-perf BENCH_PERF_TIER=smb\`, the SMB tier; a PERF-7 row measured below mid-market renders \`inconclusive\`. Job result \`$PERF_RESULT\`, outcome \`${PERF_OUTCOME:-none}\`." ;;
-              mobile) title="MOBILE-AC-2 mobile record"
-                how="\`make bench-mobile\`, Playwright Chromium on a throttled Fast-3G profile at 390px. Job result \`$MOBILE_RESULT\`, outcome \`${MOBILE_OUTCOME:-none}\`." ;;
+              speed) title="speed records"
+                how="PERF-3/PERF-7: \`make bench-perf BENCH_PERF_TIER=smb\`, the SMB tier; a PERF-7 row measured below mid-market renders \`inconclusive\`. Job result \`$PERF_RESULT\`, outcome \`${PERF_OUTCOME:-none}\`. MOBILE-AC-2: \`make bench-mobile\`, Playwright Chromium on a throttled Fast-3G profile at 390px. Job result \`$MOBILE_RESULT\`, outcome \`${MOBILE_OUTCOME:-none}\`." ;;
               llm) title="MCP use-case verdicts"
                 how="Every scenario under \`e2e/llm/scenarios/\` driven by \`claude-sonnet-5-5\` over the Claude CLI with \`scripts/e2e-llm-sweep.sh\`, search by meaning; outcome \`$LLM_OUTCOME\`." ;;
             esac

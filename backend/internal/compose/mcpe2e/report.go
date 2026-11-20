@@ -13,10 +13,13 @@ import (
 
 // VerdictTrees are the committed verdict folders, one per door, relative to
 // the repository root.
-var VerdictTrees = []string{
-	"backend/internal/compose/aicert/records/mcp_e2e",
-	"backend/internal/compose/aicert/records/mcp_e2e_rest",
+var VerdictTrees = map[Door]string{
+	DoorMCP:  "backend/internal/compose/aicert/records/mcp_e2e",
+	DoorREST: "backend/internal/compose/aicert/records/mcp_e2e_rest",
 }
+
+// doors lists the doors in a fixed order, for output a diff can read.
+var doors = []Door{DoorMCP, DoorREST}
 
 // RecordedStamp is the stamp a verdict carries: what it measured, and when.
 type RecordedStamp struct {
@@ -28,6 +31,7 @@ type RecordedStamp struct {
 // Verdict is one committed verdict file: how it went, how it was measured,
 // and what it measured. Folder is the model folder it is filed under.
 type Verdict struct {
+	Door       Door           `json:"-"`
 	Tree       string         `json:"-"`
 	Folder     string         `json:"-"`
 	Scenario   string         `json:"scenario"`
@@ -59,10 +63,13 @@ func Recheck(recorded *RecordedStamp, current Stamp, scenarioExists bool) []stri
 // ReadVerdicts reads every committed verdict under the trees, in path order.
 func ReadVerdicts(root string) ([]Verdict, error) {
 	var out []Verdict
-	for _, tree := range VerdictTrees {
-		verdicts, err := ReadTree(filepath.Join(root, tree))
+	for _, door := range doors {
+		verdicts, err := ReadTree(filepath.Join(root, VerdictTrees[door]))
 		if err != nil {
 			return nil, err
+		}
+		for i := range verdicts {
+			verdicts[i].Door = door
 		}
 		out = append(out, verdicts...)
 	}
@@ -122,7 +129,7 @@ type Line struct {
 
 // Report pairs each committed verdict with what makes it stale, if anything.
 func Report(root string) ([]Line, error) {
-	current, err := CurrentStamps(root)
+	current, err := stampsByDoor(root)
 	if err != nil {
 		return nil, err
 	}
@@ -132,8 +139,20 @@ func Report(root string) ([]Line, error) {
 	}
 	out := make([]Line, 0, len(verdicts))
 	for _, v := range verdicts {
-		stamp, exists := current[v.Scenario]
+		stamp, exists := current[v.Door][v.Scenario]
 		out = append(out, Line{Verdict: v, Why: Recheck(v.Stamp, stamp, exists)})
+	}
+	return out, nil
+}
+
+func stampsByDoor(root string) (map[Door]map[string]Stamp, error) {
+	out := map[Door]map[string]Stamp{}
+	for _, door := range doors {
+		stamps, err := CurrentStamps(root, door)
+		if err != nil {
+			return nil, err
+		}
+		out[door] = stamps
 	}
 	return out, nil
 }
@@ -141,7 +160,7 @@ func Report(root string) ([]Line, error) {
 // NewlyStale is what a change makes stale: the verdicts under head that were
 // current against the base tree's files and are not against head's.
 func NewlyStale(baseRoot, headRoot string) ([]Line, error) {
-	base, err := CurrentStamps(baseRoot)
+	base, err := stampsByDoor(baseRoot)
 	if err != nil {
 		return nil, fmt.Errorf("the base tree: %w", err)
 	}
@@ -151,7 +170,7 @@ func NewlyStale(baseRoot, headRoot string) ([]Line, error) {
 	}
 	var out []Line
 	for _, line := range lines {
-		was, existed := base[line.Scenario]
+		was, existed := base[line.Door][line.Scenario]
 		if len(line.Why) > 0 && len(Recheck(line.Stamp, was, existed)) == 0 {
 			out = append(out, line)
 		}
@@ -195,8 +214,8 @@ func Summarise(lines []Line) string {
 
 // WriteStamps writes the current stamps as JSON for the lane to file beside
 // each verdict.
-func WriteStamps(root, path string) error {
-	stamps, err := CurrentStamps(root)
+func WriteStamps(root string, door Door, path string) error {
+	stamps, err := CurrentStamps(root, door)
 	if err != nil {
 		return err
 	}

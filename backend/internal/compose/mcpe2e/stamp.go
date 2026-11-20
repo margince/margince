@@ -41,6 +41,28 @@ const (
 	ScenarioDir    = "e2e/llm/scenarios"
 )
 
+// Door is how an assistant reaches Margince, and each door reads its own copy.
+type Door string
+
+const (
+	// DoorMCP reads the MCP tool entries and the server instructions.
+	DoorMCP Door = "mcp"
+	// DoorREST reads the REST skill and the shim that offers it as one tool.
+	DoorREST Door = "rest"
+)
+
+// restTools stand where the MCP tool entries do on the REST door. restSkill
+// stands where the server instructions do: the skill a model reads first.
+var (
+	restTools = []string{"e2e/llm/rest_ops.json", "e2e/llm/restshim.py", "e2e/llm/restmap.py"}
+	restSkill = []string{
+		"backend/internal/compose/agentbundle/agentcontract_gen.yaml",
+		"backend/internal/compose/agentbundle/agentindex_gen.txt",
+		"backend/internal/compose/agentbundle/README.md.tmpl",
+		"backend/internal/compose/agentbundle/SKILL.md.tmpl",
+	}
+)
+
 // harnessFiles grade a run or build the world it runs in. A driver is not
 // here: how the model was reached is the verdict's folder and `driver`.
 var harnessFiles = []string{
@@ -48,16 +70,48 @@ var harnessFiles = []string{
 	"e2e/llm/casesetup.py", "e2e/llm/seed-llm-fixtures.sh",
 }
 
-// inputs are the committed files every scenario's stamp is computed from.
+// inputs are the committed files every scenario's stamp is computed from. On
+// the REST door restTools is the whole tool layer's digest and tools is empty.
 type inputs struct {
+	door         Door
 	tools        map[string]json.RawMessage
 	routers      map[string]string
+	restTools    string
 	instructions string
 	judge        string
 	harness      string
 }
 
-func loadInputs(root string) (inputs, error) {
+func loadInputs(root string, door Door) (inputs, error) {
+	in := inputs{door: door, tools: map[string]json.RawMessage{}, routers: map[string]string{}}
+	var err error
+	if in.judge, err = canonicalJudge(root); err != nil {
+		return inputs{}, err
+	}
+	if in.harness, err = digestFiles(root, harnessFiles); err != nil {
+		return inputs{}, err
+	}
+	switch door {
+	case DoorMCP:
+		if err := in.loadMCP(root); err != nil {
+			return inputs{}, err
+		}
+		return in, nil
+	case DoorREST:
+		if in.restTools, err = digestFiles(root, restTools); err != nil {
+			return inputs{}, err
+		}
+		if in.instructions, err = digestFiles(root, restSkill); err != nil {
+			return inputs{}, err
+		}
+		return in, nil
+	default:
+		return inputs{}, fmt.Errorf("no door is named %q; it is %s or %s", door, DoorMCP, DoorREST)
+	}
+}
+
+// loadMCP reads the served catalog, its instructions and the router table.
+func (in *inputs) loadMCP(root string) error {
 	var info struct {
 		Instructions string `json:"instructions"`
 		Tools        struct {
@@ -65,31 +119,31 @@ func loadInputs(root string) (inputs, error) {
 		} `json:"tools"`
 	}
 	if err := readJSON(filepath.Join(root, mcpInfoFile), &info); err != nil {
-		return inputs{}, err
+		return err
 	}
 	if info.Instructions == "" {
-		return inputs{}, fmt.Errorf("%s carries no server instructions to stamp", mcpInfoFile)
+		return fmt.Errorf("%s carries no server instructions to stamp", mcpInfoFile)
 	}
-	in := inputs{tools: map[string]json.RawMessage{}, routers: map[string]string{}, instructions: info.Instructions}
+	in.instructions = digest([]byte(info.Instructions))
 	for _, entry := range info.Tools.Tools {
 		// Re-encoded, so the digest reads the entry and not how the file was
 		// laid out: the generator's indentation is not tool copy.
 		var parsed map[string]any
 		if err := json.Unmarshal(entry, &parsed); err != nil {
-			return inputs{}, fmt.Errorf("%s: a tool entry: %w", mcpInfoFile, err)
+			return fmt.Errorf("%s: a tool entry: %w", mcpInfoFile, err)
 		}
 		canonical, err := json.Marshal(parsed)
 		if err != nil {
-			return inputs{}, fmt.Errorf("%s: a tool entry: %w", mcpInfoFile, err)
+			return fmt.Errorf("%s: a tool entry: %w", mcpInfoFile, err)
 		}
 		name, named := parsed["name"].(string)
 		if !named {
-			return inputs{}, fmt.Errorf("%s: a tool entry has no name", mcpInfoFile)
+			return fmt.Errorf("%s: a tool entry has no name", mcpInfoFile)
 		}
 		in.tools[name] = canonical
 	}
 	if len(in.tools) == 0 {
-		return inputs{}, fmt.Errorf("%s lists no tools", mcpInfoFile)
+		return fmt.Errorf("%s lists no tools", mcpInfoFile)
 	}
 	var routes struct {
 		Routers map[string]struct {
@@ -97,13 +151,19 @@ func loadInputs(root string) (inputs, error) {
 		} `json:"routers"`
 	}
 	if err := readJSON(filepath.Join(root, routesFile), &routes); err != nil {
-		return inputs{}, err
+		return err
 	}
 	for router, table := range routes.Routers {
 		for _, verb := range table.Actions {
 			in.routers[verb] = router
 		}
 	}
+	return nil
+}
+
+// canonicalJudge is the judge a run uses unless E2E_LLM_JUDGE_MODEL names
+// another; the lane files the one that actually judged (e2e/llm/check.py).
+func canonicalJudge(root string) (string, error) {
 	var table struct {
 		Judge struct {
 			Routes map[string]struct {
@@ -112,23 +172,27 @@ func loadInputs(root string) (inputs, error) {
 		} `json:"judge"`
 	}
 	if err := readJSON(filepath.Join(root, candidatesFile), &table); err != nil {
-		return inputs{}, err
+		return "", err
 	}
-	// The canonical judge id is the api route's; e2e/llm/judge.py reads the same.
-	if in.judge = table.Judge.Routes["api"].Model; in.judge == "" {
-		return inputs{}, fmt.Errorf("%s names no judge model", candidatesFile)
+	if model := table.Judge.Routes["api"].Model; model != "" {
+		return model, nil
 	}
-	harness := sha256.New()
-	for _, name := range harnessFiles {
-		body, err := os.ReadFile(filepath.Join(root, name)) // #nosec G304 -- a fixed harness file under the root
+	return "", fmt.Errorf("%s names no judge model", candidatesFile)
+}
+
+// digestFiles is one digest over several files. Each is framed by its name and
+// length, so bytes moved from one file to the next still move the digest.
+func digestFiles(root string, names []string) (string, error) {
+	sum := sha256.New()
+	for _, name := range names {
+		body, err := os.ReadFile(filepath.Join(root, name)) // #nosec G304 -- a fixed lane file under the root
 		if err != nil {
-			return inputs{}, err
+			return "", err
 		}
-		harness.Write([]byte(name + "\x00" + strconv.Itoa(len(body)) + "\x00"))
-		harness.Write(body)
+		sum.Write([]byte(name + "\x00" + strconv.Itoa(len(body)) + "\x00"))
+		sum.Write(body)
 	}
-	in.harness = short(harness.Sum(nil))
-	return in, nil
+	return short(sum.Sum(nil)), nil
 }
 
 // stampOf is one scenario's stamp. A name the catalog does not serve is kept
@@ -151,8 +215,11 @@ func (in inputs) stampOf(sc scenario) (Stamp, error) {
 	stamp := Stamp{
 		Scenario:     digest(sc.body),
 		Tools:        digest(tools),
-		Instructions: digest([]byte(in.instructions)),
+		Instructions: in.instructions,
 		Harness:      in.harness,
+	}
+	if in.door == DoorREST {
+		stamp.Tools = in.restTools
 	}
 	if sc.judged {
 		stamp.Judge = in.judge
@@ -160,10 +227,10 @@ func (in inputs) stampOf(sc scenario) (Stamp, error) {
 	return stamp, nil
 }
 
-// CurrentStamps is the stamp every scenario would be given if it ran on this
-// tree, keyed by scenario name.
-func CurrentStamps(root string) (map[string]Stamp, error) {
-	in, err := loadInputs(root)
+// CurrentStamps is the stamp every scenario would be given if it ran through
+// this door on this tree, keyed by scenario name.
+func CurrentStamps(root string, door Door) (map[string]Stamp, error) {
+	in, err := loadInputs(root, door)
 	if err != nil {
 		return nil, err
 	}

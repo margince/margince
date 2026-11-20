@@ -88,6 +88,17 @@ class MustCallSucceededTest(unittest.TestCase):
             out.finish(True, "stopped at the 20-turn cap", 20)
         self.assertEqual(len(check.check({"must_call": ["log_activity"]}, path)), 1)
 
+    def test_a_write_staged_for_approval_is_a_call_that_worked(self):
+        path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        with transcript.Transcript(path) as out:
+            out.init("m", "claude:cli", "cli-default", "connected", ["log_activity"])
+            out.assistant("", [("c1", "log_activity", {"kind": "call"})])
+            out.tool_results([("c1", "Confirm-first (🟡): a contact answers this before it runs. Nothing was changed "
+                                     "yet; it would log a call. Once released, this exact call repeats with "
+                                     "\"approval_id\": \"0b9e\".", True)])
+            out.finish(False, "It is waiting for your approval.", 2)
+        self.assertEqual(check.check({"must_call": ["log_activity"], "must_call_with": ["log_activity.kind=call"]}, path), [])
+
     def test_a_send_the_scenario_expects_refused_still_counts(self):
         path = run([("", [("log_activity", {"kind": "note"}, True)])], "Not sent: no mailbox is connected.")
         scenario = {"must_call": ["log_activity"], "must_call_with": ["log_activity.kind=note"],

@@ -104,9 +104,6 @@ func plainWords(m modelCoverage, titles map[string]string) string {
 	if m.Search == "lexical" {
 		held += ". Measured with search working on word matches only, which is harder than a real setup"
 	}
-	if m.RecheckPending > 0 {
-		held += fmt.Sprintf(". %d of these results wait for a re-check: what they measured has changed since", m.RecheckPending)
-	}
 	if m.SelfJudged {
 		held += ". A model of the same family judged its answers"
 	}
@@ -116,9 +113,8 @@ func plainWords(m modelCoverage, titles map[string]string) string {
 func writeCoverageJobs(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## What can it do for me?\n\n")
 	p.WriteString("One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably " +
-		"yet, and a dash means not tried yet. *Re-check pending* means the job, the tool texts, the " +
-		"instructions, the judge or the test harness changed after that result was measured, so it " +
-		"may no longer hold. What a good answer must do is in the second column.\n\n")
+		"yet, and a dash means not tried yet. What a good answer must do is in the second column. " +
+		"A result can be older than the tools it measured: `make e2e-llm-report` says which still hold.\n\n")
 	header := "| Job | What a good answer does |"
 	rule := "|---|---|"
 	var headerSb115 strings.Builder
@@ -162,9 +158,6 @@ func jobMark(c caseRow, model string) string {
 			mark := "❌"
 			if run.Held {
 				mark = "✅"
-			}
-			if len(run.Recheck) > 0 {
-				mark += "<br>re-check pending"
 			}
 			return mark
 		}

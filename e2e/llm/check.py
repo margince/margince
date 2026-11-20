@@ -357,7 +357,7 @@ def read_run(path):
             if block.get("type") == "tool_use":
                 attempts.append((block.get("id"), block.get("name", ""), block.get("input") or {}))
             elif block.get("type") == "tool_result":
-                failed[block.get("tool_use_id")] = bool(block.get("is_error"))
+                failed[block.get("tool_use_id")] = bool(block.get("is_error")) and not staged(block.get("content"))
             elif block.get("type") == "text":
                 said.append(block.get("text", ""))
 
@@ -377,6 +377,20 @@ def read_run(path):
         else:
             refused += both
     return Run(called, "\n".join(said), calls, final, worked, refused)
+
+
+# A confirm-first write comes back as an error that staged it for a human, and
+# staging is the call doing its job. The words are the server's own
+# (stagedExplanation in backend/internal/modules/agents/explain.go); a result
+# carries no other mark of it.
+_STAGED = re.compile(r"confirm-first \(🟡\)|already approved this exact call", re.IGNORECASE)
+
+
+def staged(content):
+    """Whether a tool result's content is a write staged for approval."""
+    if isinstance(content, list):
+        content = " ".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
+    return bool(_STAGED.search(str(content or "")))
 
 
 def read_transcript(path):
@@ -572,8 +586,13 @@ def recorded_stamp(name, clock=None):
     if name not in stamps:
         raise ValueError(f"the stamps at {path} carry no {name}: they were made for another tree")
     when = (clock or (lambda: datetime.datetime.now(datetime.timezone.utc)))()
-    return {**stamps[name], "commit": os.environ.get("E2E_LLM_COMMIT", ""),
-            "ran_at": when.strftime("%Y-%m-%dT%H:%M:%SZ")}
+    stamp = {**stamps[name], "commit": os.environ.get("E2E_LLM_COMMIT", ""),
+             "ran_at": when.strftime("%Y-%m-%dT%H:%M:%SZ")}
+    # The judge that graded, which E2E_LLM_JUDGE_MODEL can make another than
+    # the table's: a verdict judged by another model is not current.
+    if stamp.get("judge"):
+        stamp["judge"] = judge.pinned_model()
+    return stamp
 
 
 def settled(passed, made, runs, pass_at):
