@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"sort"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -108,7 +110,14 @@ func (s *Store) hybridSearchWithin(ctx context.Context, query string, embedder E
 	// rows stored under this exact identity, of which there are none yet. What
 	// comes back is then the lexical page, and calling it semantic would put the
 	// most misleading label on an answer at exactly the moment it is least true.
-	return fuseRankedResults(lexical.Hits, vector, limit), len(vector) > 0, nil
+	fused := fuseRankedResults(lexical.Hits, vector, limit)
+	// A hit only the vector lane found skipped decorate, so it is named here.
+	if err := s.db.Read(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return renderSystemText(ctx, tx, fused)
+	}); err != nil {
+		return nil, false, err
+	}
+	return fused, len(vector) > 0, nil
 }
 
 // degradeToLexical is the answer when the vector lane cannot contribute: the

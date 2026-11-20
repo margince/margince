@@ -83,13 +83,20 @@ var (
 	registerErr  error
 )
 
-func TestTheExtensionVerbsRoleCellsArePublished(t *testing.T) {
+// registerUnit composes the synthetic unit once for the whole binary: a second
+// registration of its jurisdiction pack is refused.
+func registerUnit(t *testing.T) {
+	t.Helper()
 	registerOnce.Do(func() {
-		registerErr = compose.RegisterExtensions([]extension.Extension{syntheticUnit()}, nil, nil)
+		registerErr = compose.RegisterExtensions([]extension.Extension{syntheticUnit()}, []extension.Verb{cacheReadVerb}, nil)
 	})
 	if registerErr != nil {
 		t.Fatalf("registering the synthetic unit: %v", registerErr)
 	}
+}
+
+func TestTheExtensionVerbsRoleCellsArePublished(t *testing.T) {
+	registerUnit(t)
 	var mu sync.Mutex
 	recorded := map[string]auth.RecordedCall{}
 	e := apptest.SetupAppWithOptions(t, compose.WithMCPConnector(), compose.WithFinanceSources(apptest.InsertOnlyRunner(t)),

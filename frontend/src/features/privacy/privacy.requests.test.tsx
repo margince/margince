@@ -234,6 +234,10 @@ describe("the subject-request table", () => {
     await within(dialog).findByText(en["jurisdiction.rule.gdpr"], {
       exact: false,
     });
+    await user.type(
+      within(dialog).getByLabelText(en["privacy.receivedAt"]),
+      "2026-09-01",
+    );
     const due = within(dialog).getByLabelText(en["privacy.earlierDue"]);
     await user.type(due, "2026-09-30");
     await user.click(

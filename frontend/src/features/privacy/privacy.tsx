@@ -65,7 +65,7 @@ import {
   DsrDeadlineFields,
   deadlineBody,
   EMPTY_DEADLINE,
-  earlierDueTooLate,
+  earlierDueFault,
   useRequestDeadline,
 } from "./privacy.deadline";
 import { ErasureRefusals } from "./privacy.notices";
@@ -177,7 +177,7 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const ready =
     draft.subjectRef.trim() !== "" &&
     computed !== undefined &&
-    !earlierDueTooLate(draft.deadline, computed, tz);
+    earlierDueFault(draft.deadline, computed, tz) === undefined;
   return (
     <>
       <form

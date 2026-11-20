@@ -28,8 +28,11 @@ func readReportingMeetingsBooked(ctx context.Context, tx pgx.Tx, frame crmcontra
 	}
 	reading := colleaguework.Reading{Fields: fields, Label: b.add(reporting.ExplanationCopy(frame).Say(reportingLabelWords.Meeting))}
 	facts, coverage, err := readColleagueWork(ctx, tx, frame, reportingMeetingsBookedForColleagues, string(recordTypeActivity), &b, colleaguework.MeetingsBookedForColleagues, reading)
+	if err != nil {
+		return nil, coverage, err
+	}
 	coverage.Withheld = coverage.Withheld || masked
-	return facts, coverage, err
+	return facts, coverage, colleaguework.NameSystemWritten(ctx, tx, facts, reporting.ExplanationCopy(frame).Lang())
 }
 
 // readColleagueWork reads one fact per piece of a figure's work, credited to

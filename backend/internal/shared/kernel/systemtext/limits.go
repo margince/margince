@@ -54,7 +54,7 @@ func fitComponent(source *Component, original string, limit int) (*Component, st
 			return nil, "", err
 		}
 		if fits {
-			canonical, err := component.renderBounded(language, 0, original, true)
+			canonical, err := component.renderBounded(language, original, true)
 			return component, canonical, err
 		}
 		label := longestLabel(component)
@@ -71,7 +71,7 @@ func fitComponent(source *Component, original string, limit int) (*Component, st
 
 func canonicalLanguage(component *Component, original string) (textlang.Lang, bool, error) {
 	for _, language := range textlang.Shipped {
-		rendered, err := component.renderBounded(language, 0, original, false)
+		rendered, err := component.renderBounded(language, original, false)
 		if err != nil {
 			return textlang.Unknown, false, err
 		}
@@ -85,7 +85,7 @@ func canonicalLanguage(component *Component, original string) (textlang.Lang, bo
 func fitsLanguages(component *Component, original string, limit int) (bool, error) {
 	fits := true
 	for _, language := range textlang.Shipped {
-		rendered, err := component.renderBounded(language, 0, original, true)
+		rendered, err := component.renderBounded(language, original, true)
 		if errors.Is(err, ErrDisplayLimit) {
 			fits = false
 			continue
