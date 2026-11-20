@@ -84,6 +84,9 @@ type Definition interface {
 	// these replaced, before ADR-0091 left that row with no configuration to
 	// reset and retired the list with it.
 	SurvivesDataReset() bool
+	// Cacheable reports whether a pooled read may be served from the
+	// in-process cache for CacheLifetime.
+	Cacheable() bool
 }
 
 // Entry is one setting's declaration: its key, governance, default and
@@ -108,6 +111,8 @@ type Entry[T any] struct {
 	// own write whoever the acting principal is. Off by default: an entry
 	// nobody declared gets the gate.
 	machineryApplied bool
+	// cacheable lets a pooled read of this entry be remembered. Off by default.
+	cacheable bool
 }
 
 // Define declares a setting's row; a gate holds the `<module>.` key prefix to
@@ -128,6 +133,18 @@ func (e *Entry[T]) MachineryApplied() *Entry[T] {
 	e.machineryApplied = true
 	return e
 }
+
+// AsCacheable declares that a change may reach a reader up to CacheLifetime
+// late, in this process or another. Only a cadence, a display format or a
+// threshold qualifies. Nothing that decides access, privacy, consent,
+// retention, sign-in, agents, AI, credentials or an automatic write does.
+func (e *Entry[T]) AsCacheable() *Entry[T] {
+	e.cacheable = true
+	return e
+}
+
+// Cacheable reports the AsCacheable declaration.
+func (e *Entry[T]) Cacheable() bool { return e.cacheable }
 
 // AsInstallationIdentity marks this setting as part of what the installation
 // IS rather than how it is configured, so a data reset spares it. Reserved for

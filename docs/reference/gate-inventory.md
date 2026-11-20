@@ -488,6 +488,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendingsystemmail_test.go` | H2 | A query that reads captured mail through the company reach set must leave out mail from a sending system. |
 | `sentmailreaders_test.go` | H2 | A voice learns from its owner's sent mail only when the owner presses the button. |
 | `settingreaders_test.go` | H2 | `setting` carries neither row-level security nor a row-scope clause. |
+| `settingscacheable_test.go` | H2 | controlWords name the settings a reader must see change at once. |
 | `settingscatalog_test.go` | H3 | Every registered setting key is unique, well-formed and governed, names the module that declares it, and does not also exist in margince.yaml's runtime surface. |
 | `singleliteralcheck_test.go` | H2 | A CHECK that admits one value and no other is a discriminator or it is nothing. |
 | `sonarbinaryexclusions_test.go` | H3 | The scan's file-encoding obligation. |

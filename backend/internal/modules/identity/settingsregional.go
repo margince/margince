@@ -28,7 +28,7 @@ var DateFormat = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "How dates are written: locale, dmy, mdy or ymd.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true, MachineryApplied: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true, MachineryApplied: true})
 
 // TimeFormat selects the displayed clock convention without changing stored instants.
 var TimeFormat = config.DefineStored(config.Spec[string]{
@@ -43,7 +43,7 @@ var TimeFormat = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "How times of day are written: locale, 24h or 12h.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true, MachineryApplied: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true, MachineryApplied: true})
 
 // DateNotationTx reads how the installation writes dates, for server-written
 // text shown beside the app's own. It takes no read gate, for the timezone's
