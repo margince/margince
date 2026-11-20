@@ -3,16 +3,34 @@ jurisdiction: gr
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Νόμος 3471/2006"
     provision: "άρθρο 11"
+    source-url: https://www.dpa.gr/sites/default/files/2019-09/%CE%9D3471_06.PDF
 fixtures:
   - finding: objection_route
     triggers: gr/fixtures/advertising-without-objection-route.md
     clears: gr/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Νόμος 3471/2006"
+    provision: "άρθρο 11 παρ. 1"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Νόμος 3471/2006"
+    provision: "άρθρο 11 παρ. 1"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Νόμος 3471/2006"
+    provision: "άρθρο 11 παρ. 1"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Νόμος 3471/2006"
+    provision: "άρθρο 11 παρ. 1"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(4)"
 ---
 
 # What Greek law requires of an outbound message

@@ -3,12 +3,9 @@ jurisdiction: es
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)"
     provision: "arts. 20 y 21"
+    source-url: https://www.boe.es/buscar/act.php?id=BOE-A-2002-13758
 subject-prefix: "Publicidad"
 fixtures:
   - finding: objection_route
@@ -17,6 +14,35 @@ fixtures:
   - finding: subject_prefix
     triggers: es/fixtures/advertising-without-prefix.md
     clears: es/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)"
+    provision: "art. 21.1"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)"
+    provision: "art. 21.1"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)"
+    provision: "art. 21.1"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)"
+    provision: "art. 21.1"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)"
+    provision: "art. 21.2"
+  - code: subject_label_missing
+    territorial-test: any_sender
+    instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)"
+    provision: "art. 20.1"
+  - code: subject_prefix
+    territorial-test: any_sender
+    instrument: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)"
+    provision: "art. 20.1"
 ---
 
 # What Spanish law requires of an outbound message

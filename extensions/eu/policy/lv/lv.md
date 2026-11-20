@@ -3,16 +3,34 @@ jurisdiction: lv
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Informācijas sabiedrības pakalpojumu likums"
     provision: "9. pants"
+    source-url: https://likumi.lv/ta/id/96619
 fixtures:
   - finding: objection_route
     triggers: lv/fixtures/advertising-without-objection-route.md
     clears: lv/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Informācijas sabiedrības pakalpojumu likums"
+    provision: "9. panta pirmā daļa"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Informācijas sabiedrības pakalpojumu likums"
+    provision: "9. panta pirmā daļa"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Informācijas sabiedrības pakalpojumu likums"
+    provision: "9. panta pirmā daļa"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Informācijas sabiedrības pakalpojumu likums"
+    provision: "9. panta pirmā daļa"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Informācijas sabiedrības pakalpojumu likums"
+    provision: "9. panta ceturtā daļa"
 ---
 
 # What Latvian law requires of an outbound message

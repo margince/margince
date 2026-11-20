@@ -3,16 +3,34 @@ jurisdiction: lu
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques"
     provision: "art. 11"
+    source-url: https://legilux.public.lu/eli/etat/leg/loi/2005/05/30/n4/jo
 fixtures:
   - finding: objection_route
     triggers: lu/fixtures/advertising-without-objection-route.md
     clears: lu/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques"
+    provision: "art. 11, paragraphe 1"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques"
+    provision: "art. 11, paragraphe 1"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques"
+    provision: "art. 11, paragraphe 1"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques"
+    provision: "art. 11, paragraphe 1"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques"
+    provision: "art. 11, paragraphe 4"
 ---
 
 # What Luxembourg law requires of an outbound message

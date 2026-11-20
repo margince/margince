@@ -5,10 +5,15 @@ created: 2026-09-04
 instruments:
   - name: Decree 91/2020/ND-CP
     effective: 2020-10-01
+    source-url: https://vanban.chinhphu.vn/default.aspx?pageid=27160&docid=200773
   - name: Law 91/2025/QH15
     effective: 2026-01-01
+    source-url: https://congbaocdn.chinhphu.vn/CongBaoCP/VanBan/2025/6/45578/57730-1-2025971-97291-2025-qh15.pdf
   - name: Decree 356/2025/ND-CP
     effective: 2026-01-01
+  - name: "Advertising Law 16/2012/QH13, as amended by Law 75/2025/QH15"
+    effective: 2013-01-01
+    source-url: https://vanban.chinhphu.vn/default.aspx?pageid=27160&docid=163008
 reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-exceptions: []
@@ -74,6 +79,75 @@ fixtures:
   - finding: privacy_contact
     triggers: vn/fixtures/invoice-from-abroad-without-privacy-contact.md
     clears: vn/fixtures/invoice-from-abroad.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Law 91/2025/QH15"
+    provision: "Art. 28(3)"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Law 91/2025/QH15"
+    provision: "Art. 28(3)"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Law 91/2025/QH15"
+    provision: "Art. 28(3)"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Law 91/2025/QH15"
+    provision: "Art. 28(3)"
+  - code: consent_withdrawn
+    territorial-test: any_sender
+    instrument: "Law 91/2025/QH15"
+    provision: "Art. 10"
+  - code: marketing_objection
+    territorial-test: any_sender
+    instrument: "Law 91/2025/QH15"
+    provision: "Art. 28(5)"
+  - code: opted_out_after_request
+    territorial-test: any_sender
+    instrument: "Law 91/2025/QH15"
+    provision: "Art. 28(5)"
+  - code: lawful_basis_unconfirmed
+    territorial-test: any_sender
+    instrument: "Law 91/2025/QH15"
+    provision: "Art. 9"
+  - code: no_compatible_evidence
+    territorial-test: any_sender
+    instrument: "Law 91/2025/QH15"
+    provision: "Art. 9"
+  - code: frequency_cap_reached
+    territorial-test: any_sender
+    instrument: "Decree 91/2020/ND-CP"
+    provision: "Art. 13(5)"
+  - code: subject_label_missing
+    territorial-test: any_sender
+    instrument: "Decree 91/2020/ND-CP"
+    provision: "Art. 18(2)"
+  - code: subject_prefix
+    territorial-test: any_sender
+    instrument: "Decree 91/2020/ND-CP"
+    provision: "Art. 18(2)"
+  - code: advertiser_contact
+    territorial-test: any_sender
+    instrument: "Decree 91/2020/ND-CP"
+    provision: "Art. 19"
+  - code: objection_route
+    territorial-test: any_sender
+    instrument: "Decree 91/2020/ND-CP"
+    provision: "Art. 20(1)"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Decree 91/2020/ND-CP"
+    provision: "Art. 20(1)"
+  - code: claim_without_proof
+    territorial-test: any_sender
+    instrument: "Advertising Law 16/2012/QH13, as amended by Law 75/2025/QH15"
+    provision: "Art. 8(11)"
+  - code: foreign_advertiser
+    territorial-test: sender_elsewhere
+    instrument: "Advertising Law 16/2012/QH13, as amended by Law 75/2025/QH15"
+    provision: "Art. 39(2)"
 ---
 
 # What Vietnamese law requires of an outbound message

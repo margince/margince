@@ -6,7 +6,7 @@ instruments:
   - name: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
     effective: 2002-07-01
     provision: "arts. 3 and 4"
-    source-url: https://elaws.e-gov.go.jp/document?lawid=414AC0000000026
+    source-url: https://laws.e-gov.go.jp/law/414AC0100000026
   - name: "Act No. 54 of 2008, amending Act No. 26 of 2002"
     effective: 2008-12-01
 reply-window: 8760h
@@ -29,6 +29,47 @@ fixtures:
   - finding: advertiser_contact
     triggers: jp/fixtures/advertising-without-advertiser-contact.md
     clears: jp/fixtures/advertising-complete.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
+    provision: "art. 3(1)"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
+    provision: "art. 3(1)"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
+    provision: "art. 3(1)"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
+    provision: "art. 3(1)"
+  - code: marketing_objection
+    territorial-test: any_sender
+    instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
+    provision: "art. 3(3)"
+  - code: opted_out_after_request
+    territorial-test: any_sender
+    instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
+    provision: "art. 3(3)"
+  - code: consent_withdrawn
+    territorial-test: any_sender
+    instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
+    provision: "art. 3(3)"
+  - code: advertiser_contact
+    territorial-test: any_sender
+    instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
+    provision: "art. 4(i)"
+  - code: objection_route
+    territorial-test: any_sender
+    instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
+    provision: "art. 4(ii)"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
+    provision: "art. 4(ii)"
 ---
 
 # What Japanese law requires of an outbound message
