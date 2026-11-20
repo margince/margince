@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -155,6 +156,7 @@ func TestAMeetingNamesOnlyACustomerTheReaderMaySee(t *testing.T) {
 		t.Fatalf("making the colleague's buyer private: %v", err)
 	}
 	visible := partiesContact(t, e, "Blair Shared", ids.UUID{}, nil)
+	shareWithBothTeams(t, e, visible)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AccountRepPerms)
 	joint := partiesMeeting(owner, t, e, "Joint call", hidden, visible)
 
@@ -365,6 +367,19 @@ func addressedContact(t *testing.T, e *integration.Env, name, address string) id
 		t.Fatalf("creating %q: %v", name, err)
 	}
 	return ids.UUID(contact.Id)
+}
+
+// shareWithBothTeams shares a contact the admin created with both teams at
+// `write`, so a rep on either may file a meeting onto it.
+func shareWithBothTeams(t *testing.T, e *integration.Env, contact ids.UUID) {
+	t.Helper()
+	for _, team := range []ids.UUID{e.Team1, e.Team2} {
+		if _, err := identity.NewServiceFor(e.DB()).CreateRecordGrant(e.Admin(), identity.CreateGrantInput{
+			RecordType: "contact", RecordID: contact, SubjectType: "team", SubjectID: team, Access: "write",
+		}); err != nil {
+			t.Fatalf("sharing the contact with a team: %v", err)
+		}
+	}
 }
 
 // trustOwnDomain makes the seats' login domain a confirmed own domain.
