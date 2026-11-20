@@ -61737,7 +61737,7 @@ export interface components {
          */
         WorklistBand: {
             /** @enum {string} */
-            band: "now" | "build_pipeline" | "keep_momentum" | "review";
+            band: "now" | "build_pipeline" | "keep_momentum" | "review" | "more";
             /** @description How many rows of this band are on the page. */
             shown: number;
         };
@@ -62606,12 +62606,15 @@ export interface components {
              *     scanning for "what must happen now" should not have to know which levels mean that.
              *
              *     Derived from the level and the row's own subject, so it cannot disagree with the order:
-             *     the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-             *     interleave prospecting and deal follow-up. A client
-             *     draws a heading when the band changes and never re-sorts.
+             *     the queue arrives already sorted, and across the pages of one walk a band never comes
+             *     back once a later band has started. `more` heads the rows past the ranked top, which a
+             *     walk reaches after every ranked row. They follow each store's own date order, are not
+             *     ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+             *     `due_group` still say what each one is. A client draws a heading when the band changes
+             *     and never re-sorts.
              * @enum {string}
              */
-            band?: "now" | "build_pipeline" | "keep_momentum" | "review";
+            band?: "now" | "build_pipeline" | "keep_momentum" | "review" | "more";
             /**
              * @description The ways this row can be PUT DOWN, as the server declares them. A client
              *     never infers this from `source`: which rows a rep may judge is a server

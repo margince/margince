@@ -10,7 +10,7 @@ Under **Needs you**, every task is its own card, and the first one is open. Pres
 
 When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests. You can also choose **Mark handled** to finish one of those tasks. After an upgrade, Margince applies this rule once to the email it already holds, and those tasks show in **Done for you** with **Undo** too.
 
-Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome.
+Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome. A task filed on no record asks which record the outcome is for: pick one, or press **Log without a record**. **Back** returns to the task's actions.
 
 ## Daily tasks
 
@@ -31,15 +31,15 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
 On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
 
 ### How do I snooze something on my worklist?
-To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
-**Snooze**. It comes back tomorrow ("Back on your list tomorrow.").
+To snooze a customer who is waiting for a reply in Margince, press **More actions** at the end of their Worklist row and choose **Snooze**. It comes back tomorrow ("Back on your list tomorrow.").
 1. Open **Home** → **Show Worklist**.
-2. At the end of the row, press **More actions**, the button with three dots.
+2. On a row where a customer waits for a reply, press **More actions**, the button with three dots.
 3. Choose **Snooze** for one day, or **Snooze for 3 days**, **Snooze for 7 days** or **Until they reply**.
 4. The note that follows offers **Undo**.
 
-Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work.
-A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
+A task's **More actions** has no snooze. In its details, **Snooze 1 day** moves the due date for everyone. A task with no date uses **Move to** ([How do I complete a task?](#how-do-i-complete-a-task)).
+
+Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work. A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
 To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to the top of your Worklist.
@@ -136,12 +136,13 @@ A task filed on no record has no one to write to and offers none. **Draft email*
 **Call** and **Book a meeting** go to the first contact the task is filed on, and an archived contact gets neither. **Call** dials. If you may log activity, it also opens **Log activity** on **Call** under the task, which does not complete the task. A done or read-only task offers the same steps. On the open card under **Needs you** on **Home**, the step is the colour button and **Done** is a plain one. A **Do** task, or one whose step has nothing to act on, keeps **Done** as the colour button.
 
 ### How do I plan my week?
-To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under **This week’s commitments**.
+To plan your week in Margince, open **Home**, switch the view to **Weekly** and add commitments to the week's plan card.
 1. Click **Home**, then **Weekly**.
-2. Under **This week’s commitments**, press **Add commitment** and fill in **Commitment**.
-3. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press **Add**.
-4. Tick commitments to mark them, then press **Save {count} changes**.
-5. Fill in **Constraints this week**: **Risks** and **Available capacity**.
+2. If the card reads **Plan for this week**, press **Plan week**. It then shows the week's dates, such as **Plan · 16 – 22 November**.
+3. Press **Add commitment** and fill in **Commitment**.
+4. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press **Add**.
+5. Tick a commitment only when it is done, since a tick saves it as done. Then press **Save {count} changes**.
+6. Fill in **Constraints this week**: **Risks** and **Not on your calendar**.
 
 Also called: weekly plan, weekly goals, set commitments. More in [Your week](your-week.md).
 
@@ -280,11 +281,10 @@ A band you have cleared still shows its heading and says so, but only when the w
 
 Inside a band, work due tomorrow, this week or later has its own heading. Late work and today's work sit under the band heading, because that is what the band already means.
 
-A row that does not fit moves down, never up. When one band fills, the rows that do not fit drop to Keep momentum. They never go before work that was already urgent.
+A row that does not fit moves down, never up. When one band fills, the rows that do not fit drop to Keep momentum. They never go before work that was already urgent. Past the ranked work, the rest of your list loads last under **More in your list**, earliest due date first. Those rows are not ranked, and a heading above them never comes back.
 
 ### Which mail is mine?
-Mine shows reply work addressed to you. Owning a contact does not make every message to that contact your work.
-Being copied alone does not assign a reply. Team shows shared work under the access you already have.
+Mine shows reply work addressed to you. Owning a contact does not make every message to that contact your work. Being copied alone does not assign a reply. Team shows shared work under the access you already have.
 
 Old automatic findings without a current check stay with their source for review. On a contact, **Review conversation findings** shows their words, source and date without calling them overdue. Tasks you typed, changed or reopened keep their own state. An import does not count as such a change. An email on another subject does not mean a promise was kept.
 
