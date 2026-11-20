@@ -120,12 +120,12 @@ describe("problemMessage", () => {
     const message = problemMessage(
       {
         code: "permission_denied",
-        detail: "contact.update: permission denied",
+        detail: "your role does not grant update on contact",
       },
       t,
     );
     expect(message).toBe(t("common.permissionDenied"));
-    expect(message).not.toContain("contact.update");
+    expect(message).not.toContain("your role does not grant update on contact");
   });
 
   it("keeps the server detail when no translator is given", () => {
