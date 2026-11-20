@@ -31,7 +31,7 @@ type schedulingCalendar struct {
 }
 
 func newSchedulingCalendar(pool *pgxpool.Pool, registry *capture.Registry) schedulingCalendar {
-	return schedulingCalendar{registry: registry, Writer: hostauthority.Writer{Seats: identity.NewService(pool)}, pool: pool}
+	return schedulingCalendar{registry: registry, Seats: identity.NewService(pool), pool: pool}
 }
 
 func (c schedulingCalendar) Check(ctx context.Context, host ids.UserID, provider string) error {
