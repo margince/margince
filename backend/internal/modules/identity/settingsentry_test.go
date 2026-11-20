@@ -62,8 +62,8 @@ func TestInstallationNameIsBoundedInCharacters(t *testing.T) {
 	}
 }
 
-// An unknown, padded, empty or offset zone is refused with the sentence that
-// names a zone to type, so the form can show it beside the field.
+// An unknown, padded, empty or offset zone is refused. The sentence names a
+// zone to type, so the form can show it beside the field.
 func TestInstallationTimezoneRefusesWhatIsNotAnIANAZone(t *testing.T) {
 	for _, bad := range []string{`"Mars/Olympus"`, `"GMT+2"`, `""`, `" Europe/Berlin"`, `"Local"`} {
 		err := Timezone.ValidateJSON([]byte(bad))

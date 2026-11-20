@@ -187,9 +187,8 @@ export function ImapMailboxForm({
       if (field === "secret") setSecretEmptied(false);
     };
 
-  // One submit for Enter in a field and for the Connect button, wherever the
-  // button stands: pressable whatever is filled in, and the press marks the
-  // fields it refuses.
+  // One submit for Enter in a field and for the Connect button, wherever it
+  // stands. The button is always pressable; the press marks refused fields.
   const submit = () => {
     // The button carries `pending`, but Enter in a field reaches this directly
     // and mutations run in parallel by default — so a second press while the
