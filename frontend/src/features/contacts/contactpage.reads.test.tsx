@@ -4,7 +4,14 @@ import {
   type QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { createQueryClient } from "../../app/queryclient";
@@ -114,6 +121,26 @@ describe("the contact page's row read", () => {
       .setup()
       .click(screen.getByRole("button", { name: "Back to Contacts" }));
     expect(window.location.hash).toBe("#/contacts");
+  });
+
+  // The sentence replaces the page's wait, so it is announced as it arrives.
+  // The way back is something to reach, not something to hear.
+  it("announces that the contact is not there, with the way back outside it", async () => {
+    const routes = liveRoutes();
+    routes["GET /contacts/p-1"] = () =>
+      jsonResponse({ status: 404, code: "not_found" }, 404);
+    const client = createQueryClient();
+    client.setDefaultOptions({
+      queries: { ...client.getDefaultOptions().queries, retry: false },
+    });
+    mount(routes, client);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe(en["record.gone.contact"]);
+    expect(within(alert).queryByRole("button")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Back to Contacts" }),
+    ).toBeTruthy();
   });
 
   it("asks for no 360 once the row is known archived", async () => {
