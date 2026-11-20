@@ -179,7 +179,10 @@ func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCo
 		return err
 	}
 	if known && prior.Settled() {
-		return attachToSettledVerdict(ctx, tx, in, base, prior, res)
+		if err := attachToSettledVerdict(ctx, tx, in, base, prior, res); err != nil || res.CompanyID == nil {
+			return err
+		}
+		return s.offerEmployerChangeTx(ctx, tx, capturedEmployerSignal(in, base, res.ContactID, *res.CompanyID))
 	}
 	if known {
 		// The question is open. Usually somebody already asked it and the crawl

@@ -140,6 +140,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/employerchange.go:employerChangeSQL":       "capture's employer-change check, run inside the capture, triage or signature transaction under that machine principal. It reads the contact's owner, name and current employment and the two company names to stage a question only the contact's owner may open (a payload-owned approval kind). Nothing is returned to a caller, and accepting the question re-asks every grant as the owner",
 	"internal/modules/contacts/restrictedauthors.go:restrictedAuthorsSQL": "the chat summary engine's restricted-author filter, run under the chat engine's system principal (system:chat_links), so auth.Require would short-circuit and asking a grant was never the point. The contact table is joined only to read archived_at; no contact column is selected, and what leaves is a per-address boolean that only ever WITHHOLDS a chat author's messages from the summary, never discloses a contact.",
 
 	"internal/modules/contacts/employmentrepair.go:CountUnresolvedEmploymentContacts": "Bounded data-task estimate counts unresolved contacts for operator progress; no contact row or identity is returned.",
@@ -240,7 +241,8 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 // where a reviewer checks it â this census resolves gates FORWARD and cannot
 // resolve them caller-ward, because the call graph is by NAME.
 var calleeGatedContactReads = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/signaturerole.go:roleFromSignatureTitleTx": "Called only by applySignature after contact.update and HoldWritableLive. It reads the persisted title for the gated relationship writer and returns no contact data.",
+	"internal/modules/contacts/employerchangeapply.go:requireContactOwner": "Called only by ApplyEmployerChangeTx after auth.HoldWritableLive on the contact. It reads owner_id to compare with the deciding member and returns no contact field.",
+	"internal/modules/contacts/signaturerole.go:roleFromSignatureTitleTx":  "Called only by applySignature after contact.update and HoldWritableLive. It reads the persisted title for the gated relationship writer and returns no contact data.",
 
 	"internal/modules/activities/meetingfollowup.go:meetingAttendeesSQL":            "meetingFollowUpsPage supplies addressableContactClause from the reader's contact grant and row scope. The recipient aggregate filters by that predicate before returning any contact id; names and other contact fields are never selected",
 	"internal/modules/consent/optoutrecords.go:optOutReceiptsTx":                    "the ids of the records merged into the exported contact, read to find their receipts and never returned. Its one caller is OptOutRecords, which asks auth.Require(ctx, \"contact\", read) and EnsureVisible on the survivor first",

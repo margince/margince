@@ -193,7 +193,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 		// pending so the question keeps its place in their queue.
 		return ResolveDomainTriageResult{}, nil
 	}
-	if res.EdgesPlanted, err = plantDomainEmployment(ctx, tx, in.Domain, *res.CompanyID); err != nil {
+	if res.EdgesPlanted, err = s.plantDomainEmploymentAndAsk(ctx, tx, in.Domain, *res.CompanyID); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
 	if len(in.Fields) > 0 || len(in.Facts) > 0 {

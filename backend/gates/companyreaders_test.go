@@ -64,6 +64,7 @@ var companyGate = objectGate{
 // than in the gated set: removing the company condition could only WIDEN the
 // result the caller already sees.
 var predicateCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/employerchange.go:ownerSeesCompanies":                   "a count of two company ids under the contact owner's own visibility predicate, so an employer question is staged only when its reader may open both companies. Nothing of either company is selected, and the answer only withholds a question",
 	"internal/platform/auth/companysidecarscope.go:CompanySidecarRowsOf":               "the company appears only inside EXISTS, joined to find which company a profile field or fact belongs to, and is tested by the caller's own visibility predicate. Nothing of the company is selected, and the predicate only narrows the audit rows a caller receives",
 	"internal/platform/auth/sharedwith.go:ActivityWorksOnClause":                       "the done-for-you filter (compose/magic): whether a machine change on an activity is the reader's own work, asked through the owner and grants of the records it is linked to. No column of the record is selected, and the clause only narrows a read the activity audience gate already admitted",
 	"internal/platform/database/storekit/sharedmailowner.go:SharedMailWorkOwnerSQL":    "picks the seat that holds the work of mail only a shared mailbox captured: the owner_id, a USER id, of the sender's contact and of its current company. Only that seat id leaves the statement, it is a candidate the same rule then checks may read the mail, and no company field reaches any reader",
@@ -113,6 +114,7 @@ const memberStaffingMetadataReadVerdict = "retiring a member must find live depe
 // records why asking was never the point.
 
 var lifecycleCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/employerchange.go:employerChangeSQL":             "capture's employer-change check, run inside the capture, triage or signature transaction under that machine principal. It reads the contact's owner, name and current employment and the two company names to stage a question only the contact's owner may open (a payload-owned approval kind). Nothing is returned to a caller, and accepting the question re-asks every grant as the owner",
 	"internal/modules/assignments/memberwork.go:memberAssignmentParents":        memberStaffingMetadataReadVerdict,
 	"internal/modules/privacy/erasure_manualreview.go:manualMentionSourcesSQL":  "the contact-delete-authorized eraser selects only identifiers of retained text requiring manual review. The compose flagger selects live controllers with unrestricted row scope, no field masks and current object read permission before issuing any notification; no matched text is copied",
 	"internal/modules/contacts/mergeprimaryrepair.go:mergeDroppedHeir":          "the merge-dropped-primary data task asks, as the system principal, whether a contact's archived primary sat at a company merged into its kept employer. Only merged_into_id is compared; no company column leaves the query, and the edge id goes to the audited promotion",
