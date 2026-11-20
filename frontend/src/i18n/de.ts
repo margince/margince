@@ -3059,6 +3059,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.phone.empty": "Gib eine Telefonnummer ein.",
   "common.fieldTooLongMax": "{field}: höchstens {max} Zeichen.",
   "common.valueTooLongMax": "Dieser Wert darf höchstens {max} Zeichen haben.",
+  "common.fieldRequiredNamed": "{field} ist erforderlich.",
+  "common.fieldNotInteger": "Gib für {field} eine ganze Zahl ein.",
+  "common.valueNotInteger": "Gib eine ganze Zahl ein.",
+  "common.fieldNotNumber": "Gib für {field} eine Zahl ein.",
+  "common.valueNotNumber": "Gib eine Zahl ein.",
+  "common.fieldNotEmail": "Gib für {field} eine E-Mail-Adresse ein.",
+  "common.valueNotEmail": "Gib eine E-Mail-Adresse ein.",
+  "common.fieldNotDate": "Gib für {field} ein gültiges Datum ein.",
+  "common.valueNotDate": "Gib ein gültiges Datum ein.",
+  "common.fieldNotDateTime":
+    "Gib für {field} ein gültiges Datum mit Uhrzeit ein.",
+  "common.valueNotDateTime": "Gib ein gültiges Datum mit Uhrzeit ein.",
+  "common.fieldNotInSet": "Wähle für {field} einen der angebotenen Werte.",
+  "common.valueNotInSet": "Wähle einen der angebotenen Werte.",
+  "common.fieldInvalidNamed": "Prüfe {field} und versuche es erneut.",
+  "common.fieldBetween": "{field} muss zwischen {min} und {max} liegen.",
+  "common.valueBetween": "Gib einen Wert von {min} bis {max} ein.",
+  "common.fieldAtLeast": "{field} muss mindestens {min} sein.",
+  "common.valueAtLeast": "Gib einen Wert von mindestens {min} ein.",
+  "common.fieldAtMost": "{field} darf höchstens {max} sein.",
+  "common.valueAtMost": "Gib einen Wert von höchstens {max} ein.",
+  "common.fieldOutOfRange": "{field} liegt außerhalb des erlaubten Bereichs.",
+  "common.valueOutOfRange":
+    "Dieser Wert liegt außerhalb des erlaubten Bereichs.",
+  "common.fieldRepeated":
+    "{field} enthält denselben Wert zweimal. Entferne die Wiederholung.",
+  "common.valueRepeated":
+    "Derselbe Wert steht zweimal in der Liste. Entferne die Wiederholung.",
+  "common.fieldOneLine": "Gib {field} in einer Zeile ein.",
+  "common.valueOneLine": "Gib den Wert in einer Zeile ein.",
+  "common.fieldDateInFuture": "{field} darf nicht in der Zukunft liegen.",
+  "common.dateInFuture": "Dieses Datum darf nicht in der Zukunft liegen.",
+  "common.fieldDecimalPlaces": "Erlaubte Nachkommastellen für {field}: {max}.",
+  "common.valueDecimalPlaces": "Erlaubte Nachkommastellen: {max}.",
   "common.valueTooLong": "Dieser Wert ist zu lang.",
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
@@ -5740,6 +5774,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.emptyBody":
     "Füge dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
   "tags.pickerLabel": "Tags suchen",
+  "tags.nameTaken": "Einen Tag mit diesem Namen gibt es schon.",
   "tags.alreadyAdded": "Bereits hinzugefügt",
   "tags.offerCompanyTitle": "{company} auch mit {tag} taggen?",
   "tags.offerCompanyAccept": "{company} taggen",
@@ -6896,6 +6931,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.termsText": "Bedingungstext",
   "offer.lines": "Positionen",
   "offer.addLine": "Position hinzufügen",
+  "offer.positionTaken": "Eine andere Zeile hat schon diese Position.",
+  "offer.lapsed":
+    "Das Datum „Gültig bis“ dieses Angebots ist überschritten. Ändere es bei einem Entwurf unter „Kopfdaten bearbeiten“ oder erzeuge für ein gesendetes Angebot eine neue Revision.",
   "offer.position": "Position",
   "offer.description": "Beschreibung",
   "offer.unit": "Einheit",
@@ -11350,6 +11388,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.correctionAccept": "Annehmen und aktualisieren",
   "privacy.correctionReject": "Unverändert lassen",
   "privacy.purposesRegistry": "Registrierte Zwecke",
+  "privacy.purposeKeyTaken": "Diesen Schlüssel verwendet bereits {label}.",
+  "privacy.purposeKeyTakenUnnamed":
+    "Ein anderer Zweck verwendet diesen Schlüssel bereits.",
   "privacy.purposeKey": "Schlüssel",
   "privacy.purposeLabel": "Bezeichnung",
   "privacy.purposeDoi": "Double-Opt-in erforderlich",
@@ -11951,6 +11992,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "pipeline.new": "Neue Pipeline",
   "pipeline.createRefused":
     "Deine Rolle darf keine Pipelines anlegen. Frage einen Admin.",
+  "pipeline.defaultTaken":
+    "Eine andere Pipeline ist schon der Standard. Lege diese mit „Kein Standard“ an und nutze danach „Zum Standard machen“.",
+  "pipeline.nameTaken": "Eine Pipeline mit diesem Namen gibt es schon.",
   "pipeline.name": "Name",
   "pipeline.default": "Standard",
   "pipeline.notDefault": "Kein Standard",
@@ -13907,6 +13951,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Stellen Sie Ihre Frage unter dem betreffenden Dokument. Die Frage geht direkt an {steward}.",
   "buyer.closedOn": "Geschlossen am {date}",
   "room.docs.title": "Dokumente und Diskussionen",
+  "room.docs.alreadyPresent": "Diese Datei ist schon im Raum.",
   "room.docs.empty": "Noch keine Dokumente im Raum.",
   "room.docs.fileLabel": "Datei aus diesem Deal",
   "room.docs.fileHint":
@@ -14304,6 +14349,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "coverage.risk.stakeholder_left": "Stakeholder ist ausgeschieden",
   "coverage.risk.going_cold": "Kühlt ab",
 
+  "cf.labelTaken":
+    "Dieser Datensatztyp hat schon ein eigenes Feld mit dieser Bezeichnung.",
   "cf.title": "Eigene Felder",
   "cf.formSection": "Eigene Felder",
   "cf.subtitle":
@@ -14357,6 +14404,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird automatisch abgeleitet und ist ab dem Livegang fest. Das Präfix cf_ verhindert Konflikte mit Kernfeldern.",
   "cf.typeLabel": "Typ",
   "cf.currencyCode": "Währungscode",
+  "cf.currencyNotCode":
+    "Gib einen Währungscode aus 3 Buchstaben ein, etwa EUR, CHF oder USD.",
   "cf.currencyHint":
     "Dreistelliger ISO-4217-Code, zum Beispiel EUR oder USD. Beträge werden auf den Cent genau gespeichert.",
   "cf.options": "Optionen",
@@ -15171,6 +15220,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.rates.modelEmpty": "Noch keine Modellpreise.",
   "settings.rates.modelModalTitle": "Modellpreis festlegen",
   "settings.rates.notSaved": "Wert nicht gespeichert",
+  "settings.rates.fromIsBase":
+    "Das ist die Basiswährung, ihr Kurs ist immer 1. Wähle eine andere Währung.",
+  "settings.rates.fromNotCurrency":
+    "Gib einen Währungscode aus 3 Buchstaben ein, etwa EUR, CHF oder USD.",
+  "settings.rates.rateNotPositive":
+    "Gib einen Kurs größer als null ein, mit höchstens 10 Stellen vor und 10 nach dem Komma.",
+  "settings.rates.pastDate":
+    "Ein vergangenes Datum geht nur vor dem ersten Kurs dieser Währung. Wähle heute oder ein späteres Datum.",
   "taxRates.title": "Steuersätze",
   "taxRates.withheld": "Nur Admin oder Ops sehen die Steuersätze.",
   "taxRates.intro":
@@ -15741,6 +15798,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.newTeamLabel": "Neues Team",
   "users.newTeamOpen": "Neues Team",
   "users.teamNameLabel": "Teamname",
+  "users.emailTaken":
+    "Ein Mitglied mit dieser E-Mail-Adresse gibt es schon. Wurde es deaktiviert, reaktiviere es stattdessen.",
+  "users.emailReserved":
+    "Diese Adresse gehörte einem endgültig entfernten Mitglied und bleibt reserviert.",
   "users.teamDuplicate":
     "Ein Team mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "users.newTeamPlaceholder": "Zum Beispiel DACH Sales",
@@ -15938,7 +15999,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companySave": "Unternehmenskontext speichern",
   "settings.companySaved": "Gespeichert",
   "settings.companySaveFailed": "Unternehmenskontext nicht gespeichert",
-  "settings.companyNameTooLong": "Kürze den Unternehmensnamen.",
   "settings.companyRefreshFailed": "Analyse der Website nicht abgeschlossen",
   "settings.companyApplyFailed": "Änderungen nicht übernommen",
   "settings.companyRefreshWarnings": "Warnungen aus dieser Analyse",
@@ -15977,6 +16037,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einträge der Preisliste, aus denen Angebotspositionen übernommen werden.",
   "product.new": "Neues Produkt",
   "product.edit": "Produkt bearbeiten",
+  "product.skuTaken": "Ein anderes Produkt hat diese Artikelnummer bereits.",
   "product.taxCategory": "Steuerkategorie",
   "product.taxCategoryUnset": "Nicht eingeordnet",
   "product.taxCategoryFilter": "Steuerkategorie",
@@ -19834,6 +19895,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.page": "Liste",
   "lists.loading": "Liste wird geladen",
   "lists.kind.live": "Live-Liste",
+  "lists.alreadyOnShortlist": "Bereits auf dieser Shortlist.",
+  "lists.alreadyOnOption": "{name} (bereits enthalten)",
   "lists.kind.shortlist": "Shortlist",
   "lists.type.contact": "Kontakte",
   "lists.type.company": "Unternehmen",

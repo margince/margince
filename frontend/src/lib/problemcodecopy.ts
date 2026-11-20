@@ -79,6 +79,22 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["phone_malformed", "common.phone.malformed"],
   // The detail speaks of a promotion; the screen calls it a qualification.
   ["contact_has_deal", "lead.demoteContactHasDeal"],
+  // Invite and Deal Room refusals: each detail is an English API sentence.
+  ["email_taken", "users.emailTaken"],
+  ["removed_member_email", "users.emailReserved"],
+  ["deal_room_document_already_present", "room.docs.alreadyPresent"],
+  // The detail says to regenerate, which a draft cannot; one sentence serves both.
+  ["offer_lapsed", "offer.lapsed"],
+  // A name or membership clash a screen words as its own field's refusal.
+  ["pipeline_name_taken", "pipeline.nameTaken"],
+  ["pipeline_default_taken", "pipeline.defaultTaken"],
+  ["custom_field_label_taken", "cf.labelTaken"],
+  ["already_on_list", "lists.alreadyOnShortlist"],
+  // The currency rate refusals name wire fields and the server's digit limits.
+  ["fx_rate_base_self", "settings.rates.fromIsBase"],
+  ["fx_rate_currency", "settings.rates.fromNotCurrency"],
+  ["fx_rate_positive", "settings.rates.rateNotPositive"],
+  ["fx_rate_past", "settings.rates.pastDate"],
 ]);
 
 // The held refusal names no record; its words depend only on whether the
