@@ -1,5 +1,5 @@
 import type { KeyboardEvent, MouseEvent, ReactNode, Ref } from "react";
-import { Children, useId, useRef } from "react";
+import { Children, useCallback, useId, useRef } from "react";
 import { flushSync } from "react-dom";
 import { useT } from "../i18n";
 import { isParagraphCommit } from "../lib/fieldcommit";
@@ -61,6 +61,7 @@ export function ConfirmModal({
   enterConfirms = intent === "form",
   returnFocusTo,
   initialFocusTo,
+  confirmRef,
   unsaved,
   unsavedBody,
   bodyRef,
@@ -115,6 +116,8 @@ export function ConfirmModal({
   returnFocusTo?: () => HTMLElement | null;
   /** The writing field can take focus before supporting context controls. */
   initialFocusTo?: () => HTMLElement | null;
+  /** The confirm button, for a caller whose `initialFocusTo` is the confirm. */
+  confirmRef?: Ref<HTMLButtonElement>;
   /** The caller holds a draft, so a close other than the confirm asks first. */
   unsaved?: boolean;
   unsavedBody?: string;
@@ -128,7 +131,15 @@ export function ConfirmModal({
   const confirm = (event: MouseEvent<HTMLButtonElement>) => {
     if (!refuseUnreadableField(event.currentTarget)) onConfirm();
   };
-  const confirmButton = useRef<HTMLButtonElement>(null);
+  const confirmButton = useRef<HTMLButtonElement | null>(null);
+  // The key shortcut presses this button, and a caller may focus it too.
+  const holdConfirm = useCallback(
+    (node: HTMLButtonElement | null) => {
+      confirmButton.current = node;
+      handOn(confirmRef, node);
+    },
+    [confirmRef],
+  );
   // Enter is a new line in a note, so ⌘/Ctrl+Enter there presses Confirm.
   const confirmFromKey = (event: KeyboardEvent<HTMLDivElement>) => {
     const commit =
@@ -191,7 +202,7 @@ export function ConfirmModal({
           {confirmMenu ? (
             <span className="actions-split">
               <Button
-                ref={confirmButton}
+                ref={holdConfirm}
                 variant={confirmVariant}
                 onClick={confirm}
                 pending={pending}
@@ -204,7 +215,7 @@ export function ConfirmModal({
             </span>
           ) : (
             <Button
-              ref={confirmButton}
+              ref={holdConfirm}
               variant={confirmVariant}
               onClick={confirm}
               pending={pending}
@@ -218,4 +229,15 @@ export function ConfirmModal({
       </div>
     </Modal>
   );
+}
+
+function handOn(
+  ref: Ref<HTMLButtonElement> | undefined,
+  node: HTMLButtonElement | null,
+) {
+  if (typeof ref === "function") {
+    ref(node);
+  } else if (ref) {
+    ref.current = node;
+  }
 }

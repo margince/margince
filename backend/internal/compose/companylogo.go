@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/picturerefusal"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
@@ -164,7 +165,7 @@ func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte
 	}
 	img, err := imagenorm.Decode(source)
 	if err != nil {
-		writeMarkDecodeRefusal(w, r, err)
+		picturerefusal.WriteMarkDecode(w, r, err)
 		return nil, "", false
 	}
 	png, err = imagenorm.FitPNG(img, companyLogoEdge)
@@ -212,38 +213,6 @@ func readImageUpload(w http.ResponseWriter, r *http.Request, limit int64) (sourc
 		return nil, "", false
 	}
 	return source, header.Filename, true
-}
-
-// errPicturesBusy answers an upload whose decode found no free slot in time. The picture
-// itself was not judged, so the reader is told to send the same file again.
-var errPicturesBusy = &httperr.DetailedError{
-	Status: http.StatusServiceUnavailable, Code: "pictures_busy", RetryAfterSeconds: 10,
-	Detail: "the server is reading other pictures right now; send the same file again in a few seconds",
-}
-
-// writeMarkDecodeRefusal names what a mark the decoder refused would need.
-func writeMarkDecodeRefusal(w http.ResponseWriter, r *http.Request, err error) {
-	switch {
-	case errors.Is(err, imagenorm.ErrSVGTextNotOutlined):
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity, Code: "svg_text_not_outlined",
-			Detail: "the SVG draws its words as text, which this server cannot render; convert the text to outlines in your design tool, or upload a PNG",
-		})
-	case errors.Is(err, imagenorm.ErrSVGNotDrawable):
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity, Code: "svg_not_drawable",
-			Detail: "the SVG has parts this server cannot draw, such as embedded images; export it as a PNG",
-		})
-	case errors.Is(err, imagenorm.ErrDecodeBusy):
-		httperr.Write(w, r, errPicturesBusy)
-	case errors.Is(err, imagenorm.ErrUnsupported):
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnsupportedMediaType, Code: "unsupported_media_type",
-			Detail: "the upload is not an image this server can read; PNG, JPEG, GIF, WebP, ICO and SVG work",
-		})
-	default:
-		httperr.Write(w, r, err)
-	}
 }
 
 // boundedFilename is what the field's history will show for this change. A

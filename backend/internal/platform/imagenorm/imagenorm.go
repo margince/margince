@@ -58,9 +58,9 @@ const MaxReadImageBytes = 8 << 20
 // source's own type: the source format is not what gets served.
 const ContentType = "image/png"
 
-// maxSourcePixels bounds a decode. An image header is cheap to forge and
-// costs the decoder its whole canvas to believe, so the declared size is
-// refused before any of it is allocated.
+// MaxSourcePixels bounds a decode. An image header is cheap to forge and
+// costs the decoder its whole canvas to believe. The declared size is
+// therefore refused before any of it is allocated.
 //
 // The bound is deliberately well under what a machine could survive, because
 // the cost per pixel is not fixed: a 16-bit RGBA PNG allocates 8 bytes per
@@ -68,13 +68,17 @@ const ContentType = "image/png"
 // runs several of these at once. 8 Mpx is a 2828x2828 source — far past any
 // logo or sharing image a site actually publishes — and caps one decode near
 // 64 MiB even in the widest pixel format.
-const maxSourcePixels = 8 << 20
+const MaxSourcePixels = 8 << 20
 
 // ErrUnsupported reports bytes this package cannot turn into a picture: a
 // format it carries no decoder for (SVG, a bitmap-only ICO), a truncated
 // body, or something that was never an image. It is a property of the input,
 // not a fault — callers treat it as "this candidate is unusable" and move on.
 var ErrUnsupported = errors.New("imagenorm: unsupported or undecodable image")
+
+// ErrTooManyPixels is a readable image past MaxSourcePixels. It wraps ErrUnsupported, so a
+// candidate chain still skips it, while an upload route can name the bound to its sender.
+var ErrTooManyPixels = fmt.Errorf("%w: the image has more pixels than one decode may hold", ErrUnsupported)
 
 // decodeSlots leaves one core free of decoding, so a burst of uploads cannot
 // take the cores that serve requests.
@@ -146,9 +150,9 @@ func decodeWithinCaps(src []byte) (image.Image, error) {
 	if config.Width <= 0 || config.Height <= 0 {
 		return nil, fmt.Errorf("%w: it declares a %dx%d canvas", ErrUnsupported, config.Width, config.Height)
 	}
-	if int64(config.Width)*int64(config.Height) > maxSourcePixels {
+	if int64(config.Width)*int64(config.Height) > MaxSourcePixels {
 		return nil, fmt.Errorf("%w: %dx%d exceeds the %d-pixel decode cap",
-			ErrUnsupported, config.Width, config.Height, maxSourcePixels)
+			ErrTooManyPixels, config.Width, config.Height, MaxSourcePixels)
 	}
 	if bytes.HasPrefix(src, jpegMagic) {
 		if err := checkJPEGScans(src, config.Width, config.Height); err != nil {

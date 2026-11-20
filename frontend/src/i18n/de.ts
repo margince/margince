@@ -1870,6 +1870,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Erinnerung konnte nicht gesendet werden. Haben die E-Mail-Regeln von Margince sie gestoppt, steht der Grund in deinen Benachrichtigungen. Schreib dem Gast direkt.",
   "history.field.reminder_status": "Erinnerungsstatus",
   "scheduling.myLink": "Dein Buchungslink",
+  "scheduling.setUpMyLink": "Buchungslink einrichten",
   "scheduling.linkIntro":
     "Ein Link für deine E-Mail-Signatur, Nachrichten und Website. Gäste wählen einen Termin innerhalb deiner Verfügbarkeit.",
   "scheduling.copyLink": "Link kopieren",
@@ -9651,7 +9652,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureReviewUseLatest": "Gespeicherte Version verwenden",
   "settings.signatureReviewKeepDraft": "Meinen Entwurf behalten",
   "settings.signatureReviewLoading": "Gespeicherte Signatur wird geladen…",
-  "settings.signatureReviewSaved": "Signaturprüfung gespeichert",
   "settings.signatureReviewMember": "dem Mitglied",
   "settings.signatureChoicePlain":
     "Deine eigene Signatur steht unter jeder E-Mail, die du sendest. Ohne sie endet die E-Mail mit einem Gruß und deinem Namen.",
@@ -9672,7 +9672,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureSub":
     "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",
   "settings.signatureLabel": "Grußformel",
-  "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
+  "settings.signaturePlaceholder": "Dein Name\nUnternehmen · Telefon",
   "settings.signatureHint":
     "Nur Text. Ohne Grußformel enden E-Mails mit einem Gruß und deinem Namen. Die KI fügt nie eine Grußformel hinzu.",
   "settings.signatureSaving": "Wird gespeichert…",
@@ -9691,13 +9691,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "delivery.none": "Nicht per E-Mail",
   "delivery.hourLabel": "Uhrzeit für Zusammenfassungen",
   "delivery.scheduleHelp":
-    "Eine persönliche Uhrzeit nutzt deine Arbeitstage und Zeitzone mit einem Versandfenster von drei Stunden. Der bisherige Plan bleibt bis zu deiner Änderung.",
+    "Wann Zusammenfassungen wie der Morgenbericht gesendet werden: innerhalb von drei Stunden nach dieser Uhrzeit, an deinen Arbeitstagen und in deiner Zeitzone. Ein früher festgelegter Plan bleibt, bis du hier eine Uhrzeit wählst.",
   "delivery.legacyTime": "Bisheriger Morgenplan (Berichtszeitzone):",
   "delivery.workingStart": "Beginn meiner Arbeitszeit",
   "delivery.weekdayLabel": "Tag des Wochenrückblicks",
   "delivery.weekdayHelp":
-    "Ein freier Tag wird auf den nächsten Arbeitstag verschoben. Die Berichtswoche bleibt fest; spätere Arbeitstage erlauben eine Nachholung.",
+    "Der Tag, an dem der Wochenrückblick gesendet wird. Arbeitest du an dem Tag nicht, kommt er an deinem nächsten Arbeitstag.",
   "delivery.quietLabel": "Ruhige Morgen",
+  "delivery.quietHelp":
+    "An einem Morgen, an dem nichts zu erledigen ist, kommt keine E-Mail, außer du wählst eine Statusübersicht.",
   "delivery.onlyUseful": "Nur mit nützlichem Inhalt",
   "delivery.quietAlso": "Auch eine Statusübersicht an ruhigen Morgen",
   "delivery.combineLabel": "Routine-E-Mails zusammenfassen",
@@ -9706,6 +9708,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "delivery.separate": "Separate Routine-E-Mails",
   "delivery.combined": "Verfügbare Inhalte zusammenfassen",
   "delivery.scopeLabel": "Umfang der Zusammenfassungen",
+  "delivery.scopeHelp":
+    "Wessen Arbeit die Zusammenfassungen zeigen: deine eigene, die eines Teams, das du prüfst, oder beides.",
   "delivery.scope.personal": "Meine Arbeit",
   "delivery.scope.team": "Gewähltes Team",
   "delivery.scope.combined": "Meine Arbeit und gewähltes Team",
@@ -13797,6 +13801,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.emailPlaceholder": "name@example.com",
   "auth.password": "Passwort",
   "auth.passwordPlaceholder": "Passwort",
+  "auth.emailMissing": "Gib deine E-Mail-Adresse ein.",
+  "auth.emailMalformed":
+    "Gib eine vollständige E-Mail-Adresse ein, etwa name@example.com.",
+  "auth.passwordMissing": "Gib dein Passwort ein.",
   "auth.passwordHint": "12 bis 256 Zeichen",
   "auth.showPassword": "Passwort anzeigen",
   "auth.hidePassword": "Passwort ausblenden",
@@ -13812,15 +13820,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.failed": "Anmeldung fehlgeschlagen",
   "auth.errCredentials":
     "Anmeldung fehlgeschlagen. Prüfe E-Mail-Adresse und Passwort und versuche es erneut.",
-  "auth.errRateLimited": "Zu viele Anmeldeversuche. Versuche es später erneut.",
+  "auth.errRateLimited":
+    "Zu viele Anmeldeversuche. Warte eine Minute und versuche es dann erneut.",
   "auth.errUnreachable":
     "Margince war nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
   "auth.retry": "Erneut versuchen",
   "auth.noticeSignedOut": "Du wurdest abgemeldet.",
   "auth.noticeSessionExpired":
     "Sitzung abgelaufen. Melde dich erneut an, um fortzufahren.",
+  "auth.noticeResetIncomplete":
+    "Dieser Link zum Festlegen des Passworts ist unvollständig oder wurde schon geöffnet. Frage nach einem neuen Link.",
   "auth.noticeOidcFailed":
-    "Die Anmeldung mit Google ist fehlgeschlagen. Wenn du eingeladen wurdest, öffne den Link in der Einladungs-E-Mail, um die Einrichtung deines Nutzerkontos abzuschließen.",
+    "Die Anmeldung über den Anbieter wurde nicht abgeschlossen. Wenn du eingeladen wurdest, öffne den Link in der Einladungs-E-Mail, um die Einrichtung deines Nutzerkontos abzuschließen.",
   "auth.connectionTitle": "Margince war nicht erreichbar",
   "auth.connectionBody":
     "Prüfe die Verbindung und versuche es erneut. Wenn das Problem bestehen bleibt, wird der Server möglicherweise gerade neu gestartet.",
@@ -13860,6 +13871,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "password.submit": "Neues Passwort speichern",
   "password.doneTitle": "Passwort geändert",
   "password.changeFailedTitle": "Passwort wurde nicht geändert",
+  "password.currentWrong":
+    "Das aktuelle Passwort stimmt nicht. Prüfe es und gib es erneut ein.",
+  "password.locked":
+    "Das Konto ist nach zu vielen falschen Passwörtern gesperrt. Warte 15 Minuten und versuche es dann erneut.",
+  "password.unchanged":
+    "Das neue Passwort ist dasselbe wie das aktuelle. Wähle ein anderes Passwort.",
+  "password.email":
+    "Das neue Passwort ist deine E-Mail-Adresse. Wähle ein anderes Passwort.",
+  "password.length": "Verwende ein neues Passwort mit 12 bis 256 Zeichen.",
   "password.errorGeneric":
     "Es wurde keine Ursache gemeldet. Bitte versuche es erneut.",
   "mfa.title": "Zweistufige Anmeldung",
@@ -13962,6 +13982,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.errorNetwork":
     "Margince war nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
   "auth.forgotLink": "Passwort vergessen?",
+  "auth.forgotAskAdmin":
+    "Passwort vergessen? Frage einen Admin nach einem Link zum Festlegen des Passworts.",
   "auth.forgotTitle": "Passwort zurücksetzen",
   // "gibt", nicht "existiert" (Amtsdeutsch), und das Feld will eine Adresse, keine
   // E-Mail — die E-Mail ist die Nachricht. Was unterwegs ist, ist ebenfalls die
@@ -13973,7 +13995,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.forgotSentBody":
     "Wenn es zu dieser Adresse ein Nutzerkonto gibt, wurde ein Link zum Zurücksetzen gesendet. Der Link läuft nach 1 Stunde ab.",
   "auth.resetTitle": "Neues Passwort wählen",
-  "auth.resetSub": "Der Link ist gültig. Gib ein neues Passwort ein.",
+  "auth.resetSub": "Gib ein neues Passwort ein.",
   "auth.newPassword": "Neues Passwort",
   "auth.setNewPassword": "Neues Passwort festlegen",
   // "bereits verwendet", nicht "verbraucht": ein Link wird verwendet, nicht
@@ -16443,6 +16465,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companyMarkUnsupported":
     "Nimm eine PNG-, JPEG-, GIF-, WebP-, ICO- oder SVG-Datei.",
   "settings.companyMarkTooLarge": "Nimm eine kleinere Datei.",
+  "settings.companyMarkTooManyPixels":
+    "Nimm ein Bild mit höchstens 8 Megapixeln.",
   "settings.companyMarkSvgNotDrawable":
     "Diese SVG-Datei enthält Teile, die sich hier nicht darstellen lassen, oder sie zeigt nichts. Exportiere das Logo in deinem Grafikprogramm als PNG-Datei.",
   "settings.companyMarkSvgText":
@@ -17028,7 +17052,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signInMethods.title": "Anmeldemethoden",
   "signInMethods.saveFailed": "Änderung nicht gespeichert",
   "signInMethods.sub":
-    "Admins können einen Anbieter deaktivieren, aber keinen hinzufügen. Ein Anbieter erscheint auf der Anmeldeseite, sobald seine App unten eingerichtet ist.",
+    "Admins können einen Anbieter deaktivieren, aber keinen hinzufügen. Ein Anbieter erscheint auf der Anmeldeseite, sobald seine App unter {apps} eingerichtet ist.",
   "signInMethods.password": "E-Mail und Passwort",
   "signInMethods.passwordAlways":
     "Immer verfügbar. Alle Nutzenden können sich so anmelden, daher lassen sich die anderen Methoden gefahrlos deaktivieren.",
@@ -17205,6 +17229,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signInMethods.offScreen": "Nicht auf der Anmeldeseite",
   "signInMethods.offScreenReason.noApp":
     "Die {vendor}-App ist nicht eingerichtet.",
+  "signInMethods.setUpApp": "{vendor}-App einrichten",
   "signInMethods.offScreenReason.noDirectory":
     "Die Microsoft-App ist nicht auf das Verzeichnis deines Unternehmens beschränkt.",
   "signInMethods.offScreenReason.unusable":
@@ -17548,6 +17573,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bild nicht hochgeladen. Nimm eine PNG-, JPEG- oder WebP-Datei.",
   "account.pictureTooLarge":
     "Bild nicht hochgeladen. Nimm eine Datei bis 5 MB.",
+  "account.pictureTooManyPixels":
+    "Bild nicht hochgeladen. Nimm ein Bild mit höchstens 8 Megapixeln.",
   "account.pictureNoStorage":
     "Diese Installation hat keinen Dateispeicher für Bilder. Bitte wende dich an die Systemadministration.",
   "account.pictureUploadFailed":

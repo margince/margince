@@ -16,7 +16,7 @@ import {
   type Theme,
   type ThemeChoice,
 } from "../lib/theme";
-import { resetTheme } from "./theme-reset";
+import { resetTheme } from "../testing/theme-reset";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
 

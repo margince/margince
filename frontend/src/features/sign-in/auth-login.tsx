@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { AuthCardTitle, type AuthPhase } from "../../components/auth-core";
 import { Button, Field, TextInput } from "../../design-system/atoms";
+import { firstRefusedControl } from "../../design-system/formvalidity";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
@@ -48,6 +49,11 @@ export function LoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [capsLock, setCapsLock] = useState(false);
+  // Set by a press that found a field missing or malformed, cleared by a press
+  // that sends. The form validates itself so the words follow the page's
+  // language; a browser bubble speaks the browser's.
+  const [attempted, setAttempted] = useState(false);
+  const [emailMalformed, setEmailMalformed] = useState(false);
   const reveal = usePasswordReveal({
     show: t("auth.showPassword"),
     hide: t("auth.hidePassword"),
@@ -102,16 +108,38 @@ export function LoginForm({
   });
 
   const ready = email.trim() !== "" && password !== "";
-  const submit = (event: FormEvent) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (ready && !login.isPending) {
+    // The browser's own email rule, read from the control: what it refused
+    // before the form turned native validation off, it still refuses.
+    const malformed = emailRef.current?.validity.typeMismatch === true;
+    if (!ready || malformed) {
+      setAttempted(true);
+      setEmailMalformed(malformed);
+      const refused = firstRefusedControl(event.currentTarget);
+      if (refused instanceof HTMLElement) {
+        refused.focus();
+      }
+      return;
+    }
+    if (!login.isPending) {
+      // A refused credential empties the password, which is not a missing one.
+      setAttempted(false);
       onPhase("signing-in");
       login.mutate();
     }
   };
+  let emailError: string | undefined;
+  if (attempted && email.trim() === "") {
+    emailError = t("auth.emailMissing");
+  } else if (attempted && emailMalformed) {
+    emailError = t("auth.emailMalformed");
+  }
+  const passwordError =
+    attempted && password === "" ? t("auth.passwordMissing") : undefined;
 
   return (
-    <form className="auth-card" onSubmit={submit}>
+    <form className="auth-card" onSubmit={submit} noValidate>
       {/* The page says its name once. The greeting beside this form is the
           page's h1, so the form's own title and sub-line would repeat it in a
           larger voice than the sentence they follow. Both stay in the
@@ -134,7 +162,11 @@ export function LoginForm({
           ADR-0076 binds the WCAG rules unamended, so where the picture and
           WCAG disagree, WCAG wins. */}
       <div className="auth-fields">
-        <Field label={t("auth.email")} icon={<Mail aria-hidden />}>
+        <Field
+          label={t("auth.email")}
+          icon={<Mail aria-hidden />}
+          error={emailError}
+        >
           {(control) => (
             <TextInput
               {...control}
@@ -156,7 +188,10 @@ export function LoginForm({
               spellCheck={false}
               placeholder={t("auth.emailPlaceholder")}
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setEmailMalformed(false);
+              }}
             />
           )}
         </Field>
@@ -170,6 +205,7 @@ export function LoginForm({
               </button>
             ) : undefined
           }
+          error={passwordError}
           hint={capsLock ? t("auth.capsLock") : undefined}
           // Announced when it appears, not only when focus arrives. Caps lock
           // is pressed while typing. A warning heard only after leaving and
@@ -203,8 +239,8 @@ export function LoginForm({
       )}
       <div className="auth-actions">
         {/* Refuses the press only while a request is in flight. An empty
-            field is answered by native validation on the inputs, not by a pale
-            control with nothing to say.
+            field is answered under the field itself, not by a pale control
+            with nothing to say.
 
             `pending`, not `disabled`: the label stays "Sign in" the whole way
             through, because renaming a control mid-press makes a screen reader
@@ -219,6 +255,9 @@ export function LoginForm({
         >
           {t("auth.signIn")}
         </Button>
+        {/* Where no forgot-password flow exists, the remedy is an admin's
+            set-password link, and a reader who never sees the advice has none. */}
+        {!resetAvailable && <p className="t-sub">{t("auth.forgotAskAdmin")}</p>}
       </div>
     </form>
   );

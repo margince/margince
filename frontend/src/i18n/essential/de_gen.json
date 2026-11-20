@@ -3435,6 +3435,7 @@
   "unsaved.saveBody": "Auf dieser Seite gibt es Änderungen, die noch nicht gespeichert sind.",
   "unsaved.stay": "Bleiben",
   "unsaved.saveRefused": "Nicht gespeichert. Bleib auf der Seite, um den Grund zu sehen.",
+  "settings.saved": "Gespeichert",
   "settings.installAppAction": "Installieren",
   "installHint.title": "Margince als App installieren",
   "installHint.value": "Öffnet sich mit einem Tipp auf dem Home-Bildschirm im eigenen Fenster. Kein App Store, nichts herunterzuladen.",

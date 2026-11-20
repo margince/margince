@@ -59,6 +59,7 @@ export function RoutineDeliveryRows({
         control={(control) => (
           <Select
             {...control}
+            className="settingrow-measure"
             disabled={disabled}
             aria-describedby={describedByIds(
               control["aria-describedby"],
@@ -103,6 +104,7 @@ export function RoutineDeliveryRows({
         control={(control) => (
           <Select
             {...control}
+            className="settingrow-measure"
             disabled={disabled}
             aria-describedby={describedByIds(
               control["aria-describedby"],
@@ -124,9 +126,11 @@ export function RoutineDeliveryRows({
       <SettingRow
         label={t("delivery.quietLabel")}
         testId="delivery-quiet"
+        description={t("delivery.quietHelp")}
         control={(control) => (
           <Select
             {...control}
+            className="settingrow-measure"
             disabled={disabled}
             aria-describedby={describedByIds(
               control["aria-describedby"],
@@ -148,6 +152,7 @@ export function RoutineDeliveryRows({
         control={(control) => (
           <Select
             {...control}
+            className="settingrow-measure"
             disabled={disabled}
             aria-describedby={describedByIds(
               control["aria-describedby"],
@@ -169,9 +174,11 @@ export function RoutineDeliveryRows({
           <SettingRow
             label={t("delivery.scopeLabel")}
             testId="delivery-scope"
+            description={t("delivery.scopeHelp")}
             control={(control) => (
               <Select
                 {...control}
+                className="settingrow-measure"
                 disabled={disabled}
                 aria-describedby={describedByIds(
                   control["aria-describedby"],
@@ -208,6 +215,7 @@ export function RoutineDeliveryRows({
               teams.isSuccess ? (
                 <Select
                   {...control}
+                  className="settingrow-measure"
                   disabled={disabled}
                   aria-describedby={describedByIds(
                     control["aria-describedby"],
