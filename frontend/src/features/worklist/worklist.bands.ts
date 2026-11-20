@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { WorklistView } from "../../lib/worklistviews";
 import type { Worklist, WorklistItem } from "./worklist.queries";
+import { rowIdentity } from "./worklist.rowidentity";
 
 // The headings the page draws, and which rows sit under each.
 //
@@ -112,6 +114,16 @@ export function drawnOrder(
     ...bandSections(day, queue).flatMap((section) => section.items),
     ...unbandedRows(queue),
   ];
+}
+
+/** Each row's rank. Today draws by band, so its numbers count the drawn order. */
+export function positionsOf(
+  day: Worklist,
+  queue: readonly WorklistItem[],
+  view: WorklistView,
+): ReadonlyMap<string, number> {
+  const drawn = view === "today" ? drawnOrder(day, queue) : queue;
+  return new Map(drawn.map((item, at) => [rowIdentity(item), at] as const));
 }
 
 /**

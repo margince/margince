@@ -11,7 +11,7 @@ import type { WorklistView } from "../../lib/worklistviews";
 import {
   bandSections,
   canReportEmptyBands,
-  drawnOrder,
+  positionsOf,
   unbandedRows,
 } from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
@@ -57,16 +57,6 @@ const HiddenBacklogPanel = lazy(async () => ({
 const TeamOversight = lazy(async () => ({
   default: (await import("./worklist.gap")).TeamOversight,
 }));
-
-// Today draws by band, so its numbers count the drawn order.
-function positionsOf(
-  day: Worklist,
-  queue: readonly WorklistItem[],
-  view: WorklistView,
-): ReadonlyMap<string, number> {
-  const drawn = view === "today" ? drawnOrder(day, queue) : queue;
-  return new Map(drawn.map((item, at) => [rowIdentity(item), at] as const));
-}
 
 export function WorklistBody({
   embedded = false,
