@@ -13,11 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import {
-  AutomationPreview,
-  AutomationRuns,
-  OutcomeBadge,
-} from "./automationdetail";
+import { AutomationPreview, AutomationRuns } from "./automationdetail";
+import { OutcomeBadge } from "./automations.runrow";
 
 type AutomationRun = components["schemas"]["AutomationRun"];
 

@@ -7283,6 +7283,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.agenda.system_one": "{count} Systemproblem",
   "brief.agenda.system_other": "{count} Systemprobleme",
   "worklist.source.failed_approval": "Freigegeben, aber nicht ausgeführt",
+  "worklist.effectFailure.approval_lapsed":
+    "Die Freigabe ist vor der Ausführung abgelaufen. Nichts wurde geändert. Fordere einen neuen Vorschlag an, um es erneut zu versuchen.",
+  "worklist.effectFailure.effect_not_run":
+    "Dies wurde freigegeben, aber die freigegebene Arbeit wurde nicht ausgeführt.",
+  "worklist.effectFailure.effect_unconfirmed":
+    "Dies wurde freigegeben und weitergeleitet, aber das empfangende System hat es nie bestätigt. Es ist also vielleicht passiert. Prüfe den Datensatz, bevor du es erneut anforderst.",
+  "worklist.effectFailure.follow_up_failed":
+    "Dies wurde freigegeben und die Änderung wurde vorgenommen, aber die Automatisierung, die sie angefordert hat, konnte nicht als abgeschlossen markiert werden.",
+  "worklist.effectFailure.window_not_widened":
+    "Das Zeitfenster des Agenten konnte nicht erweitert werden, daher ist die Freigabe nicht wirksam geworden.",
   "brief.panel.decisions": "Freigaben",
   "brief.rail.quietSchedule": "Nichts gebucht",
   "brief.panel.schedule": "Externe Termine",
@@ -14346,6 +14356,56 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.runs.reasonCode.blocked":
     "eine Berechtigungsprüfung oder eine abgelehnte Freigabe hat sie gestoppt",
   "auto.runs.outcome": "Ergebnis",
+  "auto.runs.when": "Wann",
+  "auto.runs.when.stageNamed": "Deal in die Phase {stage} verschoben",
+  "auto.runs.technical": "Technische Details",
+  "auto.runs.event": "Ereignis",
+  "auto.runs.mode": "Modus",
+  "auto.runs.did.create_task": "Aufgabe zu {target} erstellt",
+  "auto.runs.did.create_task_titled": "Aufgabe „{title}“ zu {target} erstellt",
+  "auto.runs.did.create_record": "Datensatz aus {target} erstellt",
+  "auto.runs.did.update_record": "Änderung an {target} gespeichert",
+  "auto.runs.did.assign_owner":
+    "Verantwortliches Mitglied bei {target} zugewiesen",
+  "auto.runs.did.advance_deal": "Nächste Phase bei {target} gesetzt",
+  "auto.runs.did.send_email": "E-Mail zu {target} gesendet",
+  "auto.runs.did.emit_flow_event": "Folgeschritt zu {target} gestartet",
+  "auto.runs.did.recompute_score": "Bewertung von {target} neu berechnet",
+  "auto.runs.did.enqueue_job": "Hintergrundarbeit zu {target} gestartet",
+  "auto.runs.did.notify": "Benachrichtigung zu {target} gesendet",
+  "auto.runs.did.draft_email": "E-Mail-Entwurf zu {target} erstellt",
+  "auto.runs.did.add_list_member": "Shortlist-Eintrag zu {target} erstellt",
+  "auto.runs.queued.create_task": "Zur Freigabe vorgelegt: Aufgabe zu {target}",
+  "auto.runs.queued.create_task_titled":
+    "Zur Freigabe vorgelegt: Aufgabe „{title}“ zu {target}",
+  "auto.runs.queued.create_record":
+    "Zur Freigabe vorgelegt: neuer Datensatz aus {target}",
+  "auto.runs.queued.update_record":
+    "Zur Freigabe vorgelegt: Änderung an {target}",
+  "auto.runs.queued.assign_owner":
+    "Zur Freigabe vorgelegt: verantwortliches Mitglied bei {target}",
+  "auto.runs.queued.advance_deal":
+    "Zur Freigabe vorgelegt: nächste Phase bei {target}",
+  "auto.runs.queued.send_email": "Zur Freigabe vorgelegt: E-Mail zu {target}",
+  "auto.runs.queued.emit_flow_event":
+    "Zur Freigabe vorgelegt: Folgeschritt zu {target}",
+  "auto.runs.queued.recompute_score":
+    "Zur Freigabe vorgelegt: neue Bewertung von {target}",
+  "auto.runs.queued.enqueue_job":
+    "Zur Freigabe vorgelegt: Hintergrundarbeit zu {target}",
+  "auto.runs.queued.notify":
+    "Zur Freigabe vorgelegt: Benachrichtigung zu {target}",
+  "auto.runs.queued.draft_email":
+    "Zur Freigabe vorgelegt: E-Mail-Entwurf zu {target}",
+  "auto.runs.queued.add_list_member":
+    "Zur Freigabe vorgelegt: Shortlist-Eintrag zu {target}",
+  "auto.runs.unnamed.contact": "einem Kontakt",
+  "auto.runs.unnamed.company": "einem Unternehmen",
+  "auto.runs.unnamed.deal": "einem Deal",
+  "auto.runs.unnamed.lead": "einem Lead",
+  "auto.runs.unnamed.project": "einem Projekt",
+  "auto.runs.unnamed.activity": "einer Aktivität",
+  "auto.runs.unnamed.record": "einem Datensatz",
 
   "auto.initialRun.title": "Aufgaben für bestehende Datensätze zulassen?",
   "auto.initialRun.confirm": "Speichern und Aufgaben zulassen",

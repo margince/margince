@@ -25,6 +25,15 @@ function spelledOut(raw: string): string {
   return humanizeToken(raw.replace(/^clock:/, ""));
 }
 
+/** The trigger in words, or undefined for one newer than this client. */
+export function knownTriggerLabel(
+  trigger: string,
+  t: Translator,
+): string | undefined {
+  const key = TRIGGER[trigger];
+  return key ? t(key) : undefined;
+}
+
 export function triggerLabel(trigger: string, t: Translator): string {
   const key = TRIGGER[trigger];
   return key ? t(key) : spelledOut(trigger);

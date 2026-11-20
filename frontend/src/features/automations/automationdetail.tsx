@@ -2,16 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Ban, Check, Clock, type LucideIcon, Minus, X } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Badge, Field, SegmentedControl } from "../../design-system/atoms";
+import { Field, SegmentedControl } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { AutonomyDot } from "../../design-system/trust";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
@@ -19,11 +17,10 @@ import { unwrap } from "../../lib/problem";
 // the row that folds these open lives in another sheet, and a story or a test
 // that mounts one panel alone would otherwise render it unstyled.
 import "./automationdetail.css";
-import { RUN_OUTCOME_WORD, runReasonWords } from "../../lib/automationrun";
 import { labelFor } from "../../lib/labelfor";
-import { useViewerZone } from "../../lib/viewerzone";
 import { useAutomationPreview } from "./automations.previewquery";
 import { RenewalPreviewDetails } from "./automations.renewalpreview";
+import { RunRow } from "./automations.runrow";
 
 // The human surface for the two human-only automation ops
 // (listAutomationRuns / previewAutomation), in its own file so automations.tsx
@@ -31,107 +28,6 @@ import { RenewalPreviewDetails } from "./automations.renewalpreview";
 
 type AutomationRun = components["schemas"]["AutomationRun"];
 type Outcome = AutomationRun["outcome"];
-
-// Outcome → tone, glyph and word. A Record over the enum stops compiling when
-// the contract adds an outcome, so a new one cannot ship as a blank badge.
-export const OUTCOME_LOOK: Readonly<
-  Record<
-    Outcome,
-    Readonly<{
-      tone: "success" | "warning" | "danger";
-      icon: LucideIcon;
-      word: MessageKey;
-    }>
-  >
-> = {
-  fired: { tone: "success", icon: Check, word: RUN_OUTCOME_WORD.fired },
-  failed: { tone: "danger", icon: X, word: RUN_OUTCOME_WORD.failed },
-  blocked: { tone: "warning", icon: Ban, word: RUN_OUTCOME_WORD.blocked },
-  skipped: { tone: "warning", icon: Minus, word: RUN_OUTCOME_WORD.skipped },
-  queued_for_approval: {
-    tone: "warning",
-    icon: Clock,
-    word: RUN_OUTCOME_WORD.queued_for_approval,
-  },
-};
-
-export function OutcomeBadge({ outcome }: Readonly<{ outcome: Outcome }>) {
-  const t = useT();
-  const look = OUTCOME_LOOK[outcome];
-  return (
-    <Badge tone={look.tone} icon={look.icon}>
-      {t(look.word)}
-    </Badge>
-  );
-}
-
-// The reason line reads in its badge's tone, so a run's row reads one way.
-function reasonColor(outcome: Outcome): string {
-  return OUTCOME_LOOK[outcome].tone === "danger"
-    ? "var(--dangerText)"
-    : "var(--warningText)";
-}
-
-// A labelled detail line, rendered ONLY by the caller when the field is
-// present — never a blank "Label:" row for a null optional field (T7).
-function DetailLine({
-  label,
-  value,
-  color,
-}: Readonly<{ label: string; value: string; color?: string }>) {
-  return (
-    <p className="t-caption auto-detail-line" style={{ color }}>
-      <span className="t-label">{label}</span> {value}
-    </p>
-  );
-}
-
-function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  // A run is an audit-style event: read its time in the VIEWER's own timezone
-  // (as audit.tsx / aicalls.tsx do), never a fixed one — an operator in any
-  // region sees the firing in their local wall-clock.
-  const zone = useViewerZone();
-  return (
-    <li className="auto-run">
-      <div className="auto-run-head">
-        <OutcomeBadge outcome={run.outcome} />
-        <time
-          className="t-caption"
-          dateTime={run.occurred_at}
-          title={run.occurred_at}
-        >
-          {formatDateTime(run.occurred_at, locale, zone)}
-        </time>
-        <AutonomyDot tier={run.tier === "auto_execute" ? "auto" : "confirm"} />
-        {run.approval_required && (
-          <span className="t-caption">{t("auto.runs.needsApproval")}</span>
-        )}
-      </div>
-      {run.trigger_evidence && (
-        <DetailLine label={t("auto.runs.why")} value={run.trigger_evidence} />
-      )}
-      {run.target_ref && (
-        <DetailLine label={t("auto.runs.target")} value={run.target_ref} />
-      )}
-      {run.action_result && (
-        <DetailLine label={t("auto.runs.result")} value={run.action_result} />
-      )}
-      {(run.reason_code || run.reason) && (
-        <DetailLine
-          label={t("auto.runs.reason")}
-          value={
-            run.reason_code
-              ? runReasonWords(run.reason_code, t)
-              : (run.reason ?? "")
-          }
-          color={reasonColor(run.outcome)}
-        />
-      )}
-    </li>
-  );
-}
 
 // The outcome dial: "" clears the filter, every other option pins one outcome,
 // so the query key carries `undefined` when unfiltered and paging restarts.

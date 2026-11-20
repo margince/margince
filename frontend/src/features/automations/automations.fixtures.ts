@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 
 type Automation = components["schemas"]["Automation"];
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
+type AutomationRun = components["schemas"]["AutomationRun"];
 
 const OBJECT = "object";
 const NO_PARAMS = { type: OBJECT, additionalProperties: false, properties: {} };
@@ -168,7 +169,7 @@ export const AUTOMATION_CATALOG: CatalogEntry[] = [
       "Drafts a follow-up once a customer meeting is held and has usable notes. The draft waits for a colleague and is never sent by the rule.",
     trigger: "activity.captured",
     action: "draft_email",
-    tier: "auto_execute",
+    tier: "confirmation_required",
     params_schema: NO_PARAMS,
   },
   {
@@ -371,3 +372,65 @@ export function configuredAutomation(id: string, now: number): Automation {
   if (!rule) throw new Error(`No automation fixture named ${id}`);
   return rule;
 }
+
+const GLOBEX = {
+  type: "deal",
+  id: "01a1e5f1-7a5c-7000-8000-00000000d001",
+  label: "Globex Renewal",
+};
+
+/**
+ * Runs as a current server traces them. A task on a named deal, a draft that
+ * waits for approval, a notice on a hidden deal. The last is an older server's
+ * run, with only its English lines.
+ */
+export const TRACED_RUNS: readonly AutomationRun[] = [
+  {
+    id: "r-task",
+    automation_id: "au-1",
+    occurred_at: "2026-11-20T13:02:00Z",
+    outcome: "fired",
+    tier: "auto_execute",
+    event_id: "01a1e5f1-7a5c-7000-8000-0000000000e1",
+    trigger_event_type: "deal.stage_changed",
+    trigger_stage_name: "Proposal",
+    action_kinds: ["create_task"],
+    target: GLOBEX,
+    created: { type: "activity", label: "Send the proposal" },
+    trigger_evidence: "deal Globex Renewal entered Proposal",
+    action_result: "applied create_task",
+  },
+  {
+    id: "r-draft",
+    automation_id: "au-1",
+    occurred_at: "2026-11-20T12:40:00Z",
+    outcome: "queued_for_approval",
+    tier: "confirmation_required",
+    event_id: "01a1e5f1-7a5c-7000-8000-0000000000e2",
+    trigger_event_type: "activity.captured",
+    action_kinds: ["draft_email"],
+    target: GLOBEX,
+    action_result: "queued to approval inbox",
+  },
+  {
+    id: "r-hidden",
+    automation_id: "au-1",
+    occurred_at: "2026-11-20T11:15:00Z",
+    outcome: "fired",
+    tier: "auto_execute",
+    event_id: "01a1e5f1-7a5c-7000-8000-0000000000e3",
+    trigger_event_type: "deal.stage_changed",
+    action_kinds: ["notify"],
+    target: { type: "deal", id: "01a1e5f1-7a5c-7000-8000-00000000d002" },
+  },
+  {
+    id: "r-older",
+    automation_id: "au-1",
+    occurred_at: "2026-11-19T09:00:00Z",
+    outcome: "fired",
+    tier: "auto_execute",
+    trigger_evidence: "deal BÄR Pharma entered Negotiation",
+    target_ref: "deal:BÄR Pharma",
+    action_result: "created follow-up task",
+  },
+];

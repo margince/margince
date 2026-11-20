@@ -1,8 +1,19 @@
-import { expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
 import { translate } from "../../i18n";
+import { de } from "../../i18n/de";
+import { en } from "../../i18n/en";
+import { vi } from "../../i18n/vi";
 import { readerTask, sentenceTitled, whenText } from "../../lib/worklistcopy";
-import { taskRow } from "../../testing/brief.fixtures";
-import { noticeDetail, sharedResponsibility } from "./worklist.reader";
+import { failedApprovalRow, taskRow } from "../../testing/brief.fixtures";
+import {
+  codedDetail,
+  EFFECT_FAILURE_WORDS,
+  noticeDetail,
+  sharedResponsibility,
+} from "./worklist.reader";
 
 const t = (
   key: Parameters<typeof translate>[1],
@@ -255,4 +266,59 @@ it("reads a task's due moment by its time-of-day flag", () => {
   expect(when("2026-09-16T15:00:00Z", true)).toBe(
     t("worklist.when.due", { when: "16/09/2026, 15:00" }),
   );
+});
+
+// The codes the approvals module records beside its English sentence, read
+// from the Go that pairs each code with its sentence.
+function serverEffectFailureCodes(): string[] {
+  const source = readFileSync(
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../../../backend/internal/modules/approvals/effectfailurecode.go",
+    ),
+    "utf8",
+  );
+  return [...source.matchAll(/\bcode:\s*"([a-z_]+)"/g)].flatMap(([, code]) =>
+    code ? [code] : [],
+  );
+}
+
+describe("an approved change that did not take effect", () => {
+  const codes = serverEffectFailureCodes();
+  const failed = failedApprovalRow();
+
+  it("reads the server's codes", () => {
+    expect(codes).toEqual(
+      expect.arrayContaining(["approval_lapsed", "window_not_widened"]),
+    );
+  });
+
+  it.each(codes)("words %s in every language", (code) => {
+    const key = EFFECT_FAILURE_WORDS[code];
+    expect(key, code).toBeDefined();
+    if (!key) return;
+    for (const catalog of [en, de, vi])
+      expect(catalog[key].trim()).not.toBe("");
+    expect(de[key]).not.toBe(en[key]);
+    expect(vi[key]).not.toBe(en[key]);
+  });
+
+  it("reads in the reader's language on the row and in its why", () => {
+    const lapsed = { ...failed, effect_failure_code: "approval_lapsed" };
+    const german = (key: Parameters<typeof translate>[1]) =>
+      translate("de", key);
+    expect(noticeDetail(lapsed, viewer, german)).toBe(
+      de["worklist.effectFailure.approval_lapsed"],
+    );
+    expect(codedDetail(lapsed, german)).toBe(
+      de["worklist.effectFailure.approval_lapsed"],
+    );
+  });
+
+  it("keeps the server's sentence for an absent or unknown code", () => {
+    expect(noticeDetail(failed, viewer, t)).toBe(failed.detail);
+    expect(
+      codedDetail({ ...failed, effect_failure_code: "newer_code" }, t),
+    ).toBe(failed.detail);
+  });
 });

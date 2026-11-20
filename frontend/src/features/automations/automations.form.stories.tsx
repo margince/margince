@@ -237,8 +237,11 @@ export const RenewalWithoutDateField: Story = {
   },
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await expect(body.getByRole("button", { name: "Create" })).toBeDisabled();
-    await expect(body.getByText(en["auto.needs.dateField"])).toBeVisible();
     await body.findByRole("link", { name: en["auto.dateField.place"] });
+    const create = body.getByRole("button", { name: "Create" });
+    await expect(create).toBeDisabled();
+    await expect(create).toHaveAccessibleDescription(
+      en["auto.needs.dateField"],
+    );
   },
 };

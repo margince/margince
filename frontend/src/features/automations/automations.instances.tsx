@@ -19,14 +19,19 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
-import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
+import { AutomationInspectors } from "./automationdetail";
 import { ruleName } from "./automations.catalogwords";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
-import { type AutomationPatch, patchAutomation } from "./automations.patch";
+import {
+  type AutomationPatch,
+  patchAutomation,
+  samePopulationParams,
+} from "./automations.patch";
 import { ScheduledPopulationReview } from "./automations.populationreview";
 import { recipeSentence } from "./automations.recipe";
 import { AutomationRecipientSummary } from "./automations.recipient";
+import { OUTCOME_LOOK } from "./automations.runrow";
 import { AutomationStatus } from "./automations.status";
 import "./automations.css";
 
@@ -254,17 +259,6 @@ export function ConfiguredAutomations({
         />
       )}
     </>
-  );
-}
-
-function samePopulationParams(
-  before: Record<string, unknown>,
-  after: Record<string, unknown>,
-): boolean {
-  const keys = Object.keys(before);
-  return (
-    keys.length === Object.keys(after).length &&
-    keys.every((key) => before[key] === after[key])
   );
 }
 

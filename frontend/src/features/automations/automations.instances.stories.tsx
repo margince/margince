@@ -82,7 +82,10 @@ const rendersTable: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await canvas.findByRole("switch", { name: "Renewal reminder is enabled" });
   await expect(canvas.getByText("Never")).toBeVisible();
-  await expect(canvas.getByText("Needs approval")).toBeVisible();
+  // The rule that drafts an email waits for a person, so it says so too.
+  await expect(
+    within(canvas.getByTestId("automation-au-5")).getByText("Needs approval"),
+  ).toBeVisible();
 };
 
 export const Outcomes: Story = {

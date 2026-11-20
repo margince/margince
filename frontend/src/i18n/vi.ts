@@ -7100,6 +7100,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.agenda.system_one": "{count} sự cố hệ thống",
   "brief.agenda.system_other": "{count} sự cố hệ thống",
   "worklist.source.failed_approval": "Đã duyệt nhưng chưa thực hiện",
+  "worklist.effectFailure.approval_lapsed":
+    "Phê duyệt đã hết hạn trước khi thực hiện. Không có gì thay đổi. Yêu cầu đề xuất mới để thử lại.",
+  "worklist.effectFailure.effect_not_run":
+    "Việc này đã được duyệt, nhưng tác vụ được duyệt không chạy.",
+  "worklist.effectFailure.effect_unconfirmed":
+    "Việc này đã được duyệt và chuyển đi, nhưng hệ thống nhận chưa bao giờ xác nhận, nên có thể việc đã diễn ra. Kiểm tra hồ sơ trước khi yêu cầu lại.",
+  "worklist.effectFailure.follow_up_failed":
+    "Việc này đã được duyệt và thay đổi đã được thực hiện, nhưng không thể đánh dấu hoàn tất cho tự động hóa đã yêu cầu.",
+  "worklist.effectFailure.window_not_widened":
+    "Không thể mở rộng khung thời gian của trợ lý AI, nên phê duyệt chưa có hiệu lực.",
   "brief.panel.decisions": "Phê duyệt",
   "brief.rail.quietSchedule": "Không có lịch hẹn",
   "brief.panel.schedule": "Cuộc họp bên ngoài",
@@ -13951,6 +13961,51 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.runs.reasonCode.blocked":
     "một bước kiểm tra quyền hoặc một phê duyệt bị từ chối đã dừng nó",
   "auto.runs.outcome": "Kết quả",
+  "auto.runs.when": "Khi",
+  "auto.runs.when.stageNamed": "Deal chuyển sang giai đoạn {stage}",
+  "auto.runs.technical": "Chi tiết kỹ thuật",
+  "auto.runs.event": "Sự kiện",
+  "auto.runs.mode": "Chế độ",
+  "auto.runs.did.create_task": "Đã tạo việc cho {target}",
+  "auto.runs.did.create_task_titled": "Đã tạo việc “{title}” cho {target}",
+  "auto.runs.did.create_record": "Đã tạo hồ sơ từ {target}",
+  "auto.runs.did.update_record": "Đã cập nhật {target}",
+  "auto.runs.did.assign_owner":
+    "Đã giao thành viên chịu trách nhiệm cho {target}",
+  "auto.runs.did.advance_deal": "Đã chuyển {target} sang giai đoạn tiếp theo",
+  "auto.runs.did.send_email": "Đã gửi email về {target}",
+  "auto.runs.did.emit_flow_event": "Đã bắt đầu bước tiếp theo cho {target}",
+  "auto.runs.did.recompute_score": "Đã tính lại điểm của {target}",
+  "auto.runs.did.enqueue_job": "Đã bắt đầu tác vụ nền cho {target}",
+  "auto.runs.did.notify": "Đã gửi thông báo về {target}",
+  "auto.runs.did.draft_email": "Đã soạn email nháp cho {target}",
+  "auto.runs.did.add_list_member": "Đã thêm {target} vào danh sách chọn tay",
+  "auto.runs.queued.create_task": "Đang chờ phê duyệt: việc cho {target}",
+  "auto.runs.queued.create_task_titled":
+    "Đang chờ phê duyệt: việc “{title}” cho {target}",
+  "auto.runs.queued.create_record": "Đang chờ phê duyệt: hồ sơ mới từ {target}",
+  "auto.runs.queued.update_record": "Đang chờ phê duyệt: thay đổi cho {target}",
+  "auto.runs.queued.assign_owner":
+    "Đang chờ phê duyệt: giao thành viên chịu trách nhiệm cho {target}",
+  "auto.runs.queued.advance_deal":
+    "Đang chờ phê duyệt: chuyển {target} sang giai đoạn tiếp theo",
+  "auto.runs.queued.send_email": "Đang chờ phê duyệt: email về {target}",
+  "auto.runs.queued.emit_flow_event":
+    "Đang chờ phê duyệt: bước tiếp theo cho {target}",
+  "auto.runs.queued.recompute_score":
+    "Đang chờ phê duyệt: điểm mới cho {target}",
+  "auto.runs.queued.enqueue_job": "Đang chờ phê duyệt: tác vụ nền cho {target}",
+  "auto.runs.queued.notify": "Đang chờ phê duyệt: thông báo về {target}",
+  "auto.runs.queued.draft_email": "Đang chờ phê duyệt: email nháp cho {target}",
+  "auto.runs.queued.add_list_member":
+    "Đang chờ phê duyệt: thêm {target} vào danh sách chọn tay",
+  "auto.runs.unnamed.contact": "một liên hệ",
+  "auto.runs.unnamed.company": "một công ty",
+  "auto.runs.unnamed.deal": "một deal",
+  "auto.runs.unnamed.lead": "một lead",
+  "auto.runs.unnamed.project": "một dự án",
+  "auto.runs.unnamed.activity": "một hoạt động",
+  "auto.runs.unnamed.record": "một hồ sơ",
 
   "auto.initialRun.title": "Cho phép tạo việc cho bản ghi hiện có?",
   "auto.initialRun.confirm": "Lưu và cho phép tạo việc",

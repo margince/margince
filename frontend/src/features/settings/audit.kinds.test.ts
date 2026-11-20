@@ -73,7 +73,7 @@ function auditedEntityTypes(): { types: Set<string>; dynamic: string[] } {
     for (const [, name, value] of source.matchAll(
       /^\s*(?:const\s+)?(\w+)(?:\s+[\w.]+)?\s*=\s*("[a-z_]+"|[\w.]+)\s*(?:\/\/.*)?$/gm,
     )) {
-      names.set(name, value);
+      if (name && value) names.set(name, value);
     }
   }
   const resolve = (
@@ -89,7 +89,7 @@ function auditedEntityTypes(): { types: Set<string>; dynamic: string[] } {
       const value = declared.get(dir)?.get(raw);
       return value ? resolve(dir, imports, value, hops + 1) : null;
     }
-    const target = imports.get(first);
+    const target = imports.get(first ?? "");
     const value = target ? declared.get(target)?.get(second) : undefined;
     return target && value ? resolve(target, imports, value, hops + 1) : null;
   };
@@ -97,12 +97,17 @@ function auditedEntityTypes(): { types: Set<string>; dynamic: string[] } {
   const dynamic: string[] = [];
   for (const [file, source] of sources) {
     const imports = new Map(
-      [...source.matchAll(/^\s*(?:(\w+)\s+)?"([^"]+)"\s*$/gm)]
-        .filter(([, , path]) => path.startsWith(MODULE))
-        .map(([, alias, path]) => [
-          alias ?? path.split("/").at(-1) ?? path,
-          join(root, path.slice(MODULE.length)),
-        ]),
+      [...source.matchAll(/^\s*(?:(\w+)\s+)?"([^"]+)"\s*$/gm)].flatMap(
+        ([, alias, path = ""]) =>
+          path.startsWith(MODULE)
+            ? [
+                [
+                  alias ?? path.split("/").at(-1) ?? path,
+                  join(root, path.slice(MODULE.length)),
+                ] as const,
+              ]
+            : [],
+      ),
     );
     for (const call of source.matchAll(WRITERS)) {
       const raw = fourthArgument(source, (call.index ?? 0) + call[0].length);

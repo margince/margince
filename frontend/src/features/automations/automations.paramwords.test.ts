@@ -41,14 +41,14 @@ function serverCatalogKeys(): { keys: string[]; sites: number } {
     for (const [, name, value, borrowed] of source.matchAll(
       /\b(\w+)\s*=\s*(?:"([a-z_]+)"|provenance\.(\w+))/g,
     )) {
-      const resolved = value ?? provenance.get(borrowed);
-      if (resolved) constants.set(name, resolved);
+      const resolved = value ?? provenance.get(borrowed ?? "");
+      if (name && resolved) constants.set(name, resolved);
     }
   }
   // A catalog key is a literal or a constant named for its handler (`…Name`).
   const sites = automation.flatMap((source) =>
     [...source.matchAll(/\b(?:Key:\s*|entry\()("[a-z_]+"|\w+Name\b)/g)].map(
-      ([, site]) => site,
+      ([, site]) => site ?? "",
     ),
   );
   const keys = sites.flatMap((site) =>

@@ -7263,6 +7263,16 @@ export const en = {
   "brief.agenda.system_one": "{count} system issue",
   "brief.agenda.system_other": "{count} system issues",
   "worklist.source.failed_approval": "Approved but not run",
+  "worklist.effectFailure.approval_lapsed":
+    "Approval expired before execution. Nothing changed. Request a new proposal to try again.",
+  "worklist.effectFailure.effect_not_run":
+    "This was approved, but the work it released did not run.",
+  "worklist.effectFailure.effect_unconfirmed":
+    "This was approved and sent on, but the system it went to never confirmed it, so it may have happened. Check the record before you ask for it again.",
+  "worklist.effectFailure.follow_up_failed":
+    "This was approved and the change was made, but the automation that asked for it could not be marked finished.",
+  "worklist.effectFailure.window_not_widened":
+    "The agent’s window could not be widened, so the approval has not taken effect.",
   "brief.panel.decisions": "Approvals",
   // The rail's own panel titles, after the rename that made each claim exactly
   // what its rows are. "Promises & tasks" named a thing the product does not
@@ -14281,6 +14291,56 @@ export const en = {
   "auto.runs.reasonCode.blocked":
     "a permission check or a declined approval stopped it",
   "auto.runs.outcome": "Outcome",
+  "auto.runs.when": "When",
+  "auto.runs.when.stageNamed": "Deal moved to stage {stage}",
+  "auto.runs.technical": "Technical details",
+  "auto.runs.event": "Event",
+  "auto.runs.mode": "Mode",
+  "auto.runs.did.create_task": "Created a task on {target}",
+  "auto.runs.did.create_task_titled": "Created task “{title}” on {target}",
+  "auto.runs.did.create_record": "Created a record from {target}",
+  "auto.runs.did.update_record": "Updated {target}",
+  "auto.runs.did.assign_owner": "Assigned an owner to {target}",
+  "auto.runs.did.advance_deal": "Moved {target} to its next stage",
+  "auto.runs.did.send_email": "Sent an email about {target}",
+  "auto.runs.did.emit_flow_event": "Started a follow-up step for {target}",
+  "auto.runs.did.recompute_score": "Recalculated the score of {target}",
+  "auto.runs.did.enqueue_job": "Started background work for {target}",
+  "auto.runs.did.notify": "Sent a notification about {target}",
+  "auto.runs.did.draft_email": "Drafted an email on {target}",
+  "auto.runs.did.add_list_member": "Added {target} to a Shortlist",
+  "auto.runs.queued.create_task": "Waiting for approval: a task on {target}",
+  "auto.runs.queued.create_task_titled":
+    "Waiting for approval: task “{title}” on {target}",
+  "auto.runs.queued.create_record":
+    "Waiting for approval: a new record from {target}",
+  "auto.runs.queued.update_record":
+    "Waiting for approval: a change to {target}",
+  "auto.runs.queued.assign_owner":
+    "Waiting for approval: an owner for {target}",
+  "auto.runs.queued.advance_deal":
+    "Waiting for approval: moving {target} to its next stage",
+  "auto.runs.queued.send_email":
+    "Waiting for approval: an email about {target}",
+  "auto.runs.queued.emit_flow_event":
+    "Waiting for approval: a follow-up step for {target}",
+  "auto.runs.queued.recompute_score":
+    "Waiting for approval: a new score for {target}",
+  "auto.runs.queued.enqueue_job":
+    "Waiting for approval: background work for {target}",
+  "auto.runs.queued.notify":
+    "Waiting for approval: a notification about {target}",
+  "auto.runs.queued.draft_email":
+    "Waiting for approval: a draft email on {target}",
+  "auto.runs.queued.add_list_member":
+    "Waiting for approval: adding {target} to a Shortlist",
+  "auto.runs.unnamed.contact": "a contact",
+  "auto.runs.unnamed.company": "a company",
+  "auto.runs.unnamed.deal": "a deal",
+  "auto.runs.unnamed.lead": "a lead",
+  "auto.runs.unnamed.project": "a project",
+  "auto.runs.unnamed.activity": "an activity",
+  "auto.runs.unnamed.record": "a record",
 
   "auto.initialRun.title": "Allow work for existing records?",
   "auto.initialRun.confirm": "Save and allow work",

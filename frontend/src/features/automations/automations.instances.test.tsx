@@ -163,6 +163,9 @@ describe("the configured automations table", () => {
     expect(
       within(await row("au-4")).queryByText(en["auto.modeAuto"]),
     ).toBeNull();
+    expect(
+      within(await row("au-5")).getByText(en["auto.tier.approval"]),
+    ).toBeVisible();
     const auto = within(await row("au-1")).getByText(en["auto.modeAuto"]);
     expect(auto).toHaveClass("sr-only");
     expect(
