@@ -244,11 +244,14 @@ export function useSearchCommands(
     // would read as "no matches".
     pending: enabled && result.isFetching,
     failed,
+    // Asked of the hits rather than the rows: the results page lists a hit the
+    // palette has no row for. A failed refresh keeps the answer before it.
     empty:
+      !failed &&
       !result.isFetching &&
       answer !== undefined &&
       foldForSearch(answer.q) === foldForSearch(typed) &&
-      commands.length === 0,
+      answer.hits.length === 0,
     failure: problemMessageOf(result.error, t, t("palette.searchFailed")),
   };
 }
