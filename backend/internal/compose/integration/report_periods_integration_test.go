@@ -6,7 +6,7 @@
 package integration
 
 // Period buckets (year, quarter, month) over the governed run_report tool and
-// the analytics door: each report cuts them from its own date, in the
+// the analytics door. Each report cuts them from its own date, in the
 // installation's zone and financial year.
 
 import (
@@ -56,8 +56,8 @@ func assertBuckets(t *testing.T, what string, got, want map[string]string) {
 	}
 }
 
-// Each pair sits half an hour either side of a Berlin midnight, so a cut in
-// UTC would put the second of each pair in the bucket before.
+// Each pair sits half an hour either side of a Berlin midnight. A cut in UTC
+// puts the second of each pair in the bucket before.
 var (
 	berlinNewYearsEve  = time.Date(2025, 12, 31, 22, 30, 0, 0, time.UTC)
 	berlinNewYearsDay  = time.Date(2025, 12, 31, 23, 30, 0, 0, time.UTC)
@@ -127,8 +127,8 @@ func TestActivityPeriodsFollowTheFinancialYear(t *testing.T) {
 	}
 }
 
-// A task filed on a company only its owner may see counts for that owner and
-// not for a colleague, in the same month as the meeting both can see.
+// A task filed on a company only its owner may see counts for that owner. A
+// colleague counts only the meeting both may see, in the same month.
 func TestAnActivityPeriodCountsOnlyWhatTheReaderMaySee(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()

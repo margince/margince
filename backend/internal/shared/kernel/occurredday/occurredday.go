@@ -371,9 +371,9 @@ func AheadSQL(alias, now string) string {
 }
 
 // LocalDayInstantSQL is an instant on the local date the activity under alias
-// names in zone: an instant as stored, a day entry at noon of its own date in
-// zone. A period cut from it in zone then holds a day entry by its date, which
-// noon UTC alone misses east of UTC+12. alias and zone are SQL the caller
+// names in zone. An instant stays as stored. A day entry moves to noon of its
+// own date in zone. A period cut in zone then holds a day entry by its date,
+// which noon UTC misses east of UTC+12. alias and zone are SQL the caller
 // renders.
 func LocalDayInstantSQL(alias, zone string) string {
 	return fmt.Sprintf(`(CASE WHEN %[1]s.occurred_precision = 'day'
