@@ -6919,6 +6919,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.view.weekly": "Tuần",
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
+  "brief.updating": "Đang cập nhật…",
   "brief.briefedAt": "Margince tóm tắt lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",

@@ -2691,6 +2691,7 @@
   "brief.view.label": "Home-Ansicht",
   "brief.view.morning": "Heute",
   "brief.view.weekly": "Woche",
+  "brief.updating": "Wird aktualisiert…",
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",

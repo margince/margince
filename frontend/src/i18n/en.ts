@@ -7076,6 +7076,7 @@ export const en = {
   "brief.view.weekly": "Weekly",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
+  "brief.updating": "Updating…",
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",

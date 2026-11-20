@@ -73222,7 +73222,7 @@ type Worklist struct {
 	ScopeTruncated *bool `json:"scope_truncated,omitempty"`
 
 	// ServedStale True when this answer is Home's kept answer past its five-minute freshness,
-	// served while the server reads it again. It still holds every access rule the
+	// or older than the reader's own latest write, served while the server reads it again. It still holds every access rule the
 	// fresh read would apply. A client asks again a few seconds later for the fresh
 	// answer. Absent or false means the answer is fresh.
 	ServedStale *bool `json:"served_stale,omitempty"`
