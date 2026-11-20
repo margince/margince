@@ -40,9 +40,9 @@ func groupedShapeFor(perType int, in Input) (groupedShape, error) {
 // matches cannot crowd another's out. The cap is one past perType: the extra
 // row is how page tells a type that holds more from one that was exhausted.
 //
-// A branch with own rows reads them first. When they fill the cap above every
-// score the rest of the branch can reach, the rest and its fallback arms are
-// never run: the filled check is a constant, so Postgres skips their plans.
+// A branch with own rows reads them first. They may fill the cap above every
+// score the rest of the branch can reach. Then the rest and its fallback arms
+// never run, because Postgres plans the filled check as a constant.
 func (g groupedShape) statement(branches []unionBranch, within string, arg func(any) int) string {
 	capPos := arg(g.perType + 1)
 	capped := func(sql string, conditions ...string) string {

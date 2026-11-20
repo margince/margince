@@ -26,9 +26,9 @@ import (
 )
 
 // A grouped page shows, for every type, the hits a ranked search of that type
-// alone puts first, and names the type as holding more exactly when it does.
-// The corpus mixes types whose own matches fill the page with types found only
-// by a contained address, a domain, or the company a contact works at.
+// alone puts first. It names the type as holding more when the ranked search
+// has more. In the corpus, some types fill the page by name. Others are found
+// only by a contained address, a domain, or the company a contact works at.
 func TestAGroupedPageKeepsEachTypesRankedHits(t *testing.T) {
 	e := integration.Setup(t)
 	seedGroupedCorpus(t, e)
@@ -57,7 +57,7 @@ func TestAGroupedPageKeepsEachTypesRankedHits(t *testing.T) {
 			}
 		}
 	}
-	if hits := hitsOf(mustSearch(t, store, e.Admin(), "ang"), "contact"); len(hits) == 0 {
+	if hits := hitsOf(mustSearch(e.Admin(), t, store, "ang"), "contact"); len(hits) == 0 {
 		t.Error(`"ang" found no contact: the corpus no longer reaches the contained-address rows`)
 	}
 }
@@ -98,7 +98,7 @@ func paletteInput(query string, perType *int, types []string) search.Input {
 	return in
 }
 
-func mustSearch(t *testing.T, store *search.Store, ctx context.Context, query string) []search.Hit {
+func mustSearch(ctx context.Context, t *testing.T, store *search.Store, query string) []search.Hit {
 	t.Helper()
 	perType := 3
 	page, err := store.Search(ctx, paletteInput(query, &perType, nil))
@@ -118,9 +118,9 @@ func hitsOf(hits []search.Hit, entity string) []string {
 	return out
 }
 
-// seedGroupedCorpus writes, through the contacts store: ten contacts, companies
-// and leads whose names start "co", and records that only an address, a domain
-// or an employer reaches.
+// seedGroupedCorpus writes through the contacts store. Ten contacts, companies
+// and leads start with "co". Other records are reached only by an address, a
+// domain or an employer.
 func seedGroupedCorpus(t *testing.T, e *integration.Env) {
 	t.Helper()
 	for i := range 10 {
@@ -129,8 +129,8 @@ func seedGroupedCorpus(t *testing.T, e *integration.Env) {
 		seedLead(t, e, fmt.Sprintf("Corey %c", 'A'+i), fmt.Sprintf("corey%d@south.example", i))
 		seedContact(t, e, fmt.Sprintf("O Reid %c", 'A'+i), fmt.Sprintf("reid%d@east.example", i))
 	}
-	// "o'rei" matches the O Reids by name, while Ana's address and her whole
-	// word "orei" put her first: a page filled by the O Reids must still read her.
+	// "o'rei" matches the O Reids by name. Ana's address and her word "orei"
+	// rank her first, so a page the O Reids fill must still read her.
 	seedContact(t, e, "Ana Orei", "ana@orei.example")
 	seedContact(t, e, "Cora Alpha", "cora.alpha@north.example")
 	for name, email := range map[string]string{
@@ -242,6 +242,7 @@ func containedScanRan(t *testing.T, pool *pgxpool.Pool, statement string, args [
 	return plan[0].Plan.containedScanRan()
 }
 
+//nolint:tagliatelle // fixed by the server's plan format
 type planNode struct {
 	Loops       int        `json:"Actual Loops"`
 	Filter      string     `json:"Filter"`

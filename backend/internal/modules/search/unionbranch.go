@@ -16,9 +16,7 @@ type unionBranch struct {
 	entity string
 	sql    string
 	// own, when set, is the same branch with only the rows that earn a text rank
-	// or an identifier tier. Every row sql adds beyond it scores at most
-	// unrankedCeiling, so a grouped page whose own rows fill the type above that
-	// score needs nothing else of it.
+	// or an identifier tier. Every other row of sql scores at most unrankedCeiling.
 	own             string
 	unrankedCeiling float64
 	// fallbackOf names the branch whose own rows, once they fill the page, rank
@@ -37,9 +35,8 @@ type branchQuery struct {
 }
 
 // admittedBranchSQL builds one ranked SELECT per requested-and-admitted
-// entity type. A hit is a read twice over: object RBAC first (a role
-// without contact.read gets no contact hits — search must not out-see the
-// entity lists), then the row scope.
+// entity type. A hit is a read twice over: object RBAC first, then the row
+// scope. A role without contact.read gets no contact hits, as in the lists.
 func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool,
 	identifierPos identifierBinder, addressCompanies addressAssociation, arg func(any) int,
 ) ([]unionBranch, error) {
@@ -84,9 +81,8 @@ func branchSelect(ctx context.Context, branch searchBranch, q branchQuery, arm i
 	if err != nil || !admitted {
 		return "", admitted, err
 	}
-	// What this branch matches and how it scores live with the expressions
-	// in typedquery.go — including the parse configurations each entity
-	// uses and the rule that only the fragment widens.
+	// What this branch matches and how it scores live in typedquery.go, with
+	// each entity's parse configurations and the rule that only the fragment widens.
 	tsquery := matchExpression(branch.entity, q.headPos, q.tailPos, q.hasFragment)
 
 	snippet, err := branch.excerpt(ctx, arg)
