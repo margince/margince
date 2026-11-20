@@ -6,11 +6,15 @@ package search
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // activitySnippetRunes is the length the activity branch cuts its excerpt to,
@@ -31,52 +35,31 @@ func renderSystemText(ctx context.Context, tx pgx.Tx, hits []Hit) error {
 			activityIDs = append(activityIDs, hits[i].ID)
 		}
 	}
-	if len(activityIDs) == 0 {
-		return nil
-	}
-	args := []any{activityIDs}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT id, coalesce(subject, ''), coalesce(body, ''), system_text
-		FROM activity WHERE id = ANY($%d) AND system_text IS NOT NULL`, len(args)), args...)
+	written, err := storekit.SystemWrittenActivities(ctx, tx, activityIDs)
 	if err != nil {
-		return fmt.Errorf("search: reading the system text of this page's activities: %w", err)
+		return fmt.Errorf("search: %w", err)
 	}
-	defer rows.Close()
-	type written struct {
-		subject, body string
-		message       *systemtext.Message
-	}
-	byID := map[ids.UUID]written{}
-	for rows.Next() {
-		var id ids.UUID
-		var row written
-		if err := rows.Scan(&id, &row.subject, &row.body, &row.message); err != nil {
-			return fmt.Errorf("search: reading the system text of this page's activities: %w", err)
-		}
-		byID[id] = row
-	}
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("search: reading the system text of this page's activities: %w", err)
-	}
-	reader := systemtext.Locale(ctx)
-	for i := range hits {
-		row, ok := byID[hits[i].ID]
-		if hits[i].Type != hitTypeActivity || !ok {
-			continue
-		}
-		if hits[i].Title == row.subject {
-			hits[i].Title = row.message.SubjectIn(row.subject, reader)
-		}
-		if hits[i].Snippet != "" && hits[i].Snippet == firstRunes(row.body, activitySnippetRunes) {
-			hits[i].Snippet = firstRunes(row.message.BodyIn(row.body, reader), activitySnippetRunes)
-		}
-	}
+	nameHits(hits, written, systemtext.Locale(ctx))
 	return nil
 }
 
-func firstRunes(text string, limit int) string {
-	runes := []rune(text)
-	if len(runes) <= limit {
-		return text
+// nameHits renders each hit whose words Margince wrote in the reader's language.
+func nameHits(hits []Hit, written map[ids.UUID]storekit.SystemWords, reader textlang.Lang) {
+	for i := range hits {
+		words, ok := written[hits[i].ID]
+		if hits[i].Type != hitTypeActivity || !ok {
+			continue
+		}
+		if hits[i].Title == words.Subject {
+			hits[i].Title = words.Message.SubjectIn(words.Subject, reader)
+		}
+		if hits[i].Snippet != "" && hits[i].Snippet == excerptOf(words.Body) {
+			hits[i].Snippet = excerptOf(words.Message.BodyIn(words.Body, reader))
+		}
 	}
-	return string(runes[:limit])
+}
+
+// excerptOf is a body cut the way the activity branch cuts it.
+func excerptOf(body string) string {
+	return strings.TrimSpace(textcut.Runes(body, activitySnippetRunes))
 }

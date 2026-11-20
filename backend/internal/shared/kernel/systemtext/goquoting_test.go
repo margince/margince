@@ -39,3 +39,20 @@ func TestTextStoredWithGoQuotingStillBindsAndIsShownInTheReadersLanguage(t *test
 		t.Fatalf("a German reader got %s", shown)
 	}
 }
+
+// Each code the old spelling is kept for still quotes a value, so the list
+// cannot keep a code that no longer needs it.
+func TestEveryGoQuotedCodeStillQuotesAValue(t *testing.T) {
+	for code := range goQuotedCodes {
+		definition, ok := definitionOf(code)
+		if !ok {
+			t.Errorf("%s is kept for Go quoting but is not in the catalog", code)
+			continue
+		}
+		for _, lang := range textlang.Shipped {
+			if wordsIn(code, definition, lang, goQuoted) == wordsIn(code, definition, lang, ownMarks) {
+				t.Errorf("%s in %s quotes no value, so it has no old spelling to keep", code, lang)
+			}
+		}
+	}
+}

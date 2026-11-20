@@ -70,3 +70,14 @@ func TestQuoteUsesTheLanguagesMarksAndEscapesNothing(t *testing.T) {
 		}
 	}
 }
+
+func TestEachLanguageNamesItsOwnMarks(t *testing.T) {
+	t.Parallel()
+	for lang, want := range map[textlang.Lang][2]string{
+		textlang.English: {"“", "”"}, textlang.German: {"„", "“"}, textlang.Vietnamese: {"“", "”"},
+	} {
+		if opening, closing := langcopy.For(string(lang)).Marks(); opening != want[0] || closing != want[1] {
+			t.Errorf("%s marks are %s…%s", lang, opening, closing)
+		}
+	}
+}

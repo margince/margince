@@ -20,7 +20,7 @@ type leadNextTask struct {
 }
 
 // nameNextTask names the lead's next task for the reader: in their language
-// when Margince wrote it, as typed when a person did.
+// when Margince wrote it, as typed otherwise.
 func nameNextTask(l *crmcontracts.Lead, raw []byte, reader textlang.Lang) error {
 	if len(raw) == 0 {
 		return nil

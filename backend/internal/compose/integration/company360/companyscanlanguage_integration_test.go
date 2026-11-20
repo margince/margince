@@ -6,66 +6,53 @@
 package company360
 
 import (
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-func TestScanFailuresKeepTheirWrittenLanguage(t *testing.T) {
-	for _, tc := range []struct{ language, worker, model string }{
-		{"en", "No worker", "The model's answer"},
-		{"de", "Es ist kein Worker", "Die Antwort des Modells"},
-		{"vi", "Không có tiến trình", "Câu trả lời của mô hình"},
-	} {
-		t.Run(tc.language, func(t *testing.T) {
-			e := integration.Setup(t)
-			at := clocktest.Now(t)
-			now := func() time.Time { return at }
-			integration.SetBaseLanguage(e.Admin(), t, e.Pool, tc.language)
-			company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Original account", &e.Rep1))
-			view := company360Service(e)
-			noWorker := companyscan.NewService(e.Pool, view, view, nil, nil, nil, now, nil)
-			got, err := noWorker.Ensure(e.Admin(), company, false)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got.State != crmcontracts.CompanyScanStateDegraded || got.DegradeReason == nil || !strings.HasPrefix(*got.DegradeReason, tc.worker) {
-				t.Fatalf("no-worker result: %+v", got)
-			}
-			seedInboundAsk(t, e, company.UUID, "workspace", at)
-			lane := &failingLane{}
-			var queued []companyscan.Queued
-			svc := scanClocked(e, lane, &queued, now)
-			rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-			got = readOnce(rep, t, svc, company, &queued)
-			if got.State != crmcontracts.CompanyScanStateDegraded || got.DegradeReason == nil || !strings.HasPrefix(*got.DegradeReason, tc.model) || lane.calls == 0 {
-				t.Fatalf("unusable-model result: %+v", got)
-			}
-			for _, request := range lane.requests {
-				if !strings.Contains(request.System, promptlang.Rule(tc.language)) {
-					t.Fatal("model did not receive base language")
-				}
-			}
-			original := *got.DegradeReason
-			nextLanguage := "en"
-			if tc.language == "en" {
-				nextLanguage = "de"
-			}
-			integration.SetBaseLanguage(e.Admin(), t, e.Pool, nextLanguage)
-			replay, err := svc.Get(rep, company)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if replay.Stale == nil || !*replay.Stale || replay.DegradeReason == nil || *replay.DegradeReason != original {
-				t.Fatalf("read rewrote stored explanation: %+v", replay)
-			}
-		})
+// A German reader opens the account and the worker reads it in the seat's own
+// language. The read is current, because a task Margince wrote is named in the
+// scan's language on both sides.
+func TestAScanOpenedInGermanAndReadByTheWorkerIsCurrent(t *testing.T) {
+	e := integration.Setup(t)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
+	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
+	subject := systemtext.Literal("automation.new_lead")
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, Source: "manual",
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("automation.new_lead")},
+		Links:      []activities.ActivityLinkInput{{EntityType: "company", EntityID: company.UUID}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	lane := &quotingLane{messageID: message.String(), quote: "wants to see a sample of the driver reports"}
+	var queued []companyscan.Queued
+	svc := scanClocked(e, lane, &queued, databaseClock(t))
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	german := systemtext.WithLocale(rep, textlang.German)
+
+	if _, err := svc.Ensure(german, company, false); err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+	if len(queued) != 1 {
+		t.Fatalf("the open queued %d reads, want 1", len(queued))
+	}
+	if err := svc.Run(principal.WithCorrelationID(rep, queued[0].ScanID), queued[0].ScanID, company); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	got, err := svc.Get(german, company)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.State != crmcontracts.CompanyScanStateDone || (got.Stale != nil && *got.Stale) {
+		t.Errorf("the German reader's scan is %q stale=%v, want a current read", got.State, got.Stale)
 	}
 }

@@ -126,6 +126,32 @@ func TestCensusReportsGoQuoting(t *testing.T) {
 	}
 }
 
+func TestCensusReportsAnIndexedGoQuote(t *testing.T) {
+	t.Parallel()
+	type table struct{ Named langcopy.Phrase }
+	bad := table{Named: langcopy.Phrase{En: "Move “%[1]s”", De: "%[1]q voranbringen", Vi: "Thúc đẩy “%[1]s”"}}
+	s := run(func(r reporter) { Census(r, bad) })
+	if !reports(s.errors, "Named with %q") {
+		t.Fatalf("an indexed %%[1]q was not reported: %v", s.errors)
+	}
+}
+
+func TestCensusReportsAValueQuotedInAnotherLanguagesMarks(t *testing.T) {
+	t.Parallel()
+	type table struct{ Named langcopy.Phrase }
+	bad := table{Named: langcopy.Phrase{En: "Move “%s”", De: "“%s” voranbringen", Vi: "Thúc đẩy \"%s\""}}
+	s := run(func(r reporter) { Census(r, bad) })
+	for _, want := range []string{"de quotes a value in Named with “…”", `vi quotes a value in Named with "…"`} {
+		if !reports(s.errors, want) {
+			t.Errorf("%q was not reported: %v", want, s.errors)
+		}
+	}
+	good := table{Named: langcopy.Phrase{En: "Move “%s”", De: "„%s“ voranbringen", Vi: "Thúc đẩy “%s”"}}
+	if s := run(func(r reporter) { Census(r, good) }); len(s.errors) != 0 {
+		t.Errorf("each language's own marks were reported: %v", s.errors)
+	}
+}
+
 func TestCensusNamesABadEntryInAMapField(t *testing.T) {
 	t.Parallel()
 	type table struct{ Items map[string]langcopy.Phrase }

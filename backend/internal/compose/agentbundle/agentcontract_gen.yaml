@@ -34149,7 +34149,7 @@ components:
       required: [activity_id, subject, overdue]
       properties:
         activity_id: {type: string, format: uuid}
-        subject: {type: string}
+        subject: {type: string, description: 'The task''s subject. A task Margince wrote is named in the reader''s language, as its History row names it; a task typed by hand reads as written.'}
         body:
           type: [string, 'null']
           description: |-
@@ -43207,7 +43207,7 @@ components:
           readOnly: true
           description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         open_task_count: {type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them.'}
-        next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.'}
+        next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader''s language, as its History row names it; a task typed by hand reads as written.'}
         next_task_due_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.'}
         score_reason: {type: [string, 'null'], readOnly: true, description: 'The highest-impact factor in the retained current score explanation, for a compact queue reason.'}
         source: {type: string, description: 'How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from.'}
@@ -50691,7 +50691,7 @@ components:
       properties:
         type: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
         id: {type: string, format: uuid}
-        title: {type: [string, 'null'], description: Display label (name/subject).}
+        title: {type: [string, 'null'], description: 'Display label (name/subject). An activity Margince wrote is titled in the reader''s language, as its History row names it.'}
         snippet: {type: [string, 'null']}
         score: {type: [number, 'null'], description: Relevance score.}
         identifier_match:

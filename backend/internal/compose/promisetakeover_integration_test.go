@@ -43,10 +43,17 @@ type takeOverFixture struct {
 
 func setupTakeOver(t *testing.T) takeOverFixture {
 	t.Helper()
+	return setupTakeOverAbout(t, "Questions about the offer")
+}
+
+// setupTakeOverAbout is setupTakeOver with a promise made in a message with
+// the given subject.
+func setupTakeOverAbout(t *testing.T, subject string) takeOverFixture {
+	t.Helper()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
-	claim := ids.UUID(seedWorklistPromise(t, e, contact, "Send the signed contract by Friday").Id)
+	claim := ids.UUID(seedClaimAbout(t, e, contact, subject, "Send the signed contract by Friday", "commitment_ours").Id)
 	source := ids.MustParse(e.WsScalar(t, `SELECT source_activity_id::text FROM conversation_claim WHERE id = $1`, claim))
 	return takeOverFixture{
 		e: e, h: newPromiseTakeOverHandlers(e.Pool), contact: contact, claim: claim, source: source,
@@ -344,9 +351,8 @@ func TestAPromiseAnAgentRecordedIsOpenOnItsContact(t *testing.T) {
 // A source subject with quote marks is named in the language's own marks with
 // no backslash. A second press still finds the first task.
 func TestAPromiseFromAQuotedSubjectIsTakenOverOnceWithoutBackslashes(t *testing.T) {
-	f := setupTakeOver(t)
 	subject := `Re: „Angebot“ "Q4"`
-	f.e.WsExec(t, `UPDATE activity SET subject = $1 WHERE id = $2`, subject, f.source)
+	f := setupTakeOverAbout(t, subject)
 	first, err := f.h.TakeOver(f.priya, f.claim)
 	if err != nil {
 		t.Fatalf("taking over the promise: %v", err)

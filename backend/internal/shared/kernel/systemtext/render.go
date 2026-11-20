@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -22,18 +23,33 @@ const (
 	goQuoted
 )
 
-// goQuoting turns a quoted argument back into Go's %q, the spelling stored
-// before the templates took each language's own marks.
-var goQuoting = strings.NewReplacer("“%s”", "%q", "„%s“", "%q")
+// goQuotedCodes are the templates that wrote %q before they took each
+// language's own marks. Text stored then still binds to them; no other
+// template ever had that spelling.
+var goQuotedCodes = map[string]bool{
+	"agent.accountSendFiled": true, "agent.booking": true, "agent.mergeMembers": true, "agent.mergeTags": true,
+	"agent.sendMessage": true, "agent.sendSubject": true, "approval.draftedReplyWaiting": true,
+	"approval.heldNotSent": true, "approval.taskDueAsked": true, "commitment.explanation": true,
+	"commitment.taken_over": true, "deals.draftFollowUp": true,
+}
+
+// goQuoting turns each language's quoted value back into Go's %q.
+var goQuoting = func() *strings.Replacer {
+	var pairs []string
+	for _, lang := range textlang.Shipped {
+		pairs = append(pairs, langcopy.Quoted.In(lang), "%q")
+	}
+	return strings.NewReplacer(pairs...)
+}()
 
 func (c Component) renderBounded(lang textlang.Lang, original string, bounded bool) (string, error) {
 	return c.renderSpelled(lang, 0, original, bounded, ownMarks)
 }
 
 // wordsIn is the template in one language, in the spelling asked for.
-func wordsIn(definition Definition, lang textlang.Lang, spell spelling) string {
+func wordsIn(code string, definition Definition, lang textlang.Lang, spell spelling) string {
 	words := definition.Words.In(lang)
-	if spell == goQuoted {
+	if spell == goQuoted && goQuotedCodes[code] {
 		return goQuoting.Replace(words)
 	}
 	return words
@@ -66,7 +82,7 @@ func (c Component) renderSpelled(lang textlang.Lang, depth int, original string,
 		values[i] = value
 	}
 
-	sentence := wordsIn(definition, lang, spell)
+	sentence := wordsIn(c.Code, definition, lang, spell)
 	if len(values) > 0 {
 		sentence = fmt.Sprintf(sentence, values...)
 	}
