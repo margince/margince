@@ -453,6 +453,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       input instanceof Request ? input.url : String(input),
     );
     expect(asked.some((url) => url.includes("per_type=3"))).toBe(true);
+    expect(asked.some((url) => url.includes("typeahead=true"))).toBe(true);
   });
 
   // A partner is a property of a company rather than a kind of its own, so the

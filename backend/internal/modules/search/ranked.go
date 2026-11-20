@@ -15,7 +15,7 @@ import (
 // and the rows that statement returns into a page: one ranked list
 // (rankedShape), or a few hits of every type (groupedShape).
 type pageShape interface {
-	statement(branches []string, within string, arg func(any) int) string
+	statement(branches []unionBranch, within string, arg func(any) int) string
 	page(hits []Hit) Page
 }
 
@@ -39,7 +39,7 @@ type rankedShape struct {
 	limit  int
 }
 
-func (r rankedShape) statement(branches []string, within string, arg func(any) int) string {
+func (r rankedShape) statement(branches []unionBranch, within string, arg func(any) int) string {
 	var where []string
 	if within != "" {
 		where = append(where, within)
@@ -52,7 +52,7 @@ func (r rankedShape) statement(branches []string, within string, arg func(any) i
 			`(score < $%d OR (score = $%d AND (rtype, id) > ($%d, $%d)))`,
 			score, score, arg(r.cursor.Type), arg(r.cursor.ID)))
 	}
-	sql := "SELECT " + hitColumns + " FROM (" + strings.Join(branches, " UNION ALL ") + ") ranked"
+	sql := "SELECT " + hitColumns + " FROM (" + unionSQL(branches) + ") ranked"
 	if len(where) > 0 {
 		sql += " WHERE " + strings.Join(where, " AND ")
 	}
