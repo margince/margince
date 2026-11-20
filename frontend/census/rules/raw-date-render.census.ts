@@ -26,6 +26,7 @@
 // Not seen: a date field copied into a local first, or built into a template
 // string.
 
+import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { stable } from "../../src/format/collate";
 import type { CensusFile, CensusRule } from "../tree";
@@ -63,11 +64,37 @@ function declaresADate(declaration: ts.Declaration): boolean {
   );
 }
 
+// The names of the fields the contract declares as a date or a moment, judged
+// by the same test the checker's answer goes through. A property access under
+// any other name cannot be one. So the checker is asked only about these, which
+// keeps the rule within the suite's budget.
+const WIRE_DATE_NAMES = (() => {
+  const contract = new URL("../../src/api/schema.d.ts", import.meta.url);
+  const file = ts.createSourceFile(
+    WIRE_TYPES,
+    readFileSync(contract, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const names = new Set<string>();
+  const collect = (node: ts.Node): void => {
+    if (ts.isPropertySignature(node) && declaresADate(node)) {
+      names.add(node.name.getText(file).replace(/^["']|["']$/g, ""));
+    }
+    ts.forEachChild(node, collect);
+  };
+  collect(file);
+  return names;
+})();
+
 function isWireDate(
   node: ts.Node,
   checker: ts.TypeChecker,
 ): node is ts.PropertyAccessExpression {
-  if (!ts.isPropertyAccessExpression(node)) {
+  if (
+    !ts.isPropertyAccessExpression(node) ||
+    !WIRE_DATE_NAMES.has(node.name.text)
+  ) {
     return false;
   }
   const declared = checker.getSymbolAtLocation(node.name)?.declarations ?? [];

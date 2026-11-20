@@ -86,7 +86,11 @@ describe("the keyboard shortcuts dialog", () => {
     const dialog = renderDialog();
     for (const entry of KEYMAP) {
       const group = groupNamed(dialog, GROUP_TITLES[entry.group]);
-      const caps = capsBeside(group, en[entry.labelKey]).join(" ");
+      const label =
+        entry.id === "goto.progress"
+          ? en["nav.myProgress"]
+          : en[entry.labelKey];
+      const caps = capsBeside(group, label).join(" ");
       expect(caps).toContain(bindingCaps(entry.keys, english).join(" "));
     }
   });
@@ -105,6 +109,23 @@ describe("the keyboard shortcuts dialog", () => {
     expect(within(goTo).getByText("Press G, then the letter.")).toBeVisible();
     const contacts = within(goTo).getByText("Contacts", { selector: "dt" });
     expect(contacts.nextElementSibling).toHaveTextContent("GthenC");
+  });
+
+  it("draws a sequence that repeats its key without a React key clash", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const goTo = groupNamed(renderDialog(), "Go to");
+    const goals = within(goTo).getByText("Sales goals", { selector: "dt" });
+    expect(goals.nextElementSibling).toHaveTextContent("GthenG");
+    expect(logged).not.toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
+  it("names Progress as the sidebar does for this reader", () => {
+    const goTo = groupNamed(renderDialog(), "Go to");
+    expect(
+      within(goTo).getByText("My progress", { selector: "dt" }),
+    ).toBeVisible();
+    expect(within(goTo).queryByText("Progress", { selector: "dt" })).toBeNull();
   });
 
   it("lists no way to a destination the installation turned off", () => {
