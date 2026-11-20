@@ -168,8 +168,7 @@ func extensionTools(dir string) ([]unitTool, error) {
 }
 
 // lanePassportScopes are the scopes scripts/e2e-llm.sh mints its passports with.
-// The key is a scenario's `passport:` line: absent, "wide" (draft and send), "research" (enrich),
-// "rep" (a rep seat's read and write) or "readonly" (read alone).
+// The key is a scenario's `passport:` line: absent, "wide", "research", "rep" or "readonly".
 //
 // It is the LANE'S OWN CHOICE, restated here because the page's central claim is
 // about the surface a passport is served, and a claim about a caller must name
@@ -186,18 +185,9 @@ var lanePassportScopes = map[string]map[principal.Scope]bool{
 		principal.ScopeDraft: true,
 		principal.ScopeSend:  true,
 	},
-	"research": {
-		principal.ScopeRead:   true,
-		principal.ScopeWrite:  true,
-		principal.ScopeEnrich: true,
-	},
-	"rep": {
-		principal.ScopeRead:  true,
-		principal.ScopeWrite: true,
-	},
-	"readonly": {
-		principal.ScopeRead: true,
-	},
+	"research": {principal.ScopeRead: true, principal.ScopeWrite: true, principal.ScopeEnrich: true},
+	"rep":      {principal.ScopeRead: true, principal.ScopeWrite: true},
+	"readonly": {principal.ScopeRead: true},
 }
 
 // TestTheCoveragePageCountsTheSurfaceItNames is the census.

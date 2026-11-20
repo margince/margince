@@ -46,11 +46,13 @@ says `passport: wide`. Then the lane gives a second passport that adds the
 them, these tools are never in the list the model sees.
 
 The admin mints those three. Two more measure a user with fewer rights.
-`passport: rep` is minted by the seeded rep Lena Fischer, with `read` and `write`. Her row scope is
-her own records, and every seeded deal is Sofia Meier's, so a write on a deal is refused.
-`passport: readonly` is the admin's, with `read` alone, so no tool that writes is offered. On
-these two, the lane reads the end state through the admin's own passport, because the narrow
-seat does not see every record a case names.
+`passport: rep` is minted by a seeded seat with the `rep` role, with `read` and `write`. That
+role writes only the records the seat owns, and another seat owns every seeded deal, so a write
+on a deal is refused. `passport: readonly` is the admin's, with `read` alone, so no tool that
+writes is offered.
+
+On these two, the lane reads the end state through the admin's passport. The narrow seat does
+not see every record a case names.
 
 The stack of the lane has no connected mailbox and no Telegram bot. So
 a send is refused after the model calls it, and before any data leaves. The
