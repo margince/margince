@@ -9,14 +9,20 @@ import { AuthSplash } from "./bootsplash";
 import { TrialEndedScreen } from "./trialended";
 
 // Split off: the setup carries the QR encoder, which the sign-in surface must not download.
-const ForcedMfaScreen = lazy(async () => ({
-  default: (await import("../features/sign-in/forcedmfa")).ForcedMfaScreen,
-}));
+const ForcedMfaScreen = lazy(
+  async () => ({
+    default: (await import("../features/sign-in/forcedmfa")).ForcedMfaScreen,
+  }),
+  "essential",
+);
 
-const ForcedPasswordChangeScreen = lazy(async () => ({
-  default: (await import("../features/sign-in/forcedpassword"))
-    .ForcedPasswordChangeScreen,
-}));
+const ForcedPasswordChangeScreen = lazy(
+  async () => ({
+    default: (await import("../features/sign-in/forcedpassword"))
+      .ForcedPasswordChangeScreen,
+  }),
+  "essential",
+);
 
 type ConfinedKind = Extract<
   AuthProbeKind,

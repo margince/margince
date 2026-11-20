@@ -7,6 +7,7 @@ import { App } from "./App";
 import { createQueryClient } from "./app/queryclient";
 import { LocaleProvider } from "./i18n";
 import { parseHash, routeHash } from "./lib/router";
+import { readStored, STORAGE_KEYS, writeStored } from "./lib/storage";
 import { memoryStorage, teardownApp, wizardRow } from "./testing/appharness";
 import { type GrantSpec, meFixture } from "./testing/mefixture";
 // The screens these cases open, loaded while the file is collected. A screen's
@@ -633,6 +634,54 @@ describe("onboarding gate", () => {
     await waitFor(() =>
       expect(window.location.hash).toBe("#/onboarding/company"),
     );
+  });
+
+  const USER = meFixture().user.id;
+  const finishedMark = {
+    family: STORAGE_KEYS.onboardingComplete,
+    member: USER,
+  };
+
+  it("paints the shell for a user this browser saw finish, while the journey reads are out", async () => {
+    window.location.hash = "#/contacts";
+    writeStored(finishedMark, "1");
+    stubCompany(403, undefined, { roles: ["rep"] });
+    const releaseRollout = holdAnswersTo(ROLLOUT);
+    const releaseRow = holdAnswersTo("/v1/onboarding/state");
+    mount();
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    expect(requestsEndingIn(ROLLOUT)).not.toHaveLength(0);
+    releaseRollout();
+    await waitFor(() =>
+      expect(requestsEndingIn("/v1/onboarding/state")).not.toHaveLength(0),
+    );
+    releaseRow();
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+  });
+
+  it("still sends a remembered user whose journey reads unfinished to onboarding, and forgets the mark", async () => {
+    window.location.hash = "#/contacts";
+    writeStored(finishedMark, "1");
+    stubCompany(
+      403,
+      { row: wizardRow("voice"), status: 200 },
+      { roles: ["rep"] },
+    );
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+    expect(readStored(finishedMark)).toBeNull();
+  });
+
+  it("remembers a journey the row reads as complete, for this user only", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(403, undefined, { roles: ["rep"] });
+    mount();
+    await waitFor(() => expect(readStored(finishedMark)).toBe("1"));
+    expect(
+      readStored({ family: STORAGE_KEYS.onboardingComplete, member: "other" }),
+    ).toBeNull();
   });
 
   // Serialised behind the company read, the rollout would add a round trip to

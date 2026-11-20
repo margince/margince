@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { stable } from "./format/collate";
 import { meFixture } from "./testing/mefixture";
 
 vi.mock("react-dom/client", () => ({
@@ -27,6 +28,7 @@ afterEach(async () => {
 
 it("registers the prepared session before mounting when the preparation chunk arrives last", async () => {
   location.hash = "#/analytics/performance";
+  localStorage.setItem("margince.session.seen", "1");
   const { loadEssentialLocale } = await import("./i18n/catalogs");
   await loadEssentialLocale("en");
   let releaseChunk: () => void = () => {
@@ -70,7 +72,7 @@ it("registers the prepared session before mounting when the preparation chunk ar
   await vi.waitFor(() => expect(queryClient.getQueryData(["me"])).toEqual(me));
 });
 
-it("mounts another route without importing Analytics preparation", async () => {
+it("asks nothing before mounting another route on a browser that never had a session", async () => {
   location.hash = "#/deals";
   const { loadLocale } = await import("./i18n/catalogs");
   await loadLocale("en");
@@ -79,4 +81,49 @@ it("mounts another route without importing Analytics preparation", async () => {
   await import("./main");
   await vi.waitFor(() => expect(createRoot).toHaveBeenCalledTimes(1));
   expect(fetch).not.toHaveBeenCalled();
+});
+
+it("starts the shell's reads and the screen's code together, before the language arrives", async () => {
+  location.hash = "#/deals/d1";
+  localStorage.setItem("margince.session.seen", "1");
+  let releaseLanguage = () => {};
+  const language = new Promise<void>((resolve) => {
+    releaseLanguage = resolve;
+  });
+  vi.doMock("./i18n/essential/en_gen.json", async () => {
+    await language;
+    return vi.importActual("./i18n/essential/en_gen.json");
+  });
+  vi.doMock("./i18n/en", async () => {
+    await language;
+    return vi.importActual("./i18n/en");
+  });
+  const { SCREEN_CODE } = await import("./App.screencode");
+  const screenCode = vi.spyOn(SCREEN_CODE, "deals");
+  const paths: string[] = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+    paths.push(
+      new URL(input instanceof Request ? input.url : String(input)).pathname,
+    );
+    return new Promise<Response>(() => {});
+  });
+  try {
+    await import("./bootstrap");
+    await vi.waitFor(() => expect(paths).toHaveLength(4));
+    expect([...paths].sort(stable)).toEqual([
+      "/v1/company/context/capabilities",
+      "/v1/installation/settings",
+      "/v1/me",
+      "/v1/onboarding/state",
+    ]);
+    expect(screenCode).toHaveBeenCalledTimes(1);
+    await import("./main");
+    expect(createRoot).not.toHaveBeenCalled();
+    releaseLanguage();
+    await vi.waitFor(() => expect(createRoot).toHaveBeenCalledTimes(1));
+    expect(paths).toHaveLength(4);
+  } finally {
+    vi.doUnmock("./i18n/essential/en_gen.json");
+    vi.doUnmock("./i18n/en");
+  }
 });

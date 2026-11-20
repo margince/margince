@@ -1,8 +1,35 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useCompanyContextCapabilities } from "../../lib/companycontextreach";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  watchStored,
+  writeStored,
+} from "../../lib/storage";
 import { useOnboardingProgress } from "./onboarding-progress";
+
+const finishedKey = (userId: string) => ({
+  family: STORAGE_KEYS.onboardingComplete,
+  member: userId,
+});
+
+function useRememberedFinished(userId: string | undefined): boolean {
+  const watch = useCallback(
+    (changed: () => void) =>
+      userId === undefined
+        ? () => undefined
+        : watchStored(finishedKey(userId), changed),
+    [userId],
+  );
+  return useSyncExternalStore(
+    watch,
+    () => userId !== undefined && readStored(finishedKey(userId)) === "1",
+  );
+}
 
 // The second half of the onboarding gate, for a DESCRIBED installation: a
 // human whose own journey — voice, mailbox, preferences — is not recorded as
@@ -21,6 +48,7 @@ import { useOnboardingProgress } from "./onboarding-progress";
 export function useJourneyProgress(
   authed: boolean,
   wanted: boolean,
+  userId: string | undefined,
 ): Readonly<{
   pending: boolean;
   unfinished: boolean;
@@ -28,11 +56,20 @@ export function useJourneyProgress(
   const rollout = useCompanyContextCapabilities(authed);
   const walkable = wanted && rollout.data?.onboarding_enabled === true;
   const progress = useOnboardingProgress(walkable);
+  // Seen finished here: no wait, but an unfinished answer still gates and forgets.
+  const remembered = useRememberedFinished(userId);
+  const finished = progress.isSuccess && progress.data?.step === "complete";
+  const unfinished = walkable && progress.isSuccess && !finished;
+  useEffect(() => {
+    if (userId === undefined) return;
+    if (finished) writeStored(finishedKey(userId), "1");
+    else if (unfinished) removeStored(finishedKey(userId));
+  }, [userId, finished, unfinished]);
   return {
-    pending: wanted && (rollout.isPending || (walkable && progress.isPending)),
-    unfinished:
-      walkable &&
-      progress.isSuccess &&
-      (progress.data === null || progress.data.step !== "complete"),
+    pending:
+      wanted &&
+      !remembered &&
+      (rollout.isPending || (walkable && progress.isPending)),
+    unfinished,
   };
 }

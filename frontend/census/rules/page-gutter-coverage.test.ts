@@ -126,6 +126,34 @@ describe("the page-gutter-coverage rule", () => {
     ]);
   });
 
+  it("follows a lazy screen named through a code map to its module", () => {
+    const files = shell(
+      'export function Flat() { return <div className="body" />; }',
+    ).map((file) =>
+      file.path === APP_SCREENS
+        ? {
+            ...file,
+            text:
+              'import { Inset } from "./features/inset";\n' +
+              'import { CODE } from "./code";\n' +
+              "const Flat = lazy(routed(() => CODE.flat().then((m) => ({ default: m.Flat }))));\n",
+          }
+        : file,
+    );
+    files.push({
+      path: join(srcDir, "code.ts"),
+      text: 'export const CODE = { flat: () => import("./features/flat") } as const;',
+    });
+    expect(
+      plantedFindings(
+        rule,
+        files.map((file) => ({ ...file, area: "src" as const })),
+      ),
+    ).toEqual([
+      'flat (src/App.screens.tsx): Flat → root <div class="body"> takes no page gutter',
+    ]);
+  });
+
   it("passes a screen that insets itself in its own stylesheet", () => {
     const files = [
       ...shell('export function Flat() { return <div className="pane" />; }'),

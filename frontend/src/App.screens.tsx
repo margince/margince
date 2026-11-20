@@ -1,4 +1,5 @@
 import { lazy } from "react";
+import { SCREEN_CODE } from "./App.screencode";
 import { AuthScreen } from "./app/authscreens";
 import { findCustomScreen } from "./app/custom";
 import { opensReservedPage } from "./app/nav";
@@ -33,14 +34,14 @@ function routed<T>(factory: () => Promise<T>): () => Promise<T> {
 }
 
 export const OnboardingScreen = lazy(() =>
-  import("./features/onboarding/onboarding").then((module) => ({
+  SCREEN_CODE.onboarding().then((module) => ({
     default: module.OnboardingScreen,
   })),
 );
 
 export const BookingScreen = lazy(
   routed(() =>
-    import("./features/booking/book").then((m) => ({
+    SCREEN_CODE.book().then((m) => ({
       default: m.BookingScreen,
     })),
   ),
@@ -48,27 +49,23 @@ export const BookingScreen = lazy(
 
 export const ClientSurfaceScreen = lazy(
   routed(() =>
-    import("./features/settings/client").then((m) => ({
+    SCREEN_CODE.client().then((m) => ({
       default: m.ClientSurfaceScreen,
     })),
   ),
 );
 
 const DealScreen = lazy(
-  routed(() =>
-    import("./features/deals/deals").then((m) => ({ default: m.DealScreen })),
-  ),
+  routed(() => SCREEN_CODE.deals().then((m) => ({ default: m.DealScreen }))),
 );
 
 const DealsScreen = lazy(
-  routed(() =>
-    import("./features/deals/deals").then((m) => ({ default: m.DealsScreen })),
-  ),
+  routed(() => SCREEN_CODE.deals().then((m) => ({ default: m.DealsScreen }))),
 );
 
 const DealRoomPage = lazy(
   routed(() =>
-    import("./features/deals/dealroompage").then((m) => ({
+    SCREEN_CODE.dealRoom().then((m) => ({
       default: m.DealRoomPage,
     })),
   ),
@@ -76,33 +73,27 @@ const DealRoomPage = lazy(
 
 export const FiltersScreen = lazy(
   routed(() =>
-    import("./features/lists/filters").then((m) => ({
+    SCREEN_CODE.filters().then((m) => ({
       default: m.FiltersScreen,
     })),
   ),
 );
 
 export const BriefScreen = lazy(
-  routed(() =>
-    import("./features/brief/brief").then((m) => ({ default: m.BriefScreen })),
-  ),
+  routed(() => SCREEN_CODE.brief().then((m) => ({ default: m.BriefScreen }))),
 );
 
 export const LeadScreen = lazy(
-  routed(() =>
-    import("./features/leads/leads").then((m) => ({ default: m.LeadScreen })),
-  ),
+  routed(() => SCREEN_CODE.leads().then((m) => ({ default: m.LeadScreen }))),
 );
 
 export const LeadsScreen = lazy(
-  routed(() =>
-    import("./features/leads/leads").then((m) => ({ default: m.LeadsScreen })),
-  ),
+  routed(() => SCREEN_CODE.leads().then((m) => ({ default: m.LeadsScreen }))),
 );
 
 export const ProjectScreen = lazy(
   routed(() =>
-    import("./features/projects/project360").then((m) => ({
+    SCREEN_CODE.project().then((m) => ({
       default: m.ProjectScreen,
     })),
   ),
@@ -110,7 +101,7 @@ export const ProjectScreen = lazy(
 
 export const ProjectsScreen = lazy(
   routed(() =>
-    import("./features/projects/projects").then((m) => ({
+    SCREEN_CODE.projects().then((m) => ({
       default: m.ProjectsScreen,
     })),
   ),
@@ -118,21 +109,19 @@ export const ProjectsScreen = lazy(
 
 export const OAuthConsent = lazy(
   routed(() =>
-    import("./features/automations/oauthconsent").then((m) => ({
+    SCREEN_CODE.oauthConsent().then((m) => ({
       default: m.OAuthConsent,
     })),
   ),
 );
 
 export const OfferScreen = lazy(
-  routed(() =>
-    import("./features/deals/offers").then((m) => ({ default: m.OfferScreen })),
-  ),
+  routed(() => SCREEN_CODE.offers().then((m) => ({ default: m.OfferScreen }))),
 );
 
 export const CompaniesScreen = lazy(
   routed(() =>
-    import("./features/companies/companies").then((m) => ({
+    SCREEN_CODE.companies().then((m) => ({
       default: m.CompaniesScreen,
     })),
   ),
@@ -140,7 +129,7 @@ export const CompaniesScreen = lazy(
 
 export const CompanyScreen = lazy(
   routed(() =>
-    import("./features/companies/companies").then((m) => ({
+    SCREEN_CODE.companies().then((m) => ({
       default: m.CompanyScreen,
     })),
   ),
@@ -148,7 +137,7 @@ export const CompanyScreen = lazy(
 
 export const PartnersScreen = lazy(
   routed(() =>
-    import("./features/projects/partners").then((m) => ({
+    SCREEN_CODE.partners().then((m) => ({
       default: m.PartnersScreen,
     })),
   ),
@@ -156,7 +145,7 @@ export const PartnersScreen = lazy(
 
 export const ContactsScreen = lazy(
   routed(() =>
-    import("./features/contacts/contacts").then((m) => ({
+    SCREEN_CODE.contacts().then((m) => ({
       default: m.ContactsScreen,
     })),
   ),
@@ -164,21 +153,21 @@ export const ContactsScreen = lazy(
 
 export const ContactPageV2 = lazy(
   routed(() =>
-    import("./features/contacts/contactpage").then((m) => ({
+    SCREEN_CODE.contactPage().then((m) => ({
       default: m.ContactPageV2,
     })),
   ),
 );
 
 export const BuyerRoomScreen = lazy(() =>
-  import("./features/deals/buyerroom").then((m) => ({
+  SCREEN_CODE.buyerRoom().then((m) => ({
     default: m.BuyerRoomScreen,
   })),
 );
 
 export const PreferenceCenterScreen = lazy(
   routed(() =>
-    import("./features/settings/preferences").then((m) => ({
+    SCREEN_CODE.preferences().then((m) => ({
       default: m.PreferenceCenterScreen,
     })),
   ),
@@ -186,7 +175,7 @@ export const PreferenceCenterScreen = lazy(
 
 export const UnsubscribeScreen = lazy(
   routed(() =>
-    import("./features/privacy/unsubscribe").then((m) => ({
+    SCREEN_CODE.unsubscribe().then((m) => ({
       default: m.UnsubscribeScreen,
     })),
   ),
@@ -194,7 +183,7 @@ export const UnsubscribeScreen = lazy(
 
 export const ConfirmDetailsScreen = lazy(
   routed(() =>
-    import("./features/privacy/confirm").then((m) => ({
+    SCREEN_CODE.confirm().then((m) => ({
       default: m.ConfirmDetailsScreen,
     })),
   ),
@@ -202,7 +191,7 @@ export const ConfirmDetailsScreen = lazy(
 
 export const AnalyticsScreen = lazy(
   routed(() =>
-    import("./App.analytics").then((m) => ({
+    SCREEN_CODE.analytics().then((m) => ({
       default: m.AnalyticsScreen,
     })),
   ),
@@ -210,7 +199,7 @@ export const AnalyticsScreen = lazy(
 
 export const ProgressScreen = lazy(
   routed(() =>
-    import("./features/analytics/progress").then((m) => ({
+    SCREEN_CODE.progress().then((m) => ({
       default: m.ProgressScreen,
     })),
   ),
@@ -218,7 +207,7 @@ export const ProgressScreen = lazy(
 
 export const SalesGoalsScreen = lazy(
   routed(() =>
-    import("./features/analytics/goals").then((m) => ({
+    SCREEN_CODE.goals().then((m) => ({
       default: m.SalesGoalsScreen,
     })),
   ),
@@ -226,7 +215,7 @@ export const SalesGoalsScreen = lazy(
 
 export const LegalReviewsRoute = lazy(
   routed(() =>
-    import("./features/privacy/legalreviews").then((m) => ({
+    SCREEN_CODE.legalReviews().then((m) => ({
       default: m.LegalReviewsRoute,
     })),
   ),
@@ -234,21 +223,21 @@ export const LegalReviewsRoute = lazy(
 
 export const ScheduledSendsScreen = lazy(
   routed(() =>
-    import("./features/mail/scheduledsends").then((m) => ({
+    SCREEN_CODE.scheduled().then((m) => ({
       default: m.ScheduledSendsScreen,
     })),
   ),
 );
 
 export const TagResultScreen = lazy(() =>
-  import("./features/lists/tagresult").then((m) => ({
+  SCREEN_CODE.tags().then((m) => ({
     default: m.TagResultScreen,
   })),
 );
 
 export const SearchRoute = lazy(
   routed(() =>
-    import("./features/voice-knowledge/search").then((m) => ({
+    SCREEN_CODE.search().then((m) => ({
       default: m.SearchRoute,
     })),
   ),
@@ -256,7 +245,7 @@ export const SearchRoute = lazy(
 
 export const SettingsScreen = lazy(
   routed(() =>
-    import("./App.settings").then((m) => ({
+    SCREEN_CODE.settings().then((m) => ({
       default: m.SettingsScreen,
     })),
   ),
@@ -264,14 +253,14 @@ export const SettingsScreen = lazy(
 
 const ShareScreen = lazy(
   routed(() =>
-    import("./features/records/share").then((m) => ({
+    SCREEN_CODE.share().then((m) => ({
       default: m.ShareScreen,
     })),
   ),
 );
 
 export const WorklistRedirect = lazy(() =>
-  import("./features/brief/brief.queue").then((m) => ({
+  SCREEN_CODE.worklist().then((m) => ({
     default: m.WorklistRedirect,
   })),
 );

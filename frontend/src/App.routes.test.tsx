@@ -1,8 +1,14 @@
 /** @vitest-environment happy-dom */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { isValidElement, type ReactElement } from "react";
 import { describe, expect, it } from "vitest";
+import { addressedScreenCode, SCREEN_CODE } from "./App.screencode";
 import * as screens from "./App.screens";
-import { screenOfAddress } from "./App.views";
+import { screenOfAddress, screenWithLocale } from "./App.views";
+import { CREATE_ID, IMPORT_ID, opensReservedPage } from "./app/nav";
+import { CompleteLocale } from "./i18n";
+import { parseHash, routeHash, SCREENS } from "./lib/router";
 
 // Every routed screen is a lazy chunk, and a renamed export only fails when a
 // reader first opens that page. Loading each chunk here fails the build first.
@@ -128,5 +134,65 @@ describe("the route parts", () => {
     expect(drawn(screens.CustomRoute({ name: "fork" }))).toEqual({
       messageKey: "shell.unknownPage",
     });
+  });
+});
+
+// The shell paints from the essential catalog; a screen's column waits for the
+// complete one unless the screen draws from the essential catalog alone.
+describe("the catalog each screen waits for", () => {
+  const addresses = SCREENS.flatMap((screen) =>
+    [undefined, "r1"].map((id) => routeHash({ screen, id })),
+  );
+
+  it.each(addresses)("%s", (address) => {
+    const drawn = screenWithLocale(address);
+    const essential = ["home", "analytics"].includes(parseHash(address).screen);
+    expect(isValidElement(drawn) && drawn.type === CompleteLocale).toBe(
+      !essential,
+    );
+  });
+});
+
+describe("the screen code bootstrap starts", () => {
+  it("is named by the screen-code map alone, never by a second import", () => {
+    const source = readFileSync(join(__dirname, "App.screens.tsx"), "utf8");
+    expect(source).not.toMatch(/import\(/);
+  });
+
+  // A list address loads the list's module, so the split must be nav's.
+  const reservedOrNot = [undefined, CREATE_ID, IMPORT_ID, "r1"];
+  it.each(
+    (["contacts", "projects"] as const).flatMap((screen) =>
+      reservedOrNot.map((id) => ({ screen, id })),
+    ),
+  )("opens the list exactly where nav does: $screen/$id", (route) => {
+    const list =
+      route.screen === "contacts" ? SCREEN_CODE.contacts : SCREEN_CODE.projects;
+    expect(addressedScreenCode(route) === list).toBe(
+      route.id === undefined || opensReservedPage(route),
+    );
+  });
+
+  it.each(reservedOrNot.map((id) => ({ screen: "deals" as const, id })))(
+    "opens a deal room exactly where nav names a deal: $id",
+    (route) => {
+      expect(
+        addressedScreenCode({ ...route, id2: "room" }) === SCREEN_CODE.dealRoom,
+      ).toBe(route.id !== undefined && !opensReservedPage(route));
+    },
+  );
+
+  it.each([
+    ["#/home", SCREEN_CODE.brief],
+    ["#/contacts/c1/notes", SCREEN_CODE.contactPage],
+    ["#/deals/d1/room", SCREEN_CODE.dealRoom],
+    ["#/deals/new", SCREEN_CODE.deals],
+    ["#/companies/c1", SCREEN_CODE.companies],
+    ["#/settings/account", SCREEN_CODE.settings],
+    ["#/offers/o1", SCREEN_CODE.offers],
+    ["#/offers", undefined],
+    ["#/no-such-page", undefined],
+  ])("starts %s's code", (address, code) => {
+    expect(addressedScreenCode(parseHash(address))).toBe(code);
   });
 });
