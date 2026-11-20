@@ -110,6 +110,8 @@ type Store struct {
 	// renameInstallation keeps the installation's name on the anchor's display
 	// name (anchorname.go); nil refuses an anchor rename.
 	renameInstallation InstallationRenamer
+	// employerChanges asks a contact's owner about a newer employer; nil asks nobody.
+	employerChanges EmployerChangeProposer
 }
 
 // ConsumerMailReader builds the workspace's consumer-mail matcher on a

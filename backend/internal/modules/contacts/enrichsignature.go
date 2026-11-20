@@ -207,6 +207,11 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 				return err
 			}
 		}
+		if i := slices.IndexFunc(fields, isCompanyName); i >= 0 && slices.Contains(appliedFields, fieldCompanyName) {
+			if err := s.offerSignatureEmployerTx(ctx, tx, contactID, sourceActivity, fields[i]); err != nil {
+				return err
+			}
+		}
 		before, after := signatureImages(appliedFields)
 		// The write shape: the enrichment is a contact mutation, so the
 		// audit row and the contact.updated outbox event ride this commit.
