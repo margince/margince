@@ -363,7 +363,10 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 		if a.adviceErr == nil {
 			// The stage and the name come off the company row this
 			// assembly already read, so the page adds no query for either.
-			heading := companyHeading{name: a.out.Company.DisplayName}
+			heading := companyHeading{name: a.out.Company.DisplayName, lastActivity: a.out.Company.LastActivityAt}
+			if owner := a.out.Company.OwnerId; owner != nil {
+				heading.owner = new(ids.UUID(*owner))
+			}
 			if lc := a.out.Company.Lifecycle; lc != nil {
 				heading.lifecycle = string(*lc)
 			}

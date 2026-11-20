@@ -3694,6 +3694,8 @@ export const en = {
   "company.filterLifecycleAll": "Any stage",
   "company.filterRelTypeAll": "Any type",
   "company.filterSizeBandAll": "Any number of employees",
+  "company.filterDormancyAll": "Any activity",
+  "company.dormancy": "Activity",
   "consent.confirmRecipient": "Send to {address}",
   "consent.guardFailed": "Communication permissions could not be loaded.",
   "consent.permissionScope":
@@ -4915,6 +4917,7 @@ export const en = {
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "No next step",
   "co.suggest.kind.lifecycle_conflict": "Lifecycle conflict",
+  "co.suggest.kind.gone_dormant": "Gone quiet",
   "co.suggest.kind.commitment_unmet": "Commitment unmet",
   "co.suggest.kind.question_unanswered": "Question unanswered",
   "co.suggest.kind.risk_raised": "Risk raised",
@@ -22972,16 +22975,15 @@ export const en = {
   "deal.verdict.overdueToClose": "Overdue to close",
   "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
   "deal.verdict.notStarted": "Not started",
-  "co.verdict.noContact": "No contact yet",
-  "co.verdict.addedOn":
-    "The account was added {date}. No exchange is recorded yet.",
   "co.verdict.active": "Active",
-  "co.verdict.lastExchange": "The last exchange with this account was {date}.",
-  "co.verdict.goingQuiet": "Going quiet",
-  "co.verdict.quietSince": "Nobody here has had an exchange since {date}.",
+  "co.verdict.lastExchange": "The last activity with this account was {date}.",
+  "co.verdict.cooling": "Cooling",
   "co.verdict.dormant": "Dormant",
-  "co.verdict.dormantSince":
-    "Nothing is open, and there has been no exchange since {date}.",
+  "co.verdict.stale": "Stale",
+  "co.verdict.silentFor":
+    "Nothing has happened with this account for {days} days, since {date}. An account cools from day {cooling}, goes dormant from day {dormant} and stale from day {stale}.",
+  "co.verdict.noActivity":
+    "No activity recorded since the account was added {date}.",
   "project.verdict.startsOn": "The project starts {date}.",
   "project.verdict.overrunning": "Overrunning",
   "project.verdict.endPassed": "The target end, {date}, has passed.",
