@@ -155,6 +155,7 @@ func TestAMeetingNamesOnlyACustomerTheReaderMaySee(t *testing.T) {
 		t.Fatalf("making the colleague's buyer private: %v", err)
 	}
 	visible := partiesContact(t, e, "Blair Shared", ids.UUID{}, nil)
+	e.ShareForWriting(t, "contact", visible, "team", e.Team1, e.Team2)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AccountRepPerms)
 	joint := partiesMeeting(owner, t, e, "Joint call", hidden, visible)
 

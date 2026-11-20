@@ -23,9 +23,11 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
+import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useCanWrite } from "../../lib/capability";
+import { useCan, useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import {
   fieldCheckSentence,
   refusalSentences,
@@ -35,6 +37,8 @@ import { useMe } from "../../lib/session";
 import "./privacy.css";
 
 type ConsentPurpose = components["schemas"]["ConsentPurpose"];
+type PurposeSendCount = components["schemas"]["ConsentPurposeSendCount"];
+type PurposeClass = components["schemas"]["ConsentPurposeClass"];
 
 type Frequency = NonNullable<ConsentPurpose["frequency"]>;
 
@@ -58,6 +62,16 @@ const FREQUENCY_LABEL: Readonly<Record<Frequency, MessageKey>> = {
   monthly: "privacy.purposeFrequency.monthly",
   quarterly: "privacy.purposeFrequency.quarterly",
 };
+
+const CLASS_LABEL: Readonly<Record<PurposeClass, MessageKey>> = {
+  business_correspondence: "privacy.purposeClass.businessCorrespondence",
+  transactional: "privacy.purposeClass.transactional",
+  marketing: "privacy.purposeClass.marketing",
+  phone_outreach: "privacy.purposeClass.phoneOutreach",
+};
+
+// The window the card counts sends over; the server's own default.
+const SEND_COUNT_DAYS = 30;
 
 function isFrequency(value: string): value is Frequency {
   return Object.hasOwn(FREQUENCY_LABEL, value);
@@ -217,6 +231,7 @@ export function ConsentPurposesCard() {
   const me = useMe();
   // `useCanWrite`: the seat ceiling refuses a read seat's POST before RBAC.
   const canAdminister = useCanWrite("consent_config", "create");
+  const canReadSends = useCan("consent_config", "read");
   const addTitleId = useId();
   const [adding, setAdding] = useState(false);
   const query = useQuery({
@@ -256,6 +271,7 @@ export function ConsentPurposesCard() {
           <PurposeTable purposes={purposes} />
         )}
       </CardBoundary>
+      {canReadSends && <PurposeSendCounts purposes={purposes} />}
       <Modal
         open={adding}
         onClose={() => setAdding(false)}
@@ -301,5 +317,96 @@ function PurposeTable({ purposes }: Readonly<{ purposes: ConsentPurpose[] }>) {
       rows={purposes}
       rowKey={(purpose) => purpose.id}
     />
+  );
+}
+
+// What the send engine judged each staged mail to be, per purpose. The
+// disputed count is where a mail sent under the wrong kind shows afterwards.
+function PurposeSendCounts({
+  purposes,
+}: Readonly<{ purposes: readonly ConsentPurpose[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const query = useQuery({
+    queryKey: ["consent-purposes", "send-counts", SEND_COUNT_DAYS],
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/consent-purposes/send-counts", {
+          params: { query: { days: SEND_COUNT_DAYS } },
+        }),
+      );
+    },
+  });
+  const counts = query.data?.data ?? [];
+  const labelOf = (count: PurposeSendCount) =>
+    count.class
+      ? (purposes.find((purpose) => purpose.key === count.purpose_key)?.label ??
+        count.purpose_key)
+      : t("privacy.purposeUnknown");
+  const columns: DataTableColumn<PurposeSendCount>[] = [
+    {
+      key: "purpose",
+      header: t("privacy.purpose"),
+      render: labelOf,
+    },
+    {
+      key: "class",
+      header: t("privacy.purposeClass"),
+      render: (count) =>
+        t(
+          count.class
+            ? labelFor(CLASS_LABEL, count.class)
+            : "privacy.purposeClass.undefined",
+        ),
+    },
+    {
+      key: "sends",
+      header: t("privacy.purposeSends", {
+        days: formatNumber(SEND_COUNT_DAYS, locale),
+      }),
+      align: "end",
+      render: (count) => formatNumber(count.sends, locale),
+    },
+    {
+      key: "disputed",
+      header: t("privacy.purposeDisputed"),
+      align: "end",
+      render: (count) => formatNumber(count.disputed, locale),
+    },
+  ];
+  return (
+    <>
+      <PanelBody>
+        <PanelIntro>
+          {t("privacy.purposeSendsSub", {
+            days: formatNumber(SEND_COUNT_DAYS, locale),
+          })}
+        </PanelIntro>
+        {(!query.isSuccess || counts.length === 0) && (
+          <QueryStates
+            query={query}
+            pendingLabel={t("privacy.purposeSendsLoading")}
+          >
+            <EmptyState>
+              {t("privacy.purposeSendsEmpty", {
+                days: formatNumber(SEND_COUNT_DAYS, locale),
+              })}
+            </EmptyState>
+          </QueryStates>
+        )}
+      </PanelBody>
+      <CardBoundary>
+        {query.isSuccess && counts.length > 0 && (
+          <DataTable
+            label={t("privacy.purposeSendsTable")}
+            bleed
+            fold
+            columns={columns}
+            rows={counts}
+            rowKey={(count) => count.purpose_key}
+          />
+        )}
+      </CardBoundary>
+    </>
   );
 }

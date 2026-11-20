@@ -4,10 +4,14 @@
 package compose
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -36,17 +40,34 @@ func TestAWriteEndsTheCachedHomeOfEachReaderItWasMadeForOnce(t *testing.T) {
 	}
 }
 
-func TestASuccessOrAConflictEndsTheWritersCachedHome(t *testing.T) {
-	for status, want := range map[int]bool{
-		http.StatusOK: true, http.StatusNoContent: true, http.StatusConflict: true,
-		http.StatusForbidden: false, http.StatusUnprocessableEntity: false, http.StatusInternalServerError: false,
-	} {
-		forgot := 0
-		w := &forgettingWriter{ResponseWriter: httptest.NewRecorder(), forget: func() { forgot++ }}
-		w.WriteHeader(status)
-		w.WriteHeader(status)
-		if wantCount := map[bool]int{true: 1, false: 0}[want]; forgot != wantCount {
-			t.Errorf("a %d answer ended the cache %d times, want %d", status, forgot, wantCount)
+func requestOn(route string) *http.Request {
+	method, pattern, _ := strings.Cut(route, " ")
+	rctx, r := chi.NewRouteContext(), httptest.NewRequest(method, pattern, nil)
+	rctx.RoutePatterns = []string{pattern}
+	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+}
+
+func TestARouteThatOnlyReadsNeverMarksHomeBehind(t *testing.T) { // census over agentPolicies: a new read route is covered
+	checked := 0
+	for route, pol := range agentPolicies {
+		method, _, _ := strings.Cut(route, " ")
+		if !mutatingMethod(method) || pol.Scope != scopeRead {
+			continue
+		}
+		checked++
+		if mayChangeHome(requestOn(route)) {
+			t.Errorf("%s only reads, and marks Home behind a write", route)
+		}
+	}
+	if !mayChangeHome(requestOn("PATCH /v1/contacts/{id}")) || checked == 0 {
+		t.Fatalf("a contact update must mark Home behind, and the census found %d read routes to check", checked)
+	}
+}
+
+func TestEveryWriteHomeIgnoresIsAWriteRoute(t *testing.T) {
+	for route := range homeUnchangedBy {
+		if pol, ok := agentPolicies[route]; !ok || pol.Scope == scopeRead {
+			t.Errorf("%s is listed but is not a write route", route)
 		}
 	}
 }

@@ -38,7 +38,7 @@ var FiscalYearStartMonth = config.DefineStored(config.Spec[int]{
 		return nil
 	},
 	Doc: "The month the business year begins, 1 to 12.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // ForecastForwardMeasure is which remaining-pipeline reading a projected
 // landing is built from.
@@ -68,7 +68,7 @@ var ForecastForwardMeasure = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "Which remaining-pipeline reading a projected landing is built from.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // ForecastForwardMeasureOf resolves the stored measure inside a transaction the
 // caller already holds.

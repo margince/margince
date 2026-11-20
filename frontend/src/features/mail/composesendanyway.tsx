@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { components } from "../../api/schema";
 import { CitedLaws, FindingWithLaw } from "../../components/citedlaw";
+import { lawsOf } from "../../components/citedprovisions";
 import { Button, Field, Textarea } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { describedByIds } from "../../design-system/describedby";
@@ -175,20 +176,19 @@ export function SendAnywayRows({
         live="status"
         id={warningId}
         title={
-          lead?.provision ? (
+          lead ? (
             <FindingWithLaw
               sentence={t(findingKey(lead.reason_code), {
                 address: lead.address,
               })}
-              provision={lead.provision}
+              provisions={lawsOf(lead)}
             />
-          ) : lead ? (
-            t(findingKey(lead.reason_code), { address: lead.address })
           ) : (
             t("compose.sendAnyway.finding.none")
           )
         }
       >
+        {lead && <LeadCountry refusal={lead} />}
         {!state.canSendAnyway && <p>{t("compose.sendAnyway.editOnly")}</p>}
         {state.changed && <p>{t("directSend.changed")}</p>}
         <MoreFindings refusals={review.refusals.slice(1)} />
@@ -253,9 +253,18 @@ function MoreFindings({
 // The law the refusal and each of its footer findings cite, where any does.
 function provisionsOf(refusal: RefusedRecipient) {
   return [
-    refusal.provision,
-    ...(refusal.footer_findings ?? []).map((finding) => finding.provision),
+    ...lawsOf(refusal),
+    ...(refusal.footer_findings ?? []).flatMap(lawsOf),
   ];
+}
+
+// The country the leading refusal was judged under and where it was read. The
+// rep sees why this law applies and can correct it on the chip.
+function LeadCountry({ refusal }: Readonly<{ refusal: RefusedRecipient }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const country = refusalCountryText(refusal, t, locale);
+  return country ? <p>{country}</p> : null;
 }
 
 // The reason and the button. Keyed by the review's revision, so a refreshed

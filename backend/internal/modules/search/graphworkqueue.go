@@ -63,7 +63,7 @@ func (h *graphHistoryTargets) prepareContacts(ctx context.Context, tx pgx.Tx, mi
 	if err != nil {
 		return err
 	}
-	return recomputeContactPairs(ctx, tx, uncovered, missing)
+	return recomputeContactPairs(ctx, tx, uncovered, missing, true)
 }
 
 func (h *graphHistoryTargets) prepareInteractions(ctx context.Context, tx pgx.Tx, missing []pair) error {
@@ -72,7 +72,7 @@ func (h *graphHistoryTargets) prepareInteractions(ctx context.Context, tx pgx.Tx
 	if err != nil {
 		return err
 	}
-	return recomputePairs(ctx, tx, uncovered, missing)
+	return recomputePairs(ctx, tx, uncovered, missing, true)
 }
 
 func (h *graphHistoryTargets) markContacts(ctx context.Context, tx pgx.Tx) error {

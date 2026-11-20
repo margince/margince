@@ -218,6 +218,13 @@ export function BriefGlance({
       <div className="glance-head">
         <div className="glance-facts t-caption">
           <GlanceWhen view={view} now={now} week={week} />
+          {view === "morning" && day?.served_stale && (
+            <p>
+              <Badge tone="default" live>
+                {t("brief.updating")}
+              </Badge>
+            </p>
+          )}
           {briefedAt && (
             <p>
               <Badge tone="ai">

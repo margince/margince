@@ -123,7 +123,7 @@ type questionFields struct {
 func (s *Store) questionFieldsTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef) (questionFields, error) {
 	out := questionFields{words: mailcopy.For(ref.QuestionLocale)}
 	var held PrivacyInformation
-	if err := readControllerTx(ctx, tx, &held); err != nil {
+	if err := readControllerTx(ctx, tx, &held, confirmRuleSubject(ref)); err != nil {
 		return out, err
 	}
 	out.controller = held.Controller.LegalName

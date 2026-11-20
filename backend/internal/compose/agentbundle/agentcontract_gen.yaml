@@ -7831,7 +7831,10 @@ paths:
       description: |-
         A draft is the composer's state, kept so that closing it does not lose a message. It
         is not an activity, not a scheduled send and never on a timeline, and only the seat
-        that wrote it can read it. There is at most one per author and anchor.
+        that wrote it can read, change or discard it: not a colleague, an admin, or an agent
+        acting for someone else. There is at most one per author and anchor. Once the author has
+        left, a handover of their work (`handOverUserWork`) moves their drafts to the colleague
+        who takes over, who from then on is the only one who reads them.
       parameters:
         - name: anchor_type
           in: query
@@ -18432,6 +18435,36 @@ paths:
                 properties:
                   data: {type: array, items: {$ref: '#/components/schemas/ConsentPurpose'}}
                   page: {$ref: '#/components/schemas/PageInfo'}
+  /consent-purposes/send-counts:
+    get:
+      tags: [Compliance]
+      operationId: listConsentPurposeSendCounts
+      summary: How many messages went out under each declared consent purpose, and how many the record disputes.
+      description: |-
+        Needs `consent_config:read`. A send names a consent purpose, and may claim what kind of
+        message it is. The send engine records, for every message it stages, what was claimed and
+        what the record bore out. This read counts those staged messages per purpose in the window,
+        most sent first.
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 366, default: 30}
+          description: How many days back the window reaches from now.
+      responses:
+        '200':
+          description: The send counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, days]
+                properties:
+                  data: {type: array, items: {$ref: '#/components/schemas/ConsentPurposeSendCount'}}
+                  days: {type: integer, description: 'The window the counts cover.'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /retention/settings:
     get:
       tags: [Compliance]
@@ -20059,7 +20092,7 @@ paths:
       summary: Count the live records a member still owns.
       description: |-
         How many live leads, contacts, companies, deals and projects the member owns that the
-        caller can see. For a member who left, it also counts the contacts and companies only
+        caller can see, and how many composer drafts they saved (a count only). For a member who left, it also counts the contacts and companies only
         they can see (captured and never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
         this to say what would be left behind. Works for any non-archived member, deactivated or
         not, because work is best handed over before the account is closed.
@@ -20087,7 +20120,12 @@ paths:
         in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
         owner (an active human seat that can write), else `422`
         with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
-        caller may not change stays with the member. Automations and deal-room stewardships are not moved.
+        caller may not change stays with the member. For a member who left, their saved composer
+        drafts move too, and from then on only the new holder reads them. Where the new holder
+        already has a draft in the same place, theirs stays and the member's is discarded, counted
+        in `mail_draft_discarded`. An active member keeps every draft, and so does a draft a
+        scheduled or held message still waits on; both count in `left`. Automations and deal-room
+        stewardships are not moved.
 
         Needs the passport permission Change records.
 
@@ -39687,7 +39725,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task, webhook, list, sdr_handoff, record_assignment]
+      required: [lead, contact, company, deal, project, task, webhook, list, sdr_handoff, record_assignment, mail_draft]
       properties:
         lead: {type: integer, minimum: 0}
         contact: {type: integer, minimum: 0}
@@ -39699,6 +39737,7 @@ components:
         list: {type: integer, minimum: 0, description: Live lists owned by the member.}
         sdr_handoff: {type: integer, minimum: 0, description: Waiting prospect handoffs assigned to the member.}
         record_assignment: {type: integer, minimum: 0, description: Current user responsibilities on records.}
+        mail_draft: {type: integer, minimum: 0, description: 'Unsent messages the member saved in the composer. Only the count is shown; the words stay readable by the author alone until a handover moves them.'}
     UserHandover:
       type: object
       required: [owned]
@@ -39711,10 +39750,11 @@ components:
         to_user_id: {type: string, format: uuid, description: 'The colleague who takes the work over.'}
     UserHandoverResult:
       type: object
-      required: [moved, left]
+      required: [moved, left, mail_draft_discarded]
       properties:
         moved: {$ref: '#/components/schemas/HandoverCounts'}
         left: {$ref: '#/components/schemas/HandoverCounts'}
+        mail_draft_discarded: {type: integer, minimum: 0, description: "The member's saved drafts deleted because the receiver already had a draft in the same place."}
     BulkRecordType:
       type: string
       description: |-
@@ -42141,6 +42181,7 @@ components:
             that the evidence does not carry is visible rather than silently honoured.
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |-
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -42172,6 +42213,7 @@ components:
             `invalid`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |-
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -42542,9 +42584,11 @@ components:
             allowed.
         marketing_purpose:
           type: string
+          maxLength: 200
           description: Which marketing purpose, when the context is `marketing`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |-
             The deprecated purpose key, when the composer still has one. It authorizes
             nothing on its own, and it is accepted here for one reason: the SEND still
@@ -42605,8 +42649,10 @@ components:
           allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
         marketing_purpose:
           type: string
+          maxLength: 200
         consent_purpose:
           type: string
+          maxLength: 200
           description: |-
             The deprecated purpose key, when the composer still has one. It authorizes
             nothing on its own, and it is accepted here for one reason: the SEND still
@@ -42697,8 +42743,9 @@ components:
     CitedProvision:
       type: object
       description: |-
-        The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
-        for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+        The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+        for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+        data-protection law settles. Shown beside the engine's sentence; it decides nothing.
         Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
         pack's next review is overdue, or the law has not taken effect or has expired. On a
         review it is the citation shown when the refusal was assessed, never today's.
@@ -42725,6 +42772,10 @@ components:
         missing_means: {type: array, items: {type: string}, description: 'Missing contact methods, such as email, phone or web.'}
         provision:
           $ref: '#/components/schemas/CitedProvision'
+        provisions:
+          type: array
+          items: {$ref: '#/components/schemas/CitedProvision'}
+          description: Every law cited for `kind`, `provision` first. Absent when none may be shown.
     SendAuthorizationPreviewRecipient:
       type: object
       required: [address, verdict, reason_code]
@@ -42732,7 +42783,15 @@ components:
       properties:
         provision:
           allOf: [{$ref: '#/components/schemas/CitedProvision'}]
-          description: The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+          description: |-
+            The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+            when only that pack cites one. Absent when none may be shown.
+        provisions:
+          type: array
+          items: {$ref: '#/components/schemas/CitedProvision'}
+          description: |-
+            Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
+            sending entity's for a finding its data-protection law settles. Absent when none may be shown.
         footer_findings:
           type: array
           items: {$ref: '#/components/schemas/FooterFinding'}
@@ -42900,6 +42959,7 @@ components:
             that the evidence does not carry is visible rather than silently honoured.
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |-
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -42931,6 +42991,7 @@ components:
             `invalid`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |-
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -42987,6 +43048,7 @@ components:
             that the evidence does not carry is visible rather than silently honoured.
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |-
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -43005,6 +43067,7 @@ components:
           description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |-
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -48775,6 +48838,15 @@ components:
         can_be_overruled: {type: boolean, description: Whether a recorded reason may send this one message anyway.}
         category: {type: string, description: The category the engine resolved.}
         requested_category: {type: string, description: The category the sender claimed.}
+        provision:
+          allOf: [{$ref: '#/components/schemas/CitedProvision'}]
+          description: |-
+            The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+            when only that pack cites one. Absent when none may be shown.
+        provisions:
+          type: array
+          items: {$ref: '#/components/schemas/CitedProvision'}
+          description: Every law cited for `reason_code`, `provision` first. Absent when none may be shown.
     AnalyticsRefusal:
       description: >-
         A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
@@ -52482,10 +52554,24 @@ components:
         requires_double_opt_in: {type: boolean, default: false, description: 'When true, a grant is only effective after a confirmed DOI event (German email norm).'}
         class:
           type: string
-          enum: [business_correspondence, transactional, marketing, phone_outreach]
+          allOf: [{$ref: '#/components/schemas/ConsentPurposeClass'}]
           description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
         frequency: {$ref: '#/components/schemas/ConsentPurposeFrequency'}
         created_at: {type: string, format: date-time}
+    ConsentPurposeClass:
+      type: string
+      enum: [business_correspondence, transactional, marketing, phone_outreach]
+      description: Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
+    ConsentPurposeSendCount:
+      type: object
+      required: [purpose_key, sends, disputed]
+      properties:
+        purpose_key: {type: string, description: 'The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none.'}
+        class:
+          allOf: [{$ref: '#/components/schemas/ConsentPurposeClass'}]
+          description: The purpose's class. Absent under `unknown`.
+        sends: {type: integer, description: 'Messages staged under this purpose in the window.'}
+        disputed: {type: integer, description: 'Of those, the messages whose claimed kind differs from the kind the record bore out.'}
     ConsentPurposeFrequency:
       type: string
       enum: [weekly, monthly, quarterly]
@@ -52869,7 +52955,15 @@ components:
         reason_code: {type: string}
         provision:
           allOf: [{$ref: '#/components/schemas/CitedProvision'}]
-          description: The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
+          description: |-
+            The first law cited for `reason_code` when the refusal was assessed: the recipient's
+            pack's, or the sending entity's when only that pack cites one.
+        provisions:
+          type: array
+          items: {$ref: '#/components/schemas/CitedProvision'}
+          description: |-
+            Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
+            recipient's pack, then the sending entity's for a finding its data-protection law settles.
         category: {type: string}
         sending_entity_id: {type: string, format: uuid}
         sending_entity_name: {type: string}
@@ -56277,7 +56371,7 @@ components:
           type: boolean
           description: |-
             True when this answer is Home's kept answer past its five-minute freshness,
-            served while the server reads it again. It still holds every access rule the
+            or older than the reader's own latest write, served while the server reads it again. It still holds every access rule the
             fresh read would apply. A client asks again a few seconds later for the fresh
             answer. Absent or false means the answer is fresh.
         scope:
