@@ -159,13 +159,20 @@ func TaskTypeSQL(alias string) string {
 }
 
 // ReplyChannelSQL is the kind of the activity a reply or reach-out task
-// follows, so the answer goes back the way the conversation went. Null for any
-// other task, and for a held source, whose kind is not this reader's to see.
-func ReplyChannelSQL(alias string) string {
+// follows, so the answer goes back the way the conversation went. It is null for
+// any other task, and for a held source whose kind is not this reader's to see.
+// sourceAudience is the caller's audience test on the source. When it does not
+// hold, the kind of an activity the caller may not read stays null. Empty leaves
+// it ungated, for a system reader that sees every audience.
+func ReplyChannelSQL(alias, sourceAudience string) string {
 	taskType := TaskTypeSQL(alias)
 	alias = pgx.Identifier{alias}.Sanitize()
+	audience := ""
+	if sourceAudience != "" {
+		audience = " AND (" + sourceAudience + ")"
+	}
 	return "(CASE WHEN " + taskType + " IN ('" + string(crmcontracts.TaskTypeReply) + "', '" +
-		string(crmcontracts.TaskTypeReachOut) + "') THEN (SELECT s.kind FROM activity s WHERE s.id = " + alias + ".source_activity_id AND s.restricted_at IS NULL AND s.kind IN ('" +
+		string(crmcontracts.TaskTypeReachOut) + "') THEN (SELECT s.kind FROM activity s WHERE s.id = " + alias + ".source_activity_id AND s.restricted_at IS NULL" + audience + " AND s.kind IN ('" +
 		string(crmcontracts.ActivityKindEmail) + "', '" + string(crmcontracts.ActivityKindCall) + "', '" +
 		string(crmcontracts.ActivityKindMessage) + "')) END)"
 }
