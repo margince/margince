@@ -265,9 +265,9 @@ many: a user can be in several). Teams do several jobs:
    every record and leads nobody.
 
    `auth.TeamWeekReachOf` answers it once, for `GET /weekly-reviews/team` and for the
-   `team_week` field of `GET /me` and the Worklist. The delivery settings screen reads it from
-   `GET /me` to list the teams a lead may pick for the weekly mail. So it never offers a team the
-   server refuses. The `team` scope of the Worklist is the team's live work, and
+   `team_week` field of `GET /me` and the Worklist. The delivery settings screen and the
+   **Whose week** choice on Home, Weekly read it from `GET /me` to list the teams a lead may pick.
+   So neither offers a team the server refuses. The `team` scope of the Worklist is the team's live work, and
    stays on row scope.
 
    Every arm needs `deal.read`, because the week carries the money on deals. A seat that holds

@@ -212,7 +212,7 @@ The Sales group in Settings has one page per subject. There are the fields a rec
   - **Pipelines**: the stages a deal moves through, for the whole company. See [The pipeline](the-pipeline.md#pipelines-and-stages).
   - **Acquisition sources**: the business channels a deal can come from. Lead origins, which record where a lead came from, are separate.
   - **Loss reasons**: the reasons a seller picks when a deal is lost.
-  - **Outcome reviews**: questions a seller answers when a deal is won or lost. There is one set for won and one for lost.
+  - **Outcome reviews**: questions a seller answers when a deal is won or lost. Each outcome asks one template at a time; you can add templates and turn them on or off.
   - **Legal review**: whether a stage waits for legal. See [Legal review](legal-review.md).
   - **Forecast**: how the forecast counts open deals, and whether anyone sees a colleague's figures.
 - **Leads**: lead origins, reasons to drop a lead, and the first-reply target, which is off by default. Origins add or take away score points.

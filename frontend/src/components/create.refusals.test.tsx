@@ -255,6 +255,7 @@ describe("CreateAction refusals of a row list or a set", () => {
     const user = userEvent.setup();
     render(
       <CreateAction
+        requires={{ object: "contact", action: "create" }}
         label="New contact"
         fields={listFields}
         create={() => throwProblem(problem)}
@@ -301,6 +302,7 @@ describe("CreateAction refusals of a row list or a set", () => {
     const user = userEvent.setup();
     render(
       <CreateAction
+        requires={{ object: "contact", action: "create" }}
         label="New contact"
         fields={listFields.map((field) =>
           field.type === "multiselect"

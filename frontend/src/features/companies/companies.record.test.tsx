@@ -542,6 +542,49 @@ describe("CompanyScreen — the record's history", () => {
   });
 });
 
+describe("CompanyScreen — History requests", () => {
+  it("reuses the pending overview page when History opens", async () => {
+    const { fetchMock, urls } = stubFetch(companyBackstop);
+    let finishOverview: ((response: Response) => void) | undefined;
+    const overview = new Promise<Response>((resolve) => {
+      finishOverview = resolve;
+    });
+    vi.stubGlobal("fetch", (request: Request) => {
+      if (new URL(request.url).pathname.endsWith("/360")) return overview;
+      return fetchMock(request);
+    });
+
+    render(<CompanyScreen id="o-1" />);
+    await screen.findByRole("button", { name: /^History/ });
+    const listReads = () =>
+      urls.filter((url) => new URL(url).pathname.endsWith("/activities"));
+    expect(listReads()).toEqual([]);
+    await openHistory();
+    expect(await screen.findByText("Loading change history…")).toBeTruthy();
+    expect(listReads()).toEqual([]);
+
+    if (!finishOverview) throw new Error("Overview response is unresolved");
+    finishOverview(
+      jsonResponse({
+        ...company360,
+        activities: {
+          data: [
+            {
+              id: "seeded-note",
+              kind: "note",
+              subject: "Seeded activity",
+              occurred_at: "2026-06-01T08:30:00Z",
+            },
+          ],
+          page: { has_more: false },
+        },
+      }),
+    );
+    expect(await screen.findByText("Seeded activity")).toBeTruthy();
+    expect(listReads()).toEqual([]);
+  });
+});
+
 // The 360 caps its activities section. A capped list that says nothing reads
 // as the whole history: the rep takes the oldest row on screen for the day the
 // relationship started.

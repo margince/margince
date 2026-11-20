@@ -27,6 +27,7 @@
 # answer that calls the fold staged or waiting has told the user a decision is
 # still open when it is not.
 name: case32_two_words_for_one_thing
+title: Two words for one thing
 criteria: [1, 2, 3]
 
 # WRITES: the author's own statement that this case changes the world. It is not

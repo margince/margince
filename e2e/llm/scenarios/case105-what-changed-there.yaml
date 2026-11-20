@@ -1,5 +1,6 @@
 # CASE 105 — Near neighbour of case104. Reading what changed must not spend the marker the answer is counted from.
 name: case105_what_changed_there
+title: What changed there?
 criteria: [1]
 writes: true
 

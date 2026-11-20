@@ -12,7 +12,6 @@ package assignments
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -36,15 +35,6 @@ const (
 // roleColumns is what a role read returns, shared by the list and the single
 // read.
 const roleColumns = `id, key, label, label_key, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at`
-
-var roleKeyJunk = regexp.MustCompile(`[^a-z0-9]+`)
-
-// deriveRoleKey slugs a label into a key, so an administrator adding
-// "Delivery lead" does not have to invent `delivery_lead` themselves.
-func deriveRoleKey(label string) string {
-	slug := roleKeyJunk.ReplaceAllString(strings.ToLower(strings.TrimSpace(label)), "_")
-	return strings.Trim(slug, "_")
-}
 
 // CreateRecordRoleInput is the create call's arguments.
 type CreateRecordRoleInput struct {
@@ -107,7 +97,7 @@ func (s *Store) CreateRecordRole(
 	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
-		key = deriveRoleKey(label)
+		key = values.CatalogKey(label)
 	}
 	if key == "" || key != strings.ToLower(key) {
 		return crmcontracts.RecordRole{}, &values.ParseError{

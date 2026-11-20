@@ -28,19 +28,37 @@ async function pressInPlace(page: Page, tab: Locator) {
 }
 
 // The strip's top against the pane's visible top, which runs under the bar.
-function stripBelowVisibleTop(pane: Locator): Promise<number> {
-  return pane.evaluate((element) => {
-    const row = element.querySelector(".recordtabs-row");
-    if (!row) throw new Error("the record drew no tab strip");
-    const underBar = Math.max(
-      0,
-      -Number.parseFloat(getComputedStyle(element).marginTop) || 0,
-    );
-    return (
-      row.getBoundingClientRect().top -
-      (element.getBoundingClientRect().top + underBar)
-    );
-  });
+function stripBelowVisibleTop(
+  pane: Locator,
+  sample: "current" | "before-press" | "at-press" = "current",
+): Promise<number> {
+  return pane.evaluate((element, sample) => {
+    const read = () => {
+      const row = element.querySelector(".recordtabs-row");
+      if (!row) throw new Error("the record drew no tab strip");
+      const underBar = Math.max(
+        0,
+        -Number.parseFloat(getComputedStyle(element).marginTop) || 0,
+      );
+      return (
+        row.getBoundingClientRect().top -
+        (element.getBoundingClientRect().top + underBar)
+      );
+    };
+    if (sample === "before-press") {
+      element.addEventListener(
+        "click",
+        () => element.setAttribute("data-strip-at-press", String(read())),
+        { capture: true, once: true },
+      );
+    }
+    if (sample === "at-press") {
+      const atPress = element.getAttribute("data-strip-at-press");
+      if (atPress === null) throw new Error("the tab was not pressed");
+      return Number(atPress);
+    }
+    return read();
+  }, sample);
 }
 
 // Puts the strip `below` px under the pane's visible top, once the body has
@@ -116,7 +134,8 @@ test.describe("a tab switch on a phone", () => {
     const offset = await placeStrip(pane, 120);
     expect(offset, "the record is too short to scroll").toBeGreaterThan(0);
 
-    const below = Math.round(await stripBelowVisibleTop(pane));
+    // Capture the same geometry as the tab handler, after any layout motion.
+    await stripBelowVisibleTop(pane, "before-press");
 
     // The next tab draws a line above the strip, as a record's newest message
     // does off its overview.
@@ -136,6 +155,7 @@ test.describe("a tab switch on a phone", () => {
         { message: "the pane did not keep the strip where the reader left it" },
       )
       .toBeLessThanOrEqual(1);
+    const below = await stripBelowVisibleTop(pane, "at-press");
     expect(await stripBelowVisibleTop(pane)).toBeCloseTo(below, 0);
   });
 

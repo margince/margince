@@ -97,7 +97,7 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		// Naming the subject costs one extra read and buys the ordering: it
 		// takes no row lock, so it can say who this link belongs to without
 		// ordering anything.
-		contactID, kind, asksNews, err := s.subjectOfConfirmTokenTx(ctx, tx, token)
+		who, kind, asksNews, err := s.subjectOfConfirmTokenTx(ctx, tx, token)
 		if err != nil {
 			return err
 		}
@@ -109,10 +109,10 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		if !asksNews && in.MarketingChoice != "" {
 			return &ValidationError{Field: "marketing_choice", Reason: "this link asks no news question and takes no answer to one"}
 		}
-		if err := lockSubjectSuppressions(ctx, tx, contactID.UUID); err != nil {
+		if err := lockSubjectSuppressions(ctx, tx, who.id); err != nil {
 			return err
 		}
-		if err := auth.LockSubjectLive(ctx, tx, "contact", contactID.UUID); err != nil {
+		if err := auth.LockSubjectLive(ctx, tx, who.entityType, who.id); err != nil {
 			return err
 		}
 		// Spent under the subject lock, which is what makes the link
@@ -144,9 +144,9 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 			return err
 		}
 		receipts = staged
-		who := ruleSubject{Kind: entityContact, ID: ref.ContactID.String()}
+		taskFor := ruleSubject{Kind: entityContact, ID: ref.ContactID.String()}
 		for _, receipt := range staged {
-			if err := s.openRequestTaskTx(ctx, tx, who, receipt.Kind, receipt.Reference, receivedAt); err != nil {
+			if err := s.openRequestTaskTx(ctx, tx, taskFor, receipt.Kind, receipt.Reference, receivedAt); err != nil {
 				return err
 			}
 		}
@@ -301,6 +301,7 @@ func (s *Store) recordLinkedPurposeTx(ctx context.Context, tx pgx.Tx, ref Confir
 	source := "consent_link"
 	input := RecordInput{
 		ContactID:     ref.ContactID,
+		LeadID:        ref.LeadID,
 		PurposeID:     ref.PurposeID,
 		NewState:      in.MarketingChoice,
 		Source:        &source,

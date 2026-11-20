@@ -33,6 +33,7 @@ const wiki = {
   column_name: "cf_wiki",
 };
 const WIKI = "https://wiki.example.com/globex";
+const OFFER = "https://offers.example.com/42";
 
 function catalog(fields: unknown[]) {
   installFetchStub({
@@ -67,6 +68,7 @@ const EVERY_TYPE = [
   typed("picklist", "Region", ["North", "West"]),
   typed("multiselect", "Depots", ["North", "West"]),
   typed("boolean", "Framework"),
+  typed("url", "Offer page"),
 ].map((field) => ({ ...field, object: "deal" as const }));
 // One value per type in the shape the record API sends it.
 const WIRE = {
@@ -78,6 +80,7 @@ const WIRE = {
   cf_picklist: "North",
   cf_multiselect: ["North", "West"],
   cf_boolean: true,
+  cf_url: OFFER,
 };
 
 it.each([false, true])(
@@ -115,3 +118,18 @@ it.each([false, true])(
     expect(readings.slice(1, 3)).toEqual([WIKI, "€48,000.00"]);
   },
 );
+
+it("draws a url field as a link that hands the opened page nothing back", async () => {
+  catalog(EVERY_TYPE);
+  render(
+    <StoryProviders>
+      <RecordCustomFields
+        kind="deal"
+        record={{ id: "record1", version: 1, writable: false, ...WIRE }}
+      />
+    </StoryProviders>,
+  );
+  const link = await screen.findByRole("link", { name: OFFER });
+  expect(link.getAttribute("href")).toBe(OFFER);
+  expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+});

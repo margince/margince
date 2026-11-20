@@ -1,19 +1,11 @@
-// Pure helpers for the custom-fields admin screen — no React, unit-tested in
-// isolation so the screen's derivations (immutable API key, the pending DDL
-// preview, and the structural-word refusal) are proven independently.
+// Pure helpers for custom fields, with no React. The admin screen's derivations
+// (immutable API key, pending DDL preview, structural-word refusal) are tested
+// here in isolation.
 
 import type { components } from "../api/schema";
+import { translatedLabel } from "./labeltranslation";
 
 export type CfObject = components["schemas"]["CustomField"]["object"];
-export type CfType =
-  | "text"
-  | "number"
-  | "date"
-  | "currency"
-  | "multiselect"
-  | "picklist"
-  | "boolean"
-  | "record";
 
 // Chip order is normative (AC-custom-fields-2), and the SET is the contract's:
 // CfObject is the generated `CustomField["object"]`, so this list cannot quietly
@@ -32,7 +24,24 @@ export const CF_OBJECTS: readonly CfObject[] = [
   "activity",
 ];
 
-export const CF_TYPES: readonly CfType[] = [
+/** A record key's custom-field catalog, where that record type has one. */
+export function catalogOfRecord(recordKey: string): CfObject | undefined {
+  return CF_OBJECTS.find((object) => object === recordKey);
+}
+
+/** A field's label as the reader sees it. */
+export function customFieldLabel(
+  field: components["schemas"]["CustomField"],
+  locale: string,
+): string {
+  return translatedLabel(field.label, field.label_translations, locale);
+}
+
+// The type set mirrors fieldcatalog.Types() in the backend, in its order.
+// backend/gates/frontendcustomfieldtypes_test.go fails when the two differ in
+// either direction. The create request takes a CfType, so a member the
+// contract lacks fails to compile.
+export const CF_TYPES = [
   "text",
   "number",
   "date",
@@ -41,7 +50,10 @@ export const CF_TYPES: readonly CfType[] = [
   "multiselect",
   "boolean",
   "record",
-];
+  "url",
+] as const;
+
+export type CfType = (typeof CF_TYPES)[number];
 
 export function slug(label: string): string {
   return label
@@ -78,6 +90,7 @@ function storageNote(type: CfType, currency: string): string {
     case "boolean":
       return "boolean";
     case "record":
+    case "url":
       return "text";
   }
 }

@@ -72,7 +72,7 @@ var SharePrivateQuoteRequests = config.DefineStored(config.Spec[bool]{
 
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {
-	return []config.Any{FollowUpAfterDays, InlineSendReview, PrivateMailRequests, SharePrivateQuoteRequests}
+	return []config.Any{FollowUpAfterDays, PrivateMailRequests, SharePrivateQuoteRequests}
 }
 
 // sharePrivateQuoteRequests reads SharePrivateQuoteRequests in the caller's

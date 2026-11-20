@@ -7,9 +7,9 @@ import { ListTable, useListQuery } from "../../components/listquery";
 import {
   createdColumn,
   lastActivityColumn,
-  mineEmptyNote,
+  mineEmptyLine,
   ownerColumn,
-  sharedEmptyNote,
+  sharedEmptyLine,
   sharedWithMeView,
   standardViews,
   tagsColumn,
@@ -139,9 +139,9 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
         state={state}
         unit="unit.contacts"
         unitOne="unit.contact"
-        emptyNote={
-          mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" }) ??
-          sharedEmptyNote({ t, state, unit: "unit.contacts" })
+        emptyLine={
+          mineEmptyLine({ t, state, viewerId, unit: "unit.contacts" }) ??
+          sharedEmptyLine({ t, state, unit: "unit.contacts" })
         }
         action={<ContactListActions startCreating={startCreating} />}
         columns={[

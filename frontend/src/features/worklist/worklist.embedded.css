@@ -39,7 +39,9 @@
 }
 
 /* THE DRAWER'S HEAD IS TWO LINES. The view tabs and whose day share the first,
-   the cuts take the second, and the day's sentence closes it as a count. */
+   the cuts take the second, and the day's sentence closes it as a count. The
+   header puts the dials after the tabs in the DOM, so Tab meets them as drawn;
+   only the sentence, which takes no focus, moves by `order`. */
 .worklist-embedded .worklist-header {
   flex-flow: row wrap;
   align-items: center;
@@ -49,11 +51,7 @@
 .worklist-embedded .worklist-header-cuts {
   display: contents;
 }
-.worklist-embedded .worklist-header-cuts > .segmented {
-  order: 1;
-}
 .worklist-embedded .worklist-header-dials {
-  order: 2;
   align-items: center;
   margin-inline-start: auto;
 }
@@ -107,9 +105,9 @@
   margin-block: var(--space-3) var(--space-2);
 }
 
-/* The kind chip heads the work it labels, so a long kind reads whole and the
-   title keeps the card's width. Where the drawer has the width, the verbs
-   stand beside the work, which keeps a readable measure before they take any. */
+/* The kind chip heads the work it labels, so a long kind reads whole. The verbs
+   sit under the work, so the title and its caption keep the card's width; from
+   70rem, the width worklist.row.css uses for the same move, they stand beside it. */
 .worklist-embedded .worklist-list > li > .worklist-row {
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--space-3);
@@ -128,7 +126,7 @@
 .worklist-embedded .worklist-list > li > .worklist-row > :nth-child(n + 5) {
   grid-column: 2 / -1;
 }
-@container (min-width: 44rem) {
+@container (min-width: 70rem) {
   .worklist-embedded .worklist-list > li > .worklist-row {
     grid-template-columns:
       auto minmax(min(24rem, 100%), 1fr)

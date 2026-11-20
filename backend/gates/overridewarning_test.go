@@ -51,6 +51,7 @@ var warningDigests = map[string]string{
 	"override-v1": "de2de8c051f8eed3177d2583e13ef5f72d77d0db20d4f32b27ddea0e6d494379",
 	"override-v2": "8807f8c1106d22c1445c92a2d5247b0cdf02a8eb1346f93847a55e6588e052e4",
 	"inline-v1":   "aee3010cd0cad981697a98d967b381312bd6f19b41aebf6df964dd513a2af7e3",
+	"inline-v2":   "baded5d5043e8443b8b4beae228ed174de7fb598fbb1c639427a8941d82fd781",
 }
 
 func TestTheOverrideWarningTextMatchesItsVersion(t *testing.T) {

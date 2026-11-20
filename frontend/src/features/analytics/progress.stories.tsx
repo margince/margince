@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -91,6 +92,50 @@ export const GoalDraft: Story = {
       <GoalEditor plan={draftPlan} />
     </StoryProviders>
   ),
+};
+
+const unbrokenReason = `Agreed-${"in-the-yearly-review".repeat(14)}`;
+const longReasonPlan: components["schemas"]["SalesGoalPlan"] = {
+  ...draftPlan,
+  draft: draftPlan.draft && { ...draftPlan.draft, reason: unbrokenReason },
+  history: draftPlan.history.map((event) => ({
+    ...event,
+    reason: unbrokenReason,
+  })),
+};
+
+// A reason with no space in it stays inside the publish dialog.
+export const GoalPublishLongReason: Story = {
+  render: () => (
+    <StoryProviders>
+      <GoalEditor plan={longReasonPlan} />
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Publish" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await expect(dialog.scrollWidth).toBeLessThanOrEqual(dialog.clientWidth);
+  },
+};
+
+// The history's reason column keeps the year total and date in view.
+export const GoalsLongReasonHistory: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ deal: ["read"], lead: ["read"] }),
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET /analytics/sales-goals/${draftPlan.owner_id}/2026`]: () =>
+        jsonResponse(longReasonPlan),
+    });
+    window.location.hash = "#/goals?year=2026";
+    return (
+      <StoryProviders>
+        <SalesGoalsScreen />
+      </StoryProviders>
+    );
+  },
 };
 
 // Asking for the months: "Propose months" answers twelve to take or dismiss.

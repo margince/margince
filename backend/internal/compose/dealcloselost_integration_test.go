@@ -243,15 +243,16 @@ func TestADealOnLegalHoldIsNotClosed(t *testing.T) {
 	}
 }
 
-func TestARecentReplyOnlyItsParticipantsSeeKeepsTheDealOpen(t *testing.T) {
-	c := setupCloseLost(t)
-	recent := c.now.AddDate(0, 0, -10)
-	c.customerWrites(t, c.silent, recent)
-	c.WsExec(t, `UPDATE activity SET audience = 'participants'
-		WHERE occurred_at = $1 AND id IN (SELECT activity_id FROM activity_link WHERE deal_id = $2)`, recent, c.silent)
-
-	if got := c.run(t); got != 0 {
-		t.Fatalf("closed %d deals, want 0: the customer wrote ten days ago in a private thread", got)
+func TestARecentReplyKeepsTheDealOpenUnseenOrInDoubt(t *testing.T) {
+	for name, mark := range map[string]string{
+		"seen only by its participants": `UPDATE activity SET audience = 'participants' WHERE id = $1`,
+		"doubted by the classifier":     `UPDATE activity_link SET deal_relevance = 'uncertain', relevance_source = 'classifier' WHERE activity_id = $1 AND entity_type = 'deal'`,
+	} {
+		c := setupCloseLost(t)
+		c.WsExec(t, mark, c.customerMails(t, c.silent, c.now.AddDate(0, 0, -10)))
+		if got := c.run(t); got != 0 {
+			t.Fatalf("closed %d deals, want 0: the customer wrote ten days ago, %s", got, name)
+		}
 	}
 }
 

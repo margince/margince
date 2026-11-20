@@ -93,7 +93,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 			teams = append(teams, ids.UUID(t))
 		}
 	}
-	userID, rawToken, err := h.svc.InviteUser(r.Context(), actor, InviteUserInput{
+	member, rawToken, err := h.svc.InviteMember(r.Context(), actor, InviteUserInput{
 		Email:        email.String(),
 		DisplayName:  name,
 		GreetingName: req.GreetingName,
@@ -103,6 +103,9 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		Mailed:       h.canSendPasswordLink(),
 	})
 	if err != nil {
+		err = conflictIf(err, errAlreadyInvited, "already_invited",
+			"a member with this address is already waiting on an invitation; "+
+				"resend it from the roster instead of inviting again")
 		err = conflictIf(err, errRemovedEmail, "removed_member_email", "This address belongs to a permanently removed member and remains reserved for historical attribution.")
 		err = conflictIf(err, errEmailTaken, "email_taken",
 			"a user with this email already exists in this company; if they were "+
@@ -110,8 +113,8 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, teamMembershipRefusal(unknownRoleRefusal(companyNotDescribedRefusal(err))))
 		return
 	}
-	queued := h.sendInvite(r, email.String(), rawToken, actor)
-	h.writeInvitedUser(w, r, actor, userID, http.StatusCreated, queued)
+	queued := h.sendInvite(r, rawToken, actor)
+	h.writeInvitedMember(w, member, http.StatusCreated, queued)
 }
 
 // ChangeUserRole (PATCH /users/{id}/role).
@@ -377,7 +380,7 @@ func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, actor Id
 // A goroutine and not a queued job: a job table stores its arguments verbatim,
 // and the raw token must not enter it. The relay's answer is stamped on the
 // link, where the roster reads it.
-func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Identity) bool {
+func (h Handlers) sendInvite(r *http.Request, rawToken string, inviter Identity) bool {
 	if !h.canSendPasswordLink() || rawToken == "" {
 		return false
 	}

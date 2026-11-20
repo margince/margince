@@ -2,6 +2,7 @@
 # through change_settings. The logo comes as base64, as attach_document takes a
 # file, and is attached to no record.
 name: case116_the_rate_and_the_logo
+title: The exchange rate and the logo
 criteria: [1, 2]
 writes: true
 

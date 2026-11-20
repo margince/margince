@@ -50,7 +50,7 @@ function hidden(name: string): HTMLInputElement {
 afterEach(() => {
   vi.useRealTimers();
   sessionStorage.clear();
-  document.body.innerHTML = "";
+  document.body.replaceChildren();
 });
 
 describe("the browser form snippet's fill time", () => {

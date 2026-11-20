@@ -3,15 +3,33 @@ jurisdiction: si
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Zakon o elektronskih komunikacijah (ZEKom-2)"
+    source-url: https://pisrs.si/pregledPredpisa?id=ZAKO8611
 fixtures:
   - finding: objection_route
     triggers: si/fixtures/advertising-without-objection-route.md
     clears: si/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)"
+    provision: "226. člen, (1) odstavek"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)"
+    provision: "226. člen, (1) odstavek"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)"
+    provision: "226. člen, (1) odstavek"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)"
+    provision: "226. člen, (1) odstavek"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Zakon o elektronskih komunikacijah (ZEKom-2)"
+    provision: "226. člen, (5) odstavek"
 ---
 
 # What Slovenian law requires of an outbound message

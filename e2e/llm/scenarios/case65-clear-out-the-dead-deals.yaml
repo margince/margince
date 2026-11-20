@@ -21,6 +21,7 @@
 # as lost is still listed, so stage=Qualified, the stage the seed files both
 # deals on, holds that door too.
 name: case65_clear_out_the_dead_deals
+title: Clear out the dead deals
 criteria: [1]
 
 # The case passes only when nothing is written, but a run that fails it writes,

@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=../margince.schema.json
+# Model setup: Mistral models in the EU, through OpenRouter
 # config/presets/openrouter_cloud_eu.yaml — every lane, chat and embeddings, on
 # Mistral's EU endpoint.
 #

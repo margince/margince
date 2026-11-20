@@ -44,6 +44,13 @@ const FIELDS: readonly VocabularyField[] = [
     type: "picklist",
     operators: ["eq", "neq", "in", "exists"],
     custom: true,
+    label: "Loyalty Tier",
+  },
+  {
+    name: "created_at",
+    type: "date",
+    operators: ["gte", "lte", "exists"],
+    custom: false,
   },
 ];
 
@@ -56,14 +63,14 @@ const ROWS = [
     full_name: "Ann Lee",
     city: "Berlin",
     cf_loyalty_tier: "gold",
-    created_at: "2026-08-01",
+    created_at: "2026-08-01T09:14:03.512Z",
   },
   {
     id: "p-2",
     full_name: "Bruno Sá",
     city: "Lisbon",
     cf_loyalty_tier: "silver",
-    created_at: "2026-07-19",
+    created_at: "2026-07-19T16:40:51.208Z",
   },
   {
     // The dash case, which is the reason a null does not render as blank: a
@@ -72,7 +79,7 @@ const ROWS = [
     full_name: "Chen Wei",
     city: "Singapore",
     cf_loyalty_tier: null,
-    created_at: "2026-06-30",
+    created_at: "2026-06-30T07:02:17.930Z",
   },
 ] satisfies FilterPreview["rows"];
 

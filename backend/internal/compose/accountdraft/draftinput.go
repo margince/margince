@@ -35,6 +35,9 @@ func (in Input) WrittenInto() draftfloor.Envelope { return in.Envelope }
 // Steering is the caller's own words.
 func (in Input) Steering() string { return in.Intent }
 
+// Revises is whether the salesperson is changing a draft already on screen.
+func (in Input) Revises() bool { return in.RewriteOf != "" }
+
 // GreetingNames are the two names a greeting-line repair looks for. Both,
 // because the register decides which one opens the message.
 func (in Input) GreetingNames() (string, string) {

@@ -1,4 +1,3 @@
-import { X } from "lucide-react";
 import { useId, useState } from "react";
 import {
   Badge,
@@ -11,7 +10,6 @@ import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
 import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { useToast } from "../../design-system/toast";
 import { AutonomyDot } from "../../design-system/trust";
 import { useLocale, useT } from "../../i18n";
 import {
@@ -26,6 +24,7 @@ import { fieldCheckSentence, refusalSentences } from "../../lib/problem";
 import { useRecordKindDirectory } from "../../lib/recordkinds";
 import { ActivityKindsSelect } from "./customfields.kinds";
 import { typeLabels } from "./customfields.labels";
+import { OptionRows } from "./customfields.optionrows";
 import "./customfields.css";
 
 // The add-field builder (AC-custom-fields-3..5/8) turns a plain label into one
@@ -62,7 +61,6 @@ export function FieldBuilder({
   // nothing to reset to.
   onCancel: () => void;
 }>) {
-  const toast = useToast();
   const t = useT();
   const { locale } = useLocale();
   const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
@@ -86,7 +84,6 @@ export function FieldBuilder({
   const [options, setOptions] = useState<string[]>([""]);
   const [showInCreate, setShowInCreate] = useState(true);
   const showInCreateHintId = useId();
-  const optionsErrorId = useId();
   // A record field points at a kind an installed extension declared, so the
   // type is offered only when there is one to pick.
   const kinds = useRecordKindDirectory().data?.data ?? [];
@@ -118,24 +115,6 @@ export function FieldBuilder({
     return found;
   };
 
-  const setOptionAt = (idx: number, value: string) => {
-    setOptions((current) => current.map((opt, i) => (i === idx ? value : opt)));
-    faults.edited("options");
-  };
-
-  const removeOption = (idx: number) => {
-    // The last option row is a floor, not a delete target. The refusal shows
-    // as a toast instead of being swallowed.
-    if (options.length <= 1) {
-      // `danger`: this is a refusal, and the completion dot the default tone
-      // draws said the opposite of what the sentence says.
-      toast.show(t("cf.lastOptionBlocked"), { tone: "danger" });
-      return;
-    }
-    setOptions((current) => current.filter((_, i) => i !== idx));
-    faults.edited("options");
-  };
-
   const confirm = () => {
     if (pending || structural || faults.show(checks())) {
       return;
@@ -154,7 +133,6 @@ export function FieldBuilder({
     );
   };
   const rest = refusal(error).rest;
-  const optionsRefused = faults.of("options") !== undefined;
 
   return (
     <>
@@ -255,39 +233,14 @@ export function FieldBuilder({
         )}
 
         {(type === "picklist" || type === "multiselect") && (
-          <div className="field">
-            <span className="t-label">{t("cf.options")}</span>
-            <div className="cf-options">
-              {options.map((option, idx) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: option rows are positional, not identity-keyed
-                <div className="cf-option-row" key={idx}>
-                  <TextInput
-                    aria-label={t("cf.optionPlaceholder")}
-                    aria-invalid={optionsRefused ? true : undefined}
-                    aria-describedby={
-                      optionsRefused ? optionsErrorId : undefined
-                    }
-                    placeholder={t("cf.optionPlaceholder")}
-                    value={option}
-                    onChange={(event) => setOptionAt(idx, event.target.value)}
-                  />
-                  <Button
-                    iconOnly
-                    aria-label={t("cf.removeOption")}
-                    onClick={() => removeOption(idx)}
-                  >
-                    <X aria-hidden="true" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-            <Button onClick={() => setOptions((current) => [...current, ""])}>
-              {t("cf.addOption")}
-            </Button>
-            {optionsRefused && (
-              <ErrorLine id={optionsErrorId}>{faults.of("options")}</ErrorLine>
-            )}
-          </div>
+          <OptionRows
+            options={options}
+            onChange={(next) => {
+              setOptions(next);
+              faults.edited("options");
+            }}
+            error={faults.of("options")}
+          />
         )}
 
         <div className="field">

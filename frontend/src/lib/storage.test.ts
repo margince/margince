@@ -122,6 +122,7 @@ describe("a stored value", () => {
       "margince.signin.returnRoute",
       "margince.staleBuildReloadedAt",
       "margince.setup.reminderHidden",
+      "margince.setup.permissionsSeen:*",
       "margince.changes.lastBulkUndo",
       "margince.taskReminders.shown",
       "margince.aiReveal.seen",

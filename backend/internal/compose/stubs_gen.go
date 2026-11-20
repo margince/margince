@@ -95,6 +95,10 @@ func (stubs) DeclineActivityDeal(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "DeclineActivityDeal")
 }
 
+func (stubs) SetActivityDealRelevance(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SetActivityDealRelevance")
+}
+
 func (stubs) ClearActivityDisposition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ClearActivityDispositionParams) {
 	httperr.NotImplemented(w, r, "ClearActivityDisposition")
 }
@@ -177,6 +181,10 @@ func (stubs) GetTranscriptRead(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) ListActivityReviewTemplates(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListActivityReviewTemplates")
+}
+
+func (stubs) CreateActivityReviewTemplate(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateActivityReviewTemplateParams) {
+	httperr.NotImplemented(w, r, "CreateActivityReviewTemplate")
 }
 
 func (stubs) UpdateActivityReviewTemplate(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -1135,6 +1143,10 @@ func (stubs) ListChannelProviders(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "ListChannelProviders")
 }
 
+func (stubs) ReopenConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReopenConversationClaim")
+}
+
 func (stubs) SettleConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SettleConversationClaim")
 }
@@ -1829,6 +1841,10 @@ func (stubs) CreateCustomField(w nethttp.ResponseWriter, r *nethttp.Request, par
 
 func (stubs) RenameCustomField(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RenameCustomFieldParams) {
 	httperr.NotImplemented(w, r, "RenameCustomField")
+}
+
+func (stubs) ListCustomFieldChoiceUse(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListCustomFieldChoiceUse")
 }
 
 func (stubs) ListCustomFieldLiveLists(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

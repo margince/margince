@@ -3,16 +3,34 @@ jurisdiction: fi
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Laki sähköisen viestinnän palveluista (917/2014)"
     provision: "200–202 §"
+    source-url: https://www.finlex.fi/fi/lainsaadanto/2014/917
 fixtures:
   - finding: objection_route
     triggers: fi/fixtures/advertising-without-objection-route.md
     clears: fi/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Laki sähköisen viestinnän palveluista (917/2014)"
+    provision: "200 § 1 mom."
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Laki sähköisen viestinnän palveluista (917/2014)"
+    provision: "200 § 1 mom."
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Laki sähköisen viestinnän palveluista (917/2014)"
+    provision: "200 § 1 mom."
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Laki sähköisen viestinnän palveluista (917/2014)"
+    provision: "200 § 1 mom."
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(4)"
 ---
 
 # What Finnish law requires of an outbound message

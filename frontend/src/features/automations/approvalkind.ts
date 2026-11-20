@@ -117,6 +117,11 @@ export const EDITABLE_FIELDS: Readonly<
   ownership_transfer: [],
   // A share request is answered yes or no; its fields name the records.
   contact_share: [],
+  legal_review_request: [],
+  // The owner keeps, changes or clears the captured day.
+  task_due_date: [
+    { field: "due_date", as: "date", label: "approval.field.due_date" },
+  ],
   held_draft: [
     { field: "subject", as: "text", label: "decision.draftSubject" },
     { field: "body", as: "textarea", label: "decision.draftBody" },

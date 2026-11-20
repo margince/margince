@@ -184,7 +184,9 @@ describe("ComposeWindow — channel reply", () => {
     await pressSend(user);
 
     expect(
-      await screen.findByText("This message cannot be sent as it stands."),
+      await screen.findByText(
+        "This message was not sent. Your draft is kept. Ask an admin to update Margince, then send again.",
+      ),
     ).toBeTruthy();
     // The rep's words survive the refusal, and this test proves that, not only
     // that an error rendered. Losing a written reply to a 409 once makes a rep

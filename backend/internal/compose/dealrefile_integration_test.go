@@ -334,16 +334,14 @@ func TestTheRecoverySweepQueuesTheSameFiniteReconsideration(t *testing.T) {
 	}
 }
 
-// The recovery pass rechecks a link the rule wrote on a suggestion before the
-// topic check existed. It takes the link back when the model says the mail is
-// not about the deal.
+// The recovery pass marks an older suggested link unrelated when the model rejects it.
 func TestTheRecoveryPassRechecksAnOlderSuggestedLink(t *testing.T) {
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
 	e := f.o.e
 	writer := principal.WithCorrelationID(e.ConnectorOwnerCtx(f.o.owner, "gmail"), ids.NewV7())
 	if err := InstallationDB(e.Pool).Tx(writer, func(tx pgx.Tx) error {
-		_, _, err := ActivityDealFiler{}.FileOnDealIfUnfiled(writer, tx, ids.From[ids.ActivityKind](f.mail), f.deal, nil)
+		_, _, err := ActivityDealFiler{}.FileOnDealIfUnfiled(writer, tx, ids.From[ids.ActivityKind](f.mail), f.deal, nil, "")
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -359,11 +357,11 @@ func TestTheRecoveryPassRechecksAnOlderSuggestedLink(t *testing.T) {
 	}
 	f.topic = dealTopicStub{answer: func(ids []string) string { return verdictsReply(0.95, dealTopicNotAbout)(ids) }}
 	f.run(t, args)
-	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND entity_type='deal'`, f.mail); got != 0 {
-		t.Fatal("the recheck kept a link the model says the mail is not about")
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND deal_relevance='unrelated' AND relevance_source='classifier'`, f.mail); got != 1 {
+		t.Fatal("the recheck did not mark unrelated a link the model says the mail is not about")
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND evidence->>'reason'='captured_activity_deal_recheck'`, f.mail); got != 1 {
-		t.Fatalf("%d recheck audit rows on the mail, want the retraction", got)
+		t.Fatalf("%d recheck audit rows on the mail, want the mark", got)
 	}
 }
 

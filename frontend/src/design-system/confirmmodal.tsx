@@ -1,5 +1,6 @@
 import type { KeyboardEvent, MouseEvent, ReactNode, Ref } from "react";
-import { Children, useId } from "react";
+import { Children, useCallback, useId, useRef } from "react";
+import { flushSync } from "react-dom";
 import { useT } from "../i18n";
 import { isParagraphCommit } from "../lib/fieldcommit";
 import { isImeCommit } from "../lib/imecommit";
@@ -11,6 +12,33 @@ import type { ModalIntent } from "./modal";
 import { AutonomyDot } from "./trust";
 
 type DotTier = Parameters<typeof AutonomyDot>[0]["tier"];
+
+const LINE_TYPES = new Set([
+  "text",
+  "search",
+  "email",
+  "url",
+  "tel",
+  "password",
+  "number",
+]);
+
+// A field in a form of its own submits that form. A combobox's Enter picks a
+// row. A popup portalled out of the body holds no field of this dialog.
+function isLineCommit(event: KeyboardEvent<HTMLDivElement>): boolean {
+  const field = event.target;
+  return (
+    field instanceof HTMLInputElement &&
+    LINE_TYPES.has(field.type) &&
+    event.key === "Enter" &&
+    !(event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) &&
+    !event.defaultPrevented &&
+    field.form === null &&
+    field.getAttribute("role") !== "combobox" &&
+    !field.hasAttribute("aria-autocomplete") &&
+    event.currentTarget.contains(field)
+  );
+}
 
 // The body and its fields are the caller's; the dialog owns their spacing.
 
@@ -30,6 +58,7 @@ export function ConfirmModal({
   pending,
   error,
   intent = "confirm",
+  enterConfirms = intent === "form",
   returnFocusTo,
   initialFocusTo,
   confirmRef,
@@ -78,6 +107,8 @@ export function ConfirmModal({
   pending?: boolean;
   error?: string | null;
   intent?: Exclude<ModalIntent, "full">;
+  /** Enter in a single-line field presses Confirm; on by default in the form shape. */
+  enterConfirms?: boolean;
   // Passed through to Modal. A confirm whose action destroys its own trigger —
   // deactivating a member, ending a connection, closing a request — names the
   // place focus should land instead, since the trigger will not be there to
@@ -100,19 +131,30 @@ export function ConfirmModal({
   const confirm = (event: MouseEvent<HTMLButtonElement>) => {
     if (!refuseUnreadableField(event.currentTarget)) onConfirm();
   };
+  const confirmButton = useRef<HTMLButtonElement | null>(null);
+  // The key shortcut presses this button, and a caller may focus it too.
+  const holdConfirm = useCallback(
+    (node: HTMLButtonElement | null) => {
+      confirmButton.current = node;
+      if (typeof confirmRef === "function") confirmRef(node);
+      else if (confirmRef) confirmRef.current = node;
+    },
+    [confirmRef],
+  );
   // Enter is a new line in a note, so ⌘/Ctrl+Enter there presses Confirm.
-  const confirmFromNote = (event: KeyboardEvent<HTMLDivElement>) => {
-    const refused = pending || confirmDisabled || confirmReason !== undefined;
-    if (
-      !(event.target instanceof HTMLTextAreaElement) ||
-      !isParagraphCommit(event) ||
-      isImeCommit(event) ||
-      refused
-    ) {
+  const confirmFromKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const commit =
+      event.target instanceof HTMLTextAreaElement
+        ? isParagraphCommit(event)
+        : enterConfirms && isLineCommit(event);
+    if (!commit || isImeCommit(event)) {
       return;
     }
     event.preventDefault();
-    if (!refuseUnreadableField(event.target)) onConfirm();
+    // A field that settles on Enter (DateInput) hands up its value in this
+    // keystroke. The press waits for that render, and refuses as a click does.
+    flushSync(() => undefined);
+    confirmButton.current?.click();
   };
   return (
     <Modal
@@ -136,8 +178,8 @@ export function ConfirmModal({
         <span id={titleId}>{title}</span>
       </Heading>
       {body && (
-        // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it hears ⌘/Ctrl+Enter from a note inside it; Confirm stays the control
-        <div ref={bodyRef} className="form-stack" onKeyDown={confirmFromNote}>
+        // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it hears the Enter that commits a field inside it; Confirm stays the control
+        <div ref={bodyRef} className="form-stack" onKeyDown={confirmFromKey}>
           {children}
           {error && <ErrorLine>{error}</ErrorLine>}
         </div>
@@ -161,7 +203,7 @@ export function ConfirmModal({
           {confirmMenu ? (
             <span className="actions-split">
               <Button
-                ref={confirmRef}
+                ref={holdConfirm}
                 variant={confirmVariant}
                 onClick={confirm}
                 pending={pending}
@@ -174,7 +216,7 @@ export function ConfirmModal({
             </span>
           ) : (
             <Button
-              ref={confirmRef}
+              ref={holdConfirm}
               variant={confirmVariant}
               onClick={confirm}
               pending={pending}

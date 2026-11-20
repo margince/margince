@@ -123,6 +123,9 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 		        'Hedda asked us not to contact her employer', now() + interval '3 days',
 		        $4)`, contact, user, introducer, "user:"+user.String())
 
+	_, review := seedReviewedDeal(ctx, t, tx, contact.UUID)
+	mustExec(ctx, t, tx, `UPDATE legal_review SET note = 'Hedda Subject wants clause nine changed' WHERE id = $1`, review)
+
 	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing: %v", err)
 	}
@@ -139,6 +142,10 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 	if describing != 0 {
 		t.Errorf("%d introduction row(s) still describe the subject by name after an anonymize",
 			describing)
+	}
+
+	if reviewNote, _, _ := reviewText(ctx, t, tx, review); reviewNote == nil || *reviewNote != "Erased wants clause nine changed" {
+		t.Errorf("legal review note = %v after the anonymize, want the name redacted and the clause kept", reviewNote)
 	}
 
 	var pending int

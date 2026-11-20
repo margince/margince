@@ -20,7 +20,6 @@ import {
 } from "../../testing/story-utils";
 import { type LibraryItem, libraryItems } from "./library";
 import { LibraryTable, NewShortlistAction } from "./listlibrary";
-import { DEFAULT_AUDIENCE } from "./listsharing";
 
 // The one table every library group draws: a saved view and a list read alike,
 // the name a link stretched over its row, and only a list counted. A kind is
@@ -175,7 +174,7 @@ export const StartingAShortlist: Story = {
     });
     return (
       <StoryProviders>
-        <NewShortlistAction defaultAudience={DEFAULT_AUDIENCE} />
+        <NewShortlistAction />
       </StoryProviders>
     );
   },

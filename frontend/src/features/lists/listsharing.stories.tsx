@@ -46,6 +46,25 @@ export const TeamAudience: Story = {
   },
 };
 
+/** A reader in no team: "A team" is barred, and the hint says why. */
+export const ReaderInNoTeam: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
+    });
+    return (
+      <StoryProviders>
+        <ListAudienceFields
+          value={{ sharing: "private", teamId: null }}
+          onChange={() => undefined}
+          ownerIsReader
+        />
+      </StoryProviders>
+    );
+  },
+};
+
 export const EditList: Story = {
   render: () => {
     routes();

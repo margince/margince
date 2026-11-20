@@ -8,7 +8,6 @@
 // live catalog and this workspace's i18n Yes/No labels.
 
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   typedDecimalText,
@@ -22,9 +21,10 @@ import {
   typedMinorUnits,
 } from "../format/minorunits";
 import { browserZone } from "../format/timezone";
-import { webUrl } from "../format/weburl";
+import { isWebAddress, webUrl } from "../format/weburl";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import type { CfObject } from "../lib/customfields.logic";
+import { type CfObject, customFieldLabel } from "../lib/customfields.logic";
+import { customFieldsQuery } from "../lib/customfields.query";
 import { translatedLabel } from "../lib/labeltranslation";
 import {
   readKindRecord,
@@ -110,6 +110,17 @@ export function customFieldToFormField(
       };
     case "text":
       return { ...base, type: "text", maxLength: TEXT_LIMITS.document };
+    case "url":
+      return {
+        ...base,
+        type: "text",
+        maxLength: TEXT_LIMITS.note,
+        placeholder: "https://",
+        validate: (value) =>
+          value.trim() === "" || isWebAddress(value.trim())
+            ? undefined
+            : t("cf.url.invalid"),
+      };
     case "record": {
       // A record field keeps its one kind in `options`, as the server checks.
       const kind = field.options?.[0] ?? "";
@@ -318,11 +329,6 @@ function optionLabel(field: CustomField, option: string, locale: string) {
   return translatedLabel(option, field.option_translations?.[option], locale);
 }
 
-/** A field's label as the reader sees it. */
-export function customFieldLabel(field: CustomField, locale: string): string {
-  return translatedLabel(field.label, field.label_translations, locale);
-}
-
 // customFieldDisplay in this reader's locale and Yes/No words, for either record
 // surface that reads a custom field.
 export function useCustomFieldDisplay() {
@@ -341,10 +347,9 @@ export function useCustomFieldLabel() {
 
 // Where a displayed value may be followed to, or null when it is only text.
 //
-// The type set is closed and carries no `url` type, so a link is recognised
-// from the VALUE, which makes the scheme check the load-bearing half rather
-// than a formality. Which schemes those are is not this file's to decide —
-// `format/weburl` is the one place that answers it for every surface.
+// A text field holding an address is a link too, so a link is recognised from
+// the VALUE. That makes the scheme check what keeps the link safe. Which
+// schemes those are is decided in `format/weburl`, for every surface.
 export function customFieldHref(value: string): string | null {
   return webUrl(value)?.href ?? null;
 }
@@ -434,18 +439,7 @@ export function useObjectCustomFields(
 ): ObjectCustomFields {
   const t = useT();
   const { locale } = useLocale();
-  const query = useQuery({
-    queryKey: ["custom-fields", object],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/custom-fields", {
-        params: { query: { object } },
-      });
-      if (error) {
-        throw error;
-      }
-      return data;
-    },
-  });
+  const query = useQuery(customFieldsQuery(object));
 
   const fields = fieldsForSurface(
     query.data?.data ?? EMPTY_CUSTOM_FIELDS,

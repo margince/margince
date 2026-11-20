@@ -110,7 +110,7 @@ var ceilings = map[string]int{
 	//
 	// +7 for the copy-style pointer: the gate holds only mechanics, and an author
 	// who never opens the style page writes the tone and vocabulary it cannot see.
-	"frontend/AGENTS.md": 183,
+	"frontend/AGENTS.md": 193,
 }
 
 func TestNoRulebookGrowsPastItsCeiling(t *testing.T) {

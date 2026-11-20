@@ -357,7 +357,7 @@ func scoreDeals(
 	var median *int
 	err = tx.QueryRow(ctx, fmt.Sprintf(dealScoreSQL,
 		startPos, endPos, userPos, occurredday.WithinSQL("act", fmt.Sprintf("$%d", sincePos), fmt.Sprintf("$%d", endPos))+
-			" AND "+relstrength.DealEvidenceSQL("act"), stakeholdersPos,
+			" AND "+relstrength.DealEvidenceSQL("act", "dl.deal_id"), stakeholdersPos,
 		probabilityRank("last_cat"), probabilityRank("first_cat"), scope, zonePos,
 		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), readable,
 		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), currentTask),

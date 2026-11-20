@@ -25,13 +25,17 @@ describe("the send-surface-census census", () => {
 });
 
 describe("the send-surface-census rule", () => {
+  // The real waivers name files this planted tree does not hold, so their
+  // stale-waiver lines are left out of the check.
   it("reports a sender that draws no mark, and passes one that does", () => {
     expect(
       plantedFindings(rule, [
         at("silent.tsx", 'api.POST("/activities/{id}/send-email", {});'),
         at("marked.tsx", 'api.POST("/emails", {});\n<SendMark />;'),
         at("silent.test.tsx", 'api.POST("/emails", {});'),
-      ]),
+      ]).filter(
+        (finding) => !finding.endsWith("is in SILENT_SENDERS and is gone"),
+      ),
     ).toEqual(["src/features/silent.tsx posts a send and draws no mark"]);
   });
 });
