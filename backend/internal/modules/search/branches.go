@@ -428,7 +428,7 @@ var searchBranches = []searchBranch{
 	// Archived words are excluded: a retired tag is not in the picker, so a hit
 	// on one leads to a page that cannot be acted on.
 	{entity: "tag", table: entityTag, title: columnName, snippet: noSnippet, workspaceWide: true, textOnly: true, extraWhere: "%s.archived_at IS NULL"},
-	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: "left(coalesce(body, ''), 200)", activityWalk: true, rankSample: activityRankSample},
+	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: fmt.Sprintf("left(coalesce(body, ''), %d)", activitySnippetRunes), activityWalk: true, rankSample: activityRankSample},
 }
 
 // SearchedTables names every physical table the search union full-text matches,

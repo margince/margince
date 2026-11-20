@@ -36607,6 +36607,7 @@ export interface components {
         Company360NextStep: {
             /** Format: uuid */
             activity_id: string;
+            /** @description The task's subject. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written. */
             subject: string;
             /**
              * @description The task's own words, as written. Only a task whose content this reader may read is
@@ -46272,7 +46273,7 @@ export interface components {
             readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118). */
             readonly open_task_count?: number | null;
-            /** @description Subject of the earliest open task linked to this lead. */
+            /** @description Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written. */
             readonly next_task_subject?: string | null;
             /**
              * Format: date-time
@@ -53076,7 +53077,7 @@ export interface components {
             type: string;
             /** Format: uuid */
             id: string;
-            /** @description Display label (name/subject). */
+            /** @description Display label (name/subject). An activity Margince wrote is titled in the reader's language, as its History row names it. */
             title?: string | null;
             snippet?: string | null;
             /** @description Relevance score. */

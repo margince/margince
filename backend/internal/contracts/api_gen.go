@@ -41721,7 +41721,9 @@ type Company360NextStep struct {
 	// `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
 	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
 	Overdue   bool               `json:"overdue"`
-	Subject   string             `json:"subject"`
+
+	// Subject The task's subject. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written.
+	Subject string `json:"subject"`
 
 	// Version The task's version, carried so the tick and the snooze beside this row can write with
 	// `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
@@ -55612,7 +55614,7 @@ type Lead struct {
 	// NextTaskDueAt Due time of the earliest open task linked to this lead; undated tasks follow dated ones.
 	NextTaskDueAt *time.Time `json:"next_task_due_at,omitempty"`
 
-	// NextTaskSubject Subject of the earliest open task linked to this lead.
+	// NextTaskSubject Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written.
 	NextTaskSubject *string `json:"next_task_subject,omitempty"`
 
 	// OpenTaskCount Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118).
@@ -66610,7 +66612,7 @@ type SearchResult struct {
 	// Standing Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type.
 	Standing *SearchHitStanding `json:"standing,omitempty"`
 
-	// Title Display label (name/subject).
+	// Title Display label (name/subject). An activity Margince wrote is titled in the reader's language, as its History row names it.
 	Title *string `json:"title,omitempty"`
 
 	// TrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.

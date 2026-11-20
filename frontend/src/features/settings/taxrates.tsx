@@ -23,12 +23,13 @@ import { useToast } from "../../design-system/toast";
 import { countryOptions } from "../../format/assignedcountries";
 import { todayIn } from "../../format/calendarday";
 import { typedDecimalText, typedNumberFault } from "../../format/decimalinput";
-import { formatNumber, formatPercent } from "../../format/format";
+import { formatDate, formatNumber, formatPercent } from "../../format/format";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { WithheldRateCard } from "./rates";
 
 type TaxRate = components["schemas"]["TaxRate"];
@@ -44,6 +45,7 @@ const TAX_RATE_DIGITS = 2;
 export function TaxRatesCard() {
   const t = useT();
   const { locale } = useLocale();
+  const readerZone = useViewerZone();
   const canRead = useCan("tax_rate", "read");
   const canRecord = useCanWrite("tax_rate", "create");
   const [open, setOpen] = useState(false);
@@ -109,7 +111,7 @@ export function TaxRatesCard() {
             {
               key: "from",
               header: t("taxRates.colFrom"),
-              render: (row) => row.valid_from,
+              render: (row) => formatDate(row.valid_from, locale, readerZone),
             },
           ]}
         />
