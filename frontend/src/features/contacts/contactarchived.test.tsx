@@ -19,6 +19,9 @@ import {
 } from "./contactarchived.fixtures";
 import { ContactPageV2 } from "./contactpage";
 
+// The verb shows "Meet", so its name starts with the word a speech user says.
+const MEET_NAME = `${en["record.verb.meet"]}, ${en["contact.action.meetings"]}`;
+
 afterEach(cleanup);
 
 function mount(routes: RouteMap) {
@@ -99,10 +102,7 @@ describe("the contact page on an archived row", () => {
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(control.getAttribute("aria-describedby")).toContain(reason.id);
     };
-    for (const verb of [
-      en["contact.action.write"],
-      en["contact.action.meetings"],
-    ]) {
+    for (const verb of [en["contact.action.write"], MEET_NAME]) {
       refused(screen.getByRole("button", { name: verb }));
     }
     await user.click(

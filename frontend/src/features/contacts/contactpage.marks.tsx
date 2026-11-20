@@ -28,6 +28,7 @@ export function ContactMarks({
       <ContactCaseEntry
         key={`case-${view.contact.id}`}
         contactId={view.contact.id}
+        followSurvivor
       />
     </>
   );

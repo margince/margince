@@ -15,16 +15,16 @@ Also called: who knows this client, warm path, relationship map, colleague conne
 
 ## Who here knows a contact
 
-A contact's **Relationships** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact."
+A contact's **Relationships** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact." Unless an introduction ask is open, the tab then leaves out the introduction steps and keeps **Record an introduction**. It also leaves out **Who knows {name}** and its link at the top when the contact would stand alone on its map. That part stays, and says so, when the colleagues who wrote with them are hidden from you.
 
-The tab reads in three parts, each with a one-line answer: **Way in**, **Who knows {name}** and **Progress**. Way in shows the best route with the other routes under it, and the links at the top take you to each part. Progress holds the introduction steps and one dated list of recent changes and earlier asks, then your open asks. The **Research** tab has three parts too: **To check**, **Sources** and **Record keeping**. To check holds what Margince read from mail and pages, for you to confirm, correct or dismiss. Sources has **Research public sources**, and Record keeping holds the details, permissions and lists.
+The tab reads in up to three parts, each with a one-line answer: **Way in**, **Who knows {name}** and **Progress**. Way in shows the best route with the other routes under it, and the links at the top take you to each part. Progress holds the introduction steps and one dated list of recent changes and earlier asks, then your open asks. The **Research** tab has three parts too: **To check**, **Sources** and **Record keeping**. To check holds what Margince read from mail and pages, for you to confirm, correct or dismiss. Sources has **Research public sources**, and Record keeping holds the details, permissions and lists.
 
 When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
 
 ### What does Reach on the Overview count?
 **Reach** on a contact's **How it stands** card counts the colleagues in touch with them. In touch means both sides wrote in the last 90 days, and the line under it names them.
 
-A colleague who sent the contact a message with no reply follows, after "also wrote". With no colleague in touch, **Reach** reads "No two-way contact" and names who wrote. A colleague who was only copied on a mail is not named.
+A colleague who sent the contact a message with no reply follows, after "also wrote". With no colleague in touch, **Reach** reads "No two-way contact" and names who wrote. A colleague who was only copied on a mail is not named. **Your commitments** on the same card counts open tasks filed for the contact, and promises from conversations that no task holds yet. A reminder Margince set itself is not counted.
 
 ### How strength is worked out
 Relationship strength in Margince comes from one rule, worked out from captured interactions, such as mail and meetings, **each time you look**:

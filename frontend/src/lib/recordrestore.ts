@@ -50,20 +50,45 @@ export function useRecordRestore(handlers?: {
   onError: (error: unknown) => void;
 }) {
   return useMutation({
-    mutationFn: async ({ kind, id, auditId, version }: RestorePress) => {
-      return unwrap(
-        await api.POST(
-          "/records/{entity_type}/{id}/history/{audit_id}/restore",
-          {
-            params: {
-              path: { entity_type: kind, id, audit_id: auditId },
-              ...ifMatch(version),
-            },
-          },
-        ),
-      );
-    },
+    mutationFn: restoreChange,
     onSuccess: handlers?.onSuccess,
     onError: handlers?.onError,
   });
+}
+
+async function restoreChange({ kind, id, auditId, version }: RestorePress) {
+  return unwrap(
+    await api.POST("/records/{entity_type}/{id}/history/{audit_id}/restore", {
+      params: {
+        path: { entity_type: kind, id, audit_id: auditId },
+        ...ifMatch(version),
+      },
+    }),
+  );
+}
+
+/**
+ * Puts back the record's latest archive, the entry its history offers Undo on.
+ * `version` is the one the archive answered with. A record with no archive in
+ * its history has nothing to put back, and the answer is false.
+ */
+export async function restoreLatestArchive(
+  kind: RestoreKind,
+  id: string,
+  version: number,
+): Promise<boolean> {
+  const history = unwrap(
+    await api.GET("/records/{entity_type}/{id}/history", {
+      params: {
+        path: { entity_type: kind, id },
+        query: { action: "archive", limit: 1 },
+      },
+    }),
+  );
+  const archive = history.data[0];
+  if (!archive) {
+    return false;
+  }
+  await restoreChange({ kind, id, auditId: archive.id, version });
+  return true;
 }

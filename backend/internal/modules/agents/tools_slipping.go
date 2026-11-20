@@ -114,9 +114,10 @@ type whatsSlippingThisWeek struct {
 func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "whats_slipping_this_week", Title: "What's slipping this week", Version: toolVersionV1,
-		Description:   whatsSlippingCopy.render(),
-		Instead:       whatsSlippingCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       whatsSlippingCopy.render(),
+		Instead:           whatsSlippingCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "listSlippingDeals",
 		InputSchema: schema(fmt.Sprintf(`{"type":"object","properties":{

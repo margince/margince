@@ -480,3 +480,17 @@ func (e *Env) SeedWonDealLinkedTo(t *testing.T, activities ...ids.UUID) ids.UUID
 	}
 	return deal
 }
+
+// ShareForWriting is the admin sharing one record at `write` with each
+// subject, a user or a team, through the real grant writer. A fixture uses it
+// so a seat may file onto a record it does not own.
+func (e *Env) ShareForWriting(t *testing.T, recordType string, record ids.UUID, subjectType string, subjects ...ids.UUID) {
+	t.Helper()
+	for _, subject := range subjects {
+		if _, err := identity.NewService(e.Pool).CreateRecordGrant(e.Admin(), identity.CreateGrantInput{
+			RecordType: recordType, RecordID: record, SubjectType: subjectType, SubjectID: subject, Access: "write",
+		}); err != nil {
+			t.Fatalf("sharing the %s for writing: %v", recordType, err)
+		}
+	}
+}

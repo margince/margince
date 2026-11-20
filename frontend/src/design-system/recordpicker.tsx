@@ -236,7 +236,7 @@ export function RecordPicker({
           </span>
         </p>
       )}
-      {answered && candidates.length === 0 && (
+      {answered && candidates.length === 0 && term.trim() !== "" && (
         <p aria-live="polite">{noMatch ?? t("picker.noMatch")}</p>
       )}
       {candidates.length > 0 && (

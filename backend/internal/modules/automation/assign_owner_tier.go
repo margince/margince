@@ -32,6 +32,10 @@ type AssignOwnerScope struct {
 	Bulk bool
 }
 
+// ruleFiringScope is the scope a rule's firing applies assign_owner at: one
+// record per event, never a bulk sweep.
+var ruleFiringScope = AssignOwnerScope{}
+
 // resolveAssignOwnerTier is the pure, unit-tested resolution point:
 // single-entity (Bulk == false) is 🟢 auto-apply, at-scale (Bulk == true)
 // is 🟡 stage-for-approval. A resolver may only ever raise never lower

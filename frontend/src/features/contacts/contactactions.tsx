@@ -115,7 +115,7 @@ export function ContactActions({
         reasonId={logRefused ?? (refusal ? writeRefusalId : undefined)}
         reasonTip={logRefused ? logRefusal : refusal}
         onClick={onWrite}
-        word={t("record.verb.email")}
+        word={write.word}
         keyShortcuts={writeKeys}
       />
       <IconAction

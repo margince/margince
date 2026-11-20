@@ -8,6 +8,10 @@ import {
   formatTimeOfDay,
 } from "../../format/format";
 import { browserZone } from "../../format/timezone";
+import { de } from "../../i18n/de";
+import { en } from "../../i18n/en";
+import { vi as viCatalog } from "../../i18n/vi";
+import { MAGIC_SENTENCE_KEYS } from "../../lib/magickeys";
 import { line, receipt, renderMagic, stub } from "../../testing/magic.testkit";
 
 afterEach(() => {
@@ -268,5 +272,94 @@ describe("a receipt line is one row", () => {
     expect(text).toContain("Google Calendar needs to be connected again");
     expect(text).toContain("IMAP mailbox is not keeping up");
     expect(text).not.toMatch(/\bgcal\b|\bimap\b/);
+  });
+});
+
+// The subject beside a sentence draws these values, so a sentence holding one
+// names its record twice.
+const SUBJECT_VALUES = ["{target}", "{account}", "{name}"];
+
+const occurrences = (text: string, part: string) => text.split(part).length - 1;
+
+describe("a line names its record once", () => {
+  it.each([
+    ["en", en],
+    ["de", de],
+    ["vi", viCatalog],
+  ] as const)(
+    "no %s sentence holds the value its subject draws",
+    (_, catalog) => {
+      const repeating = MAGIC_SENTENCE_KEYS.filter((key) =>
+        SUBJECT_VALUES.some((value) => catalog[key].includes(value)),
+      );
+      expect(repeating).toEqual([]);
+    },
+  );
+
+  const failed = (entity?: { label: string }) =>
+    line({
+      lane: "could_not_complete",
+      summary: {
+        key: "magic.action.automation_troubled",
+        values: {
+          name: "Route new lead to a task",
+          outcome: "failed",
+          reason_code: "target_missing",
+        },
+      },
+      ...(entity && {
+        entity: {
+          type: "automation",
+          id: "00000000-0000-7000-8000-0000000000cc",
+          ...entity,
+        },
+      }),
+    });
+
+  it.each([
+    [
+      "with its rule as the entity",
+      failed({ label: "Route new lead to a task" }),
+    ],
+    ["without an entity", failed()],
+  ])("names a failed rule once, %s", async (_, row) => {
+    stub(receipt({ could_not_complete: [row] }));
+    renderMagic();
+    const item = await onlyLine("Could not be finished");
+    const text = item.textContent ?? "";
+    expect(occurrences(text, "Route new lead to a task")).toBe(1);
+    expect(rowOf(item).sentence).toBe(
+      "Could not finish (Failed): the record it acts on no longer exists",
+    );
+    expect(rowOf(item).subject).toBe("Route new lead to a task");
+    const separator = item.querySelector(".magic-line-sep");
+    expect(separator?.textContent).toBe("·");
+    expect(separator?.getAttribute("aria-hidden")).toBe("true");
+    expect(separator?.nextElementSibling).toBe(
+      item.querySelector(".magic-line-subject"),
+    );
+  });
+
+  it("names a new sender once", async () => {
+    stub(
+      receipt({
+        needs_you: [
+          line({
+            lane: "needs_you",
+            summary: {
+              key: "magic.action.approval_capture_counterparty",
+              values: { target: "Ines Kraft" },
+            },
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    const item = await onlyLine("Waiting on you");
+    expect(occurrences(item.textContent ?? "", "Ines Kraft")).toBe(1);
+    expect(rowOf(item).sentence).toBe(
+      "Someone new wrote to you. Keep as a contact?",
+    );
+    expect(item.querySelector(".magic-line-sep")).not.toBeNull();
   });
 });

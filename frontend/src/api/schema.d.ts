@@ -7699,7 +7699,10 @@ export interface paths {
          * The caller's own unsent message for one place the composer opens.
          * @description A draft is the composer's state, kept so that closing it does not lose a message. It
          *     is not an activity, not a scheduled send and never on a timeline, and only the seat
-         *     that wrote it can read it. There is at most one per author and anchor.
+         *     that wrote it can read, change or discard it: not a colleague, an admin, or an agent
+         *     acting for someone else. There is at most one per author and anchor. Once the author has
+         *     left, a handover of their work (`handOverUserWork`) moves their drafts to the colleague
+         *     who takes over, who from then on is the only one who reads them.
          *
          *     The AI drafting routes still persist nothing. A draft exists because the rep's composer
          *     saved one here, or because an agent acting for the rep drafted a first message to a
@@ -18633,6 +18636,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/consent-purposes/send-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many messages went out under each declared consent purpose, and how many the record disputes.
+         * @description Needs `consent_config:read`. A send names a consent purpose, and may claim what kind of
+         *     message it is. The send engine records, for every message it stages, what was claimed and
+         *     what the record bore out. This read counts those staged messages per purpose in the window,
+         *     most sent first.
+         *
+         *     `disputed` counts the messages whose claimed kind differs from the one the engine resolved:
+         *     for example a campaign claimed as customer service with nothing on record behind it. That is
+         *     where a mislabelled send shows.
+         *
+         *     A key that names no live purpose, and a message that named none, count under the purpose
+         *     key `unknown`, without a class. The answer holds at most 200 entries.
+         */
+        get: operations["listConsentPurposeSendCounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/existing-customer-notices": {
         parameters: {
             query?: never;
@@ -20361,7 +20394,7 @@ export interface paths {
         /**
          * Count the live records a member still owns.
          * @description How many live leads, contacts, companies, deals and projects the member owns that the
-         *     caller can see. For a member who left, it also counts the contacts and companies only
+         *     caller can see, and how many composer drafts they saved (a count only). For a member who left, it also counts the contacts and companies only
          *     they can see (captured and never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
          *     this to say what would be left behind. Works for any non-archived member, deactivated or
          *     not, because work is best handed over before the account is closed.
@@ -20378,7 +20411,12 @@ export interface paths {
          *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
          *     owner (an active human seat that can write), else `422`
          *     with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
-         *     caller may not change stays with the member. Automations and deal-room stewardships are not moved.
+         *     caller may not change stays with the member. For a member who left, their saved composer
+         *     drafts move too, and from then on only the new holder reads them. Where the new holder
+         *     already has a draft in the same place, theirs stays and the member's is discarded, counted
+         *     in `mail_draft_discarded`. An active member keeps every draft, and so does a draft a
+         *     scheduled or held message still waits on; both count in `left`. Automations and deal-room
+         *     stewardships are not moved.
          */
         post: operations["handOverUserWork"];
         delete?: never;
@@ -42278,6 +42316,8 @@ export interface components {
             sdr_handoff: number;
             /** @description Current user responsibilities on records. */
             record_assignment: number;
+            /** @description Unsent messages the member saved in the composer. Only the count is shown; the words stay readable by the author alone until a handover moves them. */
+            mail_draft: number;
         };
         UserHandover: {
             owned: components["schemas"]["HandoverCounts"];
@@ -42292,6 +42332,8 @@ export interface components {
         UserHandoverResult: {
             moved: components["schemas"]["HandoverCounts"];
             left: components["schemas"]["HandoverCounts"];
+            /** @description The member's saved drafts deleted because the receiver already had a draft in the same place. */
+            mail_draft_discarded: number;
         };
         /**
          * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
@@ -48482,7 +48524,7 @@ export interface components {
         /** @description The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift. */
         SavedViewTarget: string;
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline" | "account_progression" | "source_quality";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline" | "account_progression" | "source_quality" | "introductions_made" | "meetings_booked_for_colleagues";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -54822,6 +54864,12 @@ export interface components {
             /** @description The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is. */
             effect_failure?: string | null;
             /**
+             * @description `effect_failure` as a code a client words in the reader's language: approval_lapsed,
+             *     effect_not_run, effect_unconfirmed, follow_up_failed or window_not_widened. Absent when
+             *     the sentence has no code; the client then shows `effect_failure`.
+             */
+            effect_failure_code?: string;
+            /**
              * @description `false` on a pending mail proposal whose sender, the account the release runs as, has no
              *     connected mailbox that can transmit, so approving could only be refused. Absent
              *     otherwise.
@@ -55221,14 +55269,26 @@ export interface components {
              * @default false
              */
             requires_double_opt_in: boolean;
-            /**
-             * @description What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
-             * @enum {string}
-             */
-            class?: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+            /** @description What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration. */
+            class?: string & components["schemas"]["ConsentPurposeClass"];
             frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /** Format: date-time */
             created_at: string;
+        };
+        /**
+         * @description Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
+         * @enum {string}
+         */
+        ConsentPurposeClass: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+        ConsentPurposeSendCount: {
+            /** @description The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none. */
+            purpose_key: string;
+            /** @description The purpose's class. Absent under `unknown`. */
+            class?: components["schemas"]["ConsentPurposeClass"];
+            /** @description Messages staged under this purpose in the window. */
+            sends: number;
+            /** @description Of those, the messages whose claimed kind differs from the kind the record bore out. */
+            disputed: number;
         };
         /**
          * @description How often the purpose's mail goes out, roughly. The subscription question states it.
@@ -57238,7 +57298,7 @@ export interface components {
              */
             outcome: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
             /**
-             * @description The tier that fired for this run.
+             * @description The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for approval.
              * @enum {string}
              */
             tier: "auto_execute" | "confirmation_required";
@@ -57259,6 +57319,28 @@ export interface components {
             reason_code?: string | null;
             /** @description Link into the audit_log row for this run. */
             audit_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The event that fired the run, for technical details. A clock rule's run names its scan.
+             */
+            event_id?: string;
+            /** @description What fires the rule, in the catalog's trigger vocabulary, e.g. deal.stage_changed or clock:renewal_scan. */
+            trigger_event_type?: string;
+            /** @description For a run a stage move fired, the stage the deal moved to. Absent once the event is no longer on record, and when the reader may not see the run's target. */
+            trigger_stage_name?: string;
+            /** @description The action kinds the run applied, or for a run queued for approval the kinds it queued, in order. A create another rule had already made is left out. Empty when the run did nothing. */
+            action_kinds?: string[];
+            /** @description The record the run acted on. Its label is absent when the reader may not see the record. */
+            target?: components["schemas"]["MagicEntityRef"];
+            created?: components["schemas"]["AutomationRunCreatedRecord"];
+        };
+        /** @description A task a fired run created. Its id is absent for a run recorded before runs kept it. Its label is the task's subject, present only when the reader may read the task itself. */
+        AutomationRunCreatedRecord: {
+            /** @description The record type, e.g. activity for a task. */
+            type: string;
+            /** Format: uuid */
+            id?: string;
+            label?: string;
         };
         /** @description How a claim finished. */
         SettleClaimRequest: {
@@ -60746,6 +60828,11 @@ export interface components {
              *     engine's English sentence.
              */
             run_reason_code?: string;
+            /**
+             * @description On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+             *     language. `detail` keeps the English sentence.
+             */
+            effect_failure_code?: string;
             domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
@@ -61246,7 +61333,7 @@ export interface components {
             as_of: string;
             /**
              * @description True when this answer is Home's kept answer past its five-minute freshness,
-             *     served while the server reads it again. It still holds every access rule the
+             *     or older than the reader's own latest write, served while the server reads it again. It still holds every access rule the
              *     fresh read would apply. A client asks again a few seconds later for the fresh
              *     answer. Absent or false means the answer is fresh.
              */
@@ -62446,6 +62533,11 @@ export interface components {
              *     engine's English sentence.
              */
             run_reason_code?: string;
+            /**
+             * @description On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+             *     language. `detail` keeps the English sentence.
+             */
+            effect_failure_code?: string;
             domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
@@ -85194,6 +85286,8 @@ export interface operations {
                 per_type?: number;
                 /** @description Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`. */
                 with_employees?: boolean;
+                /** @description The caller is a search box answering each keystroke. Messages (`activity`) are left out of the answer while the word being typed is under 4 letters, because a short prefix matches a large share of all messages and ranking them is the slow part. Every other type is searched from the first letter as usual. A query that ends in a finished word, or uses the websearch operators, has no word being typed and keeps its messages, and so does a request whose `types` names messages alone. Only a human caller's flag is honoured. */
+                typeahead?: boolean;
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -92859,6 +92953,36 @@ export interface operations {
                     "application/json": components["schemas"]["ConsentPurpose"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listConsentPurposeSendCounts: {
+        parameters: {
+            query?: {
+                /** @description How many days back the window reaches from now. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The send counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ConsentPurposeSendCount"][];
+                        /** @description The window the counts cover. */
+                        days: number;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

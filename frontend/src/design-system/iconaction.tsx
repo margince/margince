@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type MouseEvent, type ReactNode, useId } from "react";
+import { foldForMatch } from "../format/collate";
 import { AppLink } from "./applink";
 import { Button } from "./atoms";
 import { useTooltip } from "./tooltip";
@@ -130,7 +131,7 @@ export function IconAction(
           reasonId={props.reasonId}
           disabled={props.disabled}
           pending={props.pending}
-          aria-label={label}
+          aria-label={verbName(word, label)}
           aria-describedby={describedBy}
           aria-pressed={props.pressed}
           aria-expanded={props.disclosure?.expanded}
@@ -147,7 +148,7 @@ export function IconAction(
           className={`btn btn-${props.variant ?? "ghost"} btn-icon`}
           href={props.href}
           onClick={props.onClick}
-          aria-label={label}
+          aria-label={verbName(word, label)}
           aria-describedby={describedBy}
           data-testid={props.testId}
         >
@@ -176,6 +177,29 @@ export function tipText(label: string, sentence?: string): string {
 }
 
 /**
+ * The name of a verb that shows `word` under its glyph. A speech user says
+ * the word they see. A name that does not hold it as whole words starts with
+ * it, since "Meetings" does not answer to "Meet".
+ */
+export function verbName(word: string | undefined, label: string): string {
+  if (!word) {
+    return label;
+  }
+  const shown = wordsOf(word);
+  const named = wordsOf(label);
+  const holds = named.some(
+    (_, at) => named.slice(at, at + shown.length).join(" ") === shown.join(" "),
+  );
+  return holds ? label : `${word}, ${label}`;
+}
+
+function wordsOf(text: string): string[] {
+  return foldForMatch(text)
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+}
+
+/**
  * A verb's short tile word with its full name for a screen reader. It serves a
  * verb drawn as a plain `Button` or a popover face in the record verb bar.
  * The word shows only inside that bar.
@@ -189,7 +213,7 @@ export function VerbWord({
       <span className="verb-word" aria-hidden="true">
         {word}
       </span>
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{verbName(word, label)}</span>
     </>
   );
 }

@@ -33,10 +33,10 @@ func ScopeClause(ctx context.Context, arg func(any) int) (string, error) {
 	return OwnerPredicate(p, arg)(""), nil
 }
 
-// AttachClauseFor is ScopeClauseFor's attach-direction twin: the same
-// visibility predicate with the share arm narrowed to a `write` grant. Empty
-// means no narrowing, read exactly as ScopeClauseFor's empty is.
-func AttachClauseFor(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
+// writeShareClauseFor is ScopeClauseFor with the share arm narrowed to a
+// `write` grant, the visibility half of AttachClauseFor. Empty means no
+// narrowing, as ScopeClauseFor's does.
+func writeShareClauseFor(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
 	return clauseFor(ctx, table, alias, arg, writeShare)
 }
 

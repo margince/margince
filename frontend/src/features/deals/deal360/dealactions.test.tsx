@@ -42,7 +42,10 @@ function mount(
       <LocaleProvider initial="en">
         <RecordShell>
           <DealActions
-            deal={deal("d-1", "Fleet telematics rollout", over)}
+            deal={deal("d-1", "Fleet telematics rollout", {
+              writable: true,
+              ...over,
+            })}
             openStages={[]}
             onEditDetails={() => undefined}
           />
@@ -51,6 +54,16 @@ function mount(
     </QueryClientProvider>,
   );
 }
+
+// Filing an activity onto a deal adds to it, so a deal the reader may only
+// read refuses Log over its own sentence.
+it("refuses Log on a deal the reader may not write", async () => {
+  mount({ activity: ["read", "create"], deal: ["read"] }, { writable: false });
+  const reason = await screen.findByText(en["record.attachRefused"]);
+  const log = screen.getByRole("button", { name: en["log.title"] });
+  expect(log).toHaveProperty("disabled", true);
+  expect(log.getAttribute("aria-describedby")).toBe(reason.id);
+});
 
 describe("the deal header's Email verb", () => {
   it("is refused without the activity grant, over the same sentence as Log", async () => {
@@ -110,7 +123,9 @@ describe("the deal header's Email verb", () => {
 });
 
 const meet = () =>
-  screen.getByRole("button", { name: en["scheduling.bookContact"] });
+  screen.getByRole("button", {
+    name: `${en["record.verb.meet"]}, ${en["scheduling.bookContact"]}`,
+  });
 
 describe("the deal header's Meet verb", () => {
   const grants: Parameters<typeof stubWithSession>[1] = {

@@ -92,7 +92,6 @@ export const LABEL_KEYS: Readonly<Record<DraftKey, MessageKey>> = {
 
 // What the default entity keeps itself; the rest it reads from the company.
 export const DEFAULT_ENTITY_KEYS = [
-  "country",
   "bank_account_holder",
   "iban",
   "bic",

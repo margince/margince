@@ -1270,6 +1270,17 @@
   cursor: pointer;
 }
 
+/* A list fills the viewport, so its pager sits where a toast lands. While a list
+ * is on screen the toast stands above the pager's row, leaving the pages usable. */
+:root:has(.lt-foot) .toast-region {
+  --lt-foot-height: calc(var(--controlHeight) + 2 * var(--space-3));
+  bottom: calc(
+    var(--stickyBottomInset) +
+    var(--lt-foot-height) +
+    var(--space-4)
+  );
+}
+
 /* One page and nothing more to fetch: the pager has nothing to say, but it keeps
  * its space so the page-size control does not jump when a filter is cleared. */
 .lt-foot.single .lt-pager {

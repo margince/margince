@@ -3,44 +3,13 @@
 
 package compose
 
-// Every job worker that reaches a store must bind an ACTOR, not just a
-// workspace.
+// Every job worker that reaches a store must bind an actor, not just a workspace.
+// A queue inherits no principal, so a tenant-only worker meets the first RBAC
+// gate with nothing to check. That fault lives in the wiring, so this reads it.
 //
-// A queue is not a request: it inherits no principal, so a worker that binds
-// only its tenant reaches the first RBAC gate with nothing to check and the
-// write is refused. The provider-run workers shipped that way — the poll job
-// failed with "no actor bound to context" on every pass, so a paid enrichment
-// run sat in_progress forever and the values it bought reached nobody. The
-// money was spent and there was nothing to show for it.
-//
-// Nothing could have caught that but this shape of test. The failure is in the
-// wiring rather than in any store, it needs a real queue to reproduce, and it
-// looks exactly like a slow provider from the outside.
-//
-// So this reads the wiring itself: every Work method that builds a store must
-// also bind an actor. Derived from the tree rather than a hand-kept list,
-// because the next job added is the one nobody remembers to check.
-//
-// Three older workers were waived here while the question "does this one
-// actually reach a gated write" was open for each. It is answered now, and two
-// of the three were FALSE POSITIVES rather than defects: privacyRetentionWorker
-// binds a system actor through retentionPassProvenance, and timeScanWorker's
-// per-workspace turn binds one through scanLeadSLA — in both cases one call
-// away, which is the only reason this gate could not see it.
-//
-// That is what the one-level follow below exists for. A binder is a helper by
-// nature: it takes a context, returns one with the principal in it, and reads
-// better beside the pass it names than inlined into a Work method. A gate that
-// only looked at the Work body was therefore going to keep producing waivers
-// for correct code, and every one of those is a place a real defect can hide.
-//
-// The third is genuine and stays waived: webhookRetryWorker reaches no gate
-// under its own principal, and the one authority question its path asks is
-// asked under the subscription OWNER's. Its entry says so and names the
-// evidence.
-//
-// The waiver is a ratchet — a waived worker that starts binding an actor fails
-// this test until its entry is removed.
+// A binder one call away counts, because the gate follows one level.
+// webhookRetryWorker stays waived: its authority question is asked under the
+// subscription owner. A waived worker that starts binding an actor fails this.
 
 import (
 	"go/scanner"

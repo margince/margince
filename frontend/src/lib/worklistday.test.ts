@@ -63,19 +63,53 @@ describe("the Home day's refresh", () => {
     );
   });
 
-  it("stops asking soon once the same stale answer came back three times", () => {
+  it("stops asking soon once three stale answers came back in a row", () => {
     const stale = {
       ...page(["2026-10-31T11:00:00Z"]),
       as_of: "2026-10-31T08:40:00Z",
       served_stale: true,
     };
-    const waits = [1, 2, 3, 4].map(() => homeDayWait([stale], now));
+    const waits = [1, 2, 3, 4].map((n) =>
+      homeDayWait([stale], now, 1_000_000 + n * 3_000),
+    );
     expect(waits).toEqual([
       HOME_DAY_STALE_RETRY_MS,
       HOME_DAY_STALE_RETRY_MS,
       HOME_DAY_STALE_RETRY_MS,
       5 * 60_000,
     ]);
+  });
+
+  it("counts a response once, however often its wait is asked", () => {
+    const stale = {
+      ...page(["2026-10-31T11:00:00Z"]),
+      as_of: "2026-10-31T08:30:00Z",
+      served_stale: true,
+    };
+    const waits = Array.from({ length: 6 }, () =>
+      homeDayWait([stale], now, 2_000_000),
+    );
+    expect(new Set(waits)).toEqual(new Set([HOME_DAY_STALE_RETRY_MS]));
+  });
+
+  it("gives a stale answer after the reader's own write its short retries again", () => {
+    // The same kept day, as_of unchanged, comes back stale after a failed
+    // refresh used up the budget and again after a later write.
+    const stale = {
+      ...page(["2026-10-31T11:00:00Z"]),
+      as_of: "2026-10-31T08:20:00Z",
+      served_stale: true,
+    };
+    const first = 3_000_000;
+    const failing = [0, 3_000, 6_000, 9_000].map((offset) =>
+      homeDayWait([stale], now, first + offset),
+    );
+    expect(failing[3]).toBe(5 * 60_000);
+    const afterWrite = first + 120_000;
+    expect(homeDayWait([stale], now, afterWrite)).toBe(HOME_DAY_STALE_RETRY_MS);
+    expect(homeDayWait([stale], now, afterWrite + 3_000)).toBe(
+      HOME_DAY_STALE_RETRY_MS,
+    );
   });
 
   it("replaces the minute poll on the reader's own day only", () => {

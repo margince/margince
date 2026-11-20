@@ -98,6 +98,9 @@ type ConfirmationSend struct {
 	Rendered  Rendered
 	// StagedAt, when set, is the delivery's created_at (comms.StageControllerInput.StagedAt).
 	StagedAt time.Time
+	// Entity is the legal entity the mail goes out for: the one that answers
+	// for its record (recordEntityTx). withRecordEntity fills it.
+	Entity ids.UUID
 }
 
 // ConfirmationSender stages a controller message on the caller's transaction.

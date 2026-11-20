@@ -87,17 +87,16 @@ export function useEmploymentActions(contactId: string) {
   const t = useT();
   const zone = useEmploymentZone();
   const queryClient = useQueryClient();
+  // The keys are independent, so their refetches run side by side.
   const invalidate = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ["contact360", contactId],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ["contactEmployments", contactId],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ["contactBrief", contactId],
-    });
-    await queryClient.invalidateQueries({ queryKey: ["companies"] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["contact360", contactId] }),
+      queryClient.invalidateQueries({
+        queryKey: ["contactEmployments", contactId],
+      }),
+      queryClient.invalidateQueries({ queryKey: ["contactBrief", contactId] }),
+      queryClient.invalidateQueries({ queryKey: ["companies"] }),
+    ]);
   };
   // A job that ends or changes moves its company's contact count, which the
   // row reads from the company's own record.

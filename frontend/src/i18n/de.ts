@@ -971,6 +971,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Eingegangen am",
   "reporting.enteredOn": "In die Phase gekommen am",
   "reporting.accruedOn": "Angefallen am",
+  "reporting.introducedOn": "Vorgestellt am",
+  "reporting.bookedOn": "Gebucht am",
   "reporting.commissionAmount": "Provision",
   "reporting.hoursUnit": "Stunden",
   "reporting.outOf": "Von insgesamt {total}",
@@ -1865,7 +1867,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.reminder.pending": "E-Mail-Erinnerung geplant.",
   "scheduling.reminder.queued": "E-Mail-Erinnerung zum Versand vorgemerkt.",
   "scheduling.reminder.unavailable":
-    "Die Erinnerung konnte nicht gesendet werden. Prüfe deine E-Mail-Verbindung und schreibe dem Gast direkt.",
+    "Die Erinnerung konnte nicht gesendet werden. Haben die E-Mail-Regeln von Margince sie gestoppt, steht der Grund in deinen Benachrichtigungen. Schreib dem Gast direkt.",
   "history.field.reminder_status": "Erinnerungsstatus",
   "scheduling.myLink": "Dein Buchungslink",
   "scheduling.linkIntro":
@@ -2451,6 +2453,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.linkedin_rematch": "Zuordnung des LinkedIn-Imports",
   "systemJob.list_checker": "Prüfung der Live-Listen",
   "systemJob.mail_draft_retention": "Bereinigung von E-Mail-Entwürfen",
+  "systemJob.oauth_client_unused_sweep":
+    "Bereinigung ungenutzter KI-Tool-Clients",
   "systemJob.privacy_request_proof_expiry":
     "Bereinigung der Nachweise zu Datenschutzanfragen",
   "systemJob.waiting_horizon_refresh": "Messung der Antwortzeiten",
@@ -3234,6 +3238,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
     "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
+  "record.attachRefused":
+    "Du kannst diesen Datensatz nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -3319,7 +3325,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "merge.searchPlaceholder": "Suchen…",
   "merge.pickTarget": "Datensatz auswählen, der bleibt",
   "merge.confirm":
-    "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
+    "{source} mit {target} zusammenführen? Der Datensatz, der bleibt, übernimmt Verlauf, Aufgaben, Tags und Verknüpfungen des anderen und füllt seine leeren Standardfelder daraus. Der andere wird archiviert und behält die Werte seiner eigenen Felder. Das Zusammenführen lässt sich nicht rückgängig machen.",
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "{source} wurde in {target} zusammengeführt.",
   "merge.targetReadOnly":
@@ -5821,6 +5827,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.catalogTruncated":
     "Möglicherweise fehlt ein Tag. Suche nach dem Namen, bevor du ein neues anfragst.",
   "tags.noMatchYouCanCreate": "Kein Tag mit diesem Namen.",
+  "tags.noneYouCanCreate":
+    "Noch keine Tags. Gib einen Namen ein, um eines zu erstellen.",
+  "tags.noneAskForOne":
+    "Noch keine Tags. Admins und Operations können eines erstellen.",
   "tags.createNamed": "Tag {name} erstellen",
   "tags.shortlistInstead": "Stattdessen zu einer Shortlist hinzufügen",
   "tags.manage": "Tags verwalten",
@@ -6435,6 +6445,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
+  "legalEntities.defaultCountry":
+    "Land: {country}. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
+  "legalEntities.defaultCountryNone":
+    "Kein Land gesetzt. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
+  "legalEntities.defaultCountryLink": "Unter Rechtsraum ändern",
+  "jurisdiction.entities.title": "Unternehmen",
+  "jurisdiction.entities.lead":
+    "Das Land jedes Unternehmens bestimmt das Recht für die Mails seines Teams und die Datensätze, die sie verantworten.",
+  "jurisdiction.entities.default": "{country}, die Auswahl oben",
+  "jurisdiction.entities.none": "Kein Land gesetzt",
+  "jurisdiction.entities.edit": "Unternehmen ändern",
   "legalEntities.edit": "Bearbeiten",
   "legalEntities.archive": "Archivieren",
   "legalEntities.editTitle": "{name} bearbeiten",
@@ -6478,9 +6499,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.logoEmpty": "Bild hier ablegen oder auswählen",
   "legalEntities.logoRemove": "Logo entfernen",
   "legalEntities.countryPlaceholder": "Land auswählen",
-  "legalEntities.countryInstallation": "Land der Installation",
-  "legalEntities.countryInstallationHint":
-    "Lass das Land der Installation stehen, außer dieses Unternehmen hat seinen Sitz anderswo.",
   "legalEntities.archiveTitle": "{name} archivieren?",
   "legalEntities.archiveBody":
     "Er verschwindet aus dieser Liste, und niemand kann ihm mehr zugeordnet werden.",
@@ -6696,6 +6714,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
   "contact.archiveRefused":
     "Nur der Verantwortliche des Kontakts oder eine Führungskraft kann diesen Kontakt archivieren.",
+  "contact.undoArchiveNothing":
+    "Das Archivieren ließ sich nicht rückgängig machen, weil der Verlauf des Kontakts kein Archivieren zum Zurücknehmen enthält. Öffne den Kontakt, um zu sehen, ob er noch archiviert ist.",
   "company.archiveRefused":
     "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
@@ -6893,10 +6913,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.taskSubject": "Was zu tun ist",
   "bulk.taskDue": "Fällig am",
   "bulk.taskAssignee": "Zuständig",
-  "bulk.taskAssigneeMe": "Du selbst",
   "bulk.taskNext": "Vorschau",
   "bulk.titleCreateTask":
-    "Für jeden ausgewählten Datensatz in {unit} eine Aufgabe erstellen?",
+    "Für alle ausgewählten {unit} je eine Aufgabe erstellen?",
   "bulk.confirmCreateTask": "Aufgaben erstellen",
   "bulk.stateNewTask": "Neue Aufgabe",
   "bulk.stateNoTask": "Keine neue Aufgabe",
@@ -7093,6 +7112,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.view.weekly": "Woche",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
+  "brief.updating": "Wird aktualisiert…",
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
@@ -7380,6 +7400,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.agenda.system_one": "{count} Systemproblem",
   "brief.agenda.system_other": "{count} Systemprobleme",
   "worklist.source.failed_approval": "Freigegeben, aber nicht ausgeführt",
+  "worklist.effectFailure.approval_lapsed":
+    "Die Freigabe ist vor der Ausführung abgelaufen. Nichts wurde geändert. Fordere einen neuen Vorschlag an, um es erneut zu versuchen.",
+  "worklist.effectFailure.effect_not_run":
+    "Dies wurde freigegeben, aber die freigegebene Arbeit wurde nicht ausgeführt.",
+  "worklist.effectFailure.effect_unconfirmed":
+    "Dies wurde freigegeben und weitergeleitet, aber das empfangende System hat es nie bestätigt. Es ist also vielleicht passiert. Prüfe den Datensatz, bevor du es erneut anforderst.",
+  "worklist.effectFailure.follow_up_failed":
+    "Dies wurde freigegeben und die Änderung wurde vorgenommen, aber die Automatisierung, die sie angefordert hat, konnte nicht als abgeschlossen markiert werden.",
+  "worklist.effectFailure.window_not_widened":
+    "Das Zeitfenster des Agenten konnte nicht erweitert werden, daher ist die Freigabe nicht wirksam geworden.",
   "brief.panel.decisions": "Freigaben",
   "brief.rail.quietSchedule": "Nichts gebucht",
   "brief.panel.schedule": "Externe Termine",
@@ -8033,6 +8063,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.dateHint":
     "Der Tag, an dem es stattfand. Für einen späteren Tag erstelle eine Aufgabe.",
   "log.assignee": "Zugewiesen an",
+  "log.assigneeMe": "Du selbst",
   "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
@@ -9107,9 +9138,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
   "analytics.field.partner_sourced": "Von Partnern vermittelt",
-  "analytics.field.period_month": "Abschlussmonat",
-  "analytics.field.period_quarter": "Abschlussquartal",
-  "analytics.field.period_year": "Abschlussjahr",
+  "analytics.field.period_month": "Monat",
+  "analytics.field.period_quarter": "Quartal",
+  "analytics.field.period_year": "Jahr",
   "analytics.field.phase": "Phase",
   "analytics.field.pipeline_id": "Pipeline",
   "analytics.field.project": "Projektkennung",
@@ -11911,6 +11942,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
   "privacy.purposesEmpty": "Noch keine Zwecke registriert.",
+  "privacy.purposeClass": "Art",
+  "privacy.purposeClass.businessCorrespondence": "Korrespondenz",
+  "privacy.purposeClass.transactional": "Transaktional",
+  "privacy.purposeClass.marketing": "Werbung",
+  "privacy.purposeClass.phoneOutreach": "Telefonische Ansprache",
+  "privacy.purposeClass.undefined": "Nicht definiert",
+  "privacy.purposeSends": "Gesendet in {days} Tagen",
+  "privacy.purposeSendsSub":
+    "Jede Mail nennt ihren Zweck und kann sagen, welche Art Mail sie ist. Margince prüft das vor dem Senden an den Daten. Die Zahlen gelten für die letzten {days} Tage. „Art nicht belegt“ zählt Mails, deren genannte Art die Daten nicht stützen, etwa einen Newsletter, der als Kundenservice gesendet wurde.",
+  "privacy.purposeSendsLoading": "Gesendete Mails werden gezählt …",
+  "privacy.purposeSendsEmpty":
+    "In den letzten {days} Tagen hat keine Mail einen Zweck genannt.",
+  "privacy.purposeDisputed": "Art nicht belegt",
+  "privacy.purposeUnknown": "Kein bekannter Zweck",
+  "privacy.purposeSendsTable": "Gesendete Mails je Zweck",
   "privacy.customerNotices": "Bestandskunden",
   "privacy.customerNoticesSub":
     "In Deutschland darfst du Kunden ohne Einwilligung Werbung für ähnliche Produkte schicken, wenn du sie beim Erheben der Adresse auf ihr Widerspruchsrecht hingewiesen hast. Trage hier ein, wo und wann du den Hinweis gegeben hast. Kunden, die in diesem Zeitraum bei dieser Gesellschaft gekauft haben, erhalten dann deine Newsletter mit Abmeldelink.",
@@ -14351,8 +14397,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keine änderbare Shortlist mit diesem Datensatztyp.",
   "auto.dateField.placeholder": "Datumsfeld auswählen",
   "auto.dateField.needsObject":
-    "Wähle zuerst ein Objekt, um seine Datumsfelder anzuzeigen.",
-  "auto.dateField.empty": "Dieses Objekt hat noch keine aktiven Datumsfelder.",
+    "Wähle zuerst einen Datensatztyp, um seine Datumsfelder anzuzeigen.",
+  "auto.dateField.empty":
+    "Dieser Datensatztyp hat noch kein Datumsfeld. Füge eines unter {place} hinzu.",
   "auto.dateField.loadError":
     "Die Datumsfelder konnten nicht geladen werden. Bitte versuche es erneut.",
   "auto.enabledFor": "{name} ist aktiv",
@@ -14360,7 +14407,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.colRuns30": "Läufe (30 Tage)",
   "auto.colOwner": "Autorisiert durch",
   "auto.ownerFor": "Autorisierung für {name}",
-  "auto.ownerNone": "Niemand zugeordnet",
+  "auto.ownerNone": "Niemand ausgewählt",
   "auto.ownerHint":
     "Aktionen nutzen die aktuellen Zugriffsrechte dieser Person.",
   "auto.deadlineTimezone": "Zeitzone für die Frist",
@@ -14431,19 +14478,69 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.runs.reasonCode.blocked":
     "eine Berechtigungsprüfung oder eine abgelehnte Freigabe hat sie gestoppt",
   "auto.runs.outcome": "Ergebnis",
+  "auto.runs.when": "Wann",
+  "auto.runs.when.stageNamed": "Deal in die Phase {stage} verschoben",
+  "auto.runs.technical": "Technische Details",
+  "auto.runs.event": "Ereignis",
+  "auto.runs.mode": "Modus",
+  "auto.runs.did.create_task": "Aufgabe zu {target} erstellt",
+  "auto.runs.did.create_task_titled": "Aufgabe „{title}“ zu {target} erstellt",
+  "auto.runs.did.create_record": "Datensatz aus {target} erstellt",
+  "auto.runs.did.update_record": "Änderung an {target} gespeichert",
+  "auto.runs.did.assign_owner":
+    "Verantwortliches Mitglied bei {target} zugewiesen",
+  "auto.runs.did.advance_deal": "Nächste Phase bei {target} gesetzt",
+  "auto.runs.did.send_email": "E-Mail zu {target} gesendet",
+  "auto.runs.did.emit_flow_event": "Folgeschritt zu {target} gestartet",
+  "auto.runs.did.recompute_score": "Bewertung von {target} neu berechnet",
+  "auto.runs.did.enqueue_job": "Hintergrundarbeit zu {target} gestartet",
+  "auto.runs.did.notify": "Benachrichtigung zu {target} gesendet",
+  "auto.runs.did.draft_email": "E-Mail-Entwurf zu {target} erstellt",
+  "auto.runs.did.add_list_member": "Shortlist-Eintrag zu {target} erstellt",
+  "auto.runs.queued.create_task": "Zur Freigabe vorgelegt: Aufgabe zu {target}",
+  "auto.runs.queued.create_task_titled":
+    "Zur Freigabe vorgelegt: Aufgabe „{title}“ zu {target}",
+  "auto.runs.queued.create_record":
+    "Zur Freigabe vorgelegt: neuer Datensatz aus {target}",
+  "auto.runs.queued.update_record":
+    "Zur Freigabe vorgelegt: Änderung an {target}",
+  "auto.runs.queued.assign_owner":
+    "Zur Freigabe vorgelegt: verantwortliches Mitglied bei {target}",
+  "auto.runs.queued.advance_deal":
+    "Zur Freigabe vorgelegt: nächste Phase bei {target}",
+  "auto.runs.queued.send_email": "Zur Freigabe vorgelegt: E-Mail zu {target}",
+  "auto.runs.queued.emit_flow_event":
+    "Zur Freigabe vorgelegt: Folgeschritt zu {target}",
+  "auto.runs.queued.recompute_score":
+    "Zur Freigabe vorgelegt: neue Bewertung von {target}",
+  "auto.runs.queued.enqueue_job":
+    "Zur Freigabe vorgelegt: Hintergrundarbeit zu {target}",
+  "auto.runs.queued.notify":
+    "Zur Freigabe vorgelegt: Benachrichtigung zu {target}",
+  "auto.runs.queued.draft_email":
+    "Zur Freigabe vorgelegt: E-Mail-Entwurf zu {target}",
+  "auto.runs.queued.add_list_member":
+    "Zur Freigabe vorgelegt: Shortlist-Eintrag zu {target}",
+  "auto.runs.unnamed.contact": "einem Kontakt",
+  "auto.runs.unnamed.company": "einem Unternehmen",
+  "auto.runs.unnamed.deal": "einem Deal",
+  "auto.runs.unnamed.lead": "einem Lead",
+  "auto.runs.unnamed.project": "einem Projekt",
+  "auto.runs.unnamed.activity": "einer Aktivität",
+  "auto.runs.unnamed.record": "einem Datensatz",
 
   "auto.initialRun.title": "Aufgaben für bestehende Datensätze zulassen?",
   "auto.initialRun.confirm": "Speichern und Aufgaben zulassen",
   "auto.initialRun.body":
     "Der nächste geplante Lauf von {name} kann Aufgaben für bereits passende Datensätze anlegen. Spätere Läufe berücksichtigen auch neue Treffer.",
   "auto.preview.open": "Vorschau",
-  "auto.preview.title": "Auswirkung des Probelaufs",
+  "auto.preview.title": "Vorschau",
   "auto.lists.includeImports":
     "Auch auf durch Importe geänderte Datensätze reagieren",
   "auto.recipient.tasks": "Aufgaben gehen an",
   "auto.recipient.notices": "Hinweise gehen an",
-  "auto.renewal.recipient": "Erinnerungsaufgabe zuweisen an",
-  "auto.renewal.recordOwner": "Die für den Datensatz zuständige Person",
+  "auto.renewal.recipient": "Aufgabe zuweisen an",
+  "auto.renewal.recordOwner": "Die für den Datensatz verantwortliche Person",
   "auto.renewal.authorizer": "Die Person, die diese Automatisierung freigibt",
   "auto.renewal.object": "Datensatztyp",
   "auto.renewal.dateField": "Datumsfeld für die Verlängerung",
@@ -14468,7 +14565,80 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.preview.notComputable": "Rückblickende Schätzung nicht verfügbar",
   "auto.preview.hidden": "Ausgeblendet (kein Zugriff): {n}",
   "auto.preview.explainer":
-    "Probelauf ohne Schreibzugriff. Es werden keine Datensätze geändert und nichts gesendet.",
+    "Vorschau ohne Schreibzugriff. Es werden keine Datensätze geändert und nichts gesendet.",
+  "auto.template.no_activity_reminder.name":
+    "Erinnern, wenn es um einen aktiven Deal still wird",
+  "auto.template.no_activity_reminder.description":
+    "Erstellt eine Aufgabe für das verantwortliche Mitglied, wenn es um einen offenen Deal in der gewählten Pipeline still wird. Echter Kontakt setzt die Frist zurück.",
+  "auto.template.renewal_reminder.name": "Auf eine Verlängerung vorbereiten",
+  "auto.template.renewal_reminder.description":
+    "Erstellt vor einem gespeicherten Verlängerungsdatum eine Aufgabe für das gewählte Mitglied. Eine jährliche Wiederholung ist optional.",
+  "auto.template.stage_change_notify.name":
+    "Verantwortliche informieren, wenn jemand ihren Deal verschiebt",
+  "auto.template.stage_change_notify.description":
+    "Benachrichtigt das für den Deal verantwortliche Mitglied, wenn jemand anderes oder eine Automatisierung den Deal verschiebt, auch beim Abschluss. Eigene Verschiebungen stehen nur im Verlauf des Deals.",
+  "auto.template.route_lead.name":
+    "Für einen neuen Lead eine Aufgabe erstellen",
+  "auto.template.route_lead.description":
+    "Erstellt eine Follow-up-Aufgabe, sobald ein neuer Lead erfasst wird. So hat jeder Lead einen ersten nächsten Schritt.",
+  "auto.template.check_in_cadence.name":
+    "Mit ausgewählten Kunden in Kontakt bleiben",
+  "auto.template.check_in_cadence.description":
+    "Erstellt eine Aufgabe für das verantwortliche Mitglied eines Eintrags der Kundenliste, wenn der gewählte Zeitraum ohne echten Kontakt vergeht. Eine offene gleichartige Erinnerung verhindert eine weitere Aufgabe.",
+  "auto.template.post_meeting_recap.name":
+    "Nach einem Termin ein Follow-up entwerfen",
+  "auto.template.post_meeting_recap.description":
+    "Entwirft ein Follow-up, sobald ein Kundentermin stattgefunden hat und brauchbare Notizen vorliegen. Der Entwurf wartet auf ein Teammitglied und wird von der Regel nie gesendet.",
+  "auto.template.website_inquiry.name": "Website-Anfragen bearbeiten",
+  "auto.template.website_inquiry.description":
+    "Leitet angenommene Website-Anfragen weiter und gibt einem Teammitglied für jede Anfrage eine Aufgabe zur Antwort.",
+  "auto.template.assign_lead_owner.name":
+    "Neuen Leads Verantwortliche zuweisen",
+  "auto.template.assign_lead_owner.description":
+    "Weist jedem neuen Lead ein verantwortliches Mitglied zu: zuerst nach passenden Regeln, sonst reihum aus dem Pool, ohne eine Kapazitätsgrenze zu überschreiten.",
+  "auto.template.stage_change_create_task.name":
+    "Nächste Aufgabe erstellen, wenn ein Deal eine Phase erreicht",
+  "auto.template.stage_change_create_task.description":
+    "Erstellt die gewählte Aufgabe, wenn ein Deal eine ausgewählte offene Phase erreicht. Jeder Besuch der Phase bekommt eine Aufgabe.",
+  "auto.template.list_membership_task.name":
+    "Aufgabe erstellen, wenn ein Datensatz in die Liste kommt",
+  "auto.template.list_membership_task.description":
+    "Erstellt eine Aufgabe für das gewählte Mitglied, wenn ein Datensatz in die Liste kommt oder sie verlässt. Die Regel wird alle 15 Minuten von der Prüfung der Liste ausgelöst, einmal für jeden Datensatz, der dabei als neu oder entfernt erkannt wird. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder geht, wird nicht erkannt. Bewegt eine Prüfung mehr als 100 Datensätze, wird die Regel für keinen davon ausgelöst und pausiert sich selbst.",
+  "auto.template.list_membership_notify.name":
+    "Benachrichtigen, wenn sich diese Liste ändert",
+  "auto.template.list_membership_notify.description":
+    "Sendet dem Mitglied, dem die Regel gehört, einen Hinweis zu jedem Datensatz, der in die Liste kommt oder sie verlässt. Die Regel wird alle 15 Minuten von der Prüfung der Liste ausgelöst, einmal für jeden Datensatz, der dabei als neu oder entfernt erkannt wird. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder geht, wird nicht erkannt. Bewegt eine Prüfung mehr als 100 Datensätze, wird die Regel für keinen davon ausgelöst und pausiert sich selbst.",
+  "auto.template.list_membership_shortlist.name":
+    "Passende Datensätze in einer Liste speichern",
+  "auto.template.list_membership_shortlist.description":
+    "Fügt jeden Datensatz, der in die Liste kommt oder sie verlässt, einer Shortlist desselben Datensatztyps hinzu. Ein Datensatz, der schon darauf steht, bleibt unverändert. Die Regel wird alle 15 Minuten von der Prüfung der Liste ausgelöst, einmal für jeden Datensatz, der dabei als neu oder entfernt erkannt wird. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder geht, wird nicht erkannt. Bewegt eine Prüfung mehr als 100 Datensätze, wird die Regel für keinen davon ausgelöst und pausiert sich selbst.",
+  "auto.param.dueInDays": "Fällig nach (Tagen)",
+  "auto.param.capPerOwner":
+    "Höchstens offene Leads je verantwortlichem Mitglied",
+  "auto.lists.direction": "Auslösen, wenn",
+  "auto.lists.direction.entered": "Ein Datensatz in die Liste kommt",
+  "auto.lists.direction.left": "Ein Datensatz die Liste verlässt",
+  "auto.lists.direction.either": "Ein Datensatz kommt oder geht",
+  "auto.lists.watched": "Beobachtete Live-Liste",
+  "auto.lists.shortlist": "Ziel-Shortlist",
+  "auto.needs.dateField": "Wähle ein Datumsfeld für die Verlängerung.",
+  "auto.needs.object": "Wähle einen Datensatztyp.",
+  "auto.needs.recipient": "Wähle, wer die Aufgabe bekommt.",
+  "auto.needs.pipeline": "Wähle eine Pipeline.",
+  "auto.needs.stages": "Wähle mindestens eine Phase.",
+  "auto.needs.watched": "Wähle die Live-Liste, die beobachtet wird.",
+  "auto.needs.shortlist": "Wähle eine Shortlist.",
+  "auto.needs.customerList": "Wähle eine Kundenliste.",
+  "auto.nameRequired": "Gib der Automatisierung einen Namen.",
+  "auto.dateField.place": "Einstellungen → Datensätze und Felder",
+  "auto.recipient.tasksToOwner":
+    "Aufgaben gehen an das für den Datensatz verantwortliche Mitglied",
+  "auto.recipient.noticesToOwner":
+    "Hinweise gehen an das für den Datensatz verantwortliche Mitglied",
+  "auto.recipient.tasksToAuthorizer":
+    "Aufgaben gehen an das Mitglied, das diese Automatisierung autorisiert",
+  "auto.recipient.noticesToAuthorizer":
+    "Hinweise gehen an das Mitglied, das diese Automatisierung autorisiert",
 
   // Die Abdeckungskarte des Beziehungsgraphen (ADR-0078).
   "coverage.seatWithheld": "Ein Kontakt, den du nicht lesen kannst",
@@ -14603,6 +14773,144 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.removedFromReports": "„{label}“ aus Berichten entfernt",
   "cf.audit.title": "Letzte Feldänderungen",
   "audit.kind.customField": "Eigenes Feld",
+  "audit.kind.activity_review_template": "Vorlage für Aktivitätsbewertungen",
+  "audit.kind.agent_standing_grant": "Dauerhafte Agentenberechtigung",
+  "audit.kind.ai_call": "KI-Aufruf",
+  "audit.kind.ai_feedback": "KI-Feedback",
+  "audit.kind.ai_model_rate": "KI-Modellpreis",
+  "audit.kind.analytics_share": "Geteilter Bericht",
+  "audit.kind.approval": "Freigabe",
+  "audit.kind.assurance_cycle": "Prüfzyklus",
+  "audit.kind.assurance_exception": "Prüfausnahme",
+  "audit.kind.assurance_resolution": "Prüfabschluss",
+  "audit.kind.assurance_run": "Prüflauf",
+  "audit.kind.assurance_task_item": "Prüfaufgabe",
+  "audit.kind.attachment": "Anhang",
+  "audit.kind.attachment_extraction": "Text aus einem Anhang",
+  "audit.kind.audit_log": "Audit-Log-Eintrag",
+  "audit.kind.automation": "Automatisierung",
+  "audit.kind.booking_page": "Buchungsseite",
+  "audit.kind.brief_item": "Eintrag im Morgenbericht",
+  "audit.kind.brief_run": "Morgenbericht",
+  "audit.kind.capture_auto_enrich_state":
+    "Einstellung zur automatischen Anreicherung",
+  "audit.kind.capture_connection": "Connector",
+  "audit.kind.capture_exclusion": "Erfassungsausschluss",
+  "audit.kind.capture_pending_counterparty": "Neue Absendeadresse zur Prüfung",
+  "audit.kind.capture_settings": "Erfassungseinstellungen",
+  "audit.kind.chat_link": "Chat-Verknüpfung",
+  "audit.kind.commission": "Provision",
+  "audit.kind.communication_instruction": "Kommunikationsanweisung",
+  "audit.kind.communication_review": "Kommunikationsprüfung",
+  "audit.kind.communication_suppression": "Kommunikationssperre",
+  "audit.kind.company_domain_question_reader": "Frage zur Unternehmensdomain",
+  "audit.kind.confirm_token": "Bestätigungslink",
+  "audit.kind.consent_text_version": "Version des Einwilligungstexts",
+  "audit.kind.contact_acquisition_evidence": "Herkunftsnachweis des Kontakts",
+  "audit.kind.contract": "Vertrag",
+  "audit.kind.data_subject_request": "Betroffenenanfrage",
+  "audit.kind.deal_acquisition_source": "Deal-Quelle",
+  "audit.kind.deal_loss_reason": "Verlustgrund",
+  "audit.kind.deal_loss_reason_mapping": "Zuordnung des Verlustgrunds",
+  "audit.kind.deal_risk_day": "Deal-Risikoprüfung",
+  "audit.kind.deal_room": "Deal Room",
+  "audit.kind.deal_room_comment": "Kommentar im Deal Room",
+  "audit.kind.deal_room_document": "Dokument im Deal Room",
+  "audit.kind.deal_room_participant": "Teilnehmende im Deal Room",
+  "audit.kind.deal_room_session": "Besuch im Deal Room",
+  "audit.kind.deal_room_thread": "Diskussion im Deal Room",
+  "audit.kind.deal_stage_evidence": "Nachweis zur Phase",
+  "audit.kind.deal_suggestion": "Deal-Vorschlag",
+  "audit.kind.dedupe_candidate": "Mögliches Duplikat",
+  "audit.kind.existing_customer_notice": "Hinweis auf Bestandskunden",
+  "audit.kind.finance_connection": "Buchhaltungsverbindung",
+  "audit.kind.finance_customer_link": "Verknüpfung mit Buchhaltungskunden",
+  "audit.kind.finance_external_customer": "Buchhaltungskunde",
+  "audit.kind.finance_invoice": "Rechnung",
+  "audit.kind.finance_payment": "Zahlung",
+  "audit.kind.forecast_call": "Einschätzung",
+  "audit.kind.forecast_capture_status": "Erfassungsstatus der Prognose",
+  "audit.kind.forecast_snapshot": "Prognose-Snapshot",
+  "audit.kind.fx_rate": "Wechselkurs",
+  "audit.kind.import_run": "Import",
+  "audit.kind.intro_request": "Anfrage zur Vorstellung",
+  "audit.kind.knowledge_corpus": "Wissensbasis",
+  "audit.kind.knowledge_document": "Wissensdokument",
+  "audit.kind.lead_disqualify_reason": "Disqualifizierungsgrund",
+  "audit.kind.lead_origin": "Lead-Herkunft",
+  "audit.kind.lead_privacy_notice": "Datenschutzhinweis zum Lead",
+  "audit.kind.lead_source": "Lead-Quelle",
+  "audit.kind.legal_entity": "Rechtsträger",
+  "audit.kind.legal_review": "Rechtliche Prüfung",
+  "audit.kind.license": "Lizenzeinstellungen",
+  "audit.kind.linkedin_connection": "LinkedIn-Verbindung",
+  "audit.kind.list": "Liste",
+  "audit.kind.mail_draft": "E-Mail-Entwurf",
+  "audit.kind.notice": "Hinweis",
+  "audit.kind.oauth_authorization_code": "OAuth-Autorisierungscode",
+  "audit.kind.oauth_client": "OAuth-App",
+  "audit.kind.oauth_grant": "OAuth-Zugriff",
+  "audit.kind.offer": "Angebot",
+  "audit.kind.onboarding_wizard_state": "Einrichtungsfortschritt",
+  "audit.kind.partner_stage": "Partnerphase",
+  "audit.kind.passport": "Passport",
+  "audit.kind.pipeline": "Pipeline",
+  "audit.kind.privacy_notice_case": "Fall zum Datenschutzhinweis",
+  "audit.kind.privacy_request_proof": "Nachweis zur Datenschutzanfrage",
+  "audit.kind.project_health_assessment": "Prüfung des Projektzustands",
+  "audit.kind.provider_connection": "Anbieterverbindung",
+  "audit.kind.provider_run": "Anbieterlauf",
+  "audit.kind.record_assignment": "Zuständigkeit",
+  "audit.kind.record_role": "Datensatzrolle",
+  "audit.kind.relationship": "Beziehung",
+  "audit.kind.report_run": "Berichtslauf",
+  "audit.kind.restore_drill": "Wiederherstellungsübung",
+  "audit.kind.retention_policy": "Aufbewahrungsrichtlinie",
+  "audit.kind.role": "Rolle",
+  "audit.kind.sales_initiative": "Vertriebsinitiative",
+  "audit.kind.saved_view": "Gespeicherte Ansicht",
+  "audit.kind.scheduled_send": "Geplante E-Mail",
+  "audit.kind.sdr_handoff": "SDR-Übergabe",
+  "audit.kind.signal": "Signal",
+  "audit.kind.site_read": "Website-Analyse",
+  "audit.kind.stage": "Phase",
+  "audit.kind.stage_exit_criterion": "Ausstiegskriterium der Phase",
+  "audit.kind.tag_suggestion": "Tag-Vorschlag",
+  "audit.kind.tax_rate": "Steuersatz",
+  "audit.kind.team": "Team",
+  "audit.kind.team_weekly_review": "Wochenrückblick des Teams",
+  "audit.kind.transcript_read": "Transkriptanalyse",
+  "audit.kind.user": "Mitglied",
+  "audit.kind.voice_build": "Erstellung des Stilprofils",
+  "audit.kind.voice_corpus_source": "Quelle für den Stilkorpus",
+  "audit.kind.voice_learning_signal": "Lernsignal für den Schreibstil",
+  "audit.kind.voice_profile": "Stilprofil",
+  "audit.kind.voice_profile_version": "Version des Stilprofils",
+  "audit.kind.web_form": "Webformular",
+  "audit.kind.webhook_subscription": "Webhook",
+  "audit.kind.weekly_plan": "Wochenplan",
+  "audit.kind.weekly_plan_commitment": "Zusage im Wochenplan",
+  "audit.kind.weekly_review": "Wochenrückblick",
+  "audit.kind.worklist_done": "Erledigter Worklist-Eintrag",
+  "audit.kind.worklist_pin": "Angehefteter Worklist-Eintrag",
+  "audit.kind.workspace": "Unternehmensprofil",
+  "audit.kind.agent_client": "Verbundenes KI-Tool",
+  "audit.kind.ai_budget": "KI-Kontingent",
+  "audit.kind.ai_call_payload": "Inhalt eines KI-Aufrufs",
+  "audit.kind.ai_routing": "KI-Modellzuordnung",
+  "audit.kind.authentication_policy": "Anmelderichtlinie",
+  "audit.kind.channel_connection": "Verbindung zu einem Chat-Kanal",
+  "audit.kind.company_fact": "Angabe zu einem Unternehmen",
+  "audit.kind.company_profile_field": "Feld eines Unternehmens",
+  "audit.kind.installation_settings": "Installationseinstellungen",
+  "audit.kind.integrations": "Integrationseinstellungen",
+  "audit.kind.raw_capture": "Erfasste Originalnachricht",
+  "audit.kind.report_definition": "Bericht",
+  "audit.kind.report_edition": "Veröffentlichter Bericht",
+  "audit.kind.report_schedule": "Berichtszeitplan",
+  "audit.kind.reporting_framework": "Berichtseinrichtung",
+  "audit.kind.sales_goal_plan": "Plan für Vertriebsziele",
+  "audit.kind.sales_target": "Vertriebsziel",
   "cf.audit.empty": "Noch keine Änderungen an eigenen Feldern.",
   "cf.audit.footer":
     "Jedes Hinzufügen, Bearbeiten und Archivieren wird dauerhaft im Audit-Log erfasst.",
@@ -14952,6 +15260,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.documents.readFailed":
     "Das Dokument konnte nicht geladen werden.",
   "jurisdiction.documents.note": "Für {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* Die Regeln, Fristen und Dokumente auf dieser Seite sind KI-generierte Entwürfe und keine Rechtsberatung. Lass sie von einer Anwältin oder einem Anwalt prüfen, bevor du dich auf sie verlässt.",
   "jurisdiction.audience.employer": "den Arbeitgeber",
   "jurisdiction.audience.operator": "die betreibende Stelle",
   "jurisdiction.audience.employee": "Beschäftigte",
@@ -16046,6 +16356,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.deactivateNote":
     "Beim Deaktivieren wird nichts davon verschoben. Übergib es vorher oder später über dieses Menü.",
   "users.handover.done": "{records} an {name} übergeben.",
+  "users.handover.draftsNote":
+    "Gespeicherte E-Mail-Entwürfe werden erst verschoben, wenn {name} deaktiviert ist. Hat das Mitglied, das du wählst, schon einen Entwurf an derselben Stelle, bleibt dieser, und der von {name} wird gelöscht.",
+  "users.handover.draftsDiscarded_one":
+    "{count} gespeicherter E-Mail-Entwurf wurde gelöscht, weil {name} an derselben Stelle schon einen Entwurf hatte.",
+  "users.handover.draftsDiscarded_other":
+    "{count} gespeicherte E-Mail-Entwürfe wurden gelöscht, weil {name} an derselben Stelle schon einen Entwurf hatte.",
   "users.handover.nothingMoved": "Es war nichts mehr zu übergeben.",
   "users.handover.left":
     "Noch bei {name}: {records}. Diese darfst du nicht ändern.",
@@ -16067,6 +16383,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.handoffs_other": "{count} offene Übergaben",
   "users.handover.responsibilities_one": "{count} Datensatzverantwortung",
   "users.handover.responsibilities_other": "{count} Datensatzverantwortungen",
+  "users.handover.drafts_one": "{count} gespeicherter E-Mail-Entwurf",
+  "users.handover.drafts_other": "{count} gespeicherte E-Mail-Entwürfe",
   "users.handover.lists_one": "{count} Liste",
   "users.handover.lists_other": "{count} Listen",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
@@ -19598,6 +19916,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dims": "Wie die Beziehung steht",
   "contact.standing.dim.promises": "Deine Zusagen",
   "contact.standing.dim.promisesNone": "Keine offen",
+  "contact.standing.dim.promisesUncounted": "Zu viele Aufgaben zum Zählen",
   "standing.overdue_one": "{count} überfällig",
   "standing.overdue_other": "{count} überfällig",
   "standing.ofOpen_one": "von {count} offenen",
@@ -22409,7 +22728,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.schedule": "Ein Termin wurde gebucht",
   "magic.action.disqualify": "Ein Lead wurde disqualifiziert",
   "magic.action.automation_troubled":
-    "{name} konnte nicht abgeschlossen werden ({outcome}): {reason}",
+    "Konnte nicht abgeschlossen werden ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Erstansprache prüfen",
   "magic.action.approval_send_email": "Nachricht prüfen",
   "magic.action.approval_advance_deal": "Phasenwechsel prüfen",
@@ -22434,7 +22753,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{party} (nicht bestätigt): {summary}",
   "magic.action.approval_commitment_task": "Vorgeschlagene Aufgabe prüfen",
   "magic.action.approval_capture_counterparty":
-    "{target} hat dir geschrieben. Als Kontakt behalten?",
+    "Dir hat jemand Neues geschrieben. Als Kontakt behalten?",
   "magic.action.approval_summary": "Vorschlag: {summary}",
   "magic.action.approval_pending": "{kind}",
   "magic.action.decided_summary": "{summary}",
@@ -23186,6 +23505,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.details.hideEmpty": "Leere Felder ausblenden",
   "record.details.editSection": "{section} bearbeiten",
   "record.verb.email": "E-Mail",
+  "record.verb.message": "Nachricht",
   "record.verb.call": "Anruf",
   "record.verb.meet": "Termin",
   "record.verb.log": "Notiz",

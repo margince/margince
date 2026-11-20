@@ -1488,7 +1488,7 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
   const form = page.getByRole("dialog");
   // the schema default arrives in the one parameter field
   await expect(
-    form.getByRole("spinbutton", { name: "due_in_days" }),
+    form.getByRole("spinbutton", { name: de["auto.param.dueInDays"] }),
   ).toHaveValue("3");
   await form.getByRole("button", { name: "Erstellen" }).click();
   // The outcome lands on the CARD: by the time it is true the dialog that

@@ -11,21 +11,23 @@ import (
 
 // A missing pair can lose its first insert to a newer fold while its statement waits.
 // Read that bounded subset again after the upsert owns its rows.
-func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs, missing []contactPair) error {
-	written, err := foldContactPairs(ctx, tx, pairs)
+func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs, missing []contactPair, advanceSnapshot bool) error {
+	written, err := foldContactPairs(ctx, tx, pairs, advanceSnapshot)
 	if err != nil {
 		return err
 	}
-	_, err = foldContactPairs(ctx, tx, intersectGraphPairs(written, missing))
+	_, err = foldContactPairs(ctx, tx, intersectGraphPairs(written, missing), advanceSnapshot)
 	return err
 }
 
-func recomputePairs(ctx context.Context, tx pgx.Tx, pairs, missing []pair) error {
-	written, err := foldPairs(ctx, tx, pairs)
+// advanceSnapshot writes even an unchanged edge, so its read_snapshot moves
+// forward; see unchangedEdgeGuard for who needs that.
+func recomputePairs(ctx context.Context, tx pgx.Tx, pairs, missing []pair, advanceSnapshot bool) error {
+	written, err := foldPairs(ctx, tx, pairs, advanceSnapshot)
 	if err != nil {
 		return err
 	}
-	_, err = foldPairs(ctx, tx, intersectGraphPairs(written, missing))
+	_, err = foldPairs(ctx, tx, intersectGraphPairs(written, missing), advanceSnapshot)
 	return err
 }
 

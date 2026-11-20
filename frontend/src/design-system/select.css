@@ -70,12 +70,10 @@
   text-align: left;
 }
 
-/* Above `.overlay` (50) and `.toast-region` (60) in atoms.css: a select inside a
-   dialog has to draw over the dialog it belongs to, and the popup is portalled
-   to the body so stacking context cannot do that for it. */
+/* In the top layer (toplayer.ts): a select inside a dialog draws over the
+   dialog it belongs to whatever stacking context the dialog makes. */
 .select-popup {
   position: fixed;
-  z-index: 70;
   /* THE LIST IS AS WIDE AS WHAT IS IN IT, and the trigger is only its floor
      (`min-width`, handed in by select.tsx). Pinned to the trigger's width, a
      short closed face truncated every option behind it — "My own d…" over

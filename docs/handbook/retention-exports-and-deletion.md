@@ -150,9 +150,9 @@ Some examples of the difference in the product's own words:
 
 - Archiving a project "removes this project from the active list and frees its key." The project is then read-only: "This project is archived and takes no changes."
 - Archiving a document set stops the set, and everything filed in it, from showing up in search. Nothing is destroyed.
-- Merging two records destroys nothing either: "Merge {source} into {target}?
-  This archives {source}." Both values are kept in a merge; choosing a side decides
-  which record stays and which value is shown first.
+- Merging two records destroys nothing either: the record merged away is archived, and
+  the one you keep takes over its history, tasks, tags and links. A merge cannot be undone.
+  Both values are kept; choosing a side decides which record stays and which value shows first.
 
 ## A new company starts with retention rules
 
@@ -367,7 +367,7 @@ You can only add to the list: "A purpose cannot be renamed or removed once creat
 
 Your team cannot record a purpose that needs **double opt-in** at all. Only the contact can confirm one, by opening a link that works once, mailed to their own recorded address. Use **Ask them to confirm their details**. If a colleague could confirm it for the contact, it would not prove the contact agreed.
 
-The default is **deny**. A purpose with no record for a contact is not consent.
+The default is **deny**. A purpose with no record for a contact is not consent. Each mail you send names a purpose, and the kind of purpose decides if it needs consent: correspondence does not, marketing does. Margince checks the kind a mail claims against the record, yet some mail can still go out under the wrong purpose. To find it later, open **Consent purposes**, which counts the mail sent under each purpose in the last 30 days. It also counts the mail whose claimed kind the record did not support.
 
 Every consent change is written to a **Proof log**. It records who made the change and how: a Human, an Agent, the System, or a Connector. Where Margince has no record of it, it says "actor not recorded" and "source not recorded". You may one day have to prove consent, so Margince keeps the proof, not only the current state.
 

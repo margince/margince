@@ -39,6 +39,8 @@ export const reportingMetricNames: Record<
   initiative_pipeline: "Initiative pipeline by origin",
   account_progression: "How far companies got",
   source_quality: "Lead source quality",
+  introductions_made: "Introductions made",
+  meetings_booked_for_colleagues: "Meetings booked for colleagues",
 };
 
 export const reportingStoryScope = {
