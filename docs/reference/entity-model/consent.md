@@ -117,6 +117,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `communication_decision_disagreements`: `btree (decided_at) WHERE ((legacy_verdict IS NOT NULL) AND (legacy_verdict <> verdict))`
 - `communication_decision_one_per_decision`: `unique, btree (decision_set_id, recipient_address, phase)`
 - `communication_decision_pkey`: `unique, btree (id)`
+- `communication_decision_staged_at`: `btree (decided_at) WHERE (phase = 'staging')`
 - `idx_communication_decision_delivery`: `btree (delivery_id)`
 
 **Triggers**

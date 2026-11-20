@@ -18633,6 +18633,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/consent-purposes/send-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many messages went out under each declared consent purpose, and how many the record disputes.
+         * @description Needs `consent_config:read`. A send names a consent purpose, and may claim what kind of
+         *     message it is. The send engine records, for every message it stages, what was claimed and
+         *     what the record bore out. This read counts those staged messages per purpose in the window,
+         *     most sent first.
+         *
+         *     `disputed` counts the messages whose claimed kind differs from the one the engine resolved:
+         *     for example a campaign claimed as customer service with nothing on record behind it. That is
+         *     where a mislabelled send shows.
+         *
+         *     A key that names no live purpose, and a message that named none, count under the purpose
+         *     key `unknown`, without a class. The answer holds at most 200 entries.
+         */
+        get: operations["listConsentPurposeSendCounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/existing-customer-notices": {
         parameters: {
             query?: never;
@@ -55215,14 +55245,26 @@ export interface components {
              * @default false
              */
             requires_double_opt_in: boolean;
-            /**
-             * @description What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
-             * @enum {string}
-             */
-            class?: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+            /** @description What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration. */
+            class?: string & components["schemas"]["ConsentPurposeClass"];
             frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /** Format: date-time */
             created_at: string;
+        };
+        /**
+         * @description Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
+         * @enum {string}
+         */
+        ConsentPurposeClass: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+        ConsentPurposeSendCount: {
+            /** @description The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none. */
+            purpose_key: string;
+            /** @description The purpose's class. Absent under `unknown`. */
+            class?: components["schemas"]["ConsentPurposeClass"];
+            /** @description Messages staged under this purpose in the window. */
+            sends: number;
+            /** @description Of those, the messages whose claimed kind differs from the kind the record bore out. */
+            disputed: number;
         };
         /**
          * @description How often the purpose's mail goes out, roughly. The subscription question states it.
@@ -92850,6 +92892,36 @@ export interface operations {
                     "application/json": components["schemas"]["ConsentPurpose"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listConsentPurposeSendCounts: {
+        parameters: {
+            query?: {
+                /** @description How many days back the window reaches from now. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The send counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ConsentPurposeSendCount"][];
+                        /** @description The window the counts cover. */
+                        days: number;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

@@ -11850,6 +11850,21 @@ export const en = {
   "privacy.purposeDoiBadge": "Double opt-in",
   "privacy.purposesLoading": "Loading purposes…",
   "privacy.purposesEmpty": "No purposes registered yet.",
+  "privacy.purposeClass": "Class",
+  "privacy.purposeClass.businessCorrespondence": "Correspondence",
+  "privacy.purposeClass.transactional": "Transactional",
+  "privacy.purposeClass.marketing": "Marketing",
+  "privacy.purposeClass.phoneOutreach": "Phone outreach",
+  "privacy.purposeClass.undefined": "Not defined",
+  "privacy.purposeSends": "Sent in {days} days",
+  "privacy.purposeSendsSub":
+    "Each mail names its purpose and may say what kind of mail it is. Margince checks that against the record before it sends. These counts cover the last {days} days. Kind not borne out counts mail whose stated kind the record did not support, such as a newsletter sent as customer service.",
+  "privacy.purposeSendsLoading": "Counting sent mail…",
+  "privacy.purposeSendsEmpty":
+    "No mail named a purpose in the last {days} days.",
+  "privacy.purposeDisputed": "Kind not borne out",
+  "privacy.purposeUnknown": "No known purpose",
+  "privacy.purposeSendsTable": "Mail sent per purpose",
   "privacy.customerNotices": "Existing customers",
   "privacy.customerNoticesSub":
     "In Germany you may send advertising for similar products to a customer without consent, if they were told when you collected their address that they can object. Declare here where and when you told them. Customers who bought from that entity in that period then receive your newsletters with an opt-out link.",

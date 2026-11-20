@@ -225,6 +225,7 @@
     "GET /v1/connectors": "list_connectors",
     "GET /v1/connectors/{provider}/containers": "list_connector_containers",
     "GET /v1/consent-purposes": "read_view",
+    "GET /v1/consent-purposes/send-counts": "read_view",
     "GET /v1/contacts": "list_records",
     "GET /v1/contacts/{id}": "read_record",
     "GET /v1/contacts/{id}/360": "read_view",
