@@ -79,7 +79,7 @@ func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) 
 // The last try closes its reading with a reason chosen from the cause. The
 // budget stop sleeps; a close another claim refuses sleeps one lease.
 func TestATranscriptReadingsLastTry(t *testing.T) {
-	e := setupTranscript(t)
+	var e *transcriptEnv // each case's own meeting, so no reading carries over
 	steal := func() {
 		if _, err := e.owner.Exec(t.Context(), `UPDATE transcript_read SET started_at = started_at - interval '1 second'
 			WHERE activity_id = $1 AND status = 'running'`, e.activity.UUID); err != nil {
@@ -87,7 +87,6 @@ func TestATranscriptReadingsLastTry(t *testing.T) {
 		}
 	}
 	deferral := &ai.BudgetDeferralError{Task: ai.TaskTranscriptPropose, NextAttemptAt: clocktest.Now(t).Add(240 * time.Hour)}
-	// In this order: the cases share one meeting, and the last leaves its reading claimed.
 	for _, tc := range []struct {
 		name, status, code string
 		brain              completer
@@ -98,6 +97,7 @@ func TestATranscriptReadingsLastTry(t *testing.T) {
 		{"budget stop", activities.TranscriptReadQueued, "", cannedBrain{err: deferral}, true},
 		{"claim taken", activities.TranscriptReadRunning, "", &interruptedBrain{before: steal, err: ai.ErrAllTiersFailed}, true},
 	} {
+		e = setupTranscript(t)
 		read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, tc.brain)
 		_, snoozed := errors.AsType[*river.JobSnoozeError](errs[0])
 		code := ""
