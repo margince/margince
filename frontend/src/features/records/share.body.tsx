@@ -33,7 +33,6 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { holdsEveryWord, searchWords } from "../../format/collate";
 import {
   formatDate,
   formatNumber,
@@ -50,6 +49,7 @@ import {
   WhoCanSeePanel,
 } from "./recordaccesspanel";
 import { ShareConfirmation } from "./share.confirmation";
+import { shareCandidates } from "./share.roster";
 import {
   ApprovalRequiredError,
   RevokeGrantDialog,
@@ -113,17 +113,11 @@ export function ShareScreenBody({
     skipped: number;
   } | null>(null);
 
-  // The owner already sees and edits the record, so a share to them adds
-  // nothing and would list them twice.
   const ownerId = useRecordOwnerId(recordType, recordId, !contactsOnly);
-  const filteredRoster = useMemo(() => {
-    const words = searchWords(term);
-    return roster.filter(
-      (r) =>
-        !(r.kind === "user" && r.id === ownerId) &&
-        (words.length === 0 || holdsEveryWord(words, [r.name, r.note])),
-    );
-  }, [roster, term, ownerId]);
+  const filteredRoster = useMemo(
+    () => shareCandidates(roster, term, ownerId),
+    [roster, term, ownerId],
+  );
 
   function resetForm() {
     setTerm("");
