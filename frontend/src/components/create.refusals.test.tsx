@@ -41,8 +41,6 @@ const fields: CreateField[] = [
     key: "amount",
     label: "create.amount",
     type: "number",
-    step: "any",
-    min: "0",
     wireField: "amount_minor",
   },
 ];
@@ -75,21 +73,6 @@ async function submitWith(problem: unknown, locale: "en" | "de" = "en") {
 }
 
 describe("CreateAction field refusals", () => {
-  it("declares the lowest amount the browser accepts", async () => {
-    render(
-      <CreateAction
-        requires={{ object: "deal", action: "create" }}
-        label="New deal"
-        fields={fields}
-        create={() => Promise.resolve({ id: "1" })}
-        invalidate="deals"
-        screen="deals"
-      />,
-    );
-    await userEvent.click(screen.getByText("New deal"));
-    expect(screen.getByLabelText("Value").getAttribute("min")).toBe("0");
-  });
-
   it("shows a negative amount beside the amount, not at the foot", async () => {
     await submitWith(refusal("amount_minor", "amount_negative"));
     await waitFor(() =>
@@ -230,6 +213,88 @@ describe("CreateAction field refusals", () => {
     await user.click(screen.getByText("New deal"));
     await screen.findByRole("dialog");
     expect(screen.queryByText("Enter a whole number for Value.")).toBeNull();
+  });
+});
+
+describe("CreateAction email boxes", () => {
+  const emailFields: CreateField[] = [
+    { key: "name", label: "create.dealName", required: true },
+    { key: "email", label: "create.email", type: "email" },
+    {
+      key: "emails",
+      label: "create.email",
+      type: "repeatable",
+      addLabel: "field.addEmail",
+      rowFields: [{ key: "email", label: "create.email", type: "email" }],
+    },
+  ];
+
+  // The browser's own check answers in the browser's language and marks
+  // nothing, so the form checks the address itself, in the app's language.
+  it.each([
+    ["en", "Enter an email address for Email."],
+    ["de", "Gib für E-Mail eine E-Mail-Adresse ein."],
+  ] as const)(
+    "refuses an address with no @ in its own words (%s)",
+    async (locale, sentence) => {
+      const user = userEvent.setup();
+      const sent: unknown[] = [];
+      render(
+        <CreateAction
+          requires={{ object: "contact", action: "create" }}
+          label="New contact"
+          fields={emailFields}
+          create={(values) => {
+            sent.push(values);
+            return Promise.resolve({ id: "1" });
+          }}
+          invalidate="contacts"
+          screen="contacts"
+        />,
+        locale,
+      );
+      await user.click(screen.getByText("New contact"));
+      await user.type(screen.getByLabelText(/^(Deal.name|Dealname)/i), "Probe");
+      const box = screen.getAllByLabelText(/^E-?mail/i)[0];
+      await user.type(box, "keine-mail");
+      await user.click(
+        screen.getByRole("button", { name: /^(Create|Erstellen)$/ }),
+      );
+
+      expect(await screen.findByText(sentence)).toBeTruthy();
+      expect(box.getAttribute("aria-invalid")).toBe("true");
+      expect(box.closest("form")?.noValidate).toBe(true);
+      expect(sent).toHaveLength(0);
+    },
+  );
+
+  it("refuses an address with no @ in an email row", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    render(
+      <CreateAction
+        requires={{ object: "contact", action: "create" }}
+        label="New contact"
+        fields={emailFields}
+        create={(values) => {
+          sent.push(values);
+          return Promise.resolve({ id: "1" });
+        }}
+        invalidate="contacts"
+        screen="contacts"
+      />,
+    );
+    await user.click(screen.getByText("New contact"));
+    await user.type(screen.getByLabelText(/Deal.name/i), "Probe");
+    await user.click(screen.getByRole("button", { name: "Add email" }));
+    const rowBox = screen.getAllByLabelText(/^Email/)[1];
+    await user.type(rowBox, "keine-mail");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(
+      await screen.findByText("Enter an email address for Email."),
+    ).toBeTruthy();
+    expect(sent).toHaveLength(0);
   });
 });
 

@@ -190,16 +190,9 @@ export function ContractTermsFields({
 
       <Field label={t("contracts.form.value")} error={errors?.("value_minor")}>
         {(props) => (
-          // MoneyInput rather than a TextInput this file scales itself, and the
-          // reasons are the two defects the hand-rolled version had.
-          //
-          // It keeps the typed text as its OWN state, so a fractional amount is
-          // not reformatted between keystrokes — typing "12.345" into a
-          // three-decimal currency lost its tail when every keystroke was
-          // scaled and echoed back.
-          //
-          // And it takes no amount until the installation read that supplies
-          // the code has landed, so no keystroke is scaled at a guessed one.
+          // MoneyInput keeps the typed text as its own state, so "12.345" in a
+          // three-decimal currency is not reformatted between keystrokes. It
+          // takes no amount until the currency has loaded.
           <MoneyInput
             {...props}
             min={0}

@@ -53,8 +53,8 @@ import { companyDocumentsKey } from "../../lib/attachmentkeys";
 type Attachment = components["schemas"]["Attachment"];
 type Category = NonNullable<Attachment["category"]>;
 
-// The chips always offered. `contract` joins them only while a file holds it:
-// contract paper filed to an agreement is read in the agreements card above,
+// The chips always offered. `contract` joins them only while a file holds it.
+// Contract paper filed to an agreement is read in the agreements card above,
 // so the chip counts only a contract file that no agreement holds.
 const STEADY_CUTS: readonly Category[] = [
   "offer",

@@ -7,8 +7,8 @@ import {
   datePattern,
   formatISODate,
   isoOrBlank,
-  parseTypedDate,
   patternPlaceholder,
+  readTypedDate,
 } from "./datepattern";
 import { formatDate } from "./format";
 import {
@@ -56,11 +56,13 @@ describe("a typed day", () => {
     ["29.2.2028", "2028-02-29"],
     ["1.1.1000", "1000-01-01"],
   ])("reads %s day first as %s", (typed, expected) => {
-    expect(parseTypedDate(typed, dayFirst)).toBe(expected);
+    expect(readTypedDate(typed, dayFirst)).toEqual({ day: expected });
   });
 
   it("reads the same digits month first under mdy", () => {
-    expect(parseTypedDate("6.5.2026", monthFirst)).toBe("2026-06-05");
+    expect(readTypedDate("6.5.2026", monthFirst)).toEqual({
+      day: "2026-06-05",
+    });
   });
 
   it.each([
@@ -76,8 +78,26 @@ describe("a typed day", () => {
     "0099-09-09",
     "1.1.0999",
   ])("names no day in %j", (typed) => {
-    expect(parseTypedDate(typed, dayFirst)).toBeNull();
+    expect(readTypedDate(typed, dayFirst)).toHaveProperty("refused");
   });
+});
+
+describe("why a typed text names no day", () => {
+  const dayFirst = datePattern("de", "locale");
+
+  it.each(["31.02.2026", "29.2.2027", "13.13.2026"])(
+    "says %s is a day the calendar does not have",
+    (typed) => {
+      expect(readTypedDate(typed, dayFirst)).toEqual({ refused: "noSuchDay" });
+    },
+  );
+
+  it.each(["6.5.26", "6.5/2026", "6 May 2026", "1.1.0999"])(
+    "says %s is not in a date's shape",
+    (typed) => {
+      expect(readTypedDate(typed, dayFirst)).toEqual({ refused: "shape" });
+    },
+  );
 });
 
 // The box a reader types into and the date every page prints must agree, or a

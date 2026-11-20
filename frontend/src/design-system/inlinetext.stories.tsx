@@ -34,7 +34,6 @@ function Example({ multiline = false }: { multiline?: boolean }) {
       value={value}
       multiline={multiline}
       type={multiline ? "text" : "number"}
-      step="any"
       canEdit
       onSave={async (next) => setValue(next)}
     />

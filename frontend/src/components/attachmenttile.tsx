@@ -35,8 +35,8 @@ export const CATEGORY_LABELS: Record<DocumentCategory, MessageKey> = {
 const CATEGORY_ORDER: readonly string[] = Object.keys(CATEGORY_LABELS);
 
 /**
- * The category chips over a list of files: `steady` always, and every other
- * category only while a file holds it, so the chips add up to "All".
+ * The category chips over a list of files. The `steady` ones always show; any
+ * other category shows while a file holds it. So the chips add up to "All".
  */
 export function categoryCuts(
   files: readonly Attachment[],

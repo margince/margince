@@ -117,6 +117,7 @@ function RecordField({
   }
 >) {
   const t = useT();
+  const { locale } = useLocale();
   const [opened, setOpened] = useState(props.record);
   const target = useDetailsFieldTarget(field.key);
   const [editing, setEditing] = useState(false);
@@ -151,7 +152,7 @@ function RecordField({
   const editable = props.canEdit && !reason;
   const canEdit = editable && (!pending || editing);
   const saveValue = async (next: string) => {
-    checkFieldValue(field, next, t);
+    checkFieldValue(field, next, t, locale);
     await mutation.mutateAsync({
       values: { [field.key]: next },
       rows: {},
@@ -365,7 +366,6 @@ function RecordScalarField({
           multiline={field.type === "textarea"}
           type={inlineTextKind(field)}
           maxLength={field.maxLength}
-          step={field.step ?? (field.type === "number" ? "any" : undefined)}
           canEdit={canEdit}
           readOnlyReason={reason}
           onEditingChange={onEditingChange}

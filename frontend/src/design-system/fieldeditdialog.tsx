@@ -153,6 +153,7 @@ export function FieldEditDialog({
         <form
           id={formId}
           className="form-stack"
+          noValidate
           onSubmit={submit}
           onKeyDown={paragraphCommit}
         >

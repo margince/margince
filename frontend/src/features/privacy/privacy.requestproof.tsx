@@ -5,7 +5,7 @@ import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Select, type SelectOption } from "../../design-system/select";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { looksLikeEmail } from "../../lib/emailshape";
+import { emailFault } from "../../lib/emailshape";
 import { isOption } from "../../lib/options";
 import {
   type DsrClosing,
@@ -15,7 +15,7 @@ import {
   isTerminal,
   nextStatuses,
 } from "../../lib/privacy.logic";
-import { fieldCheckSentence, refusalSentences } from "../../lib/problem";
+import { refusalSentences } from "../../lib/problem";
 
 export const REQUESTER_EMAIL = "requester_email";
 
@@ -27,15 +27,8 @@ export function useRequesterEmail() {
   const label = t("privacy.requesterEmail");
   return {
     check: (address: string): ReadonlyMap<string, string> => {
-      const typed = address.trim();
-      return typed !== "" && !looksLikeEmail(typed)
-        ? new Map([
-            [
-              REQUESTER_EMAIL,
-              fieldCheckSentence("email_malformed", locale, label),
-            ],
-          ])
-        : new Map();
+      const fault = emailFault(address, locale, label);
+      return fault ? new Map([[REQUESTER_EMAIL, fault]]) : new Map();
     },
     refused: (error: unknown) =>
       refusalSentences(error, t, { [REQUESTER_EMAIL]: label }),

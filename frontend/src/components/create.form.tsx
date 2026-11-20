@@ -14,6 +14,7 @@ import { RecordFormDialog } from "../design-system/recordformdialog";
 import { useFieldFaults } from "../design-system/savepage";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { emailFault } from "../lib/emailshape";
 import { fieldCheckSentence } from "../lib/problem";
 import { navigate, type Route } from "../lib/router";
 import { fieldControl, MultiselectField } from "./create.controls";
@@ -182,7 +183,8 @@ export function RecordFormBody({
   const submit = singlePress((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
-    if (requiredMissing || refusals.size > 0) {
+    const malformed = emailFaults(shown, answers, rows, locale, t);
+    if (requiredMissing || refusals.size > 0 || malformed.length > 0) {
       setTouched(new Set([...touched, ...missing.map((field) => field.key)]));
       faults.show(
         new Map([
@@ -193,6 +195,7 @@ export function RecordFormBody({
                 fieldCheckSentence("required", locale, fieldLabel(field, t)),
               ] as const,
           ),
+          ...malformed,
           ...refusals,
         ]),
       );
@@ -330,7 +333,7 @@ export function RecordFormBody({
   );
   if (!dialog) {
     return (
-      <form id={formId} ref={faultsRoot} onSubmit={submit}>
+      <form id={formId} ref={faultsRoot} noValidate onSubmit={submit}>
         <div className="form-stack">{stack}</div>
         <div className="actions">{actions}</div>
       </form>
@@ -349,6 +352,7 @@ export function RecordFormBody({
           id={formId}
           ref={faultsRoot}
           className="form-stack"
+          noValidate
           onSubmit={submit}
         >
           {stack}
@@ -357,6 +361,31 @@ export function RecordFormBody({
       actions={actions}
     />
   );
+}
+
+// The email boxes whose text is no address, by field key. The forms set
+// noValidate, so this check answers in the app's language, not the browser's.
+function emailFaults(
+  fields: readonly CreateField[],
+  values: Record<string, string>,
+  rows: FormRows,
+  locale: Locale,
+  t: (key: MessageKey) => string,
+): (readonly [string, string])[] {
+  return fields.flatMap((field) => {
+    const label = fieldLabel(field, t);
+    const valueField = field.rowFields?.[0];
+    const typed =
+      field.type === "email"
+        ? [values[field.key] ?? ""]
+        : field.type === "repeatable" && valueField?.type === "email"
+          ? (rows[field.key] ?? []).map((row) => row[valueField.key] ?? "")
+          : [];
+    const fault = typed
+      .map((text) => emailFault(text, locale, label))
+      .find((sentence) => sentence !== undefined);
+    return fault && !answerless(field) ? [[field.key, fault] as const] : [];
+  });
 }
 
 // A check the form makes before sending, beyond the field's own validate: a

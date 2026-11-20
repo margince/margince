@@ -394,7 +394,7 @@ describe("a provider's sheet", () => {
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
 
     expect(
-      await within(sheet).findByText("Enter a date as DD/MM/YYYY."),
+      await within(sheet).findByText("There is no 99/99/9999 in the calendar."),
     ).toBeTruthy();
     expect(posts).toHaveLength(0);
   });

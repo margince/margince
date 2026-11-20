@@ -189,12 +189,15 @@ export function fieldControl(
   return (
     <TextInput
       {...control}
-      type={field.type === "decimal" ? "text" : (field.type ?? "text")}
-      inputMode={field.type === "decimal" ? "decimal" : undefined}
-      // A bare number input steps by 1, so the browser refuses 14.60 before
-      // any handler sees it. A money field has to say it takes cents.
-      step={field.step}
-      min={field.min}
+      // A number is typed as text, because the record forms set noValidate.
+      // A number box hands over "" for text it cannot read, so a typo would
+      // save as no value. The field's validate reads the text instead.
+      type={field.type === "email" ? "email" : "text"}
+      inputMode={
+        field.type === "decimal" || field.type === "number"
+          ? "decimal"
+          : undefined
+      }
       maxLength={field.maxLength}
       value={value}
       placeholder={field.placeholder}

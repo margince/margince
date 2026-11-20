@@ -8392,6 +8392,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "calendar.patternMonth": "MM",
   "calendar.patternYear": "JJJJ",
   "calendar.invalidDate": "Gib ein Datum im Format {pattern} ein.",
+  "calendar.noSuchDay": "Den {date} gibt es nicht.",
   "calendar.patternHour": "hh",
   "calendar.patternMinute": "mm",
   "calendar.invalidTime": "Gib eine Uhrzeit im Format {pattern} ein.",

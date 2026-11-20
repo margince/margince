@@ -53,14 +53,12 @@ export function InlineTextControl({
   field,
   multiline,
   type,
-  step,
   maxLength,
   suggested,
 }: Readonly<{
   field: FieldEditControl;
   multiline?: boolean;
   type?: TextKind;
-  step?: string;
   maxLength?: number;
   suggested?: string;
 }>) {
@@ -89,12 +87,14 @@ export function InlineTextControl({
       />
     );
   }
+  // A number is typed as text, because the edit form sets noValidate. A number
+  // box hands over "" for text it cannot read, which would save as no value.
+  const numeric = type === "decimal" || type === "number";
   return (
     <TextInput
       {...control}
-      type={type === "decimal" ? "text" : type}
-      inputMode={type === "decimal" ? "decimal" : undefined}
-      step={step}
+      type={numeric ? "text" : type}
+      inputMode={numeric ? "decimal" : undefined}
       value={draft}
       maxLength={maxLength}
       placeholder={suggested}
@@ -119,7 +119,6 @@ export function InlineText({
   maxLength,
   multiline,
   type,
-  step,
   frame,
   onEditingChange,
   onDirtyChange,
@@ -144,7 +143,6 @@ export function InlineText({
   emptyText?: string;
   maxLength?: number;
   type?: TextKind;
-  step?: string;
   // Holds the resting value in the element its text belongs to, such as a
   // record's h1.
   frame?: (resting: ReactNode) => ReactNode;
@@ -207,7 +205,6 @@ export function InlineText({
             field={field}
             multiline={multiline}
             type={type}
-            step={step}
             maxLength={maxLength}
             suggested={suggested}
           />

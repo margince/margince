@@ -72,17 +72,19 @@ export function patternPlaceholder(
 }
 
 /**
- * A typed day as `YYYY-MM-DD`, or null. A four-digit first part is read year
- * first whatever the pattern, so a pasted ISO date keeps its meaning. A year
- * below 1000 is a typo the instant writers cannot carry, so it reads as none.
+ * A typed day as `YYYY-MM-DD`, or why it names none: text not in a date's
+ * shape, or a well-formed day the calendar does not have (31.02.2026). A
+ * four-digit first part is read year first whatever the pattern, so a pasted
+ * ISO date keeps its meaning. A year below 1000 is a typo the instant writers
+ * cannot carry, so it reads as no date.
  */
-export function parseTypedDate(
+export function readTypedDate(
   text: string,
   pattern: DatePattern,
-): ISODate | null {
+): Readonly<{ day: ISODate }> | Readonly<{ refused: "shape" | "noSuchDay" }> {
   const match = /^(\d{1,4})([./-])(\d{1,2})\2(\d{1,4})$/.exec(text.trim());
   if (!match) {
-    return null;
+    return { refused: "shape" };
   }
   const groups = [match[1], match[3], match[4]];
   const order: DatePattern["order"] =
@@ -99,8 +101,10 @@ export function parseTypedDate(
     !day ||
     day.length > 2
   ) {
-    return null;
+    return { refused: "shape" };
   }
   const iso = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  return isISODate(iso) && isRealCalendarDay(iso) ? iso : null;
+  return isISODate(iso) && isRealCalendarDay(iso)
+    ? { day: iso }
+    : { refused: "noSuchDay" };
 }

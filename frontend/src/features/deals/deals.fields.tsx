@@ -27,8 +27,6 @@ function winProbabilityField(t: (k: MessageKey) => string): CreateField {
     key: "win_probability",
     label: "deal.winProbability",
     type: "number",
-    step: "1",
-    min: "0",
     hint: t("deal.winProbability.hint"),
     validate: (value) =>
       value.trim() === "" || WHOLE_PERCENT.test(value.trim())

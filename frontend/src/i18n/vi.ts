@@ -8184,6 +8184,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "calendar.patternMonth": "mm",
   "calendar.patternYear": "yyyy",
   "calendar.invalidDate": "Nhập ngày theo dạng {pattern}.",
+  "calendar.noSuchDay": "Không có ngày {date}.",
   "calendar.patternHour": "gg",
   "calendar.patternMinute": "pp",
   "calendar.invalidTime": "Nhập giờ theo dạng {pattern}.",

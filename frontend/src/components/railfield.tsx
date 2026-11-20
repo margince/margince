@@ -101,6 +101,7 @@ function useRailWrite(edit: RailEdit) {
  */
 export function useRailText(edit: RailEdit, field: CreateField) {
   const t = useT();
+  const { locale } = useLocale();
   const write = useRailWrite(edit);
   return {
     stored: prefillFromRecord([field], write.shown)[field.key] ?? "",
@@ -108,7 +109,7 @@ export function useRailText(edit: RailEdit, field: CreateField) {
     onEditingChange: write.onEditingChange,
     onDirtyChange: write.setDirty,
     onSave: async (next: string) => {
-      checkFieldValue(field, next, t);
+      checkFieldValue(field, next, t, locale);
       await write.mutation.mutateAsync({
         values: { [field.key]: next },
         rows: {},
@@ -153,7 +154,6 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
         multiline={field.type === "textarea"}
         type={inlineTextKind(field)}
         maxLength={field.maxLength}
-        step={field.step ?? (field.type === "number" ? "any" : undefined)}
         {...write}
       />
       {beside}
@@ -163,6 +163,7 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
 
 function RailChoice({ edit, field, label, reading, beside }: FieldProps) {
   const t = useT();
+  const { locale } = useLocale();
   const write = useRailWrite(edit);
   const values = prefillFromRecord([field], write.shown);
   const stored = values[field.key] ?? "";
@@ -184,7 +185,7 @@ function RailChoice({ edit, field, label, reading, beside }: FieldProps) {
         onEditingChange={write.onEditingChange}
         onDirtyChange={write.setDirty}
         onSave={async (next) => {
-          checkFieldValue(field, next, t);
+          checkFieldValue(field, next, t, locale);
           await write.mutation.mutateAsync({
             values: { [field.key]: next },
             rows: {},

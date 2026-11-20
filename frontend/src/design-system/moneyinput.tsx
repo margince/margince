@@ -125,8 +125,8 @@ export function MoneyInput({
 
   // The refusal the text on screen earns now, before any blur shows it. It is
   // the box's custom validity, so refuseUnreadableField stops a save past it.
-  // No currency, no scale: the box takes nothing until one arrives, so a
-  // keystroke is never committed at a guessed scale and redrawn at the real one.
+  // No currency, no scale: the box takes nothing until one arrives. A keystroke
+  // is never committed at a guessed scale and redrawn at the real one.
   const noCurrency = currency.trim() === "";
   const typedNow =
     text.trim() === "" || noCurrency

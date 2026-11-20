@@ -99,7 +99,9 @@ it("sends nothing while the box holds text it cannot read", async () => {
     screen.getByRole("button", { name: en["connectors.historyBaseline.save"] }),
   );
 
-  expect(await screen.findByText("Enter a date as DD/MM/YYYY.")).toBeTruthy();
+  expect(
+    await screen.findByText("There is no 99/99/9999 in the calendar."),
+  ).toBeTruthy();
   expect(sent).toEqual([]);
 });
 
