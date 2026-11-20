@@ -60,7 +60,10 @@ func (p *TranscriptProposer) retryable(
 	if claim.StartedAt == nil {
 		return cause
 	}
-	if err := store.ReleaseTranscriptRead(ctx, claim.ID, *claim.StartedAt); err != nil {
+	// Detached: a try that ran out of time still hands its reading back.
+	releaseCtx, cancel := terminalCtx(ctx)
+	defer cancel()
+	if err := store.ReleaseTranscriptRead(releaseCtx, claim.ID, *claim.StartedAt); err != nil {
 		p.log.WarnContext(ctx, "could not release a transcript reading being retried",
 			"transcript_read_id", claim.ID, "error", err)
 	}

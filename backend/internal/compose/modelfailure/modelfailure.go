@@ -33,7 +33,7 @@ func Write(w http.ResponseWriter, r *http.Request, err error) {
 // A model this installation cannot use is a dependency that is down, not a
 // fault in the request. httperr would answer it as an opaque 500.
 func Refusal(ctx context.Context, err error) error {
-	if !unanswered(err) {
+	if !Unanswered(err) {
 		return err
 	}
 	if errors.Is(err, ai.ErrBudgetDeferred) {
@@ -85,7 +85,7 @@ func providerDown(down *ai.ProviderDownError) error {
 	}
 }
 
-// unanswered reports whether err is the model lane ending without an answer
+// Unanswered reports whether err is the model lane ending without an answer
 // rather than this request being wrong.
 //
 // Matched by sentinel, never by message. ai.ErrAllTiersFailed is a walk that
@@ -93,7 +93,7 @@ func providerDown(down *ai.ProviderDownError) error {
 // is declined or refused (ai.ModelDeclined), or a request rejected. Or an
 // account is out of budget, or the router deferred the call. The embed lane
 // has no walk, and fails with ai.ErrEmbedLaneFailed.
-func unanswered(err error) bool {
+func Unanswered(err error) bool {
 	return errors.Is(err, ai.ErrAllTiersFailed) ||
 		errors.Is(err, ai.ErrEmbedLaneFailed) ||
 		ai.ModelDeclined(err) ||

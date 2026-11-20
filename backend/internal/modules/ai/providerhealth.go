@@ -46,6 +46,13 @@ func (e *ProviderDownError) Error() string {
 
 func (e *ProviderDownError) Unwrap() []error { return []error{ErrProviderDown, e.Cause} }
 
+// RetryAt is when the blocked provider is next probed; a job waits until then.
+func (e *ProviderDownError) RetryAt() time.Time { return e.RetryAfter }
+
+// RefusedUncalled reports whether err is a call the router refused for a
+// blocked provider without calling it.
+func RefusedUncalled(err error) bool { return refusedUncalled(err) }
+
 // IsDeferral reports whether err means "not now, and not this item's fault":
 // the installation's budget stop or a blocked provider. The attempt is refunded
 // and the pass stops.

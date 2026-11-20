@@ -215,7 +215,7 @@ func setRecoveryAllowance(t *testing.T, e *integration.Env, tokens int64) {
 }
 
 // A step the router declines reaches the runner as the runner's own refusal,
-// so the run says why no provider was called.
+// so the run says why no provider was called. A call that was made is not one.
 func TestAnAgentStepTheRouterDeclinedReachesTheRunnerAsItsReason(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
@@ -239,5 +239,9 @@ func TestAnAgentStepTheRouterDeclinedReachesTheRunnerAsItsReason(t *testing.T) {
 	}
 	if err := agentStepRefusal(&ai.ProviderDownError{Provider: "p", Health: model.HealthDown}); !errors.Is(err, runner.ErrProviderBlocked) {
 		t.Errorf("blocked provider = %v, want the runner's blocked-provider refusal", err)
+	}
+	tripped := &ai.ProviderDownError{Provider: "p", Health: model.HealthDown, Cause: ai.ErrProviderUnavailable}
+	if err := agentStepRefusal(tripped); errors.Is(err, runner.ErrProviderBlocked) {
+		t.Errorf("the call that tripped the provider = %v, want it left a failed call: it was made", err)
 	}
 }

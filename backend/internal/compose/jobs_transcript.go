@@ -14,8 +14,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
-	"github.com/riverqueue/river/rivertype"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -119,18 +119,20 @@ func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[Trans
 			"transcript_read_id", args.TranscriptReadID)
 		return nil
 	}
-	err = snoozeWhileHeld(err, time.Now())
-	if _, snoozed := errors.AsType[*river.JobSnoozeError](err); err != nil && !snoozed && lastTry(job.JobRow) {
+	err = snoozeWhileRestricted(err)
+	if jobs.Exhausted(job.JobRow, err) {
 		// The reading was handed back for a try that will not come, and a
-		// queued reading with no job is one the door joins forever.
-		err = errors.Join(err, w.closeUnread(wsCtx, args, activities.TranscriptFailureUnanswered))
+		// queued reading with no job is one the door joins forever. Detached,
+		// because a try that ran out of time has a cancelled context.
+		closeCtx, cancel := terminalCtx(wsCtx)
+		defer cancel()
+		code := activities.TranscriptFailureUnfinished
+		if modelfailure.Unanswered(err) {
+			code = activities.TranscriptFailureUnanswered
+		}
+		err = errors.Join(err, w.closeUnread(closeCtx, args, code))
 	}
 	return jobs.FaultContext(ctx, err)
-}
-
-// lastTry reports whether River will not run this job again after a fault.
-func lastTry(row *rivertype.JobRow) bool {
-	return row != nil && row.Attempt >= row.MaxAttempts
 }
 
 // declineUnread closes a reading no configured lane can perform.

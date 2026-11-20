@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // tryTranscript queues one reading and runs the production worker over it once
@@ -35,7 +36,12 @@ func (e *transcriptEnv) tryTranscript(t *testing.T, first int, brains ...complet
 		worker := &transcriptProposeWorker{language: installationLanguage(e.Pool), activities: e.Activities, log: quiet}
 		worker.proposer = NewTranscriptProposer(e.Pool, brain, e.svc, now, quiet)
 		row := &rivertype.JobRow{Attempt: first + i, MaxAttempts: oneOffJobMaxAttempts}
-		errs = append(errs, worker.Work(context.Background(), &river.Job[TranscriptProposeArgs]{JobRow: row, Args: args}))
+		ctx, cancel := context.WithCancel(context.Background())
+		if timeout, ok := brain.(*timingOutBrain); ok {
+			timeout.cancel = cancel
+		}
+		errs = append(errs, worker.Work(ctx, &river.Job[TranscriptProposeArgs]{JobRow: row, Args: args}))
+		cancel()
 	}
 	read, err := e.Activities.GetTranscriptRead(e.ctx, e.activity, started.ID)
 	if err != nil {
@@ -44,14 +50,27 @@ func (e *transcriptEnv) tryTranscript(t *testing.T, first int, brains ...complet
 	return read, errs
 }
 
+// timingOutBrain is a model call the job's timeout cut off: the try's context
+// is cancelled before the worker hands the reading back.
+type timingOutBrain struct{ cancel context.CancelFunc }
+
+func (b *timingOutBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	b.cancel()
+	return model.Response{}, context.Canceled
+}
+
 // River repeats a failed try a second later, inside the claim's lease. The
 // repeat must find a reading it can claim. Else it ends as success, and the
 // rep watches "reading…" with no job behind it.
 func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) {
 	e := setupTranscript(t)
-	read, errs := e.tryTranscript(t, 1, cannedBrain{err: ai.ErrAllTiersFailed}, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
-	if errs[0] == nil || errs[1] != nil || read.Status != activities.TranscriptReadDone {
-		t.Errorf("tries = %v, reading %q; want the fault for River, then a reading done on the next try", errs, read.Status)
+	for name, failing := range map[string]completer{
+		"model failed": cannedBrain{err: ai.ErrAllTiersFailed}, "try timed out": &timingOutBrain{},
+	} {
+		read, errs := e.tryTranscript(t, 1, failing, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
+		if errs[0] == nil || errs[1] != nil || read.Status != activities.TranscriptReadDone {
+			t.Errorf("%s: tries = %v, reading %q; want the fault for River, then done on the next try", name, errs, read.Status)
+		}
 	}
 }
 
@@ -59,11 +78,23 @@ func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) 
 // reading with a sentence, and the rep can press Read again.
 func TestATranscriptReadingWhoseLastTryFailedSaysSo(t *testing.T) {
 	e := setupTranscript(t)
-	read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, cannedBrain{err: ai.ErrAllTiersFailed})
-	if errs[0] == nil || read.Status != activities.TranscriptReadFailed || read.StatusDetail == nil || *read.StatusDetail == "" {
-		t.Errorf("err = %v, reading %q with detail %v; want the fault on the job and the reading failed with a sentence",
-			errs[0], read.Status, read.StatusDetail)
+	for brain, code := range map[completer]string{
+		cannedBrain{err: ai.ErrAllTiersFailed}: activities.TranscriptFailureUnanswered,
+		&timingOutBrain{}:                      activities.TranscriptFailureUnfinished,
+	} {
+		read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, brain)
+		if errs[0] == nil || read.Status != activities.TranscriptReadFailed || failureCode(read) != code {
+			t.Errorf("err = %v, reading %q coded %q; want the fault on the job and the reading failed as %q",
+				errs[0], read.Status, failureCode(read), code)
+		}
 	}
+}
+
+func failureCode(read activities.TranscriptRead) string {
+	if read.Outcome == nil || read.Outcome.Failure == nil {
+		return ""
+	}
+	return read.Outcome.Failure.Code
 }
 
 // The budget stop is not a failed try. Even on its last try the job sleeps

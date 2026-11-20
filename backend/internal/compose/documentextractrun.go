@@ -210,7 +210,10 @@ func claimStart(claim activities.ExtractionRead) time.Time {
 func (d *DocumentExtractor) retryable(
 	ctx context.Context, store documentReadStore, readID ids.UUID, claimedAt time.Time, cause error,
 ) error {
-	if err := store.ReleaseExtractionRead(ctx, readID, claimedAt); err != nil {
+	// Detached: a try that ran out of time still hands its reading back.
+	releaseCtx, cancel := terminalCtx(ctx)
+	defer cancel()
+	if err := store.ReleaseExtractionRead(releaseCtx, readID, claimedAt); err != nil {
 		d.log.WarnContext(ctx, "could not release a reading being retried",
 			"attachment_extraction_id", readID, "error", err)
 	}

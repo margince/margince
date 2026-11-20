@@ -14,6 +14,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -44,26 +45,23 @@ func TestSessionSlotsAreSharedAndReturned(t *testing.T) {
 	again()
 }
 
-// Every worker is registered through sessionBudgetWorker, so a deferral sleeps
-// until the moment the router named instead of spending one of the job's tries.
-func TestAJobToldNotNowSleepsUntilTheRouterSaysAndSpendsNoTry(t *testing.T) {
-	now := time.Date(2026, 11, 20, 9, 0, 0, 0, time.UTC)
+// Every worker is registered through sessionBudgetWorker, so a deferral a
+// worker returns as it came waits as a snooze within the reschedule bounds,
+// instead of spending one of the job's tries.
+func TestAJobToldNotNowSleepsAndSpendsNoTry(t *testing.T) {
+	far := clocktest.Now(t).Add(264 * time.Hour)
 	other := errors.New("the database went away")
 	for name, tc := range map[string]struct {
 		err  error
 		want time.Duration
 	}{
-		"budget used up": {&ai.BudgetDeferralError{NextAttemptAt: now.Add(264 * time.Hour)}, 264 * time.Hour},
-		"provider down":  {&ai.ProviderDownError{Health: model.HealthDown, RetryAfter: now.Add(90 * time.Second)}, 90 * time.Second},
-		"moment past":    {&ai.BudgetDeferralError{NextAttemptAt: now.Add(-time.Minute)}, 0},
+		"budget used up": {&ai.BudgetDeferralError{NextAttemptAt: far}, 15 * time.Minute},
+		"provider down":  {&ai.ProviderDownError{Health: model.HealthDown, RetryAfter: far}, 15 * time.Minute},
+		"moment past":    {&ai.BudgetDeferralError{NextAttemptAt: far.Add(-1000 * time.Hour)}, time.Second},
 		"other fault":    {other, -1},
 	} {
-		// The worker returns the router's "not now" as the reading workers do.
-		work := river.WorkFunc(func(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
-			return jobs.FaultContext(ctx, tc.err)
-		})
-		worker := sessionBudgetWorker[CloseDateSweepArgs]{work: work, now: func() time.Time { return now }}
-		err := worker.Work(t.Context(), &river.Job[CloseDateSweepArgs]{})
+		work := river.WorkFunc(func(context.Context, *river.Job[CloseDateSweepArgs]) error { return tc.err })
+		err := sessionBudgetWorker[CloseDateSweepArgs]{work: work}.Work(t.Context(), &river.Job[CloseDateSweepArgs]{})
 		snooze, snoozed := errors.AsType[*river.JobSnoozeError](err)
 		if tc.want < 0 && (snoozed || !errors.Is(err, other)) || tc.want >= 0 && (!snoozed || snooze.Duration != tc.want) {
 			t.Errorf("%s: err = %v, want a snooze of %s (negative: the fault itself, for River to retry)", name, err, tc.want)

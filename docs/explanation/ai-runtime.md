@@ -209,15 +209,20 @@ are a website read (`site_read`), a company scan (`company_scan`), and a Voice-D
 named here by the table each sits in. The queue job kind that resumes the first two is spelled
 differently (`site_deep_read`, `account_scan`); the third is `voice_build`.
 
-Every other background job waits in the queue itself. A worker hands the router's deferral, or a
-`ProviderDownError`, back to River. Every worker is registered through `sessionBudgetWorker`
-(`compose/sessionbudget.go`), and it turns that error into a snooze until `NextAttemptAt` or
-`RetryAfter`. River counts no attempt for a snooze, so the job keeps its tries. It runs when the
-next budget window opens, or when the provider is probed again.
+A job that gets the router's deferral, or a `ProviderDownError`, back waits in the queue. Both errors
+carry `RetryAt`, and the job fault path (`jobs.FaultContext`, `platform/jobs/postpone.go`) turns
+such an error into a snooze until that moment. The snooze lasts at least a second and at most 15
+minutes. A longer wait asks the router again every 15 minutes, so the health checks still count
+it. River counts no attempt for a snooze, so the job keeps its tries. The log line is a WARN, not
+an error.
 
-Raising the allowance does not
-resume such a job: `ai_budget_resume` resumes only the three carriers below. A transcript reading
-or a document reading goes back to `queued` while its job waits.
+A pass over many items, such as the deal verdict pass or the capture verdicts, does not snooze. It
+checks `ai.IsDeferral`, ends the pass, and asks again on its next run.
+
+Raising the allowance resumes the three carriers above at once, through `ai_budget_resume`. Any
+other job asks again within 15 minutes. A transcript reading or a document reading goes back to
+`queued` while its job waits. On its last try, a failure that is no wait closes the reading as
+failed, with a reason.
 
 A scheduled agent run is not a queue job, so it does not wait. It ends with its own reason: the
 monthly AI allowance is used up, or the provider is down. The next scheduled occurrence starts

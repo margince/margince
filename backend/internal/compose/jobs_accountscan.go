@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -116,5 +117,9 @@ func (w *accountScanWorker) Work(ctx context.Context, job *river.Job[AccountScan
 		return jobs.FaultContext(ctx, err)
 	}
 	err = w.svc.Run(runCtx, job.Args.ScanID, ids.From[ids.CompanyKind](job.Args.CompanyID))
-	return jobs.FaultContext(ctx, snoozeWhileDeferred(err, time.Now()))
+	until, deferred := ai.DeferredUntil(err)
+	if !deferred {
+		return jobs.FaultContext(ctx, err)
+	}
+	return river.JobSnooze(max(time.Until(until), 0))
 }

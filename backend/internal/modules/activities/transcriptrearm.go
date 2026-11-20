@@ -35,29 +35,12 @@ func rearmIfAbandoned(
 	if read.Status != TranscriptReadRunning {
 		return nil
 	}
-	rearmed, err := scanTranscriptRead(tx.QueryRow(ctx, `
-		UPDATE transcript_read
-		   SET status = 'queued', started_at = NULL, status_detail = NULL,
-		       attempt = attempt + 1, attempt_at = now()
-		 WHERE id = $1
-		   AND status = 'running'
-		   AND started_at < now() - ($2 * interval '1 microsecond')
-		RETURNING `+transcriptReadColumns, read.ID, TranscriptReadLease.Microseconds()))
-	if errors.Is(err, pgx.ErrNoRows) {
+	rearmed, requeued, err := requeueRunning(ctx, tx, read.ID, requeueGuard{deadFor: TranscriptReadLease})
+	if err != nil || !requeued {
 		// Inside its lease: a real worker holds it, and joining is correct.
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("re-arm abandoned transcript read: %w", err)
-	}
-	*read = rearmed
-	// The re-arm is the transition the attempt column exists for: it announces
-	// `queued` at a HIGHER attempt than the dead claim it replaces, which is
-	// what lets the projection prefer it over a row that would otherwise read
-	// as running until its lease expired.
-	if err := logTranscriptActivity(ctx, tx, rearmed); err != nil {
 		return err
 	}
+	*read = rearmed
 	if enqueue == nil {
 		return nil
 	}
@@ -74,18 +57,39 @@ func (s *Store) ReleaseTranscriptRead(ctx context.Context, readID ids.UUID, clai
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		released, err := scanTranscriptRead(tx.QueryRow(ctx, `
-			UPDATE transcript_read
-			   SET status = 'queued', started_at = NULL, status_detail = NULL,
-			       attempt = attempt + 1, attempt_at = now()
-			 WHERE id = $1 AND status = 'running' AND started_at = $2
-			RETURNING `+transcriptReadColumns, readID, claimedAt))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("release transcript read: %w", err)
-		}
-		return logTranscriptActivity(ctx, tx, released)
+		_, _, err := requeueRunning(ctx, tx, readID, requeueGuard{claimedAt: &claimedAt})
+		return err
 	})
+}
+
+// requeueGuard names which running claim may be handed back: the one that
+// began at claimedAt, or any whose lease has been dead for deadFor.
+type requeueGuard struct {
+	claimedAt *time.Time
+	deadFor   time.Duration
+}
+
+// requeueRunning hands a running reading back to the queue as a new attempt.
+// The higher attempt it announces is what lets the projection prefer the
+// queued row over the claim it replaces.
+func requeueRunning(ctx context.Context, tx pgx.Tx, readID ids.UUID, guard requeueGuard) (TranscriptRead, bool, error) {
+	var deadFor *int64
+	if guard.claimedAt == nil {
+		micros := guard.deadFor.Microseconds()
+		deadFor = &micros
+	}
+	requeued, err := scanTranscriptRead(tx.QueryRow(ctx, `
+		UPDATE transcript_read
+		   SET status = 'queued', started_at = NULL, status_detail = NULL,
+		       attempt = attempt + 1, attempt_at = now()
+		 WHERE id = $1 AND status = 'running'
+		   AND (started_at = $2 OR started_at < now() - ($3 * interval '1 microsecond'))
+		RETURNING `+transcriptReadColumns, readID, guard.claimedAt, deadFor))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return TranscriptRead{}, false, nil
+	}
+	if err != nil {
+		return TranscriptRead{}, false, fmt.Errorf("requeue transcript read: %w", err)
+	}
+	return requeued, true, logTranscriptActivity(ctx, tx, requeued)
 }

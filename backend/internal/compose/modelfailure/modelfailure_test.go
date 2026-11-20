@@ -32,14 +32,14 @@ func TestAModelLaneThatFailedEveryTierIsRecognisable(t *testing.T) {
 
 	served := fmt.Errorf("%w for %s: %w", ai.ErrAllTiersFailed, "cold_start",
 		errors.New("openai-compat: response has no choices"))
-	if !unanswered(served) {
+	if !Unanswered(served) {
 		t.Error("the every-tier-failed aggregate was not recognised, so the handler answers 500 and names no remedy")
 	}
 
 	// A fault in the REQUEST is not the lane being down, and must not be
 	// reported as one: telling somebody the assistant is unavailable when their
 	// input was rejected sends them to check a binding that is fine.
-	if unanswered(errors.New("history: too many messages")) {
+	if Unanswered(errors.New("history: too many messages")) {
 		t.Error("an ordinary error was reported as the model lane being unreachable")
 	}
 }
@@ -67,7 +67,7 @@ func TestAnOrdinaryProviderFailureStillDegradesRatherThanFallingThrough(t *testi
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if !unanswered(fmt.Errorf("%w: %w", ai.ErrAllTiersFailed, cause)) {
+			if !Unanswered(fmt.Errorf("%w: %w", ai.ErrAllTiersFailed, cause)) {
 				t.Error("the walk ended with no answer and the handler would still report an opaque 500")
 			}
 		})

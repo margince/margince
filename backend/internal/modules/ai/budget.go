@@ -176,6 +176,9 @@ func (e *BudgetDeferralError) Error() string {
 
 func (e *BudgetDeferralError) Unwrap() error { return ErrBudgetDeferred }
 
+// RetryAt is when the deferred task may ask again; a job waits until then.
+func (e *BudgetDeferralError) RetryAt() time.Time { return e.NextAttemptAt }
+
 // BudgetPolicy answers "how many tokens may this workspace burn per
 // month". Injected so the composition layer can derive it from seat
 // counts (09 §2.4: seats × 6M base × 2 safety) without this module
