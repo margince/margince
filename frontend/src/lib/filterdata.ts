@@ -1,19 +1,24 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The two reads a filter builder needs (LVS-EXT-8/9), and nothing else.
+// The reads a filter builder needs (LVS-EXT-8/9): the vocabulary, named from
+// the custom-field catalog, and the preview.
 //
 // Kept apart from the screen for one reason: the screen decides what a human
 // SEES, and these decide what the server was ASKED. The interesting rules here
 // are about when not to ask — a tree mid-edit is not worth a round trip, and a
 // vocabulary is worth exactly one per record type.
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { skipToken, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
+import { useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { CF_OBJECTS } from "./customfields.logic";
 import { previousOfScope, useHealthScope } from "./healthscope";
 import { historyFieldLabelKey } from "./historyfieldlabels";
+import { translatedLabel } from "./labeltranslation";
 import { unwrap } from "./problem";
 import {
   type EncodedPredicate,
@@ -22,8 +27,15 @@ import {
   type Node,
 } from "./segmentpredicate";
 
-export type FilterVocabulary = components["schemas"]["FilterVocabulary"];
-export type VocabularyField = components["schemas"]["FilterVocabularyField"];
+/** A vocabulary field. A custom one carries its admin's label in the reader's language once the catalog answers. */
+export type VocabularyField = components["schemas"]["FilterVocabularyField"] & {
+  label?: string;
+};
+export type FilterVocabulary = Omit<
+  components["schemas"]["FilterVocabulary"],
+  "fields"
+> & { fields: VocabularyField[] };
+type CustomField = components["schemas"]["CustomField"];
 export type FilterPreview = components["schemas"]["FilterPreview"];
 
 /** The record types a filter may name — the contract's own closed set. */
@@ -57,6 +69,13 @@ export function vocabularyQueryKey(resource: FilterResource) {
  * unconditionally and still ask nothing when it does not.
  */
 export function useFilterVocabulary(resource: FilterResource, enabled = true) {
+  const { locale } = useLocale();
+  const catalog = useCustomFieldCatalog(resource, enabled).data?.data;
+  const labelled = useCallback(
+    (vocabulary: FilterVocabulary) =>
+      withCatalogLabels(vocabulary, catalog, locale),
+    [catalog, locale],
+  );
   return useQuery<FilterVocabulary>({
     queryKey: vocabularyQueryKey(resource),
     enabled,
@@ -67,7 +86,56 @@ export function useFilterVocabulary(resource: FilterResource, enabled = true) {
         }),
       );
     },
+    select: labelled,
   });
+}
+
+/**
+ * A core record type's custom-field catalog, under the key its admin screen
+ * refreshes: a renamed field reads by its new label on the next answer.
+ */
+function useCustomFieldCatalog(resource: FilterResource, enabled: boolean) {
+  const object = CF_OBJECTS.find((candidate) => candidate === resource);
+  return useQuery({
+    queryKey: ["custom-fields", object],
+    queryFn:
+      enabled && object !== undefined
+        ? async () =>
+            unwrap(
+              await api.GET("/custom-fields", {
+                params: { query: { object } },
+              }),
+            )
+        : skipToken,
+  });
+}
+
+/** Each custom field labelled as `customFieldLabel` reads it. One the catalog lacks stays bare. */
+function withCatalogLabels(
+  vocabulary: FilterVocabulary,
+  catalog: readonly CustomField[] | undefined,
+  locale: string,
+): FilterVocabulary {
+  if (!catalog?.length) {
+    return vocabulary;
+  }
+  const byColumn = new Map(catalog.map((field) => [field.column_name, field]));
+  return {
+    ...vocabulary,
+    fields: vocabulary.fields.map((field) => {
+      const entry = field.custom ? byColumn.get(field.name) : undefined;
+      return entry
+        ? {
+            ...field,
+            label: translatedLabel(
+              entry.label,
+              entry.label_translations,
+              locale,
+            ),
+          }
+        : field;
+    }),
+  };
 }
 
 /**
@@ -189,28 +257,22 @@ const FILTER_ONLY_FIELD_LABELS = new Map<string, MessageKey>([
 /**
  * The label a picker shows for a field.
  *
- * A custom column arrives as its physical `cf_`-prefixed name because the
- * vocabulary deliberately carries no labels — the custom-field catalog owns
- * those. Until this screen joins that catalog, stripping the prefix and
- * un-snaking the rest is an honest approximation of the admin's label rather
- * than an invented one: `cf_loyalty_tier` reads as "loyalty tier", which is what
- * the admin typed, modulo capitalization. A core field the map does not name
- * falls back the same way rather than vanishing from the picker.
+ * A custom field reads by the label the catalog joined on. One the catalog has
+ * not named reads as its column, minus the `cf_` prefix and underscores. A core
+ * field the map does not name falls back the same way rather than vanishing from
+ * the picker.
  */
 export function fieldLabel(
   field: VocabularyField,
   t: (key: MessageKey) => string,
 ): string {
-  const key = field.custom
-    ? undefined
-    : (historyFieldLabelKey(field.name) ??
-      FILTER_ONLY_FIELD_LABELS.get(field.name));
-  if (key) {
-    return t(key);
+  if (field.custom) {
+    return field.label ?? customColumnLabel(field.name);
   }
-  return field.custom
-    ? customColumnLabel(field.name)
-    : field.name.replaceAll("_", " ");
+  const key =
+    historyFieldLabelKey(field.name) ??
+    FILTER_ONLY_FIELD_LABELS.get(field.name);
+  return key ? t(key) : field.name.replaceAll("_", " ");
 }
 
 /** A custom column's `cf_` name read as words, as `fieldLabel` reads it. */

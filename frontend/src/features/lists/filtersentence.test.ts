@@ -356,6 +356,21 @@ describe("a filter read as one sentence", () => {
     expect(filterSentence(newGroup("and"), undefined, en)).toBe("");
   });
 
+  it("names a custom field by its catalog label, and by its column until the catalog answers", () => {
+    const tier: VocabularyField = {
+      name: "cf_loyalty_tier",
+      type: "text",
+      operators: ["eq"],
+      custom: true,
+    };
+    const clause = newGroup("and", [newLeaf("cf_loyalty_tier", "eq", "gold")]);
+
+    expect(
+      filterSentence(clause, [{ ...tier, label: "Loyalty Tier" }], en),
+    ).toBe("Loyalty Tier is gold");
+    expect(filterSentence(clause, [tier], en)).toBe("loyalty tier is gold");
+  });
+
   it("reads a stored single clause, which decodes to a bare leaf", () => {
     const stored = decode({ field: "city", op: "eq", value: "Berlin" });
     if (stored === null) {

@@ -236,6 +236,33 @@ describe("what the builder offers", () => {
     expect(screen.queryByText("owner id")).toBeNull();
   });
 
+  it("offers a custom field by its catalog label", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    const labelled = VOCAB.map((field) =>
+      field.name === "cf_loyalty_tier"
+        ? { ...field, label: "Loyalty Tier" }
+        : field,
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <FilterBuilder
+          tree={newGroup("and", [newLeaf("cf_loyalty_tier", "eq", "gold")])}
+          onChange={() => {}}
+          fields={labelled}
+        />
+      </QueryClientProvider>,
+    );
+
+    const field = screen.getByRole("combobox", { name: "Field" });
+    expect(field.textContent).toContain("Loyalty Tier");
+    await user.click(field);
+
+    expect(screen.getByRole("option", { name: "Loyalty Tier" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "loyalty tier" })).toBeNull();
+    expect(screen.getByRole("option", { name: "deal score" })).toBeTruthy();
+  });
+
   it("does not mark a core field as custom", () => {
     resetIDsForTest();
     render(
