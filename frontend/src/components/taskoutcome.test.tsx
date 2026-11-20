@@ -1,0 +1,86 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+/** @vitest-environment happy-dom */
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
+import {
+  type Captured,
+  createdActivity,
+  jsonResponse,
+  render,
+  stubApi,
+} from "./logactivity.testkit";
+import { TaskOutcomeForm } from "./taskoutcome";
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+const unfiled: components["schemas"]["Activity"] = {
+  id: "t1",
+  kind: "task",
+  subject: "Renew the office insurance",
+  occurred_at: "2026-10-01T09:00:00Z",
+  occurred_precision: "instant",
+  source: "manual",
+  captured_by: "human:u1",
+  created_at: "2026-10-01T09:00:00Z",
+  updated_at: "2026-10-01T09:00:00Z",
+  offers_email: false,
+  is_done: false,
+  version: 1,
+};
+
+// A task filed on no record still has an outcome, and an activity needs no
+// record, so the form takes "none" as an answer and keeps a way back.
+describe("the outcome of a task filed on no record", () => {
+  it("logs the outcome with no record", async () => {
+    const user = userEvent.setup();
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "POST /activities": createdActivity,
+        "PATCH /activities/t1": () => jsonResponse({ ...unfiled, version: 2 }),
+      },
+      captured,
+    );
+    render(
+      <TaskOutcomeForm task={unfiled} onLogged={() => {}} onBack={() => {}} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Log without a record" }),
+    );
+    await user.type(await screen.findByLabelText("Subject *"), "Renewed");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({
+      kind: "note",
+      subject: "Renewed",
+      source_activity_id: "t1",
+      links: [],
+    });
+  });
+
+  it("goes back to the task's actions", async () => {
+    const user = userEvent.setup();
+    stubApi({});
+    const onBack = vi.fn();
+    render(
+      <TaskOutcomeForm task={unfiled} onLogged={() => {}} onBack={onBack} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+});

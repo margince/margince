@@ -8566,6 +8566,9 @@ export const en = {
   "tasks.log.action": "Log what happened",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
+  "tasks.log.noRecord": "Log without a record",
+  "tasks.log.pickRecord": "Choose a record",
+  "tasks.log.back": "Back",
   "tasks.log.leftOpen":
     "The activity was logged. The task stays open until all files attach; retry to finish.",
   "tasks.log.completeFailed":

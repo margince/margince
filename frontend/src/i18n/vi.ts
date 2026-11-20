@@ -8352,6 +8352,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.log.action": "Ghi lại kết quả",
   "tasks.log.record": "Hoạt động này thuộc bản ghi nào?",
   "tasks.log.chooseRecord": "Chọn bản ghi khác",
+  "tasks.log.noRecord": "Ghi lại không gắn bản ghi",
+  "tasks.log.pickRecord": "Chọn bản ghi",
+  "tasks.log.back": "Quay lại",
   "tasks.log.leftOpen":
     "Đã ghi hoạt động. Công việc vẫn mở cho đến khi đính kèm đủ tệp; hãy thử lại để hoàn tất.",
   "tasks.log.completeFailed":
