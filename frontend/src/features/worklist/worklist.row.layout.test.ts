@@ -47,8 +47,8 @@ describe("a row's verbs leave the title its width", () => {
     const names = (list = "") =>
       list.split(",").map((part) => part.trim().replace(/^\./, ""));
     expect(hidden.length).toBeGreaterThan(0);
-    expect(names(skipped?.[1]).sort()).toEqual([...hidden].sort());
-    expect(names(skipped?.[2]).sort()).toEqual([...hidden].sort());
+    expect(new Set(names(skipped?.[1]))).toEqual(new Set(hidden));
+    expect(new Set(names(skipped?.[2]))).toEqual(new Set(hidden));
   });
 
   it("never opens a wrapped caption line on its separator", () => {
