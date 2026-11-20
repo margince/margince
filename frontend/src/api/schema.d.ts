@@ -47548,9 +47548,10 @@ export interface components {
              *     a card handed over at a stand. `requested_by_subject` is the contact asking us to write
              *     to them away from every system: a phone call, a conversation at a counter.
              *
-             *     Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
-             *     records the product already holds, and a hand-written one would be a second, unbacked
-             *     answer to a question the data already settles.
+             *     Every other kind — inbound_message, inquiry, meeting — is DERIVED from records the
+             *     product already holds, and a hand-written one would be a second, unbacked answer to a
+             *     question the data already settles. `active_deal` is retired: nothing writes it, and the
+             *     guard does not read it.
              * @enum {string}
              */
             kind: "in_person" | "requested_by_subject";

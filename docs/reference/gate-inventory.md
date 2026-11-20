@@ -52,6 +52,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `composedfrontendbuilders_test.go` | H3 | Two builders compile the composed SPA (the make lane and the release image), and each of them must install the composed workspace before it does. |
 | `configgenerated_test.go` | H3 | The configuration files written from the settings registry are the ones its generator writes now. |
 | `configpresets_test.go` | H3 | Every preset under config/presets/ is a binding the parser accepts. |
+| `consentnoconnectioncopy_test.go` | H3 | A rep reads the guard's "no connection" reason in their own language, from the web app's copy. |
 | `consumergroupwiring_test.go` | H3 | Every lane the worker starts is a group the catalog declares. |
 | `contextanchorenum_test.go` | H3 | GET /records/{entity\_type}/{id}/context accepts the record types the search module can anchor a context read on (every searchable type but the text-only ones), and the contract has to say the same set. |
 | `contractadmission_test.go` | H3 | A route the contract declares `security: []` is reachable without a session. |
@@ -109,6 +110,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendlinkedinhosts_test.go` | H3 | Which hosts count as LinkedIn is decided on both sides of the wire, and the two answers are different sizes by design. |
 | `frontendmagickeys_test.go` | H2 | Every sentence the receipt emits has a word for it, in the client that draws it and in the catalog that translates it. |
 | `frontendmailproviders_test.go` | H3 | Which capture providers are a mailbox is answered on both sides of the wire, and the two answers must be the same three names. |
+| `frontendmailsubject_test.go` | H3 | The browser and the server both group a thread by its subject without the reply and forward markers. |
 | `frontendmaskedfields_test.go` | H3 | A field the server can withhold is drawn as withheld, or the screen states something false. |
 | `frontendmessagevoice_test.go` | H3 | messageVoiceCases lists the contract's directions and authors for one kind, with the side the activity engine reads. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the same table, or the integer they exchange means two different amounts. |

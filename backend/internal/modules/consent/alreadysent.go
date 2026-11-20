@@ -10,8 +10,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // MessageAlreadySentError answers a Send anyway on a review whose message has
@@ -35,6 +37,12 @@ func (*MessageAlreadySentError) Unwrap() error { return apperrors.ErrConflict }
 func (s *Store) SentInstead(ctx context.Context, reviewID ids.UUID, cause error) error {
 	seat := initiatingSeat(ctx)
 	if !errors.Is(cause, apperrors.ErrNotFound) || seat.IsZero() {
+		return cause
+	}
+	// The door a Send anyway passes. A caller who may not decide keeps the
+	// not-found.
+	if requireAHumanAtTheKeyboard(ctx) != nil ||
+		auth.Require(ctx, entityCommunicationException, principal.ActionCreate) != nil {
 		return cause
 	}
 	var sent bool

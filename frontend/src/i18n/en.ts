@@ -3867,7 +3867,6 @@ export const en = {
     "They bought from you and were told then that they may object to advertising",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
-  "consent.reason.qualifying.active_deal": "An open deal connects you",
   "consent.reason.qualifying.in_person":
     "A recorded exchange on {date}: {note}",
   "consent.reason.qualifying.meeting": "A meeting on {date} connects you",

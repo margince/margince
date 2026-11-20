@@ -3939,7 +3939,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.qualifying.inbound_message":
     "Der Kontakt hat dir am {date} geschrieben",
   "consent.reason.qualifying.inquiry": "Der Kontakt hat am {date} angefragt",
-  "consent.reason.qualifying.active_deal": "Ein offener Deal verbindet euch",
   "consent.reason.qualifying.in_person":
     "Ein erfasster Austausch am {date}: {note}",
   "consent.reason.qualifying.meeting": "Ein Termin am {date} verbindet euch",

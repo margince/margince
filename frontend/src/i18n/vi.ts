@@ -3812,7 +3812,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Họ đã mua hàng của bạn và khi đó đã được báo rằng họ có thể từ chối quảng cáo",
   "consent.reason.qualifying.inbound_message": "Họ đã viết cho bạn ngày {date}",
   "consent.reason.qualifying.inquiry": "Họ đã gửi yêu cầu ngày {date}",
-  "consent.reason.qualifying.active_deal": "Có một deal đang mở giữa hai bên",
   "consent.reason.qualifying.in_person":
     "Trao đổi đã ghi nhận ngày {date}: {note}",
   "consent.reason.qualifying.meeting": "Có cuộc họp ngày {date} giữa hai bên",

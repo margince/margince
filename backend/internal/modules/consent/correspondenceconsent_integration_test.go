@@ -13,7 +13,6 @@ package consent
 // and that a withdrawal still beats it.
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -270,41 +269,23 @@ func TestTheGuardAnswersOnTheSameWindowAsTheSend(t *testing.T) {
 }
 
 // A stakeholder on an open deal, with nothing else on file, is no connection
-// for the guard, and the sentence it gives names no deal.
-func TestAnOpenDealAloneIsNoConnectionAndTheGuardSaysSo(t *testing.T) {
-	e := setupQualifying(t)
-	pipeline, stage, deal := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	for _, seed := range []struct {
-		sql  string
-		args []any
-	}{
-		{`INSERT INTO pipeline (id, name, is_default) VALUES ($1, 'Sales', true)`, []any{pipeline}},
-		{`INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualifying', 1)`, []any{stage, pipeline}},
-		{`INSERT INTO deal (id, name, pipeline_id, stage_id, status, source, captured_by)
-		  VALUES ($1, 'A deal', $2, $3, 'open', 'manual', 'human:x')`, []any{deal, pipeline, stage}},
-		{`INSERT INTO relationship (kind, deal_id, contact_id, source, captured_by)
-		  VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x')`, []any{deal, e.contact}},
-	} {
-		if _, err := e.owner.Exec(e.ctx, seed.sql, seed.args...); err != nil {
-			t.Fatalf("seeding the open deal: %v", err)
-		}
-	}
+// for the guard: the guard reads no deal.
+func TestAnOpenDealAloneIsNoConnectionForTheGuard(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "business_correspondence", "business_correspondence")
+	e.openDeal(t, "open", true)
 
 	guard, err := e.store.ContactConsentGuard(e.ctx, e.contact)
 	if err != nil {
 		t.Fatalf("reading the guard: %v", err)
 	}
 	for _, entry := range guard.Entries {
-		if entry.PurposeKey != "business_correspondence" {
-			continue
+		if entry.PurposeKey == "business_correspondence" {
+			if entry.ReasonCode != ReasonNoConnection {
+				t.Fatalf("a deal stakeholder with nothing on file answers %v (%s), want no_connection", entry.ReasonCode, entry.Reason)
+			}
+			return
 		}
-		if entry.ReasonCode != ReasonNoConnection {
-			t.Fatalf("a deal stakeholder with nothing on file answers %v (%s), want no_connection", entry.ReasonCode, entry.Reason)
-		}
-		if strings.Contains(entry.Reason, "deal") {
-			t.Errorf("the guard's reason %q names a deal, which it never reads", entry.Reason)
-		}
-		return
 	}
 	t.Fatal("the guard has no business_correspondence entry")
 }
