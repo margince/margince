@@ -5,21 +5,10 @@ import type { WorklistView } from "../../lib/worklistviews";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 import { rowIdentity } from "./worklist.rowidentity";
 
-// The headings the page draws, and which rows sit under each.
-//
-// The server has always sent `bands` — every band in draw order, including one
-// holding no rows — and no client file read it. Headings were inferred from the
-// rows instead, which can say everything except the one thing the field exists
-// for: a band with nothing under it draws nothing, so a reader whose Now band
-// is empty is told the same as a reader whose page simply started at
-// Prospecting.
-//
-// "Nothing needs you today" is an answer. Inferring headings from rows cannot
-// give it, because the absence leaves no row to hang it on.
-//
-// Each band draws once, where its first row falls in the server's order. Later
-// pages and the backlog tail can name a band again; those rows join its one
-// heading. Declared bands supply empty headings; they never reorder the bands.
+// The headings the page draws, and which rows sit under each. They come from
+// the server's `bands`, so a band with no rows can still say it is clear.
+// Each band draws once, where its first row falls in the server's order. Rows
+// a later page or the backlog tail names under it join that one heading.
 
 type Band = NonNullable<WorklistItem["band"]>;
 
@@ -33,7 +22,7 @@ export type BandSection = Readonly<{
  * The page's sections, one per band, in the order the QUEUE first names each.
  *
  * A band the server declared but the loaded rows do not reach yields an empty
- * section in the server's own position, which is what lets the page say the
+ * section in the server's own position. That is what lets the page say the
  * band is clear.
  */
 export function bandSections(

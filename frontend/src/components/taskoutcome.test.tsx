@@ -36,7 +36,7 @@ const unfiled: components["schemas"]["Activity"] = {
 };
 
 // A task filed on no record still has an outcome, and an activity needs no
-// record, so the form takes "none" as an answer and keeps a way back.
+// record. So the form takes "none" as an answer, and keeps a way back.
 describe("the outcome of a task filed on no record", () => {
   it("logs the outcome with no record", async () => {
     const user = userEvent.setup();

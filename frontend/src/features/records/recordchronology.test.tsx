@@ -194,7 +194,7 @@ describe("the record's History", () => {
   });
 
   // A task further out than the Worklist's horizon shows its day nowhere else
-  // on the record, so its History row says when it is due and who holds it.
+  // on the record. Its History row says when it is due and who holds it.
   it("says when a task is due and who holds it", () => {
     const view = viewWith(false);
     withProviders(
