@@ -7,8 +7,10 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { foldForMatch } from "../format/collate";
+import { grants } from "./accessgrants";
 import { unwrap } from "./problem";
 import { RECORD_LIST_KEY } from "./recordlistkeys";
+import { useMe } from "./session";
 import type { MutationOutcome } from "./undoableremoval";
 
 // The reads and writes behind the record page's tag panel.
@@ -69,15 +71,19 @@ export function useRecordTags(
 
 // Whether a record page's Tags row shows. It folds only while every read holds
 // none, and once shown it stays, so removing the last tag keeps focus in place.
+// A reader denied the vocabulary gets no tags from the page's own read. The row
+// still shows for them, because it is where Margince says the tags are hidden.
 export function useRecordCarriesTags(
   entityType: TaggableType,
   entityID: string,
   carried: readonly unknown[] | undefined,
 ): boolean {
   const read = useRecordTags(entityType, entityID, false).data;
+  const session = useMe(false).data;
   const [shownFor, setShownFor] = useState<string | null>(null);
   const carries =
     read?.withheld === true ||
+    (session !== undefined && !grants(session, "tag", "read")) ||
     (read?.data ?? []).length > 0 ||
     (carried ?? []).length > 0;
   if (carries && shownFor !== entityID) setShownFor(entityID);

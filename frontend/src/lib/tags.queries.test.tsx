@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { meFixture } from "../testing/mefixture";
 import { useRecordCarriesTags } from "./tags.queries";
 
 const tag = { tag_id: "t-1", name: "Champion" };
@@ -11,9 +12,11 @@ const tag = { tag_id: "t-1", name: "Champion" };
 function carries(
   carried: readonly unknown[] | undefined,
   cached?: { data: unknown[]; withheld: boolean },
+  session?: ReturnType<typeof meFixture>,
 ): boolean {
   const client = new QueryClient();
   if (cached) client.setQueryData(["record-tags", "contact", "p-1"], cached);
+  if (session) client.setQueryData(["me"], session);
   const wrapper = ({ children }: Readonly<{ children: ReactNode }>) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
@@ -60,5 +63,25 @@ describe("useRecordCarriesTags", () => {
 
   it("shows a withheld read, so the panel can say why", () => {
     expect(carries([], { data: [], withheld: true })).toBe(true);
+  });
+
+  it("shows the row to a reader denied the vocabulary, whose page read is empty", () => {
+    expect(
+      carries(
+        undefined,
+        undefined,
+        meFixture({ allow: { contact: ["read"] } }),
+      ),
+    ).toBe(true);
+  });
+
+  it("folds for a reader who may read tags, once every read holds none", () => {
+    expect(
+      carries(
+        undefined,
+        undefined,
+        meFixture({ allow: { contact: ["read"], tag: ["read"] } }),
+      ),
+    ).toBe(false);
   });
 });
