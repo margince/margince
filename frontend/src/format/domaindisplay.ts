@@ -1,6 +1,6 @@
 // Company domains are stored in their punycode form so mail matching sees one
-// spelling. People read the Unicode form, so display decodes it (RFC 3492),
-// but only when it is safe to show; otherwise the stored form stays.
+// spelling. Readers expect the Unicode form, so display decodes it (RFC 3492)
+// when that is safe to show, and keeps the stored form otherwise.
 
 const BASE = 36;
 const T_MIN = 1;

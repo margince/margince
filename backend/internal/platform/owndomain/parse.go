@@ -116,7 +116,7 @@ func KeyForm(raw string) string {
 	return trimmed
 }
 
-// KeySpellings is every lowercase spelling a stored routing key may carry
+// KeySpellings returns the lowercase spellings a stored routing key may carry
 // for raw: the punycode form and its Unicode twin for a domain-shaped key.
 // Rows written before keys were folded may hold either.
 func KeySpellings(raw string) []string {

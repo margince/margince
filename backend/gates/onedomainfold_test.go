@@ -121,8 +121,7 @@ var foldsADomainInSQL = regexp.MustCompile(
 // sqlFoldsAdmitted are the statements that may still lower() a domain, by name
 // and with the reason, because no fold reaches them.
 var sqlFoldsAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/search/branches.go":     "ranks a company by the trigram similarity of a typed query to its domains, through the expression idx_company_domain_trgm indexes. It scores how alike two strings look and answers no question of which domain is which, so a punycode spelling ranking lower is a search result, not two domains.",
-	"internal/compose/company360/contacts.go": "compares a stored provider claim's company_domain against the company's own domains, both sides stored, inside a correlated subquery over every claim. Postgres cannot fold IDNA and no Go value passes through, so folding it needs a folded column on both sides, which is a schema change rather than a predicate change.",
+	"internal/modules/search/branches.go": "ranks a company by the trigram similarity of a typed query to its domains, through the expression idx_company_domain_trgm indexes. It scores how alike two strings look and answers no question of which domain is which, so a punycode spelling ranking lower is a search result, not two domains.",
 })
 
 // TestNoSQLStatementFoldsADomainWithLower censuses the SQL that compares a

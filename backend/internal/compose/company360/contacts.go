@@ -369,9 +369,9 @@ func livePurposeKeys(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	})
 }
 
-// companyDomainSpellings is every spelling of the company's live domains. A
-// provider claim carries its domain as typed, and Postgres cannot fold IDNA,
-// so the claim is compared against both the Unicode and the punycode form.
+// companyDomainSpellings returns the Unicode and punycode forms of the
+// company's live domains. A provider claim keeps its domain as typed and
+// Postgres cannot fold IDNA, so the claim is compared against both.
 func companyDomainSpellings(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]string, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT domain FROM company_domain WHERE company_id = $1 AND archived_at IS NULL`, companyID)

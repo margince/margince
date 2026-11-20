@@ -179,9 +179,9 @@ func TestParseDomainChecksTheDecodedLabel(t *testing.T) {
 	}
 	for name, in := range map[string]string{
 		"mixed script written as punycode": cyrillicA,
-		"right-to-left override":           "ac‮me.com",
-		"zero-width joiner":                "ac‍me.com",
-		"zero-width space":                 "ac​me.com",
+		"right-to-left override":           "ac\u202eme.com",
+		"zero-width joiner":                "ac\u200dme.com",
+		"zero-width space":                 "ac\u200bme.com",
 		"unreadable punycode":              "xn--acme-ik2d.com",
 		"punycode of a bidi control":       "xn--acme-yd7a.com",
 	} {

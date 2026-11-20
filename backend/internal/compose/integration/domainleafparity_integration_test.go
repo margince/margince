@@ -105,7 +105,7 @@ func seedCompanyWithDomain(t *testing.T, e *Env, name, domain string) ids.UUID {
 }
 
 // A row an older release stored in Unicode is found by either spelling on the
-// list and on a saved view, and a `neq` leaf leaves it out.
+// list and on a saved view. A `neq` leaf leaves it out.
 func TestALegacyUnicodeDomainRowIsFoundAndExcludedOnBothSurfaces(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
@@ -151,9 +151,8 @@ func TestALegacyUnicodeDomainRowIsFoundAndExcludedOnBothSurfaces(t *testing.T) {
 	}
 }
 
-// A lead's company key is found in either spelling, whether the row was
-// written folded or in Unicode before keys were folded, and a slug still
-// matches as typed.
+// A lead's company key is found in either spelling. The row may have been
+// written folded or, before keys were folded, in Unicode. A slug matches as typed.
 func TestALeadCompanyKeyFilterMatchesBothSpellings(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
