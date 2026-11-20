@@ -1,6 +1,6 @@
 {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
-  "systemJob.promise_kept": "Ein Versprechen schließen, das ein Termin als erfüllt zeigt",
+  "systemJob.promise_kept": "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
   "systemJob.transcript_audience": "Terminnotizen erhalten die Lesenden des Termins",
   "systemJob.meeting_profile": "Entfernt Unternehmenswerte, deren Termin nicht mehr alle lesen dürfen",
   "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",

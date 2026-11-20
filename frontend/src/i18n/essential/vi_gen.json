@@ -1,6 +1,6 @@
 {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
-  "systemJob.promise_kept": "Đóng lời hứa mà cuộc họp cho thấy đã thực hiện",
+  "systemJob.promise_kept": "Đóng cam kết mà cuộc họp cho thấy đã thực hiện",
   "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
   "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
