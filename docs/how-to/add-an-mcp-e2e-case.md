@@ -27,15 +27,16 @@ refusal: the model must ask before it archives.
    (`tool.argument=value`). `must_not_call_with` fails the run on a call whose
    arguments match `tool~regex`, so `archive_record~.` fails on any archive.
    `may_call` lists the other tools a good run may use, for the reader. The
-   checker does not fail a call outside it. The required calls count only when the server took
-   them; list a tool in `counts_when_refused` when the lane's stack refuses it by design, as it
-   refuses a send.
+   checker does not fail a call outside it.
+
+   A required call counts only when it worked. The lane's stack cannot send mail, so list a send
+   tool under `counts_when_refused` when its refusal is the outcome.
 3. **Hold what the model says.** `must_mention` and `must_not_mention` are
    regexes, for names, dates and counts. `must_mention` and the judge read the final answer only. `figures_from_results: true` fails a
    money value that no tool result of the run holds. Put a fact that needs a judge in
    `judge:` as one sentence that ends with when to answer no.
 4. **Hold the world it leaves.** `must_end_with` reads the records back after
-   the run ([test-the-mcp-surface-end-to-end.md](test-the-mcp-surface-end-to-end.md#the-end-state)). Set `writes: true` on a case whose tools can write,
+   the run ([mcp-e2e-end-state.md](../reference/mcp-e2e-end-state.md)). Set `writes: true` on a case whose tools can write,
    even a case that passes only when nothing is written.
 5. **Name the criteria.** `criteria: [1]` needs an entry under the case's
    `name` in `e2e/llm/criteria.yaml`, with a `name` and a one-sentence

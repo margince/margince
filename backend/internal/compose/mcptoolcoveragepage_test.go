@@ -225,10 +225,10 @@ func writeCoverageUndriven(p *strings.Builder, r mcpToolCoverage) {
 		"for, which this lane cannot express at all:\n")
 	p.WriteString("it sees that a name appeared, never whether it was the right first reach. " +
 		"`Near miss in` names the tasks that only check\n")
-	p.WriteString("a model does NOT reach for the tool, which says nothing about whether one can use it.\n\n")
+	p.WriteString("a model does not reach for the tool, which says nothing about whether one can use it.\n\n")
 	untried := r.Totals.NeverDriven - r.Totals.UndrivenButGraded
 	fmt.Fprintf(p, "So of the %d tools no use case requires, **%d are graded elsewhere** as an expected "+
-		"answer and %d are untried by any lane; %d of those are named elsewhere only as a near miss.\n\n",
+		"answer and %d are untried by any lane. Of the untried, %d appear elsewhere only as a near miss.\n\n",
 		r.Totals.NeverDriven, r.Totals.UndrivenButGraded, untried, r.Totals.UndrivenNearMissOnly)
 	p.WriteString("A tool in the `Permitted in` column is worse than one with nothing: a case is " +
 		"allowed to use it and no case checks that it can.\n\n")

@@ -704,9 +704,9 @@ class PanelReadersTest(unittest.TestCase):
     def test_a_list_member_is_found_by_the_records_name(self):
         lists = {("read_lists", "find"): {"result": {"data": [{"id": "L1", "name": "Messe", "entity_type": "contact"}]}},
                  ("read_lists", "members"): {"result": {"data": [{"entity_id": "n1"}], "page": {"has_more": False}}}}
-        self.assertEqual(self.read(lists, ['list "Messe" member=Nora Feld', 'list "Messe" nonmember=Gone Person']), [])
+        self.assertEqual(self.read(lists, ['list "Messe" member=Nora Feld', 'list "Messe" nonmember=Gone Name']), [])
         self.assertEqual(self.read(lists, ['list "Messe" nonmember=Nora Feld']), ['ended with Nora Feld on list "Messe"'])
-        self.assertEqual(self.read(lists, ['list "Messe" member=Gone Person']), ['ended with no contact named "Gone Person"'])
+        self.assertEqual(self.read(lists, ['list "Messe" member=Gone Name']), ['ended with no contact named "Gone Name"'])
 
     def test_the_newest_rate_from_a_currency_is_compared_as_a_number(self):
         rates = {("read_workspace", "fx_rates"): {"data": [

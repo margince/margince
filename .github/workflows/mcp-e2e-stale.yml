@@ -25,6 +25,11 @@ on:
 permissions:
   contents: read
 
+# A module the proxy cannot serve falls through to the source, as in every
+# workflow that installs Go (backend/gates/buildinputfetch_test.go).
+env:
+  GOPROXY: https://proxy.golang.org|direct
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true

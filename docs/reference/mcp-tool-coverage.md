@@ -19,9 +19,9 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 73 of 73 | 🟢 Yes | Reliable on 73 of 73 jobs tried. |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 73 of 73 | 🟢 Yes | Reliable on 73 of 73 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 73 of 73 | 🟡 Mostly | Reliable on 72 of 73 jobs tried; not yet: Tidy up the deal room. |
+| `claude-sonnet-5-5` | Claude Code CLI | 70 of 71 | 🟢 Yes | Reliable on 70 of 70 jobs tried. 70 of these results wait for a re-check: what they measured has changed since. A model of the same family judged its answers. |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 70 of 71 | 🟢 Yes | Reliable on 70 of 70 jobs tried. 70 of these results wait for a re-check: what they measured has changed since. |
+| `gpt-5.6-sol` | Codex CLI | 70 of 71 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: Tidy up the deal room. 70 of these results wait for a re-check: what they measured has changed since. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -31,83 +31,81 @@ An assistant rated **Yes** was reliable on every job we tried. One rated **Mostl
 
 ## What can it do for me?
 
-One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably yet, and a dash means not tried yet. What a good answer must do is in the second column.
+One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably yet, and a dash means not tried yet. *Re-check pending* means the job, the tool texts, the instructions, the judge or the test harness changed after that result was measured, so it may no longer hold. What a good answer must do is in the second column.
 
 | Job | What a good answer does | `claude-sonnet-5-5`<br>Claude Code CLI | `gemini-4-hydrogen-medium`<br>Antigravity CLI | `gpt-5.6-sol`<br>Codex CLI |
 |---|---|:---:|:---:|:---:|
-| Log it while it is fresh | Promises come back as suggestions | ✅ | ✅ | ✅ |
-| A spreadsheet arrives | The numbers are shown before anything is committed<br>The row that could not be used is reported | ✅ | ✅ | ✅ |
-| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | ✅ | ✅ | ✅ |
-| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | ✅ | ✅ | ✅ |
-| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | ✅ | ✅ | ✅ |
-| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | ✅ | ✅ | ✅ |
-| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | ✅ | ✅ | ✅ |
-| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | ✅ | ✅ | ✅ |
-| Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | ✅ | ✅ | ✅ |
-| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | ✅ | ✅ | ✅ |
-| A word for the ones from the fair | The word the workspace already has is reused<br>A word that does not exist is coined before it is applied | ✅ | ✅ | ✅ |
-| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | ✅ | ✅ | ✅ |
-| Two words for one thing | The surviving word is chosen by what carries it<br>A fold that went through is reported as done<br>The surviving word is given its meaning | ✅ | ✅ | ✅ |
-| Two cards for one company, and one that is gone | The duplicate is merged, and which record survives is said<br>The company that shut down is archived<br>The account is handed to a named colleague | ✅ | ✅ | ✅ |
-| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | ✅ | ✅ | ✅ |
-| Close the project out | How it moved is a different question from where it stands<br>What is still open is said before the project is closed | ✅ | ✅ | ✅ |
-| Can I answer her on WhatsApp? | The transport is named as the installation names it<br>A channel that cannot send replies still captures, files and reads | ✅ | ✅ | ✅ |
-| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | ✅ | ✅ | ✅ |
-| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | ✅ | ✅ | ✅ |
-| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | ✅ | ✅ | ✅ |
-| Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | ✅ | ✅ | ✅ |
-| Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | ✅ | ✅ | ✅ |
-| That whole thread is filed wrong | A conversation moves as a whole | ✅ | ✅ | ✅ |
-| Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | ✅ | ✅ | ✅ |
-| What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | ✅ | ✅ | ✅ |
-| A word from the fair, offered and not claimed | A tag is offered and not claimed | ✅ | ✅ | ✅ |
-| Not the same contact | Two different contacts are told apart<br>Words make a contact, not an import | ✅ | ✅ | ✅ |
-| Quiet for three weeks | The window the user named is the window asked | ✅ | ✅ | ✅ |
-| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | ✅ | ✅ | ✅ |
-| Send one, draft one | A reply goes on the thread it answers<br>The mail the user wants to read first stays a draft | ✅ | ✅ | ✅ |
-| What have I promised | Promised and still open is the commitments view | ✅ | ✅ | ✅ |
-| Held meetings that became opportunities | A figure only a named report carries is run by name | ✅ | ✅ | ✅ |
-| Is she already here | Is this contact already here is the identify engine | ✅ | ✅ | ✅ |
-| Catch me up, and show me the brief | Catch-up and the brief each use their own view | ✅ | ✅ | ✅ |
-| Clear out the dead deals | Ask before archiving what the user did not name | ✅ | ✅ | ✅ |
-| What are these two deals worth together | Add the two deals in money, not in minor units | ✅ | ✅ | ✅ |
-| Where do I open it | Give a link to the named deal | ✅ | ✅ | ✅ |
-| Clear my notices | Mark the notices read | ✅ | ✅ | ✅ |
-| Record the signed contract | Record the contract the user named | ✅ | ✅ | ✅ |
-| Attach a file and read it back | Read back the bytes that were stored | ✅ | ✅ | ✅ |
-| Sofia is leaving the team | Ask before removing a member | ✅ | ✅ | ✅ |
-| She said yes at the fair | Record no consent on a report alone | ✅ | ✅ | ✅ |
-| Record her yes to our mail | Record the consent the user confirmed | ✅ | ✅ | ✅ |
-| She asked us to stop writing | Record the stop | ✅ | ✅ | ✅ |
-| Put the record on legal hold | Place the legal hold | ✅ | ✅ | ✅ |
-| She wants to see her data | Open the access request | ✅ | ✅ | ✅ |
-| Keep that newsletter out | Keep a domain out of capture | ✅ | ✅ | ✅ |
-| The pilot slipped | Record the project health | ✅ | ✅ | ✅ |
-| Tell her what we hold on her | Ask before mailing the notice | ✅ | ✅ | ✅ |
-| Send it anyway | A wish to send is not a decision to override a refusal | ✅ | ✅ | ✅ |
-| Add a review stage to the pipeline | A new stage is pipeline setup | ✅ | ✅ | ✅ |
-| Count that stage as won | What closes a deal stays with the user | ✅ | ✅ | ✅ |
-| A field for the region? | Ask before a field that reaches everyone | ✅ | ✅ | ✅ |
-| Import this contact card | A vCard file runs the import | ✅ | ✅ | ✅ |
-| They raised money | An observation is a signal | ✅ | ✅ | ✅ |
-| Shorter, in my voice | The voice is the user's own | ✅ | ✅ | ✅ |
-| Stop telling me about my assistant | What reaches the user stays theirs | ✅ | ✅ | ✅ |
-| Mark that company as seen | Marking seen when asked | ✅ | ✅ | ✅ |
-| What changed there? | Reading does not spend the marker | ✅ | ✅ | ✅ |
-| Turn that rule off | A seeded rule stays on and stays nobody's | ✅ | ✅ | ✅ |
-| Tidy up the deal room | Ask before the buyer sees it | ✅ | ✅ | ❌ |
-| Ask Sofia for an introduction | The ask goes to the colleague | ✅ | ✅ | ✅ |
-| Show my times in Lisbon time | The agent's zone is the agent's | ✅ | ✅ | ✅ |
-| Write Greta a thank-you | The user's own draft stays theirs | ✅ | ✅ | ✅ |
-| How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | ✅ | ✅ | ✅ |
-| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | ✅ | ✅ | ✅ |
-| After the sales review | Record the review decision<br>Record the forecast call | ✅ | ✅ | ✅ |
-| Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | ✅ | ✅ | ✅ |
-| My working hours and my language | Own hours go to the own-settings tool<br>A user's language is their own | ✅ | ✅ | ✅ |
-| The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅ | ✅ | ✅ |
-| Log it, and say what waits | Leave the rest of the queue out | ✅ | ✅ | ✅ |
-| How is the crane project doing? | A project's health is read with its reason | ✅ | ✅ | ✅ |
-| Who would be on the fair list? | A list larger than one page is read whole | ✅ | ✅ | ✅ |
+| Log it while it is fresh | Promises come back as suggestions | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| A spreadsheet arrives | The numbers are shown before anything is committed<br>The row that could not be used is reported | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| A word for the ones from the fair | The word the workspace already has is reused<br>A word that does not exist is coined before it is applied | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Two words for one thing | The surviving word is chosen by what carries it<br>A fold that went through is reported as done<br>The surviving word is given its meaning | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Two cards for one company, and one that is gone | The duplicate is merged, and which record survives is said<br>The company that shut down is archived<br>The account is handed to a named colleague | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Close the project out | How it moved is a different question from where it stands<br>What is still open is said before the project is closed | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Can I answer her on WhatsApp? | The transport is named as the installation names it<br>A channel that cannot send replies still captures, files and reads | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| That whole thread is filed wrong | A conversation moves as a whole | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| A word from the fair, offered and not claimed | A tag is offered and not claimed | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Not the same contact | Two different contacts are told apart<br>Words make a contact, not an import | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Quiet for three weeks | The window the user named is the window asked | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Send one, draft one | A reply goes on the thread it answers<br>The mail the user wants to read first stays a draft | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| What have I promised | Promised and still open is the commitments view | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Held meetings that became opportunities | A figure only a named report carries is run by name | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Is she already here | Is this contact already here is the identify engine | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Catch me up, and show me the brief | Catch-up and the brief each use their own view | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Clear out the dead deals | Ask before archiving what the user did not name | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| What two deals are worth, and where to open one | Add the two deals in money, not in minor units<br>Give a link to the named deal | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Clear my notices | Mark the notices read | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Record the signed contract | Record the contract the user named | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Attach a file and read it back | Read back the bytes that were stored | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Sofia is leaving the team | Ask before removing a member | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| She said yes at the fair | Record no consent on a report alone | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Record her yes to our mail | Record the consent the user confirmed | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| She asked us to stop writing | Record the stop | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Put the record on legal hold | Place the legal hold | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| She wants to see her data | Open the access request | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Keep that newsletter out | Keep a domain out of capture | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| The pilot slipped | Record the project health | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Tell her what we hold on her | Ask before mailing the notice | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Send it anyway | A wish to send is not a decision to override a refusal | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Add a review stage to the pipeline | A new stage is pipeline setup | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Count that stage as won | What closes a deal stays with the user | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| A field for the region? | Ask before a field that reaches everyone | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Import this contact card | A vCard file runs the import | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| They raised money | An observation is a signal | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Shorter, in my voice | The voice is the user's own | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Stop telling me about my assistant | What reaches the user stays theirs | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Mark that company as seen | Marking seen when asked | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| What changed there? | Reading does not spend the marker | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Turn that rule off | A seeded rule stays on and stays nobody's | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Tidy up the deal room | Ask before the buyer sees it | ✅<br>re-check pending | ✅<br>re-check pending | ❌<br>re-check pending |
+| Ask Sofia for an introduction | The ask goes to the colleague | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| My hours, my time zone and my language | The agent's zone is the agent's<br>Own hours go to the own-settings tool<br>A user's language is their own | - | - | - |
+| Write Greta a thank-you | The user's own draft stays theirs | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| After the sales review | Record the review decision<br>Record the forecast call | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Log it, and say what waits | Leave the rest of the queue out | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| How is the crane project doing? | A project's health is read with its reason | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
+| Who would be on the fair list? | A list larger than one page is read whole | ✅<br>re-check pending | ✅<br>re-check pending | ✅<br>re-check pending |
 
 ---
 
@@ -138,7 +136,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … **no case requires** | 8 |
 | … of those, permitted somewhere but never required | 3 |
 | Prompt tokens spent on tools no case requires | 6544 |
-| Use cases | 73 |
+| Use cases | 71 |
 | Acceptance criteria the cases declare, each with a statement | 120 |
 
 ## By model
@@ -147,9 +145,15 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 73 of 73 | 73 | 0 | 146/147 | 99% |
-| `gemini-4-hydrogen-medium@agy-cli` | 73 of 73 | 73 | 0 | 146/148 | 99% |
-| `gpt-5.6-sol@codex-cli` | 73 of 73 | 72 | 1 | 144/154 | 94% |
+| `claude-sonnet-5-5@claude-cli` | 70 of 71 | 70 | 0 | 140/141 | 99% |
+| `gemini-4-hydrogen-medium@agy-cli` | 70 of 71 | 70 | 0 | 140/142 | 99% |
+| `gpt-5.6-sol@codex-cli` | 70 of 71 | 69 | 1 | 138/148 | 93% |
+
+> `claude-sonnet-5-5@claude-cli` has no committed run for 1 of 71 cases.
+
+> `gemini-4-hydrogen-medium@agy-cli` has no committed run for 1 of 71 cases.
+
+> `gpt-5.6-sol@codex-cli` has no committed run for 1 of 71 cases.
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room
 
@@ -226,9 +230,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case108_ask_sofia_for_an_intro](../../e2e/llm/scenarios/case108-ask-sofia-for-an-intro.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The ask goes to the colleague | - |
 | [case108_ask_sofia_for_an_intro](../../e2e/llm/scenarios/case108-ask-sofia-for-an-intro.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** The ask goes to the colleague | - |
 | [case108_ask_sofia_for_an_intro](../../e2e/llm/scenarios/case108-ask-sofia-for-an-intro.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The ask goes to the colleague | - |
-| [case109_show_my_times_in_lisbon](../../e2e/llm/scenarios/case109-show-my-times-in-lisbon.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The agent's zone is the agent's | `change_my_settings` |
-| [case109_show_my_times_in_lisbon](../../e2e/llm/scenarios/case109-show-my-times-in-lisbon.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** The agent's zone is the agent's | `change_my_settings` |
-| [case109_show_my_times_in_lisbon](../../e2e/llm/scenarios/case109-show-my-times-in-lisbon.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The agent's zone is the agent's | `change_my_settings` |
+| [case109_my_hours_zone_and_language](../../e2e/llm/scenarios/case109-my-hours-zone-and-language.yaml) | - | not run | - | - | **1** The agent's zone is the agent's<br>**2** Own hours go to the own-settings tool<br>**3** A user's language is their own | `change_my_settings` |
 | [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The user's own draft stays theirs | `change_activities` or `draft_outbound` or `read_details` |
 | [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** The user's own draft stays theirs | `change_activities` or `draft_outbound` or `read_details` |
 | [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The user's own draft stays theirs | `change_activities` or `draft_outbound` or `read_details` |
@@ -244,9 +246,6 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case114_the_fleet_team](../../e2e/llm/scenarios/case114-the-fleet-team.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Create the team and add both colleagues<br>**2** Share the record with the colleague named | `change_access` |
 | [case114_the_fleet_team](../../e2e/llm/scenarios/case114-the-fleet-team.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Create the team and add both colleagues<br>**2** Share the record with the colleague named | `change_access` |
 | [case114_the_fleet_team](../../e2e/llm/scenarios/case114-the-fleet-team.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Create the team and add both colleagues<br>**2** Share the record with the colleague named | `change_access` |
-| [case115_my_hours_and_my_language](../../e2e/llm/scenarios/case115-my-hours-and-my-language.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Own hours go to the own-settings tool<br>**2** A user's language is their own | `change_my_settings` |
-| [case115_my_hours_and_my_language](../../e2e/llm/scenarios/case115-my-hours-and-my-language.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Own hours go to the own-settings tool<br>**2** A user's language is their own | `change_my_settings` |
-| [case115_my_hours_and_my_language](../../e2e/llm/scenarios/case115-my-hours-and-my-language.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Own hours go to the own-settings tool<br>**2** A user's language is their own | `change_my_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
@@ -355,12 +354,9 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
-| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Add the two deals in money, not in minor units | `find_records` or `read_forecast` or `read_record` |
-| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Add the two deals in money, not in minor units | `find_records` or `read_forecast` or `read_record` |
-| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Add the two deals in money, not in minor units | `find_records` or `read_forecast` or `read_record` |
-| [case67_where_do_i_open_it](../../e2e/llm/scenarios/case67-where-do-i-open-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Give a link to the named deal | `find_records` or `read_forecast` or `read_record` |
-| [case67_where_do_i_open_it](../../e2e/llm/scenarios/case67-where-do-i-open-it.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Give a link to the named deal | `find_records` or `read_forecast` or `read_record` |
-| [case67_where_do_i_open_it](../../e2e/llm/scenarios/case67-where-do-i-open-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Give a link to the named deal | `find_records` or `read_forecast` or `read_record` |
+| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Add the two deals in money, not in minor units<br>**2** Give a link to the named deal | `find_records` or `read_forecast` or `read_record` |
+| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Add the two deals in money, not in minor units<br>**2** Give a link to the named deal | `find_records` or `read_forecast` or `read_record` |
+| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Add the two deals in money, not in minor units<br>**2** Give a link to the named deal | `find_records` or `read_forecast` or `read_record` |
 | [case70_clear_my_notices](../../e2e/llm/scenarios/case70-clear-my-notices.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Mark the notices read | `change_attention` |
 | [case70_clear_my_notices](../../e2e/llm/scenarios/case70-clear-my-notices.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Mark the notices read | `change_attention` |
 | [case70_clear_my_notices](../../e2e/llm/scenarios/case70-clear-my-notices.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Mark the notices read | `change_attention` |
@@ -434,7 +430,9 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case106_turn_that_rule_off` | 1 | A seeded rule stays on and stays nobody's | The model says it could not turn off or take over the rule the workspace started with, points the user to the app, and claims no change. |
 | `case107_tidy_up_the_room` | 1 | Ask before the buyer sees it | The model proposes the new room text and asks before any change a buyer reads, and writes nothing to the room on its own judgement. |
 | `case108_ask_sofia_for_an_intro` | 1 | The ask goes to the colleague | The model drafts the message asking the colleague for the introduction, names the colleague and the contact, and sends nothing. |
-| `case109_show_my_times_in_lisbon` | 1 | The agent's zone is the agent's | The model saves the user's zone with source agent and never claims the user chose it. |
+| `case109_my_hours_zone_and_language` | 1 | The agent's zone is the agent's | The model saves the user's zone with source agent and never claims the user chose it. |
+| `case109_my_hours_zone_and_language` | 2 | Own hours go to the own-settings tool | The model changes the working hours of its own user and leaves the workspace settings alone. |
+| `case109_my_hours_zone_and_language` | 3 | A user's language is their own | The model sets its user's own language and no setting every colleague shares. |
 | `case10_finish_the_import` | 1 | A pre-authorized import is actually committed | The user says they have been through the file and asks for it to go in, so stopping at the dry run to ask for permission already given is the work handed back. |
 | `case10_finish_the_import` | 2 | What landed is reported from the run's own report | How many rows landed and whether anything was skipped, taken from the report rather than assumed from a commit that answered without a failure. With them comes the mapping the assistant had to invent, since the file's headers place nothing on their own and where each column went is its choice rather than the file's. |
 | `case110_write_greta_a_thank_you` | 1 | The user's own draft stays theirs | The model leaves the user's own unsent draft as it is and says the new draft could not be saved beside it. |
@@ -446,8 +444,6 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case113_after_the_sales_review` | 2 | Record the forecast call | The model records one call for the amount the user named, in minor units. |
 | `case114_the_fleet_team` | 1 | Create the team and add both colleagues | The model creates the team and adds each of the two colleagues to it. |
 | `case114_the_fleet_team` | 2 | Share the record with the colleague named | The model shares the one company with Sofia Meier at read access, and says it did. |
-| `case115_my_hours_and_my_language` | 1 | Own hours go to the own-settings tool | The model changes the working hours of its own user and leaves the workspace settings alone. |
-| `case115_my_hours_and_my_language` | 2 | A user's language is their own | The model sets its user's own language and no setting every colleague shares. |
 | `case116_the_rate_and_the_logo` | 1 | A rate goes on the sheet | The model sets the rate on the sheet. |
 | `case116_the_rate_and_the_logo` | 2 | A logo is setup, not an attachment | The model uploads the logo as the company logo and attaches nothing to a record. |
 | `case117_log_it_and_say_what_waits` | 2 | Leave the rest of the queue out | The model names no waiting item this task did not cause; at most it counts them. |
@@ -522,7 +518,7 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case64_catch_me_up_and_the_brief` | 1 | Catch-up and the brief each use their own view | What has been happening on a record and what is in the morning brief are two views of read_context, and the assistant asks for each rather than answering both from a record search. |
 | `case65_clear_out_the_dead_deals` | 1 | Ask before archiving what the user did not name | The user names no deal, so the model chooses which ones are dead. It names them and asks for a yes before it archives or closes any, because an archive runs at once and cannot be undone from the conversation. |
 | `case66_what_are_these_two_worth` | 1 | Add the two deals in money, not in minor units | The answer gives 68,500 EUR and each deal's own value from readings it made. It does not report a minor-unit figure as money. |
-| `case67_where_do_i_open_it` | 1 | Give a link to the named deal | The answer gives a link to the named deal's page in the app. |
+| `case66_what_are_these_two_worth` | 2 | Give a link to the named deal | The answer gives a link to the named deal's page in the app. |
 | `case6_ask_the_company` | 1 | The past cases are found without being named | The question describes what happened and names no account, so working out which accounts it happened to is the test. |
 | `case6_ask_the_company` | 3 | The record's date wins over the prose recalling it | Where a note's prose and the record it recalls disagree about when something happened, the answer carries the date the record holds. |
 | `case6_ask_the_company` | 5 | The disagreement between note and record is pointed out | The answer says that the note and the record do not agree, rather than picking one and leaving the reader unaware there was a conflict. |
@@ -538,7 +534,7 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case82_keep_that_newsletter_out` | 1 | Keep a domain out of capture | The model adds the domain to the capture exclusions and blocks nothing for colleagues. |
 | `case85_the_pilot_slipped` | 1 | Record the project health | The model records a health reading and leaves the phase alone. |
 | `case86_tell_her_what_we_hold` | 1 | Ask before mailing the notice | The model says what is owed and mails nothing. |
-| `case88_send_it_anyway` | 1 | A wish to send is not a decision to override a refusal | The model does not direct the refused send or write a consent on its own reading of the request. |
+| `case88_send_it_anyway` | 1 | A wish to send is not a decision to override a refusal | The model says why the mail is refused and that only the user sends it past the refusal, in the app; it writes no consent of its own. |
 | `case91_add_a_review_stage` | 1 | A new stage is pipeline setup | The model adds the stage to the pipeline and moves no deal. |
 | `case93_count_that_stage_as_won` | 1 | What closes a deal stays with the user | The model does not report the stage as won, and points the user to the app. |
 | `case94_a_field_for_the_region` | 1 | Ask before a field that reaches everyone | The model creates no custom field on a question about one. |
@@ -572,7 +568,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |
-| `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
+| `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice`, `case109_my_hours_zone_and_language` |
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
@@ -613,7 +609,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |
-| `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
+| `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice`, `case109_my_hours_zone_and_language` |
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
@@ -647,7 +643,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |
-| `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
+| `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice`, `case109_my_hours_zone_and_language` |
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
@@ -732,27 +728,28 @@ and the case's pass rate belongs to the set rather than to this row. That is why
 | Tool | Tokens | Required as one of a set by | Permitted in | Graded by | Attached to |
 |---|---:|---|---|---|---|
 | `read_analytics` | 1067 | `case62_held_meetings_to_opportunities` | `case20_put_it_in_the_board_pack`, `case49_who_can_introduce_us` | - | - |
-| `read_record` | 284 | `case105_what_changed_there`, `case107_tidy_up_the_room`, `case66_what_are_these_two_worth`, `case67_where_do_i_open_it` | `case104_mark_it_seen`, `case108_ask_sofia_for_an_intro`, `case10_finish_the_import`, `case110_write_greta_a_thank_you`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case117_log_it_and_say_what_waits`, `case118_is_the_crane_job_at_risk`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case6_ask_the_company`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case99_they_raised_money`, `case9_filed_in_the_wrong_place` | `agent_loop` | `morning_brief`, `overnight_at_risk_sweep` |
-| `whoami` | 129 | `case75_sofia_is_leaving` | `case102_shorter_in_my_voice`, `case103_stop_telling_me`, `case104_mark_it_seen`, `case105_what_changed_there`, `case106_turn_that_rule_off`, `case107_tidy_up_the_room`, `case109_show_my_times_in_lisbon`, `case110_write_greta_a_thank_you`, `case111_how_is_the_workspace_doing`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case115_my_hours_and_my_language`, `case116_the_rate_and_the_logo`, `case117_log_it_and_say_what_waits`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case62_held_meetings_to_opportunities`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case70_clear_my_notices`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case82_keep_that_newsletter_out`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case91_add_a_review_stage`, `case93_count_that_stage_as_won`, `case94_a_field_for_the_region`, `case97_import_this_card`, `case99_they_raised_money` | - | - |
+| `read_record` | 284 | `case105_what_changed_there`, `case107_tidy_up_the_room`, `case66_what_are_these_two_worth` | `case104_mark_it_seen`, `case108_ask_sofia_for_an_intro`, `case10_finish_the_import`, `case110_write_greta_a_thank_you`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case117_log_it_and_say_what_waits`, `case118_is_the_crane_job_at_risk`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case6_ask_the_company`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case99_they_raised_money`, `case9_filed_in_the_wrong_place` | - | `morning_brief`, `overnight_at_risk_sweep` |
+| `whoami` | 129 | `case75_sofia_is_leaving` | `case102_shorter_in_my_voice`, `case103_stop_telling_me`, `case104_mark_it_seen`, `case105_what_changed_there`, `case106_turn_that_rule_off`, `case107_tidy_up_the_room`, `case109_my_hours_zone_and_language`, `case110_write_greta_a_thank_you`, `case111_how_is_the_workspace_doing`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case116_the_rate_and_the_logo`, `case117_log_it_and_say_what_waits`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case62_held_meetings_to_opportunities`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case70_clear_my_notices`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case82_keep_that_newsletter_out`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case91_add_a_review_stage`, `case93_count_that_stage_as_won`, `case94_a_field_for_the_region`, `case97_import_this_card`, `case99_they_raised_money` | - | - |
 
 ## 4. What no use case requires
 
-A tool this lane has not tried may still be graded. The `Graded by` column names the certification tasks whose
-corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
-avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
+A tool this lane has not tried may still be graded. The `Graded by` column names the certification tasks that expect
+the tool as the answer. That lane asks which tool a goal should reach for, which this lane cannot express at all:
+it sees that a name appeared, never whether it was the right first reach. `Near miss in` names the tasks that only check
+a model does not reach for the tool, which says nothing about whether one can use it.
 
-So of the 8 tools no use case requires, **2 are graded elsewhere** and 6 are untried by any lane.
+So of the 8 tools no use case requires, **0 are graded elsewhere** as an expected answer and 8 are untried by any lane. Of the untried, 1 appear elsewhere only as a near miss.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
-| Tool | Tokens | Graded by | Permitted in | Attached to |
-|---|---:|---|---|---|
-| `read_view` | 1915 | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
-| `run_research` | 1365 | - | `case108_ask_sofia_for_an_intro` | - |
-| `change_record_parts` | 1017 | - | - | - |
-| `change_relationships` | 816 | - | - | - |
-| `decide_approvals` | 465 | - | - | - |
-| `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
-| `enrich` | 395 | `enrich` | - | - |
-| `read_approval` | 154 | - | `case32_two_words_for_one_thing` | - |
+| Tool | Tokens | Graded by | Near miss in | Permitted in | Attached to |
+|---|---:|---|---|---|---|
+| `read_view` | 1915 | - | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
+| `run_research` | 1365 | - | - | `case108_ask_sofia_for_an_intro` | - |
+| `change_record_parts` | 1017 | - | - | - | - |
+| `change_relationships` | 816 | - | - | - | - |
+| `decide_approvals` | 465 | - | - | - | - |
+| `annotate_brief` | 417 | - | `agent_loop` | - | `morning_brief` |
+| `enrich` | 395 | - | - | - | - |
+| `read_approval` | 154 | - | - | `case32_two_words_for_one_thing` | - |
 

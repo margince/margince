@@ -40,6 +40,8 @@ var advisoryPullRequestWorkflows = gatekit.Waive(map[string]string{
 		"so no ruleset requires it and the queue never asks for it",
 	"docs-describing.yml": "advisory: it warns in a comment and its job always succeeds, " +
 		"so no ruleset requires it and the queue never asks for it",
+	"mcp-e2e-stale.yml": "advisory: it lists stale MCP verdicts in a comment and its job always " +
+		"succeeds, so no ruleset requires it and the queue never asks for it",
 	"review-coverage.yml": "advisory: it reports review coverage in a sticky comment and " +
 		"never blocks, so no ruleset requires it and the queue never asks for it",
 })

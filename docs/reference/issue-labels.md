@@ -102,9 +102,9 @@ planned. It does not say what a release needs.
 This label also goes on a **pull request**. The weekly scheduled run opens one pull request for each
 record it measured, and puts this label on it.
 
-- `records: weekly`: a measurement the weekly run proposes, such as the speed records or the MCP
-  use-case verdicts. The maintainer that the `RECORDS_OWNER` repository variable names is assigned.
-  That person compares the record with the one it replaces, then merges or closes the pull request.
+- `records: weekly`: a measurement the weekly run puts up for review, such as the speed records or
+  the MCP use-case verdicts. It goes to the maintainer that the `RECORDS_OWNER` repository variable names.
+  That maintainer compares the record with the one it replaces, then merges or closes the pull request.
 
 ## Provenance
 

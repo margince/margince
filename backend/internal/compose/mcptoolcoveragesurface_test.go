@@ -376,22 +376,20 @@ func unitManifestCount(dir string) (int, error) {
 // has ever graded this".
 const corpusDir = "aicert/corpus"
 
-// corpusGrades is what the certification corpus grades of each tool: the
-// tasks whose scenarios expect it as the answer, and the tasks that name it
-// only as a near miss a model must not reach for.
+// corpusGrades is what the certification corpus grades of each tool. Expected
+// are the tasks whose scenarios expect it as the answer. NearMiss are the tasks
+// that name it only as a wrong reach a model must avoid.
 type corpusGrades struct {
 	expected, nearMiss map[string][]string
 }
 
 // corpusGradedTools reads the two fields of a certification scenario that name
-// a tool, `expect.answer` and `expect.near_misses`, with an action behind a
-// router counted as its router. A word anywhere else in the file names
-// something else: `task: enrich` is the AI task that reads a mail signature,
-// not the enrich tool.
+// a tool: `expect.answer` and `expect.near_misses`. An action counts as its
+// router. A word elsewhere names something else: `task: enrich` is the AI task
+// that reads a mail signature, not the enrich tool.
 //
-// A MISSING CORPUS IS AN ERROR, not an empty one: the path is fixed in this
-// repository, and answering "nothing is graded elsewhere" to a moved corpus
-// would publish the larger untried number with nothing failing.
+// A missing corpus is an error, not an empty one. Its path is fixed, so a
+// moved corpus would otherwise publish a larger untried count with nothing failing.
 func corpusGradedTools(dir string, names []string, routes map[string]string) (corpusGrades, error) {
 	grades := corpusGrades{expected: map[string][]string{}, nearMiss: map[string][]string{}}
 	files, err := filepath.Glob(filepath.Join(dir, "*", "*.yaml"))

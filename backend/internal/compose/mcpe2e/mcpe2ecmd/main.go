@@ -9,8 +9,8 @@
 //	go run ./internal/compose/mcpe2e/mcpe2ecmd newly-stale -base DIR
 //	                                    the verdicts this tree makes stale against DIR, as Markdown
 //
-// report and newly-stale always exit 0: the lane is paid and manual, and a
-// stale verdict is a hint for a pull request, never a reason to block it.
+// report and newly-stale always exit 0. The lane is paid and manual, so a stale
+// verdict is a hint for a pull request, never a reason to block it.
 package main
 
 import (
@@ -39,7 +39,7 @@ func main() {
 		if err != nil {
 			fail(err.Error())
 		}
-		fmt.Print(mcpe2e.Summarise(lines))
+		emit(mcpe2e.Summarise(lines))
 	case "stamps":
 		if *out == "" {
 			fail("stamps needs -out")
@@ -55,7 +55,7 @@ func main() {
 		if err != nil {
 			fail(err.Error())
 		}
-		fmt.Print(newlyStaleMarkdown(lines))
+		emit(newlyStaleMarkdown(lines))
 	default:
 		fail("unknown command " + os.Args[1])
 	}
@@ -75,6 +75,12 @@ func newlyStaleMarkdown(lines []mcpe2e.Line) string {
 	b.WriteString("\nThis reports and never blocks. A paid run of these cases (`make e2e-llm`) " +
 		"stamps them again; list them in the PR body if you do not run it.\n")
 	return b.String()
+}
+
+func emit(text string) {
+	if _, err := os.Stdout.WriteString(text); err != nil {
+		fail("writing the report: " + err.Error())
+	}
 }
 
 func fail(message string) {

@@ -7,52 +7,59 @@
     "never_driven": 8,
     "permitted_but_never_required": 3,
     "tokens_served_but_never_driven": 6544,
-    "use_case_cases": 73,
+    "use_case_cases": 71,
     "acceptance_criteria_named": 120,
     "tools_added_by_shipped_units": 0,
-    "never_driven_but_graded_elsewhere": 2
+    "never_driven_but_graded_elsewhere": 0,
+    "never_driven_near_miss_only": 1
   },
   "models": [
     {
       "model": "claude-sonnet-5-5@claude-cli",
       "name": "claude-sonnet-5-5",
       "trust": "🟢 Yes",
-      "cases_with_a_committed_run": 73,
-      "cases_that_reached_their_bar": 73,
+      "cases_with_a_committed_run": 70,
+      "cases_that_reached_their_bar": 70,
       "cases_below_their_bar": 0,
-      "runs": 147,
-      "passed": 146,
-      "reliability": 0.9931972789115646,
+      "runs": 141,
+      "passed": 140,
+      "reliability": 0.9929078014184397,
       "cases_below_their_bar_named": [],
-      "route": "Claude Code CLI"
+      "route": "Claude Code CLI",
+      "cases_recheck_pending": 70,
+      "self_judged": true
     },
     {
       "model": "gemini-4-hydrogen-medium@agy-cli",
       "name": "gemini-4-hydrogen-medium",
       "trust": "🟢 Yes",
-      "cases_with_a_committed_run": 73,
-      "cases_that_reached_their_bar": 73,
+      "cases_with_a_committed_run": 70,
+      "cases_that_reached_their_bar": 70,
       "cases_below_their_bar": 0,
-      "runs": 148,
-      "passed": 146,
-      "reliability": 0.9864864864864865,
+      "runs": 142,
+      "passed": 140,
+      "reliability": 0.9859154929577465,
       "cases_below_their_bar_named": [],
-      "route": "Antigravity CLI"
+      "route": "Antigravity CLI",
+      "cases_recheck_pending": 70,
+      "self_judged": false
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
       "name": "gpt-5.6-sol",
       "trust": "🟡 Mostly",
-      "cases_with_a_committed_run": 73,
-      "cases_that_reached_their_bar": 72,
+      "cases_with_a_committed_run": 70,
+      "cases_that_reached_their_bar": 69,
       "cases_below_their_bar": 1,
-      "runs": 154,
-      "passed": 144,
-      "reliability": 0.935064935064935,
+      "runs": 148,
+      "passed": 138,
+      "reliability": 0.9324324324324325,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room"
       ],
-      "route": "Codex CLI"
+      "route": "Codex CLI",
+      "cases_recheck_pending": 70,
+      "self_judged": false
     }
   ],
   "judges": [
@@ -136,7 +143,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -145,7 +156,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -154,7 +168,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -180,7 +197,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -189,7 +210,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -198,7 +222,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -221,7 +248,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -230,7 +261,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -239,7 +273,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -260,7 +297,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -269,7 +310,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -278,7 +322,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -301,7 +348,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -310,7 +361,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -319,7 +373,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -348,7 +405,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -357,7 +418,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -366,7 +430,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -389,7 +456,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -398,7 +469,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -407,7 +481,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -434,7 +511,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -443,7 +524,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -452,7 +536,10 @@
           "pass_at": 2,
           "held": false,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -473,7 +560,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -482,7 +573,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -491,50 +585,27 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
     {
-      "name": "case109_show_my_times_in_lisbon",
-      "title": "Show my times in Lisbon time",
-      "file": "case109-show-my-times-in-lisbon.yaml",
+      "name": "case109_my_hours_zone_and_language",
+      "title": "My hours, my time zone and my language",
+      "file": "case109-my-hours-zone-and-language.yaml",
       "criteria": [
-        1
+        1,
+        2,
+        3
       ],
       "requires": [
         "change_my_settings"
       ],
       "requires_one_of": [],
-      "by_model": [
-        {
-          "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
-          "passed": 2,
-          "pass_at": 2,
-          "held": true,
-          "driver": "claude:cli",
-          "search": "semantic"
-        },
-        {
-          "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
-          "passed": 2,
-          "pass_at": 2,
-          "held": true,
-          "driver": "gemini:cli",
-          "search": "semantic"
-        },
-        {
-          "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
-          "passed": 2,
-          "pass_at": 2,
-          "held": true,
-          "driver": "gpt:cli",
-          "search": "semantic"
-        }
-      ]
+      "by_model": null
     },
     {
       "name": "case110_write_greta_a_thank_you",
@@ -559,7 +630,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -568,7 +643,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -577,7 +655,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -602,7 +683,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -611,7 +696,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -620,7 +708,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -643,7 +734,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -652,7 +747,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -661,7 +759,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -685,7 +786,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -694,7 +799,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -703,7 +811,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -727,7 +838,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -736,7 +851,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -745,49 +863,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
-        }
-      ]
-    },
-    {
-      "name": "case115_my_hours_and_my_language",
-      "title": "My working hours and my language",
-      "file": "case115-my-hours-and-my-language.yaml",
-      "criteria": [
-        1,
-        2
-      ],
-      "requires": [
-        "change_my_settings"
-      ],
-      "requires_one_of": [],
-      "by_model": [
-        {
-          "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
-          "passed": 2,
-          "pass_at": 2,
-          "held": true,
-          "driver": "claude:cli",
-          "search": "semantic"
-        },
-        {
-          "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
-          "passed": 2,
-          "pass_at": 2,
-          "held": true,
-          "driver": "gemini:cli",
-          "search": "semantic"
-        },
-        {
-          "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
-          "passed": 2,
-          "pass_at": 2,
-          "held": true,
-          "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -811,7 +890,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -820,7 +903,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -829,7 +915,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -852,7 +941,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -861,7 +954,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -870,7 +966,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -891,7 +990,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -900,7 +1003,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -909,7 +1015,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -930,7 +1039,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -939,7 +1052,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -948,7 +1064,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -970,7 +1089,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -979,7 +1102,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -988,7 +1114,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1012,7 +1141,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1021,7 +1154,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1030,7 +1166,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1054,7 +1193,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1063,7 +1206,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1072,7 +1218,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1096,7 +1245,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1105,7 +1258,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1114,7 +1270,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1139,7 +1298,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1148,7 +1311,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1157,7 +1323,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1182,7 +1351,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1191,7 +1364,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1200,7 +1376,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1226,7 +1405,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1235,7 +1418,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1244,7 +1430,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1272,7 +1461,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1281,7 +1474,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1290,7 +1486,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1312,7 +1511,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1321,7 +1524,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1330,7 +1536,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1355,7 +1564,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1364,7 +1577,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1373,7 +1589,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1398,7 +1617,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1407,7 +1630,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1416,7 +1642,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1440,7 +1669,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1449,7 +1682,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1458,7 +1694,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1482,7 +1721,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1491,7 +1734,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1500,7 +1746,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1526,7 +1775,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1535,7 +1788,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1544,7 +1800,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1570,7 +1829,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1579,7 +1842,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1588,7 +1854,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1614,7 +1883,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1623,7 +1896,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1632,7 +1908,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1660,7 +1939,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1669,7 +1952,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1678,7 +1964,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1701,7 +1990,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1710,7 +2003,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1719,7 +2015,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1747,7 +2046,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1756,7 +2059,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1765,7 +2071,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1791,7 +2100,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1800,7 +2113,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1809,7 +2125,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1834,7 +2153,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1843,7 +2166,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1852,7 +2178,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1875,7 +2204,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1884,7 +2217,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1893,7 +2229,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1918,7 +2257,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1927,7 +2270,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1936,7 +2282,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -1959,7 +2308,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1968,7 +2321,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1977,7 +2333,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2001,7 +2360,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2010,7 +2373,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2019,7 +2385,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2044,7 +2413,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2053,7 +2426,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2062,7 +2438,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2091,7 +2470,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2100,7 +2483,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2109,7 +2495,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2132,7 +2521,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2141,7 +2534,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2150,7 +2546,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2176,7 +2575,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2185,7 +2588,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2194,7 +2600,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2217,7 +2626,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2226,7 +2639,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2235,7 +2651,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2258,7 +2677,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2267,7 +2690,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2276,7 +2702,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2302,7 +2731,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2311,7 +2744,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2320,16 +2756,20 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
     {
       "name": "case66_what_are_these_two_worth",
-      "title": "What are these two deals worth together",
+      "title": "What two deals are worth, and where to open one",
       "file": "case66-what-are-these-two-worth.yaml",
       "criteria": [
-        1
+        1,
+        2
       ],
       "requires": [],
       "requires_one_of": [
@@ -2347,7 +2787,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2356,7 +2800,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2365,52 +2812,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
-        }
-      ]
-    },
-    {
-      "name": "case67_where_do_i_open_it",
-      "title": "Where do I open it",
-      "file": "case67-where-do-i-open-it.yaml",
-      "criteria": [
-        1
-      ],
-      "requires": [],
-      "requires_one_of": [
-        [
-          "find_records",
-          "read_forecast",
-          "read_record"
-        ]
-      ],
-      "by_model": [
-        {
-          "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
-          "passed": 2,
-          "pass_at": 2,
-          "held": true,
-          "driver": "claude:cli",
-          "search": "semantic"
-        },
-        {
-          "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
-          "passed": 2,
-          "pass_at": 2,
-          "held": true,
-          "driver": "gemini:cli",
-          "search": "semantic"
-        },
-        {
-          "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
-          "passed": 2,
-          "pass_at": 2,
-          "held": true,
-          "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2433,7 +2838,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2442,7 +2851,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2451,7 +2863,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2474,7 +2889,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2483,7 +2902,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2492,7 +2914,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2516,7 +2941,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2525,7 +2954,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2534,7 +2966,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2560,7 +2995,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2569,7 +3008,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2578,7 +3020,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2599,7 +3044,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2608,7 +3057,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2617,7 +3069,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2640,7 +3095,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2649,7 +3108,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2658,7 +3120,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2681,7 +3146,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2690,7 +3159,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2699,7 +3171,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2722,7 +3197,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2731,7 +3210,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2740,7 +3222,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2763,7 +3248,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2772,7 +3261,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2781,7 +3273,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2804,7 +3299,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2813,7 +3312,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2822,7 +3324,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2845,7 +3350,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2854,7 +3363,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2863,7 +3375,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2884,7 +3399,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2893,7 +3412,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2902,7 +3424,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2925,7 +3450,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2934,7 +3463,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2943,7 +3475,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -2968,7 +3503,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2977,7 +3516,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2986,7 +3528,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -3009,7 +3554,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3018,7 +3567,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3027,7 +3579,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -3048,7 +3603,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3057,7 +3616,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3066,7 +3628,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -3087,7 +3652,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3096,7 +3665,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3105,7 +3677,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -3128,7 +3703,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3137,7 +3716,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3146,7 +3728,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     },
@@ -3169,7 +3754,11 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "self_judged": true,
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3178,7 +3767,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3187,7 +3779,10 @@
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
-          "search": "semantic"
+          "search": "semantic",
+          "recheck_pending": [
+            "no stamp"
+          ]
         }
       ]
     }
@@ -3236,10 +3831,22 @@
       "statement": "The model drafts the message asking the colleague for the introduction, names the colleague and the contact, and sends nothing."
     },
     {
-      "case": "case109_show_my_times_in_lisbon",
+      "case": "case109_my_hours_zone_and_language",
       "number": 1,
       "name": "The agent's zone is the agent's",
       "statement": "The model saves the user's zone with source agent and never claims the user chose it."
+    },
+    {
+      "case": "case109_my_hours_zone_and_language",
+      "number": 2,
+      "name": "Own hours go to the own-settings tool",
+      "statement": "The model changes the working hours of its own user and leaves the workspace settings alone."
+    },
+    {
+      "case": "case109_my_hours_zone_and_language",
+      "number": 3,
+      "name": "A user's language is their own",
+      "statement": "The model sets its user's own language and no setting every colleague shares."
     },
     {
       "case": "case10_finish_the_import",
@@ -3306,18 +3913,6 @@
       "number": 2,
       "name": "Share the record with the colleague named",
       "statement": "The model shares the one company with Sofia Meier at read access, and says it did."
-    },
-    {
-      "case": "case115_my_hours_and_my_language",
-      "number": 1,
-      "name": "Own hours go to the own-settings tool",
-      "statement": "The model changes the working hours of its own user and leaves the workspace settings alone."
-    },
-    {
-      "case": "case115_my_hours_and_my_language",
-      "number": 2,
-      "name": "A user's language is their own",
-      "statement": "The model sets its user's own language and no setting every colleague shares."
     },
     {
       "case": "case116_the_rate_and_the_logo",
@@ -3764,8 +4359,8 @@
       "statement": "The answer gives 68,500 EUR and each deal's own value from readings it made. It does not report a minor-unit figure as money."
     },
     {
-      "case": "case67_where_do_i_open_it",
-      "number": 1,
+      "case": "case66_what_are_these_two_worth",
+      "number": 2,
       "name": "Give a link to the named deal",
       "statement": "The answer gives a link to the named deal's page in the app."
     },
@@ -3863,7 +4458,7 @@
       "case": "case88_send_it_anyway",
       "number": 1,
       "name": "A wish to send is not a decision to override a refusal",
-      "statement": "The model does not direct the refused send or write a consent on its own reading of the request."
+      "statement": "The model says why the mail is refused and that only the user sends it past the refusal, in the app; it writes no consent of its own."
     },
     {
       "case": "case91_add_a_review_stage",
@@ -3932,7 +4527,8 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -3946,7 +4542,8 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -3958,7 +4555,8 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -3970,7 +4568,8 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -3982,7 +4581,8 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -3996,7 +4596,8 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [
         "agent_loop"
       ],
       "measured_by_model": {}
@@ -4010,9 +4611,8 @@
       "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "enrich"
-      ],
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -4026,7 +4626,8 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -4043,7 +4644,8 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": true,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -4057,8 +4659,7 @@
       "required_as_one_of_a_set_by_cases": [
         "case105_what_changed_there",
         "case107_tidy_up_the_room",
-        "case66_what_are_these_two_worth",
-        "case67_where_do_i_open_it"
+        "case66_what_are_these_two_worth"
       ],
       "permitted_in_cases": [
         "case104_mark_it_seen",
@@ -4114,7 +4715,8 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": true,
-      "graded_by_certification_tasks": [
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [
         "agent_loop"
       ],
       "measured_by_model": {}
@@ -4134,13 +4736,12 @@
         "case105_what_changed_there",
         "case106_turn_that_rule_off",
         "case107_tidy_up_the_room",
-        "case109_show_my_times_in_lisbon",
+        "case109_my_hours_zone_and_language",
         "case110_write_greta_a_thank_you",
         "case111_how_is_the_workspace_doing",
         "case112_my_plan_and_the_dossier",
         "case113_after_the_sales_review",
         "case114_the_fleet_team",
-        "case115_my_hours_and_my_language",
         "case116_the_rate_and_the_logo",
         "case117_log_it_and_say_what_waits",
         "case30_a_word_for_it",
@@ -4182,7 +4783,8 @@
       ],
       "driven": false,
       "required_only_as_one_of_a_set": true,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -4207,7 +4809,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
@@ -4244,7 +4847,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 6,
@@ -4290,7 +4894,10 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [
+        "agent_loop"
+      ],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 13,
@@ -4328,7 +4935,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -4368,11 +4976,10 @@
         "case105_what_changed_there",
         "case106_turn_that_rule_off",
         "case108_ask_sofia_for_an_intro",
-        "case109_show_my_times_in_lisbon",
+        "case109_my_hours_zone_and_language",
         "case112_my_plan_and_the_dossier",
         "case113_after_the_sales_review",
         "case114_the_fleet_team",
-        "case115_my_hours_and_my_language",
         "case116_the_rate_and_the_logo",
         "case119_who_came_to_the_fair",
         "case1_log_it",
@@ -4407,7 +5014,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
@@ -4444,7 +5052,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 10,
@@ -4482,8 +5091,7 @@
         "case105_what_changed_there",
         "case107_tidy_up_the_room",
         "case65_clear_out_the_dead_deals",
-        "case66_what_are_these_two_worth",
-        "case67_where_do_i_open_it"
+        "case66_what_are_these_two_worth"
       ],
       "permitted_in_cases": [
         "case104_mark_it_seen",
@@ -4542,7 +5150,10 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [
+        "agent_loop"
+      ],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 6,
@@ -4576,7 +5187,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
@@ -4611,7 +5223,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 6,
@@ -4646,7 +5259,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -4679,7 +5293,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -4715,7 +5330,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 8,
@@ -4748,7 +5364,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -4783,7 +5400,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -4817,7 +5435,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
@@ -4848,8 +5467,7 @@
         "case50_what_moved_my_quarter"
       ],
       "required_as_one_of_a_set_by_cases": [
-        "case66_what_are_these_two_worth",
-        "case67_where_do_i_open_it"
+        "case66_what_are_these_two_worth"
       ],
       "permitted_in_cases": [
         "case113_after_the_sales_review",
@@ -4860,7 +5478,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
@@ -4898,7 +5517,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
@@ -4926,30 +5546,30 @@
       "agents": [],
       "required_by_cases": [
         "case102_shorter_in_my_voice",
-        "case109_show_my_times_in_lisbon",
-        "case115_my_hours_and_my_language"
+        "case109_my_hours_zone_and_language"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 6,
-          "passed": 6,
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 6,
-          "passed": 6,
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 6,
-          "passed": 6,
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -4966,7 +5586,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5001,7 +5622,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5038,7 +5660,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 6,
@@ -5072,7 +5695,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
@@ -5105,7 +5729,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5139,7 +5764,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
@@ -5175,7 +5801,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
@@ -5208,7 +5835,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5246,7 +5874,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5300,7 +5929,12 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
+      "near_miss_in_certification_tasks": [
+        "agent_loop"
+      ],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5346,7 +5980,10 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 6,
@@ -5383,7 +6020,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5421,7 +6059,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 6,
@@ -5456,7 +6095,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5492,7 +6132,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5529,7 +6170,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5562,7 +6204,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5595,7 +6238,8 @@
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -5630,7 +6274,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,

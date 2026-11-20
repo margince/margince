@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 // Stamp is what one verdict measured. Each part is a digest, or the judge
@@ -119,11 +120,11 @@ func loadInputs(root string) (inputs, error) {
 	}
 	harness := sha256.New()
 	for _, name := range harnessFiles {
-		body, err := os.ReadFile(filepath.Join(root, name))
+		body, err := os.ReadFile(filepath.Join(root, name)) // #nosec G304 -- a fixed harness file under the root
 		if err != nil {
 			return inputs{}, err
 		}
-		fmt.Fprintf(harness, "%s\x00%d\x00", name, len(body))
+		harness.Write([]byte(name + "\x00" + strconv.Itoa(len(body)) + "\x00"))
 		harness.Write(body)
 	}
 	in.harness = short(harness.Sum(nil))
@@ -221,8 +222,9 @@ func short(sum []byte) string {
 	return hex.EncodeToString(sum)[:16]
 }
 
+//craft:ignore naked-any it decodes several committed file shapes, each a caller's own struct
 func readJSON(path string, into any) error {
-	body, err := os.ReadFile(path)
+	body, err := os.ReadFile(path) // #nosec G304 -- a committed file of this repository, never a request's
 	if err != nil {
 		return err
 	}
@@ -232,7 +234,7 @@ func readJSON(path string, into any) error {
 	return nil
 }
 
-func marshalIndent(value any) ([]byte, error) {
+func marshalIndent(value map[string]Stamp) ([]byte, error) {
 	body, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return nil, err

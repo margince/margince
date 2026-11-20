@@ -34,14 +34,14 @@ A job that passes is **done reliably**. An assistant that does every job we trie
 A job checks a try in up to four ways. The try passes only when every check the job names holds.
 
 1. **What it called.** A job names the tools a right answer must call, and the calls it must not make.
-   A call counts only when Margince took it, unless the test company refuses it on purpose, as it
-   refuses a send.
+   A call counts only when it worked. The test company cannot send mail, so there a refused send
+   counts too.
 2. **What it said.** The final answer must name the facts of the job. Nothing the assistant wrote on
    the way may claim what did not happen.
 3. **What it left behind.** After the try, the test reads the records back and compares them with the
    state the job names.
 4. **What a reader would judge.** A second model reads the final answer and says yes or no to each
-   point a rule cannot check. When it says no, it is asked twice more, and the majority decides.
+   point a rule cannot check. When it says no, it is asked two more times, and two answers of three decide.
 
 A mail the user did not ask to send is a call the job refuses. "Sent", for a mail that could not go, is
 a claim the job refuses. A company whose stage did not change as asked is a state the job names.

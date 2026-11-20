@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package mcpe2e stamps the verdicts of the MCP end-to-end lane (e2e/llm) with
-// what they measured, and says which committed verdicts no longer describe the
-// product. The lane writes the stamp, the coverage page and `make
-// e2e-llm-report` read it, and all three compute it here, from committed files
-// only, so a pull request can be told for free which verdicts it makes stale.
+// what they measured, and says which verdicts no longer describe the product.
+// The lane, the coverage page and `make e2e-llm-report` all compute the stamp
+// here. It reads committed files only, so a pull request learns for free which
+// verdicts it makes stale.
 package mcpe2e
 
 import (
@@ -17,9 +17,9 @@ import (
 	"strings"
 )
 
-// scenarioKey is one `key:` line of a scenario file. The files are a small
-// subset of YAML that a standard decoder refuses (a double-quoted `\b` is an
-// unknown escape there), so they are read the way e2e/llm/check.py reads them.
+// scenarioKey is one `key:` line of a scenario file. A standard YAML decoder
+// refuses these files: a double-quoted `\b` is an unknown escape there. So they
+// are read the way e2e/llm/check.py reads them.
 var scenarioKey = regexp.MustCompile(`^([A-Za-z_][A-Za-z0-9_]*):(.*)$`)
 
 // scenario is what the stamp needs of one file: its name, whether a model
@@ -31,8 +31,8 @@ type scenario struct {
 	body   []byte
 }
 
-// toolKeys are the checks whose entries name a tool: how check.py splits an
-// entry into its any-of group, and what ends the tool's name inside one. A
+// toolKeys are the checks whose entries name a tool. Each says how check.py
+// splits an entry into its any-of group, and what ends the tool's name. A
 // must_not_call_with entry is one regex, where `|` already means "or".
 var toolKeys = map[string]struct{ anyOf, nameEnd string }{
 	"must_call":           {"|", ""},
@@ -44,58 +44,67 @@ var toolKeys = map[string]struct{ anyOf, nameEnd string }{
 }
 
 func readScenario(path string) (scenario, error) {
-	body, err := os.ReadFile(path)
+	body, err := os.ReadFile(path) // #nosec G304 -- a committed scenario file, never a request's
 	if err != nil {
 		return scenario{}, err
 	}
-	lists := map[string][]string{}
-	sc := scenario{body: body}
-	var current string
-	inBlock := false
+	reader := scenarioReader{lists: map[string][]string{}}
 	lines := bufio.NewScanner(bytes.NewReader(body))
 	lines.Buffer(make([]byte, 0, 64*1024), len(body)+1)
 	for lines.Scan() {
-		line := strings.TrimRight(lines.Text(), " \t")
-		if inBlock && (line == "" || strings.HasPrefix(line, "  ")) {
-			continue
-		}
-		inBlock = false
-		if strings.TrimSpace(line) == "" || strings.HasPrefix(strings.TrimSpace(line), "#") {
-			continue
-		}
-		if item, ok := strings.CutPrefix(line, "  - "); ok && current != "" {
-			lists[current] = append(lists[current], unquote(strings.TrimSpace(item)))
-			continue
-		}
-		key := scenarioKey.FindStringSubmatch(line)
-		if key == nil {
-			current = ""
-			continue
-		}
-		current = key[1]
-		value := strings.TrimSpace(key[2])
-		switch {
-		case value == "|":
-			inBlock = true
-		case current == "name":
-			sc.name = unquote(value)
-		case strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]"):
-			for item := range strings.SplitSeq(strings.Trim(value, "[]"), ",") {
-				if trimmed := strings.TrimSpace(item); trimmed != "" {
-					lists[current] = append(lists[current], unquote(trimmed))
-				}
-			}
-		}
+		reader.line(strings.TrimRight(lines.Text(), " \t"))
 	}
 	if err := lines.Err(); err != nil {
 		return scenario{}, fmt.Errorf("%s: %w", path, err)
 	}
-	if sc.name == "" {
+	if reader.name == "" {
 		return scenario{}, fmt.Errorf("%s names no scenario", path)
 	}
-	sc.judged = len(lists["judge"]) > 0
-	sc.tools = scenarioTools(lists)
-	return sc, nil
+	return scenario{
+		name: reader.name, body: body, judged: len(reader.lists["judge"]) > 0,
+		tools: scenarioTools(reader.lists),
+	}, nil
+}
+
+// scenarioReader is the state of one pass over a scenario file: the key a
+// list item belongs to, and whether a `|` block is still running.
+type scenarioReader struct {
+	name, current string
+	inBlock       bool
+	lists         map[string][]string
+}
+
+func (r *scenarioReader) line(line string) {
+	if r.inBlock && (line == "" || strings.HasPrefix(line, "  ")) {
+		return
+	}
+	r.inBlock = false
+	if trimmed := strings.TrimSpace(line); trimmed == "" || strings.HasPrefix(trimmed, "#") {
+		return
+	}
+	if item, ok := strings.CutPrefix(line, "  - "); ok && r.current != "" {
+		r.lists[r.current] = append(r.lists[r.current], unquote(strings.TrimSpace(item)))
+		return
+	}
+	key := scenarioKey.FindStringSubmatch(line)
+	if key == nil {
+		r.current = ""
+		return
+	}
+	r.current = key[1]
+	value := strings.TrimSpace(key[2])
+	switch {
+	case value == "|":
+		r.inBlock = true
+	case r.current == "name":
+		r.name = unquote(value)
+	case strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]"):
+		for item := range strings.SplitSeq(strings.Trim(value, "[]"), ",") {
+			if trimmed := strings.TrimSpace(item); trimmed != "" {
+				r.lists[r.current] = append(r.lists[r.current], unquote(trimmed))
+			}
+		}
+	}
 }
 
 func scenarioTools(lists map[string][]string) []string {

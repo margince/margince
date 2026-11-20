@@ -25,20 +25,26 @@ type RecordedStamp struct {
 	RanAt  string `json:"ran_at"`
 }
 
-// Verdict is one committed verdict file, as far as its age is concerned.
+// Verdict is one committed verdict file: how it went, how it was measured,
+// and what it measured. Folder is the model folder it is filed under.
 type Verdict struct {
-	Tree     string
-	Folder   string
-	Scenario string
-	Stamp    *RecordedStamp
+	Tree       string         `json:"-"`
+	Folder     string         `json:"-"`
+	Scenario   string         `json:"scenario"`
+	Passed     int            `json:"passed"`
+	Runs       int            `json:"runs"`
+	PassAt     int            `json:"pass_at"`
+	Driver     string         `json:"driver"`
+	Search     string         `json:"search"`
+	SelfJudged bool           `json:"self_judged"`
+	Stamp      *RecordedStamp `json:"stamp"`
 }
 
 // Unstamped is the reason a verdict made before the stamp existed gives.
 const Unstamped = "no stamp"
 
-// Recheck names why a verdict no longer describes the product: the parts that
-// moved, "no stamp" for a verdict that cannot say what it measured, or "no
-// scenario" for one whose scenario is gone. Empty means it is current.
+// Recheck names why a verdict no longer describes the product. It answers the
+// parts that moved, "no stamp" or "no scenario"; empty means it is current.
 func Recheck(recorded *RecordedStamp, current Stamp, scenarioExists bool) []string {
 	switch {
 	case !scenarioExists:
@@ -54,22 +60,55 @@ func Recheck(recorded *RecordedStamp, current Stamp, scenarioExists bool) []stri
 func ReadVerdicts(root string) ([]Verdict, error) {
 	var out []Verdict
 	for _, tree := range VerdictTrees {
-		files, err := filepath.Glob(filepath.Join(root, tree, "*", "*.json"))
+		verdicts, err := ReadTree(filepath.Join(root, tree))
 		if err != nil {
 			return nil, err
 		}
+		out = append(out, verdicts...)
+	}
+	return out, nil
+}
+
+// ReadTree reads one verdict tree, one folder per model; a missing tree holds
+// no verdict yet. A nested folder means a model id carried a '/'. A folder that
+// mixes lexical verdicts with others would publish two experiments as one.
+// Both are refused.
+func ReadTree(dir string) ([]Verdict, error) {
+	models, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var out []Verdict
+	for _, model := range models {
+		if !model.IsDir() {
+			continue
+		}
+		files, err := os.ReadDir(filepath.Join(dir, model.Name()))
+		if err != nil {
+			return nil, err
+		}
+		searches := map[string]bool{}
 		for _, file := range files {
-			var v struct {
-				Scenario string         `json:"scenario"`
-				Stamp    *RecordedStamp `json:"stamp"`
+			if file.IsDir() {
+				return nil, fmt.Errorf("%s/%s: a verdict folder may not nest; the model id carried a '/', "+
+					"so file it under E2E_LLM_FOLDER", model.Name(), file.Name())
 			}
-			if err := readJSON(file, &v); err != nil {
+			if !strings.HasSuffix(file.Name(), ".json") {
+				continue
+			}
+			v := Verdict{Tree: filepath.Base(dir), Folder: model.Name()}
+			if err := readJSON(filepath.Join(dir, model.Name(), file.Name()), &v); err != nil {
 				return nil, err
 			}
-			out = append(out, Verdict{
-				Tree: filepath.Base(tree), Folder: filepath.Base(filepath.Dir(file)),
-				Scenario: v.Scenario, Stamp: v.Stamp,
-			})
+			searches[v.Search] = true
+			out = append(out, v)
+		}
+		if searches["lexical"] && len(searches) > 1 {
+			return nil, fmt.Errorf("%s mixes lexical verdicts with others; a lexical run files under "+
+				"E2E_LLM_VERDICTS, never in the records tree", model.Name())
 		}
 	}
 	return out, nil
@@ -81,7 +120,7 @@ type Line struct {
 	Why []string
 }
 
-// Report is every committed verdict with what makes it stale, if anything.
+// Report pairs each committed verdict with what makes it stale, if anything.
 func Report(root string) ([]Line, error) {
 	current, err := CurrentStamps(root)
 	if err != nil {
@@ -120,7 +159,7 @@ func NewlyStale(baseRoot, headRoot string) ([]Line, error) {
 	return out, nil
 }
 
-// Summarise prints a report a person reads: per folder, how many verdicts are
+// Summarise renders the report for reading: per folder, how many verdicts are
 // current, then each stale one and why.
 func Summarise(lines []Line) string {
 	type tally struct{ current, stale int }
@@ -164,7 +203,7 @@ func WriteStamps(root, path string) error {
 	return writeJSON(path, stamps)
 }
 
-func writeJSON(path string, value any) error {
+func writeJSON(path string, value map[string]Stamp) error {
 	body, err := marshalIndent(value)
 	if err != nil {
 		return err

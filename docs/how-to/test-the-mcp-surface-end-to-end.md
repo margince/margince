@@ -60,7 +60,7 @@ does not name stops the lane before the first run.
 The judge (the model that decides the `judge:` criteria of each scenario) is
 `claude-haiku-5-5` (the judge's routes in `e2e/llm/candidates.json`), for every candidate. `E2E_LLM_JUDGE_VIA=cli|api|openrouter` chooses how to
 reach it. `cli` (the default) needs the `claude` CLI and a Claude credential. It reads only the
-final answer. When it says no, it is asked twice more, and the majority decides. A verdict for a
+final answer. When it says no, it is asked two more times, and two answers of three decide. A verdict for a
 candidate of the judge's own family says `self_judged: true`, and the coverage page says so.
 
 ## 2. Give the stack a search that works
@@ -85,7 +85,7 @@ E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml
 The lane sets the binding of the stack through `PUT /v1/ai/routing`, and starts it again. It waits
 until search answers by meaning before it takes a snapshot of the test data.
 `E2E_LLM_ALLOW_LEXICAL=1` runs on a degraded stack all the same, and files every
-verdict with `"search": "lexical"`. It needs `E2E_LLM_VERDICTS=<dir>`, because a lexical verdict
+verdict with `"search": "lexical"`. It needs `E2E_LLM_VERDICTS=<dir>`, because such a verdict
 is never filed in the records tree.
 
 ## 3. Run one scenario first
@@ -174,14 +174,14 @@ A harness stop prints `HARNESS:` and the reason, and keeps the transcript. The
 lane stops on it, and does not score. Without the stop, a refused key, or a tool that the model
 could not see, would read as a product failure.
 
-The checks that ask for something read the final answer and the calls that succeeded:
+The checks that ask for something read the final answer and the calls that worked:
 `must_mention`, the judge, `must_call`, `must_call_with` and `must_call_matching`. A sentence the
-model wrote on the way, or a call the server refused, does not count. A send the lane's stack
-refuses by design is the exception: `counts_when_refused:` lists the tools whose refused call still
-counts, because there the call is the outcome. The checks that forbid read
-every word and every attempt: `must_not_mention` and `must_not_call_with`. `check.py --lint` runs
-before the stack boots. It refuses an unknown key, a line it cannot place, a pattern that does not
-compile and a value of the wrong shape.
+model wrote on the way, or a call the server refused, does not count. A send that the lane's stack
+refuses by design still counts when the case lists its tool under `counts_when_refused:`.
+
+The checks that rule something out read every word and every call: `must_not_mention` and
+`must_not_call_with`. `check.py --lint` runs before the stack boots. It refuses an unknown key, a
+line it cannot place, a pattern that does not compile and a value of the wrong shape.
 
 A scenario that fails lists what failed to hold. That can be a tool it never called,
 a fact it never said, or something it must not say. It can be a judged criterion, with the
@@ -196,106 +196,10 @@ must_end_with:
   - company "Emsland Ventilbau GmbH" lifecycle=prospect
 ```
 
-After each run, `e2e/llm/endstate.py` finds the record by its type and its whole name, as the app shows it
-(every page of `list_records`). It does this before the lane puts back the snapshot.
-
-It reads the field with `read_record`, through the passport of the lane, and compares. A wrong value, a
-missing record, or two records with one name fail the run, such as
-`ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect`.
-A read that cannot be made (an error, a field the read does not carry, or a reader that fails) is a
-harness stop. The outcome goes at the end of the transcript as an `end_state` event. A `company`,
-`contact`, `deal`, `deal_room`, `lead` or `project` can be read by name; another type is one line in
-`endstate.py`. A field that `read_record` leaves out while it is empty, such as a contact's `title`,
-reads as `(empty)` and fails the run.
-
-The reader calls only the tools the server lists, and a router with its view. A call by the name a
-router sends work on to is logged as a call to a tool that is not listed. Each call is made once per
-read, because the server limits how often a passport calls. If the run called `commit_import`, the
-reader first waits up to 90 seconds for that import to stop running. An import that is still running
-after that is a harness stop.
-
-Five more names read something other than a stored field. `records=N` counts
-the records of that type with that whole name. `owner=` and `stage=` compare
-names, not ids, so they hold on any seed. `tagged=` and `untagged=` read the
-words that `read_tags` lists on the record, and a list the seat cannot see is
-a harness stop. `tag "Name" records=N` counts the contacts, companies, deals
-and leads that carry the word. A lead made a contact, or disqualified, leaves
-`list_records`, so an entry tells the two apart with `records` on the lead and
-on the contact.
-
-`own_draft=` holds when the user's own draft on the record has that subject; an
-agent's draft there fails it. `automation "Name"` reads a rule, with `owner=` as
-a name or `(none)`. `me "email"` reads the lane's own seat through `whoami`.
-
-`e2e/llm/endstate_dry.py --mcp-url URL --token-env NAME` reads every scenario
-with `must_end_with` against a seeded stack, with no model. Nothing has changed
-the seed yet, so each scenario exits 0 or 4. An exit of 3 is a bug in the
-reader, and the script then exits 1.
-
-An entry names an activity by its whole subject on a project, a company or a
-contact:
-
-```yaml
-must_end_with:
-  - activity "Vertragsunterzeichnung Leitstand Goslar" on project "Leitstand Goslar" documents=1
-  - activity "Re: Lieferverzug Kolbenpumpe KP-300" on company "Rhön Hydraulik AG" records=2
-```
-
-The reader finds the parent by name. On a project it finds the activity on the timeline in
-`read_project` with `view: overview`. A timeline that read cuts short is a harness stop. On a
-company or a contact it reads every page of `find_records` with `engine: list`, filtered to
-that record. `records=N` counts the activities with that subject there, so `records=0` says a
-mail left the wrong record.
-
-More names read a panel, and not a stored field:
-
-| Entry | Holds when |
-|---|---|
-| `deal "Name" pipeline=Sales` | the deal is in the pipeline of that name |
-| `deal "Name" decision=*cfo*` | one open sales decision on the deal matches the glob |
-| `company "Name" signal=*fund*` | a signal on the company has a summary that matches the glob |
-| `project "Name" health=at_risk` | the project's judged health is that state; `(none)` when nobody judged it |
-| `contact "Name" consent=marketing_email:granted` | that consent purpose has that state |
-| `contact "Name" stop=subject_request` | the contact has a stop of that kind |
-| `contact "Name" data_subject_request=access` | one open request of that kind names the contact, by id or by one of its addresses |
-| `list "Name" member=Jens Falk` | the record of that name is on the list; `nonmember=` is the reverse |
-| `fx_rate "USD" rate=0.92` | the newest rate from that currency is that number |
-
-A `me` entry reads more of the seat than `whoami` gives. `working_days=1,2,3,4` and
-`working_hours=09:00-17:00` read the seat's own hours. `unread_notices=N` counts its unread
-notices. `capture_excluded=<domain>` holds when the seat's capture excludes that domain.
-`voice=<glob>` matches the seat's own Voice DNA preferences. `forecast_call=<minor> <currency>`
-reads the seat's newest forecast call for this quarter. A glob matches whatever the case of the
-letters.
-
-Two names in that place read the record's files, and not a field:
-
-```yaml
-must_end_with:
-  - company "Aachener Metallwerke GmbH" document=<sha256> *.md
-  - company "Aachener Metallwerke GmbH" documents=1
-```
-
-`document` holds when one file on the Documents tab, and only one, has that checksum,
-under a name that the glob matches. `documents` holds when the tab has that
-many files. A count catches a refused file that comes back inside an archive, which has
-new bytes and a new name. Both read every page of `list_documents`.
-
-```yaml
-must_end_with:
-  - activity "Vertragsunterzeichnung Leitstand Goslar" on project "Leitstand Goslar" document_contract=<sha256> Servicevertrag Leitstand Goslar
-```
-
-A third name, `document_contract`, holds when the one file with that checksum is filed against
-the contract of that whole title. The reader finds that contract in what
-`read_project` lists for the entry's project. An agent never writes a contract, so a project without
-one contract of that title is a harness stop.
-
-A note that copies a file's text never shows in the answer. So
-`must_not_call_with` reads each call itself. Each entry is `tool~regex`,
-and it fails the run when that regex matches the arguments of a call to that
-tool, as one JSON text. `must_call_matching` is the other direction: in the same
-`tool~regex` form, it fails the run when no call to that tool matches.
+After each run, `e2e/llm/endstate.py` reads the records back before the lane puts back the snapshot.
+A wrong value, a missing record, or two records with one name fail the run. A read that cannot be made
+is a harness stop. Every form an entry can take is in
+[mcp-e2e-end-state.md](../reference/mcp-e2e-end-state.md).
 
 ## 6. Find the cause of a failure from the transcript
 
@@ -366,18 +270,22 @@ verdicts you want to publish, then generate the page again:
 cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished -update-mcp-tool-coverage
 ```
 
-Each verdict carries a `stamp`: a digest of the scenario file, of the published entries of the
-tools its checks name (`docs/reference/mcp-info.json`, a verb by its router), of the server
-instructions and of the grading harness, plus the judge model, the commit and the time. Before it
-runs, the lane checks that `mcp-info.json` is what the tree serves. A verdict whose stamp no longer
-matches the tree, or that has none, is stale: the page marks it *re-check pending*, and
-`make e2e-llm-report` names what moved. A pull request that makes a verdict stale gets a comment
-that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you do not run them again.
+Each verdict carries a `stamp` of what it measured. It holds a short hash of the scenario file and
+of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). It also holds
+a hash of the server instructions and of the grading harness, the judge model, the commit and the
+time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
 
-The weekly scheduled run sweeps every case in shards and opens a pull request with its verdicts only
-when every case has a fresh one from a stack whose search ranks by meaning. The maintainer that the
-`RECORDS_OWNER` repository variable names owns that pull request, and runs the lane by hand when the
-weekly run cannot. `make check` fails while the page and the committed verdicts do not agree. Delete a
+A verdict whose stamp no longer matches the tree, or that has none, is stale. The page marks it
+*re-check pending*, and `make e2e-llm-report` names what moved. A pull request that makes a verdict
+stale gets a comment that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you
+do not run them again.
+
+The weekly scheduled run sweeps every case in parts, side by side. It opens a pull request with its
+verdicts only when every case has a new one from a stack whose search ranks by meaning. The
+`RECORDS_OWNER` repository variable names who owns that pull request. That colleague runs the lane
+by hand when the weekly run cannot.
+
+`make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a run to try something.
 Do not leave it next to the others without a commit.
 

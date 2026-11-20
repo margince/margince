@@ -33,6 +33,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/compose/mcpe2e"
 )
 
 var updateMCPToolCoverage = flag.Bool("update-mcp-tool-coverage", false,
@@ -83,12 +85,10 @@ type toolCoverageRow struct {
 	OneOfASet bool `json:"required_only_as_one_of_a_set"`
 	// GradedBy are the certification tasks whose corpus expects this tool as the
 	// answer, and NearMissIn those that name it only as a wrong reach. That
-	// lane grades tool SELECTION — which tool a goal should reach for, and
-	// which plausible neighbour it must avoid — and the use-case lane cannot
-	// express it: check.py sees that a name appeared, never whether it was the
-	// right first reach. So a tool no case REQUIRES may still be graded, and a
-	// page that reported the two as one silence would name work undone that is
-	// done, on a different question.
+	// lane grades tool selection: which tool a goal should reach for. The
+	// use-case lane cannot express it, because check.py sees that a name
+	// appeared, never whether it was the right first reach. So a tool no case
+	// requires may still be graded elsewhere, on a different question.
 	GradedBy   []string `json:"graded_by_certification_tasks"`
 	NearMissIn []string `json:"near_miss_in_certification_tasks"`
 	// MeasuredByModel is what the lane saw across the cases that require this
@@ -928,4 +928,56 @@ func syncMCPToolCoverage(t *testing.T, path string, want []byte, command string)
 	t.Errorf("%s is stale — it no longer matches the served surface and the use-case lane.\n"+
 		"Regenerate with: %s\nand commit the result with the change that moved it.\n%s",
 		path, command, firstMCPInfoDifference(string(got), string(want)))
+}
+
+// verdictKey is what a committed verdict is filed under. The model is half of
+// it: a pass rate belongs to the model that produced it.
+type verdictKey struct {
+	model    string
+	scenario string
+}
+
+// readE2ELLMVerdicts reads the committed verdicts of one tree, keyed by model
+// and scenario. Keyed on the scenario alone, the last model folder read would
+// win, and one model's pass rate would print beside another's.
+func readE2ELLMVerdicts(dir string) (map[verdictKey]mcpe2e.Verdict, error) {
+	verdicts, err := mcpe2e.ReadTree(dir)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[verdictKey]mcpe2e.Verdict, len(verdicts))
+	for _, v := range verdicts {
+		out[verdictKey{model: v.Folder, scenario: v.Scenario}] = v
+	}
+	return out, nil
+}
+
+// runsFor collects each model's result on one scenario, ordered by model
+// name. A verdict whose stamp no longer matches the scenario's current one
+// carries why, so the page says it waits for a re-check.
+func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string, current map[string]mcpe2e.Stamp) []caseModelRun {
+	var out []caseModelRun
+	for key, v := range verdicts {
+		if key.scenario != scenario {
+			continue
+		}
+		out = append(out, caseModelRun{
+			Model: v.Folder, Runs: v.Runs, Passed: v.Passed, PassAt: v.PassAt,
+			Held:   v.PassAt > 0 && v.Passed >= v.PassAt,
+			Driver: v.Driver, Search: v.Search, SelfJudged: v.SelfJudged,
+			Recheck: mcpe2e.Recheck(v.Stamp, current[scenario], true),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
+	return out
+}
+
+// currentStamps is what every scenario would be stamped with on this tree. It
+// is read only when a verdict needs comparing, because a planted scenario
+// folder has none of the committed files a stamp is made from.
+func currentStamps(scenarioDir string, verdicts map[verdictKey]mcpe2e.Verdict) (map[string]mcpe2e.Stamp, error) {
+	if len(verdicts) == 0 {
+		return map[string]mcpe2e.Stamp{}, nil
+	}
+	return mcpe2e.CurrentStamps(filepath.Join(scenarioDir, "..", "..", ".."))
 }
