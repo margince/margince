@@ -285,7 +285,9 @@ func TestListAndDisconnectNotImplementedWhenUnwired(t *testing.T) {
 		call func(http.ResponseWriter, *http.Request)
 	}{
 		{"list", h.ListConnectors},
-		{"disconnect", func(w http.ResponseWriter, r *http.Request) { h.DisconnectConnector(w, r, "gmail") }},
+		{"disconnect", func(w http.ResponseWriter, r *http.Request) {
+			h.DisconnectConnector(w, r, "gmail", crmcontracts.DisconnectConnectorParams{})
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()

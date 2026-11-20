@@ -27,9 +27,7 @@ func TestLifecycleProposalsFollowTheOwnersDefaultAndOffChoice(t *testing.T) {
 			prepareLifecycleOwner(t, e, company)
 			signal := seedOpenContractEnded(t, e, company)
 			if disabled {
-				if _, err := approvals.NewService(e.DB()).SetAutoApply(e.As(e.Rep1, nil, integration.AdminPerms), lifecycleProposalKind, false); err != nil {
-					t.Fatalf("switching lifecycle changes off: %v", err)
-				}
+				integration.TurnKindOff(e.As(e.Rep1, nil, integration.AdminPerms), t, approvals.NewService(e.DB()), lifecycleProposalKind)
 			}
 			if proposed := proposePass(t, e); proposed != 1 {
 				t.Fatalf("proposed %d changes, want one", proposed)

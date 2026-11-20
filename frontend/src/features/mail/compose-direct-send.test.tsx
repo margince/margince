@@ -4,12 +4,12 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { entityTimelineKeys } from "../../lib/activitykeys";
-import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
   pressSend,
   problemResponse,
@@ -17,6 +17,7 @@ import {
   stubRoutes,
 } from "./compose.testkit";
 import { draftKey } from "./composesaveddraftcalls";
+import { ComposeWindow } from "./composewindow";
 
 // A message sent past its refusal as a recorded exception is a sent message.
 // The composer closes the way a normal send closes it, so nothing on screen
@@ -34,6 +35,8 @@ const REVIEW = {
   },
 };
 
+beforeEach(installComposeClock);
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -49,6 +52,7 @@ describe("sending with a recorded exception", () => {
     "consent_withdrawn",
     "opted_out_after_request",
   ])("sends one message with an acknowledged reason for %s", async (reason) => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const saved = {
       id: "md-1",
       anchor_type: "contact",
@@ -90,6 +94,8 @@ describe("sending with a recorded exception", () => {
               address: "anna@example.test",
               reason_code: reason,
               can_be_overruled: true,
+              country: "vn",
+              country_source: "sender_override",
             },
           ],
         }),
@@ -101,7 +107,7 @@ describe("sending with a recorded exception", () => {
     function Composer() {
       const [open, setOpen] = useState(true);
       return (
-        <ComposeModal
+        <ComposeWindow
           entityType="contact"
           entityId="c-1"
           contactId="c-1"
@@ -123,20 +129,25 @@ describe("sending with a recorded exception", () => {
     const timelineKeys = entityTimelineKeys("contact", "c-1");
     for (const key of timelineKeys) queryClient.setQueryData(key, []);
     await screen.findByText("Saved draft restored");
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", {
         name: "Send with a recorded exception",
       }),
     );
-    await userEvent.click(await screen.findByRole("checkbox"));
-    await userEvent.type(
+    expect(
+      await screen.findByText(
+        "Country: Vietnam, set by the sender for this message",
+      ),
+    ).toBeTruthy();
+    await user.click(await screen.findByRole("checkbox"));
+    await user.type(
       screen.getByLabelText("Explanation"),
       "They asked for it on the phone.",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Send email" }));
+    await user.click(screen.getByRole("button", { name: "Send email" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(screen.queryByRole("dialog")).toBeNull();

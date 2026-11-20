@@ -76,6 +76,10 @@ Use supplier, partner or provider only when the source establishes that specific
 Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
 A relationship the source does state still holds when the client it relays is unnamed: a
 transcript provider passing on an unidentified client’s need is provider, not unknown.
+For new_opportunity, request_kind is explicit_request only when the buyer asks us outright for a
+quotation, proposal, offer, RFI, RFQ or vendor brief; any other need is need. budget_quote copies
+the cited message's words that state their budget, or "". decision_date is the day they say they
+decide or need it by, or "". For other kinds all three are "".
 A meeting invitation alone establishes no buying intent. Neither does a pitch: a supplier offering
 us its product or price, when no one states a need for it, is no event at all.
 Every field is always present. A text field that does not apply to the kind is "", recipient_refs is [],
@@ -137,7 +141,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			strings.Join(recorded, ", "))
 	}
 	fmt.Fprintf(&prompt,
-		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "restated_message_id", "restated_quote", "due_date", "promiser_ref", "recipient_refs", "buyer_ref", "commercial_role", "lifecycle_scope", "workstream", "commitment", "confidence" } ] } — `+
+		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "restated_message_id", "restated_quote", "due_date", "promiser_ref", "recipient_refs", "buyer_ref", "commercial_role", "lifecycle_scope", "workstream", "commitment", "confidence", "request_kind", "budget_quote", "decision_date" } ] } — `+
 			`at most %d, and an empty list when the conversation states none. `+
 			`"summary" is one plain sentence a colleague could act on. `+
 			`Only "summary" follows the output language: quote, restated_quote, workstream, condition and deadline_quote `+

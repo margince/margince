@@ -148,6 +148,10 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 	if !row.ReviewID.IsZero() {
 		review := openapi_types.UUID(row.ReviewID)
 		out.ReviewId = &review
+		if len(row.ReviewActions) > 0 {
+			actions := row.ReviewActions
+			out.ReviewActions = &actions
+		}
 	}
 	if cc := emailList(row.Cc); len(cc) > 0 {
 		out.Cc = &cc
@@ -195,6 +199,7 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 	if evidence, named := evidenceOnWire(row.Evidence); named {
 		out.Evidence = &evidence
 	}
+	out.RecipientCountries = countriesOnWire(row.Evidence.RecipientCountries)
 	if row.ActivityID != (ids.UUID{}) {
 		activityID := openapi_types.UUID(row.ActivityID)
 		out.ActivityId = &activityID

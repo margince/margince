@@ -26,6 +26,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
 
+// weekValuedAt is the instant a week is valued at: the last instant inside it.
+// The window's end is the exclusive midnight that starts the next week.
+// A rate effective that Monday must not price a week that ended before it.
+// Postgres keeps microseconds, so one microsecond is the smallest step.
+func weekValuedAt(end time.Time) time.Time {
+	return end.Add(-time.Microsecond)
+}
+
 // countWeekMoney sums what the week added to and took out of the pipeline, in
 // the installation's base currency — or reports that it could not.
 //
@@ -70,7 +78,7 @@ func countWeekMoney(
 	// Rates as of the week's END, frozen into the figure written below. The
 	// lookup is per-read by design — a rate is appended forward, and a
 	// longer-lived cache would price this week at a rate corrected since.
-	rates := deals.NewFXRates(base, end)
+	rates := deals.NewFXRates(base, weekValuedAt(end))
 	var created int64
 	for _, row := range opened {
 		rate, ok, err := rates.For(ctx, tx, row.currency)
@@ -192,7 +200,7 @@ func closedInWeek(
 	// the mask: a withheld number reappears whole in a total, and won-and-lost
 	// is the total a review is read for.
 	amountSQL, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
-		deals.BaseValueSQL(fmt.Sprintf("$%d", arg(end)), fmt.Sprintf("$%d", arg(base)), "d"), arg)
+		deals.BaseValueSQL(fmt.Sprintf("$%d", arg(weekValuedAt(end))), fmt.Sprintf("$%d", arg(base)), "d"), arg)
 	if err != nil {
 		return nil, nil, err
 	}

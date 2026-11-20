@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -36,6 +37,9 @@ type Envelope struct {
 	// differently each time, and two consecutive drafts to one contact in two
 	// registers read as a machine that does not know who it is writing to.
 	Register string `json:"register,omitempty"`
+	// GreetingRegister is formal or familiar when a rep set it on the
+	// addressee, empty otherwise. Unlike Register it holds in every language.
+	GreetingRegister string `json:"greeting_register,omitempty"`
 	// SilenceDays is whole days since the last message either way, empty at
 	// band none where there is no last message to count from.
 	SilenceDays string `json:"silence_days,omitempty"`
@@ -147,17 +151,22 @@ func (e Envelope) Zone() *time.Location {
 	return e.zone
 }
 
-// Greeting renders the opening line in this envelope's language, band and
-// register. A Sie draft greets by full name where "Herr" or "Frau" would go,
-// because no gender is ever known; without a surname, or in any other register
-// or language, it is the familiar Greeting. Both names are folded to one line
-// first, so a stored name cannot open a paragraph of its own.
-func (e Envelope) Greeting(firstName, lastName string) string {
-	firstName, lastName = NameLine(firstName), NameLine(lastName)
-	if e.Lang() != textlang.German || e.Register != string(textlang.RegisterSie) || lastName == "" {
-		return Greeting(e.Lang(), e.Band(), firstName)
+// Formal says whether this draft opens formally: the rep's stored register in
+// any language, else the Sie a German thread reads as.
+func (e Envelope) Formal() bool {
+	if greetingregister.Register(e.GreetingRegister) == greetingregister.Formal {
+		return true
 	}
-	return fill(formalGermanGreeting, NameLine(firstName+" "+lastName))
+	return e.GreetingRegister == "" && e.Lang() == textlang.German && e.Register == string(textlang.RegisterSie)
+}
+
+// Greeting renders the opening line in this envelope's language, band and
+// register. A formal draft names the surname beside the first name, because no
+// gender is ever known; without a surname it is the familiar greeting. Both
+// names are folded to one line first, so a stored name cannot open a paragraph
+// of its own.
+func (e Envelope) Greeting(firstName, lastName string) string {
+	return OpeningLine(e.Lang(), e.Band(), e.Formal(), firstName, lastName)
 }
 
 // GreetingTo is the opening line of a message to the recipient and to others
@@ -169,9 +178,6 @@ func (e Envelope) GreetingTo(firstName, lastName string, others int) string {
 	}
 	return e.Greeting(firstName, lastName)
 }
-
-// formalGermanGreeting is the Sie opening the shared drafting rules prescribe.
-const formalGermanGreeting = "Guten Tag %s,"
 
 // Band reads the envelope's conversation state back as a typed value.
 func (e Envelope) Band() convstate.Band { return convstate.Band(e.ConversationState) }

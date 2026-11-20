@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/legalreviewrecords"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -61,7 +62,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		WithSuggestionEffects(dealSuggestionEffects{}).
 		WithSettings(StoredConfig(pool)).
 		WithLocks(loadedLocks).
-		WithLegalReviewDocuments(legalReviewDocuments{store: activities.NewStore(InstallationDB(pool))})
+		WithLegalReviewDocuments(legalReviewDocuments{store: activities.NewStore(InstallationDB(pool))}).
+		WithLegalReviewRecords(legalreviewrecords.New(contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), activities.NewStore(InstallationDB(pool))))
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
 	// serves the already-bound singleton company.
@@ -85,6 +87,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames()).
 		WithInstallationDescribed(installationDescribed(anchor)).
 		WithInstallationBrand(installationBrand(anchor)).
+		WithInlineSendReview(activities.InlineSendReviewFor(StoredConfig(pool))).
 		WithEntityMembership(anchor.AssignLegalEntityMemberTx)
 
 	// The transport directory, loaded on the REAL assembly path rather than in

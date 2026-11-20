@@ -467,7 +467,7 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     expect(await screen.findByText("Moved to Proposal")).toBeTruthy();
   });
 
-  it("says the probability the new stage set, in place of the bare move", async () => {
+  it("says the probability the new stage set beside the move", async () => {
     const d = deal({ id: "x", version: 7, stage_id: "s1" });
     vi.stubGlobal(
       "fetch",
@@ -486,9 +486,8 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     await user.click(await screen.findByRole("button", { name: "Proposal" }));
 
     expect(
-      await screen.findByText("Probability set to 60% by the stage Proposal"),
+      await screen.findByText("Moved to Proposal · probability now 60%"),
     ).toBeTruthy();
-    expect(screen.queryByText("Moved to Proposal")).toBeNull();
   });
 
   // The deal's tags ride in the context rail, beside the seats, the deal room
@@ -673,7 +672,7 @@ describe("DealScreen — the stage stepper advances the deal", () => {
 describe("DealScreen — an archived deal keeps its verbs, refused", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
-  it("shows Edit, Archive, Share and Reopen disabled, each reachable from the one sentence naming the archive", async () => {
+  it("shows Share and Reopen disabled, each reachable from the one sentence naming the archive", async () => {
     const d = deal({
       id: "x",
       status: "won",
@@ -687,7 +686,6 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
     // Each is awaited, not read in the tick the first arrived in. The note on
     // the same list in companies.header.test.tsx says why.
     const refused = [
-      await screen.findByTestId("archive-record"),
       await screen.findByTestId("share-record"),
       await screen.findByTestId("reopen-open"),
     ];
@@ -730,6 +728,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     expect(screen.queryByRole("button", { name: "Won" })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Move to/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "New offer" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Write brief" })).toBeNull();
 
     expect(screen.getByRole("button", { name: "Log activity" })).toBeTruthy();
     await openHeaderMenu(user);
@@ -757,6 +756,10 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Won" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "New offer" })).toBeTruthy();
+    // The brief writes through the page's one deal edit.
+    expect(
+      await screen.findByRole("button", { name: "Write brief" }),
+    ).toBeTruthy();
     expect(screen.queryByText(sentence)).toBeNull();
     await openHeaderMenu(user);
     for (const testId of ["archive-record", "share-record"]) {

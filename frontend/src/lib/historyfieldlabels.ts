@@ -1,3 +1,4 @@
+import { profileFieldLabelKey } from "../format/companyprofilelabels";
 import type { MessageKey } from "../i18n/en";
 
 // What a changed field is CALLED, for a reader who never sees a column name
@@ -48,6 +49,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["full_name", "history.field.full_name"],
   ["fx_rate_date", "history.field.fx_rate_date"],
   ["fx_rate_to_base", "history.field.fx_rate_to_base"],
+  ["greeting_register", "history.field.greeting_register"],
   ["industry", "history.field.industry"],
   ["assess_against_entity_id", "history.field.assess_against_entity_id"],
   ["is_done", "history.field.is_done"],
@@ -216,6 +218,9 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
 
 // The label a history row shows for one field.
 //
+// A company's profile fields (VAT ID, registered address and the rest) are
+// shown in its history under the names the profile tab gives them.
+//
 // A field with no key falls back to its own name with the underscores spaced
 // out — the same contract `coldFieldLabel` keeps, and the only honest answer
 // for a workspace's own `cf_` column, whose label lives in the custom-field
@@ -227,7 +232,8 @@ export function historyFieldLabel(
   const key =
     HISTORY_FIELD_LABELS.get(field) ??
     STORED_COLUMN_LABELS.get(field) ??
-    SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
+    SYNTHETIC_AUDIT_FIELD_LABELS.get(field) ??
+    profileFieldLabelKey(field);
   return key ? t(key) : field.replaceAll("_", " ");
 }
 

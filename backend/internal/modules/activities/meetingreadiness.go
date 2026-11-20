@@ -58,7 +58,7 @@ func (s *Store) MeetingPreparations(ctx context.Context, meetingIDs []ids.UUID) 
 func (s *Store) ConfirmMeetingReady(ctx context.Context, id ids.ActivityID, revision string) (MeetingPreparation, error) {
 	return s.changeReadiness(ctx, id, revision, func(tx pgx.Tx, attendee ids.UUID, current meetingFacts, by string) (bool, error) {
 		if current.revision != revision {
-			return false, fmt.Errorf("activities: the meeting changed since its preparation was read: %w", apperrors.ErrVersionSkew)
+			return false, fmt.Errorf("the meeting changed since its preparation was read: %w", apperrors.ErrVersionSkew)
 		}
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO meeting_readiness (attendee_id, activity_id, revision, starts_at, starts_on_day,

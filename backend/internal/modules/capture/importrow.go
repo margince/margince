@@ -67,7 +67,7 @@ func recordImportTx(
         INSERT INTO capture_import (activity_id, ` + who.column + `, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
                                     provider_received_at, source_occurred_at, delivered_by, bcc_only, provider_message_ids, legal_entity_id)
         VALUES (@activity, @importer, NULLIF(@import_posture, ''), NULLIF(@verdict_status, ''), NULLIF(@verdict_reason, ''), @verdict_reasons, @received, @occurred,
-                ARRAY(SELECT c.provider || ':' || c.generation FROM capture_connection c WHERE ` + who.connection + `),
+                ARRAY(SELECT ` + storekit.MailboxMarkSQL("c") + ` FROM capture_connection c WHERE ` + who.connection + `),
                 @bcc, ` + storekit.ConnectionMessageKeysSQL(who.connection, "@message") + `,
                 (SELECT c.legal_entity_id FROM capture_connection c WHERE ` + who.connection + `))
         ON CONFLICT ` + who.conflict + ` DO UPDATE SET
@@ -84,7 +84,7 @@ func recordImportTx(
 	args := pgx.NamedArgs{
 		"activity": activityID, "importer": who.id, "import_posture": birth.posture,
 		"verdict_status": birth.verdictStatus, "verdict_reason": birth.reason, "verdict_reasons": birth.reasons,
-		"received": received, "occurred": occurred, "delivering_provider": provider,
+		"received": received, "occurred": occurred, "delivering_provider": provider, "delivering_connection": runConnection(ctx),
 		"bcc": bccOnly, "message": providerMessageID,
 	}
 	if _, err := tx.Exec(ctx, query, args); err != nil {

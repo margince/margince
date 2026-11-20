@@ -23,7 +23,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -265,9 +264,12 @@ func TestTheSendPathMintsAWorkingLinkForALeadOnlyAddress(t *testing.T) {
 		t.Fatalf("seeding the lead: %v", err)
 	}
 
-	token, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, "header-lead@example.test", "")
+	token, purpose, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, "header-lead@example.test", "")
 	if err != nil {
 		t.Fatalf("minting for the send path: %v", err)
+	}
+	if purpose != "" {
+		t.Errorf("a purpose-free send's link names %q, want no purpose", purpose)
 	}
 	if !ok || token == "" {
 		t.Fatal("a lead-only recipient got no unsubscribe token, so their marketing mail " +
@@ -279,6 +281,9 @@ func TestTheSendPathMintsAWorkingLinkForALeadOnlyAddress(t *testing.T) {
 	}
 	if ref.LeadID.IsZero() {
 		t.Error("the credential names no lead, so nothing connects the press to the record")
+	}
+	if stopped, err := e.store.StopForCredential(pressCtx(e), token); err != nil || !stopped {
+		t.Errorf("the purpose-free link's press stopped=%v err=%v, want a recorded stop", stopped, err)
 	}
 }
 
@@ -300,7 +305,7 @@ func TestAContactWinsOverALeadHoldingTheSameAddress(t *testing.T) {
 		t.Fatalf("seeding the lead: %v", err)
 	}
 
-	token, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, shared, "")
+	token, _, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, shared, "")
 	if err != nil {
 		t.Fatalf("minting: %v", err)
 	}
@@ -531,42 +536,33 @@ func TestAnAllMarketingLinkRefusesToStopCorrespondenceByName(t *testing.T) {
 		}
 	}
 
-	// THROUGH THE HANDLER, not the store method it routes to. The first
-	// version of this called WithdrawMarketingNamed directly and passed with
-	// the routing guard disabled — it proved the store method works and said
-	// nothing about whether the press reaches it.
+	// Through the handler, not the store method it routes to, so the routing
+	// is what the test holds.
+	//
+	// The credential's scope is marketing, so naming correspondence stops
+	// marketing. Refusing would answer a product-built header with an error.
 	named := "business_correspondence"
-	stopped, err := Handlers{store: e.store}.unsubscribe(e.ctx, e.contact,
-		crmcontracts.OneClickUnsubscribeParams{Purpose: &named}, true)
+	press := oneClickPress{contactID: e.contact, requested: named, viaCredential: true}
+	stopped, err := Handlers{store: e.store}.unsubscribe(e.ctx, press)
 	if err != nil {
 		t.Fatalf("the press errored: %v", err)
 	}
-	if len(stopped) != 0 {
+	if slices.Contains(stopped, named) {
 		t.Errorf("an all-marketing link stopped %v — the recipient asked to leave a mailing "+
 			"list and would stop receiving replies to their own enquiries", stopped)
 	}
-
-	// And a purpose it MAY stop still stops, or the guard has just broken the
-	// ordinary press.
-	marketing := "newsletter_blast"
-	stopped, err = Handlers{store: e.store}.unsubscribe(e.ctx, e.contact,
-		crmcontracts.OneClickUnsubscribeParams{Purpose: &marketing}, true)
-	if err != nil {
-		t.Fatalf("the ordinary press errored: %v", err)
-	}
-	if len(stopped) != 1 {
-		t.Errorf("the link stopped %v, want the marketing purpose it names", stopped)
+	if !slices.Contains(stopped, "newsletter_blast") {
+		t.Errorf("the press stopped %v, want the marketing its credential covers", stopped)
 	}
 
-	// A PREFERENCE TOKEN IS UNCHANGED, which is the other half of the rule:
-	// narrowing the legacy sweep would change what links already in mailboxes
-	// do, and that belongs to the slice owning the purpose vocabulary.
-	stopped, err = Handlers{store: e.store}.unsubscribe(e.ctx, e.contact,
-		crmcontracts.OneClickUnsubscribeParams{Purpose: &named}, false)
+	// A preference token is unchanged: it stops the live purpose it names, as
+	// its links always did.
+	press.viaCredential = false
+	stopped, err = Handlers{store: e.store}.unsubscribe(e.ctx, press)
 	if err != nil {
 		t.Fatalf("the legacy press errored: %v", err)
 	}
-	if len(stopped) != 1 {
+	if !slices.Equal(stopped, []string{named}) {
 		t.Errorf("a preference-token press stopped %v, want the purpose it named — this "+
 			"slice must not change what an existing link does", stopped)
 	}

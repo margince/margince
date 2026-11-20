@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode, Ref } from "react";
 import { Children, useId } from "react";
 import { useT } from "../i18n";
 import { isParagraphCommit } from "../lib/fieldcommit";
@@ -34,6 +34,7 @@ export function ConfirmModal({
   initialFocusTo,
   unsaved,
   unsavedBody,
+  bodyRef,
   children,
 }: Readonly<{
   open: boolean;
@@ -86,10 +87,12 @@ export function ConfirmModal({
   /** The caller holds a draft, so a close other than the confirm asks first. */
   unsaved?: boolean;
   unsavedBody?: string;
+  /** The body around the fields, where a form looks for its first refusal. */
+  bodyRef?: Ref<HTMLDivElement>;
   children: ReactNode;
 }>) {
   const t = useT();
-  const headingId = useId();
+  const titleId = useId();
   const body = Children.toArray(children).length > 0 || Boolean(error);
   const confirm = (event: MouseEvent<HTMLButtonElement>) => {
     if (!refuseUnreadableField(event.currentTarget)) onConfirm();
@@ -112,7 +115,8 @@ export function ConfirmModal({
     <Modal
       open={open}
       onClose={onClose}
-      labelledBy={headingId}
+      // The title alone names the dialog; the dot's word stays in the heading.
+      labelledBy={titleId}
       intent={intent}
       closeDisabled={pending}
       returnFocusTo={returnFocusTo}
@@ -120,17 +124,17 @@ export function ConfirmModal({
       unsaved={unsaved}
       unsavedBody={unsavedBody}
     >
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
+      <Heading size="large" className="t-h2 modal-title">
         {tier && (
           <>
             <AutonomyDot tier={tier} />{" "}
           </>
         )}
-        {title}
+        <span id={titleId}>{title}</span>
       </Heading>
       {body && (
         // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it hears ⌘/Ctrl+Enter from a note inside it; Confirm stays the control
-        <div className="form-stack" onKeyDown={confirmFromNote}>
+        <div ref={bodyRef} className="form-stack" onKeyDown={confirmFromNote}>
           {children}
           {error && <ErrorLine>{error}</ErrorLine>}
         </div>

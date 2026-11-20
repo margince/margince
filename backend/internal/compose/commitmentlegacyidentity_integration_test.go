@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -108,4 +110,23 @@ func TestAnUnattributedPromiseLaterFoundToBeTheCustomersIsFiledOnThem(t *testing
 	if got := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE kind='commitment_theirs' AND contact_id=$1`, ids.UUID(contact.Id)); got != 1 {
 		t.Fatalf("the customer's promise is filed %d times, want once", got)
 	}
+}
+
+// Accepting a commitment reads its source mail as it stands now. Mail that is
+// gone refuses the task, and so does private mail the holder may not open.
+func TestACommitmentFromMailThatIsGoneOrNotTheHoldersIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	source, owner := ids.NewV7(), ids.NewV7()
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by)
+	             VALUES ($1, 'email', 'A promise', 'inbound', now(), 'manual', 'human:x')`, source)
+	inWorkspaceTx(t, e, func(tx pgx.Tx) error {
+		if _, err := sourcePrivateToNow(e.Admin(), tx, ids.NewV7(), nil); !errors.Is(err, apperrors.ErrNotFound) {
+			t.Errorf("accepting from mail that is gone = %v, want ErrNotFound", err)
+		}
+		proposal := CommitmentTaskProposal{SourceActivityID: source, PrivateTo: &owner}
+		if _, err := privateWorkHeldNow(e.Admin(), tx, proposal, ids.Nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("private mail held by no member = %v, want ErrPermissionDenied", err)
+		}
+		return nil
+	})
 }

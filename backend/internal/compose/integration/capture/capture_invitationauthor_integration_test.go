@@ -75,6 +75,16 @@ func TestAColleaguesInvitationNamesTheColleagueAsItsAuthor(t *testing.T) {
 	if readsContent(t, e, e.Rep3, credited) != readsContent(t, e, e.Rep3, uncredited) {
 		t.Error("naming the colleague as author changed whether they may read the invitation")
 	}
+	// Both arrived inbound; the stored writer side names the colleague on the
+	// credited copy alone, as the voice does.
+	if got := countRows(t, e, fmt.Sprintf(`SELECT count(*) FROM activity a WHERE a.id = '%s' AND a.direction = 'inbound'
+		AND `+activities.WriterSideSQL("a", "true")+` = 'outbound'`, credited)); got != 1 {
+		t.Error("the stored writer side does not credit the colleague's invitation to our side")
+	}
+	if got := countRows(t, e, fmt.Sprintf(`SELECT count(*) FROM activity a WHERE a.id = '%s'
+		AND `+activities.WriterSideSQL("a", "true")+` = 'inbound'`, uncredited)); got != 1 {
+		t.Error("the stored writer side credits an unauthenticated invitation to our side")
+	}
 	if n := countRows(t, e, fmt.Sprintf(`SELECT count(*) FROM activity_participant
 		WHERE activity_id IN ('%s', '%s') AND user_id = '%s'`, credited, uncredited, e.Rep3)); n != 0 {
 		t.Errorf("the colleague is a party on %d invitation rows; a party row is read as attendance and as an edge", n)

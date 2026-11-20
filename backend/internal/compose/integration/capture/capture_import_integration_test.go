@@ -73,13 +73,15 @@ func mailboxFor(t *testing.T, e *integration.SearchEnv, user ids.UUID, label str
 
 // seedCaptureRoleFor assigns the capture role seedCaptureRole created to a
 // second seat. The role is per workspace and already exists by the time any
-// test calls this, so assigning is the whole job.
+// test calls this, so assigning is the whole job. A seat that holds it already
+// keeps it, so a second mailbox of the first seat can be connected too.
 func seedCaptureRoleFor(t *testing.T, e *integration.SearchEnv, user ids.UUID) {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO role_assignment (role_id, user_id)
-			SELECT id, $1 FROM role WHERE key = 'capture_rep'`, user)
+			SELECT id, $1 FROM role WHERE key = 'capture_rep'
+			ON CONFLICT DO NOTHING`, user)
 		return err
 	})
 	if err != nil {

@@ -63,6 +63,16 @@ func meetingStatusOrNone(status *string) string {
 	return *status
 }
 
+// transitionStatus is the transition a patch records. A cleared status leaves
+// the meeting booked in the history, as a calendar reopen does, so the cancel
+// it undoes stops being the newest word.
+func (in UpdateActivityInput) transitionStatus(before, after crmcontracts.Activity) string {
+	if in.clears(auditFieldMeetingStatus) && before.MeetingStatus != nil && after.MeetingStatus == nil {
+		return string(crmcontracts.ActivityMeetingStatusBooked)
+	}
+	return changedMeetingStatus(before, after)
+}
+
 // changedMeetingStatus is the status an update MOVED a meeting to, or "" when
 // it moved nothing.
 //

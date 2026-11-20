@@ -20,7 +20,7 @@ import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
 import { APPROVAL_PARAM } from "../../lib/approvalhref";
-import { useCanWrite } from "../../lib/capability";
+import { useCan, useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
 import { useMagic } from "../../lib/magic.queries";
 import { usePendingMarginceChanges } from "../../lib/marginchanges";
@@ -88,7 +88,7 @@ export function BriefScreen() {
   const queueOpen = drawerOpen(params);
   const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
-  const brief = useMorningBrief();
+  const brief = useMorningBrief(useCan("deal", "read"));
   const morning = address.view === "morning";
   const dials = (
     <BriefDials
@@ -179,6 +179,22 @@ function dayAnswered(
   return state !== "loading" && reads.every((read) => !read.isPending);
 }
 
+// The deal reads never start for a reader without `deal.read`, so their
+// sections are not drawn and nothing waits for them.
+function useDealReads() {
+  const readsDeals = useCan("deal", "read");
+  const brief = useMorningBrief(readsDeals);
+  const magic = useMagic(readsDeals);
+  const pendingChanges = usePendingMarginceChanges(readsDeals);
+  return {
+    readsDeals,
+    brief,
+    magic,
+    pendingChanges,
+    dealReads: readsDeals ? [brief, magic] : [],
+  };
+}
+
 function PersonalMorning({
   query,
   queueToggle,
@@ -187,7 +203,6 @@ function PersonalMorning({
   queueToggle: ReactNode;
 }>) {
   const t = useT();
-  const brief = useMorningBrief();
   const handled = useHandledForYou();
   const [selected, setSelected] = useState("");
   const [params] = useUrlParams();
@@ -218,9 +233,10 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
-  const pendingChanges = usePendingMarginceChanges();
-  const magic = useMagic();
-  const settled = brief.isSuccess && handled.isSuccess && magic.isSuccess;
+  const { readsDeals, brief, magic, pendingChanges, dealReads } =
+    useDealReads();
+  const settled =
+    handled.isSuccess && dealReads.every((read) => read.isSuccess);
   useEffect(() => {
     const marks = homeJourneyMarks({
       state,
@@ -256,33 +272,37 @@ function PersonalMorning({
             />
             {/* What Margince finished stands with the work, where a reader
                 reviews or undoes it, not in the rail beside it. */}
-            <DoneForYou
-              completed={() => (
-                <MagicPanel
-                  lanes={["done"]}
-                  embedded
-                  visibleReceiptIds={
-                    handled.isSuccess && !handled.isRefetchError
-                      ? shownReceiptIds(
-                          handled.data.receipts,
-                          pendingChanges.data?.bundles,
-                        )
-                      : []
-                  }
+            {readsDeals && (
+              <>
+                <DoneForYou
+                  completed={() => (
+                    <MagicPanel
+                      lanes={["done"]}
+                      embedded
+                      visibleReceiptIds={
+                        handled.isSuccess && !handled.isRefetchError
+                          ? shownReceiptIds(
+                              handled.data.receipts,
+                              pendingChanges.data?.bundles,
+                            )
+                          : []
+                      }
+                    />
+                  )}
                 />
-              )}
-            />
-            <BriefSuggestions />
-            <MagicPanel
-              lanes={WAITING_LANES}
-              visibleApprovalIds={day?.focus?.items
-                .filter(
-                  (item) =>
-                    item.source === "approval" &&
-                    item.actions.includes("decide"),
-                )
-                .map((item) => item.id)}
-            />
+                <BriefSuggestions />
+                <MagicPanel
+                  lanes={WAITING_LANES}
+                  visibleApprovalIds={day?.focus?.items
+                    .filter(
+                      (item) =>
+                        item.source === "approval" &&
+                        item.actions.includes("decide"),
+                    )
+                    .map((item) => item.id)}
+                />
+              </>
+            )}
           </>
         }
         aside={
@@ -321,7 +341,7 @@ function PersonalMorning({
               </div>
             )}
             <CustomerPaymentsCard
-              enabled={dayAnswered(state, [brief, handled, magic])}
+              enabled={dayAnswered(state, [handled, ...dealReads])}
             />
           </>
         }

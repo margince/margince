@@ -3,7 +3,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { ArchiveAction } from "../../components/archive";
-import { CreateAction, type CreateField } from "../../components/create";
+import { CreateAction } from "../../components/create";
 import { EditAction } from "../../components/edit";
 import {
   type ListPage,
@@ -17,24 +17,22 @@ import { KeyedName } from "../../design-system/keyedname";
 import type { ListColumn } from "../../design-system/listtable";
 import { sortState } from "../../design-system/listtable.query";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
-import { billingModelLabel } from "../../format/productbilling";
-import { type Translator, useT } from "../../i18n";
+import { typedNumberOrNaN, writtenDecimal } from "../../format/decimalinput";
+import { typedAmountText, typedMinorOrNaN } from "../../format/minorunits";
+import { type Locale, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { billingOf, billingPatchOf } from "./billingclassification";
 import {
-  BILLING_MONTHS,
   billingLabel,
-  CADENCE,
-  COMPONENT_KINDS,
-  COMPONENT_LABEL,
   componentKindOf,
   ProductPrice,
   ProductStatus,
   productStatus,
 } from "./products.display";
+import { productFields } from "./products.fields";
 import { ProductTranslationsDialog } from "./products.translations";
 import {
   TAX_CATEGORIES,
@@ -42,19 +40,8 @@ import {
   taxCategoryOf,
 } from "./taxcategory";
 import "../lists/listsection.css";
-import {
-  currencyOptions,
-  type LeadingCurrencies,
-} from "../../format/currencychoices";
-import { labelFor } from "../../lib/labelfor";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
-import {
-  OTHER_UNIT,
-  storedUnitOf,
-  unitChoiceOf,
-  unitLabel,
-  unitOptions,
-} from "./productunit";
+import { storedUnitOf, unitChoiceOf, unitLabel } from "./productunit";
 
 type Product = components["schemas"]["Product"];
 
@@ -91,108 +78,17 @@ async function fetchProductsPage(
 // one search every surface shares.
 export { searchProductCandidates } from "../../components/productsearch";
 
-// Built per render: option labels are shown as given, so they arrive translated.
-function productFields(
-  t: Translator,
-  leadingCurrencies: LeadingCurrencies,
-): CreateField[] {
-  return [
-    { key: "name", label: "product.name", required: true },
-    { key: "sku", label: "product.sku" },
-    { key: "description", label: "product.description" },
-    {
-      key: "unit",
-      label: "product.unit",
-      type: "select",
-      required: true,
-      options: unitOptions(t),
-    },
-    {
-      key: "unit_other",
-      label: "product.unitOtherLabel",
-      required: true,
-      showWhen: (values) => values.unit === OTHER_UNIT,
-    },
-    {
-      key: "unit_price",
-      label: "product.unitPrice",
-      type: "number",
-      required: true,
-    },
-    {
-      key: "currency",
-      label: "product.currency",
-      type: "select",
-      required: true,
-      options: currencyOptions(leadingCurrencies),
-    },
-    { key: "default_tax_rate", label: "product.taxRate", type: "number" },
-    {
-      // Which rate of the country an offer is issued from applies. Unset is
-      // a real answer: nobody has classified it, and a line takes the rate
-      // above.
-      key: "tax_category",
-      label: "product.taxCategory",
-      type: "select",
-      options: [
-        { value: "", label: t("product.taxCategoryUnset") },
-        ...TAX_CATEGORIES.map((category) => ({
-          value: category,
-          label: t(labelFor(TAX_CATEGORY_LABEL, category)),
-        })),
-      ],
-    },
-    {
-      // The empty option is a real answer, and every product written before
-      // this field existed carries it: nobody has said whether the price
-      // repeats. It comes first, so a form left alone keeps saying that
-      // instead of asserting a one-off price.
-      key: "billing_model",
-      label: "product.billingModel",
-      type: "select",
-      options: [
-        { value: "", label: billingModelLabel(null, t) },
-        { value: "one_time", label: billingModelLabel("one_time", t) },
-        { value: "recurring", label: billingModelLabel("recurring", t) },
-      ],
-    },
-    {
-      // Only a recurring price has a period, and the server refuses one
-      // without it, so the choice appears, and is owed, only then.
-      key: "billing_interval_months",
-      label: "product.billingInterval",
-      type: "select",
-      required: true,
-      showWhen: (values) => values.billing_model === "recurring",
-      options: BILLING_MONTHS.map((months) => ({
-        value: String(months),
-        label: t(CADENCE[months]),
-      })),
-    },
-    {
-      // What the product is, which the commercial mix on Analytics groups won
-      // value by. Unset is a real answer: nobody has classified it.
-      key: "component_kind",
-      label: "product.componentKind",
-      type: "select",
-      options: [
-        { value: "", label: t("product.componentUnset") },
-        ...COMPONENT_KINDS.map((kind) => ({
-          value: kind,
-          label: t(labelFor(COMPONENT_LABEL, kind)),
-        })),
-      ],
-    },
-  ];
-}
-
-function editableProduct(p: Product) {
+function editableProduct(p: Product, locale: Locale) {
   const unit = unitChoiceOf(p.unit);
   return {
     ...p,
     unit: unit.choice,
     unit_other: unit.other,
-    unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
+    unit_price: typedAmountText(p.unit_price_minor, p.currency, locale),
+    default_tax_rate:
+      p.default_tax_rate == null
+        ? ""
+        : writtenDecimal(String(p.default_tax_rate), locale),
     billing_model: p.billing_model ?? "",
     component_kind: p.component_kind ?? "",
     tax_category: p.tax_category ?? "",
@@ -213,8 +109,12 @@ function text(value: unknown): string {
 // Major-unit price string -> integer minor units (P11: no float money on the
 // wire), at the scale the PRODUCT's own currency carries. A hard-coded hundred
 // priced a yen product at a hundredth and a dinar product at ten times.
-function toMinor(major: string | undefined, currency: string): number {
-  return toMinorUnits(Number(major ?? "0"), currency);
+function toMinor(
+  major: string | undefined,
+  currency: string,
+  locale: Locale,
+): number {
+  return typedMinorOrNaN(major || "0", currency, locale);
 }
 
 /**
@@ -253,7 +153,10 @@ export function ProductsAdmin() {
     paramScope: "products",
   });
   const leading = useLeadingCurrencies();
-  const fields = productFields(t, leading);
+  const { locale } = useLocale();
+  const fields = productFields(t, leading, locale);
+  // A product's one unique value is its SKU.
+  const skuTaken = { field: "sku", sentence: t("product.skuTaken") };
   const [translating, setTranslating] = useState<Product | null>(null);
 
   const createProduct = async (values: Record<string, string>) => {
@@ -268,10 +171,11 @@ export function ProductsAdmin() {
           unit_price_minor: toMinor(
             values.unit_price,
             values.currency || leading[0],
+            locale,
           ),
           currency: values.currency || leading[0],
           default_tax_rate: values.default_tax_rate
-            ? Number(values.default_tax_rate)
+            ? typedNumberOrNaN(values.default_tax_rate, locale)
             : null,
           ...billingOf(values),
           component_kind: componentKindOf(values.component_kind) ?? null,
@@ -309,10 +213,11 @@ export function ProductsAdmin() {
             unit_price_minor: toMinor(
               text(values.unit_price),
               text(values.currency) || product.currency,
+              locale,
             ),
             currency: text(values.currency) || undefined,
-            default_tax_rate: values.default_tax_rate
-              ? Number(values.default_tax_rate)
+            default_tax_rate: text(values.default_tax_rate)
+              ? typedNumberOrNaN(text(values.default_tax_rate), locale)
               : undefined,
             ...billingPatchOf(values),
             component_kind: componentKindOf(values.component_kind) ?? null,
@@ -351,9 +256,10 @@ export function ProductsAdmin() {
               }
               invalidate="products"
               recordKey="product"
-              record={editableProduct(p)}
+              record={editableProduct(p, locale)}
               update={updateProduct(p)}
               fields={fields}
+              conflict={skuTaken}
             />
           )}
           {canUpdate && (
@@ -403,6 +309,7 @@ export function ProductsAdmin() {
             stay
             create={createProduct}
             fields={fields}
+            conflict={skuTaken}
           />
         ) : undefined
       }

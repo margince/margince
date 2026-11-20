@@ -21,3 +21,11 @@
     grid-template-columns: 1fr;
   }
 }
+/* The send tick spans the row; the outgoing server's fields pair up under it. */
+.imap-send {
+  display: grid;
+  gap: var(--space-3);
+}
+.imap-send-hint {
+  display: block;
+}

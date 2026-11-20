@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"hash/crc32"
 	"io"
 	"strings"
@@ -206,7 +207,9 @@ func TestOneEntryDeclaringMoreThanTheLimitIsRefused(t *testing.T) {
 func TestAnUncountedEntryStillStopsAtTheBundleLimit(t *testing.T) {
 	const uploadCap = 10
 	data := []byte(strings.Repeat("x", uploadCap*declaredSizeFactor+1))
-	b, err := OpenBundle(forgedZip64(t, zip64Entry{name: "README.txt", data: data, declared: uint64(1) << 62}), uploadCap)
+	b, err := OpenBundle(forgedZip64(t,
+		zip64Entry{name: "README.txt", data: data, declared: uint64(1) << 62},
+		zip64Entry{name: "companies.csv", data: []byte("ref\n"), declared: 4}), uploadCap)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,5 +224,46 @@ func TestAnUncountedEntryStillStopsAtTheBundleLimit(t *testing.T) {
 	}()
 	if _, err := io.ReadAll(rc); !errors.Is(err, ErrBundleRefused) {
 		t.Fatalf("reading %d bytes past a %d-byte limit: err = %v, want ErrBundleRefused", len(data), uploadCap*declaredSizeFactor, err)
+	}
+}
+
+// A workbook is a ZIP of XML parts; it is refused as a workbook, never opened
+// as a bundle of no files.
+func TestAnExcelWorkbookIsRefusedAsAWorkbook(t *testing.T) {
+	_, err := OpenBundle(zipOf(t, map[string]string{
+		"[Content_Types].xml": "<Types/>", "xl/workbook.xml": "<workbook/>", "xl/worksheets/sheet1.xml": "<worksheet/>",
+	}), 10<<20)
+	fault, ok := errors.AsType[*FileFault](err)
+	if !ok || fault.Params[string(ParamReason)] != string(BundleSpreadsheet) || !strings.Contains(fault.Message, "CSV UTF-8") {
+		t.Fatalf("err = %v, want a workbook refusal that says to save the sheet as CSV UTF-8", err)
+	}
+}
+
+// A workbook of more sheets than a bundle may hold is still told to become a CSV.
+func TestAWorkbookPastTheEntryLimitIsRefusedAsAWorkbook(t *testing.T) {
+	files := map[string]string{"xl/workbook.xml": "<workbook/>"}
+	for i := range MaxBundleEntries + 1 {
+		files[fmt.Sprintf("xl/worksheets/sheet%d.xml", i)] = "<worksheet/>"
+	}
+	_, err := OpenBundle(zipOf(t, files), 10<<20)
+	if fault, ok := errors.AsType[*FileFault](err); !ok || fault.Params[string(ParamReason)] != string(BundleSpreadsheet) {
+		t.Fatalf("err = %v, want the workbook refusal", err)
+	}
+}
+
+func TestAZipWithNoImportableFileIsRefusedNamingTheFilesItReads(t *testing.T) {
+	for name, files := range map[string]map[string]string{
+		"unknown names": {"products.csv": "Product\n", "notes.txt": "x"},
+		"only a README": {"README.txt": "how to"},
+	} {
+		_, err := OpenBundle(zipOf(t, files), 10<<20)
+		fault, ok := errors.AsType[*FileFault](err)
+		if !ok || fault.Params[string(ParamReason)] != string(BundleNoImportableFile) {
+			t.Errorf("%s: err = %v, want no_importable_file", name, err)
+			continue
+		}
+		if names := fault.Params[string(ParamFileNames)]; names != "companies.csv, contacts.csv, leads.csv, deals.csv, activities.csv" {
+			t.Errorf("%s: file_names = %q, want the template's file of every type in import order", name, names)
+		}
 	}
 }

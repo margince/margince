@@ -22,10 +22,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// UnlabeledEmail is one classify-backlog row as the prompt consumes it.
-type UnlabeledEmail struct {
-	ID      ids.UUID
-	Subject string
+// UnlabeledMessage is one classify-backlog row as the prompt consumes it: a
+// mail, or a chat message a connector captured.
+type UnlabeledMessage struct {
+	ID ids.UUID
+	// Kind is kindEmail or KindMessage. ChannelProvider names the chat's
+	// channel and is empty on mail.
+	Kind            string
+	ChannelProvider string
+	Subject         string
 	// Body is the sender's current message, quoted mail cut off, truncated
 	// to bodyLimit runes. Empty when the mail is only a quote or a forward.
 	Body string
@@ -40,12 +45,16 @@ type UnlabeledEmail struct {
 	Version int64
 }
 
+// IsChat reports whether the message came over a chat channel rather than mail.
+func (m UnlabeledMessage) IsChat() bool { return m.Kind == KindMessage }
+
 // storedBodyReadRunes bounds how much of one stored body a classifier's read
 // holds in memory before the quote is cut.
 const storedBodyReadRunes = 20000
 
-// UnlabeledCaptureEmails reads the oldest connector-captured emails not
-// yet labeled — the partial-index backlog (idx_activity_unlabeled).
+// UnlabeledCaptureMessages reads the oldest connector-captured mail and chat
+// messages not yet labeled. It is the partial-index backlog
+// (idx_activity_unlabeled).
 //
 // Mail from a sender whose disposition is still open is left out (ADR-0072 §5).
 // Labeling routes attention, and a message from someone the workspace has not
@@ -59,14 +68,15 @@ const storedBodyReadRunes = 20000
 //
 // The quote is cut before bodyLimit applies. A short reply over a long thread
 // then reaches the model whole, and the thread not at all.
-func (s *Store) UnlabeledCaptureEmails(ctx context.Context, ruleset string, limit, bodyLimit int) ([]UnlabeledEmail, error) {
+func (s *Store) UnlabeledCaptureMessages(ctx context.Context, ruleset string, limit, bodyLimit int) ([]UnlabeledMessage, error) {
 	if ruleset == "" {
 		return nil, fmt.Errorf("activities: reading the classify backlog: %w", errRulesetUnnamed)
 	}
-	var out []UnlabeledEmail
+	var out []UnlabeledMessage
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, coalesce(subject, ''), coalesce(left(body, $1), ''),
+			SELECT id, kind, coalesce(channel_provider, ''),
+			       coalesce(subject, ''), coalesce(left(body, $1), ''),
 			       -- direction is NULLABLE, and a NULL is not an inbound message.
 			       -- Compared bare, the equality yields NULL for a row that never
 			       -- recorded a direction, which fails the scan and takes the whole
@@ -85,8 +95,8 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, ruleset string, limi
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var m UnlabeledEmail
-			if err := rows.Scan(&m.ID, &m.Subject, &m.Body, &m.Inbound, &m.Version); err != nil {
+			var m UnlabeledMessage
+			if err := rows.Scan(&m.ID, &m.Kind, &m.ChannelProvider, &m.Subject, &m.Body, &m.Inbound, &m.Version); err != nil {
 				return err
 			}
 			m.Body = ClassifyBody(m.Body, bodyLimit)

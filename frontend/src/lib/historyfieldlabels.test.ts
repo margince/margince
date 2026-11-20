@@ -248,3 +248,17 @@ describe("synthetic AuditEvent field labels", () => {
     );
   });
 });
+
+describe("company profile field labels", () => {
+  it("names every profile field the company history can show as the profile tab does", () => {
+    expect(historyFieldLabel("register_vat", (k) => en[k])).toBe(
+      "Register / VAT ID",
+    );
+    expect(historyFieldLabel("registered_address", (k) => en[k])).toBe(
+      "Registered address",
+    );
+    expect(historyFieldLabel("icp", (k) => en[k])).toBe(
+      "Ideal customer profile",
+    );
+  });
+});

@@ -112,3 +112,13 @@ func TestBuyerIsRefusedByAdminOnlyOperations(t *testing.T) {
 		t.Errorf("RequireAdmin(buyer holding the admin role key) = %v, want ErrPermissionDenied", err)
 	}
 }
+
+func TestTheToolGateRefusesABuyerEvenWithEveryScope(t *testing.T) {
+	buyer := overreachingBuyer()
+	buyer.Scopes = principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite, principal.ScopeSend)
+	ctx := principal.WithActor(context.Background(), buyer)
+
+	if _, err := fullSeatGate().Admit(ctx, readSpec, noResolve); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("Admit(buyer holding every scope) = %v, want ErrPermissionDenied", err)
+	}
+}

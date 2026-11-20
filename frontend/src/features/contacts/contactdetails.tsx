@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { ADDRESS_FIELDS } from "../../components/companyform";
@@ -6,9 +6,9 @@ import { useEmployerSummary } from "../../components/contactemployersummary";
 import { rosterOwnerName } from "../../components/entityref";
 import { leadHeldNoticeFor } from "../../components/leadheldnotice";
 import { LinkedInChip } from "../../components/linkedinchip";
-import { RailField } from "../../components/railfield";
 import { RecordCustomFields } from "../../components/recordcustomfields";
 import { RecordFields } from "../../components/recordfields";
+import { useSectionEdit } from "../../components/sectionedit";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
 import { ContactLink } from "../../design-system/contactlink";
@@ -30,7 +30,10 @@ import { industryWords } from "../../format/industry";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { currentEmployer } from "../../lib/employmentcurrency";
+import {
+  currentEmployer,
+  useEmploymentZone,
+} from "../../lib/employmentcurrency";
 import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
@@ -40,7 +43,7 @@ import { BoughtAttributes } from "./contactboughtattributes";
 import { useContactEdit } from "./contactedit";
 import { ContactSource } from "./contactfacts";
 import { ContactReach } from "./contacthandles";
-import { EmployerValue } from "./employerchange";
+import { useEmployerChange } from "./employerchange";
 import { type ProfileField, proposedEmployer } from "./employerproposal";
 import { ProposedEmployerRow } from "./employerproposalrow";
 
@@ -49,120 +52,69 @@ type Contact360 = components["schemas"]["Contact360"];
 type Employment = components["schemas"]["Contact360Employment"];
 
 /**
- * The left column's About and Ownership groups. Every field the design
- * lists has a row; an empty one folds behind "Show N empty fields" with the
- * word for its empty state.
+ * The left column's About, Address and Ownership groups, each with its own
+ * Edit. An empty row folds behind "Show N empty fields"; render `element` beside.
  */
-export function useContactAboutSections(view: Contact360): DetailSection[] {
+export function useContactAboutSections(
+  view: Contact360,
+): Readonly<{ sections: DetailSection[]; element: ReactNode }> {
   const t = useT();
   const contact = view.contact;
-  const edit = useContactEdit(contact);
   const bought = boughtFields(contact);
   const ownerName = useMemberName(contact.owner_id);
   const notSet = t("field.unset");
   const linkedin =
     typeof contact.social?.linkedin === "string" ? contact.social.linkedin : "";
-  const linkedinHref = linkedinUrl(linkedin);
-  const email = contact.primary_email;
-  const phone = primaryPhone(contact.phones);
-  const address = postalLines(contact.address);
-  const employer = currentEmployer(view.employments?.data);
+  const employmentZone = useEmploymentZone();
+  const employer = currentEmployer(view.employments?.data, employmentZone);
   const proposed = employer
     ? undefined
-    : proposedEmployer(view, view.employments?.data ?? []);
+    : proposedEmployer(view, view.employments?.data ?? [], employmentZone);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
-  // Every row opens its edit from its value; an empty one still folds.
-  // A handle (an address or number with its marks and glyphs) lays them out.
+  const edits = useSectionEdits(view, employer, proposed);
   const field = (
     key: string,
     term: string,
-    present: boolean,
-    change: Omit<ComponentProps<typeof RailField>, "edit" | "label">,
-  ): DetailRow => {
-    const value = (
-      <RailField
-        {...change}
-        edit={edit}
-        label={term}
-        reading={present ? change.reading : notSet}
-      />
-    );
-    return {
-      key,
-      term,
-      value:
-        present && change.link ? (
-          <span className="fieldgrid-handle">{value}</span>
-        ) : (
-          value
-        ),
-      empty: !present,
-    };
-  };
+    reading: ReactNode,
+    shape: RowShape = {},
+  ): DetailRow => readingRow(key, term, reading, notSet, shape);
   // Every address and number shares one card. A kind with none folds as its
   // own empty row, so "Show empty fields" still offers to add it.
-  const reachKeys = [email && "emails", phone && "phones"].filter(
-    (key): key is string => Boolean(key),
-  );
-  const reachLabel = t("record.reach.label");
+  const email = contact.primary_email;
+  const phone = primaryPhone(contact.phones);
   const reachRows: DetailRow[] = [
-    ...(reachKeys.length > 0
+    ...(email || phone
       ? [
           reachRow(
-            reachLabel,
-            <RailField
-              edit={edit}
-              keys={reachKeys}
-              label={reachLabel}
-              link
-              block
-              reading={<ContactReach contact={contact} bought={bought} />}
-            />,
+            t("record.reach.label"),
+            <ContactReach contact={contact} bought={bought} />,
           ),
         ]
       : []),
-    ...(email
-      ? []
-      : [
-          field("email", t("create.email"), false, {
-            keys: ["emails"],
-            reading: notSet,
-          }),
-        ]),
-    ...(phone
-      ? []
-      : [
-          field("phone", t("create.phone"), false, {
-            keys: ["phones"],
-            reading: notSet,
-          }),
-        ]),
+    ...(email ? [] : [field("email", t("create.email"), undefined)]),
+    ...(phone ? [] : [field("phone", t("create.phone"), undefined)]),
   ];
-  return [
+  const sections: DetailSection[] = [
     {
       key: "about",
       label: t("record.details.about"),
+      edit: edits.about,
       rows: [
         {
           key: "employer",
           term: t("contact.rail.employer"),
-          value: employerValue(view, employer, proposed, notSet),
+          value: employerReading(view, employer, proposed, notSet),
           empty: !employer && !proposed,
           block: Boolean(employer ?? proposed),
         },
         ...reachRows,
-        field("linkedin", t("contact.page.linkedin"), linkedin !== "", {
-          keys: ["social.linkedin"],
-          // The label claims the destination is LinkedIn, and a crawl or a
-          // connector writes this value, so another host gets no link.
-          link: Boolean(linkedinHref),
-          text: linkedin,
-          reading: <LinkedInChip href={linkedin} name={contact.full_name} />,
-        }),
-        field("title", t("create.contactTitle"), Boolean(contact.title), {
-          keys: ["title"],
-          text: contact.title ?? "",
-          reading: contact.title,
+        field(
+          "linkedin",
+          t("contact.page.linkedin"),
+          linkedin && <LinkedInChip href={linkedin} name={contact.full_name} />,
+          { handle: Boolean(linkedinUrl(linkedin)) },
+        ),
+        field("title", t("create.contactTitle"), contact.title, {
           beside: (
             <BoughtMark
               bought={bought.get("title")}
@@ -170,57 +122,135 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
             />
           ),
         }),
-        field("address", t("co.address.summary"), address !== "", {
-          keys: ADDRESS_FIELDS.map((entry) => entry.key),
-          reading: address,
-          beside: contact.address_country_mismatch && (
-            <>
-              {" "}
-              <AddressCountryMismatchBadge
-                mismatch={contact.address_country_mismatch}
-              />
-            </>
-          ),
-        }),
+      ],
+    },
+    {
+      key: "address",
+      label: t("co.address.summary"),
+      edit: edits.address,
+      rows: [
+        field(
+          "address",
+          t("co.address.summary"),
+          postalLines(contact.address),
+          {
+            beside: contact.address_country_mismatch && (
+              <>
+                {" "}
+                <AddressCountryMismatchBadge
+                  mismatch={contact.address_country_mismatch}
+                />
+              </>
+            ),
+          },
+        ),
       ],
     },
     {
       key: "ownership",
       label: t("record.details.ownership"),
+      edit: edits.ownership,
       rows: [
-        field("owner", t("contact.page.owner"), Boolean(contact.owner_id), {
-          keys: ["owner_id"],
+        field(
+          "owner",
+          t("contact.page.owner"),
           // An owner the roster no longer names is still the owner, and the
           // warning ink says the record needs a new one.
-          reading:
-            owner === t("ref.notInRoster") ? (
+          contact.owner_id &&
+            (owner === t("ref.notInRoster") ? (
               <span className="pe-detail-warn">
                 {t("contact.aside.ownerGone")}
               </span>
             ) : (
               owner
-            ),
-        }),
+            )),
+        ),
       ],
     },
   ];
+  return { sections, element: edits.element };
 }
 
-function employerValue(
+// Each group's Edit over the contact's one edit. A proposed employer is
+// settled by its own row's verbs, so the dialog offers no employer then.
+function useSectionEdits(
+  view: Contact360,
+  employer: Employment | undefined,
+  proposed: ProfileField | undefined,
+) {
+  const t = useT();
+  const edit = useContactEdit(view.contact);
+  const employerChange = useEmployerChange(view, employer);
+  const changeEmployer = proposed ? undefined : employerChange.open;
+  const about = useSectionEdit(edit, {
+    label: t("record.details.about"),
+    keys: ["employer", "emails", "phones", "social.linkedin", "title"],
+    flows: changeEmployer && {
+      employer: {
+        label: t("contact.rail.employer"),
+        reading: employer?.company_name ?? t("field.unset"),
+        open: changeEmployer,
+      },
+    },
+  });
+  const address = useSectionEdit(edit, {
+    label: t("co.address.summary"),
+    keys: ADDRESS_FIELDS.map((entry) => entry.key),
+  });
+  const ownership = useSectionEdit(edit, {
+    label: t("record.details.ownership"),
+    keys: ["owner_id"],
+  });
+  return {
+    about: about.edit,
+    address: address.edit,
+    ownership: ownership.edit,
+    element: (
+      <>
+        {employerChange.element}
+        {about.element}
+        {address.element}
+        {ownership.element}
+      </>
+    ),
+  };
+}
+
+// A handle (an address or number with its marks and glyphs) lays them out.
+type RowShape = Readonly<{ handle?: boolean; beside?: ReactNode }>;
+
+function readingRow(
+  key: string,
+  term: string,
+  reading: ReactNode,
+  notSet: string,
+  { handle, beside }: RowShape,
+): DetailRow {
+  return {
+    key,
+    term,
+    value: (
+      <>
+        {handle && reading ? (
+          <span className="fieldgrid-handle">{reading}</span>
+        ) : (
+          reading || notSet
+        )}
+        {beside}
+      </>
+    ),
+    empty: !reading,
+  };
+}
+
+function employerReading(
   view: Contact360,
   employer: Employment | undefined,
   proposed: ProfileField | undefined,
   notSet: string,
 ): ReactNode {
   if (proposed) return <ProposedEmployerRow view={view} fact={proposed} />;
-  return (
-    <EmployerValue
-      view={view}
-      employer={employer}
-      reading={employer && <EmployerCard employment={employer} />}
-      notSet={notSet}
-    />
-  );
+  return employer ? <EmployerCard employment={employer} /> : notSet;
 }
 
 /**

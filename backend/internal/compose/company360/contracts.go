@@ -98,7 +98,7 @@ func readContractStrip(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 
 	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT value_basis, value_minor, fx_rate_to_base, currency,
-		       renewal_on::timestamptz, cancellation_effective_on::timestamptz
+		       renewal_on, cancellation_effective_on
 		FROM contract WHERE %s`, where), args...)
 	if err != nil {
 		return contractStrip{}, fmt.Errorf("read the account's active contracts: %w", err)

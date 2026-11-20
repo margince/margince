@@ -2,18 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
-import { ComposeModal } from "./compose";
 import {
+  installComposeClock,
   jsonResponse,
   pickWhy,
   pressSend,
   render,
   stubRoutes,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 import type { EditSeed } from "./schedulededit";
 
 // Which deal a message to a contact is about.
@@ -74,7 +75,7 @@ function openContactComposer(
     "POST /emails": () => jsonResponse({ id: "sent-1" }, 202),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -86,12 +87,14 @@ function openContactComposer(
   return sent;
 }
 
-async function writeToAnna() {
-  await userEvent.type(screen.getByLabelText("To"), "anna@acme.test");
-  await userEvent.tab();
-  await userEvent.type(screen.getByLabelText("Subject"), "Next steps");
+async function writeToAnna(user: UserEvent) {
+  await user.type(screen.getByLabelText("To"), "anna@acme.test");
+  await user.tab();
+  await user.type(screen.getByLabelText("Subject"), "Next steps");
   writeMessage("Body", "As agreed, the next steps.");
 }
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -101,13 +104,14 @@ afterEach(() => {
 
 describe("the deal a message to a contact is about", () => {
   it("offers the open deals once Active deal is the reason, and files under the one chosen", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = openContactComposer();
-    await writeToAnna();
+    await writeToAnna(user);
     expect(screen.queryByRole("combobox", { name: DEAL_PICK })).toBeNull();
 
-    await pickWhy("Active deal");
+    await pickWhy(user, "Active deal");
     const pick = await screen.findByRole("combobox", { name: DEAL_PICK });
-    await userEvent.click(pick);
+    await user.click(pick);
     expect(
       screen.getAllByRole("option", { name: "Deal: Acme Renewal" }),
     ).toHaveLength(1);
@@ -117,9 +121,9 @@ describe("the deal a message to a contact is about", () => {
     expect(
       screen.queryByRole("option", { name: "Deal: Acme Rollout" }),
     ).toBeNull();
-    await userEvent.keyboard("{Escape}");
+    await user.keyboard("{Escape}");
 
-    await pickOption(userEvent.setup(), pick, "Deal: Acme Renewal");
+    await pickOption(user, pick, "Deal: Acme Renewal");
     const filed = [
       { entity_type: "contact", entity_id: "c-1" },
       { entity_type: "deal", entity_id: "deal-open" },
@@ -128,18 +132,19 @@ describe("the deal a message to a contact is about", () => {
       expect(linksOf(sent, "POST /emails:preview")).toEqual(filed),
     );
 
-    await pressSend();
-    await userEvent.click(await screen.findByRole("button", { name: "Send" }));
+    await pressSend(user);
+    await user.click(await screen.findByRole("button", { name: "Send" }));
     await waitFor(() => expect(linksOf(sent, "POST /emails")).toEqual(filed));
   });
 
   it("holds Send until a deal is chosen, and sends nothing meanwhile", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = openContactComposer();
-    await writeToAnna();
-    await pickWhy("Active deal");
+    await writeToAnna(user);
+    await pickWhy(user, "Active deal");
     await screen.findByRole("combobox", { name: DEAL_PICK });
 
-    await pressSend();
+    await pressSend(user);
 
     expect(
       await screen.findByText("Choose the deal this follow-up is about."),
@@ -148,9 +153,10 @@ describe("the deal a message to a contact is about", () => {
   });
 
   it("asks nothing about a deal for another reason", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = openContactComposer();
-    await writeToAnna();
-    await pickWhy("Follow-up they requested");
+    await writeToAnna(user);
+    await pickWhy(user, "Follow-up they requested");
 
     await waitFor(() =>
       expect(linksOf(sent, "POST /emails:preview")).toEqual([
@@ -161,15 +167,16 @@ describe("the deal a message to a contact is about", () => {
   });
 
   it("sends a new email with a Re: subject as a new conversation", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = openContactComposer();
-    await userEvent.type(screen.getByLabelText("To"), "anna@acme.test");
-    await userEvent.tab();
-    await userEvent.type(screen.getByLabelText("Subject"), "Re: Next steps");
+    await user.type(screen.getByLabelText("To"), "anna@acme.test");
+    await user.tab();
+    await user.type(screen.getByLabelText("Subject"), "Re: Next steps");
     writeMessage("Body", "Picking this up again.");
-    await pickWhy("Follow-up they requested");
+    await pickWhy(user, "Follow-up they requested");
 
-    await pressSend();
-    await userEvent.click(await screen.findByRole("button", { name: "Send" }));
+    await pressSend(user);
+    await user.click(await screen.findByRole("button", { name: "Send" }));
 
     await waitFor(() =>
       expect(sent.some((s) => s.key === "POST /emails")).toBe(true),
@@ -188,12 +195,13 @@ describe("the deal a message to a contact is about", () => {
     ["when the deals could not be loaded", () => jsonResponse({}, 500)],
     ["when not every deal is listed", () => jsonResponse(contactView(true))],
   ])("holds an Active deal send %s", async (_, view) => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = openContactComposer(undefined, view);
-    await writeToAnna();
-    await pickWhy("Active deal");
+    await writeToAnna(user);
+    await pickWhy(user, "Active deal");
     await screen.findByRole("combobox", { name: DEAL_PICK });
 
-    await pressSend();
+    await pressSend(user);
 
     expect(
       await screen.findByText("Choose the deal this follow-up is about."),
@@ -216,6 +224,7 @@ describe("the deal a message to a contact is about", () => {
   });
 
   it("drops a restored deal the contact no longer sits on, and asks again", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = openContactComposer(scheduledEdit("deal-left"));
     await screen.findByRole("combobox", { name: DEAL_PICK });
 
@@ -224,7 +233,7 @@ describe("the deal a message to a contact is about", () => {
         { entity_type: "contact", entity_id: "c-1" },
       ]),
     );
-    await pressSend();
+    await pressSend(user);
     expect(
       await screen.findByText("Choose the deal this follow-up is about."),
     ).toBeTruthy();
@@ -252,7 +261,7 @@ function scheduledEdit(dealId: string): EditSeed {
 }
 
 it("saves the chosen deal and uses the same filing after reopening", async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   let saved: object | undefined;
   const sent: Sent = stubRoutes({
     "GET /contacts/c-1/360": () => jsonResponse(contactView()),
@@ -271,7 +280,7 @@ it("saves the chosen deal and uses the same filing after reopening", async () =>
     "POST /emails": () => jsonResponse({ id: "sent-1" }, 202),
   });
   const composer = () => (
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -280,8 +289,8 @@ it("saves the chosen deal and uses the same filing after reopening", async () =>
     />
   );
   const first = render(composer());
-  await writeToAnna();
-  await pickWhy("Active deal");
+  await writeToAnna(user);
+  await pickWhy(user, "Active deal");
   await pickOption(
     user,
     await screen.findByRole("combobox", { name: DEAL_PICK }),
@@ -337,7 +346,7 @@ it("keeps an explicit cleared filing instead of reviving an agent's old deal", a
       }),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -355,7 +364,7 @@ it("keeps an explicit cleared filing instead of reviving an agent's old deal", a
 });
 
 it("keeps the saved deal while its visible choices are still loading", async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const sent: Sent = stubRoutes({
     "GET /contacts/c-1/360": () => new Promise<Response>(() => {}),
     "GET /mail-drafts": () =>
@@ -389,7 +398,7 @@ it("keeps the saved deal while its visible choices are still loading", async () 
       }),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -419,7 +428,7 @@ it("keeps the saved deal while its visible choices are still loading", async () 
 });
 
 it("saves a cleared deal from an older draft even when its words stay the same", async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const onClose = vi.fn();
   const saved = {
     id: "draft-old",
@@ -441,7 +450,7 @@ it("saves a cleared deal from an older draft even when its words stay the same",
     "PUT /mail-drafts": () => jsonResponse({ ...saved, version: 4 }),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"

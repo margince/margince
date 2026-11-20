@@ -402,7 +402,9 @@ func TestAReopenedReminderOutranksASettledVerdict(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if summaries[request].Move != crmcontracts.EmailSummaryMoveNeedsReply {
+	// Our "Sent." is the newest message, so the open request reads as replied
+	// rather than as needing a reply. A settled verdict would have closed it.
+	if summaries[request].OurReply == nil {
 		t.Error("a request whose reminder somebody reopened does not read as outstanding — " +
 			"the machine's settled verdict is overruling whoever took the work back")
 	}

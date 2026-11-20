@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
@@ -21,8 +21,8 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
-import { pressSend } from "./compose.testkit";
+import { installComposeClock, pressSend } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // WHICH WAY a message leaves, asked inside the one composer.
 //
@@ -122,7 +122,7 @@ function drawer(
   open = true,
 ) {
   return (
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       contactId="p-1"
@@ -134,6 +134,8 @@ function drawer(
     />
   );
 }
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -161,7 +163,7 @@ describe("the composer's transport dial", () => {
   // resolves the recipient from the conversation being answered — so a composer
   // still drawing those fields would offer what the send cannot carry.
   it("withholds the mail-only fields once a channel is chosen", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(drawer([MAIL, CHAT]));
 
     await pickOption(user, await screen.findByLabelText("Send via"), "Dispact");
@@ -183,7 +185,7 @@ describe("the composer's transport dial", () => {
   // nowhere to go on a channel, and a body written for one conversation must not
   // arrive in another because the rep changed their mind about the medium.
   it("clears what was written when the dial moves", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(drawer([MAIL, CHAT]));
 
     await user.type(await screen.findByLabelText("Subject"), "About the offer");
@@ -202,7 +204,7 @@ describe("the composer's transport dial", () => {
   // The whole point of the dial: a chosen channel answers ITS conversation, so
   // the send is the anchored channel reply and not an account-started email.
   it("sends a chosen channel through the conversation it continues", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /activities/a-chat/send-message": () => jsonResponse(ACTIVITY, 202),
     });
@@ -230,7 +232,7 @@ describe("the composer's transport dial", () => {
   ] as const)(
     "opens %s and keeps it when the dial moves",
     async (_, opened, next, box, mailAfter) => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       stubRoutes();
       render(drawer([MAIL, CHAT], opened));
 
@@ -248,7 +250,7 @@ describe("the composer's transport dial", () => {
   // The contact page keeps its composer mounted between openings, so the dial
   // still holds the last channel when the caller opens on mail.
   it("starts each opening on the transport the caller opens it on", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(ACTIVITY, 202),
     });
@@ -280,7 +282,7 @@ describe("the composer's transport dial", () => {
   // reader writing into a conversation they did not choose.
   it("says so when the conversation a caller named is gone", async () => {
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="p-1"
         contactId="p-1"
@@ -351,7 +353,7 @@ describe("a channel reply held to its carriage bounds", () => {
   };
 
   it("warns and refuses to send a file the channel cannot carry", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = withCarriage();
     render(drawer([MAIL, CHAT], "dispact"));
 
@@ -376,7 +378,7 @@ describe("a channel reply held to its carriage bounds", () => {
   });
 
   it("sends a file the channel can carry, by id", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = withCarriage();
     render(drawer([MAIL, CHAT], "dispact"));
 

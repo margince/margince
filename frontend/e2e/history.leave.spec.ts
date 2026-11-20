@@ -136,6 +136,9 @@ async function openRetentionForm(page: Page) {
       allow: {
         job_health: ["read"],
         installation_settings: ["read", "update"],
+        // A test that leaves the form for the companies list needs the list
+        // drawn; a role without this read gets a refusal page instead.
+        company: ["read"],
       },
     }),
   );

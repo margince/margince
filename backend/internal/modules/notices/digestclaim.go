@@ -323,7 +323,7 @@ func (s *Store) DigestBody(ctx context.Context, user ids.UserID, w Window) ([]No
 	}
 	if seat != user.UUID {
 		return nil, fmt.Errorf(
-			"notices: a morning digest is read under its own recipient's authority: %w",
+			"a morning digest is read under its own recipient's authority: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	var batched []Notice

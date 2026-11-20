@@ -1,4 +1,5 @@
 import type { Locale, Translator } from "../i18n";
+import { handScaledUnit } from "./compactscale";
 import { calendarDaysBetween } from "./format.dates";
 // The presentation edge (architecture/10 §1–3): everything here formats
 // ALREADY-stored values — minor units, UTC instants, IR-provided base
@@ -142,18 +143,12 @@ export function formatMoneyCompact(
   if (!abbreviated && !Number.isInteger(major)) {
     return formatMoney(amountMinor, currency, locale);
   }
-  const vietnameseCompact = locale === "vi" && abbreviated;
-  const scale =
-    Math.abs(major) >= 1_000_000_000
-      ? 1_000_000_000
-      : Math.abs(major) >= 1_000_000
-        ? 1_000_000
-        : 1_000;
-  const unit = scale === 1_000 ? "K" : scale === 1_000_000 ? " triệu" : " tỷ";
+  const scaled = handScaledUnit(major, locale);
+  const unit = abbreviated ? scaled.unit : undefined;
   const formatter = new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "currency",
     currency,
-    notation: abbreviated && !vietnameseCompact ? "compact" : "standard",
+    notation: abbreviated && unit === undefined ? "compact" : "standard",
     // Spelled out: the currency style starts the minimum at the currency's own
     // digits, so a maximum of 1 alone always prints one digit ("€420.0k").
     minimumFractionDigits: 0,
@@ -166,8 +161,8 @@ export function formatMoneyCompact(
     // not reach; truncating drops digits but never adds any.
     roundingMode: "trunc",
   });
-  if (!vietnameseCompact) return formatter.format(major);
-  const parts = formatter.formatToParts(major / scale);
+  if (unit === undefined) return formatter.format(major);
+  const parts = formatter.formatToParts(major / scaled.scale);
   const lastDigit = parts.reduce(
     (last, part, index) =>
       part.type === "integer" || part.type === "fraction" ? index : last,
@@ -241,8 +236,14 @@ export function formatFinePercent(fraction: number, locale: Locale): string {
   }).format(fraction);
 }
 
-export function formatNumber(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale]).format(value);
+export function formatNumber(
+  value: number,
+  locale: Locale,
+  maximumFractionDigits?: number,
+): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    maximumFractionDigits,
+  }).format(value);
 }
 
 // A measured span in hours, to one decimal and in the reader's unit word: a

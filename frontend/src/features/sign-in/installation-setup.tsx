@@ -45,6 +45,7 @@ import "../onboarding/onboarding-first-run.css";
  * restarting — and it walks `steps` in the order it arrives, because that order
  * is the server's to decide.
  */
+import { useCanWrite } from "../../lib/capability";
 import { AiStep } from "./installation-setup.ai-step";
 import { PlatformStep } from "./installation-setup.platform";
 
@@ -71,15 +72,19 @@ const ASKABLE_STEPS = DECLINABLE_STEPS;
  * model step. The model blocks the website read, and the manual interview
  * stands in for it. A decline never opens any other blocking step.
  * A report without `steps` reads as nothing outstanding, never as a throw.
+ * The model step is outstanding only for a reader who may bind a model, the
+ * check the Settings version of the form makes.
  */
 export function outstandingStep(
   setup: Setup | undefined,
   declined: ReadonlySet<DeclinableStep>,
+  canBindModel = true,
 ): Step | undefined {
   return setup?.steps?.find(
     (s) =>
       !s.configured &&
       isAskable(s.step) &&
+      (s.step !== "ai_models" || canBindModel) &&
       !(declined.has(s.step) && (!s.blocking || s.step === "ai_models")),
   );
 }
@@ -152,7 +157,8 @@ export function InstallationSetup() {
   const setup = useInstallationSetup();
   const declined = useSetupDeclines();
   const { decline } = useSetupDecline();
-  const step = outstandingStep(setup.data, declined);
+  const canBind = useCanWrite("ai_routing", "update");
+  const step = outstandingStep(setup.data, declined, canBind);
   // Owned here because the Core belongs to the stage and the write belongs to
   // the step. The step says when it is writing; nothing reads this but the orb.
   const [busy, setBusy] = useState(false);

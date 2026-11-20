@@ -22,7 +22,8 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
-import { usePipelines } from "../../lib/pipelines.queries";
+import { signalSentence } from "../../lib/forecastsignals";
+import { stageNames, usePipelines } from "../../lib/pipelines.queries";
 import type { AnalyticsScope } from "./analytics.context";
 import {
   type ForecastContribution,
@@ -30,7 +31,6 @@ import {
   type ForecastReadings,
   useForecastContributions,
 } from "./forecast.queries";
-import { signalSentence } from "./forecast.signals";
 
 type T = ReturnType<typeof useT>;
 
@@ -165,11 +165,7 @@ export function ForecastDeals({
   const { locale } = useLocale();
   const contributions = useForecastContributions(scope, period);
   const pipelines = usePipelines();
-  const stages = new Map(
-    (pipelines.data ?? []).flatMap((pipeline) =>
-      (pipeline.stages ?? []).map((stage) => [stage.id, stage.name] as const),
-    ),
-  );
+  const stages = stageNames(pipelines.data ?? []);
   const words: Words = {
     t,
     plural,

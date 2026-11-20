@@ -1325,9 +1325,9 @@ export interface paths {
          *     "Based on" line and the "Why this draft?" chips, and a body that explained itself
          *     would be a body the rep has to edit before sending.
          *
-         *     When no model lane is configured, or the workspace's AI budget is exhausted, the draft
-         *     degrades to a deterministic one rather than failing — `generated_by` says which wrote
-         *     it.
+         *     When no model lane is configured, the workspace's AI budget is exhausted, the model call
+         *     fails, or the draft checks refuse the model's answer, the draft degrades to a
+         *     deterministic one rather than failing — `generated_by` says which wrote it.
          *
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to send
          *     under their own name.
@@ -2306,7 +2306,7 @@ export interface paths {
          * @description Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          *     A `parent_company_id` that names a company the caller cannot read answers 422 naming
          *     `parent_company_id`, the same for a missing record and for one hidden by row scope.
          */
@@ -3287,9 +3287,9 @@ export interface paths {
          *     the "Based on" line and the "Why this draft?" chips, and a body that explained
          *     itself would be a body the rep has to edit before sending.
          *
-         *     When no model lane is configured, or the workspace's AI budget is exhausted, the
-         *     draft degrades to a deterministic one rather than failing — `generated_by` says
-         *     which wrote it.
+         *     When no model lane is configured, the workspace's AI budget is exhausted, the model
+         *     call fails, or the draft checks refuse the model's answer, the draft degrades to a
+         *     deterministic one rather than failing — `generated_by` says which wrote it.
          *
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to
          *     send under their own name.
@@ -4593,6 +4593,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/move-pipeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move an open deal to another pipeline, onto its first open stage.
+         * @description Puts the deal on the first open stage of a live pipeline other than its own. A caller
+         *     cannot choose the stage. It is a stage advance in every other way: it writes one
+         *     `deal_stage_history` row and one `advance_stage` audit row, emits `deal.stage_changed`,
+         *     sets the probability from the new stage, and the legal review gate and the object and row
+         *     permissions of an advance hold. The stage the deal leaves keeps its exit criteria; only a
+         *     required legal review blocks a move, and the first open stage has no gated stage before
+         *     it. The history row keeps no stage positions, because the positions of two pipelines do
+         *     not compare. The pipeline row is locked shared, so a retirement or a reorder waits for
+         *     the move.
+         *
+         *     A stale `If-Match` answers 409. A won or lost deal answers 422 `deal_closed`, the
+         *     pipeline the deal is in answers 422 `same_pipeline`, a retired pipeline answers 422
+         *     `pipeline_retired`, and a pipeline with no open stage answers 422
+         *     `pipeline_has_no_open_stage`.
+         */
+        post: operations["moveDealPipeline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/move-pipeline/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put a deal back on the pipeline and stage its last move left.
+         * @description Undoes the deal's latest stage move when it was a move to another pipeline. The source
+         *     pipeline and stage come from that move's `deal_stage_history` row, and the undo writes its
+         *     own row with `reversal_of` naming it. Anything that moved the deal since, an earlier undo
+         *     included, answers 422 `move_not_undoable`. A source pipeline retired since answers 422
+         *     `pipeline_retired`. A stale `If-Match` answers 409.
+         */
+        post: operations["undoDealPipelineMove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/close-day": {
         parameters: {
             query?: never;
@@ -5551,7 +5614,9 @@ export interface paths {
          * @description At most one default pipeline per workspace (409 if a second default). The opening
          *     `stages` keep the ladder's shape: a won or lost stage above an open one is refused
          *     `422` with the code `closing_stage_before_open`, and two stages naming one position
-         *     with `duplicate`.
+         *     with `duplicate`. A ladder without a won or without a lost stage gets the missing one
+         *     appended behind its last stage, named `Won` or `Lost`, so no pipeline is born unable to
+         *     close a deal.
          */
         post: operations["createPipeline"];
         delete?: never;
@@ -5770,7 +5835,9 @@ export interface paths {
          *     `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
          *     instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
          *     behind the open ones, published as the same `pipeline.updated` position delta. A change
-         *     to either moves the pipeline's `version`.
+         *     to either moves the pipeline's `version`. Changing the `semantic` of a pipeline's only
+         *     live won (or lost) stage is refused `422` with the code `last_closing_stage` on
+         *     `semantic`: a pipeline keeps a way to win and a way to lose a deal.
          */
         patch: operations["updateStage"];
         trace?: never;
@@ -6274,6 +6341,11 @@ export interface paths {
          *     `last_exchange` is the newest call, meeting, email or message on the record of any
          *     age, with whose move it leaves. It says where the record stands when nothing is
          *     next, such as waiting on them since the last mail sent.
+         *
+         *     `last_inbound` and `last_outbound` are the newest message the other side wrote and the
+         *     newest one we wrote, of any age, read over every row the caller may list and counted as
+         *     the account's last-touch clocks count them: it has happened, it kept us in touch, and
+         *     it is not automatic mail. Each is absent when there is none.
          */
         get: operations["listLatestInbound"];
         put?: never;
@@ -7302,6 +7374,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/recipient-countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The country the record states for each address, and where it was read.
+         * @description The country a message's marketing rules would follow for each address, read from the
+         *     record exactly as the send reads it: the contact's own address, then the address of
+         *     their current primary employer, then the company a lead is filed under. A country the
+         *     sender states on the message is not part of this answer; the client holds it.
+         *
+         *     An address no single record answers for, or whose record states no usable country,
+         *     answers `country: null` and `source: null`. That is not a refusal: such a recipient is
+         *     judged under the baseline.
+         *
+         *     It authorizes nothing and records nothing. Needs the grant to write a message.
+         */
+        post: operations["resolveRecipientCountries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/lawful-basis-confirmations": {
         parameters: {
             query?: never;
@@ -8225,8 +8326,14 @@ export interface paths {
         /**
          * Exchange a one-time Deal Room credential for a room session (anonymous).
          * @description Consumes the credential — a second exchange of the same string is refused —
-         *     and issues a session token the buyer presents as a Bearer on every other
-         *     `/public/rooms` operation. The session is bound to ONE participant in ONE
+         *     and issues a session token the buyer presents on every other
+         *     `/public/rooms` operation. The same answer sets it as the
+         *     `__Host-crm_room_session` cookie: HttpOnly, Secure, SameSite=Strict,
+         *     Path=/ and expiring with the session, so a browser keeps access after its
+         *     tab closes. Only `/public/rooms` reads that cookie. The body must be
+         *     `application/json`. A write another site starts is refused with 403 on
+         *     every `/public/rooms` operation: `Sec-Fetch-Site: cross-site`, or an
+         *     `Origin` that is not this installation's. The session is bound to ONE participant in ONE
          *     room and is resolved fresh on every request, so revocation binds on the next
          *     call. A paused room still exchanges: the session is established and the
          *     room bootstrap then says access is paused.
@@ -8392,9 +8499,9 @@ export interface paths {
         put?: never;
         /**
          * End the room session.
-         * @description Revokes this session only. The participant keeps their standing; a fresh
-         *     link admits them again. Works in every room state, because ending a session
-         *     is an access act, not a content one.
+         * @description Revokes this session only and clears the `__Host-crm_room_session` cookie. The
+         *     participant keeps their standing; a fresh link admits them again. Works in
+         *     every room state, because ending a session is an access act, not a content one.
          */
         post: operations["signOutBuyerRoom"];
         delete?: never;
@@ -8747,6 +8854,8 @@ export interface paths {
          *     An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
          *     A lead for somebody who is already a contact is refused with 409 `contact_holds_email`:
          *     open a deal on the contact instead.
+         *     A body with none of `full_name`, `email`, `phone`, `linkedin_url` or `company_name`
+         *     answers 422 `lead_identity_required`.
          */
         post: operations["createLead"];
         delete?: never;
@@ -8804,7 +8913,8 @@ export interface paths {
          * How long a sent message may go unanswered before the worklist reminds its sender.
          * @description The workspace's follow-up window: a message a seat sent to a customer that is still
          *     the last word after this many days comes back on the sender's worklist as a
-         *     follow-up. Read by every role; changed by admin/ops. Governed by the
+         *     follow-up. It also carries whether the AI checks private mail for requests owed an
+         *     answer. Read by every role; changed by admin/ops. Governed by the
          *     `installation_settings` RBAC object.
          */
         get: operations["getFollowUpSettings"];
@@ -8813,7 +8923,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Change the follow-up window (admin/ops). */
+        /** Change the follow-up window or the private-mail request check (admin/ops). */
         patch: operations["updateFollowUpSettings"];
         trace?: never;
     };
@@ -9205,9 +9315,9 @@ export interface paths {
          *     A lead with no email address on record is `422`: a draft addressed to nobody is not a
          *     message, and the composer can say so before spending a model call.
          *
-         *     When no model lane is configured, or the workspace's AI budget is exhausted, the draft
-         *     degrades to a deterministic one rather than failing — `generated_by` says which wrote
-         *     it.
+         *     When no model lane is configured, the workspace's AI budget is exhausted, the model call
+         *     fails, or the draft checks refuse the model's answer, the draft degrades to a
+         *     deterministic one rather than failing — `generated_by` says which wrote it.
          *
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to send
          *     under their own name.
@@ -11947,7 +12057,7 @@ export interface paths {
             header?: never;
             path: {
                 /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
-                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
+                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "loss-events" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
             };
             cookie?: never;
         };
@@ -13566,6 +13676,10 @@ export interface paths {
          *     binds only your own mail. Not retroactive — mail already captured under the old reading
          *     stays, and a contact already minted from an alias stays until it is merged or removed.
          *     Idempotent on the folded value.
+         *
+         *     A consumer-mail domain is refused with 422 `consumer_mail_domain` as a whole domain. A company's
+         *     domain or a contact's address answers 409 `domain_needs_confirmation` (`details.role`,
+         *     `details.company_name`); the same request with `confirm: true` stores it.
          */
         post: operations["createCaptureOwnerIdentity"];
         delete?: never;
@@ -13812,7 +13926,15 @@ export interface paths {
     };
     "/connectors/{provider}/disconnect": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -13989,7 +14111,15 @@ export interface paths {
     };
     "/connectors/{provider}/signature-enrichment": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14085,7 +14215,15 @@ export interface paths {
     };
     "/connectors/{provider}/silence/dismiss": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14124,7 +14262,15 @@ export interface paths {
     };
     "/connectors/{provider}/mail-posture": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14173,7 +14319,15 @@ export interface paths {
     };
     "/connectors/{provider}/history-baseline": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14224,7 +14378,15 @@ export interface paths {
     };
     "/connectors/{provider}/context-tag": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14275,7 +14437,15 @@ export interface paths {
     };
     "/connectors/{provider}/backfill/preview": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14318,7 +14488,15 @@ export interface paths {
     };
     "/connectors/{provider}/backfill": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14617,9 +14795,10 @@ export interface paths {
          *     on a deal at risk.
          *
          *     Each row must be one the caller's Worklist draws now, under a scope they hold, with
-         *     every lane's own grant and row scope. Any other row answers 404, the same as one
-         *     that does not exist, and nothing in the batch is written. A source whose rows never
-         *     offer Done answers 422. A row named twice is written once.
+         *     every lane's own grant and row scope, or one the caller already marked done. A row
+         *     already done answers 204 and is not written again. Any other row answers 404, the
+         *     same as one that does not exist, and nothing in the batch is written. A source whose
+         *     rows never offer Done answers 422. A row named twice is written once.
          */
         put: operations["markWorklistRowsDone"];
         post?: never;
@@ -15782,6 +15961,11 @@ export interface paths {
          *     because that is what the matcher keys on. Idempotent on the domain: re-adding returns the
          *     existing entry and changing an entry's kind updates it, since a domain cannot be both
          *     added and carved out. Audit-only write (no event stream, EVT-NOEVT-3).
+         *
+         *     An `extra` entry is refused with 422 for the workspace's own domain (`own_domain`) and for a
+         *     domain the shipped list already holds (`already_on_shipped_list`). For the domain of a company
+         *     on file it answers 409 `domain_needs_confirmation` with `details.company_name`; the same
+         *     request with `confirm: true` stores it.
          */
         post: operations["addConsumerMailDomain"];
         delete?: never;
@@ -17036,6 +17220,30 @@ export interface paths {
         patch: operations["updateAutonomy"];
         trace?: never;
     };
+    "/autonomy/installation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Switch automatic application on or off for the whole installation.
+         * @description Admin only (`approvals.auto_apply_enabled`). Off, no proposal applies itself
+         *     for anybody, whatever a reader's own setting says. On, nothing changes for a
+         *     reader: their own mode per kind still decides, so turning it back on never
+         *     switches on a kind somebody turned off. The switch is read back as
+         *     `auto_apply_enabled` on `GET /autonomy`.
+         */
+        put: operations["updateAutoApplyInstallation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/approval-preferences": {
         parameters: {
             query?: never;
@@ -17751,9 +17959,11 @@ export interface paths {
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
-         *     A SUBJECT'S OWN STOP IS NEVER PASSED. A review that holds an objection, a withdrawal, a
-         *     restriction or a request to stop is refused with 403, admin included, even beside a refusal
-         *     a decision could pass.
+         *     WHAT A DECISION CAN PASS is each refusal's declared remedy. A holder of the exception grant
+         *     may send one message past a policy refusal and past the subject's own objection, withdrawal,
+         *     restriction or request to stop; the stop stays on record and binds the next message. A hard
+         *     bounce and a recipient the engine cannot name declare no remedy: a review holding one is
+         *     refused with 403, admin included, because the address needs a real repair.
          *
          *     THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
          *     took it on. An agent or a connector is refused: it may read the review and send its user
@@ -17766,7 +17976,9 @@ export interface paths {
          *     is the one thing a dispute about that override needs not to be possible.
          *
          *     SPENT ONCE. The decision authorizes this message to this envelope and is consumed when it
-         *     goes. The next message to the same contact needs its own.
+         *     goes. The next message to the same contact needs its own. A retry under the same
+         *     `Idempotency-Key` answers the recorded 201, so a client whose first answer was lost learns
+         *     the message went.
          */
         post: operations["directCommunicationSend"];
         delete?: never;
@@ -20378,6 +20590,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/roles/{key}/restore-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The role key of a role the product ships. */
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put a shipped role's grants back to the ones the product ships. Human-only.
+         * @description Replaces the whole `objects` map of a system role (`is_system: true`) with the grants a
+         *     new installation seeds for it, extension defaults included. Grants on objects the
+         *     installation cannot name are dropped with the rest. Name, row scope and field masks are
+         *     left as they are. A custom role has nothing shipped to return to (409 `custom_role`).
+         *
+         *     Gated on `role_admin.update`. A restore that turns any verb on is admin only (403
+         *     `widening_requires_admin`), like any other widening. `If-Match` is required: a missing
+         *     or malformed one is refused 422 and a stale one 409 `version_skew`.
+         *
+         *     The audit row names the role and the before and after grant of each object that moved.
+         *     No public event is emitted, for the reason `setRoleObjectGrant` gives. Live sessions are
+         *     not revoked.
+         */
+        post: operations["restoreRoleGrants"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/roles/{key}/objects/{object}": {
         parameters: {
             query?: never;
@@ -20419,6 +20665,10 @@ export interface paths {
          *     because refusing stored data costs a member their session; on this WRITE path the
          *     opposite is true — refusing input an admin just typed costs them a correction, and
          *     storing a typo would create a grant nobody can ever satisfy and no screen can explain.
+         *
+         *     A grant with Create, Update or Delete on and Read off is refused 422 `write_needs_read`,
+         *     unless the object offers no Read (`verbs` on `listRoles`). Every write shows the record it
+         *     wrote, so a write without Read could act on rows its holder is never shown.
          *
          *     Gated on `role_admin.update`. Turning a verb OFF is open to every holder of the grant.
          *     Turning one ON is admin only (403 `widening_requires_admin`), which is also how a newly
@@ -22668,6 +22918,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forecast/focus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The deals each team should work to meet its goal this quarter.
+         * @description Read from the latest daily freeze of each team in the current quarter. The freeze ranks a
+         *     team's open priced deals when the team has a published goal for every month of the quarter.
+         *
+         *     Behind the goal, the list ranks deals by weighted amount, raised for each close-date risk.
+         *     On target, it lists only deals with a close-date risk, most risks first. A close-date risk
+         *     is a close date that passed, a provisional date, a date that kept moving, or a close within
+         *     a week with no next step. At most 20 deals, and the rank stays as frozen.
+         *
+         *     Each team needs the right to assert about its forecast, so a seat outside a team gets 404
+         *     for it. A deal the caller may not read is left out. A masked amount is left out of its row.
+         *     With individual performance off, a list shows only the reader's own deals and names no
+         *     owner. A team too small for that is refused when named and left out otherwise.
+         */
+        get: operations["getForecastFocus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/forecast/calls": {
         parameters: {
             query?: never;
@@ -23773,13 +24054,69 @@ export interface paths {
          *     (a hidden or cross-tenant entity answers 404, never leaks existence).
          *     The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
          *     Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
-         *     answers 422 `unsupported_file_type`.
+         *     answers 422 `unsupported_file_type`. So does a file whose content does not match its
+         *     name or declared type, such as a program renamed to `.pdf`.
          *
          *     An agent may file one no larger than the `attach_document` tool takes: what one MCP
          *     request carries inline, or the operator's attachment limit when that is smaller. A
          *     larger file answers 422 on `file`, as the tool refuses it.
          */
         post: operations["uploadAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attachments/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a web link to a record's documents.
+         * @description A document that lives somewhere else, such as a Google Doc or a web page, listed with the
+         *     record's files. The row keeps the address and holds no bytes: `url` is set,
+         *     `bytes_withheld` is true, and the download route answers 404 for it. The server does not
+         *     fetch the address here; `title` is what the caller read or typed.
+         *
+         *     The parent rules are the upload's: Update on the parent's type, and a parent the caller can
+         *     see (a hidden or cross-tenant one answers 404). `category` is what the document is; the two
+         *     provenance values and `link`, which marks a link a mail carried, are refused (422
+         *     `category_not_assertable`). The same address listed live on the same record answers 422
+         *     `link_already_listed`.
+         */
+        post: operations["addAttachmentLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attachments/links/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read the title a web page gives itself, before the link is added.
+         * @description Fetches the address once through the public-web reader: SSRF-guarded, robots.txt honored,
+         *     no cookies sent. Answers the page's Open Graph title, else its `<title>`, and its Open
+         *     Graph site name. Writes nothing.
+         *
+         *     A page that cannot be read still answers 200 with `read: false` and no title, because the
+         *     link can be added all the same. Google Docs, Sheets, Slides, Forms and Drive addresses are
+         *     not fetched: they answer a sign-in page, never the document's title.
+         */
+        post: operations["previewAttachmentLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -25279,9 +25616,12 @@ export interface paths {
          *     `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
          *     (with `max_mb`), `too_many_files` (with `files` and `max_files`),
          *     `password_protected`, `file_damaged` or `file_missing` (with `file`),
-         *     `two_files_one_type` (with `file`, `other_file` and `object`) or
-         *     `type_not_importable` (with `object`). A refusal of one file of a ZIP
-         *     also names it in `file`.
+         *     `two_files_one_type` (with `file`, `other_file` and `object`),
+         *     `type_not_importable` (with `object`), `spreadsheet` (an Excel
+         *     workbook, which holds no CSV) or `no_importable_file` (with
+         *     `file_names`, the names the import reads). A ZIP with no file the
+         *     import reads opens no run. A refusal of one file of a ZIP also names
+         *     it in `file`.
          *
          *     A cell an export quoted against formula evaluation (a quote before `=`,
          *     `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -25937,7 +26277,7 @@ export interface paths {
          *     Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          */
         patch: operations["updateCompanyProfileField"];
         trace?: never;
@@ -26105,7 +26445,7 @@ export interface paths {
         put?: never;
         /**
          * Add a document to this corpus.
-         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
+         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. A `.txt`, `.md`, `.csv` or `.json` ending names the type whatever type the client sent with it. Anything else is refused 415, naming the kind of file in words and what to save it as; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. A file whose content is not text, such as a program renamed to `.md`, is refused the same way. An empty file is refused 422 `empty_file` on `file`, and nothing is stored. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
          */
         post: operations["uploadCorpusDocument"];
         delete?: never;
@@ -27632,6 +27972,14 @@ export interface components {
              */
             max_upload_bytes: number;
             /**
+             * Format: int64
+             * @description The largest document `uploadCorpusDocument` accepts, in bytes. Set by whoever operates
+             *     the installation, on the same terms as `max_upload_bytes`, and lower than it by
+             *     default because a corpus document becomes passages every ask scans. Absent from a
+             *     server older than this field; a client then leaves the refusal to the server.
+             */
+            max_knowledge_document_bytes?: number;
+            /**
              * @description How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
              *     for the code exchange and every refresh rotation alike. 30 days by default, at most
              *     90. A change applies to the next token minted; tokens already issued keep the expiry
@@ -27925,7 +28273,7 @@ export interface components {
              * @enum {string}
              */
             outcome_now: "captured" | "internal" | "suppressed" | "deferred" | "fault";
-            /** @description A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `no_granting_human`, `invisible_incumbent`, `derivation_failed`. */
+            /** @description A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `own_addresses_only` (every party was the mailbox owner's own address and no forwarded customer mail was found), `no_granting_human`, `invisible_incumbent`, `derivation_failed`. */
             reason?: string | null;
             /**
              * Format: uuid
@@ -29235,13 +29583,13 @@ export interface components {
              *       as a company.
              *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
              *       company this business works with. `sender_kind` says which, when it is known.
-             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
              *       domain's open question, as `source` describes each one.
              *     - `unknown`: the row records a reason this server has no word for. `reason` still
              *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "unknown";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "foreign_site" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -29262,10 +29610,12 @@ export interface components {
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
              *     to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+             *     `foreign_site` means the site names a different business than the domain, which may
+             *     have changed hands.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "foreign_site";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -29336,6 +29686,8 @@ export interface components {
             domain: string;
             /** @enum {string} */
             kind: "extra" | "never";
+            /** @description Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again. */
+            confirm?: boolean;
         };
         ConsumerMailDomainListResponse: {
             data: components["schemas"]["ConsumerMailDomain"][];
@@ -29408,6 +29760,12 @@ export interface components {
             can_backfill: boolean;
             /** @description Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one. */
             account_label?: string | null;
+            /**
+             * @description True on the mailbox the member marked for new mail
+             *     (`PUT /connectors/{provider}/mail-posture` with `default_sender`). Without a mark, new
+             *     mail goes out from the first connected mailbox that can send.
+             */
+            default_sender?: boolean;
             /**
              * @description Connection state; `reauth_required` when the stored token expired/was revoked upstream.
              * @enum {string}
@@ -29559,13 +29917,23 @@ export interface components {
             /** @description true or false is this mailbox's own answer; null follows the tenant default. */
             enabled: boolean | null;
         };
-        /** @description What one mailbox asks of the mail it brings in. */
+        /**
+         * @description What one mailbox asks of the mail it brings in, and whether new mail goes out from it.
+         *     Send `posture`, `default_sender`, or both; a body with neither is refused with 422.
+         */
         SetMailPostureRequest: {
+            /**
+             * @description `true` makes this mailbox the one the caller's new mail goes out from, and unmarks the
+             *     one that was. A reply still goes out from the mailbox the conversation arrived in.
+             *     `false` is ignored: a member always has a default, the first connected when none is
+             *     marked.
+             */
+            default_sender?: boolean;
             /**
              * @description See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.
              * @enum {string}
              */
-            posture: "shared" | "classified" | "held";
+            posture?: "shared" | "classified" | "held";
             /**
              * @description Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
              *     narrows: a move towards `shared` leaves history where it is, because opening what was
@@ -29936,6 +30304,12 @@ export interface components {
         EmailSummary: {
             /** @description An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld. */
             request_has_reminder?: boolean;
+            /**
+             * @description Present on an open request with an unfinished reminder when our reply on its thread
+             *     is newer than it and is still the newest message there. The request stays open: a
+             *     reply settles nothing by itself. Absent when the source is withheld.
+             */
+            our_reply?: components["schemas"]["RequestReply"];
             /** Format: uuid */
             activity_id: string;
             /** @description Null when the message has none, and when the content is withheld. */
@@ -30178,8 +30552,13 @@ export interface components {
             filename: string;
             byte_size?: number | null;
             content_type?: string | null;
-            /** @description True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch. */
+            /** @description True when the file was recorded by name, size and type only. There are no bytes to fetch; `withheld_reason` says why. */
             readonly bytes_withheld?: boolean;
+            /**
+             * @description Present when `bytes_withheld` is true. `private`: the message is private to its owner. `not_addressed`: no colleague here sent the message or was in its To line, so the bytes wait for a copy that was addressed to one.
+             * @enum {string}
+             */
+            readonly withheld_reason?: "private" | "not_addressed";
         };
         /**
          * @description Who reads this message, and what this caller may do about that. `can_change` and
@@ -30428,6 +30807,11 @@ export interface components {
             kind: components["schemas"]["CaptureExclusionKind"];
             /** @description The folded address or domain, or a provider-qualified container (`gmail:Label_12`, `graph:<folderId>`, `imap:INBOX/Family`) kept as the provider spells it. */
             value: string;
+            /**
+             * Format: uuid
+             * @description The mailbox a container rule matches in. Null for every other rule.
+             */
+            connection_id?: string | null;
             /** Format: date-time */
             created_at: string;
             /**
@@ -30456,6 +30840,14 @@ export interface components {
             kind: components["schemas"]["CaptureExclusionKind"];
             /** @description An email address, or a bare domain. */
             value: string;
+            /**
+             * Format: uuid
+             * @description For a `container` rule, the caller's mailbox the folder was picked from, the `id` of a
+             *     `CaptureConnection`. A label or folder id means another folder in another mailbox, so
+             *     the rule matches only there. Omit it while the caller holds one mailbox of the
+             *     provider; with several it is required. Ignored for other kinds.
+             */
+            connection_id?: string;
         };
         /**
          * @description What the identity names. Its own schema rather than the exclusion's, which the two shared while they happened to hold the same two values: an exclusion can now also name a CONTAINER, and a container is not something a mailbox owner can BE.
@@ -30542,6 +30934,8 @@ export interface components {
             kind: components["schemas"]["CaptureOwnerIdentityKind"];
             /** @description An email address, or a bare domain. */
             value: string;
+            /** @description Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again. */
+            confirm?: boolean;
         };
         WorkspaceEmailDomainListResponse: {
             data: components["schemas"]["WorkspaceEmailDomain"][];
@@ -30656,6 +31050,14 @@ export interface components {
              */
             redirect_uri?: string;
             /**
+             * Format: uuid
+             * @description The caller's mailbox this consent repairs (Reconnect). The consent must name the same
+             *     account: a different one is refused, because it is another mailbox. Absent adds the
+             *     account the consent names as another mailbox, or repairs the one that account already
+             *     has. Ignored by credential providers.
+             */
+            connection_id?: string;
+            /**
              * @description Which surface the post-consent redirect lands on: `onboarding` lands on
              *     `/#/onboarding/connect/{outcome}/{provider}`, `settings` on
              *     `/#/settings/connections/{outcome}/{provider}` and `meetings` on
@@ -30712,6 +31114,20 @@ export interface components {
              * @default 50
              */
             max_messages: number;
+            smtp?: components["schemas"]["ImapSmtpSettings"];
+        };
+        /** @description Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`, and a username that is not an email address `422` `smtp_address_invalid`. Absent keeps the connection read-only. A shared mailbox only captures, and refuses it with `422` `shared_mailbox_cannot_send`. */
+        ImapSmtpSettings: {
+            /** @description The SMTP server. Absent or empty uses the IMAP host. */
+            host?: string;
+            /** @description Absent uses 465 for `tls` and 587 for `starttls`. */
+            port?: number;
+            /**
+             * @description `tls` opens TLS at once (port 465). `starttls` upgrades a plain connection (port 587) and refuses a server that cannot.
+             * @default tls
+             * @enum {string}
+             */
+            security: "tls" | "starttls";
         };
         /** @description A mailbox no one owns. One team reads what it captures. */
         SharedMailbox: {
@@ -30748,6 +31164,8 @@ export interface components {
              * @description The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.
              */
             backup_owner_id?: string | null;
+            /** @description A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none. */
+            unread_period?: components["schemas"]["CaptureUnreadPeriod"];
         };
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];
@@ -31170,6 +31588,20 @@ export interface components {
             history: components["schemas"]["LegalReviewPacketStage"][];
             /** @description The deal's contract, legal and offer documents, newest first. */
             documents: components["schemas"]["LegalReviewPacketDocument"][];
+            /**
+             * @description The agreements filed against the deal, newest term first. Absent on a
+             *     pack asked for before agreements were packed. An agreement this reader
+             *     may not open, and every agreement for a reader without `deal.read`, is not listed.
+             */
+            contracts?: components["schemas"]["LegalReviewPacketContract"][];
+            /**
+             * @description The deal's latest calls, meetings, messages and notes, newest first. One
+             *     this reader may not read, such as mail outside their audience, is not
+             *     listed. Absent on an older pack.
+             */
+            touches?: components["schemas"]["LegalReviewPacketTouch"][];
+            /** @description The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack. */
+            tasks?: components["schemas"]["LegalReviewPacketTask"][];
         };
         LegalReviewPacketDeal: {
             /** Format: uuid */
@@ -31241,6 +31673,48 @@ export interface components {
             stage_name: string;
             /** Format: date-time */
             entered_at: string;
+        };
+        /**
+         * @description One agreement as it stood at the request. Its title is read now for this
+         *     reader. The dates and notice terms are the ones frozen with the pack.
+         */
+        LegalReviewPacketContract: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            contract_number?: string | null;
+            /** @enum {string} */
+            status: "draft" | "active" | "expired" | "cancelled" | "superseded";
+            /** Format: date */
+            starts_on?: string | null;
+            /** Format: date */
+            ends_on?: string | null;
+            /** Format: date */
+            renewal_on?: string | null;
+            /** Format: date */
+            cancellation_notice_on?: string | null;
+            notice_period_days?: number | null;
+            auto_renew?: boolean | null;
+        };
+        /** @description One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content. */
+        LegalReviewPacketTouch: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @enum {string} */
+            kind: "call" | "email" | "meeting" | "message" | "note";
+            /** Format: date-time */
+            occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
+            subject?: string | null;
+        };
+        /** @description One task that was open at the request. Its subject is read now. */
+        LegalReviewPacketTask: {
+            /** Format: uuid */
+            activity_id: string;
+            subject?: string | null;
+            /** Format: date-time */
+            due_at?: string | null;
         };
         /**
          * @description One document as it stood at the request, read now for this reader. A
@@ -31612,6 +32086,34 @@ export interface components {
              * @description Who owns the remaining contact: the live owner of one of the selected members.
              */
             owner_id: string;
+            prefer?: components["schemas"]["ContactCasePreference"];
+        };
+        /**
+         * @description Where the selected members disagree, the member whose value the remaining contact takes.
+         *     Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+         *     No value is lost: every address, number and employment of every member stays on the remaining contact.
+         */
+        ContactCasePreference: {
+            /**
+             * Format: uuid
+             * @description The member whose first and last name the remaining contact takes.
+             */
+            name?: string;
+            /**
+             * Format: uuid
+             * @description The member whose title the remaining contact takes.
+             */
+            title?: string;
+            /**
+             * Format: uuid
+             * @description The member whose primary email address becomes the remaining contact's primary one.
+             */
+            email?: string;
+            /**
+             * Format: uuid
+             * @description The member whose current employer becomes the remaining contact's current one.
+             */
+            employment?: string;
         };
         /** @description What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant. */
         ContactCaseOutcome: {
@@ -32581,7 +33083,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -32798,6 +33300,13 @@ export interface components {
             /** @description The file name a ZIP entry needs for this object to be detected. */
             file: string;
             object: components["schemas"]["ImportObject"];
+            /**
+             * @description The columns that tell this file's rows apart. A file needs at
+             *     least one of them mapped, or the test run does not start, unless
+             *     the request names its own `source_key` column. Absent from a
+             *     server older than this field.
+             */
+            key_columns?: string[];
             columns: components["schemas"]["ImportFormatColumn"][];
         };
         /**
@@ -33305,6 +33814,14 @@ export interface components {
              *     name, so a screen can word the code in the reader's language; `message` stays
              *     the English sentence.
              *
+             *     A value its field cannot hold names the field's path (`address.city` for a key of a
+             *     nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+             *     `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+             *     `invalid_type` for any other shape. A body that is not one JSON object, and a value
+             *     inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+             *     carries its bounds as `params.min` and `params.max`, as the schema spells them;
+             *     a date-time range states them as ISO dates.
+             *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
              *     `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
@@ -33386,7 +33903,7 @@ export interface components {
              */
             email_type: "work" | "personal" | "other";
             /**
-             * @description At most one primary per type (DB-enforced).
+             * @description At most one primary address per contact, whatever its type (DB-enforced). primary_email follows it. A second primary in one request is refused with 409 multiple_primary.
              * @default false
              */
             is_primary: boolean;
@@ -33417,7 +33934,10 @@ export interface components {
              * @enum {string}
              */
             phone_type: "work" | "mobile" | "home" | "other";
-            /** @default false */
+            /**
+             * @description At most one primary number per contact, whatever its type (DB-enforced).
+             * @default false
+             */
             is_primary: boolean;
             /** @default 0 */
             position: number;
@@ -33910,6 +34430,11 @@ export interface components {
              */
             readonly created_from_activity_id?: string | null;
             /**
+             * @description How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+             * @enum {string|null}
+             */
+            greeting_register?: "formal" | "familiar" | null;
+            /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
              */
@@ -34237,7 +34762,8 @@ export interface components {
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
              *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
              *     `skipped` — the card states no name or one over 120 characters, carries a sending
-             *     system's address, or matches a contact the caller may not write; `reason` says which.
+             *     system's address, holds a value that is not readable text or cannot be stored, or
+             *     matches a contact the caller may not write; `reason` says which.
              * @enum {string}
              */
             outcome: "created" | "updated" | "needs_review" | "proposed" | "skipped";
@@ -34304,7 +34830,10 @@ export interface components {
              * @enum {string}
              */
             email_type: "work" | "personal" | "other";
-            /** @default false */
+            /**
+             * @description The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.
+             * @default false
+             */
             is_primary: boolean;
             /** @default 0 */
             position: number;
@@ -34320,13 +34849,21 @@ export interface components {
              * @enum {string}
              */
             phone_type: "work" | "mobile" | "home" | "other";
-            /** @default false */
+            /**
+             * @description The one primary number of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`.
+             * @default false
+             */
             is_primary: boolean;
             /** @default 0 */
             position: number;
         };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdateContactRequest: {
+            /**
+             * @description Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+             * @enum {string|null}
+             */
+            greeting_register?: "formal" | "familiar" | null;
             /**
              * @description Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
              * @enum {string|null}
@@ -35175,9 +35712,10 @@ export interface components {
         };
         /**
          * @description Which writer produced a piece of generated prose. `model` — the configured model
-         *     lane. `deterministic` — the structured fallback, used when no lane is configured
-         *     or the workspace's AI budget is exhausted. Never silently interchangeable: a
-         *     reader deciding how much to trust a sentence needs to know which wrote it.
+         *     lane. `deterministic` — the structured fallback, used when no lane is configured,
+         *     the workspace's AI budget is exhausted, the model call fails, or the checks the
+         *     surface runs refuse the model's answer. Never silently interchangeable: a reader
+         *     deciding how much to trust a sentence needs to know which wrote it.
          * @enum {string}
          */
         WrittenBy: "model" | "deterministic";
@@ -35703,6 +36241,11 @@ export interface components {
             /** @description Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write. */
             attachable: boolean;
             title?: string | null;
+            /**
+             * @description The register a rep set for opening a message to this contact; null when none is set.
+             * @enum {string|null}
+             */
+            greeting_register?: "formal" | "familiar" | null;
             /** @description A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed. */
             provider_title?: string | null;
             /**
@@ -36753,6 +37296,16 @@ export interface components {
          * @enum {string}
          */
         ConversationClaimKind: "commitment_ours" | "commitment_theirs" | "open_question" | "decision" | "priority" | "objection" | "success_criterion" | "decision_process";
+        /** @description A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb. */
+        ConversationClaimLooksKept: {
+            /** Format: uuid */
+            meeting_id: string;
+            guest_name: string;
+            /** Format: date-time */
+            meeting_at: string;
+            /** @description How to read `meeting_at`. `day` means only its date is known. */
+            meeting_precision: components["schemas"]["OccurredPrecision"];
+        };
         /**
          * @description One thing said in a captured conversation, with the evidence it was read from.
          *
@@ -36791,6 +37344,7 @@ export interface components {
              * @description When a human typed over the machine. Set means the claim is theirs, not the extractor's.
              */
             corrected_at?: string | null;
+            looks_kept?: components["schemas"]["ConversationClaimLooksKept"];
             /**
              * Format: uuid
              * @description The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
@@ -37921,6 +38475,15 @@ export interface components {
             /** @description The contact's display name. Null when the caller may not read that contact — the seat still counts toward coverage, because how many contacts carry a deal is not a fact this reader is being told they cannot know; only who they are. `our_side` has carried a display name from the start, and a buyer-side seat that carries only an id is the same list rendered half-anonymous. */
             contact_name?: string | null;
             role: string;
+            /**
+             * @description Whether a current colleague has exchanged mail with or met this seat, as the caller
+             *     can prove it. `not_reached` only when no activity links the seat to a colleague at
+             *     all. Anything withheld from the caller, or an exchange only with a colleague who has
+             *     left, is `unknown`. Absent for a seat the caller cannot read, and without the
+             *     `activity` grant.
+             * @enum {string}
+             */
+            reach?: "reached" | "not_reached" | "unknown";
             /** @description A two-way exchange in the window — both directions, not just our sends. */
             engaged: boolean;
             /**
@@ -37930,6 +38493,35 @@ export interface components {
             last_inbound_at?: string | null;
             /** @description How to read `last_inbound_at`, from the activity it names. Absent when that is absent. */
             last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+        };
+        /** @description One colleague's exchange with one buyer seat, as the newest event in each direction. */
+        DealCoverageLine: {
+            /** Format: uuid */
+            user_id: string;
+            /** Format: uuid */
+            contact_id: string;
+            colleague_name: string;
+            /**
+             * Format: date-time
+             * @description When the contact last wrote to this colleague.
+             */
+            last_inbound_at?: string | null;
+            /** @description How to read `last_inbound_at`. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+            /**
+             * Format: date-time
+             * @description When this colleague last wrote to the contact, or was copied on our mail to them.
+             */
+            last_outbound_at?: string | null;
+            /** @description How to read `last_outbound_at`. */
+            last_outbound_precision?: components["schemas"]["OccurredPrecision"];
+            /**
+             * Format: date-time
+             * @description The newest meeting or call of the pair that neither declined.
+             */
+            last_met_at?: string | null;
+            /** @description How to read `last_met_at`. */
+            last_met_precision?: components["schemas"]["OccurredPrecision"];
         };
         /**
          * @description One finding, with the records behind it. `kind` names the rule so a surface can
@@ -37997,11 +38589,18 @@ export interface components {
             /**
              * Format: uuid
              * @description A confirmed current inbound request on this deal, admitted by the
-             *     request owner's responsibility, settlement and currency rules.
-             *     Absent for historical or unconfirmed review. Its absence makes no
+             *     request owner's responsibility, settlement and currency rules, that
+             *     is still owed our reply. Absent for historical or unconfirmed
+             *     review, and while `our_reply` is present. Its absence makes no
              *     claim about whether an unrecorded reply exists.
              */
             reply_to?: string | null;
+            /**
+             * @description The current request on this deal that we replied to, while our reply is the newest
+             *     message on its thread. The card then says we replied instead of saying the buyer
+             *     waits, and offers to mark the reminder done.
+             */
+            our_reply?: components["schemas"]["RequestReply"];
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
@@ -38112,6 +38711,35 @@ export interface components {
             last_success_at?: string;
             /** Format: date-time */
             evaluated_at: string;
+        };
+        /**
+         * @description We replied after a request, and our reply is still the newest message on its thread.
+         *     One rule decides it, so the deal card, its risk line and its next move agree on whose
+         *     move it is. The request itself stays open until its reminder is done or a settlement
+         *     verdict records it settled.
+         */
+        RequestReply: {
+            /**
+             * Format: uuid
+             * @description The request we replied to.
+             */
+            request_activity_id: string;
+            /** @description The reader sent the reply. False when a colleague did. */
+            by_reader: boolean;
+            /**
+             * Format: date-time
+             * @description When our newest reply on the thread happened.
+             */
+            replied_at: string;
+            replied_precision: components["schemas"]["OccurredPrecision"];
+            /** @description What the settlement pass found still asked, quoted from the request. Absent when no still_owed verdict quoted one. */
+            still_asked?: string;
+            /**
+             * Format: uuid
+             * @description The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+             */
+            reminder_id?: string;
+            reminder_version?: components["schemas"]["RowVersion"];
         };
         /**
          * @description A recommendation's scoped source and classification. Known request kinds
@@ -38802,6 +39430,13 @@ export interface components {
              *     entries, so its colleague is always one of them.
              */
             our_side: components["schemas"]["ContactNetworkColleague"][];
+            /**
+             * @description One entry per current colleague and readable seat who have exchanged mail or met,
+             *     from the activities the caller may open, at the time of the read. A seat the caller
+             *     cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+             *     the edge sections are withheld: absence says nothing about who has talked.
+             */
+            lines?: components["schemas"]["DealCoverageLine"][];
             risks: components["schemas"]["DealCoverageRisk"][];
             /**
              * @description The sections withheld for lack of the `relationship` grant — so a client can say
@@ -40377,6 +41012,8 @@ export interface components {
             readonly closing_occurrence_id?: string | null;
             /** @description The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422). */
             readonly masked_fields?: string[];
+            /** @description The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none. */
+            readonly ai_written_fields?: string[];
             /** @description Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate. */
             fx_rate_to_base?: string | null;
             /** Format: date */
@@ -40480,11 +41117,16 @@ export interface components {
              * @description 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
              */
             wait_until?: string | null;
+            /**
+             * Format: date-time
+             * @description The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+             */
+            readonly wait_ends_at?: string | null;
             /** Format: date-time */
             closed_at?: string | null;
             /**
              * Format: date-time
-             * @description The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+             * @description The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
              */
             last_activity_at?: string | null;
             /** @description Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off. */
@@ -40681,6 +41323,13 @@ export interface components {
              * @description The calendar day the deal closed, in the installation's zone. Not after today.
              */
             closed_on: string;
+        };
+        MoveDealPipelineRequest: {
+            /**
+             * Format: uuid
+             * @description The live pipeline to move the deal to. It must differ from the deal's own.
+             */
+            pipeline_id: string;
         };
         AdvanceDealRequest: {
             /**
@@ -43482,10 +44131,10 @@ export interface components {
              *     moment a human actually knows the answer — the meeting is over — was the one
              *     moment the API could not be told.
              *
-             *     An omitted field is unchanged, like every other field on this patch. Sending
-             *     an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-             *     `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-             *     wrong outcome is fixed by sending the right one.
+             *     An omitted field is unchanged, like every other field on this patch. An explicit
+             *     `null` removes the status, so the meeting is unanswered again; that is how a
+             *     recorded outcome is taken back. A meeting held by a live calendar invitation
+             *     refuses it like any status other than `held` or `no_show`.
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
@@ -43495,6 +44144,8 @@ export interface components {
         LatestInboundList: {
             data: components["schemas"]["LatestInbound"][];
             last_exchange?: components["schemas"]["LastExchange"];
+            last_inbound?: components["schemas"]["Activity"];
+            last_outbound?: components["schemas"]["Activity"];
         };
         /** @description The newest call, meeting, email or message on the record. Absent when there is none. */
         LastExchange: {
@@ -43589,7 +44240,9 @@ export interface components {
              *
              *     `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
              *     Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
-             *     and the category cannot be set or changed through a metadata patch.
+             *     and the category cannot be set or changed through a metadata patch. A link a user
+             *     added (`POST /attachments/links`) holds an address the same way under the category
+             *     they chose, never `link`; its `source` is `link`.
              *
              *     `email_attachment` and `message_attachment` record PROVENANCE rather than
              *     content: capture derives them from the transport the file arrived on, so a
@@ -43626,9 +44279,9 @@ export interface components {
              * @description The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
-            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes. */
+            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for any row with a `url`, which is a pointer and has no bytes. */
             readonly bytes_withheld?: boolean;
-            /** @description The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download. */
+            /** @description The address of a document that lives elsewhere: a `link` row a mail carried, or a link a user added. Null for a stored file. It is an http or https address. The reader renders it as an outbound link to open in a new tab, never as a download. */
             readonly url?: string | null;
             origin?: components["schemas"]["AttachmentOrigin"];
             source: string;
@@ -43656,6 +44309,38 @@ export interface components {
             occurred_precision: components["schemas"]["OccurredPrecision"];
             /** @description Who the mail is from, named as the caller may see them: a contact's name only when the caller may see that contact. Absent when capture recorded no sender. */
             sender?: components["schemas"]["EmailParty"];
+        };
+        AddAttachmentLinkRequest: {
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "activity" | "lead" | "project";
+            /** Format: uuid */
+            entity_id: string;
+            /** @description An http or https address, without user info. */
+            url: string;
+            /** @description What a reader looks for. Absent or blank lists the link under its host. */
+            title?: string | null;
+            /**
+             * @description What the document is. Absent leaves it uncategorised, as an upload is.
+             * @enum {string}
+             */
+            category?: "contract" | "offer" | "legal" | "other";
+            /**
+             * Format: uuid
+             * @description The agreement this document is about, as on the upload.
+             */
+            contract_id?: string;
+        };
+        AttachmentLinkPreview: {
+            /** @description The address as it will be stored. */
+            url: string;
+            /** @description The lowercased host the address names. */
+            host: string;
+            /** @description False when the page was not fetched or did not answer. */
+            read: boolean;
+            /** @description The page's Open Graph title, else its <title>. Absent when it gave none. */
+            title?: string;
+            /** @description The page's Open Graph site name. Absent when it gave none. */
+            site_name?: string;
         };
         AttachmentListResponse: {
             data: components["schemas"]["Attachment"][];
@@ -44015,6 +44700,39 @@ export interface components {
             label: string;
             evidence_ref?: components["schemas"]["CompanyBriefEvidence"];
         };
+        RecipientCountriesRequest: {
+            /** @description The addresses on the message, as they are on `to`, `cc` or `bcc`. */
+            addresses: string[];
+        };
+        RecipientCountries: {
+            recipients: components["schemas"]["RecipientCountryReading"][];
+        };
+        RecipientCountryReading: {
+            /** @description The address as it was asked. */
+            address: string;
+            /** @description The ISO 3166-1 alpha-2 code in lower case, or null when the record states none. */
+            country: string | null;
+            /**
+             * @description The record the country was read from: the contact's own address, the address of
+             *     their current primary employer, or the company a lead is filed under. Null with a
+             *     null `country`.
+             * @enum {string|null}
+             */
+            source: "contact_address" | "employer_address" | "lead_company_address" | null;
+        };
+        /**
+         * @description A country a sender states for one recipient of one message. It is never written to the
+         *     contact.
+         */
+        RecipientCountry: {
+            /** @description The recipient's address, as it is on `to`, `cc` or `bcc`. */
+            address: string;
+            /**
+             * @description An ISO 3166-1 alpha-2 code, or null for a country the sender cleared. A cleared
+             *     recipient is judged under the baseline even when the record states a country.
+             */
+            country: string | null;
+        };
         /**
          * @description Records the caller can name in support of a send, each by id. Evidence is
          *     CHECKED, never trusted: the engine reads the named record and asks whether it
@@ -44065,6 +44783,15 @@ export interface components {
             timezone: string;
         };
         SendEmailRequest: {
+            /**
+             * Format: uuid
+             * @description The sender's own mailbox the message goes out from, the `id` of one of their
+             *     `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
+             *     conversation arrived in, and a new message from the sender's default mailbox. A mailbox
+             *     that is not the sender's, or cannot send, is refused with 422
+             *     `mailbox_not_send_capable`.
+             */
+            from_connection_id?: string | null;
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
             /** @description The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. */
@@ -44168,6 +44895,17 @@ export interface components {
             operator_reason?: string | null;
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
+            /**
+             * @description The country the sender states for a recipient of this message, which the marketing rules
+             *     then follow in place of the one the record states. An entry with `country: null` clears it,
+             *     and that recipient is judged under the baseline. A recipient with no entry keeps the country
+             *     the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+             *     is written to the contact. Only the user writing the message may state one: an agent's or an
+             *     integration's request carrying this field is refused with 422 `invalid`. Each address may
+             *     appear once, compared without case or surrounding space; a second entry is refused with 422
+             *     `invalid`.
+             */
+            recipient_countries?: components["schemas"]["RecipientCountry"][];
             /**
              * @description DEPRECATED, and no longer required. The engine resolves what a message is from
              *     the record — the thread it answers, the deal or invoice it names, the evidence
@@ -44329,6 +45067,11 @@ export interface components {
              */
             evidence?: components["schemas"]["CommunicationEvidence"];
             /**
+             * @description The countries the sender stated for recipients, frozen with the message. Absent when none
+             *     was stated.
+             */
+            recipient_countries?: components["schemas"]["RecipientCountry"][];
+            /**
              * Format: uuid
              * @description The timeline activity this produced, once released.
              */
@@ -44362,6 +45105,12 @@ export interface components {
              *     this id still gets 404 if the review is not theirs to see.
              */
             review_id?: string | null;
+            /**
+             * @description What this caller may do about the review in `review_id`, in the words a refusal's
+             *     `available_actions` uses. Absent or empty when they may only read it.
+             *     `direct_send` sends the held message now on a recorded reason.
+             */
+            review_actions?: string[];
             /** Format: int64 */
             version: number;
             /** Format: date-time */
@@ -44370,11 +45119,11 @@ export interface components {
             updated_at: string;
         };
         /**
-         * @description What the composer opened against: `activity` for a reply to that message, or the
-         *     record a new conversation starts from.
+         * @description What the composer opened against: `activity` for a reply to that message, `forward`
+         *     for that message sent on to someone new, or the record a new conversation starts from.
          * @enum {string}
          */
-        MailDraftAnchorType: "activity" | "contact" | "company" | "deal" | "lead" | "project";
+        MailDraftAnchorType: "activity" | "forward" | "contact" | "company" | "deal" | "lead" | "project";
         /** @description One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on. */
         MailDraftGround: {
             anchor_type: components["schemas"]["MailDraftAnchorType"];
@@ -44439,6 +45188,19 @@ export interface components {
             scheduled_at?: string | null;
             /** @description The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`. */
             scheduled_tz?: string | null;
+            /**
+             * @description The reason the rep typed for sending this message past a refusal, kept so a reopened
+             *     composer still holds it. It grants nothing: the send still needs its own decision. Omit
+             *     it for none.
+             */
+            override_explanation?: string;
+            /**
+             * @description The countries the rep stated for recipients of this message, kept so a reopened composer
+             *     still holds them. `country: null` is a country the rep cleared, which is not the same as no
+             *     entry. An entry whose address is not on `to`, `cc` or `bcc` is not kept. Each address may
+             *     appear once; a second entry is refused with 422 `invalid`.
+             */
+            recipient_countries?: components["schemas"]["RecipientCountry"][];
         };
         /** @description One rep's unsent message, readable by its author and nobody else. Not an activity. */
         MailDraft: {
@@ -44483,6 +45245,13 @@ export interface components {
             scheduled_at?: string;
             /** @description The IANA zone `scheduled_at` was picked in. Present exactly when it is. */
             scheduled_tz?: string;
+            /** @description The reason the author typed for sending past a refusal. Absent when none was. */
+            override_explanation?: string;
+            /**
+             * @description The countries the author stated for recipients, with `country: null` for one they cleared.
+             *     Absent when none was stated.
+             */
+            recipient_countries?: components["schemas"]["RecipientCountry"][];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -44517,7 +45286,8 @@ export interface components {
         CommunicationContext: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
         /**
          * @description What a composer is about to write, in the shape the engine judges. A `subject` and
-         *     `body` never reach a consent decision. When given, they are checked against the
+         *     `body` are read as the send reads them: words that make an offer (a discount, a quote,
+         *     a price) are judged as marketing even inside a reply. They are also checked against the
          *     advertising content rules of each recipient's jurisdiction pack and answered as
          *     `content_findings`.
          */
@@ -44547,10 +45317,24 @@ export interface components {
             consent_purpose?: string;
             /** @description Records the caller names in support of this message. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
-            /** @description The draft's subject, checked only for `content_findings`. */
+            /**
+             * @description The countries the sender states for this message's recipients, read as the send reads them:
+             *     `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+             *     An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+             *     Each address may appear once; a second entry is refused with 422 `invalid`.
+             */
+            recipient_countries?: components["schemas"]["RecipientCountry"][];
+            /** @description The draft's subject, read for an offer as the send reads it and checked for `content_findings`. */
             subject?: string;
-            /** @description The draft's plain text, checked only for `content_findings`. */
+            /** @description The draft's plain text, read for an offer as the send reads it and checked for `content_findings`. */
             body?: string;
+            /** @description The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it. */
+            html_body?: string;
+            /**
+             * @description The files the message will carry, by the ids `/attachments` gave them. Their names are
+             *     read for an offer as the send reads them. A file the send would refuse is refused here.
+             */
+            attachment_ids?: string[];
         };
         /**
          * @description PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
@@ -44575,17 +45359,52 @@ export interface components {
              */
             consent_purpose?: string;
             evidence?: components["schemas"]["CommunicationEvidence"];
-            /** @description The draft's subject, checked only for `content_findings`. */
+            /**
+             * @description The countries the sender states for this message's recipients, read as the send reads them:
+             *     `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+             *     An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+             *     Each address may appear once; a second entry is refused with 422 `invalid`.
+             */
+            recipient_countries?: components["schemas"]["RecipientCountry"][];
+            /** @description The draft's subject, read for an offer as the send reads it and checked for `content_findings`. */
             subject?: string;
-            /** @description The draft's plain text, checked only for `content_findings`. */
+            /** @description The draft's plain text, read for an offer as the send reads it and checked for `content_findings`. */
             body?: string;
+            /** @description The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it. */
+            html_body?: string;
+            /**
+             * @description The files the message will carry, by the ids `/attachments` gave them. Their names are
+             *     read for an offer as the send reads them. A file the send would refuse is refused here.
+             */
+            attachment_ids?: string[];
         };
         LawfulBasisConfirmationRequest: {
             /**
              * @description The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
              *     them. A pinned lead is named as the lead, never as a contact sharing its address.
              */
-            subjects: components["schemas"]["CommunicationEvidenceSubject"][];
+            subjects: components["schemas"]["LawfulBasisConfirmationSubject"][];
+        };
+        /**
+         * @description One record to confirm, with the country the sender stated for it on the message, when
+         *     they stated one. The confirmation is recorded under the country the preview applied, and
+         *     staging spends it only for a send judged under that same country.
+         */
+        LawfulBasisConfirmationSubject: {
+            /** @enum {string} */
+            entity_type: "contact" | "lead";
+            /** Format: uuid */
+            entity_id: string;
+            /**
+             * @description The country the sender stated for this recipient in `recipient_countries`. Omit it when
+             *     they stated none; the record's country then applies. Only the user writing the message
+             *     may send it.
+             */
+            stated_country?: components["schemas"]["StatedCountry"];
+        };
+        StatedCountry: {
+            /** @description An ISO 3166-1 alpha-2 code, or null for a country the sender cleared. */
+            country: string | null;
         };
         LawfulBasisConfirmation: {
             /**
@@ -44636,6 +45455,25 @@ export interface components {
             language?: string;
             /** @description The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`. */
             country?: string;
+            provision?: components["schemas"]["CitedProvision"];
+        };
+        /**
+         * @description The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+         *     for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+         *     Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+         *     review is overdue or not yet done, or the law has not taken effect or has expired. On a
+         *     review it is the citation shown when the refusal was assessed, never today's.
+         */
+        CitedProvision: {
+            /** @description The law or decree, as a regulator cites it. Not translated. */
+            instrument: string;
+            /** @description The part of the instrument, such as "§ 7(2)". */
+            provision: string;
+            /**
+             * Format: uri
+             * @description The official published text, over https.
+             */
+            source_url: string;
         };
         /** @description An existing recipient record the caller can read. */
         CommunicationEvidenceSubject: {
@@ -44651,9 +45489,12 @@ export interface components {
             language: string;
             /** @description Missing contact methods, such as email, phone or web. */
             missing_means: string[];
+            provision?: components["schemas"]["CitedProvision"];
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
+            /** @description The law the recipient's pack cites for `reason_code`, absent when none may be shown. */
+            provision?: components["schemas"]["CitedProvision"];
             /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
             footer_findings?: components["schemas"]["FooterFinding"][];
             /** Format: email */
@@ -44766,6 +45607,12 @@ export interface components {
          *     otherwise have supplied — the records this new conversation belongs to.
          */
         SendCompanyEmailRequest: {
+            /**
+             * Format: uuid
+             * @description The sender's own mailbox the message goes out from, as on `SendEmailRequest`.
+             *     Omitted, it goes out from the sender's default mailbox.
+             */
+            from_connection_id?: string | null;
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
             /** @description The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. */
@@ -44867,6 +45714,17 @@ export interface components {
             operator_reason?: string | null;
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
+            /**
+             * @description The country the sender states for a recipient of this message, which the marketing rules
+             *     then follow in place of the one the record states. An entry with `country: null` clears it,
+             *     and that recipient is judged under the baseline. A recipient with no entry keeps the country
+             *     the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+             *     is written to the contact. Only the user writing the message may state one: an agent's or an
+             *     integration's request carrying this field is refused with 422 `invalid`. Each address may
+             *     appear once, compared without case or surrounding space; a second entry is refused with 422
+             *     `invalid`.
+             */
+            recipient_countries?: components["schemas"]["RecipientCountry"][];
             /**
              * @description DEPRECATED, and no longer required. The engine resolves what a message is from
              *     the record — the thread it answers, the deal or invoice it names, the evidence
@@ -45110,6 +45968,11 @@ export interface components {
              * @description First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
              */
             readonly first_response_at?: string | null;
+            /**
+             * Format: uuid
+             * @description The user whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
+             */
+            readonly first_response_marked_by?: string | null;
             /**
              * Format: date-time
              * @description Derived, not stored: COALESCE(routed_at, created_at) + first_response_target_minutes (formulas §18.1). Null on a terminal lead, which owes no first response.
@@ -45967,6 +46830,25 @@ export interface components {
             readonly locks?: components["schemas"]["SettingLocks"];
             /** @description Days a sent message may stay unanswered before its sender is reminded to follow up. */
             follow_up_after_days: number;
+            /**
+             * @description Whether the AI reads private mail for requests (`activities.private_mail_requests`,
+             *     on by default): a request its reader owes an answer to, and a request for a
+             *     quotation. Only mail private by a mailbox setting is read; mail held as
+             *     confidential, by a counterparty or members-only hold, or by hand never is. It
+             *     says what a model reads, not what is shared. A GET always carries it; a PATCH
+             *     that leaves it out leaves the setting unchanged. Only a human may change it,
+             *     because it decides which mail reaches a model.
+             */
+            private_mail_requests?: boolean;
+            /**
+             * @description Whether a request for a quotation found in private mail is shared with the whole
+             *     workspace (`activities.share_private_quote_requests`, on by default). When on, what
+             *     the customer asked for becomes visible on the deal it opens. It needs
+             *     `private_mail_requests` on as well. Only mail private by a mailbox setting is
+             *     shared; mail held for any other reason never is. A GET always carries it; a PATCH
+             *     that leaves it out leaves it unchanged. Only a human may change it.
+             */
+            share_private_quote_requests?: boolean;
         };
         LeadSettings: {
             locks?: components["schemas"]["SettingLocks"];
@@ -47385,7 +48267,7 @@ export interface components {
         /** @description The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift. */
         SavedViewTarget: string;
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline" | "account_progression" | "source_quality";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -47397,9 +48279,13 @@ export interface components {
          *     `lead_cohort` follows the leads that arrived in the interval the same
          *     way: one point, its `outcomes` saying whether each lead was accepted,
          *     qualified, disqualified or is still open.
+         *     `account_cohort` follows the distinct accounts of those leads: one point,
+         *     its `outcomes` saying the furthest outcome any of an account's leads
+         *     reached. `source_quality` is one point per lead origin: how many leads
+         *     arrived from it and how many of them were linked to an opportunity.
          * @enum {string}
          */
-        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort";
+        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "account_cohort" | "source_quality";
         /**
          * @description `failed` means the database could not calculate this figure on this
          *     read. The other figures in the same evaluation are unaffected, and a
@@ -47747,7 +48633,7 @@ export interface components {
          *     `assessment`, the report's figures written up in a few sentences.
          * @enum {string}
          */
-        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "question" | "assessment";
+        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "account_cohort" | "source_quality" | "question" | "assessment";
         /**
          * @description A custom analytics question a card asks. Present exactly when the card's `kind` is
          *     `question`. Every reader of the report receives it, so it carries no filters (a filter
@@ -47989,6 +48875,13 @@ export interface components {
             target_source?: "target" | "sales_goals";
             /** Format: double */
             attainment?: number;
+            /**
+             * Format: double
+             * @description `target_actual` minus `target`, in the metric's unit: negative is still to reach,
+             *     positive is above the target. Present with both. A client shows it and `attainment`
+             *     as they are, and never works either out from the other figures.
+             */
+            target_delta?: number;
             coverage: components["schemas"]["ReportingCoverage"];
             evidence: components["schemas"]["ReportingEvidenceRef"];
             target_comparison?: components["schemas"]["ReportingTargetComparison"];
@@ -48029,7 +48922,8 @@ export interface components {
              *     pipeline and quarter, or the reader may not read targets; a missing
              *     target is never zero. `fx_missing` means a deal amount has no
              *     exchange rate to the base currency, so the totals are incomplete
-             *     and no gap or coverage is given. `partial_visibility` means the
+             *     and no gap or coverage is given. When only an open deal lacks the rate,
+             *     `target` and `won` are still given. `partial_visibility` means the
              *     reader cannot see every deal of the population asked for, or a
              *     deal's amount, so its figures cannot stand against the scope's
              *     whole target.
@@ -48120,7 +49014,9 @@ export interface components {
             call_minor?: number;
             /**
              * Format: int64
-             * @description Deals the forecast considered, priced or not.
+             * @description Open deals due in the period, priced or not. The four counts (`eligible_count`,
+             *     `priced_count`, `confirmed_date_count`, `fx_missing_count`) describe only those
+             *     open deals; they do not say whether `won_minor` is complete.
              */
             eligible_count: number;
             /**
@@ -48324,6 +49220,47 @@ export interface components {
             amount_minor?: number;
         };
         /**
+         * @description Where a month may finish against its goal, read from the forecast of the same month and
+         *     scope that GET /forecast reads. Given only for a month that has not ended, against a goal
+         *     that is `set`. A year has none, because the forecast has no year period.
+         *
+         *     - `worst` is the money already won, as if nothing more closes.
+         *     - `expected` is the forecast landing under the installation's forward measure, the same
+         *       setting the Overview lands with. `landing` names the measure and what it rests on.
+         *     - `best` is the money won plus every open deal expected in the month, at face value.
+         *
+         *     Each case carries `delta_minor`, its amount minus the goal, signed as the reading's own
+         *     `delta_minor`: negative is short of the goal.
+         */
+        SalesProgressScenarios: {
+            /**
+             * Format: date-time
+             * @description When the deals were read.
+             */
+            as_of: string;
+            worst: components["schemas"]["SalesProgressScenario"];
+            expected: components["schemas"]["SalesProgressScenario"];
+            best: components["schemas"]["SalesProgressScenario"];
+            landing: components["schemas"]["ForecastLanding"];
+            /** @description Deals the forecast read for the month. */
+            eligible_count: number;
+            /** @description Of those, the deals with an amount. */
+            priced_count: number;
+            /** @description Priced deals no exchange rate reached; their money is in no case. */
+            fx_missing_count: number;
+            /** @description True when the reader cannot see every deal of the scope, so each case is smaller than the scope's own. */
+            scope_limited: boolean;
+        };
+        SalesProgressScenario: {
+            /** Format: int64 */
+            amount_minor: number;
+            /**
+             * Format: int64
+             * @description The amount minus the goal.
+             */
+            delta_minor: number;
+        };
+        /**
          * @description Closed revenue split by what each deal sold, from the category captured on its priced lines:
          *     software is a product sale and implementation a service. Other kinds, products nobody
          *     classified and the part no line carries are unresolved. The three parts add up to the
@@ -48437,6 +49374,7 @@ export interface components {
             members_withheld: boolean;
             /** @description The Analytics reading behind closed and planned revenue, the receipt `/analytics/evidence` takes. */
             evaluation?: components["schemas"]["ReportingEvaluation"];
+            scenarios?: components["schemas"]["SalesProgressScenarios"];
             capabilities: {
                 /** @description Whether the caller may set this scope's goals. */
                 write_goals: boolean;
@@ -49163,6 +50101,12 @@ export interface components {
             license_lapsed?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;
+            /**
+             * @description The `activities.inline_send_review` setting: whether the email composer is decided at
+             *     Send, with a refusal shown inline from the embedded review. Absent or false keeps the
+             *     check while writing and the confirmation dialog.
+             */
+            inline_send_review?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
             user: components["schemas"]["User"];
             /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
@@ -49280,7 +50224,7 @@ export interface components {
              * @description Each open deal at its stage probability, rounded PER DEAL and then summed. Not the sum rounded once — the two differ by up to one minor unit per deal.
              */
             weighted_minor: number;
-            /** @description Deals considered, priced or not. */
+            /** @description Open deals due in the period, priced or not. Like the other counts, it says nothing about the won total. */
             eligible_count: number;
             /** @description How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero. */
             priced_count: number;
@@ -49293,6 +50237,8 @@ export interface components {
             timezone: string;
             base_currency: string;
             current_call?: components["schemas"]["ForecastCall"];
+            /** @description True when this answer leaves out a standing call that may exist: the reader may not see calls about this population, the reading covers several populations (`managed_teams`), or a frozen share cannot tell. A client then says nothing about a manager forecast. Absent with no current_call means nobody has made one. */
+            call_withheld?: boolean;
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
             landing?: components["schemas"]["ForecastLanding"];
@@ -49393,6 +50339,56 @@ export interface components {
             close_passed?: boolean;
             closes_in_days?: number;
         };
+        ForecastFocus: {
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            /** @description True when a team's list is left out because the installation shows no individual performance and the team is too small to show without naming a colleague. */
+            withheld: boolean;
+            /** @description One entry per team with a daily freeze this quarter, ordered by team id. */
+            teams: components["schemas"]["ForecastFocusTeam"][];
+        };
+        ForecastFocusTeam: {
+            /** @description Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size. */
+            masked_count: number;
+            /** Format: uuid */
+            team_id: string;
+            /** Format: uuid */
+            snapshot_id: string;
+            /** Format: date-time */
+            taken_at: string;
+            base_currency: string;
+            /**
+             * @description `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+             * @enum {string}
+             */
+            status: "behind" | "on_target" | "no_goal";
+            deals: components["schemas"]["ForecastFocusDeal"][];
+        };
+        ForecastFocusDeal: {
+            rank: number;
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /**
+             * Format: int64
+             * @description The deal's weighted amount in the base currency, as frozen. Absent when the amount is masked from the caller.
+             */
+            weighted_minor?: number;
+            /** Format: date */
+            effective_close_date?: string;
+            reason: components["schemas"]["ForecastFocusReason"];
+        };
+        /** @description The stored facts behind a rank. The score is never stored. */
+        ForecastFocusReason: {
+            /** @description Days from the caller's day to the expected close date, negative once that date passed. */
+            closes_in_days?: number;
+            close_provisional: boolean;
+            signals: components["schemas"]["ForecastRiskSignal"][];
+        };
         ForecastStageChances: {
             /** @description The installation setting `forecast_self_correcting`. False means every chance in use is the typed one. */
             self_correcting: boolean;
@@ -49458,10 +50454,10 @@ export interface components {
              */
             system_minor?: number;
             /**
-             * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+             * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_withheld` is a manager-call installation whose call this answer does not show, so it lands on Likely without saying whether a call exists. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
              * @enum {string}
              */
-            caveat?: "call_absent" | "call_below_actual";
+            caveat?: "call_absent" | "call_withheld" | "call_below_actual";
         };
         /**
          * @description Whether the open pipeline supports the reference landing, and what the reference is.
@@ -49469,10 +50465,10 @@ export interface components {
          */
         ForecastSufficiency: {
             /**
-             * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+             * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
              * @enum {string}
              */
-            absent?: "insufficient_basis" | "insufficient_history";
+            absent?: "insufficient_basis" | "call_withheld" | "insufficient_history";
             /**
              * @description Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
              * @enum {string}
@@ -50106,6 +51102,46 @@ export interface components {
             };
         };
         /**
+         * @description A problem body whose `details` describe a refused send and the review it opened.
+         *     The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+         */
+        SendRefusal: {
+            /**
+             * Format: uri
+             * @default about:blank
+             */
+            type: string;
+            title?: string;
+            status: number;
+            code: string;
+            detail?: string;
+            /** Format: uri */
+            instance?: string;
+            details?: components["schemas"]["SendRefusalDetails"];
+        };
+        /** @description Present when the refusal opened a review. */
+        SendRefusalDetails: {
+            /** Format: uuid */
+            review_id?: string;
+            /** @description What this caller may do about the refusal, such as `direct_send`. */
+            available_actions?: string[];
+            /** @description Each refused address the caller named. */
+            refusals?: components["schemas"]["SendRefusalRecipient"][];
+            review?: components["schemas"]["CommunicationReview"];
+        } & {
+            [key: string]: unknown;
+        };
+        SendRefusalRecipient: {
+            address: string;
+            reason_code: string;
+            /** @description Whether a recorded reason may send this one message anyway. */
+            can_be_overruled: boolean;
+            /** @description The category the engine resolved. */
+            category?: string;
+            /** @description The category the sender claimed. */
+            requested_category?: string;
+        };
+        /**
          * @description A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
          *     The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
          */
@@ -50502,6 +51538,10 @@ export interface components {
         /** @description Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer. */
         RoleDirectory: {
             roles: components["schemas"]["Role"][];
+            /** @description The verbs a role may hold on each object this installation can grant, core objects and enabled extension objects alike, Read first. An object that offers no Read has none in its list. An object absent here is one the installation cannot name, and a client draws it with all four. */
+            verbs: {
+                [key: string]: ("create" | "read" | "update" | "delete")[];
+            };
         };
         AssignableRoleDirectory: {
             roles: components["schemas"]["AssignableRole"][];
@@ -50676,7 +51716,7 @@ export interface components {
              */
             error_class?: string;
         };
-        /** @description The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again. */
+        /** @description The span between where a first sync was to read from and where it had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again. */
         CaptureUnreadPeriod: {
             /**
              * Format: date-time
@@ -50716,7 +51756,7 @@ export interface components {
             /** @description Threads whose confidentiality question is still open, so their messages stay held. */
             threads_awaiting_verdict: number;
             /**
-             * @description A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+             * @description A period no sync read: a first sync failed for longer than the point it had held, or the mailbox held more mail than one round can read. A finished history import over it clears it. Absent when there is none, which is the ordinary case.
              *     It is reported because the alternative is a mailbox that looks synced and is missing a week. The backfill reaches this period, so the owner can ask for it back, and the dates are what they point it at.
              */
             unread_period?: components["schemas"]["CaptureUnreadPeriod"] | null;
@@ -51034,8 +52074,11 @@ export interface components {
             id: string;
             /** @enum {string} */
             availability: "available" | "unknown" | "stale" | "failed" | "withheld" | "not_configured" | "not_monitored";
-            /** @enum {string} */
-            condition: "clear" | "processing" | "retrying" | "waiting_human" | "technical" | "unverified" | "recovered" | "unknown";
+            /**
+             * @description `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
+             * @enum {string}
+             */
+            condition: "clear" | "processing" | "retrying" | "waiting_human" | "technical" | "unverified" | "recovered" | "unknown" | "information";
             /** @description Safe presentation code, never raw failure text. */
             code: string;
             permission: string;
@@ -51053,6 +52096,14 @@ export interface components {
             window_start?: string;
             /** Format: date-time */
             window_end?: string;
+            /** @description The `unplaced` source's breakdown of the machine changes in its window that the `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds the sum of these entries when more kinds occurred than are listed. */
+            unplaced_changes?: components["schemas"]["HealthUnplacedChange"][];
+        };
+        HealthUnplacedChange: {
+            entity_type: string;
+            /** @description The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`. */
+            action: string;
+            count: number;
         };
         HealthFinding: {
             /** @description Stable identity of the source condition and affected scope. */
@@ -52499,7 +53550,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
-            /** @description The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters. */
+            /** @description The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;
@@ -53543,6 +54594,19 @@ export interface components {
             effect_failed_at?: string | null;
             /** @description The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is. */
             effect_failure?: string | null;
+            /**
+             * @description `false` on a pending mail proposal whose sender, the account the release runs as, has no
+             *     connected mailbox that can transmit, so approving could only be refused. Absent
+             *     otherwise.
+             */
+            mailbox_send_capable?: boolean;
+            /**
+             * @description True on an approved proposal that an agent staged and has not yet redeemed. The decision
+             *     only lets the agent repeat its call within the redemption window; nothing has changed on
+             *     any record until it does. Absent on every other row, including one whose effect ran
+             *     during the decision.
+             */
+            awaiting_agent?: boolean;
             /** Format: date-time */
             created_at: string;
         };
@@ -53593,7 +54657,17 @@ export interface components {
          *     that is eligible to apply automatically, whether or not they have ever met it.
          */
         AutonomySettings: {
+            readonly locks?: components["schemas"]["SettingLocks"];
             data: components["schemas"]["KindAutonomy"][];
+            /**
+             * @description The installation's switch over every row. False means nothing applies
+             *     itself for anybody; the modes in `data` stay as the reader set them.
+             */
+            auto_apply_enabled: boolean;
+        };
+        AutoApplyInstallation: {
+            readonly locks?: components["schemas"]["SettingLocks"];
+            enabled: boolean;
         };
         /**
          * @description One kind's standing with the reader — how it will be handled next time, and the
@@ -54224,6 +55298,11 @@ export interface components {
             lawful_basis?: string | null;
             /** Format: date-time */
             double_opt_in_confirmed_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
+             */
+            confirmation_pending_until?: string | null;
             /** Format: date-time */
             updated_at?: string | null;
         };
@@ -54600,11 +55679,26 @@ export interface components {
             /** Format: uuid */
             subject_id?: string;
             reason_code: string;
+            /** @description The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed. */
+            provision?: components["schemas"]["CitedProvision"];
             category?: string;
             /** Format: uuid */
             sending_entity_id?: string;
             sending_entity_name?: string;
             requested_category?: string;
+            /**
+             * @description The ISO 3166-1 alpha-2 code, in lower case, of the recipient's country whose sales-mail
+             *     rules judged this refusal. Absent when none applied: no country on record, or one the
+             *     sender cleared.
+             */
+            country?: string;
+            /**
+             * @description Where `country` came from: the contact's address, their employer's, the lead's company,
+             *     or the sender, who stated it (`sender_override`) or cleared it (`sender_cleared`) for this
+             *     message. Absent when no record or sender gave a country.
+             * @enum {string}
+             */
+            country_source?: "contact_address" | "employer_address" | "lead_company_address" | "sender_override" | "sender_cleared";
         };
         /**
          * @description What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
@@ -54650,6 +55744,13 @@ export interface components {
              *     would have the record assert an acknowledgement of text nobody published.
              */
             warning?: components["schemas"]["OverrideWarning"];
+            /**
+             * @description Every warning this review is served with to this reader; a decision may name any of their
+             *     versions and no other. `warning` is always among them. The sender of a held message is
+             *     also served the composer's short warning (`inline-v1`), which a decision from any other
+             *     reader is refused for naming.
+             */
+            warnings?: components["schemas"]["OverrideWarning"][];
         };
         /**
          * @description The caution a human reads before overruling the engine, with the version that identifies
@@ -54732,8 +55833,7 @@ export interface components {
             /**
              * @description The refusal reason codes the director was shown, from the review's `refusals`. When the
              *     review's refusals changed since then, the decision is refused with `instruction_stale`
-             *     and the director opens the review again. A refusal the subject made themselves (an
-             *     objection, a withdrawal, a restriction or a request to stop) is never passed.
+             *     and the director opens the review again.
              */
             shown_reasons?: string[];
         };
@@ -56924,7 +58024,7 @@ export interface components {
             exchangeable: boolean;
         };
         DealRoomSessionIssued: {
-            /** @description Present as `Authorization: Bearer`. Returned once; only its hash is stored. */
+            /** @description Present as `Authorization: Bearer`, or let the browser send the `__Host-crm_room_session` cookie. Returned once; only its hash is stored. */
             session_token: string;
             /**
              * Format: date-time
@@ -59564,10 +60664,10 @@ export interface components {
             overdue?: boolean;
             /**
              * @description Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
              * @enum {string}
              */
-            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
+            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later" | "none";
             /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
              *     task or a promise today. Carried for the reason `email_summary` carries one: a lane that offers
@@ -60044,8 +61144,9 @@ export interface components {
             next_meeting?: components["schemas"]["Contact360NextMeeting"];
         };
         /**
-         * @description Whose weekly plans this read looked at, present only when `scope` is `team` and the
-         *     due commitments were read across the team roster. Absent under every other scope.
+         * @description Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+         *     Both read the due commitments across the reader's team roster, the reader included.
+         *     Absent under every other scope.
          *
          *     It exists because "nothing due" and "not looked at" differ. A teammate whose plan
          *     could not be read contributes no rows, and without this a lead would read their
@@ -60938,6 +62039,14 @@ export interface components {
              */
             informs_us: number;
             /**
+             * @description Threads `shown` counts whose mail no model will check for a request: mail held
+             *     on purpose (marked confidential, a counterparty or members-only hold, or by
+             *     hand), or any private mail while `activities.private_mail_requests` is off. Not
+             *     hidden, so `clear` ignores it. The queue ranks such mail as a request only when
+             *     the reader wrote on its conversation first.
+             */
+            private_unchecked: number;
+            /**
              * @description True when a read stopped at its own scan bound, which makes every figure above
              *     it a FLOOR rather than a count.
              *
@@ -61281,10 +62390,10 @@ export interface components {
             overdue?: boolean;
             /**
              * @description Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
              * @enum {string}
              */
-            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
+            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later" | "none";
             /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
              *     task today. Carried for the reason `email_summary` carries one: a lane that offers
@@ -62636,6 +63745,23 @@ export interface components {
             };
         };
         /**
+         * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+         *     When the refusal opened a review, `details` carries `review_id`, the
+         *     `available_actions` this caller may take, and `refusals`: each refused address
+         *     the caller named, with the engine's `reason_code`, resolved `category` and the
+         *     `requested_category` the caller claimed. `details.review` is the review exactly as
+         *     `GET /communication-reviews/{id}` serves it to this caller, so a client needs no second
+         *     request; it is absent when the caller may not read the review.
+         */
+        SendRefused: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["SendRefusal"];
+            };
+        };
+        /**
          * @description The installation cannot send its own mail (`conflict`), or the consent engine refuses this
          *     mail to this contact (`consent_not_granted`).
          */
@@ -62732,6 +63858,13 @@ export interface components {
         /** @description The provider of an OAuth app a composed extension unit declares. Never `google` or `microsoft`: the boot refuses a unit that claims a core vendor's name. */
         ExtOAuthProvider: string;
         /**
+         * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+         *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+         *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+         *     and names this parameter.
+         */
+        CaptureConnectionId: string;
+        /**
          * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
          *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
          *     credential submission, and test_mailbox connects immediately with neither (a QC-only
@@ -62748,6 +63881,8 @@ export interface components {
         CaptureProvider: "gmail" | "gcal" | "gdocs" | "graph" | "graphcal" | "imap" | "test_mailbox";
         /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
         Id: string;
+        /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+        AssetRevision: string;
         /**
          * @description The act that staged a set of proposals together (`Approval.bundle_id`). It names a
          *     grouping over approval rows, not a resource of its own — there is nothing to GET, and a
@@ -62861,6 +63996,9 @@ export interface components {
          *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
          *     request under the key failed after it had started, so check whether it took effect before
          *     retrying under a new key.
+         *     A request the server stopped for time answers `503 code: request_timed_out` with
+         *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+         *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
          *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
          *     answer lost": without it the blind retry answers `409 version_skew`, because the first
          *     attempt already bumped the version.
@@ -64284,6 +65422,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -64360,6 +65501,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -64566,6 +65710,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -64629,6 +65776,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -64698,6 +65848,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -65856,6 +67009,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -65931,6 +67087,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66015,6 +67174,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66290,6 +67452,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66436,6 +67601,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66506,6 +67674,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66569,6 +67740,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67005,6 +68179,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67087,6 +68264,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67266,6 +68446,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description A scan would have to be queued and no AI model is connected (`code: ai_not_configured`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -67757,6 +68946,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            /** @description No AI model is connected (`code: ai_not_configured`). Nothing was queued. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description No URL to read (no override, company has no domain). */
             422: {
                 headers: {
@@ -68400,6 +69598,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -68586,6 +69787,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -68661,6 +69865,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69137,6 +70344,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69192,6 +70402,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69410,6 +70623,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69629,6 +70845,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69690,6 +70909,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69751,6 +70973,84 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    moveDealPipeline: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveDealPipelineRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal on its new stage, and the probability the move set. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealAdvanced"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    undoDealPipelineMove: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal back on its earlier stage. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealAdvanced"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -70342,6 +71642,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70589,6 +71892,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70685,6 +71991,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70796,6 +72105,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70884,6 +72196,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71004,6 +72319,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71076,6 +72394,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71250,6 +72571,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71304,6 +72628,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71359,6 +72686,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71615,6 +72945,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71725,6 +73058,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71805,6 +73141,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71864,6 +73203,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71945,6 +73287,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72055,6 +73400,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72304,6 +73652,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72546,6 +73897,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72704,6 +74058,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72878,6 +74235,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -73337,6 +74697,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -73687,6 +75050,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -73738,6 +75104,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -73797,6 +75166,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            /** @description No AI model is connected (`code: ai_not_configured`). Nothing was queued. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description This activity carries no transcript, or its transcript is blank or too long for one reading. */
             422: {
                 headers: {
@@ -73983,6 +75361,33 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    resolveRecipientCountries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipientCountriesRequest"];
+            };
+        };
+        responses: {
+            /** @description One answer per address asked, in the order asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipientCountries"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     confirmSendWithoutLawfulBasis: {
         parameters: {
             query?: never;
@@ -74052,6 +75457,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -74115,21 +75523,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["SendValidationError"];
         };
     };
@@ -74148,6 +75542,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -74217,21 +75614,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["SendValidationError"];
         };
     };
@@ -74536,6 +75919,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -74588,21 +75974,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -74928,6 +76300,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -75265,6 +76640,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -75464,6 +76842,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -75608,6 +76989,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -75678,11 +77062,11 @@ export interface operations {
                         booking: "pending" | "confirmed" | "rescheduling" | "canceling" | "canceled" | "needs_attention";
                         invitation?: components["schemas"]["MeetingInvitation"];
                         /**
-                         * @description `not_requested` — the form carried no tick. `pending_confirmation` — the question
-                         *     was queued for delivery and the grant waits on the subject answering it; queued
-                         *     is not delivered. `not_asked` — the question could not be put, or this
-                         *     installation has no lane to put it on; the booking stands and no subscription
-                         *     mail follows.
+                         * @description `not_requested` — the form carried no tick. `pending_confirmation` — the tick was
+                         *     accepted. If this address can receive our mail, a confirmation link is on its way,
+                         *     and nothing is subscribed until it is opened. The answer is the same whatever the
+                         *     address's state, so it reveals nothing about it. `not_asked` — this installation
+                         *     has no mail lane, so no subscription mail follows. The booking stands in every case.
                          * @enum {string}
                          */
                         marketing: "not_requested" | "pending_confirmation" | "not_asked";
@@ -75948,6 +77332,8 @@ export interface operations {
             /** @description The session token, returned once. */
             200: {
                 headers: {
+                    /** @description The `__Host-crm_room_session` cookie carrying the same session token. */
+                    "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -76962,6 +78348,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -77260,6 +78649,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -77333,6 +78725,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -77551,6 +78946,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -77625,6 +79023,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -77687,6 +79088,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -77963,6 +79367,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78038,6 +79445,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78113,6 +79523,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78188,6 +79601,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78263,6 +79679,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78321,6 +79740,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78396,6 +79818,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78454,6 +79879,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78533,6 +79961,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78634,6 +80065,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78684,6 +80118,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78764,6 +80201,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78843,6 +80283,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78918,6 +80361,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -79001,6 +80447,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -80013,7 +81462,33 @@ export interface operations {
     createReportingReport: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -80711,6 +82186,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -80829,6 +82307,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -81727,7 +83208,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed. */
+            /** @description The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), the chat refused the channel name even in the form derived from the record (`code: channel_name_refused`), or the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -83024,7 +84505,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
-                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
+                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "loss-events" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
             };
             cookie?: never;
         };
@@ -83703,6 +85184,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -84489,6 +85973,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -84640,6 +86127,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -85244,6 +86734,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -85516,7 +87007,15 @@ export interface operations {
     };
     disconnectConnector: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85548,6 +87047,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listSharedMailboxes: {
@@ -85699,7 +87199,15 @@ export interface operations {
     };
     setConnectorSignatureEnrichment: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85738,12 +87246,13 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listConnectorContainers: {
         parameters: {
             query?: {
-                /** @description Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox. */
+                /** @description The caller's own mailbox of this provider, the `id` of a `CaptureConnection`; omit it while they hold one. An administrator may also name a connection enrolled for internal operational mail. */
                 connection_id?: string;
             };
             header?: never;
@@ -85803,7 +87312,15 @@ export interface operations {
     };
     dismissConnectorSilence: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85848,7 +87365,15 @@ export interface operations {
     };
     setConnectorMailPosture: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85892,7 +87417,15 @@ export interface operations {
     };
     setConnectorHistoryBaseline: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85936,7 +87469,15 @@ export interface operations {
     };
     setConnectorContextTag: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85980,7 +87521,15 @@ export interface operations {
     };
     previewConnectorBackfill: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -86020,6 +87569,7 @@ export interface operations {
             403: components["responses"]["RoleCannotCapture"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
             /** @description Provider unreachable — the estimate needs the provider (`code: provider_unreachable`). */
             502: {
                 headers: {
@@ -86033,7 +87583,15 @@ export interface operations {
     };
     getConnectorBackfillStatus: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -86067,11 +87625,20 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     startConnectorBackfill: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -86111,11 +87678,20 @@ export interface operations {
             403: components["responses"]["RoleCannotCapture"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     cancelConnectorBackfill: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -86150,6 +87726,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getAttention: {
@@ -87695,6 +89272,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -89144,6 +90722,33 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    updateAutoApplyInstallation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutoApplyInstallation"];
+            };
+        };
+        responses: {
+            /** @description The switch as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoApplyInstallation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
+        };
+    };
     listApprovalPreferences: {
         parameters: {
             query?: never;
@@ -89328,6 +90933,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -89583,6 +91191,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -90040,7 +91651,33 @@ export interface operations {
     directCommunicationSend: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 id: string;
             };
@@ -90527,6 +92164,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -90611,6 +92251,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -90701,6 +92344,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -90759,6 +92405,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91069,6 +92718,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91127,6 +92779,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91231,6 +92886,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91321,6 +92979,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91380,6 +93041,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91576,6 +93240,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -92384,6 +94051,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -92508,6 +94178,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -92674,6 +94347,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -92959,6 +94635,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -93299,8 +94978,8 @@ export interface operations {
     getUserAvatar: {
         parameters: {
             query?: {
-                /** @description The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day. */
-                v?: string;
+                /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+                v?: components["parameters"]["AssetRevision"];
             };
             header?: never;
             path: {
@@ -93524,6 +95203,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -93954,6 +95636,53 @@ export interface operations {
             };
         };
     };
+    restoreRoleGrants: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The `version` of the role you read. A restore replaces every grant, so the write never goes out without it. */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The role key of a role the product ships. */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The role with its shipped grants. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description `unknown_role` — no live role has this key. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version_skew`, or `custom_role` — only a role the product ships has shipped grants. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     setRoleObjectGrant: {
         parameters: {
             query?: never;
@@ -94280,6 +96009,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -94457,6 +96189,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -94569,6 +96304,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -94704,6 +96442,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -94753,6 +96494,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -94882,6 +96626,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -94941,6 +96688,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -94992,6 +96742,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95110,6 +96863,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95221,6 +96977,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95518,6 +97277,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -96325,6 +98087,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -96420,6 +98185,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -96658,6 +98426,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -96942,6 +98713,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97071,6 +98845,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97120,6 +98897,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97266,6 +99046,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97376,6 +99159,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97436,6 +99222,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -98044,6 +99833,33 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getForecastFocus: {
+        parameters: {
+            query?: {
+                /** @description One team. Omitted, every team whose list the caller may read. */
+                team?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One list per team. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastFocus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listForecastCalls: {
         parameters: {
             query?: {
@@ -98081,7 +99897,33 @@ export interface operations {
     recordForecastCall: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -99361,6 +101203,64 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    addAttachmentLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddAttachmentLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The listed link. */
+            201: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Attachment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAttachmentLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    url: string;
+                };
+            };
+        };
+        responses: {
+            /** @description What the page says about itself. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentLinkPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getContactNetwork: {
         parameters: {
             query?: never;
@@ -100542,6 +102442,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -100982,6 +102885,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description No AI model is connected (`code: ai_not_configured`). Nothing was queued. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
             /** @description The process role wired no model path or no job runner — declared absent, never a silent no-op. */
             501: {
@@ -101871,6 +103783,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -101953,6 +103868,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -102031,6 +103949,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -102103,6 +104024,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -102181,6 +104105,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.

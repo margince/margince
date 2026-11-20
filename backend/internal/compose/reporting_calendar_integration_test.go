@@ -129,7 +129,7 @@ func TestReportingCustomRangeCSVAndDateErrorUseTheHTTPContract(t *testing.T) {
 	query.Set("evaluated_at", evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano))
 	query.Set("framework_revision", "1")
 	export := reportingRequest(f.human, t, handler, http.MethodGet, "evaluate.csv?"+query.Encode(), nil, -1, http.StatusOK)
-	if !strings.Contains(export.Body.String(), "21600000") {
+	if !strings.Contains(export.Body.String(), "216000.00") {
 		t.Fatalf("CSV lost measured sales: %s", export.Body.String())
 	}
 	query.Set("start_at", "2024-01-01T00:00:00Z")

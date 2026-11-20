@@ -1,5 +1,4 @@
 import type { components } from "../../api/schema";
-import { fieldRefusalSentence } from "../../components/create.refusals";
 import { Field } from "../../design-system/atoms";
 import { Button } from "../../design-system/button";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
@@ -7,7 +6,12 @@ import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemFieldErrorsOf, problemMessageOf } from "../../lib/problem";
+import {
+  type FieldLabel,
+  faultSentenceFor,
+  problemFieldErrorsOf,
+  problemMessageOf,
+} from "../../lib/problem";
 
 type Deal = components["schemas"]["Deal"];
 type Preview = components["schemas"]["PromoteLeadPreview"];
@@ -194,34 +198,27 @@ export function dealBlock(input: {
 export function qualifyRefusals(
   error: unknown,
   t: (key: MessageKey) => string,
+  amountLabel: FieldLabel,
 ) {
   const faults = problemFieldErrorsOf(error);
   const amount = faults.find((fault) => fault.field === "amount_minor");
   return {
-    amount: amount && fieldRefusalSentence(amount, t),
+    amount:
+      amount && faultSentenceFor(amount, t, { amount_minor: amountLabel }),
     foot:
       amount && faults.length === 1 ? undefined : problemMessageOf(error, t),
   };
 }
 
-// The sentence under the amount: the box's own refusal first, then the
-// server's. Only the box's own (local) holds the confirm back.
+// The sentence under the amount, and whether the box's own state holds the
+// confirm back. Text the box refuses names its reason under the box itself.
 export function amountRefusal(
-  amount: {
-    amountMinor: number | null;
-    tooPrecise: boolean;
-    currency?: string;
-  },
+  amount: { amountMinor: number | null; refused: boolean },
   server: string | undefined,
   t: ReturnType<typeof useT>,
 ) {
-  if (amount.tooPrecise) {
-    return {
-      local: true,
-      sentence: t("record.amountTooPrecise", {
-        currency: amount.currency ?? "",
-      }),
-    };
+  if (amount.refused) {
+    return { local: true, sentence: undefined };
   }
   if (amount.amountMinor !== null && amount.amountMinor < 0) {
     return { local: true, sentence: t("create.amountNegative") };

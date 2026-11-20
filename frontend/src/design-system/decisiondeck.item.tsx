@@ -52,6 +52,9 @@ export function DeckItemCard({
   );
   const approval = refused ?? representative(item, now);
   const trim = chips?.(approval, shared) ?? {};
+  const editable = (item.kind === "bundle" ? members : [approval]).some(
+    (member) => chips?.(member, shared).canEdit !== false,
+  );
   return (
     <DecisionCard
       approval={approval}
@@ -108,7 +111,7 @@ export function DeckItemCard({
           ? () => onStage(item, "accept")
           : undefined
       }
-      onEdit={() => onStage(item, "edit")}
+      onEdit={editable ? () => onStage(item, "edit") : undefined}
       onReject={() => onStage(item, "reject")}
       onSkip={() => onStage(item, "skip")}
     />

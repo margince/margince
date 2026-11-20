@@ -30,6 +30,15 @@ func UnmarshalOrRefusal(ctx context.Context, field string, raw json.RawMessage, 
 	return undecodedRefusal(ctx, "", "", field, raw, into, err)
 }
 
+// keyPath names a key of the value decoded under field. "body" is the request
+// itself, whose keys are their own paths.
+func keyPath(field, key string) string {
+	if field == "body" {
+		return key
+	}
+	return field + "." + key
+}
+
 //craft:ignore naked-any mirror of Decode's seam target
 func undecodedRefusal(ctx context.Context, method, path, field string, raw json.RawMessage, into any, err error) error {
 	// A target's own unmarshaler may refuse a key (the lead patch does).
@@ -42,7 +51,7 @@ func undecodedRefusal(ctx context.Context, method, path, field string, raw json.
 			slog.WarnContext(ctx, "unnamed request-body field decode failure",
 				"method", method, "path", path, "field", refusal.Field, "err", err)
 		}
-		return Validation(field, "malformed_json", detail)
+		return Validation(keyPath(field, refusal.Field), refusal.ShapeCode(), detail)
 	}
 	safe, withheld := SafeDecodeError(err)
 	if withheld {

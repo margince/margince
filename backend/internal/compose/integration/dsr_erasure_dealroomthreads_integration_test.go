@@ -48,7 +48,7 @@ func TestErasingABuyerDeletesTheThreadsTheirSeatOpened(t *testing.T) {
 		t.Fatalf("the buyer replying in the seller's thread: %v", err)
 	}
 
-	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(seller, buyer.contact.UUID, "subject request"); err != nil {
+	if err := compose.ComposedEraser(e.Pool, nil).EraseContact(seller, buyer.contact.UUID, "subject request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -106,7 +106,7 @@ func TestASellerReplyInFlightDuringTheErasureIsTombstoned(t *testing.T) {
 
 	erased := make(chan error, 1)
 	go func() {
-		erased <- compose.ComposedEraser(e.Pool, nil, nil).EraseContact(seller, buyer.contact.UUID, "subject request")
+		erased <- compose.ComposedEraser(e.Pool, nil).EraseContact(seller, buyer.contact.UUID, "subject request")
 	}()
 	waitUntilBlockedBy(t, reply)
 	if err := reply.Commit(ctx); err != nil {
@@ -132,7 +132,7 @@ func TestErasingABuyerRedactsTheirSessionsAuditHistory(t *testing.T) {
 		t.Fatal("signing in opened no session, so there is no history to redact")
 	}
 
-	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(
+	if err := compose.ComposedEraser(e.Pool, nil).EraseContact(
 		e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}

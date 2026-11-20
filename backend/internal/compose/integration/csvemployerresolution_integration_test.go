@@ -62,11 +62,11 @@ func TestCSVImplicitEmployerIsRecordedForUndo(t *testing.T) {
 
 func TestCSVContactUsesConfiguredConsumerDomains(t *testing.T) {
 	e := setupImportApp(t)
-	if s := e.Call(t, http.MethodPost, "/v1/capture/consumer-mail-domains", map[string]string{"domain": "mail-provider.test", "kind": "extra"}, nil, nil); s != http.StatusCreated {
-		t.Fatalf("domain: %d", s)
-	}
 	if s := e.Call(t, http.MethodPost, "/v1/companies", map[string]any{"source": "manual", "display_name": "Mail Provider", "domains": []map[string]any{{"domain": "mail-provider.test", "is_primary": true}}}, nil, nil); s != http.StatusCreated {
 		t.Fatalf("company: %d", s)
+	}
+	if s := e.Call(t, http.MethodPost, "/v1/capture/consumer-mail-domains", map[string]any{"domain": "mail-provider.test", "kind": "extra", "confirm": true}, nil, nil); s != http.StatusCreated {
+		t.Fatalf("domain: %d", s)
 	}
 	profile, _ := importjobtest.UploadCSV(t, e, "contact", "Email,Full Name\nbuyer@mail-provider.test,Dana Buyer\n")
 	run, status := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name"})

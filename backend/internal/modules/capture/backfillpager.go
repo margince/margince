@@ -49,7 +49,7 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 			Scan(&connID, &after, &cursor, &status, &name, &grantedBy, &credentialRef, &authBytes, &generation, &sameAccount)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return true, false, 0, fmt.Errorf("capture: backfill %s: %w", backfillID, apperrors.ErrNotFound)
+		return true, false, 0, fmt.Errorf("this history import no longer exists: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return false, false, 0, err
@@ -308,7 +308,13 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 		rowsAffected = tag.RowsAffected()
 		if rowsAffected > 0 {
 			if finishing {
-				return reconcileBackfillCreationsTx(ctx, tx, backfillID)
+				if err := settleUnreadPeriodTx(ctx, tx, backfillID); err != nil {
+					return err
+				}
+				if err := reconcileBackfillCreationsTx(ctx, tx, backfillID); err != nil {
+					return err
+				}
+				return retryWeatheredSyncTx(ctx, tx, backfillID)
 			}
 			return rescheduleBackfillTx(ctx, tx, backfillID, backfillPageDelay)
 		}

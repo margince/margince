@@ -277,7 +277,7 @@ func (g *Gate) ReserveRecordWrites(ctx context.Context, tool string, n int) (*Wr
 	}
 	reserver, ok := g.volume.(VolumeReserver)
 	if !ok {
-		return nil, fmt.Errorf("gate: %s cannot reserve a bulk change on a volume meter that cannot reserve: %w",
+		return nil, fmt.Errorf("%s cannot run as a bulk change, because this server's volume meter cannot hold a reservation: %w",
 			tool, apperrors.ErrBudgetExceeded)
 	}
 	reading, admitted, err := reserver.Reserve(ctx, agentvolume.Writes, n)

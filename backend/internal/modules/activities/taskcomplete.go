@@ -49,7 +49,7 @@ func (s *Store) CompleteTaskTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID
 		return false, err
 	}
 	if current.Kind != crmcontracts.ActivityKindTask {
-		return false, fmt.Errorf("activities: %s is a %s, not a task to complete: %w", id, current.Kind, apperrors.ErrConflict)
+		return false, fmt.Errorf("activity %s is a %s, not a task to complete: %w", id, current.Kind, apperrors.ErrConflict)
 	}
 	if (current.IsDone != nil && *current.IsDone) || current.Version == nil || current.UpdatedAt.After(settledAt) {
 		return false, nil

@@ -112,7 +112,7 @@ func TestExtensionInventoryNeverAttributesAnotherUnitsContribution(t *testing.T)
 	// Two unit names that derive ONE namespace token: `crm-demo` underscores to
 	// `crm_demo`, which is also `crm`'s own prefix for an object named
 	// `demo_widget`. A prefix-splitting implementation gets this wrong.
-	exts := []extension.Extension{{Name: "crm", Version: "1"}, {Name: "crm-demo", Version: "1"}}
+	exts := []extension.Extension{{Name: "crm", Version: "1"}, {Name: "crm-demo", Version: "1", RecordKinds: []extension.RecordKindDeclaration{{Kind: "gadget"}}}}
 	verbs := []extension.Verb{
 		{Unit: "crm", Route: "/ext/crm/a", Method: "GET", RbacObject: "ext_crm_demo_widget"},
 		{Unit: "crm-demo", Route: "/ext/crm-demo/b", Method: "GET", RbacObject: "ext_crm_demo_thing"},
@@ -122,7 +122,7 @@ func TestExtensionInventoryNeverAttributesAnotherUnitsContribution(t *testing.T)
 	if !slices.Equal(got[0].RbacObjects, []string{"ext_crm_demo_widget"}) {
 		t.Errorf("crm's objects = %v, want only its own", got[0].RbacObjects)
 	}
-	if !slices.Equal(got[1].RbacObjects, []string{"ext_crm_demo_thing"}) {
+	if !slices.Equal(got[1].RbacObjects, []string{"ext_crm_demo_gadget", "ext_crm_demo_thing"}) {
 		t.Errorf("crm-demo's objects = %v, want only its own", got[1].RbacObjects)
 	}
 	if !slices.Equal(got[0].Routes, []crmcontracts.ComposedExtensionRoute{{Method: "GET", Path: "/ext/crm/a"}}) {

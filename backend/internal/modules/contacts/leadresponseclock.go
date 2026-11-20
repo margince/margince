@@ -16,6 +16,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -26,14 +27,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// firstResponseMarkedByColumn names the user whose status move wrote the
+// first-response stamp when no activity backs it.
+const firstResponseMarkedByColumn = "first_response_marked_by"
+
 // stampHumanFirstResponse adds the §18.1 first-response stamp to a patch
-// that moves the lead off `new` by a HUMAN's hand. An agent's status change
-// is not a response, and a lead already answered keeps its first stamp.
-func stampHumanFirstResponse(ctx context.Context, p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {
-	if in.Status == nil || current.Status != crmcontracts.LeadStatusNew || current.FirstResponseAt != nil {
+// that moves the lead off `new` by a HUMAN's hand. It takes that stamp back when
+// the lead returns to `new` with no response activity behind it. An agent's
+// status change is not a response, and a lead already answered keeps its first
+// stamp.
+func stampHumanFirstResponse(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {
+	if in.Status == nil {
 		return nil
 	}
 	if LeadStatus(*in.Status) == LeadStatusNew {
+		return releaseMarkedFirstResponse(ctx, tx, p, current)
+	}
+	if current.Status != crmcontracts.LeadStatusNew || current.FirstResponseAt != nil {
 		return nil
 	}
 	actor, err := storekit.Actor(ctx)
@@ -42,7 +52,27 @@ func stampHumanFirstResponse(ctx context.Context, p *storekit.Patch, current crm
 	}
 	if actor.Type == principal.PrincipalHuman {
 		p.Set(firstResponseColumn, nil, firstResponseStamp(leadSLAClock(), current.CreatedAt))
+		p.Set(firstResponseMarkedByColumn, nil, actor.UserID)
 	}
+	return nil
+}
+
+// releaseMarkedFirstResponse clears a stamp a status move wrote, unless a
+// response activity has been logged since. That activity answers the lead on its
+// own, by the rule the stamp subscriber uses.
+func releaseMarkedFirstResponse(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Lead) error {
+	if current.FirstResponseMarkedBy == nil || current.FirstResponseAt == nil {
+		return nil
+	}
+	touches, err := leadTouchesFor(ctx, tx, ids.LeadID{UUID: ids.UUID(current.Id)}, endOfTime)
+	if err != nil {
+		return err
+	}
+	if slices.ContainsFunc(touches, isFirstResponseActivity) {
+		return nil
+	}
+	p.Set(firstResponseColumn, current.FirstResponseAt, nil)
+	p.Set(firstResponseMarkedByColumn, current.FirstResponseMarkedBy, nil)
 	return nil
 }
 

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -146,7 +147,7 @@ func countedEmploymentFrom(ctx context.Context, companyBinding string, arg func(
 func fillOpenDealCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Company, companyIDs []ids.UUID, asOf time.Time) error {
 	return fillCount(ctx, tx, idx,
 		`SELECT company_id, open_deal_count
-		 FROM company_open_pipeline_rollup($2)
+		 FROM company_open_pipeline_rollup(`+occurredday.TodaySQL("$2::timestamptz")+`)
 		 WHERE company_id = ANY($1)`, []any{companyIDs, asOf},
 		func(o *crmcontracts.Company, n int) { o.OpenDealCount = &n })
 }

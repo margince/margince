@@ -29,7 +29,8 @@ import (
 //
 // Every kind carries an answer, including the false ones. A lookup miss and a
 // "no" are the same value in Go, and the miss fails open.
-// gates/momentactionvocabulary_test.go holds these keys equal to the enum.
+// gates/momentactionvocabulary_test.go holds these keys equal to the enum, and
+// gates/frontendwriteverbs_test.go holds frontend/src/lib/writeverbs.ts equal to the map.
 var writesAnActivity = map[crmcontracts.ContactMomentActionKind]bool{
 	// The log form, under its own name and asked as a task. One POST, one grant.
 	crmcontracts.ContactMomentActionKindLogActivity:  true,

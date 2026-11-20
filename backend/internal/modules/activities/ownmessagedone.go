@@ -163,7 +163,7 @@ func ownWaitingMessageSQL(reader, addresses, laterContent string) string {
 	          AND NOT EXISTS (SELECT 1 FROM activity_link heard
 	                JOIN activity later ON later.id = heard.activity_id
 	               WHERE heard.contact_id = sent.contact_id AND later.id <> a.id
-	                 AND later.archived_at IS NULL AND later.kind IN ('` + kindEmail + `', '` + kindMessage + `')
+	                 AND later.archived_at IS NULL AND later.kind IN ('` + kindEmail + `', '` + KindMessage + `')
 	                 AND later.direction IN ('inbound', 'outbound')
 	                 AND (later.occurred_at, later.id) > (a.occurred_at, a.id) -- occurred_at raw: which message is newer, an ordering of rows
 	                 AND ` + laterContent + `)))`

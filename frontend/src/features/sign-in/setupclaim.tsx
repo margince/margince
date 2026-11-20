@@ -14,7 +14,7 @@ import {
   useLocale,
   useT,
 } from "../../i18n";
-import { isTooShort } from "./passwordrule";
+import { passwordFault } from "./passwordrule";
 import "../../components/auth-core.css";
 
 // The first-run claim (ADR-0105). An installation whose deployment file names no
@@ -189,7 +189,7 @@ export function SetupClaimScreen({
     }
   }
 
-  const passwordShort = isTooShort(fields.adminPassword);
+  const passwordFaultKey = passwordFault(fields.adminPassword);
   // The server refuses a currency that is not three letters, so saying so here
   // keeps the operator from spending a round-trip to learn it. The check is
   // shape only: which three letters are a real currency is the server's to
@@ -206,7 +206,7 @@ export function SetupClaimScreen({
     fields.baseCurrency.trim() !== "" &&
     fields.country !== "" &&
     !currencyMalformed &&
-    !passwordShort &&
+    !passwordFaultKey &&
     fields.adminPassword !== "";
 
   return (
@@ -355,11 +355,11 @@ export function SetupClaimScreen({
           <Field
             label={t("setup.adminPassword")}
             required
-            error={passwordShort ? t("setup.passwordShort") : undefined}
+            error={passwordFaultKey ? t(passwordFaultKey) : undefined}
             // The rule, until the rule is being broken — at which point the
             // refusal restates it in the danger tone and a second grey copy of
             // the same sentence underneath is noise.
-            hint={passwordShort ? undefined : t("setup.passwordHint")}
+            hint={passwordFaultKey ? undefined : t("setup.passwordHint")}
             trailing={reveal.trailing}
           >
             {(control) => (

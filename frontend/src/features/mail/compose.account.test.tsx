@@ -1,15 +1,15 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
-import { draftButton } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
+import { draftButton, pressDraft } from "../../testing/composedraft.testkit";
 import {
   type Activity,
   activity202,
   fillSendableForm,
   findThreadChoice,
+  installComposeClock,
   jsonResponse,
   NO_VOICE_PROFILE,
   PURPOSES,
@@ -18,6 +18,9 @@ import {
   stubRoutes,
   WHY_ASK,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -30,14 +33,15 @@ afterEach(() => {
 // These three cases check that the composer picks the right endpoint. The
 // reply path and the account path are one component, and a refactor most
 // easily breaks which endpoint it reaches for.
-describe("ComposeModal started from an account", () => {
+describe("ComposeWindow started from an account", () => {
   it("sends through POST /emails, filed under the record it started from", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -45,8 +49,8 @@ describe("ComposeModal started from an account", () => {
       />,
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const req = sent.find((r) => r.key === "POST /emails");
@@ -65,11 +69,12 @@ describe("ComposeModal started from an account", () => {
   });
 
   it("never reaches the anchored reply endpoint", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -77,8 +82,8 @@ describe("ComposeModal started from an account", () => {
       />,
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
 
     await waitFor(() =>
       expect(sent.some((r) => r.key === "POST /emails")).toBe(true),
@@ -95,7 +100,7 @@ describe("ComposeModal started from an account", () => {
   it("will not draft from an account until a recipient is in To", async () => {
     const sent = stubRoutes({});
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -187,7 +192,7 @@ describe("ComposeModal started from an account", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Discuss the renewal"
         entityType="company"
         entityId="company-1"
@@ -196,13 +201,13 @@ describe("ComposeModal started from an account", () => {
       />,
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     await user.type(await screen.findByLabelText("To"), "sarah@acme.test");
     await user.keyboard("{Enter}");
     await waitFor(() =>
       expect(draftButton()).toHaveProperty("disabled", false),
     );
-    await user.click(draftButton());
+    await pressDraft(user);
     await waitFor(() =>
       expect(messageText("Body")).toBe("Hi Sarah, shall we pick this up?"),
     );
@@ -232,7 +237,7 @@ describe("ComposeModal started from an account", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="p-2"
@@ -280,7 +285,7 @@ describe("ComposeModal started from an account", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -319,6 +324,7 @@ describe("what the composer says it is answering", () => {
   };
 
   it("offers the record's conversations, and drafts against the one picked", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /activities": () =>
         jsonResponse({
@@ -333,7 +339,7 @@ describe("what the composer says it is answering", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -344,9 +350,9 @@ describe("what the composer says it is answering", () => {
     // The conversations are offered, not chosen for the reader. A button that
     // says "write an email" must not anchor the message to whatever came last,
     // addressed to somebody they had not picked.
-    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
+    await user.click(await findThreadChoice(user, /Rechnung GR-2026-0207/));
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     // And the draft answers that message: the account-wide draft, which needs
     // a recipient named first, is not what a reader gets from a record page.
@@ -368,7 +374,7 @@ describe("what the composer says it is answering", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -383,6 +389,7 @@ describe("what the composer says it is answering", () => {
   // made the consent purpose an attestation about a named human. The thread
   // supplies the address, so the reader has to see it before they attest.
   it("names the recipient once the draft has filled it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "GET /activities": () =>
         jsonResponse({
@@ -397,7 +404,7 @@ describe("what the composer says it is answering", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -406,10 +413,10 @@ describe("what the composer says it is answering", () => {
     );
 
     // The conversation is picked, then drafted against.
-    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
+    await user.click(await findThreadChoice(user, /Rechnung GR-2026-0207/));
     expect(screen.queryByText(/dietmar@valantic.test/)).toBeNull();
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     // And who, in the field that will carry it. It is asked for as the chip's
     // own control, because the address also appears in the quoted head of the
@@ -426,6 +433,7 @@ describe("what the composer says it is answering", () => {
   // against the running API. So the wrong spelling reads as "no earlier
   // message" for every project on the installation, with no sign.
   it("narrows to the selected project through project_id", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const asked: { params?: URLSearchParams } = {};
     vi.stubGlobal(
       "fetch",
@@ -451,7 +459,7 @@ describe("what the composer says it is answering", () => {
       }),
     );
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -459,7 +467,7 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    await findThreadChoice(/Rechnung GR-2026-0207/);
+    await findThreadChoice(user, /Rechnung GR-2026-0207/);
     // The record still scopes the read; a project only narrows it further.
     expect(asked.params?.get("entity_type")).toBe("company");
     expect(asked.params?.get("entity_id")).toBe("company-1");
@@ -474,6 +482,7 @@ describe("what the composer says it is answering", () => {
   // The contact it was with gets none of it, and it leaves as a new RFC chain.
   // That is an orphan, to a reader who was shown a reply.
   it("sends against the same message it drafted against", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /activities": () =>
         jsonResponse({
@@ -489,7 +498,7 @@ describe("what the composer says it is answering", () => {
       "POST /activities/act-latest/send-email": () => jsonResponse({}, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -497,16 +506,16 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
-    await userEvent.click(draftButton());
+    await user.click(await findThreadChoice(user, /Rechnung GR-2026-0207/));
+    await pressDraft(user);
     await waitFor(() =>
       expect(
         sent.some((s) => s.key === "POST /activities/act-latest/draft-email"),
       ).toBe(true),
     );
 
-    await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: /^Send$/ }));
+    await fillSendableForm(user);
+    await user.click(screen.getByRole("button", { name: /^Send$/ }));
 
     await waitFor(() => {
       // The reply path, not POST /emails, which would file under the body's
@@ -539,7 +548,7 @@ describe("what the composer says it is answering", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -561,7 +570,7 @@ describe("what the composer says it is answering", () => {
       "GET /activities/act-1": () => jsonResponse(activity202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"

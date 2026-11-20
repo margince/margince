@@ -21,8 +21,11 @@ import (
 
 const certSite = "chat_summary/episode"
 
+// certMessage is one message of a scenario. Side is a label the prompt
+// prints, such as "colleague"; left out, the author is unknown.
 type certMessage struct {
 	Author string    `json:"author"`
+	Side   string    `json:"side,omitempty"`
 	At     time.Time `json:"at"`
 	Text   string    `json:"text"`
 }
@@ -31,6 +34,7 @@ type certFixture struct {
 	Record   string        `json:"record"`
 	Facts    []string      `json:"facts"`
 	Channel  string        `json:"channel"`
+	Earlier  string        `json:"earlier,omitempty"`
 	Messages []certMessage `json:"messages"`
 }
 
@@ -66,10 +70,14 @@ func (CertCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCas
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf("%s: the expected value is not {relevant, keeps, omits}: %w", certSite, err)
 	}
-	in := Input{Record: f.Record, Facts: f.Facts, Channel: f.Channel}
+	in := Input{Record: f.Record, Facts: f.Facts, Channel: f.Channel, Earlier: f.Earlier}
 	var said strings.Builder
 	for _, m := range f.Messages {
-		in.Messages = append(in.Messages, Message(m))
+		side, ok := sideNamed(m.Side)
+		if !ok {
+			return nil, fmt.Errorf("%s: the side %q is not one the prompt prints", certSite, m.Side)
+		}
+		in.Messages = append(in.Messages, Message{Author: m.Author, Side: side, At: m.At, Text: m.Text})
 		said.WriteString(m.Text + "\n")
 	}
 	for _, span := range want.Keeps {
@@ -125,4 +133,17 @@ func (c *certCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+}
+
+// sideNamed is the side a scenario's label names; an empty label is unknown.
+func sideNamed(label string) (Side, bool) {
+	if label == "" {
+		return SideUnknown, true
+	}
+	for side, name := range sideLabels {
+		if name == label {
+			return Side(side), true
+		}
+	}
+	return SideUnknown, false
 }

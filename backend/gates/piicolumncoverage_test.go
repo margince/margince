@@ -98,7 +98,7 @@ var erasureColumnBaseline = map[string][]string{
 	// redaction leaves it standing. What it DOES clear on this table is the
 	// recipient address and the subject link, which is the identifying half.
 	"communication_decision": {
-		"basis",
+		"basis", "country_source",
 		// Two values, both this repository's own: the engine allowed the
 		// message, or a named human decided a refused one goes anyway. It says
 		// nothing about the subject — it says what the CONTROLLER did — and
@@ -130,7 +130,7 @@ var erasureColumnBaseline = map[string][]string{
 		// the recipient's is not read at all. Clearing it would leave a sent
 		// message with no record of the law it was judged under, which is the
 		// accountability half Art. 5(2) requires the erasure to keep.
-		"ruleset_codes",
+		"ruleset_codes", "ruleset_digest",
 		// The sending legal entity's country code: the controller's
 		// jurisdiction, never the subject's, kept for the same reason.
 		"data_protection_country",
@@ -242,8 +242,8 @@ var erasureColumnBaseline = map[string][]string{
 		// anything a subject wrote or anything written about them, so the
 		// Art. 17 scrub leaves them standing.
 		//
-		// payload_ref is deliberately NOT here: erasure_payloads.go clears it,
-		// after destroying the vault material the reference names.
+		// Names vault material, nothing a subject wrote; the sweep clears it.
+		"payload_ref",
 		"sender_kind",
 		"template_key",
 		"bounce_kind",

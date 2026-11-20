@@ -10,6 +10,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { addressKey } from "../lib/addresskey";
 import { problemMessageOf, throwProblem } from "../lib/problem";
 
 // The warning before a send to a recipient whose country has no
@@ -28,18 +29,37 @@ export function lawfulBasisMissing(preview: Preview | undefined): string[] {
     .map((recipient) => recipient.address);
 }
 
-type Subject = components["schemas"]["CommunicationEvidenceSubject"];
+type Subject = components["schemas"]["LawfulBasisConfirmationSubject"];
+type StatedCountry = components["schemas"]["RecipientCountry"];
 
 /**
  * The records the server confirms against: each marked recipient's own
  * record, as the preview names it. A pinned lead stays the lead.
  */
-function confirmableSubjects(preview: Preview | undefined): Subject[] {
-  return (preview?.recipients ?? []).flatMap((recipient) =>
-    recipient.lawful_basis_missing === true && recipient.evidence_subject
-      ? [recipient.evidence_subject]
-      : [],
-  );
+// Each marked record, with the country the sender stated for its address, so
+// the confirmation is taken under the country the preview warned under.
+function confirmableSubjects(
+  preview: Preview | undefined,
+  stated: readonly StatedCountry[],
+): Subject[] {
+  return (preview?.recipients ?? []).flatMap((recipient) => {
+    if (
+      recipient.lawful_basis_missing !== true ||
+      !recipient.evidence_subject
+    ) {
+      return [];
+    }
+    const address = addressKey(recipient.address);
+    const statement = stated.find((entry) => entry.address === address);
+    return [
+      statement
+        ? {
+            ...recipient.evidence_subject,
+            stated_country: { country: statement.country },
+          }
+        : recipient.evidence_subject,
+    ];
+  });
 }
 
 type ConsentRequest = Readonly<{
@@ -174,11 +194,14 @@ function askFailure(
  * else after the confirmation is recorded. Asking for consent instead closes
  * the dialog without sending. `dialog` is drawn by the caller.
  */
-export function useLawfulBasisGate(preview: Preview | undefined) {
+export function useLawfulBasisGate(
+  preview: Preview | undefined,
+  stated: readonly StatedCountry[] = [],
+) {
   const t = useT();
   const toast = useToast();
   const missing = lawfulBasisMissing(preview);
-  const subjects = confirmableSubjects(preview);
+  const subjects = confirmableSubjects(preview, stated);
   const requests = askableRequests(preview);
   const [pending, setPending] = useState<(() => void) | null>(null);
   const { mutation: ask, asked, reset: resetAsk } = useAskForConsent(requests);

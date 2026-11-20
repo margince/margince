@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "6e0c882bde4744e362430fdcfeb28ab999edf42e21e017f22b3accd551d439d1"
+const JobContractHash = "b6a3ea8d838edc856c7bef6c6c11275791028b65b338441c0c2d88a4bb6dca09"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -382,15 +382,14 @@ var specs = map[string]Spec{
 		Fault:     FaultPolicy{NilAfterLogging: "the warn line is this pass's FINDING, not a failure: it is the mail enforcing the engine would have stopped, logged at warn because that is what an operator weighs before enforcing. A pass that read the disagreement has succeeded whatever it found; a pass that could not read it returns that through jobs.Fault."},
 	},
 	"comms_controller_payload_sweep": {
-		Kind:         "comms_controller_payload_sweep",
-		GoType:       "ControllerPayloadSweepArgs",
-		Role:         Worker,
-		Queue:        "default",
-		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
-		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{Fixed: 15 * time.Minute},
-		Registration: Registration{When: []string{"SendRegistry", "SendDelivery"}},
-		Fault:        FaultPolicy{NilAfterLogging: "A batch of independent payloads, and one that will not destroy must not strand the others: the pass logs that row and carries on. The retry policy is the CADENCE — this runs every 15 minutes and re-reads what is still expired, so a payload that failed here is picked up by the next pass. Failing the whole job would re-read the rows already retired and leave one permanently unreadable row blocking every other payload behind it forever, which is the opposite of what a cleanup owes."},
+		Kind:      "comms_controller_payload_sweep",
+		GoType:    "ControllerPayloadSweepArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 15 * time.Minute},
+		Fault:     FaultPolicy{NilAfterLogging: "A batch of independent payloads, and one that will not destroy must not strand the others: the pass logs that row and carries on. The retry policy is the CADENCE — this runs every 15 minutes and re-reads what is still expired, so a payload that failed here is picked up by the next pass. Failing the whole job would re-read the rows already retired and leave one permanently unreadable row blocking every other payload behind it forever, which is the opposite of what a cleanup owes."},
 	},
 	"comms_scheduled_send": {
 		Kind:         "comms_scheduled_send",

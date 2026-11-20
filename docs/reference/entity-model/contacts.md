@@ -223,7 +223,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `last_evidence_at` | `timestamp with time zone` |  |  |
 | `next_attempt_at` | `timestamp with time zone`, default `now()` |  |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
-| `pending_reason` | `text` |  | One of `unevidenced`, `stale_evidence`, `near_duplicate`, `forwarded_identity`, `vendor_verdict`, `reserved_domain`. |
+| `pending_reason` | `text` |  | One of `unevidenced`, `stale_evidence`, `near_duplicate`, `forwarded_identity`, `vendor_verdict`, `reserved_domain` and 1 more. |
 | `site_read_id` | `uuid` |  | Points at `site_read.id`. |
 | `site_unreadable` | `boolean`, default `false` | yes |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `company`, `personal`, `provider`, `no_site`. |
@@ -246,7 +246,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_domain_disposition_admission_shape`: `CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))`
 - `company_domain_disposition_admission_source_check`: `CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict', 'heuristic', 'human', 'agent']))))`
 - `company_domain_disposition_domain_check`: `CHECK (((domain = lower(domain)) AND (domain <> '')))`
-- `company_domain_disposition_pending_reason_check`: `CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced', 'stale_evidence', 'near_duplicate', 'forwarded_identity', 'vendor_verdict', 'reserved_domain']))))`
+- `company_domain_disposition_pending_reason_check`: `CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced', 'stale_evidence', 'near_duplicate', 'forwarded_identity', 'vendor_verdict', 'reserved_domain', 'foreign_site']))))`
 - `company_domain_disposition_pending_reason_shape`: `CHECK (((pending_reason IS NULL) OR ((status = 'pending') AND (admission IS DISTINCT FROM 'suppressed'))))`
 - `company_domain_disposition_settled_shape`: `CHECK ((((status = 'pending') AND (source IS NULL)) OR ((status = 'company') AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal', 'provider', 'no_site'])) AND (source IS NOT NULL))))`
 - `company_domain_disposition_source_check`: `CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read', 'heuristic', 'human', 'agent']))))`
@@ -617,7 +617,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-38 columns · primary key `(id)` · referenced by 50 foreign keys
+39 columns · primary key `(id)` · referenced by 50 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -635,6 +635,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_name` | `text` |  |  |
 | `full_name` | `text` | yes | Always present (display name). |
+| `greeting_register` | `text` |  | How a message to this contact opens: `formal` takes the surname, `familiar` the first name. |
 | `last_activity_at` | `timestamp with time zone` |  | When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts. |
 | `last_name` | `text` |  |  |
 | `merged_into_id` | `uuid` |  | Set when this row was merged away. |
@@ -672,6 +673,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `contact_greeting_register_check`: `CHECK ((greeting_register = ANY (ARRAY['formal', 'familiar'])))`
 - `contact_narrowing_reason_check`: `CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided'])))`
 - `contact_narrowing_reason_only_when_owner`: `CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner')))`
 - `contact_owner_private_names_its_owner`: `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
@@ -692,6 +694,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_dedupe_scan`: `btree (updated_at, id) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_digraph_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'))), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
+- `idx_contact_family_name_key`: `btree ("substring"(btrim(regexp_replace(replace(f_fold_apostrophes(lower( CASE WHEN (full_name ~~ '%,%') THEN split_part(full_name, ',', 1) ELSE full_name END)), 'ς', 'σ'), '\s+', ' ', 'g')), '[^ ]+$')) WHERE (archived_at IS NULL)`
 - `idx_contact_from_lead`: `btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)`
 - `idx_contact_keyed_address_hashes`: `btree (anonymized_address_key_id) WHERE (anonymized_address_key_id IS NOT NULL)`
 - `idx_contact_last_activity_keyset`: `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
@@ -710,8 +713,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `home_read_fence_contact_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
 - `trg_contact_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()`
 - `trg_contact_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -845,7 +848,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `email_domain_folded` | `text` |  |  |
 | `email_type` | `text`, default `'work'::text` | yes | One of `work`, `personal`, `other`. |
 | `from_correspondence` | `boolean`, default `true` | yes |  |
-| `is_primary` | `boolean`, default `false` | yes | At most one primary per type (DB-enforced). |
+| `is_primary` | `boolean`, default `false` | yes | At most one primary address per contact, whatever its type (DB-enforced). |
 | `position` | `integer`, default `0` | yes | Explicit ordering. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
@@ -877,7 +880,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_email_mailbox_base`: `btree (( CASE WHEN (regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@', '\1@') ~ '^[^@]*@(gmail|googlemail)\.com$') THEN (replace(regexp_replace(regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@', '\1@'), '@(gmail|googlemail)\.com$', ''), '.', '') || '@gmail.com') ELSE regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@', '\1@') END)) WHERE (archived_at IS NULL)`
 - `idx_contact_email_trgm`: `gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)`
 - `uq_contact_email_dedupe`: `unique, btree (email) WHERE (archived_at IS NULL)`
-- `uq_contact_email_primary`: `unique, btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL))`
+- `uq_contact_email_primary`: `unique, btree (contact_id) WHERE (is_primary AND (archived_at IS NULL))`
 
 **Triggers**
 
@@ -896,7 +899,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
-| `is_primary` | `boolean`, default `false` | yes |  |
+| `is_primary` | `boolean`, default `false` | yes | At most one primary number per contact, whatever its type (DB-enforced). |
 | `observed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `phone` | `text` | yes | E.164 normalized. |
 | `phone_type` | `text`, default `'work'::text` | yes | One of `work`, `mobile`, `home`, `other`. |
@@ -928,7 +931,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_phone_superseded_phone_ix`: `btree (superseded_phone_id) WHERE (superseded_phone_id IS NOT NULL)`
 - `idx_contact_phone_contact`: `btree (contact_id)`
 - `idx_contact_phone_dedupe_scan`: `btree (updated_at, id)`
-- `uq_contact_phone_primary`: `unique, btree (contact_id, phone_type) WHERE (is_primary AND (archived_at IS NULL))`
+- `idx_contact_phone_live_phone`: `btree (phone) WHERE (archived_at IS NULL)`
+- `uq_contact_phone_primary`: `unique, btree (contact_id) WHERE (is_primary AND (archived_at IS NULL))`
 
 **Triggers**
 
@@ -1356,7 +1360,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-48 columns · primary key `(id)` · referenced by 20 foreign keys
+49 columns · primary key `(id)` · referenced by 20 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1371,6 +1375,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `email_domain_folded` | `text` |  |  |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_response_at` | `timestamp with time zone` |  | First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. |
+| `first_response_marked_by` | `uuid` |  | The user whose status move off `new` wrote `first_response_at`, with no activity behind it. |
 | `from_contact_id` | `uuid` |  | The contact an older lead was created from, and null for every newly created lead. |
 | `full_name` | `text` |  |  |
 | `industry` | `text` |  | The industry typed on the lead, one of the fixed codes, or null. |

@@ -89,23 +89,11 @@ func TestCancellingAMessageClosesItsReview(t *testing.T) {
 	}
 }
 
-// MOVING A MESSAGE LEAVES ITS REVIEW LIVE, BECAUSE THE DECISION IS STILL OPEN.
-//
-// This test pins a decision that was reversed while the slice was being
-// reviewed. Closing the review on a reschedule reads right — nothing is sent
-// now, and the row is 'scheduled' again — and it loses the refusal.
-//
-// The reason is that only the STAGING path opens a review, through
-// RecordPendingReview. The timer-driven refire holds a refused message
-// (scheduledsendfire.go, holdInTx) and opens none. So a review closed here and
-// the message refused again at its new moment would leave it held with nothing
-// routable in front of anybody, which is the silence the review exists to end.
-//
-// Left live, the row stays honest: the message really is still going out and
-// the decision really is still outstanding. If it is refused again,
-// OpenReviewTx upserts on the live-intent index and refreshes THIS row rather
-// than opening a rival.
-func TestMovingAMessageLeavesItsReviewLive(t *testing.T) {
+// Moving a message nobody decided closes its review, as cancelling does. The
+// card is withdrawn and the row names no review, so a live review would be work
+// no surface reaches. The decided case is
+// TestAMovedMessageSpendsTheDecisionAlreadyRecorded.
+func TestMovingAnUndecidedMessageClosesItsReview(t *testing.T) {
 	c := setupConsent(t)
 	_, held := refuseAndHold(t, c)
 
@@ -137,11 +125,9 @@ func TestMovingAMessageLeavesItsReviewLive(t *testing.T) {
 		t.Fatalf("the message reads %q after being moved, want scheduled", status)
 	}
 
-	_, resolved := closedReview(t, c)
-	if resolved != nil {
-		t.Error("the review closed when its message was merely moved — the message is still " +
-			"going out, and the refire that carries it opens no review of its own, so the " +
-			"refusal is now invisible to everybody")
+	state, resolved := closedReview(t, c)
+	if resolved == nil || state != "cancelled" {
+		t.Errorf("the review reads %q (resolved %v) after its undecided message moved, want cancelled", state, resolved)
 	}
 }
 

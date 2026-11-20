@@ -19,6 +19,7 @@ import { formatDate } from "../../format/format";
 import { INTL_LOCALE } from "../../format/intllocale";
 import { zoneNameAndOffset } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { mailboxParams } from "../../lib/connectors";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 
@@ -31,7 +32,7 @@ export function HistoryBaselineRow({
   const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  const save = useSetHistoryBaseline(conn.provider);
+  const save = useSetHistoryBaseline(conn);
   const baseline = conn.history_baseline;
   const [draft, setDraft] = useState(baseline?.date ?? "");
   const changed = isISODate(draft) && draft !== baseline?.date;
@@ -95,13 +96,13 @@ export function HistoryBaselineRow({
   );
 }
 
-function useSetHistoryBaseline(provider: CaptureConnection["provider"]) {
+function useSetHistoryBaseline(conn: CaptureConnection) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { date: string | null; timezone?: string }) => {
       unwrap(
         await api.PUT("/connectors/{provider}/history-baseline", {
-          params: { path: { provider } },
+          params: mailboxParams(conn),
           body: { date: vars.date, timezone: vars.timezone },
         }),
       );

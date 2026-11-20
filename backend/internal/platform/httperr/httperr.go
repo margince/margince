@@ -111,7 +111,7 @@ func clientInputValidation(err error) (error, bool) {
 	// does. Any other cause is restated as the native body decode restates it,
 	// and Write logs what that withheld.
 	if refused, ok := errors.AsType[*datasource.DecodedValueError](err); ok {
-		return Validation(refused.Field, refused.Code, refused.Error()), true
+		return Validation(refused.Field, refused.Code, refused.Error()).WithParams(refused.Params), true
 	}
 	if badFields, ok := errors.AsType[*datasource.FieldDecodeError](err); ok {
 		detail, _ := fieldDecodeRefusal(badFields.Cause)
@@ -392,6 +392,9 @@ func loggedPath(r *http.Request) string {
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
 	fault, ok := Classify(err)
+	if timedOut, late := timedOutFault(r, err, ok); late {
+		fault, ok = timedOut, true
+	}
 	if !ok && CallerLeft(r.Context()) {
 		// Debug, not error: nothing failed on our side, and the sweep an operator
 		// reads for faults must not have to rule these out by hand. The cause

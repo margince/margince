@@ -66,7 +66,7 @@ func (e *resolveEnv) decideAs(t *testing.T, user ids.UUID) commsauthz.Decision {
 	ctx := e.seatCtx(user)
 	var out commsauthz.Decision
 	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		req, err := withSendingEntity(ctx, tx, commsauthz.Request{LegacyPurposeKey: "newsletter"})
+		req, err := withSendFacts(ctx, tx, commsauthz.Request{LegacyPurposeKey: "newsletter"})
 		if err != nil {
 			return err
 		}

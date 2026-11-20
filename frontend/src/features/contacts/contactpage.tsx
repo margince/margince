@@ -25,9 +25,8 @@ import {
   openingIdentity,
 } from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
-import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
+import type { ContactTab } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
-import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
 import { BriefQueue } from "../brief/brief.queue";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
@@ -46,10 +45,10 @@ import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
-import { useDisabledCoreFeatures } from "../../lib/corefeatures";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
-  navigateKeepingReturn,
+  openContactTab,
   WorklistReturnLink,
 } from "../worklist/worklist.return";
 import {
@@ -111,7 +110,7 @@ export function ContactPageV2({
   id,
   tab: addressedTab,
 }: Readonly<{ id: string; tab: ContactTab }>) {
-  const tab = contactTabForFeatures(addressedTab, useDisabledCoreFeatures());
+  const tab = contactTabForFeatures(addressedTab, useHiddenCoreFeatures());
 
   // Which message the drawer is showing. One drawer over the record, owned by
   // the page: the timeline and the rail both open into it, so a citation in
@@ -253,10 +252,7 @@ export function ContactPageV2({
     />
   );
 
-  const openTab = (next: ContactTab) => {
-    navigateKeepingReturn(contactTabRoute(id, next));
-    scrollPageToTop();
-  };
+  const openTab = (next: ContactTab) => openContactTab(id, next);
 
   return (
     <div className="wrap">

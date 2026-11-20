@@ -26,3 +26,14 @@ func TestProject360CarriesAContractsTermState(t *testing.T) {
 		t.Errorf("carried %+v, want active, out of contract, not_started", got[0])
 	}
 }
+
+// A timeline row tells the agent which side wrote it, as compose's writer side
+// answers. A colleague's mail can arrive inbound and still be ours.
+func TestProject360CarriesTheSideThatWroteARow(t *testing.T) {
+	inbound := crmcontracts.ActivityDirectionInbound
+	got := project360Activities([]crmcontracts.Activity{{Kind: crmcontracts.ActivityKindEmail, Direction: &inbound}},
+		func(crmcontracts.Activity) string { return string(crmcontracts.ActivityDirectionOutbound) })
+	if len(got) != 1 || got[0].Direction != "outbound" {
+		t.Errorf("carried %+v, want the writer side outbound rather than the transport's inbound", got)
+	}
+}

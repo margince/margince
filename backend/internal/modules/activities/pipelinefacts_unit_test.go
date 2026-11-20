@@ -30,8 +30,12 @@ func TestTheClassifyReasonNamesTheExclusionThatApplied(t *testing.T) {
 			"meeting", "email", connector, false, false, false, "",
 		},
 		{
-			"a chat message is not the classifier's transport",
-			"", "message", connector, false, false, false, pipelinetrace.ReasonTransportNotRead,
+			"a meeting is not the classifier's transport",
+			"", "meeting", connector, false, false, false, pipelinetrace.ReasonTransportNotRead,
+		},
+		{
+			"a connector-captured chat message waits for the batch like mail",
+			"", "message", connector, false, false, false, pipelinetrace.ReasonAwaitingBatch,
 		},
 		{
 			"a hand-logged activity was never connector-captured",
@@ -67,12 +71,11 @@ func TestTheClassifyReasonNamesTheExclusionThatApplied(t *testing.T) {
 }
 
 func TestTheEarliestExclusionWins(t *testing.T) {
-	// A chat message that is ALSO archived has two true exclusions. The reason
-	// reported is the one the backlog predicate acts on first, so a member is
-	// told what actually kept their message out rather than whichever condition
-	// happened to be evaluated last.
+	// An archived meeting has two true exclusions. The reason reported is the
+	// one the backlog predicate tests first. A member is told what kept their
+	// message out, not whichever condition was evaluated last.
 	got := classifyReason(classifySubject{
-		kind: "message", capturedBy: "connector:telegram", archived: true, senderUndecided: true,
+		kind: "meeting", capturedBy: "connector:gcal", archived: true, senderUndecided: true,
 	})
 	if got != pipelinetrace.ReasonTransportNotRead {
 		t.Errorf("classifyReason() = %q, want the transport exclusion to win", got)
@@ -111,7 +114,7 @@ func TestTheBacklogPredicateIsTheOneTheReaderAsks(t *testing.T) {
 	// would otherwise cover: that the reader did not quietly grow its own copy
 	// of the predicate's text.
 	for _, clause := range []string{
-		"capture_label IS NULL", "captured_by LIKE 'connector:%'", "kind = 'email'",
+		"capture_label IS NULL", "captured_by LIKE 'connector:%'", "kind IN ('email', 'message')",
 		"archived_at IS NULL", "capture_pending_counterparty", "capture_label_declined_ruleset",
 	} {
 		if !strings.Contains(ClassifyBacklogPredicate("$1"), clause) {

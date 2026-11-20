@@ -175,6 +175,9 @@ func TestColumnTakenErrorReadsAsConflict(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatal("ColumnTakenError must map onto the 409 conflict sentinel")
 	}
+	if code, _ := err.MessageFault(); code != "custom_field_label_taken" {
+		t.Errorf("a taken column answers code %q, want custom_field_label_taken: another label resolves it", code)
+	}
 }
 
 func TestUpdateAuditNamesTheActivityKindsAlone(t *testing.T) {

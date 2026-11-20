@@ -50,6 +50,9 @@ var remedies = map[string][]Remedy{
 
 	ReasonHardBounce: {},
 	ReasonNoSubject:  {},
+	// The subject is edited or the recipients split; nothing overrules a label.
+	ReasonSubjectLabelMissing:   {},
+	ReasonSubjectLabelsConflict: {},
 
 	// Allows, not refusals.
 	ReasonAllowed:           {},

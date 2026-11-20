@@ -6,9 +6,20 @@ import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
 import { providerName } from "../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
-import { CAPTURE_CONCERNS, concernKey } from "../lib/captureconcern";
-import { useConnectors } from "../lib/connectors";
+import { useNow } from "../format/now";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
+import {
+  CAPTURE_CONCERNS,
+  concernKey,
+  rateLimited,
+} from "../lib/captureconcern";
+import { mailboxParams, useConnectors } from "../lib/connectors";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import { briefKey, magicKey, worklistKey } from "../lib/workkeys";
@@ -40,13 +51,14 @@ export function CaptureHealthBanner() {
   const { locale } = useLocale();
   const client = useQueryClient();
   const concerns = useCaptureConcerns() ?? [];
+  const now = useNow(60_000);
   const dismiss = useMutation({
     mutationFn: async (connection: Connection) => {
       if (!connection.concern_since)
         throw new Error(t("captureConcern.changed"));
       return unwrap(
         await api.POST("/connectors/{provider}/silence/dismiss", {
-          params: { path: { provider: connection.provider } },
+          params: mailboxParams(connection),
           body: { since: connection.concern_since },
         }),
       );
@@ -68,6 +80,7 @@ export function CaptureHealthBanner() {
   const since = row.concern_since
     ? formatDateTime(row.concern_since, locale, readerZone)
     : "";
+  const nextTry = retryLine(row, now, t, locale, readerZone);
   return (
     <div className="appbanner">
       <Callout
@@ -98,6 +111,7 @@ export function CaptureHealthBanner() {
         }
       >
         {since && <p>{t("captureConcern.since", { since })}</p>}
+        {nextTry && <p>{nextTry}</p>}
         {concerns.length > 1 && (
           <p>
             {plural("captureConcern.more", concerns.length - 1, {
@@ -111,4 +125,23 @@ export function CaptureHealthBanner() {
       </Callout>
     </div>
   );
+}
+
+/** When a rate-limited sync tries again. A time already passed means the sync
+ *  is due, so naming that time would read stale. */
+function retryLine(
+  row: Connection,
+  now: number,
+  t: Translator,
+  locale: Locale,
+  zone: string,
+): string {
+  const retryAt = rateLimited(row.concern, row.last_sync_error_class)
+    ? row.next_sync_due_at
+    : null;
+  if (!retryAt) return "";
+  if (Date.parse(retryAt) <= now) return t("captureConcern.tryingNow");
+  return t("captureConcern.nextTry", {
+    time: formatDateTime(retryAt, locale, zone),
+  });
 }

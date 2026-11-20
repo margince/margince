@@ -15,8 +15,10 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // sharedContact is the part of a stored contact that two contacts made the
@@ -136,11 +138,12 @@ func TestLogActivityAndCreateTaskLeaveTheSameOnEitherDoor(t *testing.T) {
 	}
 	d.sameEffect(t, "note", noteREST, noteTool)
 
+	due := clocktest.Now(t).AddDate(0, 1, 0).Truncate(time.Hour).Format(time.RFC3339)
 	restTask := d.restStatus(t, "POST", "/v1/tasks", AnyMap{
-		"subject": "Send the quote", "body": "Anna Weber asked for the quote in the note.", "source_activity_id": noteREST, "due_at": "2036-04-01T09:00:00Z", "source": "manual", "links": link,
+		"subject": "Send the quote", "body": "Anna Weber asked for the quote in the note.", "source_activity_id": noteREST, "due_at": due, "source": "manual", "links": link,
 	}, http.StatusCreated)
 	toolTask := d.tool(t, "create_task", map[string]any{
-		"subject": "Send the quote", "body": "Anna Weber asked for the quote in the note.", "source_activity_id": noteREST, "due_at": "2036-04-01T09:00:00Z", "links": link,
+		"subject": "Send the quote", "body": "Anna Weber asked for the quote in the note.", "source_activity_id": noteREST, "due_at": due, "links": link,
 	})
 	taskREST, taskTool := anIDIn(t, restTask), anIDIn(t, toolTask)
 	sameStored(t, "task", stored(taskREST), stored(taskTool), taskREST, taskTool)

@@ -15,11 +15,12 @@ import {
   useFrozenEdge,
 } from "./listtable.layout";
 import { orderedColumns, useColumnOrder } from "./listtable.order";
-import { fitsOnePage, holdsCount, usePaging } from "./listtable.paging";
+import { fitsOnePage, usePaging } from "./listtable.paging";
 import {
   applyView,
   clearAll,
   filteredBy,
+  holdsCount,
   narrowedBy,
   type QueryDials,
   sortedColumn,
@@ -107,6 +108,7 @@ export function ListTable<Row>({
   notice,
   body,
   bodyOwnsPaging = false,
+  bodyEmpty = false,
   selection,
 }: Readonly<{
   rows: readonly Row[];
@@ -133,6 +135,8 @@ export function ListTable<Row>({
   body?: ReactNode;
   /** The alternate body carries its own count and continuation control. */
   bodyOwnsPaging?: boolean;
+  /** A settled body with nothing in it is headed by the grid's empty line. */
+  bodyEmpty?: boolean;
   /**
    * The count sentence for a body that owns its own paging.
    *
@@ -386,6 +390,11 @@ export function ListTable<Row>({
       emptyNote={emptyNote}
     />
   );
+  const emptyBlock = (
+    <div className="lt-emptyline">
+      <EmptyState>{emptyLine}</EmptyState>
+    </div>
+  );
 
   return (
     <ListSurface
@@ -410,9 +419,7 @@ export function ListTable<Row>({
               sortedBy: sortedColumn(columns, sort)?.header,
             })
       }
-      holdCount={
-        !bodyOwnsPaging && holdsCount(pending, narrowedBy(dials), rows.length)
-      }
+      holdCount={holdsCount(bodyOwnsPaging, pending, dials, rows.length)}
       action={action}
       caption={caption}
       search={search}
@@ -450,20 +457,17 @@ export function ListTable<Row>({
     >
       <ListBulkBar selection={selection} all={all} hidden={!drawsOwnTable} />
       {short && !problem && rows.length === 0 ? (
-        <div className="lt-emptyline">
-          <EmptyState>{emptyLine}</EmptyState>
-        </div>
+        emptyBlock
       ) : body != null ? (
         <AnsweredSearch.Provider value={search?.answered}>
+          {bodyEmpty && !problem && emptyBlock}
           {body}
         </AnsweredSearch.Provider>
       ) : (
         <ListGrid
           scrollerRef={(node) => {
             scroller.current = node;
-            if (bodyRef) {
-              bodyRef.current = node;
-            }
+            if (bodyRef) bodyRef.current = node;
           }}
           region={region}
           frozen={frozen}

@@ -32,6 +32,8 @@ package approvals
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -115,15 +117,11 @@ func (s *Service) MarkLapsedRedemptions(ctx context.Context) (int64, error) {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT id FROM approval
-			 WHERE status = $1
-			   AND passport_id IS NOT NULL
-			   AND consumed_at IS NULL
-			   AND effect_failed_at IS NULL
-			   AND decided_at < $2
+			 WHERE `+lapsedUnmarkedSQL("$1")+`
 			 `+lockOrder+`
-			 LIMIT $3
+			 LIMIT $2
 			   FOR UPDATE`,
-			approvalStatusApproved, s.now().UTC().Add(-redemptionTTL), lapseSweepBatch)
+			s.now().UTC().Add(-redemptionTTL), lapseSweepBatch)
 		if err != nil {
 			return fmt.Errorf("crmapprovals: reading the approvals nobody came back for: %w", err)
 		}
@@ -136,8 +134,8 @@ func (s *Service) MarkLapsedRedemptions(ctx context.Context) (int64, error) {
 		}
 		tag, err := tx.Exec(ctx, `
 			UPDATE approval
-			   SET effect_failed_at = now(), effect_failure = $1
-			 WHERE id = ANY($2)`, lapsedRedemptionSentence, lapsed)
+			   SET effect_failed_at = decided_at + make_interval(secs => $3), effect_failure = $1
+			 WHERE id = ANY($2)`, lapsedRedemptionSentence, lapsed, redemptionTTL.Seconds())
 		if err != nil {
 			return fmt.Errorf("crmapprovals: marking the approvals nobody came back for: %w", err)
 		}
@@ -145,4 +143,22 @@ func (s *Service) MarkLapsedRedemptions(ctx context.Context) (int64, error) {
 		return nil
 	})
 	return marked, err
+}
+
+// The lapse is recorded as decided_at plus the window, the moment it closed. A
+// reader before the sweep and one after then see the same failure time.
+
+// lapsedUnmarkedSQL is unredeemedPastWindow for the table. cutoff names a
+// placeholder holding the instant a decision must precede to have lapsed. It
+// is derived from the same classification, agentRedeems, as the Go side.
+func lapsedUnmarkedSQL(cutoff string) string {
+	excluded := []string{"'" + KindVolumeRelease + "'"}
+	for kind := range humanAcceptedKinds {
+		excluded = append(excluded, "'"+kind+"'")
+	}
+	sort.Strings(excluded)
+	return "(status = '" + approvalStatusApproved + "' AND passport_id IS NOT NULL" +
+		" AND kind NOT IN (" + strings.Join(excluded, ", ") + ")" +
+		" AND consumed_at IS NULL AND effect_ran_at IS NULL AND effect_failed_at IS NULL" +
+		" AND decided_at < " + cutoff + ")"
 }

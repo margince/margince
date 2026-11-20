@@ -5,11 +5,12 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { en } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { render } from "./analytics.testkit";
 import { sellerMarch, sellerMarchSummary } from "./progress.fixtures";
-import type { ProgressAsk } from "./progress.queries";
-import { ProgressSummary } from "./progress.summary";
+import type { ProgressAsk, SalesProgress } from "./progress.queries";
+import { ProgressScenarios, ProgressSummary } from "./progress.summary";
 
 afterEach(cleanup);
 
@@ -98,5 +99,93 @@ describe("ProgressSummary", () => {
     );
     render(<ProgressSummary ask={ASK} progress={sellerMarch} />);
     expect(await screen.findByRole("button", { name: "Retry" })).toBeTruthy();
+  });
+});
+
+// March still running, against the €100,000 goal: €60,000 won, a Likely
+// landing of €90,000 and €130,000 if every open deal closes. The amounts and
+// their deltas are the server's; the block only words them.
+const marchRunning: SalesProgress = {
+  ...sellerMarch,
+  state: "current",
+  scenarios: {
+    as_of: "2026-03-20T09:00:00Z",
+    worst: { amount_minor: 6000000, delta_minor: -4000000 },
+    expected: { amount_minor: 9000000, delta_minor: -1000000 },
+    best: { amount_minor: 13000000, delta_minor: 3000000 },
+    landing: {
+      amount_minor: 9000000,
+      measure: "likely",
+      won_minor: 6000000,
+      remaining_minor: 3000000,
+    },
+    eligible_count: 5,
+    priced_count: 4,
+    fx_missing_count: 0,
+    scope_limited: false,
+  },
+};
+
+describe("ProgressScenarios", () => {
+  it("states each case against the goal and names the measure the landing used", () => {
+    render(<ProgressScenarios progress={marchRunning} />);
+    expect(screen.getByText("€60,000")).toBeTruthy();
+    expect(screen.getByText("€40,000 below goal")).toBeTruthy();
+    expect(screen.getByText("Won + Likely deals")).toBeTruthy();
+    expect(screen.getByText("€10,000 below goal")).toBeTruthy();
+    expect(screen.getByText("€30,000 above goal")).toBeTruthy();
+    expect(
+      screen.getByText(/Deals with no amount or no exchange rate are left out/),
+    ).toBeTruthy();
+  });
+
+  // A reader who may not see the call is told it is not shown here, in the
+  // words the Forecast page uses.
+  it("says a withheld call is not shown rather than not recorded", () => {
+    const withheld: SalesProgress = {
+      ...marchRunning,
+      scenarios: marchRunning.scenarios && {
+        ...marchRunning.scenarios,
+        landing: { ...marchRunning.scenarios.landing, caveat: "call_withheld" },
+      },
+    };
+    render(<ProgressScenarios progress={withheld} />);
+    expect(
+      screen.getByText(new RegExp(en["forecast.callWithheldLine"])),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(new RegExp(en["forecast.callAbsentLine"])),
+    ).toBeNull();
+  });
+
+  it("opens the forecast's deals for the running month", () => {
+    render(<ProgressScenarios progress={marchRunning} />);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(3);
+    expect(links[0]?.getAttribute("href")).toContain("period=this_month");
+  });
+
+  it("says a year has no scenarios", () => {
+    render(
+      <ProgressScenarios
+        progress={{
+          ...marchRunning,
+          period: { kind: "year", year: 2026 },
+          scenarios: undefined,
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(/The forecast has no year to read them from/),
+    ).toBeTruthy();
+  });
+
+  it("draws nothing for a month the server gave no scenarios", () => {
+    const { container } = render(
+      <ProgressScenarios
+        progress={{ ...marchRunning, scenarios: undefined }}
+      />,
+    );
+    expect(container.textContent).toBe("");
   });
 });

@@ -153,3 +153,42 @@ export const NarrowField: Story = {
   ),
   play: async ({ canvasElement }) => openAndWalk(canvasElement, "Model"),
 };
+
+/**
+ * Rows under a heading. The heading names its group for a screen reader and is
+ * no option: the arrows walk past it.
+ */
+export const Grouped: Story = {
+  render: () => (
+    <Host
+      label="To"
+      suggestions={[
+        ...RECIPIENTS,
+        {
+          value: "sofia@margince.example",
+          label: "Sofia Keller",
+          hint: "sofia@margince.example",
+          group: "Colleagues",
+        },
+        {
+          value: "tom@margince.example",
+          label: "Tom Brandt",
+          hint: "tom@margince.example",
+          group: "Colleagues",
+        },
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await openAndWalk(canvasElement, "To");
+    const page = within(canvasElement.ownerDocument.body);
+    await expect(
+      await page.findByRole("group", { name: "Colleagues" }),
+    ).toBeInTheDocument();
+  },
+};
+
+export const GroupedDark: Story = {
+  ...Grouped,
+  globals: { theme: "dark" },
+};

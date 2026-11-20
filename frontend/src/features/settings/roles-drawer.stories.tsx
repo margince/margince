@@ -89,6 +89,7 @@ const meta = {
     returnFocusTo: () => null,
     directory: [FIELD_SALES, ADMIN],
     units: [NOTES],
+    verbs: { audit_log: ["read"] },
     canUpdate: true,
     canMove: true,
     canRestore: true,

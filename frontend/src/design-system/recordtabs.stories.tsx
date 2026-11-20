@@ -38,7 +38,7 @@ const LABELS: Record<Body, string> = {
 };
 
 // Live, so the underline can be judged moving to the tab the reader picked.
-function Live(props: Readonly<{ initial: Body }>) {
+function Live(props: Readonly<{ initial: Body; keepPlace?: boolean }>) {
   const [value, setValue] = useState<Body>(props.initial);
   return (
     <RecordTabs
@@ -46,6 +46,7 @@ function Live(props: Readonly<{ initial: Body }>) {
       options={["overview", "contacts", "activity", "brief"]}
       value={value}
       onChange={setValue}
+      keepPlace={props.keepPlace}
       labels={LABELS}
       counts={{ contacts: 10, activity: 27 }}
       marks={{ brief: true }}
@@ -304,3 +305,37 @@ export const FoldsAndReturnsWithWidth: Story = {
     );
   },
 };
+
+// A keyboard reader can press a tab while the strip is out of view. The pane
+// then scrolls up just far enough to show the strip, and no further.
+export const PressedOutOfView: Story = {
+  render: () => <InPane />,
+  play: async ({ canvasElement }) => {
+    const pane = within(canvasElement).getByTestId("pane");
+    const row = canvasElement.querySelector(".recordtabs-row");
+    if (!(row instanceof HTMLElement)) throw new Error("no tab strip drawn");
+    const stripTop = () =>
+      row.getBoundingClientRect().top - pane.getBoundingClientRect().top;
+    pane.scrollTop += stripTop() + 200;
+    await waitFor(() => expect(stripTop()).toBeLessThan(-150));
+    within(canvasElement)
+      .getByRole("button", { name: /Activity/ })
+      .click();
+    await waitFor(() => expect(Math.abs(stripTop())).toBeLessThanOrEqual(1));
+    await expect(pane.scrollTop).toBeGreaterThan(0);
+  },
+};
+
+function InPane() {
+  return (
+    <div
+      data-testid="pane"
+      className="scroll"
+      style={{ display: "block", blockSize: "24rem", overflowY: "auto" }}
+    >
+      <div style={{ blockSize: "16rem" }}>Record header</div>
+      <Live initial="overview" keepPlace />
+      <div style={{ blockSize: "60rem" }}>Tab body</div>
+    </div>
+  );
+}

@@ -29,7 +29,7 @@ func (s *Sink) counterpartyAdmission(original connector.NormalizedRecord, ref da
 		if err != nil {
 			return err
 		}
-		return s.guardAutomaticSubject(ctx, tx, activity, source, rec, cp, created)
+		return s.guardAutomaticSubject(ctx, tx, activity, source, withForwardOf(rec, original), cp, created)
 	}
 }
 
@@ -173,7 +173,9 @@ func (s *Sink) guardAutomaticSubject(ctx context.Context, tx pgx.Tx, activity id
 		return s.guardMeetingParty(ctx, tx, activity, source, cp)
 	}
 
-	if fields.Direction == connector.DirectionOutbound {
+	// The seat forwarding the subject's mail to themselves vouches for them as
+	// writing to them would.
+	if fields.Direction == connector.DirectionOutbound && !forwardIsFrom(fields, cp.Email) {
 		sent, err := partyWasWrittenToTx(ctx, tx, cp.Email)
 		if err != nil {
 			return err

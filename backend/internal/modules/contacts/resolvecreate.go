@@ -28,6 +28,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -191,10 +192,20 @@ func createContact(ctx context.Context, tx pgx.Tx, s *Store, match ContactResolu
 	if err := writeContactSocial(ctx, tx, wsID, id, spec.Social, spec.converting); err != nil {
 		return ids.ContactID{}, err
 	}
-	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails, spec.erasure, spec.converting); err != nil {
+	emails := slices.Clone(spec.Emails)
+	primaryFirstIfNone(emails,
+		func(e ContactEmailInput) bool { return e.IsPrimary },
+		func(e ContactEmailInput) int { return e.Position },
+		func(e *ContactEmailInput) { e.IsPrimary = true })
+	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, emails, spec.erasure, spec.converting); err != nil {
 		return ids.ContactID{}, err
 	}
-	if err := insertContactPhones(ctx, tx, id, spec.Source, spec.CapturedBy, spec.Phones); err != nil {
+	phones := slices.Clone(spec.Phones)
+	primaryFirstIfNone(phones,
+		func(p ContactPhoneInput) bool { return p.IsPrimary },
+		func(p ContactPhoneInput) int { return p.Position },
+		func(p *ContactPhoneInput) { p.IsPrimary = true })
+	if err := insertContactPhones(ctx, tx, id, spec.Source, spec.CapturedBy, phones); err != nil {
 		return ids.ContactID{}, err
 	}
 	// Why this contact exists, written beside the contact itself.
@@ -234,7 +245,7 @@ func refusedContactCreate(ctx context.Context, tx pgx.Tx, match ContactResolutio
 	// Other lanes name no record: the message says which key collided, never
 	// whose row it was.
 	return fmt.Errorf(
-		"contacts: an exact %q collision already claims this identity: %w",
+		"an exact %q collision already claims this identity: %w",
 		match.MatchedLane, apperrors.ErrConflict)
 }
 
@@ -287,7 +298,7 @@ type CompanySpec struct {
 func refusedCompanyCreate(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec CompanySpec) error {
 	if len(spec.Domains) == 0 {
 		return fmt.Errorf(
-			"contacts: an exact domain collision already claims this identity: %w",
+			"an exact domain collision already claims this identity: %w",
 			apperrors.ErrConflict)
 	}
 	dup := &DuplicateDomainError{Domain: spec.Domains[0].Domain}

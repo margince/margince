@@ -46,8 +46,8 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphW
 		channelNote = "telegram poll on"
 	}
 	deepReadNote := "deep read on"
-	if modelPath.SiteExtract == nil {
-		deepReadNote = "deep read degraded: no model path, queued reads will fail (configure --ai-routing)"
+	if modelPath.RoutingVersion() == "" {
+		deepReadNote = "deep read waiting: no model bound yet (queued reads fail until one is saved under Settings -> AI)"
 	}
 	// Gated on the signing key, and it must say so by name: an api that HAS the
 	// key still accepts subscriptions and parks failed deliveries, while a
@@ -63,7 +63,7 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphW
 	// the one place an operator looks. Without a service the agent catalog is
 	// never seeded, so no morning brief and no at-risk sweep ever runs while
 	// every other lane here reads healthy; say so by name.
-	schedulerNote := "agent scheduler off (no model path: no brief and no at-risk sweep will run — configure --ai-routing)"
+	schedulerNote := "agent scheduler off (no runner: no brief and no at-risk sweep will run)"
 	if runnerSvc != nil {
 		schedulerNote = "agent scheduler on"
 	}

@@ -233,6 +233,26 @@ describe("ChannelPanel", () => {
     ).toBeInTheDocument();
   });
 
+  it("tells the rep to rename the record when the chat refuses the channel name", async () => {
+    stubServer({ state: "none" }, () =>
+      jsonResponse(
+        { code: "channel_name_refused", detail: "name refused" },
+        422,
+      ),
+    );
+    const user = userEvent.setup();
+    renderPanel();
+    await user.click(
+      await screen.findByRole("button", { name: "Create a channel" }),
+    );
+    expect(
+      await screen.findByText(
+        "The chat refused this channel name. Rename the record, or link an existing channel.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/try again/)).not.toBeInTheDocument();
+  });
+
   it("changes how much Margince posts into a linked channel", async () => {
     const writes = stubServer({ state: "linked", link }, (write) =>
       jsonResponse({

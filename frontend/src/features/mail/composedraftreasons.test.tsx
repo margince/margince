@@ -34,8 +34,9 @@ describe("DraftReasons", () => {
   });
 
   it("opens to the based-on line and one chip per input", async () => {
+    const user = userEvent.setup();
     const hint = renderReasons();
-    await userEvent.click(hint);
+    await user.click(hint);
     expect(hint.getAttribute("aria-expanded")).toBe("true");
     expect(
       screen.getByText(

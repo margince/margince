@@ -4,8 +4,8 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { HandbookAnswer } from "../features/voice-knowledge/corpusaskqueries";
-import { looksLikeDataQuestion } from "../lib/dataquestion";
 import { throwProblem } from "../lib/problem";
+import { looksLikeDataQuestion } from "../lib/question";
 
 export type DataAnswer = components["schemas"]["SearchDataAnswer"];
 export type HandbookFallback = HandbookAnswer & {

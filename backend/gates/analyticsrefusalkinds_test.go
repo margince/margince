@@ -283,14 +283,17 @@ func literalKind(lit *ast.CompositeLit, kinds map[string]string) (kind string, n
 	return "", false, false
 }
 
-// AnalyticsRefusal restates Problem's envelope because the breaking-change
-// check cannot read an allOf; the restatement must name the same members.
+// AnalyticsRefusal and SendRefusal restate Problem's envelope because the
+// breaking-change check cannot read an allOf; each restatement must name the
+// same members.
 func TestTheRefusalEnvelopeIsTheProblemEnvelope(t *testing.T) {
 	t.Parallel()
 	schemas := crmYAMLSchemas(t)
-	refusal := slices.Sorted(maps.Keys(schemas["AnalyticsRefusal"].Properties))
 	problem := slices.Sorted(maps.Keys(schemas["Problem"].Properties))
-	if len(problem) == 0 || !slices.Equal(refusal, problem) {
-		t.Errorf("AnalyticsRefusal has %v and Problem has %v — one writer renders both", refusal, problem)
+	for _, name := range []string{"AnalyticsRefusal", "SendRefusal"} {
+		refusal := slices.Sorted(maps.Keys(schemas[name].Properties))
+		if len(problem) == 0 || !slices.Equal(refusal, problem) {
+			t.Errorf("%s has %v and Problem has %v — one writer renders both", name, refusal, problem)
+		}
 	}
 }

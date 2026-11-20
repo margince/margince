@@ -92,7 +92,7 @@ describe("the deal list's commercial filters", () => {
     renderBar({ seen: (next) => (filters = next) });
     const user = await openAttribute("Value");
     await user.type(
-      screen.getByRole("spinbutton", { name: "At least (EUR)" }),
+      screen.getByRole("textbox", { name: "At least (EUR)" }),
       "20000",
     );
     await user.click(screen.getByRole("button", { name: "Apply" }));

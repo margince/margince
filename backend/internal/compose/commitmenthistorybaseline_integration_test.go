@@ -18,10 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // baselineAsOf is two days after baselineMail was sent, so normal policy writes the task.
@@ -40,7 +40,7 @@ func connectProvider(t *testing.T, e *integration.Env, seat ids.UUID, provider s
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
 			VALUES ($1, $2, 'connected', 'vault:test', $3)
-			ON CONFLICT (user_id, provider) DO NOTHING`, seat, provider, address)
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO NOTHING`, seat, provider, address)
 		return err
 	}); err != nil {
 		t.Fatalf("connecting %s: %v", provider, err)
@@ -83,7 +83,7 @@ func setBaseline(t *testing.T, e *integration.Env, seat ids.UUID, provider, day,
 		}
 		date = &parsed
 	}
-	if _, err := registry.SetHistoryBaseline(ctx, provider, date, zone); err != nil {
+	if _, err := registry.SetHistoryBaseline(ctx, capture.ProviderMailbox(provider), date, zone); err != nil {
 		t.Fatalf("setting the %s baseline: %v", provider, err)
 	}
 }
@@ -188,7 +188,8 @@ func TestAMailboxBaselineAppliesOnlyWhenEveryDeliveringMailboxOfTheSeatExcludes(
 			raw := threadMail(seatAddress(t, e, e.Rep1), "two-mailboxes@buyer.test", baselineMail, "")
 			captureMailVia(t, e, e.Rep1, "gmail", raw)
 			captureMailVia(t, e, e.Rep1, "graph", raw)
-			if got := e.WsCount(t, `SELECT count(*) FROM capture_import WHERE user_id = $1 AND delivered_by = ARRAY['gmail:0','graph:0']`, e.Rep1); got != 1 {
+			if got := e.WsCount(t, `SELECT count(*) FROM capture_import WHERE user_id = $1 AND delivered_by = ARRAY(
+				SELECT `+storekit.MailboxMarkSQL("c")+` FROM capture_connection c WHERE c.user_id = $1 ORDER BY c.provider)`, e.Rep1); got != 1 {
 				t.Fatalf("import rows naming both mailboxes = %d, want 1", got)
 			}
 			setBaseline(t, e, e.Rep1, "gmail", "2026-10-20", "Europe/Berlin")
@@ -228,6 +229,9 @@ func TestAMailboxBaselineNeedsProofOfTheDeliveringMailbox(t *testing.T) {
 			setBaseline(t, e, e.Rep1, "gmail", "2026-10-20", "Europe/Berlin")
 			source := mailSource(t, e, "provenance@buyer.test")
 			e.WsExec(t, `UPDATE capture_import SET delivered_by = '{}' WHERE activity_id = $1`, source)
+			// An import naming no mailbox predates per-mailbox keys, so its
+			// connection still keys by provider.
+			e.WsExec(t, `UPDATE capture_connection SET keys_by_provider = true WHERE user_id = $1 AND provider = 'gmail'`, e.Rep1)
 			want := beforeBaseline
 			if !legacy {
 				e.WsExec(t, `UPDATE activity SET captured_by = 'connector:gmail' WHERE id = $1`, source)
@@ -253,41 +257,6 @@ func TestAMailboxBaselineDoesNotGovernAMeeting(t *testing.T) {
 	}
 	if got := dispatchFor(t, e, ids.UUID(meeting.Id), e.Rep1); got != CommitmentTaskWritten {
 		t.Errorf("meeting outcome = %q, want its task", got)
-	}
-}
-
-// labelledConnector names its account from the credential, so a second grant
-// with other bytes is a rebind to another account.
-type labelledConnector struct{ plainSyncConnector }
-
-func (labelledConnector) AccountLabel(auth connector.Auth) (string, error) { return string(auth), nil }
-
-func TestAMailboxBaselineSetAfterARebindLeavesThePreviousAccountsMail(t *testing.T) {
-	e := integration.Setup(t)
-	oldAddress := seatAddress(t, e, e.Rep1)
-	captureMailVia(t, e, e.Rep1, "gmail", threadMail(oldAddress, "old-account@buyer.test", baselineMail, ""))
-
-	registry := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), backfillAuthority{}, keyvault.NewMemory())
-	registry.Register(labelledConnector{plainSyncConnector{name: "gmail"}})
-	human := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
-		Scopes: principal.NewScopeSet(principal.ScopeRead),
-	})
-	newAddress := "rebound-" + e.Rep1.String()[:8] + "@ws.example"
-	if _, err := registry.Connect(human, "gmail", connector.Auth(newAddress)); err != nil {
-		t.Fatalf("rebinding the mailbox: %v", err)
-	}
-	if got := e.WsCount(t, `SELECT count(*) FROM capture_connection WHERE user_id = $1 AND provider = 'gmail' AND generation = 1`, e.Rep1); got != 1 {
-		t.Fatalf("connections on the new account's generation = %d, want 1", got)
-	}
-	captureMailAs(t, e, e.Rep1, "gmail", newAddress, threadMail(newAddress, "new-account@buyer.test", baselineMail, ""))
-	setBaseline(t, e, e.Rep1, "gmail", "2026-10-20", "Europe/Berlin")
-
-	if got := dispatchFor(t, e, mailSource(t, e, "old-account@buyer.test"), e.Rep1); got != CommitmentTaskWritten {
-		t.Errorf("the previous account's mail = %q, want its task", got)
-	}
-	if got := dispatchFor(t, e, mailSource(t, e, "new-account@buyer.test"), e.Rep1); got != beforeBaseline {
-		t.Errorf("the new account's mail = %q, want %q", got, beforeBaseline)
 	}
 }
 

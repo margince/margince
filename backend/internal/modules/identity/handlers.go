@@ -144,7 +144,9 @@ type Handlers struct {
 	// installationBrand reads the anchor company's name and marks for /me.
 	// Nil omits them (meparts.go).
 	installationBrand InstallationBrand
-	analyticsStartup  AnalyticsStartup
+	// inlineSendReview reads the composer's pilot switch. Nil omits it.
+	inlineSendReview InlineSendReview
+	analyticsStartup AnalyticsStartup
 	// refusedDealFilters and refusedLeadFilters name the deal and lead list
 	// filters the caller is refused. Nil omits them (meparts.go).
 	refusedDealFilters RefusedFilters

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  Fragment,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type RefObject,
@@ -46,6 +47,8 @@ export type Suggestion = Readonly<{
   label?: string;
   /** Shown after the label, dimmed: what it is, when the label alone is thin. */
   hint?: string;
+  /** The heading the row is listed under. Rows of one group stand together. */
+  group?: string;
 }>;
 
 /**
@@ -65,13 +68,13 @@ export type Suggestion = Readonly<{
 export function matchingSuggestions(
   suggestions: readonly Suggestion[],
   typed: string,
-  taken?: ReadonlySet<string>,
+  taken?: (value: string) => boolean,
 ): readonly Suggestion[] {
   // A row already spoken for is not a suggestion. `ComboBox` names none and
   // loses nothing; a set-collecting host would otherwise offer a reader the
   // recipient standing in front of them as a chip.
   const offerable = taken
-    ? suggestions.filter((row) => !taken.has(row.value))
+    ? suggestions.filter((row) => !taken(row.value))
     : suggestions;
   const words = searchWords(typed);
   if (words.length === 0) {
@@ -225,7 +228,7 @@ export function useSuggestList({
   suggestions: readonly Suggestion[];
   typed: string;
   disabled?: boolean;
-  taken?: ReadonlySet<string>;
+  taken?: (value: string) => boolean;
   onPick: (value: string) => void;
 }>): SuggestList & { frame: ReturnType<typeof useAnchoredPopup> } {
   const listboxId = useId();
@@ -340,23 +343,71 @@ export function SuggestPopup({
       }}
     >
       <div className="suggest-list">
-        {list.matches.map((row, index) => (
-          <SuggestOption
-            key={row.value}
-            id={list.optionDomId(index)}
-            active={index === list.active}
-            selected={selected !== undefined && row.value === selected}
-            hint={row.hint}
-            onPick={() => list.pick(index)}
-            onHover={() => list.setActive(index)}
-          >
-            {row.label ?? row.value}
-          </SuggestOption>
-        ))}
+        {runsOf(list.matches).map((run) => {
+          const options = run.rows.map((row, offset) => {
+            const index = run.start + offset;
+            return (
+              <SuggestOption
+                key={row.value}
+                id={list.optionDomId(index)}
+                active={index === list.active}
+                selected={selected !== undefined && row.value === selected}
+                hint={row.hint}
+                onPick={() => list.pick(index)}
+                onHover={() => list.setActive(index)}
+              >
+                {row.label ?? row.value}
+              </SuggestOption>
+            );
+          });
+          const headingId = `${list.listboxId}-group-${run.start}`;
+          if (run.group === undefined) {
+            return <Fragment key={headingId}>{options}</Fragment>;
+          }
+          return (
+            // biome-ignore lint/a11y/useSemanticElements: a listbox owns options and groups of them; a fieldset is a form's group and no listbox child
+            <div
+              key={headingId}
+              role="group"
+              aria-labelledby={headingId}
+              className="suggest-group"
+            >
+              <div id={headingId} className="suggest-group-label t-eyebrow">
+                {run.group}
+              </div>
+              {options}
+            </div>
+          );
+        })}
       </div>
     </div>,
     document.body,
   );
+}
+
+type SuggestRun = Readonly<{
+  group: string | undefined;
+  start: number;
+  rows: readonly Suggestion[];
+}>;
+
+// Consecutive rows under one heading. An option keeps its index in the whole
+// list, which is what the arrows and `aria-activedescendant` count by.
+function runsOf(rows: readonly Suggestion[]): readonly SuggestRun[] {
+  const runs: {
+    group: string | undefined;
+    start: number;
+    rows: Suggestion[];
+  }[] = [];
+  rows.forEach((row, index) => {
+    const last = runs.at(-1);
+    if (last && last.group === row.group) {
+      last.rows.push(row);
+    } else {
+      runs.push({ group: row.group, start: index, rows: [row] });
+    }
+  });
+  return runs;
 }
 
 /**

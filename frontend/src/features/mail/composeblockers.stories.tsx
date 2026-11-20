@@ -2,15 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
+import { browserZone } from "../../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
 import { ComposeBlockers } from "./composeblockers";
+import { ComposeWindow } from "./composewindow";
+import { editSeedOf } from "./schedulededit";
 
 const meta: Meta = {
   title: "Patterns/Compose mail/What stands in the way",
@@ -95,7 +97,7 @@ function NewMessage({ preview }: Readonly<{ preview: object }>) {
   });
   return (
     <StoryProviders>
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -125,7 +127,7 @@ function Composer() {
   });
   return (
     <StoryProviders>
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="c-1"
@@ -221,5 +223,96 @@ export const NewMessageObjectedDark: StoryObj = {
 
 export const NewMessageNoReasonPhone: StoryObj = {
   ...NewMessageNoReason,
+  tags: ["uat-phone"],
+};
+
+// A scheduled message at the attachment cap, with a reason the record does not
+// prove. The notices band and the foot are both as full as they get.
+const CROWDED = editSeedOf({
+  id: "019f7e65-fbf7-7114-b114-40af4af63ae9",
+  status: "scheduled",
+  // Fixed and far ahead, so the story reads the same on any day.
+  scheduled_at: "2031-03-17T08:00:00Z",
+  scheduled_tz: browserZone(),
+  subject: "The renewal quote",
+  to: ["anna@example.test"],
+  body: "Hi Anna, here is the renewal quote and everything behind it.",
+  communication_context: "account_notice",
+  attachments: Array.from({ length: 10 }, (_, index) => ({
+    id: `att-${index + 1}`,
+    filename: `Renewal_appendix_${index + 1}.pdf`,
+    content_type: "application/pdf",
+    byte_size: 48_000,
+  })),
+  links: [{ entity_type: "contact", entity_id: "c-1" }],
+  version: 1,
+  created_at: "2026-08-20T09:00:00Z",
+  updated_at: "2026-08-20T09:00:00Z",
+});
+
+const UNPROVEN_WITH_ALTERNATIVE = {
+  allowed: false,
+  recipients: [
+    {
+      ...UNPROVEN.recipients[0],
+      supported_alternatives: ["requested_followup"],
+    },
+  ],
+};
+
+function boxOf(selector: string): DOMRect {
+  const node = document.querySelector(selector);
+  if (!node) {
+    throw new Error(`${selector} is not drawn`);
+  }
+  return node.getBoundingClientRect();
+}
+
+/** Notices, ten files and a scheduled moment at once: the message keeps a
+ *  readable height, and nothing above the foot covers it. */
+export const CrowdedKeepsTheMessage: StoryObj = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /contacts/c-1/360": ANNA,
+      "POST /emails:preview": () => jsonResponse(UNPROVEN_WITH_ALTERNATIVE),
+    });
+    return (
+      <StoryProviders>
+        <ComposeWindow
+          edit={CROWDED}
+          entityType="contact"
+          entityId="c-1"
+          contactId="c-1"
+          open
+          onClose={() => {}}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await dialog.findByText("No recorded reason to contact this recipient");
+    await dialog.findByText("Renewal_appendix_10.pdf");
+    const rem = Number.parseFloat(
+      getComputedStyle(document.documentElement).fontSize,
+    );
+    await expect(boxOf(".compose-sheet").height).toBeGreaterThanOrEqual(
+      8 * rem,
+    );
+    await expect(boxOf(".compose-blockers").bottom).toBeLessThanOrEqual(
+      boxOf(".compose-foot").top,
+    );
+  },
+};
+
+export const CrowdedKeepsTheMessageDark: StoryObj = {
+  ...CrowdedKeepsTheMessage,
+  globals: { theme: "dark" },
+};
+
+export const CrowdedKeepsTheMessagePhone: StoryObj = {
+  ...CrowdedKeepsTheMessage,
+  globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

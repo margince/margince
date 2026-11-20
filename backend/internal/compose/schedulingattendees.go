@@ -161,7 +161,7 @@ func (c schedulingCalendar) consentAddresses(ctx context.Context, host ids.UserI
 			return nil, err
 		}
 		if suppressed {
-			return nil, fmt.Errorf("compose: %s is suppressed: %w", address, apperrors.ErrConsentNotGranted)
+			return nil, fmt.Errorf("%s is on the suppression list: %w", address, apperrors.ErrConsentNotGranted)
 		}
 		if i == 0 || len(in.Roster) != len(in.Attendees) {
 			if err := c.checkAppointmentRecipient(ctx, host, in, address); err != nil {

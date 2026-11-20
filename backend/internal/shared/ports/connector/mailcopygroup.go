@@ -27,19 +27,24 @@ import (
 func MailCopyGroupFrom(ctx context.Context, source, alias, candidates, contentArm string, arg func(any) int) string {
 	shared := SharedMailKeySQL(alias)
 	reader := fmt.Sprintf("$%d::text", arg(copyReader(ctx).String()))
-	return `(SELECT seat_copy.copy_of, seat_copy.copy_readable,
+	// A rank filter can make Postgres expect one group and rescan activity for each row.
+	// DISTINCT ON gives the join a group estimate instead.
+	return `(SELECT DISTINCT ON (grouped.copy_key) grouped.copy_of, grouped.copy_readable,
 	  count(*) OVER copy_group AS copy_count,
-	  array_agg(seat_copy.copy_of) OVER copy_group AS copy_ids,
-	  row_number() OVER (copy_group ORDER BY seat_copy.own_copy DESC, seat_copy.created_at, seat_copy.copy_of) AS copy_rank
-	FROM (SELECT ` + alias + `.id AS copy_of, ` + alias + `.created_at, (` + contentArm + `) AS copy_readable,
+	  array_agg(grouped.copy_of) OVER copy_group AS copy_ids
+	FROM (SELECT seat_copy.copy_of, seat_copy.created_at, seat_copy.copy_readable, seat_copy.own_copy,
+	  CASE WHEN seat_copy.copy_readable AND seat_copy.shared_key IS NOT NULL
+	  THEN 'message:' || seat_copy.shared_key ELSE 'activity:' || seat_copy.copy_of::text END AS copy_key
+	  FROM (SELECT ` + alias + `.id AS copy_of, ` + alias + `.created_at, (` + contentArm + `) AS copy_readable,
 	    CASE WHEN ` + alias + `.kind = 'email' AND ` + shared + ` IS NOT NULL THEN jsonb_build_array(` + shared + `,
 	      lower(` + alias + `.counterparty_email), ` + alias + `.subject, md5(coalesce(` + alias + `.body, '')), ` + alias + `.direction,
 	      date_trunc('second', ` + alias + `.occurred_at))::text END AS shared_key,
 	    coalesce(` + alias + `.source_id = ` + shared + ` || '` + MailSeatMarker + `' || ` + reader + `, false) AS own_copy
 	  FROM ` + source + ` ` + alias + ` WHERE ` + candidates + `) seat_copy
-	WINDOW copy_group AS (PARTITION BY CASE WHEN seat_copy.copy_readable AND seat_copy.shared_key IS NOT NULL
-	  THEN 'message:' || seat_copy.shared_key ELSE 'activity:' || seat_copy.copy_of::text END)
-	) copies JOIN activity ` + alias + ` ON ` + alias + `.id = copies.copy_of AND copies.copy_rank = 1`
+	) grouped
+	WINDOW copy_group AS (PARTITION BY grouped.copy_key)
+	ORDER BY grouped.copy_key, grouped.own_copy DESC, grouped.created_at, grouped.copy_of
+	) copies JOIN activity ` + alias + ` ON ` + alias + `.id = copies.copy_of`
 }
 
 // copyReader is the seat whose own copy a reader is shown: the user, or the

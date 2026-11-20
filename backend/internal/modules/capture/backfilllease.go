@@ -50,7 +50,7 @@ func (e backfillExecution) guard(ctx context.Context, tx pgx.Tx) error {
 		return err
 	}
 	if !valid {
-		return fmt.Errorf("capture: history execution no longer owns its slot: %w", apperrors.ErrConflict)
+		return fmt.Errorf("this history import no longer holds its turn to run: %w", apperrors.ErrConflict)
 	}
 	return nil
 }

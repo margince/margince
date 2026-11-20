@@ -98,20 +98,9 @@ func companyReadQuestionFixture() companyReadMessageFixture {
 	return fixture
 }
 
-// companyReadExpectationJSON is what the corpus asserts, encoded as the corpus
-// will carry it — beside the fixture, never inside it.
-func companyReadExpectationJSON(t *testing.T, kind string, changes map[string]string) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(companyConversationExpectation{Kind: kind, Changes: changes})
-	if err != nil {
-		t.Fatalf("encoding the expectation: %v", err)
-	}
-	return raw
-}
-
 func companyReadCorrectionExpectation(t *testing.T) json.RawMessage {
 	t.Helper()
-	return companyReadExpectationJSON(t, "correction", map[string]string{"legal_name": "Acme Robotics GmbH"})
+	return companyConversationExpectationJSON(t, "correction", map[string]string{"legal_name": "Acme Robotics GmbH"})
 }
 
 func runCompanyReadCase(
@@ -179,7 +168,7 @@ func TestCompanyReadMessageCaseReportsWhatTheGateRefused(t *testing.T) {
 			// anything but the fixture it sent would accept this one too.
 			name:       "the accepted correction, answered to a question",
 			fixture:    companyReadQuestionFixture(),
-			expected:   companyReadExpectationJSON(t, "answer", nil),
+			expected:   companyConversationExpectationJSON(t, "answer", nil),
 			reply:      companyReadCorrectionReply,
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: `proposes "legal_name" without an administrator change request`,

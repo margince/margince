@@ -5,7 +5,7 @@ import { usePageName } from "../../app/pagemeta";
 import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { searchCompanyTargets } from "../../components/companyform";
 import { CreateAction } from "../../components/create";
-import { currencyField } from "../../components/currencyfield";
+import { amountField, currencyField } from "../../components/currencyfield";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
@@ -38,6 +38,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useReReadMeWhen } from "../../lib/refusedfilters";
 import { useViewerId } from "../../lib/session";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   SavedViewsFailure,
@@ -55,6 +56,7 @@ import {
   ConfirmAdvanceModal,
   type PendingAdvance,
 } from "./deal360/confirmadvance";
+import { useAdvanceDeal } from "./dealadvance";
 import {
   dealProjectFields,
   resolveDealProject,
@@ -63,8 +65,9 @@ import {
 import type { Deal, Pipeline, Stage } from "./deals";
 import {
   BoardHeadCount,
+  BoardReopenModal,
+  boardIsEmpty,
   DealBoardBody,
-  useAdvanceDeal,
   useBoardInteractions,
 } from "./deals.board";
 import { dealColumns } from "./deals.columns";
@@ -133,6 +136,7 @@ function DealCreateAction({
             { ...values, project_id: projectId ?? "" },
             pipeline.id,
             leading[0],
+            locale,
           ),
           ...cf.toBody(values),
         },
@@ -150,15 +154,21 @@ function DealCreateAction({
       listCreate={{ open: startOpen }}
       onValuesChange={(values) => setFormCompany(values.company_id ?? "")}
       fields={[
-        { key: "name", label: "create.dealName", required: true },
         {
-          key: "amount",
-          label: "create.amount",
-          type: "number",
-          step: "any",
-          min: "0",
-          wireField: "amount_minor",
+          key: "name",
+          label: "create.dealName",
+          required: true,
+          maxLength: TEXT_LIMITS.label,
         },
+        amountField(
+          { key: "amount", label: "create.amount", wireField: "amount_minor" },
+          {
+            currency: (values) => values.currency || leading[0],
+            locale,
+            t,
+            nonNegative: true,
+          },
+        ),
         currencyField(leading, locale),
         {
           key: "stage_id",
@@ -284,6 +294,7 @@ export function DealsScreen({
   // from `pending`, which is the question before the close; this is the offer
   // after one landed, and the close dialog is already gone by then.
   const [closed, setClosed] = useState<ClosedDeal | null>(null);
+  const [reopening, setReopening] = useState<PendingAdvance | null>(null);
 
   const advance = useAdvanceDeal();
 
@@ -329,6 +340,10 @@ export function DealsScreen({
     loadedDeals: stageColumns.deals,
     advance,
     setPending,
+    setReopening: (asked) => {
+      advance.reset();
+      setReopening(asked);
+    },
   });
 
   // Shared between the board and the table surface: whichever view is
@@ -422,6 +437,7 @@ export function DealsScreen({
         notice={<SavedViewsFailure resource="deals" />}
         body={boardBody}
         bodyOwnsPaging={boardBody !== undefined}
+        bodyEmpty={boardIsEmpty(stageColumns)}
         countScope={effectivePipeline?.name}
         bodyCount={
           boardBody && (
@@ -459,6 +475,12 @@ export function DealsScreen({
         }
       />
       <ErrorLine error={advanceErrorBehind(advance.error, pending !== null)} />
+      <BoardReopenModal
+        asked={reopening}
+        onClose={() => setReopening(null)}
+        openStages={openStages}
+        advance={advance}
+      />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={dismissPending}

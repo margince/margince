@@ -153,8 +153,8 @@ func (s *Store) stampReviews(ctx context.Context, rows []ScheduledSend) {
 		return
 	}
 	for i := range rows {
-		if id, ok := reviews[rows[i].ID]; ok {
-			rows[i].ReviewID = id
+		if review, ok := reviews[rows[i].ID]; ok {
+			rows[i].ReviewID, rows[i].ReviewActions = review.ID, review.Actions
 		}
 	}
 }
@@ -305,24 +305,15 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		// time and finds a row whose due moment has moved, which it re-snoozes
 		// or ignores — the row is the schedule, the job is only an alarm.
 		// The rep answered the hold, so its card goes with it.
-		if err := s.resolveHeld(ctx, tx, id); err != nil {
+		if err := s.resolveHeld(ctx, tx, id, HeldResolvedByRep); err != nil {
 			return err
 		}
-		// THE REVIEW STAYS LIVE, and that is a decision this slice reversed
-		// after tracing where a rescheduled message actually goes.
-		//
-		// Closing it here reads right — nothing is sent now, and the row is
-		// 'scheduled' again — and it loses the refusal. The fire path holds a
-		// refused message (scheduledsendfire.go, holdInTx) and opens NO review:
-		// only the staging path does that, through RecordPendingReview, and a
-		// timer-driven refire never reaches it. So a message closed here and
-		// refused again at its new moment would sit held with nothing routable
-		// in front of anybody — the exact silence the review exists to end.
-		//
-		// Left live it stays honest instead: the decision really is still
-		// outstanding, the message really is still going out, and if it is
-		// refused again OpenReviewTx upserts on the live-intent index and
-		// refreshes this row's refusals rather than opening a rival.
+		// A review whose decision is already recorded stays, and the fire at
+		// the new moment spends it. One nobody decided closes with the card;
+		// a refusal at the new moment opens a fresh one.
+		if err := s.closeReview(ctx, tx, id, ReviewOutcomeMoved); err != nil {
+			return err
+		}
 		return timer.ScheduleTx(ctx, tx, id, keptAt)
 	}
 }
@@ -366,7 +357,7 @@ func (s *Store) CancelInTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		}
 		// Answered, like the reschedule above: a cancelled message needs no
 		// decision, so its card must not outlive it.
-		if err := s.resolveHeld(ctx, tx, id); err != nil {
+		if err := s.resolveHeld(ctx, tx, id, HeldResolvedByRep); err != nil {
 			return err
 		}
 		// AND THE REVIEW, if this message was one a refusal froze. Cancelling
@@ -407,11 +398,11 @@ func (s *Store) closeReview(
 
 // resolveHeld clears the inbox card a hold raised, once the rep has acted on
 // the message. A surface with no notifier wired has nothing to clear.
-func (s *Store) resolveHeld(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+func (s *Store) resolveHeld(ctx context.Context, tx pgx.Tx, id ids.UUID, how HeldResolution) error {
 	if s.heldNotifier == nil {
 		return nil
 	}
-	return s.heldNotifier.ResolveHeldInTx(ctx, tx, id)
+	return s.heldNotifier.ResolveHeldInTx(ctx, tx, id, how)
 }
 
 // scanScheduledSend reads one row, thawing the payload for the fields the

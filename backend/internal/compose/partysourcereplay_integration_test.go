@@ -40,7 +40,7 @@ func TestCapturedPartiesReplaysStoredRecipientProofWithoutInventingFolders(t *te
 			var excluded ids.UUID
 			exclusions := capture.NewExclusionStore(InstallationDB(e.Pool))
 			if excludedFolder {
-				entry, err := exclusions.Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindContainer, "gmail:Private")
+				entry, err := exclusions.Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindContainer, "gmail:Private", ids.Nil)
 				if err != nil {
 					t.Fatal(err)
 				}

@@ -1,4 +1,5 @@
 import { EntityRef } from "../../components/entityref";
+import { useLatestInboundRead } from "../../components/latestinbound";
 import { HowItStands } from "../../design-system/howitstands";
 import { statTone } from "../../design-system/readingtone";
 import type { RecordTimeline } from "../../design-system/recordtimeline";
@@ -10,6 +11,7 @@ import { StatStrip } from "../../design-system/statstrip";
 import { formatDayMonth } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { addedViaFor } from "../../lib/leadorigins";
+import { useMemberName } from "../../lib/membernames";
 import { navigate } from "../../lib/router";
 import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
@@ -60,7 +62,15 @@ export function LeadHowItStands({
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const ctx: ReadingContext = { t, locale, zone, record: zone, asOf };
+  const markedBy = useMemberName(lead.first_response_marked_by).data;
+  const ctx: ReadingContext = {
+    t,
+    locale,
+    zone,
+    record: zone,
+    asOf,
+    markedBy,
+  };
   const changes = useLeadStatusChanges(lead);
   const explain = useLeadScore(lead);
   const reasons = useLeadDisqualifyReasons();
@@ -78,9 +88,14 @@ export function LeadHowItStands({
       ? (explain.data.current?.factors ?? [])
       : undefined;
   const score = leadScoreReading(lead, factors, ctx);
+  const lastMessages = useLatestInboundRead("lead", lead.id).data;
   const timeline = leadTimeline(
     lead,
     thread.activities,
+    {
+      inbound: lastMessages?.last_inbound,
+      outbound: lastMessages?.last_outbound,
+    },
     addedViaFor(lead, t),
     ctx,
   );

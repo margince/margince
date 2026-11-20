@@ -42,6 +42,16 @@ func (e *CounterpartyVerdictEngine) apply(
 			return err
 		}
 		kind, verdict, measured, ownerSaidSo = settled.kind, settled.verdict, settled.measured, settled.byOwner
+		// A record removed after this question was asked is not minted again by
+		// the machine's answer to it. The owner's own answer still counts.
+		removed, err := capture.RemovedSinceAskedTx(ctx, tx, row, verdict, ownerSaidSo)
+		if err != nil {
+			return err
+		}
+		if removed {
+			acted, err = e.pending.ResolveAs(ctx, tx, row, capture.PendingStatusRejected, kind, capture.ReasonRemovedBeforeAnswer, false, measured)
+			return err
+		}
 
 		won, err := e.pending.ResolveAs(ctx, tx, row, verdict, kind, verdictReason, ownerSaidSo, measured)
 		if err != nil || !won {

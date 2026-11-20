@@ -103,3 +103,20 @@ func FieldOrigins(ctx context.Context, tx pgx.Tx, objectType string, objectID id
 	}
 	return out, nil
 }
+
+// AgentWrittenFieldsSQL lists, as a text[] expression, the fields of record
+// idExpr whose newest origin is an agent and that no later update names. An
+// edit by anyone takes the field over, so it stops reading as model-written.
+// objectType is a compile-time literal.
+func AgentWrittenFieldsSQL(objectType, idExpr string) string {
+	return `ARRAY(SELECT origin.field_name FROM (
+	   SELECT DISTINCT ON (field_name) field_name, captured_by, captured_at FROM field_provenance
+	    WHERE object_type = '` + objectType + `' AND object_id = ` + idExpr + `
+	    ORDER BY field_name, captured_at DESC, id DESC) origin
+	  WHERE origin.captured_by LIKE 'agent:%'
+	    AND NOT EXISTS (SELECT 1 FROM audit_log edit
+	          WHERE edit.entity_type = '` + objectType + `' AND edit.entity_id = ` + idExpr + `
+	            AND edit.action = 'update' AND edit.occurred_at > origin.captured_at
+	            AND edit.after ? origin.field_name)
+	  ORDER BY origin.field_name)`
+}

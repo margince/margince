@@ -34,6 +34,12 @@ type Message struct {
 	PostedAt   time.Time
 	Subtype    string
 	Bot        bool
+	Files      []File
+}
+
+// File is a file attached to a seeded message.
+type File struct {
+	Name, MimeType string
 }
 
 // Post is one message the bot sent.
@@ -92,6 +98,16 @@ func (s *Server) AddChannelWithoutBot(slug string) {
 // AddPublicChannel adds a public channel with the bot in it.
 func (s *Server) AddPublicChannel(slug string) {
 	s.put(channel{Slug: slug, Name: slug, BotIsMember: true})
+}
+
+// Archive closes a channel, as a member who owns it does in the chat. Dispact
+// sends no notice from here: it still serves the history and takes posts.
+func (s *Server) Archive(slug string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ch := s.channels[slug]
+	ch.IsArchived = true
+	s.channels[slug] = ch
 }
 
 func (s *Server) put(ch channel) {
@@ -278,6 +294,14 @@ func (s *Server) create(body map[string]any) map[string]any {
 	if slug, ok := s.keys[key]; ok && key != "" {
 		return map[string]any{"ok": true, fieldChannel: slug, "channel_id": "id-" + slug, "created": false, "bot_is_member": true}
 	}
+	if strings.HasPrefix(name, "dm:") {
+		return refuse("invalid_name")
+	}
+	for _, ch := range s.channels {
+		if strings.EqualFold(ch.Name, name) {
+			return refuse("name_taken")
+		}
+	}
 	slug := strings.ToLower(strings.ReplaceAll(name, " ", "-")) + "-" + strconv.Itoa(len(s.channels)+1)
 	s.channels[slug] = channel{Slug: slug, Name: name, IsPrivate: true, BotIsMember: true}
 	if key != "" {
@@ -393,6 +417,13 @@ func wire(m Message) map[string]any {
 	}
 	if m.Subtype != "" {
 		out["subtype"] = m.Subtype
+	}
+	if len(m.Files) > 0 {
+		files := make([]map[string]any, 0, len(m.Files))
+		for i, f := range m.Files {
+			files = append(files, map[string]any{"id": "F" + strconv.Itoa(i), "name": f.Name, "mimetype": f.MimeType, "size": 1})
+		}
+		out["files"] = files
 	}
 	switch {
 	case m.ThreadSeq != 0:

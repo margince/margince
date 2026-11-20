@@ -27,6 +27,9 @@ type Handlers struct {
 	// nil leaves the field out.
 	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	store *Store
+	// linkPages reads the page a link names for its preview; nil reads the
+	// public web through webread.
+	linkPages LinkPageReader
 	// settings reads and writes the follow-up window; nil refuses both its
 	// endpoints.
 	settings *config.Config
@@ -36,6 +39,8 @@ type Handlers struct {
 	emailDrafter EmailDrafter
 	// consent gates the send path; nil fails closed (WithConsent wires it).
 	consent ConsentGate
+	// sendObserver hears each email Send's outcome; nil reports to nobody.
+	sendObserver SendObserver
 	// calendars answers whether a host's own diary reaches this product, which
 	// decides what an empty availability window may claim. Nil answers no.
 	calendars CalendarConnected
@@ -92,6 +97,25 @@ type Handlers struct {
 // so what this answers decides who a composed reply may go to.
 type ColleagueDomains interface {
 	Covers(ctx context.Context) (func(address string) bool, error)
+}
+
+// ownAddress is the predicate naming addresses that are ours by domain. With no
+// reader wired it names none.
+func (h Handlers) ownAddress(ctx context.Context) (func(address string) bool, error) {
+	if h.colleagues == nil {
+		return func(string) bool { return false }, nil
+	}
+	return h.colleagues.Covers(ctx)
+}
+
+// replyRecipient is the contact a reply is delivered to, with colleagues skipped
+// by the same own-domain predicate the address uses.
+func (h Handlers) replyRecipient(ctx context.Context, anchor ids.ActivityID) (ReplyRecipient, error) {
+	covers, err := h.ownAddress(ctx)
+	if err != nil {
+		return ReplyRecipient{}, err
+	}
+	return h.store.ReplyRecipientFor(ctx, anchor, covers)
 }
 
 // WithColleagues wires the own-domain reader that addressing a reply needs.
