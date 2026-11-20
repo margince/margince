@@ -10,7 +10,7 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { WriteRefused } from "../../design-system/querystates";
 import { FieldDiff } from "../../design-system/trust";
-import { formatNumber } from "../../format/format";
+import { formatPercent } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { coldFieldLabel } from "../../lib/coldfieldlabels";
@@ -57,11 +57,8 @@ export function RefreshReview(
   const coverage =
     props.read.pages.length === 0
       ? 0
-      : Math.round(
-          (props.read.pages.filter((page) => page.status === "fetched").length /
-            props.read.pages.length) *
-            100,
-        );
+      : props.read.pages.filter((page) => page.status === "fetched").length /
+        props.read.pages.length;
   return (
     // The review as a Panel: the state sentence is its title, since a bare h3
     // draws at body size. The comparisons are full-bleed rows. The coverage
@@ -75,7 +72,7 @@ export function RefreshReview(
       }
       footer={
         <span className="company-context-coverage">
-          <strong>{formatNumber(coverage, locale)}%</strong>{" "}
+          <strong>{formatPercent(coverage, locale)}</strong>{" "}
           {t("settings.companyCoverage")}
         </span>
       }

@@ -715,6 +715,36 @@ describe("refusalSentences", () => {
     expect(rest).toBe("The range starts after it ends.");
   });
 
+  it.each([
+    ["beside a field the form shows", { name: "Name" }],
+    ["with no field the form shows", {}],
+  ])("says every fault on a field the form does not show, %s", (_, labels) => {
+    const { rest } = refusalSentences(
+      fieldRefusal(
+        { field: "name", code: "required", message: "x" },
+        {
+          field: "close_from",
+          code: "range_inverted",
+          message: "Starts late.",
+        },
+        { field: "close_to", code: "range_inverted", message: "Ends early." },
+      ),
+      english,
+      labels,
+    );
+    expect(rest).toContain("Starts late.");
+    expect(rest).toContain("Ends early.");
+  });
+
+  it("words a fieldless refusal of a known code in that code's copy", () => {
+    const { rest } = refusalSentences(
+      new ProblemError({ status: 403, code: "permission_denied", detail: "x" }),
+      english,
+      {},
+    );
+    expect(rest).toBe(t("common.permissionDenied"));
+  });
+
   it("words that foot fault in German, where no server sentence is shown", () => {
     const german = Object.assign(
       (key: Parameters<typeof translate>[1]) => translate("de", key),

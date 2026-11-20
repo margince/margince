@@ -169,7 +169,7 @@ export function TopBarSearch({
             not the four-character string "⌘K" in one box. The caps come from the
             keymap the dispatcher reads, so the cap cannot name another key. */}
         <span className="topbar-keys" aria-hidden>
-          {shortcutCaps("search").map((cap) => (
+          {shortcutCaps("search", t).map((cap) => (
             <Kbd key={cap}>{cap}</Kbd>
           ))}
         </span>
@@ -272,11 +272,7 @@ export function TopBar({
             // The shortcut belongs in the tooltip, not in the accessible name:
             // a speech-input user says the words they can read, and "Collapse
             // sidebar ⌘B" is not one of them.
-            title={shortcutTip(
-              toggleLabel,
-              binding("sidebar").keys,
-              t("shell.shortcuts.then"),
-            )}
+            title={shortcutTip(toggleLabel, binding("sidebar").keys, t)}
             aria-expanded={!collapsed}
             onClick={onToggle}
           >

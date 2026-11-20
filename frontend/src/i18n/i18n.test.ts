@@ -18,6 +18,8 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // A Vietnamese keyboard prints the Ctrl cap in English.
+  "shell.shortcuts.ctrl",
   // A link's kind is the product's own name, or "Web".
   "docs.kind.docs",
   "docs.kind.sheets",

@@ -36,7 +36,7 @@ A relationship is marked inbound only, outbound only, or both ways. A pulse, col
 
 Editing identity, choosing the default address and resolving where the contact works stay with the parts that already do them.
 
-While the contact is in an open duplicate case, the record header shows a **Possible duplicates** button with a count (`components/contactcase.entry.tsx`). The count is the number of other contacts of the case that the reader can see. The button opens the same review the Worklist case row opens, so both places merge through one decision. It does not show when the contact is in no case, or when the case is merged or gone.
+While the contact is in an open duplicate case, the record header shows a **Possible duplicates** button with a count (`components/contactcase.entry.tsx`). The count is the number of other contacts of the case that the reader can see. A case too large to list in full shows the listed number with a plus, such as 25+. The button opens the same review the Worklist case row opens, so both places merge through one decision. It does not show when the contact is in no case, or when the case is merged or gone. A merge from this button says so in a message and opens the contact kept.
 
 ## Permission to write
 

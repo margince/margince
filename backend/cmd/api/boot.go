@@ -264,6 +264,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 	// when declared. bindInstallation already proved the base URL they advertise.
 	if cfg.mcpConnector {
 		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration),
+			compose.WithUnusedClientLimit(config.Val(cfg.settings, ps.MCPUnusedClientLimit)),
 			compose.WithDispactCalls(replayguard.New(rdb), cfg.posture.IsNonProduction()))
 	}
 

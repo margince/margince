@@ -11,7 +11,7 @@ Rejecting it resumes the run without sending it.
 
 Most tools run at once for an agent that acts as its own user, because it can do only what that user could do alone. Some
 still wait for a human then. These are the `enrich` tool and these actions: `set_up_partner` and `merge_member_accounts` on
-`change_state`, and `relink` and `relink_many` on `change_activities`.
+`change_state`, and `relink` and `relink_many` on `change_activities` when they file under a project.
 
 Automatic work with no passport behind it waits on every 🟡 tool in the catalog below, such as `merge` on `change_tags` and
 `invite` on `schedule_meeting`. A few more wait only in some cases, such as moving a deal to `won` or `lost`. These are the
@@ -120,7 +120,8 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 - A deal move to an `open` stage runs; a move to a `won` or `lost` stage waits.
 - The relink verbs (`relink_activity`, `relink_thread`, `relink_activities`) read the record type the activity moves
   to. Filing under a project is 🟡, because it marks every named activity as sales mail. A thread or a named set
-  cannot pin a version, so a named set always waits.
+  cannot pin a version, so a named set always waits. For an agent that acts as its own user, a relink waits only when
+  it files under a project. Only a member can undo that filing.
 - `relink_thread` refuses every call; `relink_activities`, whose approval binds the named IDs, replaces it.
 - A credential may give the approval for its own staged relink with `decide_approvals`, on a call with a human there.
   The same checks the decision applies must pass: the decision grants, and the target is visible. The change must

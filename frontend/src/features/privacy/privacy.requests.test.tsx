@@ -329,6 +329,30 @@ it("shows the retained proof on a closed request", async () => {
   expect(screen.getByText(en["privacy.proofErasureChanges"])).toBeVisible();
 });
 
+it("counts no erasure changes on a fulfilled access request", async () => {
+  stub();
+  renderDrawer({
+    ...NAMED,
+    kind: "access",
+    status: "fulfilled",
+    proof: {
+      request_number: "DSR-2026-0043",
+      request_kind: "access",
+      result: "fulfilled",
+      identity_check: "id_document",
+      requester_email: "subject@demo.test",
+      received_at: "2026-07-01T00:00:00Z",
+      answered_at: "2026-07-12T10:00:00Z",
+      keep_until: "2030-01-01T00:00:00Z",
+      erased_counts: {},
+      erased_counts_known: true,
+      erased_uncounted: [],
+    },
+  });
+  expect(await screen.findByText("DSR-2026-0043")).toBeVisible();
+  expect(screen.queryByText(en["privacy.proofErasureChanges"])).toBeNull();
+});
+
 it("prefills the identity check for a request opened through its confirm link", async () => {
   stub();
   renderDrawer({ ...NAMED, kind: "access", identity_verified: true });

@@ -223,9 +223,10 @@ type companyCoverageTool struct{ read CoverageReader }
 func (t companyCoverageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "company_coverage", Title: "Relationship coverage on a deal", Version: toolVersionV1,
-		Description:   companyCoverageCopy.render(),
-		Instead:       companyCoverageCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       companyCoverageCopy.render(),
+		Instead:           companyCoverageCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getDealCoverage",
 		InputSchema: schema(`{"type":"object","properties":{
 			"deal_id":{"type":"string","format":"uuid","description":"The deal to assess"}},
@@ -284,9 +285,10 @@ type introPathTool struct{ list IntroPathLister }
 func (t introPathTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "intro_path_to", Title: "Find a warm introduction path", Version: toolVersionV1,
-		Description:   introPathToCopy.render(),
-		Instead:       introPathToCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       introPathToCopy.render(),
+		Instead:           introPathToCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listIntroPaths",
 		InputSchema: schema(`{"type":"object","properties":{
 			"company_id":{"type":"string","format":"uuid","description":"The company to find a warm route into"}},
@@ -345,9 +347,10 @@ type atRiskTool struct{ list AtRiskLister }
 func (t atRiskTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "at_risk_relationships", Title: "Relationships going cold", Version: toolVersionV1,
-		Description:   atRiskRelationshipsCopy.render(),
-		Instead:       atRiskRelationshipsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       atRiskRelationshipsCopy.render(),
+		Instead:           atRiskRelationshipsCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:     true,
 		OpenAPIOp:    "listAtRiskRelationships",
 		InputSchema:  schema(`{"type":"object","properties":{"owner_id":{"type":"string","format":"uuid","description":"Narrow to deals owned by this member; existing read scope still applies"}},"additionalProperties":false}`),

@@ -23,7 +23,7 @@ import {
   withControllerSend,
   withCreator,
 } from "./provenanceof";
-import type { TimelineEntry } from "./timelineentry";
+import { TIMELINE_KIND_LABEL, type TimelineEntry } from "./timelineentry";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
 import { TranscriptSummary } from "./transcriptsummary";
 
@@ -84,12 +84,31 @@ function timelineTitle(activity: Activity): string {
   // where the reason for the mail should be.
   const raw = activity.body ?? "";
   const body = titleText(activity, raw);
-  if (!body) {
-    return activity.kind;
-  }
   return body.length > TIMELINE_TITLE_MAX
     ? `${body.slice(0, TIMELINE_TITLE_MAX - 1)}…`
     : body;
+}
+
+// A call with no words is titled by how it ended, which is then not repeated
+// beside the kind. How a call ended, or who a meeting's folded invitation
+// reached, otherwise sits where a direction sits.
+function headline(
+  activity: Activity,
+  t: ReturnType<typeof useT> | undefined,
+  locale: Locale | undefined,
+): Pick<TimelineEntry, "title" | "qualifier"> {
+  const written = timelineTitle(activity);
+  const outcome = callOutcomeLabel(activity, t);
+  return {
+    title: written || outcome || kindWord(activity.kind, t),
+    qualifier:
+      (written ? outcome : undefined) ??
+      meetingInvitationLabel(activity, locale),
+  };
+}
+
+function kindWord(kind: string, t: ReturnType<typeof useT> | undefined) {
+  return t ? t(TIMELINE_KIND_LABEL[timelineKind(kind)]) : kind;
 }
 
 // A written body is markdown, so its title is the text it renders, not its
@@ -139,7 +158,7 @@ export function activityTimeline(
   // Absent leaves a row saying which way it went and nothing about whom, which
   // is what it said before anybody could resolve a name at all.
   who?: Readonly<{
-    nameOf: NameOf;
+    nameOf?: NameOf;
     t: ReturnType<typeof useT>;
     locale: Locale;
   }>,
@@ -155,12 +174,7 @@ export function activityTimeline(
       kind: timelineKind(activity.kind),
       isDone: activity.is_done,
       commitmentReviewCount: commitmentReviewCount(activity),
-      title: timelineTitle(activity),
-      // How a call ended, or who a meeting's folded invitation reached, sits
-      // where a direction sits.
-      qualifier:
-        callOutcomeLabel(activity, who?.t) ??
-        meetingInvitationLabel(activity, who?.locale),
+      ...headline(activity, who?.t, who?.locale),
       // Carried beside the rendered title, which may be the body or the kind:
       // bulk grouping needs the message's OWN subject or it folds unrelated
       // subjectless rows together.
@@ -184,7 +198,7 @@ export function activityTimeline(
       // What this exchange was ABOUT, when it is filed against a deal. A
       // chronology of an account runs several deals through one list, and the
       // row that does not say which one is a row a reader has to open to place.
-      via: who ? dealChip(activity, who.nameOf) : undefined,
+      via: who?.nameOf ? dealChip(activity, who.nameOf) : undefined,
       // The server's own row model, carried rather than re-derived. Present
       // exactly when kind=email, so the row branches on the field and every
       // other kind keeps the reading it had.

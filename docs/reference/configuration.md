@@ -478,6 +478,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `mcp.client_registration.dynamic` | `MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC` | — | `bool` | `true` | api | Let AI tools register their own OAuth client at `/oauth/register` (DCR); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
 | `mcp.client_registration.metadata_document` | `MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT` | — | `bool` | `true` | api | Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
+| `mcp.client_registration.unused_limit` | `MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_LIMIT` | — | `int` | `1000` | api | Most clients that AI tools made themselves (at `/oauth/register` or by a metadata document) and that no sign-in has used yet; a new one past it removes the oldest such client. |
+| `mcp.client_registration.unused_retention` | `MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_RETENTION` | — | `duration` | `24h0m0s` | worker | How long a client an AI tool made itself, and that no sign-in has used, is kept before the hourly sweep deletes it. |
 | `mcp.connector_enabled` | `MARGINCE_MCP_CONNECTOR_ENABLED` | — | `bool` | `false` | api | Serve `/mcp` and the OAuth authorization server to outside agent clients; needs `--public-base-url`. |
 
 ### `operations`

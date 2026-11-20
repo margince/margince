@@ -178,9 +178,10 @@ type reviewCommitments struct{ list CommitmentLister }
 func (t reviewCommitments) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "review_commitments", Title: "Review open commitments", Version: toolVersionV1,
-		Description:   reviewCommitmentsCopy.render(),
-		Instead:       reviewCommitmentsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       reviewCommitmentsCopy.render(),
+		Instead:           reviewCommitmentsCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "listOpenCommitments",
 		InputSchema: schema(`{"type":"object","properties":{

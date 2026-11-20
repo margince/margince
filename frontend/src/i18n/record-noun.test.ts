@@ -242,6 +242,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
 
     // The meeting's organizer is a human, not the CRM contact record type.
     "meetingChange.line.details",
+    "worklist.ask.invitation",
     "worklist.ask.changedInvitation",
     "worklist.ask.meeting.updated",
     "worklist.ask.meeting.canceled",
@@ -495,7 +496,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "scheduling.unavailable",
     // Human account holders whose full seats determine the shared allowance.
     "aiAdmin.fixed",
-    "aiAdmin.formula",
+    "aiAdmin.formula_one",
+    "aiAdmin.formula_other",
     "aiAdmin.floor",
     "aiAdmin.perUser",
     "aiAdmin.overrideHint",

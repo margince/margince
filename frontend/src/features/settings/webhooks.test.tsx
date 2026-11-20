@@ -242,7 +242,9 @@ describe("WebhooksCard", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText(/not enabled on this installation/i),
+        screen.getByText(
+          /whoever runs your Margince server sets as webhook_key/i,
+        ),
       ).toBeTruthy(),
     );
     expect(
@@ -259,7 +261,9 @@ describe("WebhooksCard", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText(/not enabled on this installation/i),
+        screen.getByText(
+          /whoever runs your Margince server sets as webhook_key/i,
+        ),
       ).toBeTruthy(),
     );
     expect(screen.queryByTestId("new-webhook-subscription")).toBeNull();
@@ -295,7 +299,11 @@ describe("WebhooksCard", () => {
         screen.getByText("https://example.test/hooks/margince"),
       ).toBeTruthy(),
     );
-    expect(screen.getByText(/not enabled on this installation/i)).toBeTruthy();
+    expect(
+      screen.getByText(
+        /whoever runs your Margince server sets as webhook_key/i,
+      ),
+    ).toBeTruthy();
     // Even for an admin, no create / rotate affordances when delivery is off.
     expect(screen.queryByTestId("new-webhook-subscription")).toBeNull();
     expect(screen.queryByTestId("rotate-webhook-secret")).toBeNull();
@@ -366,7 +374,7 @@ describe("WebhooksCard — markup", () => {
     ["a list the seat can manage", WEBHOOK_OPERATOR, 200, true, "example.test"],
     ["a list the seat only reads", {}, 200, true, "example.test"],
     ["a deployment without a signing key", {}, 200, false, "example.test"],
-    ["a deployment answering not configured", {}, 503, false, "enabled"],
+    ["a deployment answering not configured", {}, 503, false, "webhook_key"],
   ];
   it.each(states)(
     "nests validly in %s",

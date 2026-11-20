@@ -152,8 +152,10 @@ export function useTransports(view: TransportSource): Transport[] {
 }
 
 // What a control that opens the composer may call itself, and the mark it wears.
+// `word` is the short form drawn under the glyph, and it names the same verb.
 export type TransportAction = {
   label: string;
+  word: string;
   icon: LucideIcon;
 };
 
@@ -177,13 +179,19 @@ export function primaryTransportAction(
 ): TransportAction {
   const [only] = transports;
   if (transports.length !== 1 || only === undefined) {
-    return { label: t("contact.action.write"), icon: Send };
+    const write = t("contact.action.write");
+    return { label: write, word: write, icon: Send };
   }
   if (only.id === "email") {
-    return { label: t("contact.action.email"), icon: Mail };
+    return {
+      label: t("contact.action.email"),
+      word: t("record.verb.email"),
+      icon: Mail,
+    };
   }
   return {
     label: t("contact.action.messageOn", { transport: only.label }),
+    word: t("record.verb.message"),
     icon: MessageSquare,
   };
 }

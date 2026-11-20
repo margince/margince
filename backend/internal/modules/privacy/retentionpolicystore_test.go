@@ -222,7 +222,7 @@ func TestEveryExecutorPairIsReachableAndEveryReachablePairHasAnExecutor(t *testi
 func TestValidateRetainDaysRefusesAWindowThatActsImmediately(t *testing.T) {
 	// The ceiling itself is legitimate: a bound that refuses its own limit
 	// would be off by one in the direction nobody notices.
-	for _, days := range []int{1, 30, 365, 2555, retainDaysCeiling} {
+	for _, days := range []int{1, 30, 365, 2555, RetainDaysCeiling} {
 		if err := validateRetainDays(days); err != nil {
 			t.Errorf("validateRetainDays(%d) refused a legitimate window: %v", days, err)
 		}
@@ -236,7 +236,7 @@ func TestValidateRetainDaysRefusesAWindowThatActsImmediately(t *testing.T) {
 	}
 	// Past the ceiling the policy saves and the nightly pass errors instead of
 	// acting, which is a policy that looks enabled and does nothing.
-	for _, days := range []int{retainDaysCeiling + 1, 1 << 20, math.MaxInt32} {
+	for _, days := range []int{RetainDaysCeiling + 1, 1 << 20, math.MaxInt32} {
 		err := validateRetainDays(days)
 		if err == nil {
 			t.Fatalf("validateRetainDays(%d) accepted a window the retention pass cannot evaluate", days)

@@ -6066,11 +6066,15 @@ export interface paths {
         put?: never;
         /**
          * Add an exit criterion to a stage.
-         * @description Requires `pipeline:update`, like every other pipeline-shape edit.
+         * @description Requires `pipeline:update`, like every other pipeline-shape edit. Leave
+         *     `key` out and Margince makes it from the label, adding a number on a clash
+         *     in the stage. A `key` you send is validated, and a live clash is
+         *     `criterion_key_taken`.
          *
-         *     Two refusals, both `422`. `terminal_stage_has_no_exit_criteria` on a
-         *     `won`/`lost` stage. `criterion_key_taken` when the stage already has a LIVE
-         *     criterion with this key — archiving one frees its key for reuse, and both
+         *     Refusals, all `422`. `terminal_stage_has_no_exit_criteria` on a
+         *     `won`/`lost` stage. `invalid_criterion_key` for a key that is empty or has
+         *     the wrong shape. `criterion_key_taken` when a key you sent matches a LIVE
+         *     criterion of the stage — archiving one frees its key for reuse, and both
          *     rows survive so the older evidence stays legible.
          */
         post: operations["createStageExitCriterion"];
@@ -42856,7 +42860,11 @@ export interface components {
          */
         StageCriterionKind: "buyer_confirmed" | "event_held" | "document_signed" | "role_identified" | "terms_accepted" | "custom" | "legal_reviewed";
         CreateStageExitCriterionRequest: {
-            key: string;
+            /**
+             * @description Optional. Left out, Margince makes the key from the label and adds a
+             *     number when the stage already has a live criterion under that key.
+             */
+            key?: string;
             label: string;
             kind: components["schemas"]["StageCriterionKind"];
             /** @default true */
@@ -54895,6 +54903,12 @@ export interface components {
             /** @description The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is. */
             effect_failure?: string | null;
             /**
+             * @description `effect_failure` as a code a client words in the reader's language: approval_lapsed,
+             *     effect_not_run, effect_unconfirmed, follow_up_failed or window_not_widened. Absent when
+             *     the sentence has no code; the client then shows `effect_failure`.
+             */
+            effect_failure_code?: string;
+            /**
              * @description `false` on a pending mail proposal whose sender, the account the release runs as, has no
              *     connected mailbox that can transmit, so approving could only be refused. Absent
              *     otherwise.
@@ -57330,7 +57344,7 @@ export interface components {
              */
             outcome: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
             /**
-             * @description The tier that fired for this run.
+             * @description The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for approval.
              * @enum {string}
              */
             tier: "auto_execute" | "confirmation_required";
@@ -57351,6 +57365,28 @@ export interface components {
             reason_code?: string | null;
             /** @description Link into the audit_log row for this run. */
             audit_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The event that fired the run, for technical details. A clock rule's run names its scan.
+             */
+            event_id?: string;
+            /** @description What fires the rule, in the catalog's trigger vocabulary, e.g. deal.stage_changed or clock:renewal_scan. */
+            trigger_event_type?: string;
+            /** @description For a run a stage move fired, the stage the deal moved to. Absent once the event is no longer on record, and when the reader may not see the run's target. */
+            trigger_stage_name?: string;
+            /** @description The action kinds the run applied, or for a run queued for approval the kinds it queued, in order. A create another rule had already made is left out. Empty when the run did nothing. */
+            action_kinds?: string[];
+            /** @description The record the run acted on. Its label is absent when the reader may not see the record. */
+            target?: components["schemas"]["MagicEntityRef"];
+            created?: components["schemas"]["AutomationRunCreatedRecord"];
+        };
+        /** @description A task a fired run created. Its id is absent for a run recorded before runs kept it. Its label is the task's subject, present only when the reader may read the task itself. */
+        AutomationRunCreatedRecord: {
+            /** @description The record type, e.g. activity for a task. */
+            type: string;
+            /** Format: uuid */
+            id?: string;
+            label?: string;
         };
         /** @description How a claim finished. */
         SettleClaimRequest: {
@@ -60838,6 +60874,11 @@ export interface components {
              *     engine's English sentence.
              */
             run_reason_code?: string;
+            /**
+             * @description On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+             *     language. `detail` keeps the English sentence.
+             */
+            effect_failure_code?: string;
             domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
@@ -62538,6 +62579,11 @@ export interface components {
              *     engine's English sentence.
              */
             run_reason_code?: string;
+            /**
+             * @description On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+             *     language. `detail` keeps the English sentence.
+             */
+            effect_failure_code?: string;
             domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
