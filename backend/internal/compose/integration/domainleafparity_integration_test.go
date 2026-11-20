@@ -103,3 +103,89 @@ func seedCompanyWithDomain(t *testing.T, e *Env, name, domain string) ids.UUID {
 	}
 	return ids.UUID(company.Id)
 }
+
+// A row an older release stored in Unicode is found by either spelling on the
+// list and on a saved view, and a `neq` leaf leaves it out.
+func TestALegacyUnicodeDomainRowIsFoundAndExcludedOnBothSurfaces(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	lists := collections.NewStore(e.DB())
+
+	legacy := seedCompanyWithDomain(t, e, "Bücher Verlag", "buecher-verlag.example")
+	seedCompanyWithDomain(t, e, "Other", "other.example")
+	e.WsExec(t, `INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by, domain_folded)
+		VALUES ($1, 'bücher.example', false, 'manual', 'human:test', 'xn--bcher-kva.example')`, legacy)
+
+	for _, asked := range []string{"bücher.example", "xn--bcher-kva.example"} {
+		listed, _, err := e.Contacts.ListCompanies(admin, contacts.ListCompaniesInput{Domain: &asked})
+		if err != nil || len(listed) != 1 || ids.UUID(listed[0].Id) != legacy {
+			t.Fatalf("the list answered %d account(s) for %q (%v), want the legacy row's company", len(listed), asked, err)
+		}
+		eq, err := lists.CreateList(admin, collections.CreateListInput{
+			Name: "eq " + asked, EntityType: "company", ListType: "dynamic",
+			Definition: map[string]any{"field": "domain", "op": "eq", "value": asked},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		members, _, err := lists.ListMembers(admin, eq.ID, 50, "")
+		if err != nil || len(members) != 1 || members[0].EntityID != legacy {
+			t.Fatalf("the eq segment answered %d member(s) for %q (%v), want the legacy company", len(members), asked, err)
+		}
+		neq, err := lists.CreateList(admin, collections.CreateListInput{
+			Name: "neq " + asked, EntityType: "company", ListType: "dynamic",
+			Definition: map[string]any{"field": "domain", "op": "neq", "value": asked},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		others, _, err := lists.ListMembers(admin, neq.ID, 50, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range others {
+			if m.EntityID == legacy {
+				t.Errorf("the neq segment on %q still includes the legacy company", asked)
+			}
+		}
+	}
+}
+
+// A lead's company key is found in either spelling, whether the row was
+// written folded or in Unicode before keys were folded, and a slug still
+// matches as typed.
+func TestALeadCompanyKeyFilterMatchesBothSpellings(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	lists := collections.NewStore(e.DB())
+
+	seed := func(name, key string) ids.UUID {
+		lead, _, err := e.Contacts.CreateLead(admin, contacts.CreateLeadInput{FullName: &name, CandidateCompanyKey: &key, Source: "inbound"})
+		if err != nil {
+			t.Fatalf("seeding %s: %v", name, err)
+		}
+		return ids.UUID(lead.Id)
+	}
+	folded := seed("Anna", "bücher.example")
+	legacy := seed("Bert", "other-key")
+	slug := seed("Carl", "Acme Inc")
+	e.WsExec(t, `UPDATE lead SET candidate_company_key = 'Bücher.example' WHERE id = $1`, legacy)
+
+	for asked, want := range map[string][]ids.UUID{
+		"xn--bcher-kva.example": {folded, legacy},
+		"bücher.example":        {folded, legacy},
+		"acme inc":              {slug},
+	} {
+		list, err := lists.CreateList(admin, collections.CreateListInput{
+			Name: "key " + asked, EntityType: "lead", ListType: "dynamic",
+			Definition: map[string]any{"field": "candidate_company_key", "op": "eq", "value": asked},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		members, _, err := lists.ListMembers(admin, list.ID, 50, "")
+		if err != nil || len(members) != len(want) {
+			t.Fatalf("the filter on %q answered %d member(s) (%v), want %d", asked, len(members), err, len(want))
+		}
+	}
+}

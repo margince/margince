@@ -104,3 +104,25 @@ func DomainOrAsWritten(raw string) string {
 	}
 	return strings.TrimSpace(raw)
 }
+
+// KeyForm is a company routing key in its stored form. A key shaped like a
+// domain is reduced to the punycode host ParseDomain stores; any other key (a
+// slug) is left as typed.
+func KeyForm(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if parsed, err := ParseDomain(trimmed); err == nil {
+		return parsed.String()
+	}
+	return trimmed
+}
+
+// KeySpellings is every lowercase spelling a stored routing key may carry
+// for raw: the punycode form and its Unicode twin for a domain-shaped key.
+// Rows written before keys were folded may hold either.
+func KeySpellings(raw string) []string {
+	form := KeyForm(raw)
+	if _, err := ParseDomain(form); err != nil {
+		return []string{strings.ToLower(form)}
+	}
+	return Spellings(form)
+}

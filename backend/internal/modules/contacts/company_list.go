@@ -155,7 +155,7 @@ func companyDomainClause(domain *string, includeArchived bool, arg func(any) int
 	return storekit.SQLf(`EXISTS (
 		SELECT 1 FROM company_domain d
 		WHERE d.company_id = company.id
-		  AND d.domain = $%d`+live+`)`,
+		  AND `+owndomain.FoldedEqualsSQL("d", "$%[1]d")+live+`)`,
 		arg(foldDomainQuery(*domain)))
 }
 

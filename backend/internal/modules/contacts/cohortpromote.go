@@ -428,6 +428,14 @@ func (s *Store) DomainsOwedTheirContacts(ctx context.Context, limit int) ([]Doma
 			 WHERE od.archived_at IS NULL
 			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL
 			   AND p.archived_at IS NULL AND p.merged_into_id IS NULL
+			   -- A folded domain two live companies hold has no single owner to
+			   -- attach to; legacy Unicode and punycode rows fold alike.
+			   AND NOT EXISTS (
+			       SELECT 1 FROM company_domain twin
+			         JOIN company tc ON tc.id = twin.company_id
+			        WHERE twin.domain_folded = od.domain_folded
+			          AND twin.company_id <> od.company_id AND twin.archived_at IS NULL
+			          AND tc.archived_at IS NULL AND tc.merged_into_id IS NULL)
 			   AND NOT EXISTS (
 			       SELECT 1 FROM relationship r
 			        WHERE r.contact_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)

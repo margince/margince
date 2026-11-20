@@ -270,7 +270,7 @@ func domainCompanyMatch(ctx context.Context, tx pgx.Tx, domain string) (*crmcont
 		return nil, nil //nolint:nilnil // a lead with no domain names no company by one
 	}
 	owners, err := exactCompanyByDomain(ctx, tx, []string{domain}, nil)
-	if err != nil || len(owners) == 0 {
+	if err != nil || len(owners) != 1 {
 		return nil, err
 	}
 	matches, err := liveVisibleCompanies(ctx, tx, `id = $1 AND NOT is_anchor`, owners[0])
@@ -381,7 +381,7 @@ func namesCompany(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, name,
 	if err := tx.QueryRow(ctx, `
 		SELECT coalesce(`+exactNameKeySQL("display_name")+` = `+exactNameKeySQL("$2::text")+`, false)
 		       OR EXISTS (SELECT 1 FROM company_domain claim
-		                   WHERE claim.company_id = company.id AND claim.archived_at IS NULL AND claim.domain = $3)
+		                   WHERE claim.company_id = company.id AND claim.archived_at IS NULL AND `+owndomain.FoldedEqualsSQL("claim", "$3")+`)
 		  FROM company WHERE id = $1`, companyID, name, leadDomain(key)).Scan(&named); err != nil {
 		return false, fmt.Errorf("compare a lead's company name and domain with its linked company: %w", err)
 	}
