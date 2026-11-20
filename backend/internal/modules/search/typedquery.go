@@ -5,9 +5,33 @@ package search
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 )
+
+// mailPrefixFloor is how many letters the word being typed needs before a
+// typeahead search ranks messages: a shorter prefix matches a large share of
+// them.
+const mailPrefixFloor = 4
+
+// fragmentTooShortForMail reports whether the word still being typed is under
+// mailPrefixFloor letters. Letters are counted as runes without combining
+// marks, so a decomposed "ü" counts once. A query with no fragment has no
+// prefix to widen and never qualifies.
+func fragmentTooShortForMail(query string) bool {
+	_, tail := splitTypedQuery(query)
+	if tail == "" {
+		return false
+	}
+	letters := 0
+	for _, r := range tail {
+		if !unicode.IsMark(r) {
+			letters++
+		}
+	}
+	return letters < mailPrefixFloor
+}
 
 // normalizeQuery is what Search hands the splitter.
 //
@@ -173,4 +197,11 @@ func scoreExpression(entity, alias string, headPos, tailPos int, hasFragment boo
 	}
 	return fmt.Sprintf(`((%s.search_tsv @@ (%s))::int + %s)`,
 		alias, simpleWholeWords(tailPos), rank)
+}
+
+// namesOnlyMail reports whether the request asked for messages and nothing
+// else, as a palette narrowed to mail does. Dropping the only type asked for
+// would answer an empty page.
+func namesOnlyMail(types []string) bool {
+	return len(types) > 0 && !slices.ContainsFunc(types, func(t string) bool { return t != entityActivity })
 }
