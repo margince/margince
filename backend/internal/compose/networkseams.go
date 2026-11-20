@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -194,7 +193,7 @@ func toAgentCoverage(c network.DealCoverage, names, seated map[ids.UUID]string) 
 	for _, s := range c.Stakeholders {
 		out.Stakeholders = append(out.Stakeholders, agents.CoverageSeat{
 			ContactID: s.ContactID, ContactName: seated[s.ContactID],
-			Role: dealrole.Recorded(s.Role), Engaged: s.Engaged,
+			Role: s.Role, Engaged: s.Engaged,
 		})
 	}
 	for _, e := range network.OurColleagues(c.OurSide) {
