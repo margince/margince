@@ -15867,7 +15867,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Füge dieser Installation ein Mitglied hinzu und wähle die Startrolle.",
   "users.membersTitle": "Personen",
   "users.col.member": "Name",
-  "users.col.activity": "Zuletzt aktiv",
+  "users.col.activity": "Aktivität",
   "users.addedOn": "Hinzugefügt am {date}",
   "users.lastActiveUnknown": "Nicht verfügbar",
   "users.role.lastAdmin":

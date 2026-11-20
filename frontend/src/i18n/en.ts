@@ -168,7 +168,7 @@ export const en = {
     "The access export includes the recorded breakdown.",
   "privacy.proofUnknown": "Not recorded",
   "analytics.q.conversionFrame":
-    "Base currency: {currency}. Rates as of {date}.",
+    "Base currency: {currency}. Exchange rates as of {date}.",
 
   "homeRepair.taskPermission":
     "Activity archive permission is required to archive reviewed tasks.",
@@ -3036,7 +3036,7 @@ export const en = {
     "{count} deal has no price and is left out of both totals.",
   "board.unpricedTip_other":
     "{count} deals have no price and are left out of both totals.",
-  "board.convertedTip": "Converted at rates as of {date}.",
+  "board.convertedTip": "Converted at exchange rates as of {date}.",
   "board.matchesIn_one": "{count} result in {columns}",
   "board.matchesIn_other": "{count} results in {columns}",
   "board.showMatches": "Go to column",
@@ -15755,7 +15755,7 @@ export const en = {
     "Add a member to this installation and choose their starting role.",
   "users.membersTitle": "Members",
   "users.col.member": "Name",
-  "users.col.activity": "Last active",
+  "users.col.activity": "Activity",
   "users.addedOn": "Added {date}",
   "users.lastActiveUnknown": "Not available",
   "users.role.lastAdmin":

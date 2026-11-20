@@ -71,7 +71,7 @@ describe("the members table", () => {
       "Name",
       "Role",
       "Teams",
-      "Last active",
+      "Activity",
       "Actions",
     ]);
     cleanup();
@@ -79,7 +79,7 @@ describe("the members table", () => {
     vi.stubGlobal("fetch", backend([], { roles: ["rep"] }));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
-    expect(columnHeaders()).toEqual(["Name", "Last active"]);
+    expect(columnHeaders()).toEqual(["Name", "Activity"]);
     // Last activity is withheld from this reader, so the cell states only when
     // the member was added.
     expect(

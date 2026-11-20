@@ -15430,7 +15430,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thêm thành viên vào bản cài đặt này và chọn vai trò ban đầu.",
   "users.membersTitle": "Thành viên",
   "users.col.member": "Tên",
-  "users.col.activity": "Hoạt động gần nhất",
+  "users.col.activity": "Hoạt động",
   "users.addedOn": "Đã thêm {date}",
   "users.lastActiveUnknown": "Không có dữ liệu",
   "users.role.lastAdmin":
