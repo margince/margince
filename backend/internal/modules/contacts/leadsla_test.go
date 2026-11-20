@@ -38,14 +38,14 @@ func TestLeadSLAFieldsFollowTheClock(t *testing.T) {
 			if !tc.routed.IsZero() {
 				routedAt = &tc.routed
 			}
-			deadline, got := leadSLAFields(leadSLAPolicy{enabled: true, target: DefaultFirstResponseTarget}, routedAt, tc.created, tc.firstResponse, tc.archived)
+			deadline, got := leadSLAFields(now, leadSLAPolicy{enabled: true, target: DefaultFirstResponseTarget}, routedAt, tc.created, tc.firstResponse, tc.archived)
 			if (got == nil) != (tc.want == nil) || (got != nil && *got != *tc.want) {
 				t.Fatalf("sla_state = %v, want %v", got, tc.want)
 			}
 			if tc.archived == nil && deadline == nil {
 				t.Fatal("an open lead always carries its deadline")
 			}
-			offDeadline, offState := leadSLAFields(leadSLAPolicy{target: DefaultFirstResponseTarget}, routedAt, tc.created, tc.firstResponse, tc.archived)
+			offDeadline, offState := leadSLAFields(now, leadSLAPolicy{target: DefaultFirstResponseTarget}, routedAt, tc.created, tc.firstResponse, tc.archived)
 			if offDeadline != nil || offState != nil {
 				t.Fatalf("with the target switched off a lead carries no SLA field, got deadline %v state %v", offDeadline, offState)
 			}

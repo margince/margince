@@ -201,7 +201,7 @@ func readLeadQueuePage(ctx context.Context, tx pgx.Tx, query string, args []any,
 	defer rows.Close()
 	for rows.Next() {
 		var rank int
-		lead, err := scanLead(rows, active, policy, &rank)
+		lead, err := scanLead(rows, active, policy, asOf, &rank)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}

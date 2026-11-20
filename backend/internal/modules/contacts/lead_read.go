@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -167,7 +168,7 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	l, err := scanLead(tx.QueryRow(ctx, q, args...), active, policy)
+	l, err := scanLead(tx.QueryRow(ctx, q, args...), active, policy, slaNow(ctx))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}
@@ -225,7 +226,7 @@ func withholdUnreadableSourceContacts(ctx context.Context, tx pgx.Tx, leads []cr
 // scanLead scans core + active custom columns, plus whatever trailing
 // expressions the caller selected — the list page appends the sort's
 // __cursor_key there, exactly as scanContact does.
-func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, extra ...any) (crmcontracts.Lead, error) {
+func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, now time.Time, extra ...any) (crmcontracts.Lead, error) {
 	var l crmcontracts.Lead
 	var id ids.UUID
 	var ownerID, projectID, productID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal, companyID, partnerCompany *ids.UUID
@@ -304,7 +305,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	if !hasInbound {
 		policy.enabled = false
 	}
-	l.SlaDeadlineAt, l.SlaState = leadSLAFields(policy, l.RoutedAt, l.CreatedAt, l.FirstResponseAt, l.ArchivedAt)
+	l.SlaDeadlineAt, l.SlaState = leadSLAFields(now, policy, l.RoutedAt, l.CreatedAt, l.FirstResponseAt, l.ArchivedAt)
 	l.Author = sourceAuthorOf(authorID, authorSeatName, authorName, l.SourceSystem)
 	l.ImportedFrom = provenance.ImportedFrom(l.SourceSystem)
 	return l, nil

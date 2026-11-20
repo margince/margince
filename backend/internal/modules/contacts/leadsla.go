@@ -59,7 +59,7 @@ func slaNow(ctx context.Context) time.Time {
 // stored clock start, first response and closure (formulas §18.1) under the
 // installation's policy. A closed or answered lead owes nothing and reads
 // null; with the target switched off every lead does.
-func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Time, firstResponseAt, archivedAt *time.Time) (*time.Time, *crmcontracts.LeadSlaState) {
+func leadSLAFields(now time.Time, policy leadSLAPolicy, routedAt *time.Time, createdAt time.Time, firstResponseAt, archivedAt *time.Time) (*time.Time, *crmcontracts.LeadSlaState) {
 	if !policy.enabled || archivedAt != nil {
 		return nil, nil
 	}
@@ -71,7 +71,6 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 	if firstResponseAt != nil {
 		return &deadline, nil
 	}
-	now := leadSLAClock().UTC()
 	state := crmcontracts.LeadSlaStateLeadSlaStateWithinTarget
 	switch {
 	case now.After(deadline):
