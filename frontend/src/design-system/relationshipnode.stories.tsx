@@ -106,7 +106,9 @@ export const LongName: Story = {
   },
   play: async ({ canvasElement }) => {
     await document.fonts.ready;
-    const box = canvasElement.querySelector(".rmap-box")?.getBBox();
+    const box = canvasElement
+      .querySelector<SVGRectElement>(".rmap-box")
+      ?.getBBox();
     const name = canvasElement.querySelector<SVGTextElement>(".rmap-name");
     const drawn = name?.getBBox();
     await expect(name?.textContent).toMatch(/…$/);
