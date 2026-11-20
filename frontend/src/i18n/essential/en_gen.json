@@ -3023,8 +3023,6 @@
   "sendPermission.recheck": "Check again",
   "sendPermission.appliesToSome_one": "This applies to {count} of {total} recipients.",
   "sendPermission.appliesToSome_other": "This applies to {count} of {total} recipients.",
-  "sendPermission.ready": "Recipients checked",
-  "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message can be sent…",
   "lawfulBasis.title": "No valid basis recorded",
   "lawfulBasis.body": "No valid basis under Vietnamese law is recorded for this contact: neither their consent nor a case where the law allows processing without it. Sending is at your own risk.",

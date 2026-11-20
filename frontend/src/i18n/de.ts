@@ -8009,16 +8009,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
-  "compose.fact.open": "Gespräch festhalten",
-  "compose.fact.title": "Gespräch mit {address} festhalten",
-  "compose.fact.scope":
-    "Hält den Austausch mit {address} für das sendende Unternehmen fest. Sendet keine E-Mail, erfasst keine Werbeeinwilligung und erstellt keine Ausnahme.",
-  "compose.fact.kind": "Was ist passiert?",
-  "compose.fact.request": "Der Kontakt hat um eine Nachricht gebeten",
-  "compose.fact.quoteRequest": "Der Kontakt hat um dieses Angebot gebeten",
   "compose.fact.met": "Persönlich getroffen",
-  "compose.fact.note": "Was wurde vereinbart?",
-  "compose.fact.save": "Gespräch festhalten",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
   "compose.draftReply": "Antwort entwerfen",
@@ -8289,19 +8280,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.recheck": "Erneut prüfen",
   "compose.sendWithReason": "Mit Begründung senden…",
   "compose.scheduleWithReason": "Mit Begründung planen…",
-  "compose.holdForCheck": "Senden wartet auf die Versandprüfung.",
   "compose.legacyFooter":
     "Diese Version von Margince kann E-Mails mit fehlenden Angaben zum Unternehmen noch nicht mit einer Begründung senden. Dein Entwurf bleibt erhalten. Frag einen Admin nach einem Update von Margince. Versuche es danach erneut.",
-  "compose.holdRefused":
-    "Senden ist gesperrt. Behebe, was die Prüfung oben nennt, oder entferne diese Empfangsadresse.",
-  "compose.holdWithReason":
-    "Die Prüfung hat diese Nachricht abgelehnt. Senden fragt nach deiner Begründung, und sie gilt nur für diese eine Nachricht.",
   "sendPermission.appliesToSome_one":
     "Das betrifft {count} von {total} Empfangsadressen.",
   "sendPermission.appliesToSome_other":
     "Das betrifft {count} von {total} Empfangsadressen.",
-  "sendPermission.ready": "Empfangsadressen geprüft",
-  "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
   "lawfulBasis.title": "Keine gültige Grundlage erfasst",
@@ -8484,7 +8468,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bearbeite die Nachricht oder entferne diese Empfangsadresse, um sie zu senden.",
   "compose.sendAnyway.more_one": "{count} weiterer Befund",
   "compose.sendAnyway.more_other": "{count} weitere Befunde",
-  "compose.sendAnyway.details": "Details",
   "compose.sendAnyway.reasonLabel": "Grund für den Versand",
   "compose.sendAnyway.confirm": "Trotzdem senden",
   "compose.sendAnyway.marked": "im Hinweis genannt",
@@ -8496,7 +8479,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendAnyway.retry": "Erneut versuchen",
   "compose.sendAnyway.unreviewed":
     "Diese Nachricht wurde nicht gesendet. Dein Entwurf bleibt erhalten. Wende dich an einen Admin, um Margince zu aktualisieren, und sende dann erneut.",
-  "compose.reviewReference": "Prüfung",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",
   "compose.draftUnsupportedHere":
@@ -8526,9 +8508,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.missingSubject": "Gib einen Betreff ein.",
   "compose.missingBody": "Gib vor dem Senden eine Nachricht ein.",
   "compose.missingWhy": "Wähle den Kontaktgrund aus.",
-  "compose.reasonSwitchText":
-    "Für diese Nachricht steht schon ein anderer Grund im Datensatz.",
-  "compose.reasonSwitch": "Stattdessen „{reason}“ verwenden",
   "compose.missingDeal": "Wähle den Deal, um den es in diesem Follow-up geht.",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",
@@ -23830,11 +23809,4 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "particulars.translationIntro":
     "E-Mails und Seiten auf {language} zeigen diesen Text, wo du ihn ausfüllst. Werbung, die auf {language} sein muss, geht erst raus, wenn Ablehnung und Kontaktdaten des werbenden Unternehmens hier ausgefüllt sind.",
   "particulars.objectionExample": "Beispiel: {example}",
-  "compose.contentFinding.title": "Werberegeln für diese E-Mail",
-  "compose.contentFinding.claim":
-    "„{words}“ darfst du nur mit Nachweis behaupten. Ergänze Name, Nummer und Datum des Nachweises in der E-Mail.",
-  "compose.contentFinding.language":
-    "Schreibe diese E-Mail zuerst auf {language}. Text in einer anderen Sprache steht darunter und ist nicht größer als der Text auf {language}.",
-  "compose.contentFinding.foreignAdvertiser":
-    "Dein Unternehmen ist nicht in {country} niedergelassen. Ein ausländisches Unternehmen, das in {country} nicht tätig ist, darf dort nur über ein Werbeunternehmen aus {country} werben. Dafür ist dein Unternehmen verantwortlich.",
 };

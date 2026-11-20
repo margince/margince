@@ -8010,16 +8010,7 @@ export const en = {
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
-  "compose.fact.open": "Record what happened",
-  "compose.fact.title": "Record the exchange with {address}",
-  "compose.fact.scope":
-    "Records the exchange with {address} for the sending company. It does not send this email, record marketing consent or create an exception.",
-  "compose.fact.kind": "What happened?",
-  "compose.fact.request": "They asked me to write",
-  "compose.fact.quoteRequest": "They asked for this quote",
   "compose.fact.met": "Met face to face",
-  "compose.fact.note": "What was agreed?",
-  "compose.fact.save": "Record the exchange",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
   "compose.draftReply": "Draft reply",
@@ -8283,19 +8274,12 @@ export const en = {
   "sendPermission.recheck": "Check again",
   "compose.sendWithReason": "Send with a reason…",
   "compose.scheduleWithReason": "Schedule with a reason…",
-  "compose.holdForCheck": "Send waits for the send check.",
   "compose.legacyFooter":
     "This server cannot send with a reason when company email details are missing. Your draft is kept. Ask an administrator to update Margince, then try again.",
-  "compose.holdRefused":
-    "Send is off. Fix what the check above names, or remove that recipient.",
-  "compose.holdWithReason":
-    "The check refused this message. Send asks for your reason, and the reason covers this one message only.",
   "sendPermission.appliesToSome_one":
     "This applies to {count} of {total} recipients.",
   "sendPermission.appliesToSome_other":
     "This applies to {count} of {total} recipients.",
-  "sendPermission.ready": "Recipients checked",
-  "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message can be sent…",
   "lawfulBasis.title": "No valid basis recorded",
   "lawfulBasis.body":
@@ -8474,7 +8458,6 @@ export const en = {
     "Edit the message or remove this recipient to send it.",
   "compose.sendAnyway.more_one": "{count} more finding",
   "compose.sendAnyway.more_other": "{count} more findings",
-  "compose.sendAnyway.details": "Details",
   "compose.sendAnyway.reasonLabel": "Reason for sending",
   "compose.sendAnyway.confirm": "Send anyway",
   "compose.sendAnyway.marked": "named in the warning",
@@ -8485,7 +8468,6 @@ export const en = {
   "compose.sendAnyway.retry": "Retry",
   "compose.sendAnyway.unreviewed":
     "This message was not sent. Your draft is kept. Ask an admin to update Margince, then send again.",
-  "compose.reviewReference": "Review",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",
   "compose.draftUnsupportedHere":
@@ -8515,9 +8497,6 @@ export const en = {
   "compose.missingSubject": "Enter a subject.",
   "compose.missingBody": "Enter a message before sending.",
   "compose.missingWhy": "Select the reason for contact.",
-  "compose.reasonSwitchText":
-    "The record already shows another reason for this message.",
-  "compose.reasonSwitch": "Use “{reason}” instead",
   "compose.missingDeal": "Choose the deal this follow-up is about.",
   "compose.actionFailed": "The request failed. Retry.",
 
@@ -23482,13 +23461,6 @@ export const en = {
   "particulars.translationIntro":
     "Mail and pages in {language} show this text where you fill it in. Advertising that must be in {language} is sent only once the refusal and the advertiser contact are filled in here.",
   "particulars.objectionExample": "Example: {example}",
-  "compose.contentFinding.title": "Advertising rules for this mail",
-  "compose.contentFinding.claim":
-    "“{words}” is a claim you may make only with a proof. Add the name, number and date of the proving document to the mail.",
-  "compose.contentFinding.language":
-    "Write this mail in {language} first. Text in another language goes below it, no larger than the {language} text.",
-  "compose.contentFinding.foreignAdvertiser":
-    "Your company is not set up in {country}. A foreign company that does not operate in {country} must advertise there through an advertising business from {country}. Your company is responsible for this.",
 } as const;
 
 export type MessageKey = keyof typeof en;

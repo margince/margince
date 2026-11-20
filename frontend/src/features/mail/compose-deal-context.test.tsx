@@ -21,8 +21,8 @@ import type { EditSeed } from "./schedulededit";
 //
 // An Active deal reason is proved by a deal. A contact's composer offers the
 // contact's open deals beside it, and files the message under the one the rep
-// chose. The preview and the send carry the same links, because the
-// engine reads the deal from them. These tests assert the request bodies.
+// chose. The send carries the deal in its links, because the engine reads the
+// deal from them. These tests assert the request bodies.
 
 const DEAL_PICK = "Deal this follow-up is about";
 
@@ -128,9 +128,6 @@ describe("the deal a message to a contact is about", () => {
       { entity_type: "contact", entity_id: "c-1" },
       { entity_type: "deal", entity_id: "deal-open" },
     ];
-    await waitFor(() =>
-      expect(linksOf(sent, "POST /emails:preview")).toEqual(filed),
-    );
 
     await pressSend(user);
     await user.click(await screen.findByRole("button", { name: "Send" }));
@@ -157,13 +154,14 @@ describe("the deal a message to a contact is about", () => {
     const sent = openContactComposer();
     await writeToAnna(user);
     await pickWhy(user, "Follow-up they requested");
+    expect(screen.queryByRole("combobox", { name: DEAL_PICK })).toBeNull();
 
+    await pressSend(user);
     await waitFor(() =>
-      expect(linksOf(sent, "POST /emails:preview")).toEqual([
+      expect(linksOf(sent, "POST /emails")).toEqual([
         { entity_type: "contact", entity_id: "c-1" },
       ]),
     );
-    expect(screen.queryByRole("combobox", { name: DEAL_PICK })).toBeNull();
   });
 
   it("sends a new email with a Re: subject as a new conversation", async () => {
@@ -210,13 +208,15 @@ describe("the deal a message to a contact is about", () => {
   });
 
   it("keeps the deal an edited scheduled message was filed under, and shows it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = openContactComposer(scheduledEdit("deal-open"));
 
     expect(
-      await screen.findByRole("combobox", { name: DEAL_PICK }),
-    ).toBeTruthy();
+      (await screen.findByRole("combobox", { name: DEAL_PICK })).textContent,
+    ).toContain("Acme Renewal");
+    await pressSend(user);
     await waitFor(() =>
-      expect(linksOf(sent, "POST /emails:preview")).toEqual([
+      expect(linksOf(sent, "POST /emails")).toEqual([
         { entity_type: "contact", entity_id: "c-1" },
         { entity_type: "deal", entity_id: "deal-open" },
       ]),
@@ -228,11 +228,6 @@ describe("the deal a message to a contact is about", () => {
     const sent = openContactComposer(scheduledEdit("deal-left"));
     await screen.findByRole("combobox", { name: DEAL_PICK });
 
-    await waitFor(() =>
-      expect(linksOf(sent, "POST /emails:preview")).toEqual([
-        { entity_type: "contact", entity_id: "c-1" },
-      ]),
-    );
     await pressSend(user);
     expect(
       await screen.findByText("Choose the deal this follow-up is about."),
@@ -314,9 +309,6 @@ it("saves the chosen deal and uses the same filing after reopening", async () =>
     { entity_type: "contact", entity_id: "c-1" },
     { entity_type: "deal", entity_id: "deal-open" },
   ];
-  await waitFor(() =>
-    expect(linksOf(sent, "POST /emails:preview")).toEqual(expected),
-  );
   expect(sent.filter((item) => item.key === "POST /emails")).toHaveLength(0);
   const sendButton = screen.getByRole("button", { name: "Send" });
   await waitFor(() => expect(sendButton.hasAttribute("disabled")).toBe(false));
@@ -326,6 +318,7 @@ it("saves the chosen deal and uses the same filing after reopening", async () =>
 });
 
 it("keeps an explicit cleared filing instead of reviving an agent's old deal", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const sent = stubRoutes({
     "GET /contacts/c-1/360": () => jsonResponse(contactView()),
     "GET /mail-drafts": () =>
@@ -355,12 +348,13 @@ it("keeps an explicit cleared filing instead of reviving an agent's old deal", a
     />,
   );
   await screen.findByText("Saved draft restored");
+  expect(screen.queryByRole("combobox", { name: DEAL_PICK })).toBeNull();
+  await pressSend(user);
   await waitFor(() =>
-    expect(linksOf(sent, "POST /emails:preview")).toEqual([
+    expect(linksOf(sent, "POST /emails")).toEqual([
       { entity_type: "contact", entity_id: "c-1" },
     ]),
   );
-  expect(screen.queryByRole("combobox", { name: DEAL_PICK })).toBeNull();
 });
 
 it("keeps the saved deal while its visible choices are still loading", async () => {
@@ -407,11 +401,6 @@ it("keeps the saved deal while its visible choices are still loading", async () 
     />,
   );
   await screen.findByText("Saved draft restored");
-  await waitFor(() =>
-    expect(linksOf(sent, "POST /emails:preview")).toEqual([
-      { entity_type: "contact", entity_id: "c-1" },
-    ]),
-  );
   await pressSend(user);
   expect(sent.some((item) => item.key === "POST /emails")).toBe(false);
   writeMessage("Body", "Edited while loading.");

@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  act,
   type RenderResult,
   render as rtlRender,
   screen,
@@ -10,16 +9,10 @@ import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { onTestFinished, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
-import {
-  allowedPreview,
-  isPreviewDoor,
-  previewedAddresses,
-} from "../../testing/sendpermission.testkit";
 import { ComposeWindow } from "./composewindow";
 
 // The composer's "why are you writing?" dial is found by name, not by role
@@ -203,9 +196,6 @@ export function stubRoutes(
       }
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse(NO_VOICE_PROFILE);
-      if (isPreviewDoor(url.pathname)) {
-        return jsonResponse(allowedPreview(previewedAddresses(body)));
-      }
       return jsonResponse({});
     }),
   );
@@ -256,11 +246,6 @@ export async function fillSendableForm(user: UserEvent) {
   await user.type(screen.getByLabelText("Subject"), "Hi there");
   writeMessage("Body", "Body content");
   await pickWhy(user, WHY_LABEL.requestedFollowup);
-  await settleSendCheck();
-  await waitFor(() => {
-    if (screen.queryByText("Checking whether this message can be sent…"))
-      throw new Error("recipient check is pending");
-  });
 }
 
 // The threads the composer offers sit in a menu behind the bar above the
@@ -289,16 +274,7 @@ export function rewrittenBody(body: string, language = "en") {
   });
 }
 
-// The check asks about the subject and body only once typing has paused. A
-// press straight after typing meets the answer for the text before it. The
-// answer for the new text lands after the press. Stepping the clock over that
-// pause inside act lets the newer check start, and the wait then ends on its
-// answer. It needs installComposeClock, and throws without it.
-export async function settleSendCheck() {
-  await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
-}
-
-// Every suite that reaches settleSendCheck calls this in a beforeEach, and
+// Every suite that presses Send through this kit calls this in a beforeEach, and
 // drives its session with `advanceTimers: vi.advanceTimersByTime`. The clock
 // still moves 1 ms per real 1 ms. Testing Library drains each wait on a
 // setTimeout(0) it steps only through a `jest` global. Nothing else steps the
@@ -314,10 +290,9 @@ export function installComposeClock() {
   });
 }
 
-// The foot's own button of this name, once the check for the message on screen
-// lets it be pressed. A menu entry of the same name is not it.
-export async function footSendButton(name = "Send") {
-  await settleSendCheck();
+// The foot's own button of this name, once it can be pressed. A menu entry of
+// the same name is not it.
+export function footSendButton(name = "Send") {
   return waitFor(() => {
     const found = screen
       .queryAllByRole("button", { name })
@@ -325,24 +300,7 @@ export async function footSendButton(name = "Send") {
     if (!found || found.hasAttribute("disabled")) {
       throw new Error(`${name} is not ready`);
     }
-    throwWhileChecking();
     return found;
-  });
-}
-
-function throwWhileChecking() {
-  if (screen.queryByText("Checking whether this message can be sent…")) {
-    throw new Error("the recipient check is running");
-  }
-}
-
-// A button the permission band draws, once the check for the message on screen
-// has answered. A recheck redraws the band, so a button found earlier is gone.
-export async function permissionBandButton(name: string) {
-  await settleSendCheck();
-  return waitFor(() => {
-    throwWhileChecking();
-    return screen.getByRole("button", { name });
   });
 }
 

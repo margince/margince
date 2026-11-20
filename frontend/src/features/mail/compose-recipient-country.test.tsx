@@ -7,28 +7,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
-import { meFixture } from "../../testing/mefixture";
 import { isPreviewDoor } from "../../testing/sendpermission.testkit";
 import {
   activity202,
   installComposeClock,
   jsonResponse,
+  pickWhy,
   pressSend,
   render,
   type Sent,
   stubRoutes,
+  WHY_ASK,
+  WHY_LABEL,
 } from "./compose.testkit";
 import { ComposeWindow } from "./composewindow";
 
 // A recipient's chip offers the country their marketing rules follow: what the
 // record says and where, and the rep's own setting for this one message. It
 // rides the send and the saved draft, and a cleared country stays cleared.
-
-const inlineMe = () =>
-  jsonResponse({
-    ...meFixture({ allow: { activity: ["read", "create", "update"] } }),
-    inline_send_review: true,
-  });
 
 const recordCountry = () =>
   jsonResponse({
@@ -56,9 +52,9 @@ function Composer() {
   );
 }
 
-async function openWith(sent: Sent[]) {
+async function openComposer() {
   render(<Composer />);
-  await waitFor(() => expect(count(sent, "GET /me")).toBeGreaterThan(0));
+  await screen.findByRole("combobox", { name: WHY_ASK });
 }
 
 async function writeTo(user: UserEvent, address: string) {
@@ -66,6 +62,7 @@ async function writeTo(user: UserEvent, address: string) {
   await user.tab();
   await user.type(screen.getByLabelText("Subject"), "Your quote");
   writeMessage("Body", "The prices you asked for.");
+  await pickWhy(user, WHY_LABEL.requestedFollowup);
 }
 
 const countryOf = (address: string) =>
@@ -88,11 +85,10 @@ describe("a recipient's country on the chip", () => {
   it("reads the record only when the chip is opened, and names its source", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       [LOOKUP]: recordCountry,
       "POST /emails": () => jsonResponse(activity202, 202),
     });
-    await openWith(sent);
+    await openComposer();
     await writeTo(user, "a@x.com");
     expect(count(sent, LOOKUP)).toBe(0);
     await user.click(await countryOf("a@x.com"));
@@ -106,11 +102,10 @@ describe("a recipient's country on the chip", () => {
   it("sends a country the rep set, and a cleared one as null", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       [LOOKUP]: recordCountry,
       "POST /emails": () => jsonResponse(activity202, 202),
     });
-    await openWith(sent);
+    await openComposer();
     await writeTo(user, "a@x.com");
     await user.click(await countryOf("a@x.com"));
     await pickOption(
@@ -136,11 +131,10 @@ describe("a recipient's country on the chip", () => {
   it("sends no countries when the rep goes back to the record's", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       [LOOKUP]: recordCountry,
       "POST /emails": () => jsonResponse(activity202, 202),
     });
-    await openWith(sent);
+    await openComposer();
     await writeTo(user, "a@x.com");
     await user.click(await countryOf("a@x.com"));
     await user.click(
@@ -178,12 +172,11 @@ describe("a recipient's country in the saved draft", () => {
       updated_at: "2026-01-01T00:00:00Z",
     };
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       "GET /mail-drafts": () => jsonResponse(saved),
       "PUT /mail-drafts": () => jsonResponse({ ...saved, version: 2 }),
       [LOOKUP]: recordCountry,
     });
-    await openWith(sent);
+    await openComposer();
     await screen.findByText("Saved draft restored");
     await user.click(await countryOf("a@x.com"));
     expect(

@@ -7814,16 +7814,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Chuỗi thư mới",
   "compose.copies": "Cc và Bcc",
   "compose.signsOffAs": "Kết thư bằng “{closing}”.",
-  "compose.fact.open": "Ghi lại sự việc",
-  "compose.fact.title": "Ghi lại trao đổi với {address}",
-  "compose.fact.scope":
-    "Ghi lại trao đổi với {address} cho công ty gửi email. Không gửi email này, không ghi nhận đồng ý nhận quảng cáo hay tạo ngoại lệ.",
-  "compose.fact.kind": "Đã xảy ra việc gì?",
-  "compose.fact.request": "Đã yêu cầu tôi liên hệ",
-  "compose.fact.quoteRequest": "Đã yêu cầu báo giá này",
   "compose.fact.met": "Đã gặp trực tiếp",
-  "compose.fact.note": "Đã thống nhất điều gì?",
-  "compose.fact.save": "Ghi lại trao đổi",
   "compose.replyIntent": "Mục đích trả lời",
   "compose.newIntent": "Mục đích email",
   "compose.draftReply": "Soạn trả lời",
@@ -8083,19 +8074,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.recheck": "Kiểm tra lại",
   "compose.sendWithReason": "Gửi kèm lý do…",
   "compose.scheduleWithReason": "Lên lịch kèm lý do…",
-  "compose.holdForCheck": "Nút Gửi chờ bước kiểm tra gửi.",
   "compose.legacyFooter":
     "Máy chủ này chưa hỗ trợ gửi kèm lý do khi thiếu thông tin email của công ty. Bản nháp được giữ lại. Liên hệ quản trị viên để cập nhật Margince rồi thử lại.",
-  "compose.holdRefused":
-    "Không thể gửi. Hãy sửa điều bước kiểm tra ở trên nêu ra, hoặc bỏ người nhận đó.",
-  "compose.holdWithReason":
-    "Bước kiểm tra đã từ chối tin nhắn này. Nút Gửi sẽ hỏi lý do của bạn, và lý do chỉ áp dụng cho riêng tin nhắn này.",
   "sendPermission.appliesToSome_one":
     "Điều này áp dụng cho {count} trên {total} người nhận.",
   "sendPermission.appliesToSome_other":
     "Điều này áp dụng cho {count} trên {total} người nhận.",
-  "sendPermission.ready": "Đã kiểm tra người nhận",
-  "sendPermission.markName": "Trạng thái liên lạc của tin nhắn này",
   "sendPermission.checking": "Đang kiểm tra xem có thể gửi tin nhắn này không…",
   "lawfulBasis.title": "Chưa ghi nhận căn cứ hợp lệ",
   "lawfulBasis.body":
@@ -8264,7 +8248,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.sendAnyway.editOnly": "Sửa tin nhắn hoặc bỏ địa chỉ này để gửi.",
   "compose.sendAnyway.more_one": "Thêm {count} kết quả",
   "compose.sendAnyway.more_other": "Thêm {count} kết quả",
-  "compose.sendAnyway.details": "Chi tiết",
   "compose.sendAnyway.reasonLabel": "Lý do gửi",
   "compose.sendAnyway.confirm": "Vẫn gửi",
   "compose.sendAnyway.marked": "có trong cảnh báo",
@@ -8275,7 +8258,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.sendAnyway.retry": "Thử lại",
   "compose.sendAnyway.unreviewed":
     "Chưa gửi tin nhắn này. Bản nháp vẫn được giữ. Liên hệ quản trị viên để cập nhật Margince, rồi gửi lại.",
-  "compose.reviewReference": "Phê duyệt",
   "compose.draftUnavailable":
     "Không thể soạn nháp bằng AI vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",
   "compose.draftUnsupportedHere":
@@ -8303,8 +8285,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.missingSubject": "Nhập tiêu đề.",
   "compose.missingBody": "Nhập nội dung trước khi gửi.",
   "compose.missingWhy": "Chọn lý do liên hệ.",
-  "compose.reasonSwitchText": "Hồ sơ đã có một lý do khác cho thư này.",
-  "compose.reasonSwitch": "Dùng “{reason}” thay thế",
   "compose.missingDeal": "Chọn deal mà thư theo dõi này nói về.",
   "compose.actionFailed": "Yêu cầu không thành công. Thử lại.",
 
@@ -23199,11 +23179,4 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "particulars.translationIntro":
     "Email và trang bằng {language} hiển thị nội dung này ở những trường bạn điền. Quảng cáo phải viết bằng {language} chỉ được gửi khi cách từ chối và liên hệ bên quảng cáo đã được điền ở đây.",
   "particulars.objectionExample": "Ví dụ: {example}",
-  "compose.contentFinding.title": "Quy định quảng cáo cho email này",
-  "compose.contentFinding.claim":
-    "Chỉ được dùng “{words}” khi có bằng chứng. Hãy thêm tên, số và ngày của tài liệu chứng minh vào email.",
-  "compose.contentFinding.language":
-    "Viết email này bằng {language} trước. Nội dung bằng ngôn ngữ khác đặt bên dưới và không lớn hơn phần bằng {language}.",
-  "compose.contentFinding.foreignAdvertiser":
-    "Công ty của bạn không được thành lập tại {country}. Tổ chức nước ngoài không hoạt động tại {country} phải quảng cáo tại đó thông qua một doanh nghiệp kinh doanh dịch vụ quảng cáo của {country}. Công ty của bạn chịu trách nhiệm về việc này.",
 };

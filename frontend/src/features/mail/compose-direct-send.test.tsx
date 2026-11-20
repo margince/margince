@@ -23,16 +23,19 @@ import { ComposeWindow } from "./composewindow";
 // The composer closes the way a normal send closes it, so nothing on screen
 // invites a second send of mail that has gone.
 
+const INLINE_WARNING = {
+  version: "inline-v1",
+  text: "The send check still blocks this message.",
+};
+
 const REVIEW = {
   id: "r-1",
   state: "open",
   kind: "single",
   reason_code: "no_compatible_evidence",
   refusals: [],
-  warning: {
-    version: "override-v2",
-    text: "The send check still blocks this message.",
-  },
+  warning: INLINE_WARNING,
+  warnings: [INLINE_WARNING],
 };
 
 beforeEach(installComposeClock);
@@ -132,25 +135,18 @@ describe("sending with a recorded exception", () => {
     await fillSendableForm(user);
     await pressSend(user);
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Send with a recorded exception",
-      }),
-    );
     expect(
       await screen.findByText(
         "Country: Vietnam, set by the sender for this message",
       ),
     ).toBeTruthy();
-    await user.click(await screen.findByRole("checkbox"));
     await user.type(
-      screen.getByLabelText("Explanation"),
+      await screen.findByLabelText(/Reason for sending/),
       "They asked for it on the phone.",
     );
-    await user.click(screen.getByRole("button", { name: "Send email" }));
+    await user.click(screen.getByRole("button", { name: "Send anyway" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByText("Queued as a recorded exception.")).toBeTruthy();
     expect(
       queryClient.getQueryData(draftKey({ type: "contact", id: "c-1" })),
@@ -169,6 +165,7 @@ describe("sending with a recorded exception", () => {
         ?.body,
     ).toMatchObject({
       assessment_revision: "current-warnings",
+      warning_version: "inline-v1",
       acknowledged: true,
       explanation: "They asked for it on the phone.",
       shown_reasons: [reason],

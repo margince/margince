@@ -425,10 +425,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "homeRepair.explain",
     // These name users, recipients and participants, not contact records.
     "approval.scheduled.rearm",
-    "compose.holdRefused",
     "sendPermission.appliesToSome_one",
     "sendPermission.appliesToSome_other",
-    "sendPermission.ready",
     "approval.read.retained",
     "approval.read.effect",
     "approval.preview.companyPrivateReadings",

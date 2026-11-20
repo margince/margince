@@ -686,10 +686,11 @@ describe("ComposeWindow", () => {
     await fillSendableForm(user);
     await pressSend(user);
 
-    // The refusal named no reason, so it names no cause, consent included.
-    expect(
-      await screen.findByText("This message cannot be sent as it stands."),
-    ).toBeTruthy();
+    // The refusal opened no review, so it names no cause, consent included.
+    const refused = await screen.findByText(
+      "This message was not sent. Your draft is kept. Ask an admin to update Margince, then send again.",
+    );
+    expect(refused.textContent).not.toMatch(/consent/i);
     // The server offered no move, so none is drawn, and the modal stays open.
     expect(screen.queryByRole("link", { name: "Open contact" })).toBeNull();
     expect(onClose).not.toHaveBeenCalled();

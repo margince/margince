@@ -3023,8 +3023,6 @@
   "sendPermission.recheck": "Erneut prüfen",
   "sendPermission.appliesToSome_one": "Das betrifft {count} von {total} Empfangsadressen.",
   "sendPermission.appliesToSome_other": "Das betrifft {count} von {total} Empfangsadressen.",
-  "sendPermission.ready": "Empfangsadressen geprüft",
-  "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking": "Wird geprüft, ob diese Nachricht gesendet werden kann…",
   "lawfulBasis.title": "Keine gültige Grundlage erfasst",
   "lawfulBasis.body": "Für diesen Kontakt ist keine nach vietnamesischem Recht gültige Grundlage erfasst: weder seine Einwilligung noch ein Fall, in dem das Gesetz die Verarbeitung ohne sie erlaubt. Du sendest auf eigenes Risiko.",

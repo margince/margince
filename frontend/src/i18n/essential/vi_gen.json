@@ -3023,8 +3023,6 @@
   "sendPermission.recheck": "Kiểm tra lại",
   "sendPermission.appliesToSome_one": "Điều này áp dụng cho {count} trên {total} người nhận.",
   "sendPermission.appliesToSome_other": "Điều này áp dụng cho {count} trên {total} người nhận.",
-  "sendPermission.ready": "Đã kiểm tra người nhận",
-  "sendPermission.markName": "Trạng thái liên lạc của tin nhắn này",
   "sendPermission.checking": "Đang kiểm tra xem có thể gửi tin nhắn này không…",
   "lawfulBasis.title": "Chưa ghi nhận căn cứ hợp lệ",
   "lawfulBasis.body": "Chưa ghi nhận căn cứ hợp lệ theo pháp luật Việt Nam cho liên hệ này: không có sự đồng ý của họ, cũng không có trường hợp pháp luật cho phép xử lý mà không cần sự đồng ý. Nếu gửi, bạn tự chịu rủi ro.",

@@ -132,7 +132,6 @@ async function composeAndSend(user: UserEvent) {
     screen.getByRole("combobox", { name: WHY_ASK }),
     WHY_LABEL,
   );
-  await screen.findByRole("button", { name: /recipients checked/i });
   await pressSend(user);
   return onClose;
 }
