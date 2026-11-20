@@ -356,3 +356,28 @@ func TestIdentifierBinderAndLeadBranch(t *testing.T) {
 		}
 	}
 }
+
+func TestFragmentTooShortForMailCountsLettersNotBytes(t *testing.T) {
+	for query, want := range map[string]bool{
+		"co":          true,
+		"con":         true,
+		"cont":        false,
+		"acme con":    true,
+		"con acme":    false,
+		"übe":         true,
+		"über":        false,
+		"übe":        true,
+		"über":       false,
+		"viê":         true,
+		"việt":        false,
+		"con ":        false,
+		`"con"`:       false,
+		"con or acme": false,
+		"-con":        false,
+		"acme\tco":    true,
+	} {
+		if got := fragmentTooShortForMail(query); got != want {
+			t.Errorf("fragmentTooShortForMail(%q) = %v, want %v", query, got, want)
+		}
+	}
+}

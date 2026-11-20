@@ -37,7 +37,11 @@ import type { PaletteMode } from "./palettehotkey";
 import { recentCommand, usePaletteRecents } from "./paletterecents";
 import { type RecentEntry, recentIdentity } from "./paletterecents.storage";
 import { PaletteRow } from "./paletterow";
-import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
+import {
+  narrowingFor,
+  SEARCH_PENDING_DELAY_MS,
+  useSearchCommands,
+} from "./palettesearch";
 
 // ⌘K command palette. Each command is a screen, setting, action or record;
 // record rows come from the search seam.
@@ -155,7 +159,7 @@ export function CommandPalette({
   // leaves Enter to defaultSelection.
   const [picked, setPicked] = useState<string | null>(null);
   // The one type of record the list is narrowed to; null lists every type.
-  const [kind, setKind] = useState<CoreSearchHitType | null>(null);
+  const [narrowedTo, setKind] = useState<CoreSearchHitType | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const overlay = useRef<HTMLDivElement>(null);
 
@@ -192,6 +196,9 @@ export function CommandPalette({
   );
   // Create mode answers "make a record", so a typed word narrows those and asks nothing else.
   const searched = creates ? "" : query;
+  // Mail is left out of a short word's answer, so a narrowing to it would list
+  // nothing and read as "no matches": the list widens again until it can.
+  const kind = narrowingFor(narrowedTo, searched);
   const matched = useMemo(
     () => matchingCommands(commands, query),
     [commands, query],

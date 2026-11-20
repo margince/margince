@@ -9,6 +9,29 @@ import (
 	"unicode"
 )
 
+// mailPrefixFloor is how many letters the word being typed needs before a
+// typeahead search ranks messages: a shorter prefix matches a large share of
+// them.
+const mailPrefixFloor = 4
+
+// fragmentTooShortForMail reports whether the word still being typed is under
+// mailPrefixFloor letters. Letters are counted as runes without combining
+// marks, so a decomposed "ü" counts once. A query with no fragment has no
+// prefix to widen and never qualifies.
+func fragmentTooShortForMail(query string) bool {
+	_, tail := splitTypedQuery(query)
+	if tail == "" {
+		return false
+	}
+	letters := 0
+	for _, r := range tail {
+		if !unicode.IsMark(r) {
+			letters++
+		}
+	}
+	return letters < mailPrefixFloor
+}
+
 // normalizeQuery is what Search hands the splitter.
 //
 // Leading whitespace is the reader's slip; TRAILING whitespace is a statement —

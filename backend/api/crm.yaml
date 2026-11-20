@@ -19238,6 +19238,16 @@ paths:
             `-word`, quotes), where `-acme` would reach every other company in the workspace.
             Honoured by both page shapes, so a contact a grouped page shows is also on the ranked
             list narrowed to `types=contact`.
+        - name: typeahead
+          in: query
+          schema: { type: boolean, default: false }
+          description: >
+            The caller is a search box answering each keystroke. Messages (`activity`) are left
+            out of the answer while the word being typed is under 4 letters, because a short
+            prefix matches a large share of all messages and ranking them is the slow part.
+            Every other type is searched from the first letter as usual. A query that ends in a
+            finished word, or uses the websearch operators, has no word being typed and keeps its
+            messages.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:

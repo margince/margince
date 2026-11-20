@@ -77,6 +77,7 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	}
 	in.PerType = params.PerType
 	in.WithEmployees = params.WithEmployees != nil && *params.WithEmployees
+	in.Typeahead = params.Typeahead != nil && *params.Typeahead
 	in.NearMatches = true
 
 	page, err := h.store.Search(r.Context(), in)

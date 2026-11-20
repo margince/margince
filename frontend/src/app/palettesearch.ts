@@ -23,6 +23,7 @@ import {
 import type { Route } from "../lib/router";
 import {
   bestIdentifierMatch,
+  type CoreSearchHitType,
   groupSearchHits,
   type SearchHitType,
   searchGroupHeading,
@@ -53,6 +54,30 @@ export const PALETTE_PER_TYPE = 3;
 
 // How many hits the palette offers once the reader narrows to one type.
 export const PALETTE_PER_KIND = 8;
+
+// The letters the server needs in the word being typed before it ranks mail.
+const MAIL_PREFIX_FLOOR = 4;
+
+// Whether the server leaves mail out of a palette answer for `typed`: the last
+// word is a fragment under the floor. A query using the search operators has no
+// fragment, so it keeps its mail, as the server's own split does.
+export function mailLeftOut(typed: string): boolean {
+  const words = typed.trim().split(/\s+/);
+  const last = words.at(-1) ?? "";
+  if (typed.includes('"') || words.some((w) => w.startsWith("-"))) return false;
+  if (words.some((w) => w.toLowerCase() === "or")) return false;
+  const letters = Array.from(last.normalize("NFC")).length;
+  return letters > 0 && letters < MAIL_PREFIX_FLOOR;
+}
+
+// The type the list may be narrowed to for `typed`: a narrowing to mail waits
+// for the word to be long enough, as a list of nothing would read as "no matches".
+export function narrowingFor(
+  narrowedTo: CoreSearchHitType | null,
+  typed: string,
+): CoreSearchHitType | null {
+  return narrowedTo === "activity" && mailLeftOut(typed) ? null : narrowedTo;
+}
 
 // Whether an answer for `asked` still speaks to `typed`: one extends the other,
 // as typing on or backspacing does, rather than the box having changed subject.
@@ -116,6 +141,7 @@ export function useSearchCommands(
             q: settled,
             per_type: kind ? PALETTE_PER_KIND : PALETTE_PER_TYPE,
             with_employees: true,
+            typeahead: true,
             ...(kind ? { types: [kind] } : {}),
           },
         },
