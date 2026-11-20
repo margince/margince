@@ -127,6 +127,16 @@ the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per
 `per_type=5`. They show an activity that carries an
 `email_summary` under `Emails`, separate from the calls and notes beside it.
 
+A grouped page reads a type's own matches first. For contacts, companies and leads, these are
+the rows the name index finds, plus a whole identifier or one that earns an identifier tier
+(`withOwnMatches`). A row found only by a contained address or domain scores 0. A company found
+that way scores at most its domain similarity share, a tenth. The employer arm scores below 0.
+When the own matches fill the `N + 1` rows above that score, the statement skips the
+contained-address scans and the employer arm. Postgres reads that check as a constant and never
+runs their plans, so a two-letter prefix no longer reads every address that contains it. A query
+with the web-search operators reads every branch whole, because a negated word ranks rows the
+query refuses. The ranked page reads every branch whole.
+
 **`typeahead=true` leaves mail out of a short prefix.** A short prefix matches a large share of
 all activities, and ranking them is slow. The `⌘K` menu sends `typeahead=true`. `Store.Search` then
 drops the `activity` type for a word under four letters (`fragmentTooShortForMail`, counted in runes). Other types are searched from the first letter. A
