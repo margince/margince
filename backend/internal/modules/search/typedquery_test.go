@@ -124,7 +124,7 @@ func TestSearchBindsNoParameterItsSQLDoesNotUse(t *testing.T) {
 		t.Fatal("no branch was admitted, so this proves nothing about the SQL")
 	}
 
-	sql := strings.Join(branches, " ")
+	sql := unionSQL(branches)
 	for i := range bound {
 		placeholder := fmt.Sprintf("$%d", i+1)
 		if !strings.Contains(sql, placeholder) {
@@ -167,7 +167,7 @@ func TestTheBranchSQLCarriesBothHalvesOfTheQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
-	sql := strings.Join(branches, " ")
+	sql := unionSQL(branches)
 
 	if !strings.Contains(sql, "websearch_to_tsquery") {
 		t.Fatal("the finished words are no longer matched whole")
@@ -205,7 +205,7 @@ func TestAQueryWithNoFragmentGetsNoPrefixArm(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
-	sql := strings.Join(branches, " ")
+	sql := unionSQL(branches)
 
 	if strings.Contains(sql, "':*'") {
 		t.Fatal("a prefix arm was built for a query with no fragment; it renders '':* and raises a tsquery syntax error")
@@ -262,7 +262,7 @@ func TestMailMatchesTheFragmentWholeAndRecordsByPrefix(t *testing.T) {
 		if err != nil {
 			t.Fatalf("building the %s branch SQL: %v", entity, err)
 		}
-		return strings.Join(branches, " "), tailPos
+		return unionSQL(branches), tailPos
 	}
 
 	mail, tailPos := branchSQL("activity")
@@ -329,7 +329,7 @@ func TestMailRanksABoundedSampleAndRecordsRankEveryMatch(t *testing.T) {
 		if err != nil {
 			t.Fatalf("building the %s branch SQL: %v", entity, err)
 		}
-		sql := strings.Join(branches, " ")
+		sql := unionSQL(branches)
 		sampled := false
 		for pos, v := range bound {
 			if n, ok := v.(int); ok && n == activityRankSample && strings.Contains(sql, fmt.Sprintf("LIMIT $%d)", pos+1)) {
