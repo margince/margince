@@ -51,7 +51,14 @@ type Routes = Parameters<typeof installFetchStub>[0];
 
 function openList(listID: string, routes: Routes) {
   installFetchStub({
-    "GET /me": listsMe(true),
+    // The bar's verbs ask the grants their server admission asks.
+    "GET /me": listsMe(true, [], {
+      allow: {
+        list: ["read", "create", "update", "delete"],
+        company: ["read", "update", "delete"],
+        activity: ["read", "create"],
+      },
+    }),
     [`GET /lists/${LIVE_ID}`]: () => jsonResponse(liveList),
     [`GET /lists/${SHORTLIST_ID}`]: () => jsonResponse(shortlist),
     [`GET /lists/${LIVE_ID}/history`]: () =>

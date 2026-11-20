@@ -295,7 +295,7 @@ it("distinguishes an empty window from a refused read", async () => {
   mount(
     {
       title: "Forbidden",
-      detail: "automation.update: permission denied",
+      detail: "your role does not grant update on automation",
       status: 403,
       code: "permission_denied",
     },
@@ -304,9 +304,11 @@ it("distinguishes an empty window from a refused read", async () => {
   await waitFor(() =>
     expect(screen.getByText(en["common.permissionDenied"])).toBeTruthy(),
   );
-  // The RBAC object and verb the gate wrapped its refusal with never reach the
-  // reader: that is the authority model's shape, not an explanation.
-  expect(screen.queryByText(/automation.update/)).toBeNull();
+  // The server's sentence about the grant never reaches the reader: that is
+  // the authority model's shape, not an explanation.
+  expect(
+    screen.queryByText(/your role does not grant update on automation/),
+  ).toBeNull();
 });
 
 it("names each arrow and switches the one table between tasks and days", async () => {

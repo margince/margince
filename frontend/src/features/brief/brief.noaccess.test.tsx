@@ -23,7 +23,7 @@ function refused() {
     {
       status: 403,
       code: "permission_denied",
-      detail: "deal.read: permission denied",
+      detail: "your role does not grant read on deal",
     },
     403,
   );

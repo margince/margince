@@ -47839,6 +47839,15 @@ components:
             `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
             The `Retry-After` header says how many seconds until the call can succeed.
 
+            A 403 that the caller's roles answer carries `missing_grant`: what those roles
+            lack, in the notation the tool table uses for a tool's requirement, with
+            alternatives joined by `,`. An object action (`deal.update`, `deal.create|update`)
+            is a grant an admin adds to a role. `admin` asks for the admin role, and
+            `scope:team` for a role whose row scope reaches team records or more. Each is
+            lifted by an admin changing the caller's roles. A refusal that no role change
+            lifts, such as a Deal Room participant's or a record kind the installation
+            switched off, carries none.
+
     # ---- pagination envelope ----
     PageInfo:
       type: object
@@ -59752,9 +59761,10 @@ components:
           x-extensible-enum: true
           readOnly: true
           description: >-
-            Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`),
-            so the answer goes back the way the message came in. Null for every other type, and for
-            a reply with no source of one of these kinds.
+            Task only. For a `reply` or `reach_out` task, the kind of the activity it follows
+            (`source_activity_id`), so the answer goes back the way the conversation went: a promise
+            made in a mail is kept by mail. Null for every other type, and for a task with no source
+            of one of these kinds.
         email_target:
           $ref: '#/components/schemas/ActivityEmailTarget'
         source:
@@ -68182,8 +68192,9 @@ components:
           enum: [workspace]
           x-extensible-enum: true
           description: >-
-            Customer identity (contact, company, lead, deal) is readable by every seat that
-            holds the object grant; row scope governs projects and writes.
+            Customer identity and the work done for it (contact, company, lead, deal,
+            project) is readable by every seat that holds the object grant; row scope
+            governs writes.
         objects:
           type: object
           additionalProperties:

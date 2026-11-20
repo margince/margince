@@ -183,6 +183,15 @@ describe("history field labels", () => {
     );
   });
 
+  it("names each stored address column with the Address dialog's word", () => {
+    expect(historyFieldLabel("address_line1", (k) => en[k])).toBe(
+      "Street and number",
+    );
+    expect(historyFieldLabel("address_postal_code", (k) => en[k])).toBe(
+      "Postal code",
+    );
+  });
+
   it("names a key the catalogs actually carry", () => {
     const missing = historyFieldLabelled()
       .map((field) => historyFieldLabelKey(field))

@@ -242,7 +242,10 @@ describe("AccessPreviewPanel", () => {
       </Providers>,
     );
 
-    await screen.findByText(en["users.access.identity"]);
+    // Only the kinds the server granted read on, never a fixed list.
+    await screen.findByText(
+      en["users.access.reads"].replace("{kinds}", "contacts and deals"),
+    );
     // The team the scope names, not just the word "team": a preview that lost
     // the roster would still read as a team scope.
     expect(
@@ -286,7 +289,11 @@ describe("AccessPreviewPanel", () => {
   // and it must not read as if it edited every record.
   it("says a team scope with no team edits only their own records", async () => {
     const { fetchMock } = backend({
-      preview: { row_scope: "team", teams: [] },
+      preview: {
+        row_scope: "team",
+        teams: [],
+        objects: { contact: { read: true, update: true } },
+      },
     });
     vi.stubGlobal("fetch", fetchMock);
     render(

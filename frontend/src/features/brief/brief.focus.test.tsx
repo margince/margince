@@ -200,6 +200,39 @@ it("a reply to a call answers by phone, and the menu still offers Email", async 
   expect(email.getAttribute("href")).toBe("mailto:alice@example.com");
 });
 
+it("a reach out on a promise made by mail drafts the mail, and Call waits in the menu", async () => {
+  showLead(LEAD, "reach_out", vi.fn(), "email");
+  const user = userEvent.setup();
+
+  const card = within(await screen.findByRole("article"));
+  await card.findByRole("button", { name: en["task.next.draftEmail"] });
+  expect(card.queryByRole("link", { name: en["record.verb.call"] })).toBeNull();
+  expect(
+    card.queryByRole("button", { name: en["task.next.copyNumber"] }),
+  ).toBeNull();
+  await user.click(card.getByRole("button", { name: /^More actions for/ }));
+  const dial = await screen.findByRole("link", {
+    name: en["record.verb.call"],
+  });
+  expect(dial.getAttribute("href")).toBe("tel:+491517654321");
+});
+
+it("a reach out after a call leads with a filled Call, and Email waits in the menu", async () => {
+  showLead(LEAD, "reach_out", vi.fn(), "call");
+  const user = userEvent.setup();
+
+  const card = within(await screen.findByRole("article"));
+  const dial = await card.findByRole("link", { name: en["record.verb.call"] });
+  expect(dial.classList.contains("btn-primary")).toBe(true);
+  expect(
+    card.queryByRole("button", { name: en["task.next.draftEmail"] }),
+  ).toBeNull();
+  await user.click(card.getByRole("button", { name: /^More actions for/ }));
+  expect(
+    await screen.findByRole("button", { name: en["task.next.draftEmail"] }),
+  ).toBeTruthy();
+});
+
 // The verbs arrive after the card: the task is read, then its contact. Their
 // row holds one verb's room meanwhile, so the card does not grow under a reader.
 it("a task lead holds its verbs' room until the task and its contact are read", async () => {

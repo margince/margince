@@ -278,6 +278,7 @@ function LeadsWorkbench({
         action={
           <CreateAction
             label={t("create.lead")}
+            requires={{ object: "lead", action: "create" }}
             invalidate="leads"
             screen="leads"
             listCreate={{ open: startCreating }}

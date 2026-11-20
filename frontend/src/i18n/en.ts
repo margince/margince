@@ -2452,6 +2452,11 @@ export const en = {
   "history.undo.redo": "Redo",
   "history.undo.busy": "Undoing change…",
   "history.undo.confirmTitle": "Undo this change?",
+  "history.undo.redoConfirmTitle": "Redo this change?",
+  "history.undo.redoConfirmBody_one":
+    "{count} field goes back to its value before the undo:",
+  "history.undo.redoConfirmBody_other":
+    "{count} fields go back to their values before the undo:",
   "history.undo.confirmEdgeBody":
     "This changes the link with {other}. Both records stay; only the link between them changes.",
   "history.undo.confirmCreateBody":
@@ -3123,6 +3128,8 @@ export const en = {
     "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
+  "record.accessUnknown":
+    "Your access could not be read. Reload the page to check it again.",
   "contact.attachRefused":
     "You can only read this contact. Ask its owner for write access.",
   "record.logActivityRefused":
@@ -3147,6 +3154,8 @@ export const en = {
   "share.ceiling.noWider": "no wider",
   "share.ceiling.post": ".",
   "share.unknownRecord": "This record cannot be shared.",
+  "share.missingRecord":
+    "This record does not exist, or it is not shared with you.",
   "share.grantAccess": "Grant access",
   "share.subject": "Person or team",
   "share.holdsRead": "Has read",
@@ -7519,12 +7528,25 @@ export const en = {
   "create.companyName": "Company",
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
-    "Creates a new company unless one is picked from the list.",
+    "Links the company with this name, or creates it if there is none.",
   "create.companyPrefilled":
     "Matched to an existing company by the work email domain.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
   "create.amountNegative": "Enter an amount of zero or more.",
+  "create.emailNamesNoOne":
+    "This address belongs to a sending system that nobody answers. Enter the contact’s own address.",
+  "create.addressErased":
+    "This value was erased at its owner’s request and cannot be stored again.",
+  "create.linkedinMalformed":
+    "This is not a link. Paste the address of the LinkedIn page.",
+  "create.linkedinNotLinkedin": "Enter a link to a page on linkedin.com.",
+  "create.linkedinNotProfile":
+    "Enter a link to someone’s own profile, such as linkedin.com/in/name.",
+  "create.dateRangeReversed":
+    "The end date is before the start date. Choose a later end date.",
+  "create.countryCodeInvalid":
+    "Enter the country as its two-letter code, such as DE or US.",
   "create.referenceNotFound":
     "This record no longer exists, or you cannot see it.",
   "create.currency": "Currency",
@@ -7533,6 +7555,7 @@ export const en = {
   "create.expectedClose": "Expected close",
 
   "keyCode.label": "Key: {key}",
+  "field.rowRepeated": "{value} is in two rows. Remove one of them.",
   "field.addEmail": "Add email",
   "field.addPhone": "Add phone",
   "field.editEmails": "Edit emails",
@@ -14427,10 +14450,15 @@ export const en = {
   "settings.home.seatLabel": "Your seat",
   "settings.home.seat.full": "Full seat: changes allowed",
   "settings.home.seat.read": "Read-only seat: view only",
-  "settings.home.reachLabel": "Visible records",
-  "settings.home.reach.own": "Your own records",
-  "settings.home.reach.team": "Your team\u2019s records",
-  "settings.home.reach.all": "All company records",
+  "settings.home.reachLabel": "Records you can change",
+  "settings.home.reach.none": "None",
+  "settings.home.reach.own": "Your own",
+  "settings.home.reach.team": "Yours and your team\u2019s",
+  "settings.home.reach.all": "All in the company",
+  "settings.home.readLabel": "Records you can read",
+  "settings.home.read.some":
+    "All {kinds}, except colleagues\u2019 private ones not shared with you",
+  "settings.home.read.none": "None",
   "settings.home.access": "Your access",
   "settings.home.accessLoading": "Loading your access…",
   "settings.boundary.deniedTitle": "No access to this settings page",
@@ -15121,7 +15149,7 @@ export const en = {
   "license.check.failed":
     "The license token could not be read again. The last result stands, and the server log says why.",
   "license.counting":
-    "Full seats that are not deactivated or suspended, agents included. Read-only seats are unlimited and not counted.",
+    "Full seats that are not deactivated or suspended. Agents and read-only seats are not counted.",
   "settings.rates.fxTitle": "Currency rates",
   "settings.rates.fxIntro":
     "Exchange rates that convert foreign-currency amounts to the base currency. New rates take effect today or later. A past date works only before the currency’s first rate. A rate already in force never changes.",
@@ -15506,7 +15534,7 @@ export const en = {
   "roles.renameSubmit": "Save name",
   "roles.scopeTitle": "Whose records members change",
   "roles.scopeSub":
-    "Contacts, companies, leads and deals stay readable to every role allowed to read them. This decides what members may change, and which projects they see.",
+    "Every role allowed to read contacts, companies, leads, deals and projects reads all of them. This decides which of them members may change.",
   "roles.scope.own": "Their own",
   "roles.scope.ownSub": "Records the member owns.",
   "roles.scope.team": "Their teams’",
@@ -15711,8 +15739,9 @@ export const en = {
   "users.notArchived": "Team not archived",
   "users.teamNotChanged": "Membership not changed",
   "users.access.title": "User access",
-  "users.access.identity":
-    "Reads every contact, company, lead and deal in the company.",
+  "users.access.reads": "Reads all {kinds} in the company.",
+  "users.access.readsNone": "Reads no records.",
+  "users.access.writesNone": "Changes no records.",
   "users.access.writesAll": "Edits every record.",
   "users.access.writesTeam":
     "Edits their own records and those of the teams {teams}.",
@@ -19020,7 +19049,7 @@ export const en = {
   "contact.rail.employer": "Employer",
   "contact.rail.allCompaniesConnected":
     "All matches are already linked to this contact.",
-  "contact.rail.isCurrentEmployer": "This is their current employer",
+  "contact.rail.isPrimaryEmployer": "This is their primary employer",
   "contact.rail.markEnded": "Mark as ended",
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":
