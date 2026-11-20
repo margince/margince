@@ -6,10 +6,10 @@ package contacts
 // Noticing that a contact moved. Capture never reassigns an employer
 // (employmentedge.go), so this asks the contact's owner instead.
 //
-// The sender picks the From address and writes the signature. So the evidence
-// must name an existing company, and be newer than all that places the contact
-// at the employer we hold. Consumer domains, our own domains and our own
-// company never count.
+// Anyone can send mail. So the evidence is only mail the contact sent from an
+// address on their record, vouched for by its domain. The owner may read it.
+// It names a company the owner may see, and is newer than all that places the
+// contact at the employer we hold.
 
 import (
 	"context"
@@ -27,14 +27,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// EmployerChangeProposer puts an employer change to the contact's owner, in the
+// EmployerChangeProposer puts employer changes to the contacts' owners, in the
 // transaction that captured the evidence. Compose binds the approvals inbox;
 // nil asks nobody.
 type EmployerChangeProposer interface {
-	ProposeEmployerChangeTx(ctx context.Context, tx pgx.Tx, change approvalsubject.EmployerChange) error
+	ProposeEmployerChangesTx(ctx context.Context, tx pgx.Tx, changes []approvalsubject.EmployerChange) error
 }
 
 // WithEmployerChangeProposer wires the inbox an employer change is asked in.
@@ -51,7 +50,8 @@ func (h Handlers) WithEmployerChangeProposer(proposer EmployerChangeProposer) Ha
 }
 
 // employerSignal is one captured mail that places a contact at a company:
-// through its mail domain, or through the company its signature names.
+// through its mail domain, or through the company its signature names. domain
+// is folded, and empty for a signature.
 type employerSignal struct {
 	contact   ids.ContactID
 	company   ids.CompanyID
@@ -59,6 +59,14 @@ type employerSignal struct {
 	domain    string
 	signature string
 }
+
+// domainEmployerChangeCap bounds the questions one settled domain raises in
+// its request. A contact past it is asked when they next write.
+const domainEmployerChangeCap = 20
+
+// senderCheckAuthenticated is what the card shows for mail whose sender's
+// domain vouched for the From address.
+const senderCheckAuthenticated = "authenticated"
 
 // capturedEmployerSignal is the mail an ensure is filing, as evidence for the
 // company its domain names.
@@ -72,23 +80,37 @@ func (s *Store) offerEmployerChangeTx(ctx context.Context, tx pgx.Tx, signal emp
 	if s.employerChanges == nil || signal.activity.IsZero() {
 		return nil
 	}
-	// The question first: most mail comes from the employer on record, and
-	// that answer costs one statement.
-	change, found, err := readEmployerChange(ctx, tx, signal)
-	if err != nil || !found {
-		return err
-	}
 	if signal.domain != "" {
 		ours, err := s.domainNamesNoEmployer(ctx, tx, signal.domain)
 		if err != nil || ours {
 			return err
 		}
 	}
-	if seat, err := contactIsSeatTx(ctx, tx, signal.contact.UUID); err != nil || seat {
+	change, found, err := employerChangeFor(ctx, tx, signal)
+	if err != nil || !found {
 		return err
 	}
+	return s.employerChanges.ProposeEmployerChangesTx(ctx, tx, []approvalsubject.EmployerChange{change})
+}
+
+// employerChangeFor is the question one signal raises, once its domain is
+// known to be a business one.
+func employerChangeFor(ctx context.Context, tx pgx.Tx, signal employerSignal) (approvalsubject.EmployerChange, bool, error) {
+	// The question first: most mail comes from the employer on record, and
+	// that answer costs one statement.
+	change, found, err := readEmployerChange(ctx, tx, signal)
+	if err != nil || !found {
+		return change, false, err
+	}
+	if seat, err := contactIsSeatTx(ctx, tx, signal.contact.UUID); err != nil || seat {
+		return change, false, err
+	}
+	sees, err := ownerSeesCompanies(ctx, tx, change)
+	if err != nil || !sees {
+		return change, false, err
+	}
 	change.Domain, change.Signature = signal.domain, signal.signature
-	return s.employerChanges.ProposeEmployerChangeTx(ctx, tx, change)
+	return change, true, nil
 }
 
 // domainNamesNoEmployer reports a consumer domain or one of our own.
@@ -104,22 +126,50 @@ func (s *Store) domainNamesNoEmployer(ctx context.Context, tx pgx.Tx, domain str
 	return own.CoversDomain(domain), nil
 }
 
+// ownerSeesCompanies reports whether the owner may open both companies the
+// card names. A card never shows its reader a company they could not open.
+func ownerSeesCompanies(ctx context.Context, tx pgx.Tx, change approvalsubject.EmployerChange) (bool, error) {
+	seat, err := auth.SeatPrincipal(ctx, tx, change.OwnerID)
+	if err != nil {
+		return false, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	named := arg([]ids.UUID{change.FromCompanyID, change.ToCompanyID})
+	visible := auth.VisiblePredicate(seat, companyEntity, arg)("")
+	var seen int
+	if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT count(*) FROM company WHERE id = ANY($%d) AND %s`, named, visible),
+		args...).Scan(&seen); err != nil {
+		return false, fmt.Errorf("contacts: reading whether the owner may open the companies a question names: %w", err)
+	}
+	return seen == 2, nil
+}
+
 // employerChangeSQL reads the question for one signal, or no row when there is
-// none to ask. $1 is the contact, $2 the company, $3 the mail, $4 the clock skew.
+// none to ask. $1 is the contact, $2 the company, $3 the mail, $4 the clock
+// skew, $5 the signal's domain or ”.
 //
-// A header dated ahead of our clock is forged. The mail must postdate each date
-// the current employment carries, its creation included. A backfill reads old
-// mail after the record was set up, and an old address must not undo it. The
-// mail must also be newer than any the contact sent from the employer's domains.
+// The mail is inbound, its sender's domain vouched for it, and its From is an
+// address of this contact on the signal's domain. The owner may read it. A
+// header dated ahead of our clock is forged. The mail postdates each date the
+// current employment carries, its creation included, and any mail the contact
+// sent from the employer's domains.
 var employerChangeSQL = `
-SELECT p.owner_id, p.full_name, cur.id, cur.company_id, curco.display_name, target.display_name, a.occurred_at
+SELECT p.owner_id, p.full_name, cur.id, cur.company_id, curco.display_name, target.display_name, a.occurred_at,
+       sender.address
   FROM contact p
   JOIN relationship cur ON cur.contact_id = p.id AND ` + employment.LiveCurrentPrimarySQL("cur") + `
   JOIN company curco ON curco.id = cur.company_id
   JOIN company target ON target.id = $2
-  JOIN activity a ON a.id = $3 AND a.restricted_at IS NULL
+  JOIN activity a ON a.id = $3 AND a.archived_at IS NULL AND a.direction = 'inbound' AND a.inbound_sender_authenticated
+  JOIN LATERAL (SELECT fp.address FROM activity_participant fp
+                  JOIN contact_email fe ON fe.contact_id = p.id AND fe.archived_at IS NULL AND lower(fe.email) = lower(fp.address)
+                 WHERE fp.activity_id = a.id AND fp.role = 'from'
+                   AND ($5 = '' OR ` + owndomain.CoversSQL("fe.email_domain_folded", "$5") + `)
+                 ORDER BY fp.address LIMIT 1) sender ON true
  WHERE p.id = $1 AND p.archived_at IS NULL AND p.merged_into_id IS NULL AND p.owner_id IS NOT NULL
    AND target.archived_at IS NULL AND target.merged_into_id IS NULL AND NOT target.is_anchor
+   AND ` + SignatureSourceEligible("p", "a") + `
    AND ` + occurredday.BegunSQL("a", "now() + $4::interval") + `
    AND a.occurred_at > -- occurred_at raw: captured mail is an instant, ordered against the employment's own stamps
        greatest(cur.created_at, cur.first_observed_at, cur.started_at::timestamp AT TIME ZONE 'UTC')
@@ -136,11 +186,13 @@ SELECT p.owner_id, p.full_name, cur.id, cur.company_id, curco.display_name, targ
 func readEmployerChange(ctx context.Context, tx pgx.Tx, signal employerSignal) (approvalsubject.EmployerChange, bool, error) {
 	change := approvalsubject.EmployerChange{
 		ContactID: signal.contact.UUID, ToCompanyID: signal.company.UUID, ActivityID: signal.activity,
+		SenderCheck: senderCheckAuthenticated,
 	}
 	var observed time.Time
-	err := tx.QueryRow(ctx, employerChangeSQL, signal.contact, signal.company, signal.activity, mailClockSkewAllowance).Scan(
+	err := tx.QueryRow(ctx, employerChangeSQL, signal.contact, signal.company, signal.activity, mailClockSkewAllowance,
+		signal.domain).Scan(
 		&change.OwnerID, &change.ContactName, &change.FromRelationshipID, &change.FromCompanyID,
-		&change.FromCompanyName, &change.ToCompanyName, &observed)
+		&change.FromCompanyName, &change.ToCompanyName, &observed, &change.FromAddress)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return change, false, nil
 	}
@@ -161,25 +213,31 @@ func (s *Store) plantDomainEmploymentAndAsk(ctx context.Context, tx pgx.Tx, doma
 	return planted, s.offerDomainEmployerChangesTx(ctx, tx, domain, companyID)
 }
 
-// offerDomainEmployerChangesTx asks about every contact on a just-settled
-// domain whose current employer is another company. The planter employed the
-// rest. Each contact's newest mail from the domain is the evidence.
+// offerDomainEmployerChangesTx asks about the contacts on a just-settled domain
+// whose current employer is another company, up to domainEmployerChangeCap.
+// The planter employed the rest. Each contact's newest mail from the domain is
+// the evidence. The domain is judged once, and the inbox is asked once.
 func (s *Store) offerDomainEmployerChangesTx(ctx context.Context, tx pgx.Tx, domain string, companyID ids.CompanyID) error {
 	if s.employerChanges == nil {
 		return nil
 	}
 	folded := owndomain.Fold(domain)
+	if ours, err := s.domainNamesNoEmployer(ctx, tx, folded); err != nil || ours {
+		return err
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, newest.id FROM contact p
 		  JOIN relationship cur ON cur.contact_id = p.id AND cur.company_id <> $2 AND `+employment.LiveCurrentPrimarySQL("cur")+`
 		  JOIN LATERAL (SELECT ev.id FROM contact_email pe
 		                  JOIN activity_participant ap ON lower(ap.address) = lower(pe.email) AND ap.role = 'from'
-		                  JOIN activity ev ON ev.id = ap.activity_id AND ev.restricted_at IS NULL
+		                  JOIN activity ev ON ev.id = ap.activity_id AND ev.archived_at IS NULL
+		                   AND ev.direction = 'inbound' AND ev.inbound_sender_authenticated
 		                 WHERE pe.contact_id = p.id AND pe.archived_at IS NULL
 		                   AND `+owndomain.CoversSQL("pe.email_domain_folded", "$1")+`
 		                 ORDER BY ev.occurred_at DESC, ev.id DESC LIMIT 1) newest ON true
 		 WHERE `+domainEmploymentCandidateSQL("p", "$1")+`
-		 ORDER BY p.id`, folded, companyID)
+		 ORDER BY p.id
+		 LIMIT $3`, folded, companyID, domainEmployerChangeCap)
 	if err != nil {
 		return fmt.Errorf("contacts: reading the newest mail on %s: %w", domain, err)
 	}
@@ -190,12 +248,20 @@ func (s *Store) offerDomainEmployerChangesTx(ctx context.Context, tx pgx.Tx, dom
 	if err != nil {
 		return fmt.Errorf("contacts: reading the newest mail on %s: %w", domain, err)
 	}
+	var changes []approvalsubject.EmployerChange
 	for _, signal := range signals {
-		if err := s.offerEmployerChangeTx(ctx, tx, signal); err != nil {
+		change, found, err := employerChangeFor(ctx, tx, signal)
+		if err != nil {
 			return err
 		}
+		if found {
+			changes = append(changes, change)
+		}
 	}
-	return nil
+	if len(changes) == 0 {
+		return nil
+	}
+	return s.employerChanges.ProposeEmployerChangesTx(ctx, tx, changes)
 }
 
 // offerSignatureEmployerTx asks when a newer signature names one company we
@@ -220,67 +286,3 @@ func (s *Store) offerSignatureEmployerTx(ctx context.Context, tx pgx.Tx, contact
 }
 
 func isCompanyName(f SignatureField) bool { return f.Name == fieldCompanyName }
-
-// ApplyEmployerChangeTx writes an accepted employer change as the decider. The
-// new company becomes the current primary employer. The old employment ends as
-// former, dated by the mail when that date is after its start. It answers false
-// and writes nothing when the old employment is no longer the current one.
-func (s *Store) ApplyEmployerChangeTx(ctx context.Context, tx pgx.Tx, change approvalsubject.EmployerChange) (bool, error) {
-	if err := auth.HoldWritableLive(ctx, tx, contactEntity, change.ContactID); err != nil {
-		return false, err
-	}
-	if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, change.ContactID.String()); err != nil {
-		return false, err
-	}
-	var current ids.UUID
-	var started *time.Time
-	err := tx.QueryRow(ctx, `SELECT r.id, r.started_at FROM relationship r WHERE r.contact_id = $1 AND `+
-		employment.LiveCurrentPrimarySQL("r"), change.ContactID).Scan(&current, &started)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && current != change.FromRelationshipID) {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("contacts: reading the employment an employer change ends: %w", err)
-	}
-	if err := auth.EnsureLinkTarget(ctx, tx, companyEntity, change.ToCompanyID); err != nil {
-		return false, err
-	}
-	live, err := liveEmploymentAt(ctx, tx, change.ContactID, change.ToCompanyID)
-	if err != nil {
-		return false, err
-	}
-	if err := requireEmployerWrite(ctx, live); err != nil {
-		return false, err
-	}
-	if err := auth.Require(ctx, tableRelationship, principal.ActionUpdate); err != nil {
-		return false, err
-	}
-	if _, _, err := s.employAt(ctx, tx, change.ContactID, change.ToCompanyID, "", employerChangeSource); err != nil {
-		return false, err
-	}
-	return true, s.endEmployment(ctx, tx, change, started)
-}
-
-// endEmployment marks the old employment former. The mail's day is the latest
-// the old job can have ended, so it is the end date unless it falls before the
-// start.
-func (s *Store) endEmployment(ctx context.Context, tx pgx.Tx, change approvalsubject.EmployerChange, started *time.Time) error {
-	capturedBy, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return err
-	}
-	former, primary := employmentFormer, false
-	patch := UpdateRelationshipInput{
-		EmploymentStatus: &former, IsCurrentPrimary: &primary,
-		Evidence: map[string]any{auditKeySource: employerChangeSource, "activity_id": change.ActivityID},
-	}
-	if ended, err := time.Parse(time.DateOnly, change.ObservedOn); err == nil && (started == nil || !ended.Before(*started)) {
-		patch.EndedAt = &ended
-	}
-	_, err = s.updateRelationshipInTx(ctx, tx, change.FromRelationshipID, patch, capturedBy)
-	return err
-}
-
-// employerChangeSource is the source of an employment an accepted employer
-// change starts, and the audit evidence on the one it ends.
-const employerChangeSource = approvalsubject.KindEmployerChange

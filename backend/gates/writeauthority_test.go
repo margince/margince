@@ -97,6 +97,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:ownerSeesCompanies":            "Asks whether the contact's OWNER may open the two companies an employer question names, so the card never shows them a name they could not read. It narrows what is staged; the accept writes through EnsureLinkTarget and the relationship writers, and no company changes.",
 	"internal/modules/capture:companyOfDomainTx":              "names the company a domain belongs to in a refusal, and only when the caller may read it. The write is a capture list entry; no company changes.",
 	"internal/modules/activities:ownCompanyTestScopes":        "Read scopes classify a meeting counterparty; the only possible mutation is on the activity. No company is changed.",
 	"internal/modules/activities:readableContactScope":        "Read scopes classify visible meeting participants. The outcome writer gates the activity separately and changes no contact.",

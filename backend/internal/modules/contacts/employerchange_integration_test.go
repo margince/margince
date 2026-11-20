@@ -25,10 +25,12 @@ import (
 // askedChanges records the questions a store would put to an owner.
 type askedChanges struct {
 	asked []approvalsubject.EmployerChange
+	calls int
 }
 
-func (a *askedChanges) ProposeEmployerChangeTx(_ context.Context, _ pgx.Tx, change approvalsubject.EmployerChange) error {
-	a.asked = append(a.asked, change)
+func (a *askedChanges) ProposeEmployerChangesTx(_ context.Context, _ pgx.Tx, changes []approvalsubject.EmployerChange) error {
+	a.asked = append(a.asked, changes...)
+	a.calls++
 	return nil
 }
 
@@ -83,11 +85,35 @@ func (m movedContact) after(seconds int) time.Time {
 	return m.employmentMade.Add(time.Duration(seconds) * time.Second)
 }
 
+// ensureMail captures one message the address sent, which its domain vouched
+// for, as capture records it.
 func (e *dedupeEnv) ensureMail(ctx context.Context, t *testing.T, email, domain string, at time.Time) {
 	t.Helper()
-	if _, err := e.store.EnsureCounterparty(ctx, e.datedEnsureInput(ctx, t, email, domain, at)); err != nil {
+	mail := e.datedEnsureInput(ctx, t, email, domain, at)
+	e.execTx(ctx, t, `UPDATE activity SET inbound_sender_authenticated = true WHERE id = $1`, mail.ActivityID)
+	if _, err := e.store.EnsureCounterparty(ctx, mail); err != nil {
 		t.Fatalf("ensuring mail from %s: %v", email, err)
 	}
+}
+
+func (e *dedupeEnv) execTx(ctx context.Context, t *testing.T, sql string, args ...any) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, sql, args...)
+		return err
+	}); err != nil {
+		t.Fatalf("%s: %v", sql, err)
+	}
+}
+
+// signatureFrom is a signature source Ann sent from address, vouched for by its
+// domain or not.
+func (e *dedupeEnv) signatureFrom(ctx context.Context, t *testing.T, m movedContact, address string, verified bool) ids.UUID {
+	t.Helper()
+	source := e.openSignatureSource(ctx, t, m.contact)
+	e.execTx(ctx, t, `UPDATE activity_participant SET address = $2 WHERE activity_id = $1`, source, address)
+	e.execTx(ctx, t, `UPDATE activity SET inbound_sender_authenticated = $2 WHERE id = $1`, source, verified)
+	return source
 }
 
 func requireAsked(t *testing.T, asked *askedChanges, want int) {
@@ -228,14 +254,14 @@ func TestANewerSignatureNamingAnotherCompanyAsksTheOwner(t *testing.T) {
 	m := e.seedMovedContact(ctx, t)
 
 	for _, name := range []string{"Oldco", "Nobody Ltd"} {
-		if _, err := e.store.ApplySignatureFields(ctx, m.contact, e.openSignatureSource(ctx, t, m.contact),
+		if _, err := e.store.ApplySignatureFields(ctx, m.contact, e.signatureFrom(ctx, t, m, "ann@gmail.com", true),
 			[]SignatureField{companyNameField(name)}, true); err != nil {
 			t.Fatalf("applying a signature naming %s: %v", name, err)
 		}
 	}
 	requireAsked(t, asked, 0)
 
-	if _, err := e.store.ApplySignatureFields(ctx, m.contact, e.openSignatureSource(ctx, t, m.contact),
+	if _, err := e.store.ApplySignatureFields(ctx, m.contact, e.signatureFrom(ctx, t, m, "ann@gmail.com", true),
 		[]SignatureField{companyNameField("Newco")}, true); err != nil {
 		t.Fatalf("applying a signature naming Newco: %v", err)
 	}
@@ -250,13 +276,7 @@ func TestASignatureSentFromTheEmployerHeldAsksNobody(t *testing.T) {
 	asked := e.askingStore()
 	ctx := e.as()
 	m := e.seedMovedContact(ctx, t)
-	source := e.openSignatureSource(ctx, t, m.contact)
-	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE activity_participant SET address = 'ann@oldco.test' WHERE activity_id = $1`, source)
-		return err
-	}); err != nil {
-		t.Fatal(err)
-	}
+	source := e.signatureFrom(ctx, t, m, "ann@oldco.test", true)
 	if _, err := e.store.ApplySignatureFields(ctx, m.contact, source, []SignatureField{companyNameField("Newco")}, true); err != nil {
 		t.Fatalf("applying the signature: %v", err)
 	}
@@ -276,7 +296,7 @@ func TestASignatureNamingTheAnchorCompanyAsksNobody(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.store.ApplySignatureFields(ctx, m.contact, e.openSignatureSource(ctx, t, m.contact),
+	if _, err := e.store.ApplySignatureFields(ctx, m.contact, e.signatureFrom(ctx, t, m, "ann@gmail.com", true),
 		[]SignatureField{companyNameField("Newco")}, true); err != nil {
 		t.Fatalf("applying the signature: %v", err)
 	}
@@ -300,25 +320,38 @@ func TestAColleaguesContactAsksNobody(t *testing.T) {
 	requireAsked(t, asked, 0)
 }
 
-// A held message is out of everybody's sight, so it is no evidence to show.
-func TestAHeldMessageAsksNobody(t *testing.T) {
+// Archived mail is out of the owner's sight, so it is no evidence to show.
+func TestAnArchivedMessageAsksNobody(t *testing.T) {
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
 	m := e.seedMovedContact(ctx, t)
-	var held ids.ActivityID
-	if err := e.store.tx(ctx, func(tx pgx.Tx) (err error) {
-		held, err = seedDomainEvidence(ctx, tx, domainEvidenceFixture{
-			address: "ann@newco.test", at: m.after(30), precision: "instant", restricted: true, archived: true,
-		})
-		return err
-	}); err != nil {
-		t.Fatal(err)
+	mail := e.datedEnsureInput(ctx, t, "ann@newco.test", "newco.test", m.after(30))
+	e.execTx(ctx, t, `UPDATE activity SET inbound_sender_authenticated = true, archived_at = now() WHERE id = $1`, mail.ActivityID)
+	if _, err := e.store.EnsureCounterparty(ctx, mail); err != nil {
+		t.Fatalf("ensuring the archived mail: %v", err)
 	}
+	requireAsked(t, asked, 0)
+}
+
+// A restricted message is always archived as well (activity_restricted_is_archived),
+// so the archive filter is what keeps it out; this holds that it does.
+func TestARestrictedMessageAsksNobody(t *testing.T) {
+	e := setupDedupe(t)
+	asked := e.askingStore()
+	ctx := e.as()
+	m := e.seedMovedContact(ctx, t)
+	held := ids.New[ids.ActivityKind]()
+	e.execTx(ctx, t, `
+		INSERT INTO activity (id, kind, source, captured_by, occurred_at, direction, inbound_sender_authenticated,
+		                      restricted_at, archived_at, restricted_reason, restricted_until, retention_class, retention_class_at)
+		VALUES ($1, 'email', 'manual', 'test:held', $2, 'inbound', true,
+		        now(), now(), 'test hold', now() + interval '1 year', 'commercial_correspondence', now())`, held, m.after(30))
+	e.execTx(ctx, t, `INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'from', 'ann@newco.test')`, held)
 	mail := e.datedEnsureInput(ctx, t, "ann@newco.test", "newco.test", m.after(30))
 	mail.ActivityID = held
 	if _, err := e.store.EnsureCounterparty(ctx, mail); err != nil {
-		t.Fatalf("ensuring the held mail: %v", err)
+		t.Fatalf("ensuring the restricted mail: %v", err)
 	}
 	requireAsked(t, asked, 0)
 }

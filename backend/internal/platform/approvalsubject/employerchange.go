@@ -26,4 +26,8 @@ type EmployerChange struct {
 	ObservedOn         string   `json:"observed_on"`
 	Domain             string   `json:"domain,omitempty"`
 	Signature          string   `json:"signature,omitempty"`
+	// FromAddress is the mail's From, and SenderCheck says whether the
+	// sender's domain vouched for it.
+	FromAddress string `json:"from_address"`
+	SenderCheck string `json:"sender_check"`
 }

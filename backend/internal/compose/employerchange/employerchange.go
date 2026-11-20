@@ -38,18 +38,40 @@ const (
 // staleReason tells the decider why an accept wrote nothing.
 const staleReason = "This contact's employer changed since the question was asked, so nothing was written."
 
-// NewInbox builds the approvals service a question is staged on. Compose binds
-// it at start-up. That service is built from a contacts store, so it cannot be
-// handed to one while the store is built.
-var NewInbox func(*database.DB) *approvals.Service
+// Inbox builds the approvals service a question is staged on. Compose passes
+// it in. An interface rather than the constructor itself, because that
+// constructor is built from the contacts store this proposer is wired into.
+type Inbox interface {
+	Service(db *database.DB) *approvals.Service
+}
 
-// Proposer stages the question for the contact's owner.
-type Proposer struct{ DB *database.DB }
+// errNoInbox refuses a proposer wired without an inbox.
+var errNoInbox = errors.New("employerchange: the proposer has no approvals inbox wired")
 
-// ProposeEmployerChangeTx stages one question per contact and company. A
-// repeat joins the open one, and a pair the owner declined is not asked again.
-// An owner who can no longer be asked gets nothing, and nobody else is asked.
-func (p Proposer) ProposeEmployerChangeTx(ctx context.Context, tx pgx.Tx, change approvalsubject.EmployerChange) error {
+// Proposer stages questions for the contacts' owners.
+type Proposer struct {
+	DB    *database.DB
+	Inbox Inbox
+}
+
+// ProposeEmployerChangesTx stages one question per contact and company, on
+// one inbox for the whole call. A repeat joins the open one, and a pair the
+// owner declined is not asked again. An owner who can no longer be asked gets
+// nothing, and nobody else is asked.
+func (p Proposer) ProposeEmployerChangesTx(ctx context.Context, tx pgx.Tx, changes []approvalsubject.EmployerChange) error {
+	if p.Inbox == nil {
+		return errNoInbox
+	}
+	inbox := p.Inbox.Service(p.DB)
+	for _, change := range changes {
+		if err := stage(ctx, tx, inbox, change); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func stage(ctx context.Context, tx pgx.Tx, inbox *approvals.Service, change approvalsubject.EmployerChange) error {
 	body, err := json.Marshal(change)
 	if err != nil {
 		return fmt.Errorf("employerchange: encoding the question: %w", err)
@@ -64,7 +86,7 @@ func (p Proposer) ProposeEmployerChangeTx(ctx context.Context, tx pgx.Tx, change
 	// question instead of replacing it. A different employment to end is a
 	// new question.
 	digest := sha256.Sum256(append(identity, change.FromRelationshipID.String()...))
-	_, _, err = NewInbox(p.DB).StageUnlessDeclinedTx(principal.SystemActing(ctx, actor), tx, approvals.StageInput{
+	_, _, err = inbox.StageUnlessDeclinedTx(principal.SystemActing(ctx, actor), tx, approvals.StageInput{
 		Kind:           Kind,
 		ProposedChange: body,
 		DiffHash:       hex.EncodeToString(digest[:]),
@@ -85,11 +107,11 @@ func (p Proposer) ProposeEmployerChangeTx(ctx context.Context, tx pgx.Tx, change
 }
 
 // evidence is what the decider judges the question on: the signature line, or
-// the mail domain.
+// the From address on the mail domain.
 func evidence(change approvalsubject.EmployerChange) approvals.Evidence {
 	snippet := change.Signature
 	if snippet == "" {
-		snippet = change.Domain
+		snippet = change.FromAddress
 	}
 	return approvals.Evidence{
 		Snippet: textcut.Bytes(snippet, approvals.MaxEvidenceSnippet), SourceType: "activity", SourceID: change.ActivityID,

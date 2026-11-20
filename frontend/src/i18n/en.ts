@@ -4885,6 +4885,10 @@ export const en = {
   "approval.field.signature": "Signature line",
   "approval.field.to_company": "New employer",
   "approval.field.from_company": "Employer now",
+  "approval.field.from_address": "Sent from",
+  "approval.field.sender_check": "Sender check",
+  "approval.senderCheck.authenticated":
+    "Passed: the sender’s mail domain confirmed this address",
   "approval.linkedin.useAsTitle": "Use as job title",
   "approval.linkedin.useAsEmployer": "Use {company} as employer",
   "approval.linkedin.employerNow": "Works at {company} now",

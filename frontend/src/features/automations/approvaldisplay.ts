@@ -131,6 +131,13 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       textRow("contact_name", "approval.field.contact_name"),
       textRow("from_company_name", "approval.field.from_company"),
       textRow("to_company_name", "approval.field.to_company"),
+      textRow("from_address", "approval.field.from_address"),
+      {
+        field: "sender_check",
+        label: "approval.field.sender_check",
+        as: "enum",
+        optionLabels: { authenticated: "approval.senderCheck.authenticated" },
+      },
       textRow("domain", "approval.field.domain"),
       textRow("signature", "approval.field.signature"),
       { field: "observed_on", label: "approval.field.observed_on", as: "date" },

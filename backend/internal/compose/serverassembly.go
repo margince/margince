@@ -57,9 +57,7 @@ import (
 // approvals is a sibling of contacts and a module never imports one.
 //
 // The lead settings write through the installation settings store, and the
-// qualify dialog's "also open a deal" rides the deals store through the
-// contacts→deals edge (leadDealOpener) — both injected here for the same
-// ADR-0054 reason as the stager.
+// qualify dialog's "also open a deal" rides the deals store (leadDealOpener).
 func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
 		WithPrivacyReviewer(identity.NewServiceFor(InstallationDB(pool))).
@@ -80,7 +78,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithPartnerNextSteps(partnersteps.New(activities.NewStore(InstallationDB(pool)))).
 		WithInstallationRenamer(installationRenamer(pool)).
-		WithConsumerMail(capture.MatcherTx).WithEmployerChangeProposer(employerchange.Proposer{DB: InstallationDB(pool)})
+		WithConsumerMail(capture.MatcherTx).WithEmployerChangeProposer(employerchange.Proposer{DB: InstallationDB(pool), Inbox: approvalsInbox{}})
 }
 
 // newBookerContacts is the contact path a public booking resolves its booker

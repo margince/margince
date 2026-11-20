@@ -15,10 +15,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/employerchange"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,6 +39,13 @@ var employerOwnerPerms = principal.Permissions{
 	RowScope: principal.RowScopeAll,
 }
 
+// composedInbox is the inbox production wires: the composed approvals service.
+type composedInbox struct{}
+
+func (composedInbox) Service(db *database.DB) *approvals.Service {
+	return compose.NewApprovalsService(db)
+}
+
 type employerChangeFixture struct {
 	e            *Env
 	ctx          context.Context
@@ -48,7 +59,7 @@ func setupEmployerChange(t *testing.T) employerChangeFixture {
 	t.Helper()
 	e := Setup(t)
 	f := employerChangeFixture{e: e, ctx: e.As(e.Rep1, []ids.UUID{e.Team1}, employerOwnerPerms)}
-	f.store = e.Contacts.WithEmployerChangeProposer(employerchange.Proposer{DB: e.DB()})
+	f.store = e.Contacts.WithEmployerChangeProposer(employerchange.Proposer{DB: e.DB(), Inbox: composedInbox{}})
 	f.oldco, f.newco = f.company(t, "Oldco", "oldco.test"), f.company(t, "Newco", "newco.test")
 	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Ann Lee", Source: "manual",
@@ -87,8 +98,8 @@ func (f employerChangeFixture) company(t *testing.T, name, domain string) ids.Co
 func (f employerChangeFixture) mailFromNewco(t *testing.T, seconds int) {
 	t.Helper()
 	activity := ids.New[ids.ActivityKind]()
-	f.e.WsExec(t, `INSERT INTO activity (id, kind, subject, direction, occurred_at, source_system, source_id, source, captured_by)
-		VALUES ($1, 'email', 'hello', 'inbound', $2, 'gmail', $3, 'gmail:seed', 'connector:gmail')`,
+	f.e.WsExec(t, `INSERT INTO activity (id, kind, subject, direction, occurred_at, source_system, source_id, source, captured_by,
+		inbound_sender_authenticated) VALUES ($1, 'email', 'hello', 'inbound', $2, 'gmail', $3, 'gmail:seed', 'connector:gmail', true)`,
 		activity, f.employedAt.Add(time.Duration(seconds)*time.Second), activity.String())
 	f.e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'from', 'ann@newco.test')`, activity)
 	if _, err := f.store.EnsureCounterparty(f.ctx, contacts.EnsureCounterpartyInput{
@@ -230,5 +241,38 @@ func TestAnEditedAnswerIsRefused(t *testing.T) {
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM relationship WHERE contact_id = $1 AND company_id = $2`, f.contact, f.newco); n != 0 {
 		t.Fatalf("%d Newco employments after a refused answer, want none", n)
+	}
+}
+
+// A question is put to the owner it names. When the contact changes hands it
+// is withdrawn, and the next mail asks the new owner.
+func TestAQuestionFollowsTheContactsOwner(t *testing.T) {
+	f := setupEmployerChange(t)
+	f.mailFromNewco(t, 30)
+	rep2 := f.e.Rep2
+	if err := f.e.DB().Tx(f.ctx, func(tx pgx.Tx) error {
+		_, err := approvals.FollowContactOwnerInTx(f.ctx, tx, f.contact.UUID, &rep2)
+		return err
+	}); err != nil {
+		t.Fatalf("following the owner: %v", err)
+	}
+	if n := f.questions(t, "pending"); n != 0 {
+		t.Fatalf("%d questions still wait for the previous owner, want none", n)
+	}
+}
+
+// An accept from a member who no longer owns the contact writes nothing.
+func TestOnlyTheContactsCurrentOwnerAccepts(t *testing.T) {
+	f := setupEmployerChange(t)
+	f.mailFromNewco(t, 30)
+	rep2 := ids.From[ids.UserKind](f.e.Rep2)
+	if _, err := f.store.UpdateContact(f.ctx, f.contact, contacts.UpdateContactInput{OwnerID: &rep2}); err != nil {
+		t.Fatalf("handing Ann to a colleague: %v", err)
+	}
+	if _, err := compose.NewApprovalsServiceWithEffects(f.e.Pool).Decide(f.ctx, f.question(t), true, nil); err == nil {
+		t.Fatal("the former owner accepted the question")
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM relationship WHERE contact_id = $1 AND company_id = $2`, f.contact, f.newco); n != 0 {
+		t.Fatalf("%d Newco employments after the former owner's accept, want none", n)
 	}
 }
