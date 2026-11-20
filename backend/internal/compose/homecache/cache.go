@@ -287,16 +287,28 @@ const forgetTimeout = 5 * time.Second
 // read fresh. It follows a committed write, so a caller who has left must not
 // cancel it and leave their Home unmarked.
 func (c *Cache) Forget(ctx context.Context, readers []ids.UUID) error {
+	return c.end(ctx, readers, false)
+}
+
+// end marks the readers' answers behind a write and, when drop is set, deletes
+// them too, so the next read assembles a fresh day.
+func (c *Cache) end(ctx context.Context, readers []ids.UUID, drop bool) error {
 	if len(readers) == 0 {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), forgetTimeout)
 	defer cancel()
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
 			INSERT INTO home_read_forgotten (reader_id, at)
 			SELECT r, clock_timestamp() FROM unnest($1::uuid[]) r
-			ON CONFLICT (reader_id) DO UPDATE SET at = greatest(home_read_forgotten.at, EXCLUDED.at)`, readers)
+			ON CONFLICT (reader_id) DO UPDATE SET at = greatest(home_read_forgotten.at, EXCLUDED.at)`, readers); err != nil {
+			return err
+		}
+		if !drop {
+			return nil
+		}
+		_, err := tx.Exec(ctx, `DELETE FROM home_read_cache WHERE reader_id = ANY($1::uuid[])`, readers)
 		return err
 	})
 	if err != nil {

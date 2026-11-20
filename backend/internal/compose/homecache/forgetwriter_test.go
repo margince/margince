@@ -15,7 +15,7 @@ func TestASuccessOrAConflictEndsTheWritersCachedHome(t *testing.T) {
 		http.StatusForbidden: false, http.StatusUnprocessableEntity: false, http.StatusInternalServerError: false,
 	} {
 		forgot := 0
-		w := NewForgettingWriter(httptest.NewRecorder(), func() { forgot++ })
+		w := NewForgettingWriter(httptest.NewRecorder(), func(int) { forgot++ })
 		w.WriteHeader(status)
 		w.WriteHeader(status)
 		if wantCount := map[bool]int{true: 1, false: 0}[want]; forgot != wantCount {

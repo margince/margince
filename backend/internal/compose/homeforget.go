@@ -16,11 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// forgetHomeOnWrite marks the writer's cached Home answers as behind a write
-// that succeeds or meets a conflict, before its status is sent. A client that
-// refetches then gets the kept day flagged stale, never as if it were current. Many of a reader's
-// own writes emit no event and no audit row, so the door they all pass is where
-// this is asked.
+// forgetHomeOnWrite ends the writer's cached Home after a write that succeeds or
+// conflicts (homecache.AfterWrite says how). Many writes emit no event or audit row.
 func forgetHomeOnWrite(cache *homecache.Cache, log *slog.Logger) crmcontracts.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -30,11 +27,11 @@ func forgetHomeOnWrite(cache *homecache.Cache, log *slog.Logger) crmcontracts.Mi
 				return
 			}
 			//nolint:contextcheck // WriteHeader has net/http's signature, and the request's context is the one this write ran under.
-			next.ServeHTTP(homecache.NewForgettingWriter(w, func() {
+			next.ServeHTTP(homecache.NewForgettingWriter(w, func(status int) {
 				// The write has committed and its answer is the caller's; a
 				// failure here leaves their Home behind by at most homecache.Life
 				// plus homecache.StaleGrace.
-				if err := cache.Forget(r.Context(), writers); err != nil {
+				if err := cache.AfterWrite(r, writers, status); err != nil {
 					log.Error("ending a writer's cached Home", "err", err)
 				}
 			}), r)

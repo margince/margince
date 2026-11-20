@@ -33,6 +33,23 @@ func homeShows(t *testing.T, e *apptest.AppEnv, subject string) bool {
 	return strings.Contains(string(raw), subject)
 }
 
+// homeStaleAnswer reads Home's worklist once and says whether it is flagged
+// served_stale and whether it shows subject.
+func homeStaleAnswer(t *testing.T, e *apptest.AppEnv, subject string) (stale, shows bool) {
+	t.Helper()
+	var raw json.RawMessage
+	if status := e.Call(t, "GET", homeWorklistPath, nil, nil, &raw); status != http.StatusOK {
+		t.Fatalf("GET worklist → %d", status)
+	}
+	var day struct {
+		ServedStale *bool `json:"served_stale"`
+	}
+	if err := json.Unmarshal(raw, &day); err != nil {
+		t.Fatal(err)
+	}
+	return day.ServedStale != nil && *day.ServedStale, strings.Contains(string(raw), subject)
+}
+
 // overdueTask writes a task for the reader straight to the table: a write no
 // fence trigger and no request of theirs announces.
 func overdueTask(t *testing.T, e *apptest.AppEnv, assignee ids.UUID, subject string) {
@@ -66,8 +83,14 @@ func TestHomeOpensOnItsCachedWorklistUntilTheFenceOrTheReadersWriteEndsIt(t *tes
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Fresh Lead"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("POST contact → %d", status)
 	}
+	// The kept day is served at once, flagged stale, while it is read again behind.
+	if stale, shows := homeStaleAnswer(t, e, "Call the quiet buyer"); !stale || shows {
+		t.Errorf("after the reader's own write Home answered stale=%v with the new task shown %v, want the kept day flagged stale", stale, shows)
+	}
+	// The refresh behind it has finished once the kept answer is newer than the write.
+	waitForHomeRefresh(t, e, admin)
 	if !homeShows(t, e, "Call the quiet buyer") {
-		t.Error("the reader's own write left their Home on the answer from before it")
+		t.Error("the refresh behind the stale day never showed the new task")
 	}
 
 	overdueTask(t, e, admin, "Send the revised offer")
@@ -236,5 +259,32 @@ func TestAnUnchangedWorklistComesBackAs304AndNoSharedCacheKeepsIt(t *testing.T) 
 	if status, header, body = worklistAnswer(t, e, etag); status != http.StatusOK || header.Get("ETag") == etag ||
 		!strings.Contains(string(body), "Chase the signed order") {
 		t.Errorf("a changed day answered %d with tag %q, want 200, a new tag and the new task", status, header.Get("ETag"))
+	}
+}
+
+// waitForHomeRefresh waits until the background read behind a stale day has kept
+// its answer, which the server stamps after the reader's write. It asks the
+// database on its own clock, so a refresh that never lands fails the wait.
+func waitForHomeRefresh(t *testing.T, e *apptest.AppEnv, reader ids.UUID) {
+	t.Helper()
+	deadline := time.After(10 * time.Second)
+	tick := time.NewTicker(50 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		var current bool
+		if err := e.Owner.QueryRow(context.Background(), `
+			SELECT NOT EXISTS (SELECT 1 FROM home_read_forgotten f JOIN home_read_cache c ON c.reader_id = f.reader_id
+			                    WHERE f.reader_id = $1 AND f.at >= c.computed_at AND c.read = 'worklist')
+			       AND EXISTS (SELECT 1 FROM home_read_cache WHERE reader_id = $1 AND read = 'worklist')`, reader).Scan(&current); err != nil {
+			t.Fatal(err)
+		}
+		if current {
+			return
+		}
+		select {
+		case <-deadline:
+			t.Fatal("the refresh behind the stale day never kept a newer answer")
+		case <-tick.C:
+		}
 	}
 }
