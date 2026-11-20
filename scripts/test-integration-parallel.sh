@@ -48,7 +48,7 @@
 # as red, never as a quietly thinner lane.
 #
 # Env:
-#   INTEGRATION_JOBS        max concurrent packages (default: min(nproc, 8))
+#   INTEGRATION_JOBS        max concurrent packages (default: 3; min(nproc, 8) when CI is set)
 #   INTEGRATION_SHARD       "k/N" → run the k-th of N test slices (CI matrix)
 #   INTEGRATION_QUEUE       shard mode only: take parts from one queue the
 #                           shards share instead of a fixed slice
@@ -204,7 +204,10 @@ resolve_test_shuffle
 export IT_SHUFFLE
 
 ncpu() { sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4; }
-JOBS="${INTEGRATION_JOBS:-$(( $(ncpu) < 8 ? $(ncpu) : 8 ))}"
+# Three on a developer machine: more packages open more Postgres connections
+# than the shared dev container has memory for. CI sets the width itself.
+if [[ -n "${CI:-}" ]]; then default_jobs=$(( $(ncpu) < 8 ? $(ncpu) : 8 )); else default_jobs=3; fi
+JOBS="${INTEGRATION_JOBS:-$default_jobs}"
 
 # The lane's connection budget, declared once in scripts/lib-testdb.sh and
 # computed for THIS run's concurrency. Exports MARGINCE_TEST_POOL_MAX_CONNS and

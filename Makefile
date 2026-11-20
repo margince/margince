@@ -29,7 +29,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   check-extension-modules go-work-sum \
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze test-pkg-freeze \
-  test-dev-postgres-container test-e2e-llm-check \
+  test-dev-postgres-container test-e2e-llm-check test-gate-slot \
   test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-dist-version test-release-license-stamped \
@@ -73,7 +73,7 @@ MINIO_PORT ?= 29000
 
 .PHONY: gate-timings preflight
 .PHONY: repeat-changed-tests test-repeat-changed-tests
-.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe test-gate-slot dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -143,6 +143,7 @@ install: fe-install tools hooks
 ## one of them running these is enough.
 CHECK_TREE_GATES ?= on
 check-backend:
+	@bash scripts/gate-slot.sh acquire $@
 	@bash scripts/phase-timer.sh reset
 ifneq ($(CHECK_TREE_GATES),off)
 	@bash scripts/phase-timer.sh start "frontend contract types (gen:api)"
@@ -214,6 +215,7 @@ CHECK_LANE_LOGS ?= .tmp/check-lanes
 ## ledger, and a prerequisite would record a phase before the reset. check-fe
 ## needs `make install` first.
 check:
+	@bash scripts/gate-slot.sh acquire $@
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
 	@bash scripts/phase-timer.sh start "writers ($(CHECK_WRITERS))"
 	$(MAKE) -j1 $(CHECK_WRITERS)
@@ -272,6 +274,7 @@ check-q:
 ## + fitness tests, contract drift). A scope-aware per-task gate for backend-only
 ## work; the full `make check` adds the deterministic script gates.
 check-go:
+	@bash scripts/gate-slot.sh acquire $@
 	$(MAKE) -C backend check
 
 ## check-gates — the meta-gate lane: the waiver census, the obligations derived
@@ -399,6 +402,7 @@ scripts/composition-profile.mk: ;
 ## fails loudly if they are still missing after that. The CI frontend job runs
 ## this too.
 check-fe: fe-typecheck-composed
+	@bash scripts/gate-slot.sh acquire $@
 	@[ -d frontend/node_modules ] || { echo "check-fe: frontend/node_modules missing — run 'make install' (or 'make fe-install') first" >&2; exit 1; }
 	@bash scripts/phase-timer.sh start "frontend: core suite (ds-gates, drift, lint, unit, build)"
 	$(MAKE) frontend-check
@@ -1461,6 +1465,17 @@ test-migration-versions:
 ## one does not, so Go's test cache never replays a stale result.
 test-keep-unchanged-mtimes:
 	@bash scripts/keep-unchanged-mtimes.test.sh
+
+## gate-slot.sh gives check, check-backend, check-go, check-fe and (in backend/)
+## test-integration one of the machine's gate slots for the whole run: two by
+## default, GATE_SLOTS=N to change, 0 to switch off, never taken when CI is set.
+## The make running the recipe is the holder, so the slot frees itself when that
+## make ends, and a sub-make under it takes none.
+##
+## test-gate-slot — gate-slot.sh's own test: a third run waits, a dead
+## holder's slot is reclaimed, and CI, GATE_SLOTS=0 and a nested call take none.
+test-gate-slot:
+	@bash scripts/gate-slot.test.sh
 
 ## test-phase-timer — phase-timer.sh's own test: phases in one lane do not
 ## nest, lanes overlap, and the report gives the wall time next to the sum.

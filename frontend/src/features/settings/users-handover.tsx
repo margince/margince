@@ -33,6 +33,7 @@ const COUNTED = [
   ["list", "users.handover.lists"],
   ["sdr_handoff", "users.handover.handoffs"],
   ["record_assignment", "users.handover.responsibilities"],
+  ["mail_draft", "users.handover.drafts"],
 ] as const;
 
 /** The records in a count as one phrase ("16 deals and 4 leads"); "" for none. */
@@ -105,6 +106,8 @@ export function HandoverModal({
   const toast = useToast();
   const queryClient = useQueryClient();
   const phrase = useRecordsPhrase();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const [receiver, setReceiver] = useState("");
   // One key per opening, so a retried Hand over replays the first answer.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
@@ -135,22 +138,26 @@ export function HandoverModal({
       // Records of every kind changed owner, so every list and page reads anew.
       await queryClient.invalidateQueries();
       onClose();
+      // One message each way: a second toast would replace the first unread.
+      const discarded =
+        result.mail_draft_discarded > 0
+          ? ` ${plural("users.handover.draftsDiscarded", result.mail_draft_discarded, { count: formatNumber(result.mail_draft_discarded, locale), name: receiverName })}`
+          : "";
       const left = phrase(result.left);
       if (left) {
         toast.show(
-          t("users.handover.left", {
-            name: member.display_name,
-            records: left,
-          }),
+          `${t("users.handover.left", { name: member.display_name, records: left })}${discarded}`,
           { tone: "danger", sticky: true },
         );
         return;
       }
       const moved = phrase(result.moved);
       toast.show(
-        moved
-          ? t("users.handover.done", { records: moved, name: receiverName })
-          : t("users.handover.nothingMoved"),
+        `${
+          moved
+            ? t("users.handover.done", { records: moved, name: receiverName })
+            : t("users.handover.nothingMoved")
+        }${discarded}`,
       );
     },
   });
@@ -175,6 +182,9 @@ export function HandoverModal({
             ? t("users.handover.owns", { name: member.display_name, records })
             : t("users.handover.ownsNothing", { name: member.display_name })}
         </p>
+      )}
+      {owned.data && owned.data.mail_draft > 0 && (
+        <p>{t("users.handover.draftsNote", { name: member.display_name })}</p>
       )}
       {owned.isError && <ErrorLine error={owned.error} />}
       <Field label={t("users.handover.receiver")} hint={rosterHint}>

@@ -42,6 +42,16 @@ func coreOperationAvailable(availability corefeatures.Availability, policy agent
 	return availability.AreaEnabled(area) && (!corefeatures.AreaUsesRecordScope(area) || availability.RecordEnabled(string(policy.RecordType)))
 }
 
+// routePolicy is the agent policy of the route that matched r, or the zero
+// policy when none did.
+func routePolicy(r *http.Request) agentPolicy {
+	route := chi.RouteContext(r.Context())
+	if route == nil {
+		return agentPolicy{}
+	}
+	return agentPolicies[r.Method+" "+route.RoutePattern()]
+}
+
 func coreFeatureGate(availability corefeatures.Availability) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -50,8 +60,7 @@ func coreFeatureGate(availability corefeatures.Availability) func(http.Handler) 
 				next.ServeHTTP(w, r.WithContext(availability.Context(r.Context())))
 				return
 			}
-			pattern := route.RoutePattern()
-			policy := agentPolicies[r.Method+" "+pattern]
+			policy := routePolicy(r)
 			if !coreOperationAvailable(availability, policy) || !availability.RecordEnabled(chi.URLParam(r, "record_type")) {
 				httperr.Write(w, r, apperrors.ErrNotFound)
 				return

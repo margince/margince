@@ -76,7 +76,7 @@ describe("the project's record keys", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("open the log on a project this caller may not change", async () => {
+  it("open no log on a project this caller may not change", async () => {
     const user = userEvent.setup();
     const log = await mountProject(
       project360({
@@ -84,10 +84,10 @@ describe("the project's record keys", () => {
       }),
     );
     await screen.findByText(/You cannot edit this project/);
-    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
+    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(true));
 
     await user.keyboard("n");
-    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("do nothing on an archived project", async () => {

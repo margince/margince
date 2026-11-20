@@ -17,7 +17,7 @@ import (
 )
 
 func (e *revocationEnv) requireMFAOn() {
-	e.svc.requireMFA = func(context.Context) (bool, error) { return true, nil }
+	e.svc.requireMFA = func(context.Context, pgx.Tx) (bool, error) { return true, nil }
 }
 
 func TestRequireMFAFlagsAMemberWithNoFactorAndClearsOnEnrolment(t *testing.T) {
@@ -73,7 +73,7 @@ func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
 	e.enrolMemberMFA(t)
 
 	bare := NewServiceFor(e.svc.db)
-	bare.requireMFA = func(context.Context) (bool, error) { return true, nil }
+	bare.requireMFA = func(context.Context, pgx.Tx) (bool, error) { return true, nil }
 
 	// Password login never answers the 202 challenge state: a challenge this
 	// service could not verify would be a lockout, not a factor.

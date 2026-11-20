@@ -231,7 +231,8 @@ func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx
 	         s.at - interval '4 days' - random() * interval '12 days' at_time
 	    FROM plan_seed s CROSS JOIN LATERAL generate_series(1, s.meetings) g
 	    JOIN plan_deal d ON d.n = greatest(1, g - (s.meetings - s.deals));
-	INSERT INTO contact (id, full_name, source, captured_by) SELECT contact, 'Attendee '||g, 'manual', 'human:seed' FROM plan_meeting;
+	INSERT INTO contact (id, full_name, source, captured_by, owner_id)
+	  SELECT m.contact, 'Attendee '||m.g, 'manual', 'human:seed', s.rep FROM plan_meeting m, plan_seed s;
 	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, meeting_status)
 	  SELECT id, 'meeting', 'Meeting '||g, at_time, 'outbound', 'manual', 'human:seed', 'held' FROM plan_meeting;
 	INSERT INTO activity_participant (activity_id, address, user_id, role)

@@ -107,6 +107,12 @@ func scanLegalEntity(row pgx.Row) (LegalEntity, error) {
 		&e.BankAccountHolder, &e.IBAN, &e.BIC, &e.Imprint, &e.SignatureTemplate,
 		&e.Offering.OfferSummary, &e.Offering.ICP, &e.Offering.ValueProposition, &e.Offering.USP, &out.Version, &out.CreatedAt, &out.UpdatedAt,
 		&out.ArchivedAt, &out.MemberCount)
+	if e.IsDefault {
+		// The default entity's country is the installation's jurisdiction. A
+		// value stored before that rule is never read, so no reader can see a
+		// second country for one company.
+		e.Country = nil
+	}
 	return out, err
 }
 

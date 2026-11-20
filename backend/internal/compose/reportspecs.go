@@ -318,11 +318,12 @@ var prebuiltReports = map[string]reportSpec{
 		// below, through ActivityContentClause) already narrows this
 		// correctly, since an activity's discoverability is real per-row
 		// scope and not the identity-table TRUE a deal's is.
-		population:   measureEveryReadableRow,
-		baseWhere:    whereArchivedNull,
-		basePlain:    "live (unarchived) meetings and tasks; email, messages, calls and notes are not counted",
+		population: measureEveryReadableRow,
+		baseWhere:  whereArchivedNull,
+		basePlain: "live (unarchived) meetings and tasks; email, messages, calls and notes are not counted. " +
+			"Period buckets read when each happened in the installation's reporting timezone, a date-only entry on its own date",
 		activityWalk: true,
-		dimensions: map[string]string{
+		dimensions: withPeriodDimensions(map[string]string{
 			fieldKind:      colKind,
 			fieldDirection: colDirection,
 			// A meeting's CURRENT standing — booked, held, no_show, canceled —
@@ -337,9 +338,9 @@ var prebuiltReports = map[string]reportSpec{
 			// as "no project".
 			fieldProjectID: activityProjectIDExpr,
 			fieldProject:   activityProjectLabelExpr,
-		},
+		}, colActivityAt),
 		measures: map[string]string{},
-		filters: map[string]string{
+		filters: withPeriodDimensions(map[string]string{
 			fieldKind:          colKind,
 			fieldDirection:     colDirection,
 			fieldMeetingStatus: colMeetingStatus,
@@ -350,7 +351,7 @@ var prebuiltReports = map[string]reportSpec{
 			// activities list serves host and standing on each of those rows.
 			fieldHostUserID: colMeetingCreditedSeat,
 			fieldProjectID:  activityProjectIDExpr,
-		},
+		}, colActivityAt),
 		filterScopes: projectFilterScope,
 		// The project a filed activity names is row-scoped; grouping by it
 		// carries the same obligation the deal reports' company columns do,

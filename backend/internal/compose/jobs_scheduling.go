@@ -81,7 +81,7 @@ func (w *meetingDeliveryWorker) remind(ctx context.Context, store *activities.St
 			}
 			continue
 		}
-		sender := w.reminders.store.WithClock(time.Now).WithWorkingHours(workingHoursResolver(w.pool)).WithMeetingVault(w.vault).WithSchedulingCalendar(newSchedulingCalendar(w.pool, w.registry))
+		sender := w.reminders.store.WithClock(time.Now).WithWorkingHours(workingHoursResolver(w.pool)).WithMeetingVault(w.vault).WithSchedulingCalendar(newSchedulingCalendar(w.pool, w.registry)).WithInvitationAttention(invitationAttention{pool: w.pool})
 		if err := sender.SendMeetingReminder(fireCtx, reminder.ID, w.reminders.consent, w.reminders.delivery); err != nil {
 			if errors.Is(err, apperrors.ErrPermissionDenied) {
 				err = errors.Join(err, store.RefuseMeetingReminder(ctx, reminder))
