@@ -124,6 +124,46 @@ describe("password-reset deep link", () => {
     expect(screen.queryByLabelText("Email")).toBeNull();
   });
 
+  it("opens the reset form for a token that arrives while the session probe is out", async () => {
+    let answerMe: (answer: Response) => void = () => undefined;
+    const me = new Promise<Response>((resolve) => {
+      answerMe = resolve;
+    });
+    const fetchStub = vi.fn(async (input: Request | string | URL) => {
+      const supporting = await supportingRoutes(input);
+      if (supporting) return supporting;
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.endsWith("/v1/me")) return me;
+      return new Response(JSON.stringify({ data: [], page: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchStub);
+    window.location.hash = "#/reset-password";
+    mount();
+    await waitFor(() =>
+      expect(
+        fetchStub.mock.calls.some(([input]) =>
+          String(input instanceof Request ? input.url : input).endsWith(
+            "/v1/me",
+          ),
+        ),
+      ).toBe(true),
+    );
+
+    window.location.hash = "#/reset-password?token=late-token";
+    await waitFor(() => expect(window.location.hash).toBe("#/reset-password"));
+    answerMe(
+      new Response(
+        JSON.stringify({ user: { id: "u1" }, roles: [], teams: [] }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    expect(await screen.findByLabelText("New password")).toBeTruthy();
+  });
+
   it("reaches the Brief on the sign-in that follows a completed reset", async () => {
     const user = userEvent.setup();
     // No session at the start, the ordinary case for a reset. Once the login

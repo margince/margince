@@ -48,7 +48,7 @@ import { markJourney } from "./lib/journeymarks";
 import { useWarmProgressName } from "./lib/progressreader";
 import { SPA_RELEASE } from "./lib/release";
 import { routePattern } from "./lib/routepattern";
-import { type Screen, takeHashCredential } from "./lib/router";
+import { type Screen, takeHashCredential, watchAddress } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import {
   readStored,
@@ -132,18 +132,22 @@ export function App() {
   return <AuthedApp route={route} />;
 }
 
-// The emailed reset link is a bearer credential, not a session check. A link
-// with its token reaches the reset form ahead of AuthedApp's session gate,
-// live cookie or not. An address without a token goes through the gate.
-//
-// Decided once per arrival, in state. The reset form forgets the token as it
-// takes it, and a later render must not drop the form being typed in.
+// The emailed reset link is a bearer credential, not a session check. With its
+// token it reaches the reset form ahead of AuthedApp's session gate; without one
+// it goes through the gate. A link pasted while the gate waits is scrubbed back
+// to this same address, so the router is watched, not the route. A token once
+// seen stays decided, since the form forgets it as it takes it.
 function ResetEntry({
   route,
 }: Readonly<{ route: ReturnType<typeof useRoute> }>) {
-  const [carriesToken] = useState(
+  const tokenHeld = useSyncExternalStore(
+    watchAddress,
     () => takeHashCredential(RESET_ROUTE) !== null,
   );
+  const [carriesToken, setCarriesToken] = useState(tokenHeld);
+  if (tokenHeld && !carriesToken) {
+    setCarriesToken(true);
+  }
   if (!carriesToken) {
     return <AuthedApp route={route} />;
   }
