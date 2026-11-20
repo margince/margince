@@ -68,11 +68,15 @@ export function NumericCell({
   width,
   testId,
   onSave,
+  check,
 }: Readonly<{
   value: number;
   width: number;
   testId: string;
   onSave: (num: number) => void;
+  // The field's own refusal of a typed text, bounds included. Absent, any
+  // number passes.
+  check?: (text: string) => string | undefined;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -101,7 +105,9 @@ export function NumericCell({
             setValue(writtenDecimal(String(savedValue), locale));
             return;
           }
-          const refusal = typedNumberFault(value, locale, t);
+          const refusal = check
+            ? check(value)
+            : typedNumberFault(value, locale, t);
           if (refusal) {
             setFault(refusal);
             return;

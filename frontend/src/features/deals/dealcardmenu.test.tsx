@@ -539,6 +539,27 @@ describe("changing a deal's close date from its card", () => {
     );
   });
 
+  it("refuses a day the server cannot store on the field, before sending", async () => {
+    const patches: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], { onPatch: (body) => patches.push(body) }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const dialog = await openCloseDate(user);
+    const box = dialog.getByRole("textbox", { name: "Expected close" });
+    await user.type(box, "31/12/9999{Enter}");
+
+    expect(
+      await dialog.findByText(
+        "Expected close must be from 02/01/0001 to 30/12/9999.",
+      ),
+    ).toBeInTheDocument();
+    expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(patches).toEqual([]);
+  });
+
   it("opens from the keyboard and gives focus back to the menu's trigger on Escape", async () => {
     vi.stubGlobal("fetch", stubBackend([deal({})]));
     const user = userEvent.setup();

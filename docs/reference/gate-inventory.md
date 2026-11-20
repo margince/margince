@@ -16,7 +16,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
-| `accountreachcopies_test.go` | H2 | "Which activities belong to this account" is computed in two places, and they must agree. |
+| `accountreachcopies_test.go` | H2 | The stored company clock and the activity walk use the same employment bounds. |
 | `acquisitionvocabulary_test.go` | H1 | Two modules spell "we do not know how this contact arrived" the same way. |
 | `agenttoolcatalogtiers_test.go` | H2 | The tool catalog's Tier column says what the contract says. |
 | `aiactivitycatalogparity_test.go` | H3 | The AI-activity contract names the work that can reach it and nothing else, and caps what the read caps. |
@@ -87,6 +87,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendcollapsespace_test.go` | H3 | The viewer and the server must fold whitespace by the same set, or a citation opens a document with nothing marked. |
 | `frontendcountries_test.go` | H3 | The country filters offer the codes the server stores, and no other. |
 | `frontendcurrencies_test.go` | H3 | The currency picker must never offer a code the server refuses. |
+| `frontendcustomfieldtypes_test.go` | H3 | The custom-field types are one list on both sides of the wire. |
 | `frontenddatenotation_test.go` | H3 | A server-written brief and the app around it must write one day the same way, or the reader sees 16/11/2026 beside 2026-11-16 on one screen. |
 | `frontenddue_window_test.go` | H3 | The task due-date box offers days inside the window the server accepts. |
 | `frontendemailtext_test.go` | H3 | The browser and the server split a mail body by the same rules, or a row's preview and the message it opens disagree about where the sender stopped writing. |
@@ -102,6 +103,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendjoblabels_test.go` | H3 | History names the system pass behind a change by its words, never by its key. |
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |
 | `frontendlastactivitykinds_test.go` | H3 | The browser counts the same activity kinds toward last activity as the server. |
+| `frontendlimits_test.go` | H3 | The limits a screen's own pre-send check states in a refusal sentence equal the server's. |
 | `frontendlinkedinhosts_test.go` | H3 | Which hosts count as LinkedIn is decided on both sides of the wire, and the two answers are different sizes by design. |
 | `frontendmagickeys_test.go` | H2 | Every sentence the receipt emits has a word for it, in the client that draws it and in the catalog that translates it. |
 | `frontendmailproviders_test.go` | H3 | Which capture providers are a mailbox is answered on both sides of the wire, and the two answers must be the same three names. |
@@ -305,8 +307,9 @@ The eight shapes, what each is for, and how each one silently passes:
 | `currencycolumndomain_test.go` | H2 | Every currency column carries the `currency\_code` domain. |
 | `datataskregistry_test.go` | H2 | Removing a released registration must fail even when its ID constant remains. |
 | `datecolumncalendars_test.go` | H2 | Every `date` column states whose calendar it is a day in. |
-| `dealevidencereaders_test.go` | H2 | A Go reader that judges whether a deal is alive asks relstrength.DealEvidenceSQL, so a personal thread keeps no deal warm. |
+| `dealevidencereaders_test.go` | H2 | A Go reader that judges whether a deal is alive asks relstrength.DealEvidenceSQL with the deal it reads. |
 | `deallinewriters_test.go` | H2 | A lines-priced deal has one value writer; every other writer must refuse line-owned columns and preserve its product projection. |
+| `dealmarkcarried_test.go` | H2 | A statement that copies deal links onto another activity carries each link's mark with it. |
 | `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |

@@ -358,3 +358,25 @@ func TestCustomFieldRBAC_ReadGrantCannotChangeSchema(t *testing.T) {
 		t.Fatalf("the read grant lists the catalog: %v / %d rows", err, len(fields))
 	}
 }
+
+// Removing a choice changes records, so it needs the grant to update the
+// field's object as well as custom_field. Adding one changes no record.
+func TestRemovingAChoiceNeedsTheGrantToUpdateTheRecords(t *testing.T) {
+	e := integration.Setup(t)
+	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
+	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+
+	created, err := svc.Create(ctx, customfieldsmod.FieldSpec{
+		Object: "deal", Label: "Deal channel", Type: customfieldsmod.TypePicklist,
+		Options: []string{"direct", "reseller"}, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.SetOptions(ctx, ids.UUID(created.Id), []string{"direct", "reseller", "marketplace"}); err != nil {
+		t.Fatalf("adding a choice without a deal grant: %v", err)
+	}
+	if _, err := svc.SetOptions(ctx, ids.UUID(created.Id), []string{"direct"}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("removing a choice without deal update answered %v, want permission denied", err)
+	}
+}

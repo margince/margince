@@ -6,7 +6,7 @@
 package capture
 
 // The historical recheck: a deal link the rule wrote before the topic check
-// existed is asked about once, within the window.
+// existed is asked about once, within the window. The answer marks the link.
 
 import (
 	"context"
@@ -42,7 +42,7 @@ func unrecheckedLink(t *testing.T, env captureEnv, sourceID string, deal ids.UUI
 	})
 	connector = principal.WithCorrelationID(connector, ids.NewV7())
 	if err := database.WithWorkspaceTx(connector, e.Pool, func(tx pgx.Tx) error {
-		_, _, err := compose.ActivityDealFiler{}.FileOnDealIfUnfiled(connector, tx, mail, deal, nil)
+		_, _, err := compose.ActivityDealFiler{}.FileOnDealIfUnfiled(connector, tx, mail, deal, nil, "")
 		return err
 	}); err != nil {
 		t.Fatalf("filing the mail on its deal as the connector: %v", err)
@@ -75,9 +75,10 @@ func rechecking(t *testing.T, r repairer, asOf time.Time) []ids.UUID {
 
 var maxUUID = ids.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 
-// A link the model confidently says the mail is not about comes off, audited
-// as the recheck. The answer is remembered, so a second pass asks nothing.
-func TestTheRecheckTakesBackALinkTheMailIsNotAbout(t *testing.T) {
+// A link the model confidently says the mail is not about stays, marked
+// unrelated by the classifier and audited as the recheck. The answer is
+// remembered, so a second pass asks nothing.
+func TestTheRecheckMarksALinkTheMailIsNotAbout(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -91,10 +92,11 @@ func TestTheRecheckTakesBackALinkTheMailIsNotAbout(t *testing.T) {
 	env.topic.answer = func(string) (string, float64) { return "not_about", 0.95 }
 	before := env.topic.asked()
 	recheck(t, r, mail)
-	wantDeals(t, e, "rc1@acme.example")
+	wantDeals(t, e, "rc1@acme.example", deal)
+	wantMark(t, e, "rc1@acme.example", deal, "unrelated/classifier")
 	if n := countRows(t, e, `SELECT count(*) FROM audit_log WHERE action = 'activity_relink'
-		 AND evidence->>'reason' = 'captured_activity_deal_recheck' AND before->>'entity_type' = 'deal'`); n != 1 {
-		t.Fatalf("%d recheck audit rows, want the one retraction", n)
+		 AND evidence->>'reason' = 'captured_activity_deal_recheck' AND after->>'deal_relevance' = 'unrelated'`); n != 1 {
+		t.Fatalf("%d recheck audit rows, want the one mark", n)
 	}
 	recheck(t, r, mail)
 	if asked := env.topic.asked() - before; asked != 1 {
@@ -103,6 +105,37 @@ func TestTheRecheckTakesBackALinkTheMailIsNotAbout(t *testing.T) {
 	if got := rechecking(t, r, captureNow); slices.Contains(got, mail.UUID) {
 		t.Fatal("a rechecked mail is listed again")
 	}
+}
+
+// A colleague's mark stands. The recheck asks the model nothing about a link
+// a colleague judged, and the classifier's own writer refuses to change it.
+func TestTheClassifierNeverChangesAColleaguesMark(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	deal := w.deal(t, "Acme rollout")
+	mail := unrecheckedLink(t, env, "rc6@acme.example", deal)
+	if _, err := activities.NewStore(e.DB()).SetDealRelevance(w.ctx, mail, deal, "relevant"); err != nil {
+		t.Fatalf("marking the link as a colleague: %v", err)
+	}
+	r := refiler(env, w)
+	env.topic.forbid = t
+	recheck(t, r, mail)
+	wantMark(t, e, "rc6@acme.example", deal, "relevant/human")
+
+	var changed bool
+	if err := database.WithWorkspaceTx(r.system, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		changed, err = compose.ActivityDealFiler{}.MarkDealLink(r.system, tx, mail, deal, "unrelated", nil)
+		return err
+	}); err != nil {
+		t.Fatalf("marking the link as the classifier: %v", err)
+	}
+	if changed {
+		t.Fatal("the classifier's writer changed a colleague's mark")
+	}
+	wantMark(t, e, "rc6@acme.example", deal, "relevant/human")
 }
 
 // With no answer the link stays, and a later pass asks again. A colleague's
@@ -149,18 +182,20 @@ func TestTheRecheckWindowIsNinetyDays(t *testing.T) {
 	}
 }
 
-// Only a confident "not about it" takes a link back. Doubt keeps it, and is
-// remembered, so the recheck does not ask about it again.
-func TestTheRecheckTakesALinkBackOnlyOnAConfidentNo(t *testing.T) {
+// Every answer marks the link and keeps it: a fit relevant, doubt uncertain,
+// a confident "not about it" unrelated. The answer is remembered, so the
+// recheck does not ask about it again.
+func TestTheRecheckMarksALinkByItsAnswer(t *testing.T) {
 	for _, c := range []struct {
 		name       string
 		verdict    string
 		confidence float64
-		kept       bool
+		mark       string
 	}{
-		{"unsure", "unsure", 0.5, true},
-		{"not about it, below the floor", "not_about", 0.6, true},
-		{"not about it", "not_about", 0.9, false},
+		{"unsure", "unsure", 0.5, "uncertain/classifier"},
+		{"not about it, below the floor", "not_about", 0.6, "uncertain/classifier"},
+		{"not about it", "not_about", 0.9, "unrelated/classifier"},
+		{"about it", "about", 0.9, "relevant/classifier"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			env := newCaptureEnv(t)
@@ -172,14 +207,38 @@ func TestTheRecheckTakesALinkBackOnlyOnAConfidentNo(t *testing.T) {
 			r := refiler(env, w)
 			env.topic.answer = func(string) (string, float64) { return c.verdict, c.confidence }
 			recheck(t, r, mail)
-			if c.kept {
-				wantDeals(t, e, "rc5@acme.example", deal)
-			} else {
-				wantDeals(t, e, "rc5@acme.example")
-			}
+			wantDeals(t, e, "rc5@acme.example", deal)
+			wantMark(t, e, "rc5@acme.example", deal, c.mark)
 			if got := rechecking(t, r, captureNow); slices.Contains(got, mail.UUID) {
 				t.Fatal("an answered recheck is offered again")
 			}
 		})
 	}
+}
+
+// A reply the thread filed on a deal stands on our mail's link. Once a
+// colleague marks our mail not about that deal, the reply's link rests on
+// nothing but a suggestion, so the recheck asks about it.
+func TestTheRecheckAsksAboutAReplyWhoseThreadWasMarkedNotAboutTheDeal(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme operations")
+	reporting := w.deal(t, "Acme reporting")
+	env.syncSent(t, map[string]bool{"rt1@myco.example": true},
+		email(captureOwner, "", "alice@acme.example", "rt1@myco.example", ""))
+	ours := ids.From[ids.ActivityKind](activityOf(t, e, "rt1@myco.example"))
+	store := activities.NewStore(e.DB())
+	if _, err := store.RelinkActivity(w.ctx, ours, activities.RelinkActivityInput{EntityType: "deal", EntityID: reporting}); err != nil {
+		t.Fatalf("filing our mail on a deal as a colleague: %v", err)
+	}
+	env.sync(t, authenticated(mailFrom("alice@acme.example", "rt2@acme.example", "rt1@myco.example", "Re: project"), "acme.example"))
+	wantDeals(t, e, "rt2@acme.example", reporting)
+	if _, err := store.SetDealRelevance(w.ctx, ours, reporting, "unrelated"); err != nil {
+		t.Fatalf("marking our mail not about the deal: %v", err)
+	}
+	env.topic.answer = func(string) (string, float64) { return "not_about", 0.95 }
+	recheck(t, refiler(env, w), ids.From[ids.ActivityKind](activityOf(t, e, "rt2@acme.example")))
+	wantMark(t, e, "rt2@acme.example", reporting, "unrelated/classifier")
 }

@@ -12,6 +12,7 @@ package activities
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -43,5 +44,33 @@ func TestACursorFromTheRecencyOrderCannotResumeAnOpenAndDueRead(t *testing.T) {
 	})
 	if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); !ok {
 		t.Fatalf("resuming the due queue with a timeline cursor → %v, want a sort mismatch", err)
+	}
+}
+
+func TestCalendarMailFoldOnlyRunsWhenItsMeetingCanBeListed(t *testing.T) {
+	id := ids.NewV7()
+	for _, tc := range []struct {
+		name  string
+		kind  *string
+		kinds []string
+		fold  bool
+	}{
+		{name: "all", fold: true},
+		{name: "mail and meetings", kinds: []string{"email", "meeting"}, fold: true},
+		{name: "meetings only", kinds: []string{"meeting"}},
+		{name: "mail only", kind: new("email")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			page, err := timelinePageSQL(unscopedCtx(), ListActivitiesInput{
+				EntityType: new("company"), EntityID: &id, CollapseSeatCopies: true,
+				Kind: tc.kind, Kinds: tc.kinds,
+			}, 25)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if folded := strings.Contains(page.sql, foldedCalendarMailSQL); folded != tc.fold {
+				t.Errorf("folding calendar mail = %t, want %t", folded, tc.fold)
+			}
+		})
 	}
 }

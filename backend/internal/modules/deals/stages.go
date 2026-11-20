@@ -102,8 +102,8 @@ func writePipelineUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 		}
 	}
 	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
+		if refused := pipelineUniqueRefusal(err); refused != nil {
+			return refused
 		}
 		return fmt.Errorf("update pipeline: %w", err)
 	}

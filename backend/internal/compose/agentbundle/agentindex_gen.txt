@@ -348,6 +348,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /activities/{id}/pipeline` | readActivityPipelineTrace | Every ingress stage this message passed through, and why each did or did not run. | Read records | at once |
 | `POST /activities/{id}/relink` | relinkActivity | Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving). | Change records | may wait for approval |
 | `POST /activities/{id}/deal-decline` | declineActivityDeal | Say a captured message is not about a deal, or about none of the deals its question offered. | Change records | at once |
+| `PUT /activities/{id}/deal-relevance` | setActivityDealRelevance | Say whether an activity linked to a deal is about that deal, or take that back. | Change records | at once |
 | `GET /activities/{id}/project-filing` | getActivityProjectFiling | What filing this activity under a project did to its retention, and whether it can be undone. | Read records | at once |
 | `POST /activities/relink-thread` | relinkThread | Re-associate every activity of one conversation thread to a chosen record, in one transaction. | Change records | may wait for approval |
 | `POST /activities/relink-bulk` | relinkActivities | Re-associate a named set of activities to a chosen record, in one transaction. | Change records | may wait for approval |
@@ -386,7 +387,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /commitments` | listOpenCommitments | The promises still open, overdue first. | Read records | at once |
 | `POST /activities/threads/{thread_key}/audience` | setThreadAudience | Share a thread with the team, or keep it private. | Change records | at once |
 | `GET /activity-review-templates` | listActivityReviewTemplates | The question sets an outcome review can ask. | Read records | at once |
-| `PATCH /activity-review-templates/{id}` | updateActivityReviewTemplate | Edit the questions for future outcome reviews. | Change records | at once |
+| `POST /activity-review-templates` | createActivityReviewTemplate | Add the question set an outcome's reviews ask from now on. | Change records | at once |
+| `PATCH /activity-review-templates/{id}` | updateActivityReviewTemplate | Edit the questions for future outcome reviews, or retire or restore a template. | Change records | at once |
 
 ## Leads
 
@@ -483,6 +485,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /custom-fields` | createCustomField | Define a new custom field on an existing core object (a schema change). | Change records | at once |
 | `PATCH /custom-fields/{id}` | renameCustomField | Rename a custom field or change whether create dialogs offer it (not a schema change). | Change records | at once |
 | `GET /custom-fields/{id}/lists` | listCustomFieldLiveLists | The Live Lists whose filter names this custom field. | Read records | at once |
+| `GET /custom-fields/{id}/choices` | listCustomFieldChoiceUse | How many records hold each choice of a picklist or multiselect field. | Read records | at once |
 | `POST /custom-fields/{id}/retire` | retireCustomField | Retire (soft-retire) a custom field. It cannot be undone. | Change records | at once |
 | `PATCH /custom-fields/{id}/options` | updateCustomFieldOptions | Edit a picklist custom field's allowed options (regenerates the column's CHECK). | Change records | at once |
 

@@ -3,7 +3,11 @@
 
 package dueday
 
-import "testing"
+import (
+	"context"
+	"testing"
+	"time"
+)
 
 func TestTheDayAfterAPromisedDayIsTheNextCalendarDay(t *testing.T) {
 	for day, want := range map[string]string{
@@ -19,5 +23,27 @@ func TestTheDayAfterAPromisedDayIsTheNextCalendarDay(t *testing.T) {
 	}
 	if _, err := DayAfter("Friday"); err == nil {
 		t.Error("a day that is not YYYY-MM-DD must be refused, not followed up on a guessed day")
+	}
+}
+
+func TestOddClassifiesTheExactEndOfTheDayAtBothEdgesOfTheWindow(t *testing.T) {
+	now := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	for day, want := range map[string]string{
+		"2036-11-19": "", "2036-11-20": "2036-11-20",
+		"2016-11-20": "", "2016-11-19": "2016-11-19",
+		"": "",
+	} {
+		got, err := Odd(context.Background(), nil, day, "UTC", now)
+		if err != nil || got != want {
+			t.Errorf("Odd(%q) = %q, %v; want %q", day, got, err, want)
+		}
+	}
+}
+
+func TestOddReadsTheDayInTheWritersZone(t *testing.T) {
+	now := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	got, err := Odd(context.Background(), nil, "2036-11-20", "Pacific/Auckland", now)
+	if err != nil || got != "" {
+		t.Errorf("the day ends before the edge in Auckland: Odd = %q, %v; want none", got, err)
 	}
 }

@@ -398,9 +398,20 @@ func (s *Sink) upsertActivity(
 		return ids.ActivityID{}, false, err
 	}
 	var id ids.ActivityID
-	query, args := capturedActivityInsert(ctx, rec, fields, birth, s.clock())
+	now := s.clock()
+	askDue := !fields.DueAt.IsZero() && !values.DueInWindow(fields.DueAt, now)
+	if askDue && s.dueAsker == nil {
+		return ids.ActivityID{}, false, fmt.Errorf("this task has a due date far outside the allowed window, and nobody is set up to ask about it: %w", apperrors.ErrInvalidArgument)
+	}
+	query, args := capturedActivityInsert(ctx, rec, fields, birth, now)
 	err := tx.QueryRow(ctx, query, args...).Scan(&id)
 	if err == nil {
+		if askDue && !fields.AssigneeID.IsZero() {
+			err := s.dueAsker.AskDueTx(ctx, tx, DueQuestion{TaskID: id, OwnerID: fields.AssigneeID, Summary: fields.Subject, Due: fields.DueAt})
+			if err != nil {
+				return ids.ActivityID{}, false, err
+			}
+		}
 		// Field-level provenance (B-E02.12) for the content fields this
 		// capture set — same source/author the row itself carries.
 		var stamps []storekit.FieldStamp
@@ -458,7 +469,7 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),
 		nullableString(fields.AgendaFingerprint),
-		nullableID(fields.AssigneeID), nullableTime(sensibleDue(fields.DueAt, now)),
+		nullableID(fields.AssigneeID), nullableTime(storedDue(fields.DueAt, now)),
 		nullableString(fields.CalendarUID),
 		fields.CalendarEvent,
 		fields.forwardedFrom != nil,
@@ -468,9 +479,9 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 	return query, args
 }
 
-// sensibleDue drops a due date outside the shared window. A mis-read year then
-// files an undated task instead of one on no list.
-func sensibleDue(due, now time.Time) time.Time {
+// storedDue is the due date the row keeps: none for a day outside the shared
+// window, which upsertActivity puts to the task's owner instead.
+func storedDue(due, now time.Time) time.Time {
 	if !due.IsZero() && !values.DueInWindow(due, now) {
 		return time.Time{}
 	}

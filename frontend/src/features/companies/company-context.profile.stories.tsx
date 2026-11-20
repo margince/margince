@@ -34,13 +34,16 @@ export const ManualSetupReady: Story = {
   ...ManualSetupEmpty,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByLabelText("Company name"), "Havbris AS");
     await userEvent.type(
-      canvas.getByLabelText("Products and services"),
+      canvas.getByRole("textbox", { name: "Company name" }),
+      "Havbris AS",
+    );
+    await userEvent.type(
+      canvas.getByRole("textbox", { name: "Products and services" }),
       "Coastal ferry maintenance contracts.",
     );
     await userEvent.type(
-      canvas.getByLabelText("Ideal customer"),
+      canvas.getByRole("textbox", { name: "Ideal customer" }),
       "Municipal ferry operators.",
     );
   },
@@ -65,6 +68,7 @@ function EditProfile() {
         focus="offer_summary"
         pending={false}
         error={null}
+        refusedAt={undefined}
         onChange={setForm}
         onClose={() => undefined}
         onSubmit={() => undefined}

@@ -1408,6 +1408,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/claims/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Margince's close of a promise.
+         * @description Opens again a promise Margince closed itself (`auto_kept` on the claim). The close
+         *     touched only the claim, so nothing else needs undoing. Whoever may settle the claim
+         *     by hand may reopen it. A claim outside the caller's scope is a 404. A claim a human
+         *     settled is a 409: it reopens through the settle path. A claim already open is the
+         *     same success.
+         */
+        post: operations["reopenConversationClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/claims/{id}/settle": {
         parameters: {
             query?: never;
@@ -2306,7 +2333,7 @@ export interface paths {
          * @description Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          *     A `parent_company_id` that names a company the caller cannot read answers 422 naming
          *     `parent_company_id`, the same for a missing record and for one hidden by row scope.
          */
@@ -6992,11 +7019,14 @@ export interface paths {
         put?: never;
         /**
          * Say a captured message is not about a deal, or about none of the deals its question offered.
-         * @description With `deal_id`, the message is not about that deal. Its link to the deal comes off, and no
-         *     automatic pass (capture, the refile pass, the repair) files it on that deal again. Other
-         *     deals stay open to it, and a colleague's own relink still files it anywhere.
+         * @description With `deal_id`, the message is not about that deal. Its link to the deal stays and is marked
+         *     `unrelated` by a human, as `setActivityDealRelevance` marks it, so the deal's timeline still
+         *     shows the message and "About this deal" takes it back. A link marked so keeps the deal
+         *     alive in no reading of it. No automatic pass (capture, the refile pass, the repair, the
+         *     topic recheck) files the message on that deal again or changes the mark. A colleague's own
+         *     relink still files it anywhere.
          *
-         *     A project link that came from the deal comes off with it, through the same rules as the
+         *     A project link that came from the deal comes off, through the same rules as the
          *     project-filing undo. It stays when the project was filed some other way, when a retention
          *     rule keeps it, or when the caller cannot read the project. An agent's decline takes it off
          *     as a member's does. `project_kept` says so.
@@ -7006,9 +7036,50 @@ export interface paths {
          *     message and on each unfiled message of the conversation, and the question is done. A
          *     message with no open question answers 422.
          *
-         *     Declining a deal already declined is the same success and writes nothing.
+         *     Declining a deal already declined is the same success and writes nothing. With `deal_id`,
+         *     the caller needs the right to change the deal too, as for `setActivityDealRelevance`.
          */
         post: operations["declineActivityDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/deal-relevance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say whether an activity linked to a deal is about that deal, or take that back.
+         * @description Marks the activity's link to `deal_id` as `relevant` or `unrelated`, with `human` as its
+         *     source. The link is never taken off: the deal's timeline still shows the activity with its
+         *     mark, and the opposite call is the undo. A link marked `unrelated`, or `uncertain` by the
+         *     classifier, warms the deal in no reading of it: its last-activity date, the quiet and
+         *     stalled rules, a meeting ahead and engagement all leave it out. The deal's last-activity
+         *     date moves back at once. Only `unrelated` also leaves it out of the silent close, so the
+         *     classifier's doubt never closes a deal.
+         *
+         *     `unrelated` is the same act as `declineActivityDeal` with a `deal_id`: the decline is
+         *     recorded, and a project link that came from the deal comes off under the project-filing
+         *     undo's rules. `relevant` files the activity on the deal's project again when it has none
+         *     and the caller is a member who may.
+         *
+         *     The classifier never changes a mark a human set, and no automatic pass takes a link a human
+         *     judged off the activity. Needs `activity.update` and the right to change both the activity
+         *     and the deal; a deal the caller cannot see answers 404. An activity with no link to the deal
+         *     answers 404. Setting the mark the link already has is the same success with `changed`
+         *     false.
+         */
+        put: operations["setActivityDealRelevance"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -18435,6 +18506,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/custom-fields/{id}/choices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * How many records hold each choice of a picklist or multiselect field.
+         * @description What removing a choice would clear, asked before an options edit is confirmed. Every
+         *     record of the field's object counts, archived ones included, because the edit clears
+         *     them all. Each current choice is listed, with zero where no record holds it. A read:
+         *     it needs `custom_field:read` and read on the field's object.
+         */
+        get: operations["listCustomFieldChoiceUse"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/custom-fields/{id}/retire": {
         parameters: {
             query?: never;
@@ -18484,17 +18581,27 @@ export interface paths {
         head?: never;
         /**
          * Edit a picklist custom field's allowed options (regenerates the column's CHECK).
-         * @description CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` fields (422 `not_picklist`
+         * @description CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` and `type=multiselect` fields (422 `not_picklist`
          *     otherwise). Replaces the catalog's `options` array and regenerates the physical
          *     column's CHECK constraint from the new set via the governed engine (the same
          *     one-transaction owner-ALTER shape as `createCustomField` — this is the
          *     one DDL path rename/retire never touch). Removing every option is refused (422,
          *     detail "A picklist needs at least one option") — a picklist always keeps at least
          *     one allowed value. Like `retireCustomField`, an agent asks its user first: this
-         *     mutates a schema-adjacent CHECK constraint. A retired field
+         *     mutates a schema-adjacent CHECK constraint, and clears data. A retired field
          *     refuses the edit with a 409 `conflict` — retirement is terminal, so its options
-         *     are frozen; removing an option that stored values still use is also a 409
-         *     (`ADD CONSTRAINT` validates existing rows — migrate the values first).
+         *     are frozen.
+         *
+         *     Removing a choice that records hold clears it from them in the same transaction:
+         *     a picklist value becomes null, and a multiselect keeps its other choices. Archived
+         *     records are cleared too. Each changed record gets its own audit entry and its
+         *     object's `*.updated` event, and the answer's `records_changed` counts them.
+         *     `listCustomFieldChoiceUse` tells the caller that count before they confirm. Removing a
+         *     choice also needs the grant to update the field's object, or the edit answers 403. A
+         *     record that cannot change, such as an activity under a retention hold, refuses the
+         *     edit with a 409 that says so. A Live
+         *     List whose filter names a removed choice keeps evaluating and matches no record
+         *     through it.
          */
         patch: operations["updateCustomFieldOptions"];
         trace?: never;
@@ -21956,7 +22063,14 @@ export interface paths {
         /** The question sets an outcome review can ask. */
         get: operations["listActivityReviewTemplates"];
         put?: never;
-        post?: never;
+        /**
+         * Add the question set an outcome's reviews ask from now on.
+         * @description Requires custom_field create permission. A closing asks one review, so an outcome has at
+         *     most one active template: the new one is asked from now on, and the template asked before
+         *     is retired in the same write. Reviews already written keep their frozen questions. A key
+         *     another template uses answers 409.
+         */
+        post: operations["createActivityReviewTemplate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21980,8 +22094,12 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Edit the questions for future outcome reviews.
-         * @description Requires custom_field update permission. Version conflicts return 409; submitted reviews retain their frozen questions and answers.
+         * Edit the questions for future outcome reviews, or retire or restore a template.
+         * @description Requires custom_field update permission. Version conflicts return 409; submitted reviews
+         *     retain their frozen questions and answers. `active: false` retires the template: a closing
+         *     with that outcome asks no review until a template for it is active again. There is no
+         *     delete, so an old review always names a template the list still shows. `active: true`
+         *     makes the template the one its outcome asks and retires the one asked before.
          */
         patch: operations["updateActivityReviewTemplate"];
         trace?: never;
@@ -26277,7 +26395,7 @@ export interface paths {
          *     Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          */
         patch: operations["updateCompanyProfileField"];
         trace?: never;
@@ -33814,6 +33932,14 @@ export interface components {
              *     name, so a screen can word the code in the reader's language; `message` stays
              *     the English sentence.
              *
+             *     A value its field cannot hold names the field's path (`address.city` for a key of a
+             *     nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+             *     `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+             *     `invalid_type` for any other shape. A body that is not one JSON object, and a value
+             *     inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+             *     carries its bounds as `params.min` and `params.max`, as the schema spells them;
+             *     a date-time range states them as ISO dates.
+             *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
              *     `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
@@ -37288,7 +37414,7 @@ export interface components {
          * @enum {string}
          */
         ConversationClaimKind: "commitment_ours" | "commitment_theirs" | "open_question" | "decision" | "priority" | "objection" | "success_criterion" | "decision_process";
-        /** @description A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb. */
+        /** @description A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on. */
         ConversationClaimLooksKept: {
             /** Format: uuid */
             meeting_id: string;
@@ -37297,6 +37423,10 @@ export interface components {
             meeting_at: string;
             /** @description How to read `meeting_at`. `day` means only its date is known. */
             meeting_precision: components["schemas"]["OccurredPrecision"];
+        };
+        /** @description Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting. */
+        ConversationClaimAutoKept: {
+            evidence?: components["schemas"]["ConversationClaimLooksKept"];
         };
         /**
          * @description One thing said in a captured conversation, with the evidence it was read from.
@@ -37337,6 +37467,7 @@ export interface components {
              */
             corrected_at?: string | null;
             looks_kept?: components["schemas"]["ConversationClaimLooksKept"];
+            auto_kept?: components["schemas"]["ConversationClaimAutoKept"];
             /**
              * Format: uuid
              * @description The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
@@ -42767,6 +42898,18 @@ export interface components {
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
+            /**
+             * @description On a deal link only: whether the activity is about the deal. Absent when nobody judged
+             *     it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+             *     it; only `unrelated` also leaves it out of the silent close.
+             * @enum {string}
+             */
+            deal_relevance?: "relevant" | "unrelated" | "uncertain";
+            /**
+             * @description Who set `deal_relevance`. The classifier never changes a mark a human set.
+             * @enum {string}
+             */
+            relevance_source?: "human" | "classifier";
         };
         /**
          * @description The destination for every writable, non-archived activity of one conversation thread.
@@ -44021,11 +44164,50 @@ export interface components {
              */
             deal_id?: string;
         };
+        SetActivityDealRelevanceRequest: {
+            /**
+             * Format: uuid
+             * @description The deal whose link to the activity is judged.
+             */
+            deal_id: string;
+            /**
+             * @description `relevant` says the activity is about the deal; `unrelated` says it is not.
+             * @enum {string}
+             */
+            deal_relevance: "relevant" | "unrelated";
+        };
+        ActivityDealRelevance: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * @description The link's mark after the call.
+             * @enum {string}
+             */
+            deal_relevance: "relevant" | "unrelated" | "uncertain";
+            /**
+             * @description Who set the mark. Always `human` after this call.
+             * @enum {string}
+             */
+            relevance_source: "human" | "classifier";
+            /** @description The call changed the mark. */
+            changed: boolean;
+            /** @description The project link that came from the deal came off the activity. */
+            project_unfiled: boolean;
+            /** @description A project link came from the deal and stays, because a retention rule keeps it or the caller cannot read the project. */
+            project_kept: boolean;
+            /** @description The activity was filed on the deal's project again. */
+            project_filed: boolean;
+        };
         ActivityDealDecline: {
             /** @description The deals this call declined on the message. A deal declined before is not listed again. */
             declined_deal_ids: string[];
-            /** @description A deal link came off the message. */
+            /**
+             * @deprecated
+             * @description Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
+             */
             unlinked: boolean;
+            /** @description A deal link of the message is now marked `unrelated` by a human. */
+            marked_unrelated: boolean;
             /** @description The project link that came from a declined deal came off the message. */
             project_unfiled: boolean;
             /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
@@ -46390,12 +46572,26 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description Every field but `version` is optional; an omitted one is left alone. */
         UpdateActivityReviewTemplateRequest: {
             /**
              * Format: int64
              * @description Last read template version.
              */
             version: number;
+            questions?: components["schemas"]["ReviewQuestion"][];
+            /** @description false retires the template; true makes it the one its outcome asks. */
+            active?: boolean;
+        };
+        CreateActivityReviewTemplateRequest: {
+            /** @description Derived from the label when omitted. */
+            key?: string;
+            label: string;
+            /**
+             * @description Which outcome the template is asked for.
+             * @enum {string}
+             */
+            outcome: "won" | "lost";
             questions: components["schemas"]["ReviewQuestion"][];
         };
         ActivityReviewTemplateListResponse: {
@@ -46448,6 +46644,15 @@ export interface components {
              * @description Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
              */
             template_version?: number;
+            /**
+             * @description Key of the template shown when the form opened. A template added or restored since then
+             *     is a different template, possibly at the same version, so a key that is not the live
+             *     template's returns 409. Optional: a client that omits it keeps the version-only check, so
+             *     a client built before this field keeps working. That client cannot tell a swap to another
+             *     template at the same version; its answers are still checked against the live questions,
+             *     and an answer to a question the live template does not ask is refused 422.
+             */
+            template_key?: string;
             /**
              * Format: uuid
              * @description The closing being reviewed. Must be the one the deal is on now, else 409.
@@ -47965,7 +48170,7 @@ export interface components {
              */
             name: string;
             /**
-             * @description The six custom-field types, plus `id` for a reference to another record,
+             * @description The custom-field types, plus `id` for a reference to another record,
              *     `domain` for a host column and `distance` for a place on the earth. A `distance`
              *     field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
              *     `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -47981,7 +48186,7 @@ export interface components {
              *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "id" | "domain" | "distance";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "url" | "id" | "domain" | "distance";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for
@@ -52407,10 +52612,10 @@ export interface components {
             /** @description Admin-facing key the column_name derives from. */
             slug: string;
             /**
-             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "url";
             /**
              * @description retired = soft: hidden from the API and filtering, column and values preserved.
              * @enum {string}
@@ -52442,6 +52647,17 @@ export interface components {
              */
             archived_at?: string | null;
             version?: components["schemas"]["RowVersion"];
+            /** @description Only on the answer to `updateCustomFieldOptions`: how many records held a choice the edit removed and had it cleared. */
+            records_changed?: number;
+        };
+        /** @description How many records hold each current choice of a picklist or multiselect field. */
+        CustomFieldChoiceUse: {
+            choices: components["schemas"]["CustomFieldChoiceCount"][];
+        };
+        CustomFieldChoiceCount: {
+            choice: string;
+            /** @description Records that hold the choice, archived ones included. */
+            records: number;
         };
         /** @description The Live Lists whose filter names a custom field: the ones the caller may find by name, and how many more exist that they may not find. */
         CustomFieldLiveLists: {
@@ -52473,7 +52689,7 @@ export interface components {
             object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
             label: string;
             /** @enum {string} */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "url";
             currency?: string | null;
             options?: string[] | null;
             source: string;
@@ -53536,7 +53752,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
-            /** @description The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters. */
+            /** @description The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;
@@ -66211,6 +66427,32 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    reopenConversationClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reopened, or was already open. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     settleConversationClaim: {
         parameters: {
             query?: never;
@@ -74947,6 +75189,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityDealDecline"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
+    setActivityDealRelevance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetActivityDealRelevanceRequest"];
+            };
+        };
+        responses: {
+            /** @description The link's mark after the call. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityDealRelevance"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -92317,6 +92591,41 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listCustomFieldChoiceUse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The records holding each choice. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFieldChoiceUse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The field is not a picklist or multiselect. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     retireCustomField: {
         parameters: {
             query?: never;
@@ -92440,7 +92749,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description Stored values still use a removed option, the field is retired (options are frozen — retirement is terminal), or the target table is busy with concurrent activity — the last is retryable. */
+            /** @description The field is retired (options are frozen — retirement is terminal), a record that holds a removed choice belongs to a member who has left and must be handed on first, a record that holds one is under a retention hold, or the target table is busy with concurrent activity — the last is retryable. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -94511,7 +94820,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Refused, with the reason distinguished by the problem `code`: `email_taken` (a member with this email already exists), `no_delivery_channel` (this installation has neither an outbound-email channel nor a public base URL, so neither the mailed link nor an admin-issued one could reach the member — an invite would create an ACTIVE account nobody could ever sign in as), or `company_not_described` (this installation has not yet saved its own company through `PUT /company`; the onboarding gate holds every admin on the company form until it is saved, so no seat of any role is added before then, and a client may read any non-admin seat as proof that the company exists. Asked after the caller's grant, so a caller who may not invite is answered 403 either way). */
+            /** @description Refused, with the reason distinguished by the problem `code`: `already_invited` (a member with this email exists and is still waiting on an invitation; resend it with `POST /users/{id}/resend-invite`. Answered only to a caller who may read `user_admin`; any other caller is answered `email_taken` or the seat refusal, as for any other taken address), `email_taken` (a member with this email already exists), `no_delivery_channel` (this installation has neither an outbound-email channel nor a public base URL, so neither the mailed link nor an admin-issued one could reach the member — an invite would create an ACTIVE account nobody could ever sign in as), or `company_not_described` (this installation has not yet saved its own company through `PUT /company`; the onboarding gate holds every admin on the company form until it is saved, so no seat of any role is added before then, and a client may read any non-admin seat as proof that the company exists. Asked after the caller's grant, so a caller who may not invite is answered 403 either way). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -98317,7 +98626,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Every live template. */
+            /** @description Every template, active and retired. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -98326,6 +98635,59 @@ export interface operations {
                     "application/json": components["schemas"]["ActivityReviewTemplateListResponse"];
                 };
             };
+        };
+    };
+    createActivityReviewTemplate: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateActivityReviewTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created template. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityReviewTemplate"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateActivityReviewTemplate: {

@@ -252,6 +252,8 @@ var decisionGrants = map[string][]DecisionGrant{
 	// Accepting a contact_share request shares the contact with the colleague
 	// who asked, which is the grant the Share button itself requires.
 	approvalsubject.KindContactShare: {{tableContact, principal.ActionUpdate}},
+	// Answering a due-date question writes the date onto the captured task.
+	approvalsubject.KindTaskDueDate: {{objectActivity, principal.ActionUpdate}},
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
 	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create

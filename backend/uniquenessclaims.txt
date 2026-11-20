@@ -222,7 +222,6 @@ internal/modules/activities/activitylinks.go#func insertActivityLinks
 internal/modules/activities/activityread.go#func scanActivity
 internal/modules/activities/channelsend.go#method outboundChannelMessage.activity
 internal/modules/activities/companyscope.go#func ActivityWithinProject
-internal/modules/activities/companyscope.go#func CompanyLinkedActivityExists
 internal/modules/activities/email.go#const sourceManual
 internal/modules/activities/handlers_email.go#func DeterministicEmailDraft
 internal/modules/activities/handlers_email.go#func IsMailThread

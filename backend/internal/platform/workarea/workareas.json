@@ -142,6 +142,7 @@
     "correctDealCloseDay": "business",
     "correctProjectHealthAssessment": "business",
     "createAcquisitionSource": "admin_settings",
+    "createActivityReviewTemplate": "admin_settings",
     "createAutomation": "admin_settings",
     "createCaptureCounterpartyHold": "capture",
     "createCaptureExclusion": "workspace_settings",
@@ -530,6 +531,7 @@
     "listContacts": "business",
     "listCorpora": "business",
     "listCorpusDocuments": "business",
+    "listCustomFieldChoiceUse": "workspace_settings",
     "listCustomFieldLiveLists": "admin_settings",
     "listCustomFields": "workspace_settings",
     "listDataSubjectRequests": "compliance",
@@ -814,6 +816,7 @@
     "sendOffer": "business",
     "sendPrivacyNotice": "compliance",
     "setActivityAudience": "business",
+    "setActivityDealRelevance": "business",
     "setActivityDisposition": "business",
     "setAiModelRate": "admin_settings",
     "setBlockedDomain": "workspace_settings",
@@ -1042,6 +1045,7 @@
     "correctProjectHealthAssessment": "projects",
     "countPendingApprovals": "agent_limits",
     "createAcquisitionSource": "sales_lists",
+    "createActivityReviewTemplate": "sales_rules",
     "createAutomation": "automations",
     "createCaptureCounterpartyHold": "capture_triage",
     "createCaptureExclusion": "capture_rules",
@@ -1527,6 +1531,7 @@
     "listContacts": "contacts",
     "listCorpora": "knowledge",
     "listCorpusDocuments": "knowledge",
+    "listCustomFieldChoiceUse": "custom_fields",
     "listCustomFieldLiveLists": "custom_fields",
     "listCustomFields": "custom_fields",
     "listDataSubjectRequests": "privacy_requests",
@@ -1790,6 +1795,7 @@
     "renderAnalyticsReport": "reports",
     "renderOffer": "offers",
     "renewContract": "contracts",
+    "reopenConversationClaim": "contacts",
     "reopenLead": "leads",
     "reopenWithheldDomain": "capture_rules",
     "reopenWorklistRows": "worklist",
@@ -1890,6 +1896,7 @@
     "sendOffer": "offers",
     "sendPrivacyNotice": "consent",
     "setActivityAudience": "activities",
+    "setActivityDealRelevance": "activities",
     "setActivityDisposition": "activities",
     "setAiModelRate": "rates",
     "setAiProviderKey": "ai_models",
@@ -2313,6 +2320,9 @@
     ],
     "create_acquisition_source": [
       "sales_lists"
+    ],
+    "create_activity_review_template": [
+      "sales_rules"
     ],
     "create_automation": [
       "automations"
@@ -3880,6 +3890,9 @@
     "set_activity_audience": [
       "activities"
     ],
+    "set_activity_deal_relevance": [
+      "activities"
+    ],
     "set_activity_disposition": [
       "activities"
     ],
@@ -4437,6 +4450,9 @@
       "business"
     ],
     "create_acquisition_source": [
+      "admin_settings"
+    ],
+    "create_activity_review_template": [
       "admin_settings"
     ],
     "create_automation": [
@@ -5957,6 +5973,9 @@
       "compliance"
     ],
     "set_activity_audience": [
+      "business"
+    ],
+    "set_activity_deal_relevance": [
       "business"
     ],
     "set_activity_disposition": [

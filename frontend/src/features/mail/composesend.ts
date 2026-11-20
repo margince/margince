@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { type IntentKeys, intentKeys } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
+import { focusFirstRefused } from "../../design-system/savepage";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
@@ -275,14 +276,8 @@ export function useComposeSend({
   const flagged: ReadonlySet<MissingField> = attempted
     ? new Set(missing)
     : new Set<MissingField>();
-  // The first unanswered field, read off the DOM at the press. The controls
-  // share no ref shape, and `aria-invalid` is the mark they share.
   const fieldsRef = useRef<HTMLDivElement | null>(null);
-  const focusFirstMissing = () => {
-    fieldsRef.current
-      ?.querySelector<HTMLElement>('[aria-invalid="true"]')
-      ?.focus();
-  };
+  const focusFirstMissing = () => focusFirstRefused(fieldsRef.current);
   const confirm = () => {
     // Marking and focusing is harmless when only a carriage block is present.
     if (missing.length > 0 || carriageBlocked || sourceBlocked) {

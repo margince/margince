@@ -67,6 +67,10 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["run_in_flight", "import.reason.run_in_flight"],
   // A date-only meeting cannot hold its host's calendar hour.
   ["day_holds_host_slot", "activity.dayHoldsHostSlot"],
+  // The member invite's refusals: the detail is English and names no screen.
+  ["already_invited", "users.alreadyInvited"],
+  ["email_taken", "users.emailTaken"],
+  ["removed_member_email", "users.removedEmail"],
   // A legal entity's refusals: the detail is English and names no screen.
   ["legal_entity_has_members", "legalEntities.hasMembers"],
   ["legal_entity_is_assessed_against", "legalEntities.assessedAgainst"],
@@ -81,6 +85,20 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["phone_malformed", "common.phone.malformed"],
   // The detail speaks of a promotion; the screen calls it a qualification.
   ["contact_has_deal", "lead.demoteContactHasDeal"],
+  // A Deal Room refusal: the detail is an English API sentence.
+  ["deal_room_document_already_present", "room.docs.alreadyPresent"],
+  // The detail says to regenerate, which a draft cannot; one sentence serves both.
+  ["offer_lapsed", "offer.lapsed"],
+  // A name or membership clash a screen words as its own field's refusal.
+  ["pipeline_name_taken", "pipeline.nameTaken"],
+  ["pipeline_default_taken", "pipeline.defaultTaken"],
+  ["custom_field_label_taken", "cf.labelTaken"],
+  ["already_on_list", "lists.alreadyOnShortlist"],
+  // The currency rate refusals name wire fields and the server's digit limits.
+  ["fx_rate_base_self", "settings.rates.fromIsBase"],
+  ["fx_rate_currency", "settings.rates.fromNotCurrency"],
+  ["fx_rate_positive", "settings.rates.rateNotPositive"],
+  ["fx_rate_past", "settings.rates.pastDate"],
 ]);
 
 // The held refusal names no record; its words depend only on whether the

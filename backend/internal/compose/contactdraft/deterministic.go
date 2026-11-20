@@ -84,6 +84,11 @@ func greeting(in Input) string {
 // something to say: what this contact SAID outranks the deal it was said about,
 // which outranks the last message anyone happened to send.
 func deterministicOpener(in Input) string {
+	// A floor cannot tell which history an explicit intent bears on, so it
+	// leaves all of it out rather than open on an unrelated topic.
+	if in.Intent != "" {
+		return ""
+	}
 	lines := draftfloor.SubstanceFor(in.Envelope.Lang())
 	if claim, ok := leadClaim(in); ok {
 		return claimOpener(claim, lines)

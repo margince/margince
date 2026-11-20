@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   jsonResponse,
@@ -115,4 +116,38 @@ export const Refused: Story = {
     {},
     "This room is closed, so its documents can no longer change.",
   ),
+};
+
+/**
+ * The picked file is already in the room. The refusal stands on the file it is
+ * about, once, until another file is picked.
+ */
+export const AlreadyInTheRoom: Story = {
+  render: addDocument({
+    [DEAL_DOCUMENTS]: () =>
+      jsonResponse({
+        data: FILES,
+        page: { next_cursor: null, has_more: false },
+      }),
+    [`POST /deal-rooms/${ROOM.id}/documents`]: () =>
+      jsonResponse(
+        {
+          status: 409,
+          code: "deal_room_document_already_present",
+          detail: "this file is already in the room",
+        },
+        409,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("combobox", { name: /^File/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Commercial terms v4" }),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "Add to room" }));
+    await canvas.findByText("This file is already in the room.");
+  },
 };

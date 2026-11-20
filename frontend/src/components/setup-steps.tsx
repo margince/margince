@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useRef, useState } from "react";
 import { Button } from "../design-system/atoms";
 import { Checklist, ChecklistStep } from "../design-system/checklist";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { StatusBadge } from "../design-system/statusbadge";
 import { accountNameOf } from "../format/connectorprovider";
 import { formatNumber } from "../format/format";
@@ -11,7 +13,12 @@ import type { MessageKey } from "../i18n/en";
 import { deferralDetail } from "../lib/deferral-detail";
 import { navigate } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
-import type { SetupStep, SetupStepId } from "../lib/setup-checklist";
+import {
+  type SetupStep,
+  type SetupStepId,
+  stepDials,
+} from "../lib/setup-checklist";
+import { usePermissionsSeen } from "../lib/setup-permissions";
 import {
   VOICE_FOCUS_PARAM,
   type VoiceSetupState,
@@ -22,6 +29,9 @@ const TITLE: Readonly<Record<SetupStepId, MessageKey>> = {
   model: "setup.step.model",
   mail: "setup.step.mail",
   calendar: "setup.step.calendar",
+  timezone: "setup.step.timezone",
+  language: "setup.step.language",
+  permissions: "setup.step.permissions",
   ai: "setup.step.ai",
   voice: "setup.step.writingVoice",
   booking: "setup.step.booking",
@@ -31,6 +41,9 @@ const ACTION: Readonly<Record<SetupStepId, MessageKey>> = {
   model: "setup.action.model",
   mail: "setup.action.mail",
   calendar: "setup.action.calendar",
+  timezone: "setup.action.timezone",
+  language: "setup.action.language",
+  permissions: "setup.action.permissions",
   ai: "setup.action.ai",
   voice: "setup.action.voice",
   booking: "setup.action.booking",
@@ -38,6 +51,8 @@ const ACTION: Readonly<Record<SetupStepId, MessageKey>> = {
 
 // What a finished step says when no connection names it.
 const DONE: Partial<Record<SetupStepId, MessageKey>> = {
+  language: "setup.step.languageDone",
+  permissions: "setup.step.permissionsDone",
   model: "setup.step.modelDone",
   voice: "setup.step.voiceDone",
 };
@@ -47,6 +62,9 @@ const WHY: Readonly<Record<SetupStepId, MessageKey>> = {
   model: "setup.caption.model",
   mail: "setup.caption.mail",
   calendar: "setup.caption.calendar",
+  timezone: "setup.caption.timezone",
+  language: "setup.caption.language",
+  permissions: "setup.caption.permissions",
   ai: "setup.caption.ai",
   voice: "setup.caption.voiceSamples",
   booking: "setup.caption.booking",
@@ -139,6 +157,11 @@ function doneCaption(t: Translator, step: SetupStep): string {
       ? t("setup.step.connectedAs", { address: step.account.label, provider })
       : provider;
   }
+  if (step.id === "timezone") {
+    return step.zone
+      ? t("setup.step.timezoneDone", { zone: step.zone })
+      : t("setup.step.timezoneDoneUnnamed");
+  }
   if (step.id === "ai") {
     const name = step.agent?.name;
     return name
@@ -205,6 +228,15 @@ export function SetupSteps({
 
 function StepAction({ step }: Readonly<{ step: SetupStep }>) {
   const t = useT();
+  // Kept mounted once done, so the dialog can close and hand focus back.
+  if (step.id === "permissions") {
+    return (
+      <PermissionsAction
+        primary={step.state === "current"}
+        done={step.state === "done"}
+      />
+    );
+  }
   if (step.state === "done") {
     // The step title already carries the state as a word for a screen reader.
     return (
@@ -234,7 +266,7 @@ function StepAction({ step }: Readonly<{ step: SetupStep }>) {
   return (
     <Button
       variant={step.state === "current" ? "primary" : undefined}
-      onClick={() => navigate(settingsHref(step.page))}
+      onClick={() => navigate(settingsHref(step.page), stepDials(step.id))}
     >
       {t(
         step.reason === "needsReconnect"
@@ -242,5 +274,54 @@ function StepAction({ step }: Readonly<{ step: SetupStep }>) {
           : ACTION[step.id],
       )}
     </Button>
+  );
+}
+
+// What Margince reads and writes, said in a dialog over wherever the checklist
+// is drawn. Pressing "Got it" is what marks the step done.
+function PermissionsAction({
+  primary,
+  done,
+}: Readonly<{ primary: boolean; done: boolean }>) {
+  const t = useT();
+  const { markSeen } = usePermissionsSeen();
+  const [open, setOpen] = useState(false);
+  // The button is replaced by the done badge on "Got it", so focus returns to
+  // this wrapper, which stays.
+  const holder = useRef<HTMLSpanElement>(null);
+  return (
+    <span ref={holder} tabIndex={-1}>
+      {done ? (
+        <span aria-hidden="true">
+          <StatusBadge kind="done" label={t("checklist.stepDone")} />
+        </span>
+      ) : (
+        <Button
+          variant={primary ? "primary" : undefined}
+          aria-haspopup="dialog"
+          onClick={() => setOpen(true)}
+        >
+          {t("setup.action.permissions")}
+        </Button>
+      )}
+      <ConfirmModal
+        returnFocusTo={() => holder.current}
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t("setup.permissions.title")}
+        confirmLabel={t("setup.permissions.confirm")}
+        cancelLabel={t("setup.permissions.later")}
+        onConfirm={() => {
+          markSeen();
+          setOpen(false);
+        }}
+      >
+        <ul className="form-stack">
+          <li>{t("setup.permissions.reads")}</li>
+          <li>{t("setup.permissions.writes")}</li>
+          <li>{t("setup.permissions.undo")}</li>
+        </ul>
+      </ConfirmModal>
+    </span>
   );
 }

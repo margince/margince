@@ -48,6 +48,7 @@ type Service struct {
 	pool       *pgxpool.Pool
 	schemaPool *pgxpool.Pool
 	liveLists  LiveListReader
+	removers   map[string]ChoiceRemover
 }
 
 // NewService wires the engine. schemaPool MAY be nil: the schema-change
@@ -150,6 +151,11 @@ func (e *ColumnTakenError) Error() string {
 // Is maps the collision onto the generic conflict sentinel so transports
 // without a dedicated branch still answer 409, never 500.
 func (e *ColumnTakenError) Is(target error) bool { return target == apperrors.ErrConflict }
+
+// MessageFault names it a label clash: another label gives the field another column.
+func (e *ColumnTakenError) MessageFault() (code, message string) {
+	return codeLabelTaken, e.Error()
+}
 
 // catalogColumns is the ONE spelling of the custom_field row selection,
 // in scanCustomField's scan order.

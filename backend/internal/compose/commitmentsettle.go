@@ -81,6 +81,10 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 		if !readSettlePayload(ctx, t.log, env, &payload) || (payload.Status != claimStatusDone && payload.Status != claimStatusDismissed) {
 			return nil
 		}
+		// An automatic close touches only the claim, so undoing it restores everything.
+		if env.Actor.ID == contacts.PromiseKeptActor {
+			return nil
+		}
 		return t.applyClaimSettlement(ctx, env.Actor, ids.UUID(payload.ClaimId), env.Trace.AuditLogID)
 	}
 	return nil
