@@ -193,6 +193,37 @@ describe("the record's History", () => {
     expect(screen.queryByText("Fleet renewal")).toBeNull();
   });
 
+  // A task further out than the Worklist's horizon shows its day nowhere else
+  // on the record, so its History row says when it is due and who holds it.
+  it("says when a task is due and who holds it", () => {
+    const view = viewWith(false);
+    withProviders(
+      <ContactTimelineTab
+        contactId="p-1"
+        view={{
+          ...view,
+          activities: {
+            data: [
+              activity({
+                id: "t-1",
+                kind: "task",
+                subject: "Call back about pricing",
+                occurred_at: "2026-08-11T12:00:00Z",
+                due_at: "2026-09-02T10:00:00Z",
+                due_has_time: false,
+                assignee_id: null,
+              }),
+            ],
+            page: { has_more: false },
+          },
+        }}
+      />,
+    );
+
+    const row = screen.getByText("Call back about pricing").closest("li");
+    expect(row?.textContent).toMatch(/Unassigned · Due \S/);
+  });
+
   it("states that a capped page is not the whole ledger", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={viewWith(true)} />);
 

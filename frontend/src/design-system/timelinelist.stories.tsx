@@ -476,6 +476,7 @@ export const TaskStates: Story = {
         kind: "task",
         title: "Send the revised quote",
         isDone: false,
+        terms: "Lena Fischer · Due 6 Dec 2026",
       }),
       entry("task-done", "2026-08-13T09:00:00Z", {
         kind: "task",
