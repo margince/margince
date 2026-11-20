@@ -28,6 +28,7 @@ import (
 var approvalSummaryHoles = map[string][]string{
 	"taskCompleted":                {"%s", "%s"},
 	"taskContact":                  nil,
+	"taskBooked":                   {"%s", "%s"},
 	"signaturePrivate":             nil,
 	"draftedReplyWaiting":          {"%s"},
 	"counterpartyWorthKeeping":     {"%s"},

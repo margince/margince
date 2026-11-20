@@ -107,7 +107,11 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 			if contact == "" {
 				contact = said.taskContact
 			}
-			reason := fmt.Sprintf(said.taskCompleted, contact, completed.WrittenAt.Format(time.DateOnly))
+			phrase := said.taskCompleted
+			if completed.Booking {
+				phrase = said.taskBooked
+			}
+			reason := fmt.Sprintf(phrase, contact, completed.WrittenAt.Format(time.DateOnly))
 			decided = append(decided, attention.Receipt{Source: attention.ReceiptFromCorrection, ID: completed.AuditID, AuditLogID: completed.AuditID, Kind: "task_completed", Summary: reason, Headline: completed.Subject, Reason: reason, OccurredAt: completed.At, TargetType: string(recordTypeActivity), TargetID: completed.ID, Actor: attention.ReceiptActor{Type: systemActor}, Undo: undo})
 		}
 	}

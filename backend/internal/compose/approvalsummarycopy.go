@@ -33,6 +33,7 @@ import (
 type approvalSummaryCopy struct {
 	taskCompleted    string
 	taskContact      string
+	taskBooked       string
 	signaturePrivate string
 	// draftedReplyWaiting: a follow-up reply is drafted. The quoted %s is its subject.
 	draftedReplyWaiting string
@@ -106,6 +107,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 	textlang.English: {
 		taskCompleted:            systemtext.Copy("approval.taskCompleted", textlang.English),
 		taskContact:              systemtext.Copy("approval.taskContact", textlang.English),
+		taskBooked:               systemtext.Copy("approval.taskBooked", textlang.English),
 		signaturePrivate:         systemtext.Copy("approval.signaturePrivate", textlang.English),
 		draftedReplyWaiting:      systemtext.Copy("approval.draftedReplyWaiting", textlang.English),
 		counterpartyWorthKeeping: systemtext.Copy("approval.counterpartyWorthKeeping", textlang.English),
@@ -150,6 +152,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 	textlang.German: {
 		taskCompleted:            systemtext.Copy("approval.taskCompleted", textlang.German),
 		taskContact:              systemtext.Copy("approval.taskContact", textlang.German),
+		taskBooked:               systemtext.Copy("approval.taskBooked", textlang.German),
 		signaturePrivate:         systemtext.Copy("approval.signaturePrivate", textlang.German),
 		draftedReplyWaiting:      systemtext.Copy("approval.draftedReplyWaiting", textlang.German),
 		counterpartyWorthKeeping: systemtext.Copy("approval.counterpartyWorthKeeping", textlang.German),
@@ -194,6 +197,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 	textlang.Vietnamese: {
 		taskCompleted:            systemtext.Copy("approval.taskCompleted", textlang.Vietnamese),
 		taskContact:              systemtext.Copy("approval.taskContact", textlang.Vietnamese),
+		taskBooked:               systemtext.Copy("approval.taskBooked", textlang.Vietnamese),
 		signaturePrivate:         systemtext.Copy("approval.signaturePrivate", textlang.Vietnamese),
 		draftedReplyWaiting:      systemtext.Copy("approval.draftedReplyWaiting", textlang.Vietnamese),
 		counterpartyWorthKeeping: systemtext.Copy("approval.counterpartyWorthKeeping", textlang.Vietnamese),
