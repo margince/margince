@@ -7,7 +7,11 @@ import { handledForYouOptions } from "../lib/handled";
 import { homeDayOptions } from "../lib/worklistday";
 import { quietRun, readingsDay } from "../testing/brief.fixtures";
 import { meFixture, READS_RECORDS } from "../testing/mefixture";
-import { mayReadHomeDeals, prefetchHome } from "./homeprefetch";
+import {
+  mayReadHomeDeals,
+  prefetchHome,
+  prefetchHomeDeals,
+} from "./homeprefetch";
 import { createQueryClient, liveOnMount } from "./queryclient";
 
 afterEach(() => vi.restoreAllMocks());
@@ -44,7 +48,7 @@ function answering(handled: unknown) {
 it("lets Home's mount use an answer the prefetch fetched", async () => {
   answering(handledPage);
   const client = createQueryClient();
-  prefetchHome(client, new Map(), true);
+  prefetchHome(client, new Map());
   await vi.waitFor(() => expect(handledQuery(client).state.data).toBeDefined());
   await vi.waitFor(() => expect(liveOnMount(handledQuery(client))).toBe(true));
 });
@@ -59,14 +63,15 @@ it("keeps the mount refetch for an answer already cached before the prefetch", a
     { pages: [handledPage], pageParams: [undefined] },
     { updatedAt: Date.now() + 1 },
   );
-  prefetchHome(client, new Map(), true);
+  prefetchHome(client, new Map());
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(liveOnMount(handledQuery(client))).toBe("always");
 });
 
 it("prefetches nothing for the weekly view", () => {
   const fetched = vi.spyOn(globalThis, "fetch");
-  prefetchHome(createQueryClient(), new Map([["view", "weekly"]]), true);
+  prefetchHome(createQueryClient(), new Map([["view", "weekly"]]));
+  prefetchHomeDeals(createQueryClient(), new Map([["view", "weekly"]]));
   expect(fetched).not.toHaveBeenCalled();
 });
 
@@ -91,7 +96,7 @@ function stubHangingWorklist(): () => AbortSignal | undefined {
 
 it("aborts the day's Worklist read when the reader leaves before Home renders", async () => {
   const worklist = stubHangingWorklist();
-  const leave = prefetchHome(createQueryClient(), new Map(), true);
+  const leave = prefetchHome(createQueryClient(), new Map());
   await vi.waitFor(() => expect(worklist()).toBeDefined());
 
   leave();
@@ -101,7 +106,7 @@ it("aborts the day's Worklist read when the reader leaves before Home renders", 
 it("leaves the read running when Home already watches it", async () => {
   const worklist = stubHangingWorklist();
   const client = createQueryClient();
-  const leave = prefetchHome(client, new Map(), true);
+  const leave = prefetchHome(client, new Map());
   await vi.waitFor(() => expect(worklist()).toBeDefined());
   const home = new InfiniteQueryObserver(client, homeDayOptions()).subscribe(
     () => undefined,
@@ -117,7 +122,7 @@ it("leaves the read running when Home already watches it", async () => {
 it("lets go of the day's Worklist once its read answers", async () => {
   answering(handledPage);
   const client = createQueryClient();
-  prefetchHome(client, new Map(), true);
+  prefetchHome(client, new Map());
   const day = () =>
     client.getQueryCache().find({
       queryKey: homeDayOptions().queryKey,
@@ -132,7 +137,7 @@ it("does not read the brief or the done-for-you receipt for a reader without dea
   const fetched = vi
     .spyOn(globalThis, "fetch")
     .mockImplementation(async () => Response.json({}));
-  prefetchHome(createQueryClient(), new Map(), false);
+  prefetchHome(createQueryClient(), new Map());
   await new Promise((resolve) => setTimeout(resolve, 0));
   const paths = fetched.mock.calls.map(
     ([input]) =>

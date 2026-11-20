@@ -27,7 +27,7 @@ import { AuthSplash } from "./app/bootsplash";
 import { lockScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import { useFeatureLanding } from "./app/featurelanding";
-import { mayReadHomeDeals, prefetchHome } from "./app/homeprefetch";
+import { useHomePrefetch } from "./app/homeprefetch";
 import { passesOnboardingGate } from "./app/onboarding-gate";
 import { useCommandPalette } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
@@ -358,19 +358,12 @@ function AuthedApp({
     described,
     unfinished: progress.unfinished,
   });
-  const queryClient = useQueryClient();
-  const readsDeals = mayReadHomeDeals(me.data);
   useEffect(() => {
     if (shellReady) {
       markJourney("gates");
     }
   }, [shellReady]);
-  useEffect(() => {
-    if (!opensHome) {
-      return;
-    }
-    return prefetchHome(queryClient, currentParams(), readsDeals);
-  }, [opensHome, queryClient, readsDeals]);
+  useHomePrefetch(opensHome, me.data);
   useTaskReminderNotifications(authed);
   useFeatureLanding(shellReady, confinement !== null, disabled);
 

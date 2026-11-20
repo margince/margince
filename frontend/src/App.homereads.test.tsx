@@ -78,6 +78,24 @@ it("asks for Home's day while the session probe is out, and the deal reads once 
   await waitFor(() => expect(asked(seen, "/magic")).toBeDefined());
 });
 
+// The day is the slow read, so it is still out when the probe answers. The
+// grant in that answer starts the deal reads and must leave the day alone.
+it("keeps the day's read in flight when the probe answers with the deal grant", async () => {
+  writeStored(STORAGE_KEYS.sessionSeen, "1");
+  const { seen } = server(
+    {
+      "/me": () =>
+        json(meFixture({ roles: ["rep"], allow: { deal: ["read"] } })),
+    },
+    ["/worklist"],
+  );
+  renderApp();
+  await waitFor(() => expect(asked(seen, "/magic")).toBeDefined());
+  const days = seen.filter((s) => s.path === "/worklist");
+  expect(days).toHaveLength(1);
+  expect(days[0]?.signal?.aborted).toBe(false);
+});
+
 it("stops Home's reads once the gate sends the reader to describe the company", async () => {
   writeStored(STORAGE_KEYS.sessionSeen, "1");
   const { seen } = server(
