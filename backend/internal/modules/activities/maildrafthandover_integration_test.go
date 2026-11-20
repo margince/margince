@@ -207,6 +207,10 @@ func TestOnlyALeaversFreeDraftsAreTransferable(t *testing.T) {
 // A receiver who saves a draft on the same anchor while the handover runs makes
 // the move collide on the one-draft-per-anchor key. The handover answers a
 // conflict to retry, never a server error.
+//
+// The receiver's insert is held uncommitted first, so the handover's move
+// cannot see it and must wait on its key. The commit comes only once that very
+// backend waits on that very transaction.
 func TestAReceiversConcurrentSaveIsAConflict(t *testing.T) {
 	e := setupSend(t)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
@@ -218,16 +222,31 @@ func TestAReceiversConcurrentSaveIsAConflict(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := receiver.Exec(ctx, `INSERT INTO mail_draft (id, author_id, anchor_type, anchor_id) VALUES ($1, $2, $3, $4)`,
-		ids.NewV7(), e.other, string(anchor.Type), anchor.ID); err != nil {
+	var receiverXact string
+	if err := receiver.QueryRow(ctx, `INSERT INTO mail_draft (id, author_id, anchor_type, anchor_id) VALUES ($1, $2, $3, $4)
+		RETURNING xid(pg_current_xact_id())::text`, ids.NewV7(), e.other, string(anchor.Type), anchor.ID).Scan(&receiverXact); err != nil {
 		t.Fatalf("the receiver's save: %v", err)
 	}
+	admin := asAdminWith(e, fullActivityGrant())
+	pids := make(chan int32, 1)
 	done := make(chan error, 1)
 	go func() {
-		_, err := handOverDrafts(asAdminWith(e, fullActivityGrant()), t, e)
-		done <- err
+		done <- database.WithWorkspaceTx(admin, e.pool, func(tx pgx.Tx) error {
+			var pid int32
+			if err := tx.QueryRow(admin, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+				return err
+			}
+			pids <- pid
+			_, err := draftStore(e).HandOverMailDraftsTx(admin, tx, ids.From[ids.UserKind](e.rep), ids.From[ids.UserKind](e.other))
+			return err
+		})
 	}()
-	e.awaitBlockedOnAnotherTransaction(t)
+	select {
+	case pid := <-pids:
+		e.awaitWaitingOn(t, pid, receiverXact)
+	case err := <-done:
+		t.Fatalf("the handover ended before it could wait on the receiver: %v", err)
+	}
 	if err := receiver.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -236,20 +255,17 @@ func TestAReceiversConcurrentSaveIsAConflict(t *testing.T) {
 	}
 }
 
-// awaitBlockedOnAnotherTransaction returns once some backend waits on a lock,
-// which is the handover's move waiting on the receiver's uncommitted key.
-func (e *sendEnv) awaitBlockedOnAnotherTransaction(t *testing.T) {
+// awaitWaitingOn returns once backend pid waits on the lock of transaction
+// xact, the one no other test can hold.
+func (e *sendEnv) awaitWaitingOn(t *testing.T, pid int32, xact string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	probe, err := e.pool.Acquire(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer probe.Release()
 	for {
 		var waiting bool
-		if err := probe.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_locks WHERE NOT granted)`).Scan(&waiting); err != nil {
+		if err := e.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_locks
+			WHERE pid = $1 AND NOT granted AND locktype = 'transactionid' AND transactionid::text = $2)`,
+			pid, xact).Scan(&waiting); err != nil {
 			t.Fatalf("the handover never waited on the receiver's save: %v", err)
 		}
 		if waiting {
