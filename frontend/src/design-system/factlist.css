@@ -126,6 +126,8 @@
 .factlist-flat .factlist-row-block .factlist-term {
   padding-block: 0;
 }
+/* A block value is prose someone wrote, so its line breaks are kept. */
 .factlist-flat .factlist-row-block .factlist-value {
   overflow: visible;
+  white-space: pre-line;
 }
