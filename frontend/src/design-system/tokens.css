@@ -54,7 +54,7 @@
   --ladder3: #f1f3f3;
   --ladder4: #e3e7e8;
   --ladder1Edge: var(--paneEdge);
-  --ladder2Edge: #e3e7e8;
+  --ladder2Edge: #f1f3f3;
   --ladder3Edge: #d0d6d8;
   --ladder4Edge: #b6bfc1;
 
@@ -819,7 +819,7 @@
   --ladder2: #1c2020;
   --ladder3: #1f2323;
   --ladder4: #212628;
-  --ladder2Edge: #292f30;
+  --ladder2Edge: #222626;
   --ladder3Edge: #31383a;
   --ladder4Edge: #3b4345;
 
@@ -980,7 +980,7 @@
     --ladder2: #1c2020;
     --ladder3: #1f2323;
     --ladder4: #212628;
-    --ladder2Edge: #292f30;
+    --ladder2Edge: #222626;
     --ladder3Edge: #31383a;
     --ladder4Edge: #3b4345;
 

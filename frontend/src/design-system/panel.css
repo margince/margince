@@ -573,9 +573,19 @@
     .panel-discovery,
     .chapter-parts > .panel
   ) {
+  --sectionRule: var(--borderSubtle);
   margin-inline: calc(-1 * var(--padPanel));
   border: 0;
-  border-block-start: 1px solid var(--borderSubtle);
+  border-block-start: 1px solid;
+  /* The section bleeds past the feed; its rule spans the feed alone. */
+  border-image: linear-gradient(
+      to right,
+      transparent var(--sectionRuleInset, 0px),
+      var(--sectionRule) var(--sectionRuleInset, 0px),
+      var(--sectionRule) calc(100% - var(--sectionRuleInset, 0px)),
+      transparent calc(100% - var(--sectionRuleInset, 0px))
+    )
+    1;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -618,5 +628,5 @@
   .record-split-feed > *,
   .record-split-feed > :first-child > *
 ) {
-  border-block-start-color: transparent;
+  --sectionRule: transparent;
 }

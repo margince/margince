@@ -287,8 +287,12 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
           const edge = composite(pal[`--ladder${level}Edge`], ground);
           return contrastOf(edge, ground);
         });
+        // Level 2's ground already parts it from the card, so its edge is the faintest.
         for (const [at, ratio] of ratios.entries()) {
-          expect(ratio, `${theme}: level ${at + 1} edge`).toBeGreaterThan(1.15);
+          const floor = at === 1 ? 1.05 : 1.15;
+          expect(ratio, `${theme}: level ${at + 1} edge`).toBeGreaterThan(
+            floor,
+          );
         }
         const deep = ratios.slice(1);
         expect(
