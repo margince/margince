@@ -15,17 +15,19 @@ import (
 
 const taskReopenedBy = "task_reopened_by"
 
-// CloseTasksAnsweredByBookingTx completes every open task on the lead or
-// contact a booking was filed on, whoever created it, through the same
+// CloseTasksAnsweredByBookingTx completes every open task the booking's host
+// holds on the lead or contact the booking was filed on, whoever created it. The
+// booker is anonymous, so a task of any other seat is never theirs to close. It runs through the same
 // completion and receipt evidence a sent mail uses. A task created at or after
 // the booking, or one a user reopened after an automatic completion, stays open.
-func (s *Store) CloseTasksAnsweredByBookingTx(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) (int, error) {
+func (s *Store) CloseTasksAnsweredByBookingTx(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, host ids.UserID) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
 	}
 	args := schedulingArgs{}
 	query := `SELECT task.id FROM activity task JOIN activity booked ON booked.id=` + args.add(meeting) + `
  WHERE task.kind='task' AND NOT task.is_done AND task.archived_at IS NULL AND task.created_at < booked.created_at
+ AND task.assignee_id=` + args.add(host) + `
  AND EXISTS (SELECT 1 FROM activity_link t JOIN activity_link m ON m.activity_id=booked.id
    AND (m.lead_id=t.lead_id OR m.contact_id=t.contact_id) WHERE t.activity_id=task.id)
  AND NOT ` + reopenedAfterAnswerSQL("task") + ` ORDER BY task.id FOR UPDATE OF task`

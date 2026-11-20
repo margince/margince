@@ -318,7 +318,7 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 			return err
 		}
 		if invitationSource(ctx) == publicBookingSource {
-			if _, err := s.CloseTasksAnsweredByBookingTx(ctx, tx, ids.From[ids.ActivityKind](row.ID)); err != nil {
+			if _, err := s.CloseTasksAnsweredByBookingTx(ctx, tx, ids.From[ids.ActivityKind](row.ID), host); err != nil {
 				return err
 			}
 		}

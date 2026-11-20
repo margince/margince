@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -22,6 +23,22 @@ func (f *invitationFixture) handTask(t *testing.T, subject, entityType string, r
 	task, _, err := f.store.LogActivity(f.ctx, LogActivityInput{
 		Kind: "task", Subject: &subject, Source: "manual", AssigneeID: new(ids.From[ids.UserKind](f.env.rep)),
 		Links: []ActivityLinkInput{{EntityType: entityType, EntityID: record}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ids.UUID(task.Id)
+}
+
+func (f *invitationFixture) colleagueTask(t *testing.T, record ids.UUID) ids.UUID {
+	t.Helper()
+	colleague := ids.NewV7()
+	if _, err := f.env.owner.Exec(f.ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1,$2,'Colleague')`, colleague, "colleague-"+colleague.String()+"@example.test"); err != nil {
+		t.Fatal(err)
+	}
+	task, _, err := f.store.LogActivity(f.ctx, LogActivityInput{
+		Kind: "task", Subject: new("Colleague's task"), Source: "manual", AssigneeID: new(ids.From[ids.UserKind](colleague)),
+		Links: []ActivityLinkInput{{EntityType: "contact", EntityID: record}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +105,7 @@ func TestABookingThroughThePageClosesTheOpenTasksOnTheBookedLead(t *testing.T) {
 	}
 	actor, _ := principal.Actor(f.ctx)
 	actor.Permissions.Objects["lead"] = principal.ObjectGrant{Read: true}
-	receipts, err := f.store.RecentTaskCompletions(principal.WithActor(f.ctx, actor), time.Now().Add(-time.Hour), 10)
+	receipts, err := f.store.RecentTaskCompletions(principal.WithActor(f.ctx, actor), clocktest.Now(t).Add(-time.Hour), 10)
 	if err != nil || len(receipts) != 1 || receipts[0].ID != mine || !receipts[0].Booking || receipts[0].Contact != "Lead A" || receipts[0].EmailID != ids.UUID(meeting.Id) {
 		t.Fatalf("receipts=%+v, %v", receipts, err)
 	}
@@ -97,7 +114,7 @@ func TestABookingThroughThePageClosesTheOpenTasksOnTheBookedLead(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := f.store.tx(f.systemCtx(), func(tx pgx.Tx) error {
-		n, err := f.store.CloseTasksAnsweredByBookingTx(f.systemCtx(), tx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)))
+		n, err := f.store.CloseTasksAnsweredByBookingTx(f.systemCtx(), tx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), ids.From[ids.UserKind](f.env.rep))
 		if n != 0 {
 			t.Fatalf("a second pass over the same booking closed %d tasks", n)
 		}
@@ -114,9 +131,13 @@ func TestABookingThroughThePageClosesTheOpenTasksOnTheBookedContactOnly(t *testi
 	f := newInvitationFixture(t)
 	contact := ids.UUID(f.request.ContactId)
 	mine := f.handTask(t, "Call the guest", "contact", contact)
+	colleagues := f.colleagueTask(t, contact)
 	f.bookThroughThePage(t, invitationIntent{})
 	if !f.taskIsDone(t, mine) {
 		t.Fatal("the user's own task on the booked contact stayed open")
+	}
+	if f.taskIsDone(t, colleagues) {
+		t.Fatal("an anonymous booking closed another user's task")
 	}
 }
 
