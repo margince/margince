@@ -617,6 +617,27 @@ func TestNotesCanLandWithoutAuthorityToChangeTheMeeting(t *testing.T) {
 	}
 }
 
+// The meeting is filed on its attendees' contacts, so the transcript lands
+// there too, even on a contact a colleague owns. The contact already shows the
+// meeting; the notes add no record it did not reach.
+func TestNotesLandOnAColleaguesContactTheMeetingIsFiledOn(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	meeting, _, _ := meetingWithNotes(t, env)
+	moved, err := e.Owner.Exec(context.Background(), `UPDATE contact SET owner_id = $1, visibility = 'workspace', narrowing_reason = NULL
+		WHERE id IN (SELECT contact_id FROM activity_link WHERE activity_id = $2 AND contact_id IS NOT NULL)`, e.Rep3, meeting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if moved.RowsAffected() == 0 {
+		t.Fatal("the meeting is filed on no contact, so this test checks nothing")
+	}
+	landed, err := landAs(t, e, activities.NewStore(e.DB()), e.Rep1, meeting, "myco.example")
+	if err != nil || !landed {
+		t.Fatalf("notes on a colleague's contact → landed %v, %v; want landed", landed, err)
+	}
+}
+
 func TestMeetingNotesHintEndsWhenTheDocumentBecomesATranscript(t *testing.T) {
 	env := newCaptureEnv(t)
 	meeting, _, _ := meetingWithNotes(t, env)

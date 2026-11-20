@@ -492,14 +492,14 @@ describe("ProjectScreen", () => {
     for (const label of ["New deal"]) {
       expect(screen.queryByRole("button", { name: label })).toBeNull();
     }
-    // Logging files an activity under the project rather than changing it, so
-    // a colleague's project takes a note as every other record page does.
+    // Logging attaches an activity to the project, and attaching needs the
+    // right to change it, so a colleague's project offers no log.
     await waitFor(() =>
       expect(
         screen
           .getByRole("button", { name: en["log.title"] })
           .hasAttribute("disabled"),
-      ).toBe(false),
+      ).toBe(true),
     );
     // Inside the overflow menu the verbs are refused rather than dropped, so a
     // reader learns the verb exists and why it is shut. What must NOT happen is
@@ -516,7 +516,7 @@ describe("ProjectScreen", () => {
       screen
         .getByRole("button", { name: /^Add task/ })
         .hasAttribute("disabled"),
-    ).toBe(false);
+    ).toBe(true);
     for (const label of [
       /^Edit project/,
       /^Archive/,

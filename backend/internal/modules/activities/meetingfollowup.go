@@ -78,8 +78,8 @@ func (s *Store) queryMeetingFollowUps(
 }
 
 // addressableContactClause is which contacts under alias rc this reader may
-// write a follow-up to. It is the attach rule a send files under, so a
-// read-only shared contact is never offered a draft the send would refuse.
+// write a follow-up to. It is the attach rule a send files under. So a contact
+// the reader may see but not change is never offered a draft the send refuses.
 func addressableContactClause(ctx context.Context, arg func(any) int) (string, error) {
 	if !auth.ReadGranted(ctx, "contact") {
 		return scopeNothing, nil

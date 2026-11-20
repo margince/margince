@@ -73,7 +73,7 @@ func (in LegalEntityInput) fields() []entityField {
 		{column: "vat_id", value: in.VatID, limit: legalEntityNameLimit, anchored: true},
 		{column: fieldRegisterCourt, value: in.RegisterCourt, limit: legalEntityNameLimit, anchored: true},
 		{column: fieldRegisterNumber, value: in.RegisterNumber, limit: legalEntityNameLimit, anchored: true},
-		{column: wireCountry, value: in.Country, limit: 2, required: true, clean: cleanEntityCountry},
+		{column: wireCountry, value: in.Country, limit: 2, required: true, clean: cleanEntityCountry, installationOwned: true},
 		{column: wireDefaultLanguage, value: in.DefaultLanguage, limit: 2, clean: cleanEntityLanguage},
 		{column: "bank_account_holder", value: in.BankAccountHolder, limit: legalEntityNameLimit},
 		{column: wireIBAN, value: in.IBAN, limit: 34, clean: cleanIBAN},

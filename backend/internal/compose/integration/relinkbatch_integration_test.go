@@ -28,7 +28,8 @@ import (
 
 // threadFixture is one conversation of three mails we sent to one
 // correspondent. Two are Rep1's own and one is on another team's
-// capture-private contact. A project is there to file the conversation under.
+// capture-private contact. Rep1's own project is there to file the
+// conversation under: filing adds to the project, so it must be Rep1's to change.
 type threadFixture struct {
 	key     string
 	mine    [2]ids.UUID
@@ -41,8 +42,8 @@ func seedThreadFixture(t *testing.T, e *Env, owner *pgx.Conn) threadFixture {
 	f := threadFixture{key: "thread:" + ids.NewV7().String()}
 	company := e.SeedCompany(t, "Acme GmbH", nil)
 	f.project = ids.NewV7()
-	e.WsExec(t, `INSERT INTO project (id, name, key, company_id, phase, source, captured_by)
-		VALUES ($1, 'ERP rollout', 'ERP27', $2, 'delivering', 'manual', 'human:x')`, f.project, company)
+	e.WsExec(t, `INSERT INTO project (id, name, key, company_id, phase, source, captured_by, owner_id)
+		VALUES ($1, 'ERP rollout', 'ERP27', $2, 'delivering', 'manual', 'human:x', $3)`, f.project, company, e.Rep1)
 
 	myContact := e.SeedContact(t, "My Contact", &e.Rep1)
 	for i := range f.mine {
