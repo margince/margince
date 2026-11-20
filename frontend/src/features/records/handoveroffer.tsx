@@ -142,7 +142,7 @@ function OfferForm({
     );
   };
   return (
-    <div>
+    <div className="form-stack">
       <Field label={t("handover.offerTo")}>
         {(control) => (
           <Select
@@ -167,17 +167,19 @@ function OfferForm({
           />
         )}
       </Field>
-      <Button
-        variant="primary"
-        disabled={toId === ""}
-        pending={offer.isPending}
-        onClick={send}
-      >
-        {t("handover.offerSend")}
-      </Button>
-      <Button variant="link" onClick={() => setOpened(false)}>
-        {t("handover.offerCancel")}
-      </Button>
+      <div className="form-actions">
+        <Button variant="link" onClick={() => setOpened(false)}>
+          {t("handover.offerCancel")}
+        </Button>
+        <Button
+          variant="primary"
+          disabled={toId === ""}
+          pending={offer.isPending}
+          onClick={send}
+        >
+          {t("handover.offerSend")}
+        </Button>
+      </div>
       {offer.error && (
         <ErrorLine inline>{problemMessageOf(offer.error, t)}</ErrorLine>
       )}

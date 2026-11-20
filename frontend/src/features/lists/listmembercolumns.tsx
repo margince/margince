@@ -12,8 +12,8 @@ import type { ListColumn } from "../../design-system/listtable";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
-  customColumnLabel,
   fieldLabel,
+  useCustomColumnLabel,
   useFilterVocabulary,
 } from "../../lib/filterdata";
 import type { List } from "../../lib/lists.queries";
@@ -62,13 +62,14 @@ function useFilterColumns(list: List): ListColumn<MemberRow>[] {
   const live = list.list_type === "dynamic";
   const vocabulary = useFilterVocabulary(list.entity_type, live);
   const valueText = useFieldValueText(list.entity_type, [], live);
+  const columnLabel = useCustomColumnLabel(list.entity_type, live);
   const tree = decode(list.definition);
   const names = tree ? fieldsNamed(tree) : [];
   return names.map((field, index) => {
     const known = vocabularyField(vocabulary.data, field);
     return {
       key: `field:${field}`,
-      header: known ? fieldLabel(known, t) : customColumnLabel(field),
+      header: known ? fieldLabel(known, t) : columnLabel(field),
       initiallyHidden: index >= SHOWN_FILTER_FIELDS,
       cell: (row: MemberRow) => {
         const held = row.listing?.values?.[field];

@@ -74,6 +74,7 @@ export function ListTable<Row>({
   unit,
   unitOne,
   emptyNote,
+  emptyLine,
   search,
   sort,
   chips = [],
@@ -165,16 +166,13 @@ export function ListTable<Row>({
   /** Singular noun for a count of one ("contact", "lead"). Defaults to `unit`. */
   unitOne?: string;
   /**
-   * A likelier cause than "there is nothing here", for a caller that knows one.
-   *
-   * Drawn under the empty state whichever line it carries, narrowed or not:
-   * which emptiness a note explains is the CALLER's to know. A "Mine" view for
-   * a reader who owns nothing is the case this was written for and is a
-   * narrowed list, so a note shown only over the unnarrowed one never appeared.
-   * A caller whose note would blame the data source for what the reader's own
-   * dial did passes none.
+   * A likelier cause than "there is nothing here", under the empty line
+   * whether it is narrowed or not. A caller whose note would blame the data
+   * source for what the reader's own dial did passes none.
    */
   emptyNote?: ReactNode;
+  /** Replaces the empty line and its Clear filters; see `EmptyRow`. */
+  emptyLine?: ReactNode;
   /**
    * Omit for a list whose GET has no `q` param; the box is then not rendered.
    * `answered` is the search the rows answer, which `value` runs ahead of while
@@ -381,18 +379,19 @@ export function ListTable<Row>({
     !narrowedBy(dials) &&
     archived?.checked !== true &&
     fitsOnePage(rows, serverTotal, hasMore);
-  const emptyLine = (
+  const emptyRow = (
     <EmptyRow
       unit={unit}
       narrowed={narrowedBy(dials)}
       filtered={filteredBy(dials)}
       onClear={() => clearAll(dials)}
+      line={emptyLine}
       emptyNote={emptyNote}
     />
   );
   const emptyBlock = (
     <div className="lt-emptyline">
-      <EmptyState>{emptyLine}</EmptyState>
+      <EmptyState>{emptyRow}</EmptyState>
     </div>
   );
 
@@ -490,7 +489,7 @@ export function ListTable<Row>({
             phone={phone}
             pending={pending}
             problem={problem}
-            empty={emptyLine}
+            empty={emptyRow}
           />
         </ListGrid>
       )}

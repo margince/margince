@@ -8673,6 +8673,9 @@ export const en = {
   "tasks.log.action": "Log what happened",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
+  "tasks.log.noRecord": "Log without a record",
+  "tasks.log.pickRecord": "Choose a record",
+  "tasks.log.back": "Back",
   "tasks.log.leftOpen":
     "The activity was logged. The task stays open until all files attach; retry to finish.",
   "tasks.log.completeFailed":
@@ -19865,6 +19868,8 @@ export const en = {
   "filters.date.daysAgo": "Days ago",
   "filters.date.mode": "How the date is given",
   "filters.date.daysAgoCount": "{field}: days before today",
+  "filters.date.daysAgoInvalid":
+    "Enter a whole number of days from 0 to {max}.",
   "filters.saveListConfirm": "Save list",
   "filters.propose.label": "Describe the {records} you want",
   "filters.propose.hint":
@@ -19914,6 +19919,7 @@ export const en = {
   "lists.sharing.private": "Only me",
   "lists.sharing.team": "A team",
   "lists.sharing.workspace": "Everyone",
+  "lists.sharing.noTeamHint": "You are in no team.",
   "lists.sharingLabel": "Who can find it",
   "lists.sharingHint":
     "Sharing a list shows nobody a record they could not already see.",
@@ -20879,6 +20885,7 @@ export const en = {
   "worklist.band.build_pipeline": "Prospecting",
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",
+  "worklist.band.more": "More in your list",
   // A band holding nothing, said rather than left out. Each says what is
   // absent, because "nothing here" four times over tells a reader less than
   // one line naming what they are clear of.

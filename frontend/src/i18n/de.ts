@@ -8689,6 +8689,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.log.action": "Ergebnis erfassen",
   "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
+  "tasks.log.noRecord": "Ohne Datensatz erfassen",
+  "tasks.log.pickRecord": "Datensatz wählen",
+  "tasks.log.back": "Zurück",
   "tasks.log.leftOpen":
     "Die Aktivität wurde erfasst. Die Aufgabe bleibt offen, bis alle Dateien angehängt sind. Versuche es erneut.",
   "tasks.log.completeFailed":
@@ -20071,6 +20074,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",
   "filters.date.daysAgoCount": "{field}: Tage vor heute",
+  "filters.date.daysAgoInvalid":
+    "Gib eine ganze Zahl von 0 bis {max} Tagen ein.",
   "filters.saveListConfirm": "Liste speichern",
   "filters.propose.label": "Beschreibe die {records}, die du suchst",
   "filters.propose.hint":
@@ -20120,6 +20125,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.sharing.private": "Privat",
   "lists.sharing.team": "Ein Team",
   "lists.sharing.workspace": "Alle",
+  "lists.sharing.noTeamHint": "Du bist in keinem Team.",
   "lists.sharingLabel": "Wer sie finden kann",
   "lists.sharingHint":
     "Wer eine Liste sieht, sieht dadurch keinen Datensatz, den er nicht schon sehen durfte.",
@@ -21167,6 +21173,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.band.build_pipeline": "Akquise",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
+  "worklist.band.more": "Weiteres in deiner Liste",
   "worklist.disposition.verb.snooze": "Zurückstellen",
   "worklist.disposition.snoozeForDays_one": "{value} Tag zurückstellen",
   "worklist.disposition.snoozeForDays_other": "{value} Tage zurückstellen",

@@ -120,6 +120,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendproblemcodecopy_test.go` | H3 | Every problem code an httperr builder sends for a reader has catalog copy on the screen, keyed by the wire code (PROBLEM\_CODE\_COPY in problemcodecopy.ts). |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails silently when it falls short. |
 | `frontendproviders_test.go` | H3 | The routing form offers the adapters and profiles the server accepts, and no others. |
+| `frontendrelativedays_test.go` | H1 | The filter builder bounds a "days ago" count where the engine does. |
 | `frontendremoteimagebox_test.go` | H3 | The approval card offers the drawn signature only where the list's markup carries the box marker. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat may do rather than which role it holds. |
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one list row carries, or the chip strip's "+N" counts a number nobody has. |

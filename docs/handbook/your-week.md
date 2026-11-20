@@ -124,7 +124,7 @@ open it.
 
 ## Planning a week
 
-The **Plan for this week** card, on **Home → Weekly**, is your plan for the week. It holds what you said
+The **Plan for this week** card, on **Home → Weekly**, is your plan for the week. Once you press **Plan week**, it takes the week's dates as its title, such as **Plan · 16 – 22 November**. It holds what you said
 you will do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **Needs you**
 on that day, in the company's time zone. Done ones, ones due later and ones with no date stay out.
 

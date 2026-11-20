@@ -16,7 +16,9 @@ import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
 import { recordListsKey } from "../lib/activitykeys";
 import { useCanWrite } from "../lib/capability";
+import { useNewListSharing } from "../lib/listaudience";
 import {
+  type List,
   type ListRecordType,
   useChangeMember,
   useCreateList,
@@ -42,6 +44,7 @@ type AddInput = Readonly<{
   choice: string;
   newName: string;
   note: string;
+  sharing: List["sharing"];
 }>;
 
 export function useMayAddToShortlist(): boolean {
@@ -123,6 +126,7 @@ export function AddToShortlistDialog({
   const shortlists = useLists({ entityType, listType: "static" });
   const create = useCreateList();
   const change = useChangeMember();
+  const sharing = useNewListSharing();
   const [choice, setChoice] = useState(named === "" ? "" : NEW_LIST);
   const [newName, setNewName] = useState(named);
   const [note, setNote] = useState("");
@@ -181,6 +185,7 @@ export function AddToShortlistDialog({
                 name: input.newName.trim(),
                 entityType,
                 listType: "static",
+                sharing: input.sharing,
               },
               {
                 onError: (error) => faults.show(nameRefusal(error).byField),
@@ -206,7 +211,7 @@ export function AddToShortlistDialog({
       bodyRef={faultsRoot}
       error={memberRefusal(change.error).rest ?? nameRefusal(create.error).rest}
       onConfirm={() => {
-        const input = { choice, newName, note };
+        const input = { choice, newName, note, sharing };
         if (faults.show(checked(input))) return;
         // A refusal is drawn from the mutations' own error state above; the
         // rejected promise has nothing left to say.

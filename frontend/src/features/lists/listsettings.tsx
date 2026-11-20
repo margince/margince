@@ -88,6 +88,7 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
           value={audience}
           onChange={setAudience}
           ownerIsReader={ownedByReader(list, me.data?.user.id)}
+          openedWith={started.sharing}
         />
         <ListRuleUses
           rules={ruleUsesOf(list)}
