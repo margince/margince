@@ -43,7 +43,7 @@ Each type maps to one column type:
   on `options` unless it names one registered kind and no other. A write is refused with `invalid_value` unless
   the value is a UUID. Core does not yet check that the row exists, and the lists filter the value as text.
 - `url` → a `text` with a 2000-character `CHECK`. A write is refused with `invalid_value` unless the value is
-  an absolute `http` or `https` address with a host and no user name or password (`values.IsWebAddress`).
+  an absolute `http` or `https` address. It needs a host and no user name or password (`values.IsWebAddress`).
   The scheme matches in any case. The lists filter the value as text, and the record page draws it as a
   link through `OffsiteLink`.
 
@@ -155,7 +155,7 @@ left outside its own constraint. A `picklist` always keeps one value or more.
 
 The options edit clears a removed choice from every record of the field's object, archived ones too,
 because the `CHECK` covers them. It runs in the same schema-pool transaction as the `ALTER`, after the
-advisory lock and before the `CHECK` is rebuilt. A `picklist` value becomes `NULL`. A `multiselect` keeps
+advisory lock and before the `CHECK` is made again. A `picklist` value becomes `NULL`. A `multiselect` keeps
 its other choices in their order, and one left with none becomes `NULL`.
 
 Removing a choice changes records, so the caller also needs the grant to update the field's object. Before
@@ -167,6 +167,7 @@ each object, and compose injects them (`CustomFieldChoiceRemovers` in
 `internal/compose/customfieldchoices.go`). Most removers call `storekit.ClearRemovedChoices` with their own
 table and their own `<object>.updated` payload. That helper locks the rows that hold a removed choice and
 updates them. It writes the update, the audit rows and the events in one statement each per 1000 records.
+
 The contract remover takes the locked rows from `storekit.LockRemovedChoices` and writes each through
 `applyContractUpdate`, the one writer of a contract update. Both refuse a column the catalog does not list
 on that table with that type. The table ownership gate counts
@@ -174,15 +175,17 @@ on that table with that type. The table ownership gate counts
 
 The cost grows with the records that hold the choice. The `ALTER` already reads the whole table to check
 the new `CHECK`. The 2-second `lock_timeout` covers the row locks too, so a record being edited answers
-the retryable `ErrTableBusy`. A record that holds the choice and still belongs to a member who has left is
-refused by the retired-member trigger, and an activity under a retention hold refuses any change. The edit
+`ErrTableBusy`, which a client may retry. A record that holds the choice and still belongs to a member who has left is
+refused by the retired-member trigger. An activity under a retention hold refuses any change. The edit
 then answers 409 and names the reason.
 
 The answer carries `records_changed`. `GET /custom-fields/{id}/choices` answers how many records hold
-each choice before the edit, for a reader of the field and its object, and the **Edit choices** dialog shows those counts and the total a save
-clears. A Live List whose filter names the removed choice keeps evaluating, because a filter leaf does not
+each choice, for a reader of the field and its object. The **Edit choices** dialog shows those counts and the total a save
+clears.
+
+A Live List whose filter names the removed choice keeps working. A filter condition does not
 refuse a value outside the set at read time (`storekit.RefuseUnknownPicklistValues` runs only when a
-filter is saved). It matches no record by that choice. Saving a picklist filter that still names the choice is refused until the
+filter is saved). It matches no record by that choice. Saving a `picklist` filter that still names the choice is refused until the
 choice is taken out of it.
 
 Changing the catalog is **owned by admins and operators**, and every role may read it, as with pipeline config. A

@@ -339,7 +339,7 @@ Also called: edit conflict, simultaneous editing, someone overwrote my change.
 
 ## Custom fields
 
-Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice**, **yes/no** and **web address**, on contacts, companies, deals, leads, projects, contracts and activities. A field of many choices holds many answers at once, and a filter finds the record by any one of them. A web address field takes only an address that starts with `http://` or `https://`, and shows it as a link that opens in a new tab.
+Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice**, **yes/no** and **web address**, on contacts, companies, deals, leads, projects, contracts and activities. A field of many choices holds many answers at once, and a filter finds the record by any one of them. A web address field takes only an `http://` or `https://` address and shows it as a link.
 
 ### How do I add a custom field?
 To add a custom field in Margince, open Settings → **Records and fields**, pick the **Object**, and choose **New field**.
@@ -351,11 +351,13 @@ Also called: custom property, extra column, new attribute, hide a field on new r
 
 **A custom field on activities** is offered on every call, meeting, note and task you log, unless you pick types under **Shows on**. You can pick them when you add the field, or in its row later. You fill the field in **Log activity**, and it shows only for the types it is on. On a meeting you change it in **Add notes**. A value saved before you changed **Shows on** stays, and **Add notes** still shows it so you can clear it. A colleague who may not read the activity does not see the field.
 
-Renaming a field changes its label and keeps your reports working. To name a field and its choices per language, choose **Names in other languages** in its row menu. A colleague whose Margince is in that language sees those names in forms and on records. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there. A deal or company picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. A company field groups each deal by its company's value. Everyone who reads deal reports then sees the field's name and choices.
+Renaming a field changes its label and keeps your reports working. To name a field and its choices per language, choose **Names in other languages** in its row menu. A colleague whose Margince is in that language sees those names in forms and on records. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
+
+A deal or company picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. A company field groups each deal by its company's value. Everyone who reads deal reports then sees the field's name and choices.
 
 ### How do I change the choices of a field?
-To change the choices of a picklist or multiple choice field, choose **Edit choices** in its row menu in Settings → **Records and fields**. Each choice shows how many records hold it, archived records included. Add one with **Add option**, take one away with **Remove option**, and choose **Save**; a field keeps at least one choice. If records hold a choice you removed, the dialog first says how many records lose it. Saving takes that choice off every record: a picklist record is left with no value, and a multiple choice record keeps its other choices. Each record's history shows the change, and the message after **Save** says how many records changed. A saved filter or list that names the removed choice keeps working and finds no record by it.
-Also called: delete a picklist value, retire an option, remove a dropdown value.
+To change the choices of a **picklist** or **multiple choice** field, choose **Edit choices** in its row menu in Settings → **Records and fields**. Each choice shows how many records hold it, and before you save Margince says how many lose a removed choice. Add one with **Add option**, take one away with **Remove option**, and choose **Save**; a field keeps at least one choice. Saving takes a removed choice off each record: a picklist record has no value left, and a **multiple choice** record keeps the rest. Each record's history shows the change, and a saved filter that names the removed choice finds no record by it.
+Also called: delete a picklist value, retire an option.
 
 ## Tags
 
