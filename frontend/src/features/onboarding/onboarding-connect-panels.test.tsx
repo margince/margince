@@ -62,8 +62,8 @@ describe("ImapConnectPanel", () => {
     expect(
       screen.getByText(en["connectors.imapSecretHint"]),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Port")).toHaveValue(993);
-    expect(screen.getByLabelText("Messages per sync")).toHaveValue(50);
+    expect(screen.getByLabelText("Port")).toHaveValue("993");
+    expect(screen.getByLabelText("Messages per sync")).toHaveValue("50");
   });
 
   it("connects IMAP through the typed client, not a raw fetch to a bespoke path", async () => {
