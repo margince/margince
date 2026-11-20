@@ -19601,28 +19601,8 @@
         "proof",
         "market"
       ],
-<<<<<<< HEAD
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "not_supported",
-        "runs": 39,
-        "passed": 39,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.9595866736004136,
-          "upper": 1
-        },
-        "state": "current"
-      },
-=======
       "best_state": "stale",
       "recommended": null,
->>>>>>> origin/develop
       "scenarios": [
         {
           "name": "account_first_touch_with_a_deal_in_flight",
@@ -20186,29 +20166,8 @@
         "proof",
         "market"
       ],
-<<<<<<< HEAD
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.8-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
-        },
-        "band": "certified",
-        "runs": 18,
-        "passed": 18,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.9163803650038297,
-          "upper": 1
-        },
-        "state": "current"
-      },
-=======
       "best_state": "stale",
       "recommended": null,
->>>>>>> origin/develop
       "scenarios": [
         {
           "name": "a_logged_internal_note_stays_out_of_the_draft",
@@ -21727,29 +21686,8 @@
         "proof",
         "market"
       ],
-<<<<<<< HEAD
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.8-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
-        },
-        "band": "certified",
-        "runs": 18,
-        "passed": 18,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.9163803650038297,
-          "upper": 1
-        },
-        "state": "current"
-      },
-=======
       "best_state": "stale",
       "recommended": null,
->>>>>>> origin/develop
       "scenarios": [
         {
           "name": "german_thread_with_an_introduction_in_it",

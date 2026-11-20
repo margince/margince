@@ -17,7 +17,6 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -104,7 +103,7 @@ func TestCertificationReliabilityPrintsWithItsInterval(t *testing.T) {
 func TestEveryPublishedReliabilityCarriesItsInterval(t *testing.T) {
 	t.Parallel()
 	for _, page := range reliabilityPages {
-		raw, err := os.ReadFile(page)
+		raw, err := gatekit.ReadFile(page)
 		if err != nil {
 			t.Fatalf("reading %s: %v", page, err)
 		}
