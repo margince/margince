@@ -681,6 +681,24 @@ describe("AskMarginceModal", () => {
     expect(backend.asked).toHaveLength(0);
   });
 
+  // A live region announces a change, not its own arrival, so the count's
+  // region stands before its first words do.
+  it("keeps the count's status region in place before the count shows", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
+    render(<AskMarginceModal open onClose={() => {}} />);
+    const box = await screen.findByLabelText(/your question/i);
+    const status = [...document.querySelectorAll('[role="status"]')].find(
+      (node) => node.textContent === "" && node.classList.contains("sr-only"),
+    );
+    expect(status).toBeDefined();
+
+    await user.click(box);
+    await user.paste("x".repeat(900));
+
+    expect(screen.getByText("900 of 1,000 characters")).toBe(status);
+  });
+
   it("counts a question in characters as the server does, so emoji count once", async () => {
     const backend = backendFor(ASKER);
     vi.stubGlobal("fetch", backend.fetchMock);
