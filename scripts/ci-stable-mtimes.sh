@@ -21,6 +21,8 @@
 # and a test reading outside its module reads that variable instead
 # (gatekit.DeclareInputs); the cache keys on every variable a test reads.
 # --names prints each entry and its variable name, and touches nothing.
+# --export prints NAME=digest for every entry and stamps nothing, for a local
+# run, where no GITHUB_ENV exists and a tracked file's mtime must stay its own.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -35,10 +37,11 @@ git ls-files -s -z | perl -0 -MDigest::SHA=sha1_hex -MTime::HiRes=utime -ne '
 		$tops{$top} = 1;
 		next;
 	}
+	next if $ENV{MODE} eq "--export" && !-e "./$path"; # tracked, deleted in the working tree
 	my $content = Digest::SHA->new(1);
 	$content->addfile("./$path", "b"); # "./" so a file named "-" is not read as stdin
 	my $blob = $content->hexdigest;
-	stamp($path, $blob);
+	stamp($path, $blob) unless $ENV{MODE} eq "--export";
 	$tops{$top} .= "$path $blob\n";
 	my $dir = $path;
 	while ($dir =~ s{/[^/]+$}{}) {
@@ -54,6 +57,10 @@ git ls-files -s -z | perl -0 -MDigest::SHA=sha1_hex -MTime::HiRes=utime -ne '
 		}
 		if ($ENV{MODE} eq "--names") {
 			print "$named{$_}\t$_\n" for sort keys %named;
+			exit 0;
+		}
+		if ($ENV{MODE} eq "--export") {
+			print "$_=" . sha1_hex($tops{$named{$_}}) . "\n" for sort keys %named;
 			exit 0;
 		}
 		stamp($_, sha1_hex($entries{$_})) for keys %entries;

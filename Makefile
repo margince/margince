@@ -14,6 +14,14 @@ include scripts/composition-profile.mk
 # one target here that invokes the compiler directly instead of delegating.
 GO ?= go
 
+# Local go commands build with -trimpath so worktrees share one build cache; see
+# the same lines in backend/Makefile. CI and release builds keep the paths.
+ifeq ($(CI),)
+ifeq (,$(findstring -trimpath,$(GOFLAGS)))
+export GOFLAGS += -trimpath
+endif
+endif
+
 # The deterministic script gates `check-root-gates` fans out. One list, one
 # consumer — see the comment on check-root-gates for why they are not that
 # target's prerequisites.

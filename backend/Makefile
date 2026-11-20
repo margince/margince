@@ -96,6 +96,22 @@ export MARGINCE_ENV          ?= dev
 # workspace — it must work before the composition exists.
 COMPOSITION_DIR := $(abspath ../build/composition)
 GOWORK_COMPOSED := GOWORK=$(COMPOSITION_DIR)/go.work
+
+# One digest variable per top-level entry, for the tests that read outside
+# their module (gatekit.DeclareInputs): Go's test cache keys on a variable's
+# value and never rechecks such a file. CI exports them through GITHUB_ENV, so
+# the shell computes them per test command: about three seconds locally, none in CI.
+TREE_DIGESTS = $(if $(CI),,env $$('$(abspath ../scripts/ci-stable-mtimes.sh)' --export))
+
+# Local go commands build with -trimpath, so worktrees share one build cache
+# instead of compiling the same package once per checkout path. CI and the
+# release builds keep the paths in; the test cache is safe because the tests
+# that read outside their module declare it (make test-input-census).
+ifeq ($(CI),)
+ifeq (,$(findstring -trimpath,$(GOFLAGS)))
+export GOFLAGS += -trimpath
+endif
+endif
 # The root workspace, which is what every backend/tools generator runs under:
 # the tools are a separate module, and their resolution must not depend on
 # what the caller exported.
@@ -238,10 +254,10 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 		[ -e "$$dir/go.mod" ] || { echo "test-extensions: $$dir has no go.mod"; exit 1; }; found=1; \
 		echo "== $$dir"; \
 		if [ -n "$$out" ]; then \
-			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test $(TEST_SHUFFLE_FLAGS) -coverprofile="$$tmp" -coverpkg=./... ./...); \
+			(cd "$$dir" && $(GOWORK_COMPOSED) $(TREE_DIGESTS) $(GO) test $(TEST_SHUFFLE_FLAGS) -coverprofile="$$tmp" -coverpkg=./... ./...); \
 			if [ -s "$$out" ]; then tail -n +2 "$$tmp" >> "$$out"; else cp "$$tmp" "$$out"; fi; \
 		else \
-			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) ./...); \
+			(cd "$$dir" && $(GOWORK_COMPOSED) $(TREE_DIGESTS) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) ./...); \
 		fi; \
 	done < "$$members"; \
 	[ "$$found" = "1" ] || echo "test-extensions: no enabled Go extensions"
@@ -303,15 +319,35 @@ test-cached: composition
 	    exit 1; \
 	  fi; \
 	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want run by test-uncached and test-solo"; \
-	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) $$cached
+	  $(GOWORK_COMPOSED) $(TREE_DIGESTS) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) $$cached
 	# The tool chain is its own module, so ./... above never reaches it —
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
-	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) ./tools/...
+	$(GOWORK_COMPOSED) $(TREE_DIGESTS) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) ./tools/...
+	$(if $(CI)$(TEST_EXEC),,$(MAKE) test-input-census-changed)
+
+# test-input-census-changed — the test-input census over the packages whose
+# test files this branch changed, so a new read outside the module fails on the
+# machine that added it. Local runs only: CI runs the whole census itself. The
+# packages that never replay from the cache (UNCACHED_TEST_PKGS, SOLO_TEST_PKGS)
+# need no census.
+test-input-census-changed: composition
+	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
+	base="$$(git merge-base $(CHECK_BASE_REF) HEAD)"; \
+	dirs="$$( { git diff --relative --name-only "$$base" -- '*_test.go'; git ls-files --others --exclude-standard -- '*_test.go'; } | xargs -n1 dirname | sort -u)"; \
+	existing=""; for dir in $$dirs; do [ ! -d "$$dir" ] || existing="$$existing ./$$dir"; done; \
+	[ -n "$$existing" ] || { echo "test-input-census-changed: no test file changed"; exit 0; }; \
+	skip="$$($(GOWORK_COMPOSED) $(GO) list $(UNCACHED_TEST_PKGS) $(SOLO_TEST_PKGS))"; \
+	pkgs="$$($(GOWORK_COMPOSED) $(GO) list -f '{{if or .TestGoFiles .XTestGoFiles}}{{.ImportPath}}{{end}}' $$existing | { grep -Fxv "$$skip" || true; })"; \
+	[ -n "$$pkgs" ] || { echo "test-input-census-changed: no changed package is cached"; exit 0; }; \
+	TESTLOG_DIR="$$logs" $(GOWORK_COMPOSED) $(TREE_DIGESTS) $(GO) test -count=1 -exec $(abspath ../scripts/testlog-exec.sh) $$pkgs \
+	  || echo "test-input-census-changed: a test failed under the census; its inputs are judged all the same" >&2; \
+	../scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
+	$(GOWORK_ROOT) $(GO) run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv" -minimum "$$(printf '%s\n' "$$pkgs" | wc -l | tr -d ' ')"
 
 test-solo: composition
 	$(TEST_SHUFFLE_NOTE)
-	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) $(SOLO_TEST_PKGS)
+	$(GOWORK_COMPOSED) $(TREE_DIGESTS) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_SHUFFLE_FLAGS) $(SOLO_TEST_PKGS)
 
 test-uncached: composition
 	$(TEST_SHUFFLE_NOTE)

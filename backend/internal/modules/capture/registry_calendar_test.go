@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestCalendarWriteGrantMatchesFrontend(t *testing.T) {
@@ -38,7 +40,11 @@ func TestCalendarWriteGrantMatchesFrontend(t *testing.T) {
 // frontend/src/lib/connector-status.ts, the mirror each grant check keeps.
 func frontendScopeTable(t *testing.T, name string) map[string][]string {
 	t.Helper()
-	source, err := os.ReadFile("../../../../frontend/src/lib/connector-status.ts")
+	const path = "../../../../frontend/src/lib/connector-status.ts"
+	if err := gatekit.DeclareInputs(os.Getenv, path); err != nil {
+		t.Fatal(err)
+	}
+	source, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
