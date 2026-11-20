@@ -86,7 +86,7 @@ On a waiting handoff in your prospecting panel, choose **Reassign handoff** to c
 
 Automations and Deal Rooms stay where they are. Privacy cases need an officer to reassign them in their own queue. Introduction requests need their requester to choose another route; handing over records does not hand over a personal relationship. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
 
-Some contacts and companies only the colleague who left could see. They move too once the colleague is deactivated, and stay visible to the new owner alone. Before that, they stay with the colleague. Their saved email drafts move with every handover, deactivated or not. The box counts them, but nobody else can open them before the handover: not you, and not an admin. After it, only the new colleague can open them. If the new colleague already has a draft in the same place, theirs stays and the old one is deleted.
+Some contacts and companies only the colleague who left could see. They move too once the colleague is deactivated, and stay visible to the new owner alone. Their saved email drafts also move only once they are deactivated; before that, nobody else can open them, not even an admin. After the handover, only the new colleague can open them. Where the new colleague already has a draft in the same place, theirs stays and the old one is deleted. A draft for a scheduled or held message stays with the colleague who left.
 
 Until you hand it over, their open work still counts in their team's Worklist and numbers. Their name shows as "(left)", and their Worklist rows say the work needs a new owner.
 

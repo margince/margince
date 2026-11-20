@@ -39,8 +39,12 @@ type MailDraftHandover struct {
 }
 
 // MailDraftsWrittenBy counts the saved drafts author wrote. The count says
-// nothing of what a draft holds, so the handover preview may show it.
+// nothing of what a draft holds. A caller who reads activities may see it in
+// the handover preview, and any other caller counts none.
 func (s *Store) MailDraftsWrittenBy(ctx context.Context, tx pgx.Tx, author ids.UserID) (int, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return 0, nilIfDenied(err)
+	}
 	var n int
 	if err := tx.QueryRow(ctx, `SELECT count(*) FROM mail_draft WHERE author_id = $1`, author).Scan(&n); err != nil {
 		return 0, fmt.Errorf("mail draft: counting a member's drafts: %w", err)
