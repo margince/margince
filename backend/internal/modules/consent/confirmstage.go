@@ -102,7 +102,7 @@ func (s *Store) stageConfirmMail(
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("consent: sealing the one-time confirm link: %w", err)
 	}
-	deliveryID, err := s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{
+	deliveryID, err := s.queueControllerMailTx(ctx, tx, ConfirmationSend{
 		ContactID: in.contactID,
 		LeadID:    in.leadID,
 		Recipient: in.recipient,
@@ -141,7 +141,11 @@ func (s *Store) renderConfirmMail(
 	if err != nil {
 		return Rendered{}, "", err
 	}
-	rendered, err = s.controllerView(ctx, tx, rendered, category, in.recipient)
+	who := ruleSubject{Kind: entityContact, ID: in.contactID.String()}
+	if !in.leadID.IsZero() {
+		who = ruleSubject{Kind: entityLead, ID: in.leadID.String()}
+	}
+	rendered, err = s.controllerView(ctx, tx, rendered, category, in.recipient, who)
 	return rendered, category, err
 }
 
