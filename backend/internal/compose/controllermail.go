@@ -229,8 +229,8 @@ func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Re
 	return mail, nil
 }
 
-// controllerLetterheadTx is the name and logo a controller mail is headed by:
-// the stated legal name, so the brand line and "This message is from" agree.
+// controllerLetterheadTx is the name and logo a controller mail is headed by.
+// The stated legal name heads it, so it agrees with "This message is from".
 // Refusing instead would withhold a notice the law owes over a branding setting.
 func controllerLetterheadTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (string, string, error) {
 	if further, name, key, err := contacts.FurtherEntityLetterheadTx(ctx, tx, entity); err != nil || further {
