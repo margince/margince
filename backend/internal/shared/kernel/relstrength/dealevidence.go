@@ -25,16 +25,16 @@ const (
 // is judged unrelated or uncertain. deal is a compile-time SQL expression. The
 // deal clock's migration carries this text.
 func DealEvidenceSQL(activity, deal string) string {
-	return dealEvidenceSQL(activity, deal, "'"+DealUnrelated+"', '"+DealUncertain+"'")
+	return evidenceRefusingMarks(activity, deal, "'"+DealUnrelated+"', '"+DealUncertain+"'")
 }
 
 // DealKeptOpenSQL is DealEvidenceSQL that still admits a link the classifier
 // is unsure of. Doubt warms no deal, and it closes none for silence either.
 func DealKeptOpenSQL(activity, deal string) string {
-	return dealEvidenceSQL(activity, deal, "'"+DealUnrelated+"'")
+	return evidenceRefusingMarks(activity, deal, "'"+DealUnrelated+"'")
 }
 
-func dealEvidenceSQL(activity, deal, refused string) string {
+func evidenceRefusingMarks(activity, deal, refused string) string {
 	return "(" + NotPersonalSQL(activity) + " AND NOT EXISTS (SELECT 1 FROM activity_link judged WHERE judged.activity_id = " +
 		activity + ".id AND judged.deal_id = " + deal + " AND judged.deal_relevance IN (" + refused + ")))"
 }
