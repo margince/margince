@@ -175,3 +175,13 @@ export const PersonalDetails: Story = {
     />
   )),
 };
+
+const longTitle = "M".repeat(200);
+export const PreviewLongName: Story = {
+  render: bookingFrame(() => <BookingGuestScreen hostSlug="" preview />, {
+    "GET /scheduling/profile": () =>
+      jsonResponse({ ...bookingProfile, title: longTitle }),
+    "GET /availability": () =>
+      jsonResponse({ slots: openTimes(), truncated: false }),
+  }),
+};
