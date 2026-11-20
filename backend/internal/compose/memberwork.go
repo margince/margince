@@ -25,9 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-// tableMailDraft is the composer's saved drafts, which move with the author's work.
-const tableMailDraft = "mail_draft"
-
 type memberWork struct{ handoverSeam }
 
 func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, target *ids.UUID, lock bool) (identity.MemberWorkInspection, error) {
@@ -45,7 +42,7 @@ func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, tar
 
 	tally := handoverTally(counts)
 	tally[string(recordTypeActivity)] = &counts.Task
-	tally[tableMailDraft] = &counts.MailDraft
+	tally["mail_draft"] = &counts.MailDraft
 	tally["signal"] = &report.Signals
 	seen := map[string]bool{}
 	for _, reference := range slices.Sorted(maps.Keys(memberReferences)) {

@@ -3,10 +3,8 @@
 
 package compose
 
-// The handover of a member's work. Every live record they own moves to a named
-// colleague through that record's own owner-change write. So each record gets
-// the audit row, event and follow-on moves one reassignment writes, a deal's
-// pending proposals included. Deactivating a member moves nothing.
+// The handover of a member's work: each owned record moves through its own
+// owner-change write, with its audit row and events. Deactivating moves nothing.
 
 import (
 	"context"
@@ -82,10 +80,8 @@ func newHandoverSeam(engine *bulkEngine) handoverSeam {
 	return handoverSeam{db: engine.db, targets: engine.targets, tasks: engine.tasks}
 }
 
-// admit is the gate the count and the move both pass, in their own transaction.
-// It admits a human whom the member verbs would let act on this member, or an
-// agent acting for one. Every record moved after it is still gated by its own
-// write check.
+// admit gates the count and the move: a human the member verbs let act on this
+// member, or their agent. Each moved record still passes its own write check.
 func admit(ctx context.Context, tx pgx.Tx, member ids.UUID) error {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
