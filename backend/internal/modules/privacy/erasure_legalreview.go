@@ -27,21 +27,22 @@ const subjectLiveDealIDsSQL = subjectDealIDsSQL + ` AND r.archived_at IS NULL`
 // of, and tombstones each row it changed.
 //
 // The text is a colleague's prose about the deal, shared with its other
-// stakeholders, so only what names the subject goes, as with an unlinked note.
+// stakeholders, so only what names the subject goes, as with an unlinked note:
+// the same pattern, from the same helper.
 // Both erasure acts call this, as neither deletes the deal.
 func redactSubjectLegalReviewText(
 	ctx context.Context, tx pgx.Tx, contactID ids.UUID, emails []string, displayName, reason, cause string,
 ) error {
+	// A subject the helper can build no pattern for has nothing to match on, so the
+	// text goes whole: leaving it would keep what cannot be told apart from theirs.
 	pattern := subjectTextPattern(emails, displayName)
-	if pattern == "" {
-		return nil
-	}
 	rows, err := tx.Query(ctx, `
-		UPDATE legal_review SET note = regexp_replace(note, $2, $3, 'gi'),
-		       comments = regexp_replace(comments, $2, $3, 'gi')
+		UPDATE legal_review SET note = CASE WHEN $2 = '' THEN NULL ELSE regexp_replace(note, $2, $3, 'gi') END,
+		       comments = CASE WHEN $2 = '' THEN NULL ELSE regexp_replace(comments, $2, $3, 'gi') END
 		 WHERE deal_id IN (`+subjectDealIDsSQL+`)
-		   AND (note IS DISTINCT FROM regexp_replace(note, $2, $3, 'gi')
-		        OR comments IS DISTINCT FROM regexp_replace(comments, $2, $3, 'gi'))
+		   AND (($2 = '' AND (note IS NOT NULL OR comments IS NOT NULL))
+		        OR ($2 <> '' AND (note IS DISTINCT FROM regexp_replace(note, $2, $3, 'gi')
+		                          OR comments IS DISTINCT FROM regexp_replace(comments, $2, $3, 'gi'))))
 		RETURNING id`, contactID, pattern, erasedTextMention)
 	if err != nil {
 		return fmt.Errorf("privacy: redacting the subject from legal review text: %w", err)

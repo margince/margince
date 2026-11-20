@@ -148,3 +148,44 @@ func TestTheExportLeavesOutTheLegalReviewOfADealWhoseStakeholderLinkWasArchived(
 		t.Errorf("deals in the export = %d, want the same one deal", len(pkg.Deals))
 	}
 }
+
+func TestASubjectWithNoUsablePatternHasTheLegalReviewTextCleared(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
+	tx := subjectColumnsTx(ctx, t)
+	subject := ids.NewV7()
+	mustExec(ctx, t, tx, `INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Cher', 'manual', 'test')`, subject)
+	_, review := seedReviewedDeal(ctx, t, tx, subject)
+
+	if err := redactSubjectLegalReviewText(ctx, tx, subject, nil, "Cher", "retention", causeRetention); err != nil {
+		t.Fatal(err)
+	}
+
+	note, comments, status := reviewText(ctx, t, tx, review)
+	if note != nil || comments != nil || status != "changes_needed" {
+		t.Errorf("note=%v comments=%v status=%q, want the text cleared and the outcome kept", note, comments, status)
+	}
+	var tombstones int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE entity_type = 'legal_review' AND entity_id = $1 AND action = 'erase'`,
+		review).Scan(&tombstones); err != nil || tombstones != 1 {
+		t.Errorf("tombstones = %d, %v; want 1", tombstones, err)
+	}
+}
+
+func TestAnAddressInLegalReviewTextIsRedactedLikeAnUnlinkedNote(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
+	tx := subjectColumnsTx(ctx, t)
+	subject := ids.NewV7()
+	mustExec(ctx, t, tx, `INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Cher', 'manual', 'test')`, subject)
+	_, review := seedReviewedDeal(ctx, t, tx, subject)
+	mustExec(ctx, t, tx, `UPDATE legal_review SET note = 'Ask cher@example.test about clause nine' WHERE id = $1`, review)
+
+	if err := redactSubjectLegalReviewText(ctx, tx, subject, []string{"cher@example.test"}, "Cher", "retention", causeRetention); err != nil {
+		t.Fatal(err)
+	}
+
+	if note, _, _ := reviewText(ctx, t, tx, review); note == nil || *note != "Ask Erased about clause nine" {
+		t.Errorf("note = %v, want the address redacted and the rest kept", note)
+	}
+}
