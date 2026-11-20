@@ -1,0 +1,13 @@
+{
+  "verb": "move_deal_pipeline",
+  "checks": [
+    "company.read",
+    "deal.update",
+    "installation_settings.read",
+    "project.read"
+  ],
+  "takes": [
+    "deal",
+    "pipeline"
+  ]
+}

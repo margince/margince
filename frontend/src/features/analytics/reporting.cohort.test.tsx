@@ -135,3 +135,66 @@ it("names the stage, the outcome and its count when an outcome's members open", 
     ),
   ).toBeInTheDocument();
 });
+
+function sourceQuality(): ReportingChart {
+  const outcome = (key: string, members: number, group: string) => ({
+    key,
+    label: key,
+    count: members,
+    evidence: {
+      metric: "source_quality" as const,
+      context_id: "interval",
+      group_key: group,
+    },
+  });
+  return {
+    kind: "source_quality",
+    metric: "source_quality",
+    context_id: "interval",
+    unit: "count",
+    coverage: { status: "ok", withheld: false },
+    points: [
+      {
+        key: "source:web",
+        label: "Website",
+        value: 25,
+        observations: 8,
+        status: "ok",
+        evidence: {
+          metric: "source_quality",
+          context_id: "interval",
+          group_key: "source:web",
+        },
+        outcomes: [
+          outcome("opportunity_linked", 2, "source:web:opportunity_linked"),
+          outcome("not_linked", 6, "source:web:not_linked"),
+        ],
+      },
+    ],
+  };
+}
+
+it("shows each source's entrants and the share linked to an opportunity, with no day notes", async () => {
+  const user = userEvent.setup({ delay: null });
+  const evidence = vi.fn();
+  render(
+    <StoryProviders>
+      <CohortTable
+        chart={sourceQuality()}
+        label="Lead source quality"
+        onEvidence={evidence}
+      />
+    </StoryProviders>,
+  );
+
+  await user.click(screen.getByRole("button", { name: "2" }));
+
+  expect(evidence).toHaveBeenLastCalledWith({
+    metric: "source_quality",
+    context_id: "interval",
+    group_key: "source:web:opportunity_linked",
+  });
+  expect(screen.getByText(en["reporting.cohortLinkedRate"])).toBeVisible();
+  expect(screen.queryByText(en["reporting.cohortStillOpenNote"])).toBeNull();
+  expect(screen.queryByText(en["reporting.cohortLeadDaysNote"])).toBeNull();
+});

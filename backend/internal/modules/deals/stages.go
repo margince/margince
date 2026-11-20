@@ -102,8 +102,8 @@ func writePipelineUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 		}
 	}
 	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
+		if refused := pipelineUniqueRefusal(err); refused != nil {
+			return refused
 		}
 		return fmt.Errorf("update pipeline: %w", err)
 	}
@@ -184,10 +184,8 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		if err := markLadderChanged(ctx, tx, in.PipelineID); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil, map[string]any{
-			"pipeline_id": in.PipelineID, "name": in.Name, stageSemanticField: in.Semantic,
-			stageNameTranslationsField: translations,
-		})
+		auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil,
+			stageCreateImage(in.PipelineID, in.Name, in.Semantic, translations))
 		if err != nil {
 			return fmt.Errorf("audit stage create: %w", err)
 		}
@@ -205,6 +203,15 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		return nil
 	})
 	return out, err
+}
+
+// stageCreateImage is the audit image of a stage's creation, shared by every
+// writer that inserts a stage.
+func stageCreateImage(pipelineID ids.PipelineID, name, semantic string, translations map[string]string) map[string]any {
+	return map[string]any{
+		"pipeline_id": pipelineID, stageNameField: name, stageSemanticField: semantic,
+		stageNameTranslationsField: translations,
+	}
 }
 
 // stageCreatedPayload builds the stage.created wire payload from
@@ -257,6 +264,9 @@ func (s *Store) ListStages(ctx context.Context, pipelineID *ids.PipelineID, arch
 // stageNameTranslationsField is the column and the request field the
 // translated stage names travel in.
 const stageNameTranslationsField = "name_translations"
+
+// stageNameField is the key a stage's name travels under in an audit image.
+const stageNameField = "name"
 
 type UpdateStageInput struct {
 	// NameTranslations replaces the stored map when set.
@@ -317,6 +327,9 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 			return apperrors.ErrVersionSkew
 		}
 		if err := refuseAgentSemanticChange(ctx, current.semantic, in.Semantic); err != nil {
+			return err
+		}
+		if err := refuseLastClosingStageRetype(ctx, tx, id, pipelineID, current.semantic, in.Semantic); err != nil {
 			return err
 		}
 		if err := refuseTerminalWithCriteria(ctx, tx, id, current.semantic, in.Semantic); err != nil {

@@ -339,8 +339,8 @@ func holdTagTarget(ctx context.Context, tx pgx.Tx, entityType string, entityID i
 
 // The keys a tag audit row files a tagging under.
 const (
-	tagApplied = "applied"
-	tagRemoved = "removed"
+	tagApplied = auditentity.TagApplied
+	tagRemoved = auditentity.TagRemoved
 )
 
 func auditTagLink(ctx context.Context, tx pgx.Tx, tagID ids.TagID, change string, link linkImage, evidence map[string]any) (ids.UUID, error) {

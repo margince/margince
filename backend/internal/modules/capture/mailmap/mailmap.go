@@ -165,7 +165,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// ADR-0082 §3 and not something this parser can recover.
 	bccList, _ := addressList(header, "Bcc")
 	deliveredTo := TopDeliveredTo(header)
-	senderAuth := TopSenderAuthentication(header)
+	senderAuth := groupRelayed(TopSenderAuthentication(header), viaGroup)
 	from, to := firstAddress(fromList), firstAddress(toList)
 
 	walked := extractText(root)

@@ -196,12 +196,7 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
   const { locale } = useLocale();
   const zone = useViewerZone();
   const guard = useConsentGuard(view.contact.id, !view.contact.archived_at);
-  const [manage, setManage] = useState(false);
-  // Opened once, mounted from then on. The section reads consent and the
-  // purpose catalogue, and a reader would watch an emptied drawer leave on
-  // close.
-  const [everManaged, setEverManaged] = useState(false);
-  const titleId = useId();
+  const manage = useManageConsent(view);
   const mayWrite = useCanWriteRecord("contact", view.contact);
   const entries = guard.data?.entries ?? [];
   const correspondence = correspondenceOf(entries);
@@ -249,13 +244,7 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
         <StandingExceptions key={view.contact.id} contactId={view.contact.id} />
         <OptOutRecordsDownload contactId={view.contact.id} />
         <p className="panel-intro">{t("consent.permissionScope")}</p>
-        <Button
-          variant="ghost"
-          onClick={() => {
-            setEverManaged(true);
-            setManage(true);
-          }}
-        >
+        <Button variant="ghost" onClick={manage.open}>
           {t("consent.manage")}
         </Button>
       </PanelBody>
@@ -268,9 +257,30 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
           !hasEmail ? t("contact.rail.noEmailAddress") : undefined
         }
       />
+      {manage.element}
+    </Panel>
+  );
+}
+
+/** The drawer behind "Manage consent", opened from the consent panel and from
+ *  the left column's Consent section. */
+export function useManageConsent(view: Contact360) {
+  const t = useT();
+  const titleId = useId();
+  const [open, setOpen] = useState(false);
+  // Opened once, mounted from then on. The section reads consent and the
+  // purpose catalogue, and a reader would watch an emptied drawer leave on
+  // close.
+  const [everOpened, setEverOpened] = useState(false);
+  return {
+    open: () => {
+      setEverOpened(true);
+      setOpen(true);
+    },
+    element: (
       <Modal
-        open={manage}
-        onClose={() => setManage(false)}
+        open={open}
+        onClose={() => setOpen(false)}
         labelledBy={titleId}
         intent="drawer"
       >
@@ -279,7 +289,7 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
             {t("consent.manage")}
           </Heading>
         </div>
-        {everManaged && (
+        {everOpened && (
           <ConsentSection
             contactId={view.contact.id}
             contact={view.contact}
@@ -288,8 +298,8 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
           />
         )}
       </Modal>
-    </Panel>
-  );
+    ),
+  };
 }
 
 /** The contact's registrations, refusals and opt-out receipts as one file, the

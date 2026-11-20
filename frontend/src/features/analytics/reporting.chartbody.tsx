@@ -162,6 +162,8 @@ export function ChartBody({
       );
     case "stage_cohort":
     case "lead_cohort":
+    case "account_cohort":
+    case "source_quality":
       return (
         <CohortTable
           chart={chart}

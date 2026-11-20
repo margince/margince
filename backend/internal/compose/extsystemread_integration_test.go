@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -195,7 +196,7 @@ func asUser(id ids.UUID) extension.UserID { return extension.UserID(id.String())
 
 func TestADeliveryReadsTheDealItHeardAbout(t *testing.T) {
 	s := setupSystemRead(t)
-	closeOn := time.Date(2031, time.March, 14, 0, 0, 0, 0, time.UTC)
+	closeOn := clocktest.Now(t).AddDate(0, 4, 0).Truncate(24 * time.Hour)
 	s.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, s.deal, closeOn)
 	var got extension.DealSummary
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {

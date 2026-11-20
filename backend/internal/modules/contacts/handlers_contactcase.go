@@ -85,7 +85,7 @@ func decodeCaseDecision(w http.ResponseWriter, r *http.Request) (ContactCaseDeci
 	}
 	d := ContactCaseDecision{
 		Revision: req.Revision, SurvivorID: ids.UUID(req.SurvivorId), OwnerID: ids.UUID(req.OwnerId),
-		MemberIDs: make([]ids.UUID, 0, len(req.MemberIds)),
+		MemberIDs: make([]ids.UUID, 0, len(req.MemberIds)), Prefer: MergePreferenceOf(req.Prefer),
 	}
 	for _, id := range req.MemberIds {
 		d.MemberIDs = append(d.MemberIDs, ids.UUID(id))

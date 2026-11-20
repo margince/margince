@@ -204,8 +204,8 @@ func (r *Router) ServesOnlyFake() bool {
 }
 
 // refuseUnbound is the answer every model call gets before a binding exists:
-// the 501 an operation answers on a role that wires no model. It rides httperr,
-// so a surface that returns the error as it came says the same.
+// the 409 ai_not_configured. It rides httperr, so a surface that returns the
+// error as it came says the same.
 func (r *Router) refuseUnbound() error {
 	if r.Bound() {
 		return nil

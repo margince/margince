@@ -874,6 +874,60 @@ func (e ActivityVoiceContactRole) Valid() bool {
 	}
 }
 
+// Defines values for AddAttachmentLinkRequestCategory.
+const (
+	AddAttachmentLinkRequestCategoryContract AddAttachmentLinkRequestCategory = "contract"
+	AddAttachmentLinkRequestCategoryLegal    AddAttachmentLinkRequestCategory = "legal"
+	AddAttachmentLinkRequestCategoryOffer    AddAttachmentLinkRequestCategory = "offer"
+	AddAttachmentLinkRequestCategoryOther    AddAttachmentLinkRequestCategory = "other"
+)
+
+// Valid indicates whether the value is a known member of the AddAttachmentLinkRequestCategory enum.
+func (e AddAttachmentLinkRequestCategory) Valid() bool {
+	switch e {
+	case AddAttachmentLinkRequestCategoryContract:
+		return true
+	case AddAttachmentLinkRequestCategoryLegal:
+		return true
+	case AddAttachmentLinkRequestCategoryOffer:
+		return true
+	case AddAttachmentLinkRequestCategoryOther:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AddAttachmentLinkRequestEntityType.
+const (
+	AddAttachmentLinkRequestEntityTypeActivity AddAttachmentLinkRequestEntityType = "activity"
+	AddAttachmentLinkRequestEntityTypeCompany  AddAttachmentLinkRequestEntityType = "company"
+	AddAttachmentLinkRequestEntityTypeContact  AddAttachmentLinkRequestEntityType = "contact"
+	AddAttachmentLinkRequestEntityTypeDeal     AddAttachmentLinkRequestEntityType = "deal"
+	AddAttachmentLinkRequestEntityTypeLead     AddAttachmentLinkRequestEntityType = "lead"
+	AddAttachmentLinkRequestEntityTypeProject  AddAttachmentLinkRequestEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the AddAttachmentLinkRequestEntityType enum.
+func (e AddAttachmentLinkRequestEntityType) Valid() bool {
+	switch e {
+	case AddAttachmentLinkRequestEntityTypeActivity:
+		return true
+	case AddAttachmentLinkRequestEntityTypeCompany:
+		return true
+	case AddAttachmentLinkRequestEntityTypeContact:
+		return true
+	case AddAttachmentLinkRequestEntityTypeDeal:
+		return true
+	case AddAttachmentLinkRequestEntityTypeLead:
+		return true
+	case AddAttachmentLinkRequestEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AddConsumerMailDomainRequestKind.
 const (
 	AddConsumerMailDomainRequestKindExtra AddConsumerMailDomainRequestKind = "extra"
@@ -4277,6 +4331,7 @@ func (e BlockedDomainAdmission) Valid() bool {
 const (
 	BlockedDomainReasonCodeBulkSender        BlockedDomainReasonCode = "bulk_sender"
 	BlockedDomainReasonCodeCompanyCreated    BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeForeignSite       BlockedDomainReasonCode = "foreign_site"
 	BlockedDomainReasonCodeForwardedIdentity BlockedDomainReasonCode = "forwarded_identity"
 	BlockedDomainReasonCodeKeptAsCompany     BlockedDomainReasonCode = "kept_as_company"
 	BlockedDomainReasonCodeNearDuplicate     BlockedDomainReasonCode = "near_duplicate"
@@ -4294,6 +4349,8 @@ func (e BlockedDomainReasonCode) Valid() bool {
 	case BlockedDomainReasonCodeBulkSender:
 		return true
 	case BlockedDomainReasonCodeCompanyCreated:
+		return true
+	case BlockedDomainReasonCodeForeignSite:
 		return true
 	case BlockedDomainReasonCodeForwardedIdentity:
 		return true
@@ -4342,6 +4399,7 @@ func (e BlockedDomainSenderKind) Valid() bool {
 // Defines values for BlockedDomainSource.
 const (
 	BlockedDomainSourceAgent             BlockedDomainSource = "agent"
+	BlockedDomainSourceForeignSite       BlockedDomainSource = "foreign_site"
 	BlockedDomainSourceForwardedIdentity BlockedDomainSource = "forwarded_identity"
 	BlockedDomainSourceHeuristic         BlockedDomainSource = "heuristic"
 	BlockedDomainSourceHuman             BlockedDomainSource = "human"
@@ -4357,6 +4415,8 @@ const (
 func (e BlockedDomainSource) Valid() bool {
 	switch e {
 	case BlockedDomainSourceAgent:
+		return true
+	case BlockedDomainSourceForeignSite:
 		return true
 	case BlockedDomainSourceForwardedIdentity:
 		return true
@@ -5920,6 +5980,24 @@ func (e Company360ContactConsent) Valid() bool {
 	case Company360ContactConsentUnknown:
 		return true
 	case Company360ContactConsentWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Company360ContactGreetingRegister.
+const (
+	Company360ContactGreetingRegisterFamiliar Company360ContactGreetingRegister = "familiar"
+	Company360ContactGreetingRegisterFormal   Company360ContactGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the Company360ContactGreetingRegister enum.
+func (e Company360ContactGreetingRegister) Valid() bool {
+	switch e {
+	case Company360ContactGreetingRegisterFamiliar:
+		return true
+	case Company360ContactGreetingRegisterFormal:
 		return true
 	default:
 		return false
@@ -7984,6 +8062,24 @@ func (e ConsumerMailDomainKind) Valid() bool {
 	case ConsumerMailDomainKindExtra:
 		return true
 	case ConsumerMailDomainKindNever:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactGreetingRegister.
+const (
+	ContactGreetingRegisterFamiliar ContactGreetingRegister = "familiar"
+	ContactGreetingRegisterFormal   ContactGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the ContactGreetingRegister enum.
+func (e ContactGreetingRegister) Valid() bool {
+	switch e {
+	case ContactGreetingRegisterFamiliar:
+		return true
+	case ContactGreetingRegisterFormal:
 		return true
 	default:
 		return false
@@ -11470,6 +11566,27 @@ func (e DealCoverageRiskKind) Valid() bool {
 	}
 }
 
+// Defines values for DealCoverageSeatReach.
+const (
+	DealCoverageSeatReachNotReached DealCoverageSeatReach = "not_reached"
+	DealCoverageSeatReachReached    DealCoverageSeatReach = "reached"
+	DealCoverageSeatReachUnknown    DealCoverageSeatReach = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the DealCoverageSeatReach enum.
+func (e DealCoverageSeatReach) Valid() bool {
+	switch e {
+	case DealCoverageSeatReachNotReached:
+		return true
+	case DealCoverageSeatReachReached:
+		return true
+	case DealCoverageSeatReachUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealFollowUpDraftRequestSegment.
 const (
 	DealFollowUpDraftRequestSegmentSlipping DealFollowUpDraftRequestSegment = "slipping"
@@ -14437,6 +14554,7 @@ func (e HealthSourceAvailability) Valid() bool {
 // Defines values for HealthSourceCondition.
 const (
 	HealthSourceConditionClear        HealthSourceCondition = "clear"
+	HealthSourceConditionInformation  HealthSourceCondition = "information"
 	HealthSourceConditionProcessing   HealthSourceCondition = "processing"
 	HealthSourceConditionRecovered    HealthSourceCondition = "recovered"
 	HealthSourceConditionRetrying     HealthSourceCondition = "retrying"
@@ -14450,6 +14568,8 @@ const (
 func (e HealthSourceCondition) Valid() bool {
 	switch e {
 	case HealthSourceConditionClear:
+		return true
+	case HealthSourceConditionInformation:
 		return true
 	case HealthSourceConditionProcessing:
 		return true
@@ -16651,6 +16771,33 @@ func (e LegalReviewOutcome) Valid() bool {
 	}
 }
 
+// Defines values for LegalReviewPacketContractStatus.
+const (
+	LegalReviewPacketContractStatusActive     LegalReviewPacketContractStatus = "active"
+	LegalReviewPacketContractStatusCancelled  LegalReviewPacketContractStatus = "cancelled"
+	LegalReviewPacketContractStatusDraft      LegalReviewPacketContractStatus = "draft"
+	LegalReviewPacketContractStatusExpired    LegalReviewPacketContractStatus = "expired"
+	LegalReviewPacketContractStatusSuperseded LegalReviewPacketContractStatus = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketContractStatus enum.
+func (e LegalReviewPacketContractStatus) Valid() bool {
+	switch e {
+	case LegalReviewPacketContractStatusActive:
+		return true
+	case LegalReviewPacketContractStatusCancelled:
+		return true
+	case LegalReviewPacketContractStatusDraft:
+		return true
+	case LegalReviewPacketContractStatusExpired:
+		return true
+	case LegalReviewPacketContractStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LegalReviewPacketDocumentCategory.
 const (
 	LegalReviewPacketDocumentCategoryContract LegalReviewPacketDocumentCategory = "contract"
@@ -16687,6 +16834,33 @@ func (e LegalReviewPacketDocumentDocState) Valid() bool {
 	case LegalReviewPacketDocumentDocStateDraft:
 		return true
 	case LegalReviewPacketDocumentDocStateFinal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalReviewPacketTouchKind.
+const (
+	LegalReviewPacketTouchKindCall    LegalReviewPacketTouchKind = "call"
+	LegalReviewPacketTouchKindEmail   LegalReviewPacketTouchKind = "email"
+	LegalReviewPacketTouchKindMeeting LegalReviewPacketTouchKind = "meeting"
+	LegalReviewPacketTouchKindMessage LegalReviewPacketTouchKind = "message"
+	LegalReviewPacketTouchKindNote    LegalReviewPacketTouchKind = "note"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketTouchKind enum.
+func (e LegalReviewPacketTouchKind) Valid() bool {
+	switch e {
+	case LegalReviewPacketTouchKindCall:
+		return true
+	case LegalReviewPacketTouchKindEmail:
+		return true
+	case LegalReviewPacketTouchKindMeeting:
+		return true
+	case LegalReviewPacketTouchKindMessage:
+		return true
+	case LegalReviewPacketTouchKindNote:
 		return true
 	default:
 		return false
@@ -21150,6 +21324,7 @@ func (e ReportSetupUnsupportedCode) Valid() bool {
 
 // Defines values for ReportingBlockKind.
 const (
+	ReportingBlockKindAccountCohort     ReportingBlockKind = "account_cohort"
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
 	ReportingBlockKindBreakdown         ReportingBlockKind = "breakdown"
 	ReportingBlockKindForecastSupport   ReportingBlockKind = "forecast_support"
@@ -21158,6 +21333,7 @@ const (
 	ReportingBlockKindOwnerAttainment   ReportingBlockKind = "owner_attainment"
 	ReportingBlockKindPipelineMovement  ReportingBlockKind = "pipeline_movement"
 	ReportingBlockKindSdrOutcomes       ReportingBlockKind = "sdr_outcomes"
+	ReportingBlockKindSourceQuality     ReportingBlockKind = "source_quality"
 	ReportingBlockKindStageAge          ReportingBlockKind = "stage_age"
 	ReportingBlockKindStageCohort       ReportingBlockKind = "stage_cohort"
 	ReportingBlockKindStageDistribution ReportingBlockKind = "stage_distribution"
@@ -21167,6 +21343,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingBlockKind enum.
 func (e ReportingBlockKind) Valid() bool {
 	switch e {
+	case ReportingBlockKindAccountCohort:
+		return true
 	case ReportingBlockKindBookingsTrend:
 		return true
 	case ReportingBlockKindBreakdown:
@@ -21182,6 +21360,8 @@ func (e ReportingBlockKind) Valid() bool {
 	case ReportingBlockKindPipelineMovement:
 		return true
 	case ReportingBlockKindSdrOutcomes:
+		return true
+	case ReportingBlockKindSourceQuality:
 		return true
 	case ReportingBlockKindStageAge:
 		return true
@@ -21216,6 +21396,7 @@ func (e ReportingCardWidth) Valid() bool {
 
 // Defines values for ReportingCardKind.
 const (
+	ReportingCardKindAccountCohort     ReportingCardKind = "account_cohort"
 	ReportingCardKindAssessment        ReportingCardKind = "assessment"
 	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
 	ReportingCardKindBreakdown         ReportingCardKind = "breakdown"
@@ -21226,6 +21407,7 @@ const (
 	ReportingCardKindPipelineMovement  ReportingCardKind = "pipeline_movement"
 	ReportingCardKindQuestion          ReportingCardKind = "question"
 	ReportingCardKindSdrOutcomes       ReportingCardKind = "sdr_outcomes"
+	ReportingCardKindSourceQuality     ReportingCardKind = "source_quality"
 	ReportingCardKindStageAge          ReportingCardKind = "stage_age"
 	ReportingCardKindStageCohort       ReportingCardKind = "stage_cohort"
 	ReportingCardKindStageDistribution ReportingCardKind = "stage_distribution"
@@ -21235,6 +21417,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingCardKind enum.
 func (e ReportingCardKind) Valid() bool {
 	switch e {
+	case ReportingCardKindAccountCohort:
+		return true
 	case ReportingCardKindAssessment:
 		return true
 	case ReportingCardKindBookingsTrend:
@@ -21254,6 +21438,8 @@ func (e ReportingCardKind) Valid() bool {
 	case ReportingCardKindQuestion:
 		return true
 	case ReportingCardKindSdrOutcomes:
+		return true
+	case ReportingCardKindSourceQuality:
 		return true
 	case ReportingCardKindStageAge:
 		return true
@@ -21421,6 +21607,7 @@ func (e ReportingMetricDefinitionTemporalBasis) Valid() bool {
 // Defines values for ReportingMetricID.
 const (
 	ReportingMetricIDAcceptedOpportunities         ReportingMetricID = "accepted_opportunities"
+	ReportingMetricIDAccountProgression            ReportingMetricID = "account_progression"
 	ReportingMetricIDBookingsMix                   ReportingMetricID = "bookings_mix"
 	ReportingMetricIDBookingsWon                   ReportingMetricID = "bookings_won"
 	ReportingMetricIDClosedWinRate                 ReportingMetricID = "closed_win_rate"
@@ -21442,6 +21629,7 @@ const (
 	ReportingMetricIDPartnerWon                    ReportingMetricID = "partner_won"
 	ReportingMetricIDQualifiedOpportunitiesCreated ReportingMetricID = "qualified_opportunities_created"
 	ReportingMetricIDQualifiedPipelineCreated      ReportingMetricID = "qualified_pipeline_created"
+	ReportingMetricIDSourceQuality                 ReportingMetricID = "source_quality"
 	ReportingMetricIDStageAge                      ReportingMetricID = "stage_age"
 	ReportingMetricIDStageConversion               ReportingMetricID = "stage_conversion"
 )
@@ -21450,6 +21638,8 @@ const (
 func (e ReportingMetricID) Valid() bool {
 	switch e {
 	case ReportingMetricIDAcceptedOpportunities:
+		return true
+	case ReportingMetricIDAccountProgression:
 		return true
 	case ReportingMetricIDBookingsMix:
 		return true
@@ -21492,6 +21682,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDQualifiedOpportunitiesCreated:
 		return true
 	case ReportingMetricIDQualifiedPipelineCreated:
+		return true
+	case ReportingMetricIDSourceQuality:
 		return true
 	case ReportingMetricIDStageAge:
 		return true
@@ -25549,6 +25741,24 @@ func (e UpdateCompanyRequestVisibility) Valid() bool {
 	case UpdateCompanyRequestVisibilityOwner:
 		return true
 	case UpdateCompanyRequestVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateContactRequestGreetingRegister.
+const (
+	UpdateContactRequestGreetingRegisterFamiliar UpdateContactRequestGreetingRegister = "familiar"
+	UpdateContactRequestGreetingRegisterFormal   UpdateContactRequestGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the UpdateContactRequestGreetingRegister enum.
+func (e UpdateContactRequestGreetingRegister) Valid() bool {
+	switch e {
+	case UpdateContactRequestGreetingRegisterFamiliar:
+		return true
+	case UpdateContactRequestGreetingRegisterFormal:
 		return true
 	default:
 		return false
@@ -33402,6 +33612,29 @@ type ActivityVoice struct {
 // ActivityVoiceContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
 type ActivityVoiceContactRole string
 
+// AddAttachmentLinkRequest defines model for AddAttachmentLinkRequest.
+type AddAttachmentLinkRequest struct {
+	// Category What the document is. Absent leaves it uncategorised, as an upload is.
+	Category *AddAttachmentLinkRequestCategory `json:"category,omitempty"`
+
+	// ContractId The agreement this document is about, as on the upload.
+	ContractId *openapi_types.UUID                `json:"contract_id,omitempty"`
+	EntityId   openapi_types.UUID                 `json:"entity_id"`
+	EntityType AddAttachmentLinkRequestEntityType `json:"entity_type"`
+
+	// Title What a reader looks for. Absent or blank lists the link under its host.
+	Title *string `json:"title,omitempty"`
+
+	// Url An http or https address, without user info.
+	Url string `json:"url"`
+}
+
+// AddAttachmentLinkRequestCategory What the document is. Absent leaves it uncategorised, as an upload is.
+type AddAttachmentLinkRequestCategory string
+
+// AddAttachmentLinkRequestEntityType defines model for AddAttachmentLinkRequest.EntityType.
+type AddAttachmentLinkRequestEntityType string
+
 // AddConsumerMailDomainRequest defines model for AddConsumerMailDomainRequest.
 type AddConsumerMailDomainRequest struct {
 	// Confirm Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.
@@ -36522,7 +36755,7 @@ type AtRiskRelationships struct {
 type Attachment struct {
 	ByteSize *int64 `json:"byte_size,omitempty"`
 
-	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes.
+	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for any row with a `url`, which is a pointer and has no bytes.
 	BytesWithheld *bool `json:"bytes_withheld,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
@@ -36533,7 +36766,9 @@ type Attachment struct {
 	//
 	// `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
 	// Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
-	// and the category cannot be set or changed through a metadata patch.
+	// and the category cannot be set or changed through a metadata patch. A link a user
+	// added (`POST /attachments/links`) holds an address the same way under the category
+	// they chose, never `link`; its `source` is `link`.
 	//
 	// `email_attachment` and `message_attachment` record PROVENANCE rather than
 	// content: capture derives them from the transport the file arrived on, so a
@@ -36576,7 +36811,7 @@ type Attachment struct {
 	// Title A display name distinct from the filename, showing what a reader looks for rather than what arrived.
 	Title *string `json:"title,omitempty"`
 
-	// Url The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download.
+	// Url The address of a document that lives elsewhere: a `link` row a mail carried, or a link a user added. Null for a stored file. It is an http or https address. The reader renders it as an outbound link to open in a new tab, never as a download.
 	Url *string `json:"url,omitempty"`
 }
 
@@ -36585,7 +36820,9 @@ type Attachment struct {
 //
 // `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
 // Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
-// and the category cannot be set or changed through a metadata patch.
+// and the category cannot be set or changed through a metadata patch. A link a user
+// added (`POST /attachments/links`) holds an address the same way under the category
+// they chose, never `link`; its `source` is `link`.
 //
 // `email_attachment` and `message_attachment` record PROVENANCE rather than
 // content: capture derives them from the transport the file arrived on, so a
@@ -36653,6 +36890,24 @@ type AttachmentExtractionStatus string
 type AttachmentExtractionAcceptResponse struct {
 	Accepted []AcceptedExtractionField `json:"accepted"`
 	DealId   openapi_types.UUID        `json:"deal_id"`
+}
+
+// AttachmentLinkPreview defines model for AttachmentLinkPreview.
+type AttachmentLinkPreview struct {
+	// Host The lowercased host the address names.
+	Host string `json:"host"`
+
+	// Read False when the page was not fetched or did not answer.
+	Read bool `json:"read"`
+
+	// SiteName The page's Open Graph site name. Absent when it gave none.
+	SiteName *string `json:"site_name,omitempty"`
+
+	// Title The page's Open Graph title, else its <title>. Absent when it gave none.
+	Title *string `json:"title,omitempty"`
+
+	// Url The address as it will be stored.
+	Url string `json:"url"`
 }
 
 // AttachmentListResponse defines model for AttachmentListResponse.
@@ -37960,6 +38215,15 @@ type AuthorizationRowScope string
 // AuthorizationSeatType The licensing seat. A read seat may read but never mutate over REST, whatever its role grants. A client that cannot read a recognized value MUST assume a read seat: the ceiling fails closed, so an omission never buys the ability to mutate.
 type AuthorizationSeatType string
 
+// AutoApplyInstallation defines model for AutoApplyInstallation.
+type AutoApplyInstallation struct {
+	Enabled bool `json:"enabled"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+}
+
 // AutomaticWorkColleague defines model for AutomaticWorkColleague.
 type AutomaticWorkColleague struct {
 	DisplayName string                       `json:"display_name"`
@@ -38291,7 +38555,14 @@ type AutomationRunTier string
 // AutonomySettings What the reader has decided about answering their own queue: one row per kind
 // that is eligible to apply automatically, whether or not they have ever met it.
 type AutonomySettings struct {
-	Data []KindAutonomy `json:"data"`
+	// AutoApplyEnabled The installation's switch over every row. False means nothing applies
+	// itself for anybody; the modes in `data` stay as the reader set them.
+	AutoApplyEnabled bool           `json:"auto_apply_enabled"`
+	Data             []KindAutonomy `json:"data"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
 // AvailableModel One model a vendor says it serves.
@@ -38543,7 +38814,7 @@ type BlockedDomain struct {
 	//   as a company.
 	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 	//   company this business works with. `sender_kind` says which, when it is known.
-	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
 	//   domain's open question, as `source` describes each one.
 	// - `unknown`: the row records a reason this server has no word for. `reason` still
 	//   carries its stored sentence.
@@ -38559,7 +38830,9 @@ type BlockedDomain struct {
 	// old to mint one from today's site; `near_duplicate` means more than one company
 	// here already carries the name it resolved to, and which of them this domain belongs
 	// to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-	// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+	// as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+	// `foreign_site` means the site names a different business than the domain, which may
+	// have changed hands.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -38576,7 +38849,7 @@ type BlockedDomainAdmission string
 //     as a company.
 //   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 //     company this business works with. `sender_kind` says which, when it is known.
-//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
 //     domain's open question, as `source` describes each one.
 //   - `unknown`: the row records a reason this server has no word for. `reason` still
 //     carries its stored sentence.
@@ -38592,7 +38865,9 @@ type BlockedDomainSenderKind string
 // old to mint one from today's site; `near_duplicate` means more than one company
 // here already carries the name it resolved to, and which of them this domain belongs
 // to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+// as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+// `foreign_site` means the site names a different business than the domain, which may
+// have changed hands.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -41026,9 +41301,12 @@ type Company360Contact struct {
 	ContactId openapi_types.UUID                  `json:"contact_id"`
 
 	// DealRoles This contact's stakeholder roles on the account's deals (champion, economic_buyer, …).
-	DealRoles    []Company360DealRole `json:"deal_roles"`
-	FullName     string               `json:"full_name"`
-	PrimaryEmail *string              `json:"primary_email,omitempty"`
+	DealRoles []Company360DealRole `json:"deal_roles"`
+	FullName  string               `json:"full_name"`
+
+	// GreetingRegister The register a rep set for opening a message to this contact; null when none is set.
+	GreetingRegister *Company360ContactGreetingRegister `json:"greeting_register,omitempty"`
+	PrimaryEmail     *string                            `json:"primary_email,omitempty"`
 
 	// ProviderTitle A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed.
 	ProviderTitle *string `json:"provider_title,omitempty"`
@@ -41059,6 +41337,9 @@ type Company360Contact struct {
 
 // Company360ContactConsent defines model for Company360Contact.Consent.
 type Company360ContactConsent string
+
+// Company360ContactGreetingRegister The register a rep set for opening a message to this contact; null when none is set.
+type Company360ContactGreetingRegister string
 
 // Company360ContactTitleSource Which title the roster is showing — the installation's own record, or the provider fallback. Null when there is no title at all.
 type Company360ContactTitleSource string
@@ -41618,9 +41899,10 @@ type CompanyAnswer struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Question The prepared questions. Fixed, because each one names the records its answer is
@@ -41658,9 +41940,10 @@ type CompanyBrief struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
@@ -42104,9 +42387,10 @@ type CompanyDossier struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// NeedsRefresh The newest contributing source was retrieved more than thirty days ago
@@ -42176,9 +42460,10 @@ type CompanyEmailDraft struct {
 	DraftRef *string `json:"draft_ref,omitempty"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Language The language this draft is written in: the `language` the request named, else the one the server resolved from the record's correspondence. The model draft and the deterministic floor report it alike. Absent on an introduction request or note, which reads its language on its own and says so through `language_undetermined`.
@@ -42618,9 +42903,10 @@ type CompanyGrowthFit struct {
 	GeneratedAt      time.Time        `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// NegativeFactors What argues against it.
@@ -42919,7 +43205,7 @@ type CompanyProfileInput struct {
 	CustomerPains    *string `json:"customer_pains,omitempty"`
 	DesiredOutcomes  *string `json:"desired_outcomes,omitempty"`
 
-	// DisplayName The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters.
+	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.
 	DisplayName string  `json:"display_name"`
 	History     *string `json:"history,omitempty"`
 	Icp         *string `json:"icp,omitempty"`
@@ -44113,8 +44399,11 @@ type Contact struct {
 	FirstName *string          `json:"first_name,omitempty"`
 
 	// FullName Always present (display name).
-	FullName string             `json:"full_name"`
-	Id       openapi_types.UUID `json:"id"`
+	FullName string `json:"full_name"`
+
+	// GreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+	GreetingRegister *ContactGreetingRegister `json:"greeting_register,omitempty"`
+	Id               openapi_types.UUID       `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -44175,6 +44464,9 @@ type Contact struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ContactGreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+type ContactGreetingRegister string
 
 // ContactRelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 type ContactRelationshipMark string
@@ -44501,9 +44793,10 @@ type ContactBrief struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Sentences Two to five sentences: who this contact is in the current commercial context, what they have explicitly cared about, what recently changed, and the unresolved decision or risk. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited.
@@ -44582,6 +44875,11 @@ type ContactCaseDecisionRequest struct {
 
 	// OwnerId Who owns the remaining contact: the live owner of one of the selected members.
 	OwnerId openapi_types.UUID `json:"owner_id"`
+
+	// Prefer Where the selected members disagree, the member whose value the remaining contact takes.
+	// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+	// No value is lost: every address, number and employment of every member stays on the remaining contact.
+	Prefer *ContactCasePreference `json:"prefer,omitempty"`
 
 	// Revision The case revision the reviewer looked at.
 	Revision string `json:"revision"`
@@ -44677,6 +44975,23 @@ type ContactCaseOwner struct {
 // ContactCaseOwnerSeat defines model for ContactCaseOwner.Seat.
 type ContactCaseOwnerSeat string
 
+// ContactCasePreference Where the selected members disagree, the member whose value the remaining contact takes.
+// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+// No value is lost: every address, number and employment of every member stays on the remaining contact.
+type ContactCasePreference struct {
+	// Email The member whose primary email address becomes the remaining contact's primary one.
+	Email *openapi_types.UUID `json:"email,omitempty"`
+
+	// Employment The member whose current employer becomes the remaining contact's current one.
+	Employment *openapi_types.UUID `json:"employment,omitempty"`
+
+	// Name The member whose first and last name the remaining contact takes.
+	Name *openapi_types.UUID `json:"name,omitempty"`
+
+	// Title The member whose title the remaining contact takes.
+	Title *openapi_types.UUID `json:"title,omitempty"`
+}
+
 // ContactCaseResolution defines model for ContactCaseResolution.
 type ContactCaseResolution struct {
 	ResolvedAt     time.Time           `json:"resolved_at"`
@@ -44770,12 +45085,14 @@ type ContactConsentGuardEntryVerdict string
 
 // ContactConsentState A contact's current consent for one purpose.
 type ContactConsentState struct {
-	DoubleOptInConfirmedAt *time.Time               `json:"double_opt_in_confirmed_at,omitempty"`
-	LawfulBasis            *string                  `json:"lawful_basis,omitempty"`
-	PurposeId              openapi_types.UUID       `json:"purpose_id"`
-	PurposeKey             *string                  `json:"purpose_key,omitempty"`
-	State                  ContactConsentStateState `json:"state"`
-	UpdatedAt              *time.Time               `json:"updated_at,omitempty"`
+	// ConfirmationPendingUntil When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
+	ConfirmationPendingUntil *time.Time               `json:"confirmation_pending_until,omitempty"`
+	DoubleOptInConfirmedAt   *time.Time               `json:"double_opt_in_confirmed_at,omitempty"`
+	LawfulBasis              *string                  `json:"lawful_basis,omitempty"`
+	PurposeId                openapi_types.UUID       `json:"purpose_id"`
+	PurposeKey               *string                  `json:"purpose_key,omitempty"`
+	State                    ContactConsentStateState `json:"state"`
+	UpdatedAt                *time.Time               `json:"updated_at,omitempty"`
 }
 
 // ContactConsentStateState defines model for ContactConsentState.State.
@@ -46035,9 +46352,10 @@ type ConversationMemoryEntry struct {
 	FirstActivityId *openapi_types.UUID `json:"first_activity_id,omitempty"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
 
 	// Key The thread key, or the activity id for a meeting or a standalone message that has none.
@@ -47831,6 +48149,9 @@ type Deal struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
+	// WaitEndsAt The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+	WaitEndsAt *time.Time `json:"wait_ends_at,omitempty"`
+
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
@@ -48000,6 +48321,9 @@ type DealAdvanced struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
+	// WaitEndsAt The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+	WaitEndsAt *time.Time `json:"wait_ends_at,omitempty"`
+
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
@@ -48137,6 +48461,12 @@ type DealCommitments struct {
 type DealCoverage struct {
 	DealId openapi_types.UUID `json:"deal_id"`
 
+	// Lines One entry per current colleague and readable seat who have exchanged mail or met,
+	// from the activities the caller may open, at the time of the read. A seat the caller
+	// cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+	// the edge sections are withheld: absence says nothing about who has talked.
+	Lines *[]DealCoverageLine `json:"lines,omitempty"`
+
 	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
 	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
 	// score is their warmest single relationship. `single_threaded_ours` reads the same
@@ -48164,6 +48494,31 @@ type DealCoverage struct {
 
 // DealCoverageSectionsOmitted defines model for DealCoverage.SectionsOmitted.
 type DealCoverageSectionsOmitted string
+
+// DealCoverageLine One colleague's exchange with one buyer seat, as the newest event in each direction.
+type DealCoverageLine struct {
+	ColleagueName string             `json:"colleague_name"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+
+	// LastInboundAt When the contact last wrote to this colleague.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
+	// LastMetAt The newest meeting or call of the pair that neither declined.
+	LastMetAt *time.Time `json:"last_met_at,omitempty"`
+
+	// LastMetPrecision How to read `last_met_at`.
+	LastMetPrecision *OccurredPrecision `json:"last_met_precision,omitempty"`
+
+	// LastOutboundAt When this colleague last wrote to the contact, or was copied on our mail to them.
+	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
+	UserId                openapi_types.UUID `json:"user_id"`
+}
 
 // DealCoverageRisk One finding, with the records behind it. `kind` names the rule so a surface can
 // explain the flag rather than assert it.
@@ -48198,8 +48553,22 @@ type DealCoverageSeat struct {
 
 	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
 	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
-	Role                 string             `json:"role"`
+
+	// Reach Whether a current colleague has exchanged mail with or met this seat, as the caller
+	// can prove it. `not_reached` only when no activity links the seat to a colleague at
+	// all. Anything withheld from the caller, or an exchange only with a colleague who has
+	// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+	// `activity` grant.
+	Reach *DealCoverageSeatReach `json:"reach,omitempty"`
+	Role  string                 `json:"role"`
 }
+
+// DealCoverageSeatReach Whether a current colleague has exchanged mail with or met this seat, as the caller
+// can prove it. `not_reached` only when no activity links the seat to a colleague at
+// all. Anything withheld from the caller, or an exchange only with a colleague who has
+// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+// `activity` grant.
+type DealCoverageSeatReach string
 
 // DealDocument One file in a deal's Files area: the attachment, whether it is hidden from this
 // deal, and where a captured file came from, so a reader can tell "the contract
@@ -48507,9 +48876,10 @@ type DealRevisionRequest struct {
 // DealRoleProposalResult defines model for DealRoleProposalResult.
 type DealRoleProposalResult struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Skipped How many of the model's proposals the gate refused — a wrong quote, a contact
@@ -48620,9 +48990,10 @@ type DealRoomBrief struct {
 	GeneratedAt time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy               `json:"generated_by"`
 	RoomId      openapi_types.UUID      `json:"room_id"`
 	Sentences   []DealRoomBriefSentence `json:"sentences"`
@@ -48962,9 +49333,10 @@ type DealStatusCard struct {
 	GeneratedAt time.Time              `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// MailCoverage The calling reader's mail capture for the requested interval. This does
@@ -52113,7 +52485,9 @@ type HealthSource struct {
 	Availability  HealthSourceAvailability `json:"availability"`
 
 	// Code Safe presentation code, never raw failure text.
-	Code               string                `json:"code"`
+	Code string `json:"code"`
+
+	// Condition `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
 	Condition          HealthSourceCondition `json:"condition"`
 	Count              *int                  `json:"count,omitempty" minimum:"0"`
 	ExpectationSeconds *int                  `json:"expectation_seconds,omitempty" minimum:"0"`
@@ -52123,14 +52497,17 @@ type HealthSource struct {
 	Permission         string                `json:"permission"`
 	Scope              HealthSourceScope     `json:"scope"`
 	Unit               *HealthSourceUnit     `json:"unit,omitempty"`
-	WindowEnd          *time.Time            `json:"window_end,omitempty"`
-	WindowStart        *time.Time            `json:"window_start,omitempty"`
+
+	// UnplacedChanges The `unplaced` source's breakdown of the machine changes in its window that the `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds the sum of these entries when more kinds occurred than are listed.
+	UnplacedChanges *[]HealthUnplacedChange `json:"unplaced_changes,omitempty"`
+	WindowEnd       *time.Time              `json:"window_end,omitempty"`
+	WindowStart     *time.Time              `json:"window_start,omitempty"`
 }
 
 // HealthSourceAvailability defines model for HealthSource.Availability.
 type HealthSourceAvailability string
 
-// HealthSourceCondition defines model for HealthSource.Condition.
+// HealthSourceCondition `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
 type HealthSourceCondition string
 
 // HealthSourceScope defines model for HealthSource.Scope.
@@ -52138,6 +52515,14 @@ type HealthSourceScope string
 
 // HealthSourceUnit defines model for HealthSource.Unit.
 type HealthSourceUnit string
+
+// HealthUnplacedChange defines model for HealthUnplacedChange.
+type HealthUnplacedChange struct {
+	// Action The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`.
+	Action     string `json:"action"`
+	Count      int    `json:"count" minimum:"1"`
+	EntityType string `json:"entity_type"`
+}
 
 // HeldEntityType defines model for HeldEntityType.
 type HeldEntityType string
@@ -52587,6 +52972,12 @@ type ImportFormatFile struct {
 
 	// File The file name a ZIP entry needs for this object to be detected.
 	File string `json:"file"`
+
+	// KeyColumns The columns that tell this file's rows apart. A file needs at
+	// least one of them mapped, or the test run does not start, unless
+	// the request names its own `source_key` column. Absent from a
+	// server older than this field.
+	KeyColumns *[]string `json:"key_columns,omitempty"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
@@ -53800,6 +54191,12 @@ type InstallationSettings struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
+	// MaxKnowledgeDocumentBytes The largest document `uploadCorpusDocument` accepts, in bytes. Set by whoever operates
+	// the installation, on the same terms as `max_upload_bytes`, and lower than it by
+	// default because a corpus document becomes passages every ask scans. Absent from a
+	// server older than this field; a client then leaves the refusal to the server.
+	MaxKnowledgeDocumentBytes *int64 `json:"max_knowledge_document_bytes,omitempty"`
+
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
 	// it is a deployment fact, so PATCH does not carry it.
@@ -54539,9 +54936,10 @@ type KnowledgeAnswer struct {
 	Coverage KnowledgeCoverage     `json:"coverage"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Outcome The five are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all; unreviewed says the corpus WAS searched and the nearest passages are attached, but no writer read them, so nothing has judged whether they answer the question — the claims are what the search found, not an answer. Collapsing them is the failure this endpoint exists to avoid.
@@ -54801,6 +55199,34 @@ type LatestInboundList struct {
 
 	// LastExchange The newest call, meeting, email or message on the record. Absent when there is none.
 	LastExchange *LastExchange `json:"last_exchange,omitempty"`
+
+	// LastInbound A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	LastInbound *Activity `json:"last_inbound,omitempty"`
+
+	// LastOutbound A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	LastOutbound *Activity `json:"last_outbound,omitempty"`
 }
 
 // LawfulBasisConfirmation defines model for LawfulBasisConfirmation.
@@ -55546,7 +55972,12 @@ type LegalReviewOutcome string
 type LegalReviewPacket struct {
 	// Binding Every other offer the buyer was sent or accepted. The approval binds to these too.
 	Binding *[]LegalReviewPacketOffer `json:"binding,omitempty"`
-	Deal    LegalReviewPacketDeal     `json:"deal"`
+
+	// Contracts The agreements filed against the deal, newest term first. Absent on a
+	// pack asked for before agreements were packed. An agreement this reader
+	// may not open, and every agreement for a reader without `deal.read`, is not listed.
+	Contracts *[]LegalReviewPacketContract `json:"contracts,omitempty"`
+	Deal      LegalReviewPacketDeal        `json:"deal"`
 
 	// Documents The deal's contract, legal and offer documents, newest first.
 	Documents []LegalReviewPacketDocument `json:"documents"`
@@ -55555,10 +55986,36 @@ type LegalReviewPacket struct {
 	History []LegalReviewPacketStage `json:"history"`
 
 	// Offer The current offer, or null when the deal has none.
-	Offer         *LegalReviewPacketOffer `json:"offer,omitempty"`
-	ValueCurrency *string                 `json:"value_currency,omitempty"`
-	ValueMinor    *int64                  `json:"value_minor,omitempty"`
+	Offer *LegalReviewPacketOffer `json:"offer,omitempty"`
+
+	// Tasks The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+	Tasks *[]LegalReviewPacketTask `json:"tasks,omitempty"`
+
+	// Touches The deal's latest calls, meetings, messages and notes, newest first. One
+	// this reader may not read, such as mail outside their audience, is not
+	// listed. Absent on an older pack.
+	Touches       *[]LegalReviewPacketTouch `json:"touches,omitempty"`
+	ValueCurrency *string                   `json:"value_currency,omitempty"`
+	ValueMinor    *int64                    `json:"value_minor,omitempty"`
 }
+
+// LegalReviewPacketContract One agreement as it stood at the request. Its title is read now for this
+// reader. The dates and notice terms are the ones frozen with the pack.
+type LegalReviewPacketContract struct {
+	AutoRenew            *bool                           `json:"auto_renew,omitempty"`
+	CancellationNoticeOn *openapi_types.Date             `json:"cancellation_notice_on,omitempty"`
+	ContractNumber       *string                         `json:"contract_number,omitempty"`
+	EndsOn               *openapi_types.Date             `json:"ends_on,omitempty"`
+	Id                   openapi_types.UUID              `json:"id"`
+	NoticePeriodDays     *int                            `json:"notice_period_days,omitempty"`
+	RenewalOn            *openapi_types.Date             `json:"renewal_on,omitempty"`
+	StartsOn             *openapi_types.Date             `json:"starts_on,omitempty"`
+	Status               LegalReviewPacketContractStatus `json:"status"`
+	Title                string                          `json:"title"`
+}
+
+// LegalReviewPacketContractStatus defines model for LegalReviewPacketContract.Status.
+type LegalReviewPacketContractStatus string
 
 // LegalReviewPacketDeal defines model for LegalReviewPacketDeal.
 type LegalReviewPacketDeal struct {
@@ -55654,6 +56111,27 @@ type LegalReviewPacketStage struct {
 	EnteredAt time.Time `json:"entered_at"`
 	StageName string    `json:"stage_name"`
 }
+
+// LegalReviewPacketTask One task that was open at the request. Its subject is read now.
+type LegalReviewPacketTask struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+	DueAt      *time.Time         `json:"due_at,omitempty"`
+	Subject    *string            `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouch One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+type LegalReviewPacketTouch struct {
+	ActivityId openapi_types.UUID         `json:"activity_id"`
+	Kind       LegalReviewPacketTouchKind `json:"kind"`
+	OccurredAt time.Time                  `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouchKind defines model for LegalReviewPacketTouch.Kind.
+type LegalReviewPacketTouchKind string
 
 // LegalReviewQueueItem One row of the reviewer's queue, with the facts it is sorted by.
 type LegalReviewQueueItem struct {
@@ -57181,9 +57659,10 @@ type MeetingBrief struct {
 	GeneratedAt time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Omitted What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at.
@@ -57414,9 +57893,10 @@ type MeetingPlan struct {
 	CompanyArc []MeetingPlanArcMoment `json:"company_arc"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// LikelyAsks What the other side is likely to ask, each an assessment with the record behind it.
@@ -58047,6 +58527,12 @@ type MorningDigestConnectorsProvider string
 
 // MorningDigestConnectorsStatus defines model for MorningDigest.Connectors.Status.
 type MorningDigestConnectorsStatus string
+
+// MoveDealPipelineRequest defines model for MoveDealPipelineRequest.
+type MoveDealPipelineRequest struct {
+	// PipelineId The live pipeline to move the deal to. It must differ from the deal's own.
+	PipelineId openapi_types.UUID `json:"pipeline_id"`
+}
 
 // MyAgentGrant One rep's standing answer for one scheduled agent.
 type MyAgentGrant struct {
@@ -60034,6 +60520,14 @@ type Problem struct {
 	// code names other values carries them in `params`, an object of text values by
 	// name, so a screen can word the code in the reader's language; `message` stays
 	// the English sentence.
+	//
+	// A value its field cannot hold names the field's path (`address.city` for a key of a
+	// nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+	// `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+	// `invalid_type` for any other shape. A body that is not one JSON object, and a value
+	// inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+	// carries its bounds as `params.min` and `params.max`, as the schema spells them;
+	// a date-time range states them as ISO dates.
 	//
 	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -62738,9 +63232,10 @@ type ReportSetupProposal struct {
 	Clarifications []string `json:"clarifications"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 	ModelUsed   *string   `json:"model_used,omitempty"`
 
@@ -62828,6 +63323,10 @@ type ReportVocabulary struct {
 // `lead_cohort` follows the leads that arrived in the interval the same
 // way: one point, its `outcomes` saying whether each lead was accepted,
 // qualified, disqualified or is still open.
+// `account_cohort` follows the distinct accounts of those leads: one point,
+// its `outcomes` saying the furthest outcome any of an account's leads
+// reached. `source_quality` is one point per lead origin: how many leads
+// arrived from it and how many of them were linked to an opportunity.
 type ReportingBlockKind string
 
 // ReportingCaptureContext defines model for ReportingCaptureContext.
@@ -62929,6 +63428,10 @@ type ReportingChart struct {
 	// `lead_cohort` follows the leads that arrived in the interval the same
 	// way: one point, its `outcomes` saying whether each lead was accepted,
 	// qualified, disqualified or is still open.
+	// `account_cohort` follows the distinct accounts of those leads: one point,
+	// its `outcomes` saying the furthest outcome any of an account's leads
+	// reached. `source_quality` is one point per lead origin: how many leads
+	// arrived from it and how many of them were linked to an opportunity.
 	Kind              ReportingBlockKind  `json:"kind"`
 	Marker            *float64            `json:"marker,omitempty"`
 	Metric            ReportingMetricID   `json:"metric"`
@@ -64353,9 +64856,10 @@ type SalesAssessment struct {
 	GeneratedAt   time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy  WrittenBy                `json:"generated_by"`
 	ModelUsed    *string                  `json:"model_used,omitempty"`
 	NextDecision *SalesAssessmentDecision `json:"next_decision,omitempty"`
@@ -64525,9 +65029,10 @@ type SalesGoalPlanState string
 // SalesGoalProposal defines model for SalesGoalProposal.
 type SalesGoalProposal struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 	ModelUsed   *string   `json:"model_used,omitempty"`
 
@@ -69231,7 +69736,10 @@ type UpdateContactRequest struct {
 	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
 	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
 	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
-	LastName  *string              `json:"last_name,omitempty" singleline:"true"`
+
+	// GreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+	GreetingRegister *UpdateContactRequestGreetingRegister `json:"greeting_register,omitempty"`
+	LastName         *string                               `json:"last_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
 	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
@@ -69281,6 +69789,9 @@ type UpdateContactRequest struct {
 	Visibility           *UpdateContactRequestVisibility `json:"visibility,omitempty"`
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
+
+// UpdateContactRequestGreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+type UpdateContactRequestGreetingRegister string
 
 // UpdateContactRequestRelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 type UpdateContactRequestRelationshipMark string
@@ -72458,8 +72969,9 @@ type Worklist struct {
 	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
 	OptionalRelationshipsMoreAvailable *bool `json:"optional_relationships_more_available,omitempty"`
 
-	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
-	// due commitments were read across the team roster. Absent under every other scope.
+	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+	// Both read the due commitments across the reader's team roster, the reader included.
+	// Absent under every other scope.
 	//
 	// It exists because "nothing due" and "not looked at" differ. A teammate whose plan
 	// could not be read contributes no rows, and without this a lead would read their
@@ -73714,8 +74226,9 @@ type WorklistPinRequest struct {
 	Source string `json:"source"`
 }
 
-// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
-// due commitments were read across the team roster. Absent under every other scope.
+// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+// Both read the due commitments across the reader's team roster, the reader included.
+// Absent under every other scope.
 //
 // It exists because "nothing due" and "not looked at" differ. A teammate whose plan
 // could not be read contributes no rows, and without this a lead would read their
@@ -74155,9 +74668,10 @@ type WorkspaceQueryResult struct {
 }
 
 // WrittenBy Which writer produced a piece of generated prose. `model` — the configured model
-// lane. `deterministic` — the structured fallback, used when no lane is configured
-// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-// reader deciding how much to trust a sentence needs to know which wrote it.
+// lane. `deterministic` — the structured fallback, used when no lane is configured,
+// the workspace's AI budget is exhausted, the model call fails, or the checks the
+// surface runs refuse the model's answer. Never silently interchangeable: a reader
+// deciding how much to trust a sentence needs to know which wrote it.
 type WrittenBy string
 
 // AiWritten defines model for AiWritten.
@@ -75670,6 +76184,11 @@ type UploadAttachmentMultipartBody struct {
 
 // UploadAttachmentMultipartBodyEntityType defines parameters for UploadAttachment.
 type UploadAttachmentMultipartBodyEntityType string
+
+// PreviewAttachmentLinkJSONBody defines parameters for PreviewAttachmentLink.
+type PreviewAttachmentLinkJSONBody struct {
+	Url string `json:"url"`
+}
 
 // GetAttachmentExtractionParams defines parameters for GetAttachmentExtraction.
 type GetAttachmentExtractionParams struct {
@@ -78648,6 +79167,26 @@ type RemoveDealLineParams struct {
 type ListDealMarginceChangesParams struct {
 	// Cursor The `next_cursor` of the page before. A token this server did not mint is refused with 422.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// MoveDealPipelineParams defines parameters for MoveDealPipeline.
+type MoveDealPipelineParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// UndoDealPipelineMoveParams defines parameters for UndoDealPipelineMove.
+type UndoDealPipelineMoveParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // RestoreDealMoveParams defines parameters for RestoreDealMove.
@@ -83466,6 +84005,12 @@ type UpdateRecordAssignmentJSONRequestBody = UpdateRecordAssignmentRequest
 // UploadAttachmentMultipartRequestBody defines body for UploadAttachment for multipart/form-data ContentType.
 type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
 
+// AddAttachmentLinkJSONRequestBody defines body for AddAttachmentLink for application/json ContentType.
+type AddAttachmentLinkJSONRequestBody = AddAttachmentLinkRequest
+
+// PreviewAttachmentLinkJSONRequestBody defines body for PreviewAttachmentLink for application/json ContentType.
+type PreviewAttachmentLinkJSONRequestBody PreviewAttachmentLinkJSONBody
+
 // ReadAttachmentForFieldsJSONRequestBody defines body for ReadAttachmentForFields for application/json ContentType.
 type ReadAttachmentForFieldsJSONRequestBody = AttachmentReadRequest
 
@@ -83504,6 +84049,9 @@ type PreviewAutomationJSONRequestBody = AutomationPreviewRequest
 
 // UpdateAutonomyJSONRequestBody defines body for UpdateAutonomy for application/json ContentType.
 type UpdateAutonomyJSONRequestBody = UpdateAutonomyRequest
+
+// UpdateAutoApplyInstallationJSONRequestBody defines body for UpdateAutoApplyInstallation for application/json ContentType.
+type UpdateAutoApplyInstallationJSONRequestBody = AutoApplyInstallation
 
 // BookMeetingJSONRequestBody defines body for BookMeeting for application/json ContentType.
 type BookMeetingJSONRequestBody BookMeetingJSONBody
@@ -83864,6 +84412,9 @@ type UseDealEstimateJSONRequestBody = DealRevisionRequest
 
 // UpdateDealLineJSONRequestBody defines body for UpdateDealLine for application/json ContentType.
 type UpdateDealLineJSONRequestBody = UpdateDealLineRequest
+
+// MoveDealPipelineJSONRequestBody defines body for MoveDealPipeline for application/json ContentType.
+type MoveDealPipelineJSONRequestBody = MoveDealPipelineRequest
 
 // DismissDealMoveJSONRequestBody defines body for DismissDealMove for application/json ContentType.
 type DismissDealMoveJSONRequestBody = DismissDealMoveRequest
@@ -86716,6 +87267,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "full_name")
 	}
 
+	if raw, found := object["greeting_register"]; found {
+		err = json.Unmarshal(raw, &a.GreetingRegister)
+		if err != nil {
+			return fmt.Errorf("error reading 'greeting_register': %w", err)
+		}
+		delete(object, "greeting_register")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -87029,6 +87588,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	object["full_name"], err = json.Marshal(a.FullName)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
+	}
+
+	if a.GreetingRegister != nil {
+		object["greeting_register"], err = json.Marshal(a.GreetingRegister)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'greeting_register': %w", err)
+		}
 	}
 
 	object["id"], err = json.Marshal(a.Id)
@@ -90713,6 +91279,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["wait_ends_at"]; found {
+		err = json.Unmarshal(raw, &a.WaitEndsAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_ends_at': %w", err)
+		}
+		delete(object, "wait_ends_at")
+	}
+
 	if raw, found := object["wait_until"]; found {
 		err = json.Unmarshal(raw, &a.WaitUntil)
 		if err != nil {
@@ -91097,6 +91671,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.WaitEndsAt != nil {
+		object["wait_ends_at"], err = json.Marshal(a.WaitEndsAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_ends_at': %w", err)
 		}
 	}
 
@@ -91566,6 +92147,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["wait_ends_at"]; found {
+		err = json.Unmarshal(raw, &a.WaitEndsAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_ends_at': %w", err)
+		}
+		delete(object, "wait_ends_at")
+	}
+
 	if raw, found := object["wait_until"]; found {
 		err = json.Unmarshal(raw, &a.WaitUntil)
 		if err != nil {
@@ -91957,6 +92546,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.WaitEndsAt != nil {
+		object["wait_ends_at"], err = json.Marshal(a.WaitEndsAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_ends_at': %w", err)
 		}
 	}
 
@@ -96223,6 +96819,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "full_name")
 	}
 
+	if raw, found := object["greeting_register"]; found {
+		err = json.Unmarshal(raw, &a.GreetingRegister)
+		if err != nil {
+			return fmt.Errorf("error reading 'greeting_register': %w", err)
+		}
+		delete(object, "greeting_register")
+	}
+
 	if raw, found := object["last_name"]; found {
 		err = json.Unmarshal(raw, &a.LastName)
 		if err != nil {
@@ -96338,6 +96942,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["full_name"], err = json.Marshal(a.FullName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
+		}
+	}
+
+	if a.GreetingRegister != nil {
+		object["greeting_register"], err = json.Marshal(a.GreetingRegister)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'greeting_register': %w", err)
 		}
 	}
 
@@ -98666,6 +99277,12 @@ type ServerInterface interface {
 	// Upload a file and attach it to an entity.
 	// (POST /attachments)
 	UploadAttachment(w http.ResponseWriter, r *http.Request)
+	// Add a web link to a record's documents.
+	// (POST /attachments/links)
+	AddAttachmentLink(w http.ResponseWriter, r *http.Request)
+	// Read the title a web page gives itself, before the link is added.
+	// (POST /attachments/links/preview)
+	PreviewAttachmentLink(w http.ResponseWriter, r *http.Request)
 	// Archive an attachment (soft delete).
 	// (DELETE /attachments/{id})
 	DeleteAttachment(w http.ResponseWriter, r *http.Request, id Id)
@@ -98759,6 +99376,9 @@ type ServerInterface interface {
 	// Turn automatic application on or off for one kind.
 	// (PATCH /autonomy)
 	UpdateAutonomy(w http.ResponseWriter, r *http.Request)
+	// Switch automatic application on or off for the whole installation.
+	// (PUT /autonomy/installation)
+	UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request)
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
@@ -99656,6 +100276,12 @@ type ServerInterface interface {
 	// Every change Margince made to this deal, newest first.
 	// (GET /deals/{id}/margince-changes)
 	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
+	// Move an open deal to another pipeline, onto its first open stage.
+	// (POST /deals/{id}/move-pipeline)
+	MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams)
+	// Put a deal back on the pipeline and stage its last move left.
+	// (POST /deals/{id}/move-pipeline/undo)
+	UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id Id, params UndoDealPipelineMoveParams)
 	// Put a set-aside move back on the deal card, the undo behind "Not now".
 	// (DELETE /deals/{id}/move/dismiss)
 	RestoreDealMove(w http.ResponseWriter, r *http.Request, id Id, params RestoreDealMoveParams)
@@ -102548,6 +103174,18 @@ func (_ Unimplemented) UploadAttachment(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Add a web link to a record's documents.
+// (POST /attachments/links)
+func (_ Unimplemented) AddAttachmentLink(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the title a web page gives itself, before the link is added.
+// (POST /attachments/links/preview)
+func (_ Unimplemented) PreviewAttachmentLink(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Archive an attachment (soft delete).
 // (DELETE /attachments/{id})
 func (_ Unimplemented) DeleteAttachment(w http.ResponseWriter, r *http.Request, id Id) {
@@ -102731,6 +103369,12 @@ func (_ Unimplemented) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 // Turn automatic application on or off for one kind.
 // (PATCH /autonomy)
 func (_ Unimplemented) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Switch automatic application on or off for the whole installation.
+// (PUT /autonomy/installation)
+func (_ Unimplemented) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104525,6 +105169,18 @@ func (_ Unimplemented) UpdateDealLine(w http.ResponseWriter, r *http.Request, id
 // Every change Margince made to this deal, newest first.
 // (GET /deals/{id}/margince-changes)
 func (_ Unimplemented) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Move an open deal to another pipeline, onto its first open stage.
+// (POST /deals/{id}/move-pipeline)
+func (_ Unimplemented) MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a deal back on the pipeline and stage its last move left.
+// (POST /deals/{id}/move-pipeline/undo)
+func (_ Unimplemented) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id Id, params UndoDealPipelineMoveParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -117072,6 +117728,48 @@ func (siw *ServerInterfaceWrapper) UploadAttachment(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// AddAttachmentLink operation middleware
+func (siw *ServerInterfaceWrapper) AddAttachmentLink(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddAttachmentLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAttachmentLink operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAttachmentLink(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAttachmentLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteAttachment operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 
@@ -118183,6 +118881,26 @@ func (siw *ServerInterfaceWrapper) UpdateAutonomy(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAutonomy(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAutoApplyInstallation operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAutoApplyInstallation(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132415,6 +133133,120 @@ func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDealMarginceChanges(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MoveDealPipeline operation middleware
+func (siw *ServerInterfaceWrapper) MoveDealPipeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MoveDealPipelineParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MoveDealPipeline(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoDealPipelineMove operation middleware
+func (siw *ServerInterfaceWrapper) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoDealPipelineMoveParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoDealPipelineMove(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -157753,6 +158585,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/attachments", wrapper.UploadAttachment)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attachments/links", wrapper.AddAttachmentLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attachments/links/preview", wrapper.PreviewAttachmentLink)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/attachments/{id}", wrapper.DeleteAttachment)
 	})
 	r.Group(func(r chi.Router) {
@@ -157844,6 +158682,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/autonomy", wrapper.UpdateAutonomy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/autonomy/installation", wrapper.UpdateAutoApplyInstallation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/availability", wrapper.GetAvailability)
@@ -158741,6 +159582,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move-pipeline", wrapper.MoveDealPipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move-pipeline/undo", wrapper.UndoDealPipelineMove)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/deals/{id}/move/dismiss", wrapper.RestoreDealMove)

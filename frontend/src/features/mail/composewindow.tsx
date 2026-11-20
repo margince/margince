@@ -20,7 +20,7 @@ import {
 import { useKeptDraft } from "./composeautosave";
 import { ComposeBlockers } from "./composeblockers";
 import { useDealChoice } from "./composedeal";
-import { useComposeFields } from "./composefields";
+import { type ComposeFields, useComposeFields } from "./composefields";
 import { useAccountRecipient, useComposeRecords } from "./composefiling";
 import { useInlineFlow, useInlineReview } from "./composeinlinereview";
 import { groundingOf } from "./composelinks";
@@ -28,8 +28,7 @@ import type { ComposeProps } from "./composeprops";
 import { useRecipientOffer } from "./composerecipientoffer";
 import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
 import { savedFieldsOf } from "./composesaveddraftfields";
-
-import { ScheduleDialog } from "./composeschedule";
+import { ScheduleDialogOnDemand } from "./composeschedule";
 import { type ComposeSend, useComposeSend } from "./composesend";
 import { InlineBlockers, markedRecipients } from "./composesendanyway";
 import { sendWording } from "./composesendhold";
@@ -111,8 +110,7 @@ export function ComposeWindow({
     fields.body,
     open,
   );
-  // Whether the moment picker is up, apart from whether a moment is chosen.
-  const [pickingMoment, setPickingMoment] = useState(false);
+  const momentPicker = useMomentPicker();
   // The foot's place for the editor's marks, so they sit beside Send.
   const [markRow, setMarkRow] = useState<HTMLDivElement | null>(null);
   // The account-started path is keyed on the resolved anchor: a record with
@@ -129,7 +127,9 @@ export function ComposeWindow({
     isChannelReply,
     answering,
     recordAddress: account.offeredAddress,
+    to: fields.to,
     setTo: fields.setTo,
+    copies: [...fields.cc, ...fields.bcc],
   });
   const names = useConversationNames(open, entityType, entityId);
   const thread = useComposeThread({
@@ -299,20 +299,14 @@ export function ComposeWindow({
     isChannelReply,
     wordingTitle: t(wording.title),
     replying: thread.replying,
-    anchorSubject: thread.anchorActivity?.subject,
+    anchor: thread.anchorActivity,
     subject: fields.subject,
     recordName: records.recordName,
     t,
   });
   return (
     <>
-      <ScheduleDialog
-        open={pickingMoment}
-        onClose={() => setPickingMoment(false)}
-        {...fields.scheduleControl}
-        onChoose={fields.setSendAt}
-        now={new Date()}
-      />
+      <MomentDialog picker={momentPicker} fields={fields} />
       {open && (
         <ComposeFrame
           title={title}
@@ -326,6 +320,7 @@ export function ComposeWindow({
           onClose={savedDraft.requestClose}
           closeDisabled={sendPending}
           bodyId={bodyId}
+          recipientFirst={startsInTo(newMessage, account, fields.to)}
           openedFrom={openedFrom}
         >
           <ChannelDraftNotice
@@ -424,7 +419,7 @@ export function ComposeWindow({
             // The button stays live with fields outstanding, so a press can
             // name them. A rejection or a draft save in flight holds it.
             held={held}
-            onPickMoment={() => setPickingMoment(true)}
+            onPickMoment={momentPicker.pick}
             {...fields.scheduleControl}
             savedDraft={savedDraft}
             busy={busy}
@@ -435,6 +430,42 @@ export function ComposeWindow({
       )}
     </>
   );
+}
+
+// Whether the moment picker is up, apart from whether a moment is chosen.
+// Null until it first opens: its code loads then.
+function useMomentPicker() {
+  const [open, setOpen] = useState<boolean | null>(null);
+  return { open, pick: () => setOpen(true), close: () => setOpen(false) };
+}
+
+function MomentDialog({
+  picker,
+  fields,
+}: Readonly<{
+  picker: ReturnType<typeof useMomentPicker>;
+  fields: ComposeFields;
+}>) {
+  const now = new Date();
+  return (
+    <ScheduleDialogOnDemand
+      open={picker.open}
+      onClose={picker.close}
+      {...fields.scheduleControl}
+      onChoose={fields.setSendAt}
+      now={now}
+      sampledAt={now.getTime()}
+    />
+  );
+}
+
+// The cursor starts in To on a new message with no address on its way there.
+function startsInTo(
+  newMessage: boolean,
+  account: Readonly<{ nothingOffered: boolean }>,
+  to: readonly string[],
+): boolean {
+  return newMessage && account.nothingOffered && to.length === 0;
 }
 
 // The checked flow's status, with what the server offers after a refused Send.

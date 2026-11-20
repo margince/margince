@@ -140,3 +140,13 @@
 .dc-legend .dc-dot {
   margin-block-start: 0;
 }
+
+/* The pairs list sits under both sides and wraps at the card's width, so a
+   long sentence stays whole at 390px. */
+.dc-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  border-block-start: 1px solid var(--borderSubtle);
+}

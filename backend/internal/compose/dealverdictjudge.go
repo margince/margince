@@ -76,7 +76,7 @@ func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, night ve
 	if err != nil {
 		return fmt.Errorf("compose: the deal verdict answer: %w", err)
 	}
-	decisions, err := p.decide(ctx, read, payload, night.today)
+	decisions, err := p.decide(ctx, read, payload, night.at)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (r txRates) For(currency string) (deals.FXRate, bool, error) {
 }
 
 func (p dealVerdictPass) decide(
-	ctx context.Context, read dealVerdictRead, payload dealverdict.Payload, today time.Time,
+	ctx context.Context, read dealVerdictRead, payload dealverdict.Payload, at time.Time,
 ) ([]dealverdict.Decision, error) {
 	var decisions []dealverdict.Decision
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
@@ -117,7 +117,7 @@ func (p dealVerdictPass) decide(
 			return err
 		}
 		decisions, err = dealverdict.Decide(read.in, read.state, payload,
-			txRates{ctx: ctx, tx: tx, rates: deals.NewFXRates(base, today)})
+			txRates{ctx: ctx, tx: tx, rates: deals.NewFXRates(base, at)})
 		return err
 	})
 	return decisions, err

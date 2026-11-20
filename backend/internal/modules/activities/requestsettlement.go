@@ -137,10 +137,10 @@ func repliedRequestsSQL(private bool) string {
 }
 
 // settlementAnswersSQL selects, as (id, occurred_at), every answer to request a
-// as of the pass's own instant ($1): our attested reply in the conversation and
-// the answers off its thread. Each is one the whole workspace may read, so the
-// newest answer, which a verdict is recorded through, is always one the
-// settlement model may be shown.
+// as of the pass's own instant ($1). These are our attested reply in the
+// conversation, our reply on a new topic to it, and the answers off its thread.
+// Each is one the whole workspace may read. So the newest answer, which a
+// verdict is recorded through, is always one the settlement model may be shown.
 func settlementAnswersSQL(private bool) string {
 	return `SELECT reply.id, reply.occurred_at FROM activity reply
    WHERE (` + ourOutboundInThisThread("reply", "a") + `
@@ -148,6 +148,7 @@ func settlementAnswersSQL(private bool) string {
      AND ` + judgeableAudienceSQL("reply", private) + `
      AND ` + occurredday.BegunSQL("reply", "$1") + `
      AND ` + occurredday.AnswersSQL("reply", "a") + ` AND reply.id <> a.id
+ UNION ` + splitAnswersSQL(private) + `
  UNION ` + offThreadAnswersSQL("a", "$1")
 }
 

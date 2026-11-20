@@ -5,6 +5,7 @@ import { DealStatusBadge } from "../../components/dealstatusbadge";
 import {
   LatestInboundLine,
   useLatestInbound,
+  useLatestInboundRead,
 } from "../../components/latestinbound";
 import { useRailRename } from "../../components/railfield";
 import { Badge } from "../../design-system/atoms";
@@ -52,13 +53,13 @@ import { DealRoomTab } from "./deal360/dealroomtab";
 import { useDealTabCounts } from "./deal360/dealtabcounts";
 import { currentReplyTarget } from "./deal360/dealwaiting";
 import { useDealCoverage } from "./deal360/usedealcoverage";
+import { useAdvanceDeal } from "./dealadvance";
 import { DealAside } from "./dealaside";
-import { useDealEdit } from "./dealedit";
+import { DealEditContext, useDealEdit } from "./dealedit";
 import { DealFiles } from "./dealfiles";
 import { DealReferralLine } from "./dealpartner";
 import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
-import { useAdvanceDeal } from "./deals.board";
 import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
@@ -104,6 +105,7 @@ function DealTabs({
       options={tabsOf(deal, legalReview)}
       value={value}
       onChange={onChange}
+      keepPlace
       counts={counts}
       labels={{
         overview: t("tab.overview"),
@@ -134,12 +136,14 @@ function dealBand({
   return <p id={reasonId}>{reason}</p>;
 }
 
-// The pills under the deal's name: whose move it is, when a buyer is owed a
-// reply, then the deal's status.
+// The pills under the deal's name. They say whose move it is and when a buyer
+// is owed a reply. Then come the deal's status and, as on the board card,
+// whether it is archived.
 function DealPulsePills({
   status,
+  archived,
   yourMove,
-}: Readonly<{ status: Deal["status"]; yourMove: boolean }>) {
+}: Readonly<{ status: Deal["status"]; archived: boolean; yourMove: boolean }>) {
   const t = useT();
   return (
     <>
@@ -149,6 +153,7 @@ function DealPulsePills({
         </Badge>
       )}
       <DealStatusBadge status={status} />
+      {archived && <Badge>{t("deal.archived")}</Badge>}
     </>
   );
 }
@@ -164,6 +169,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // point at it are two different slots of the same header.
   const readOnlyReasonId = useId();
   const [tab, setTab] = useState<DealTab>("overview");
+  // The tab lives in state, so no move of the address opens the new one at its
+  // top. A door in a tab's body does that here; the strip keeps the place.
+  const openTab = (next: DealTab) => {
+    setTab(next);
+    scrollPageToTop();
+  };
   const [editingDetails, setEditingDetails] = useState(false);
   const legalReview = useLegalReviewAvailable() === true;
   const [pending, setPending] = useState<PendingAdvance | null>(null);
@@ -175,6 +186,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const advance = useAdvanceDeal();
   const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
+  const pipelineRetired = Boolean(pipelineQuery.data?.archived_at);
   // Every write affordance on this page answers one question, asked once. An
   // archived deal takes no changes, and its verbs stay, refused. One this
   // caller cannot write takes none from them, so its verbs are left out.
@@ -198,6 +210,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const live = dealQuery.isSuccess && !dealQuery.data.archived_at;
   const statusQuery = useDealStatusCard(id, live);
   const latest = useLatestInbound("deal", id);
+  const lastInbound = useLatestInboundRead("deal", id).data?.last_inbound;
   const coverageRead = useDealCoverage(id, live);
   // How it stands reads the whole history, not what the History tab's own
   // filter has narrowed. A "no reply" read off a filtered view would be false.
@@ -267,7 +280,10 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
             // the reader saw it, so a change made elsewhere fails loud.
             const input = { dealId: deal.id, version: deal.version, toStage };
             if (toStage.semantic === "open") {
-              advance.mutate(input);
+              advance.mutate({
+                ...input,
+                fromStage: stages.find((stage) => stage.id === deal.stage_id),
+              });
             } else {
               setPending(input);
             }
@@ -295,6 +311,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               pulse={
                 <DealPulsePills
                   status={deal.status}
+                  archived={Boolean(deal.archived_at)}
                   yourMove={Boolean(
                     statusQuery.data && currentReplyTarget(statusQuery.data),
                   )}
@@ -304,7 +321,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 shownTab !== "overview" && (
                   <LatestInboundLine
                     latest={latest}
-                    onOpen={() => setTab("overview")}
+                    onOpen={() => openTab("overview")}
                   />
                 )
               }
@@ -312,6 +329,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 <DealActions
                   deal={deal}
                   openStages={openStages}
+                  pipelineRetired={pipelineRetired}
                   refusedReasonId={refusedReasonId}
                   onEditDetails={() => setEditingDetails(true)}
                 />
@@ -328,10 +346,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   legalReview={legalReview}
                   thread={threadQuery}
                   value={shownTab}
-                  onChange={(next) => {
-                    setTab(next);
-                    scrollPageToTop();
-                  }}
+                  onChange={setTab}
                 />
               }
             >
@@ -347,6 +362,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       stages,
                       asOf,
                       activities: threadQuery.activities,
+                      lastInbound,
                       history: threadQuery,
                       offers: offersQuery.data?.data,
                       coverage: coverageRead,
@@ -356,17 +372,15 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                         // A deal that takes no changes is not moved through
                         // the pipeline. A closed one is reopened by its own
                         // action, whose dialog says what reopening clears.
-                        advanceRefused: readOnly || deal.status !== "open",
+                        advanceRefused:
+                          readOnly || deal.status !== "open" || pipelineRetired,
+                        pipelineRetired,
                         refusedReasonId,
                         onAdvance,
                       },
                     }}
                     onOpenEmail={setOpenEmail}
-                    onOpenTab={(next) => {
-                      setTab(next);
-                      scrollPageToTop();
-                    }}
-                    onEditDetails={() => setEditingDetails(true)}
+                    onOpenTab={openTab}
                     threadComplete={
                       threadQuery.isSuccess && !threadQuery.hasNextPage
                     }
@@ -411,6 +425,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 zone={readerZone}
                 onClose={() => setOpenEmail(null)}
               />
+              <ErrorLine error={pipelineQuery.error} />
               <ErrorLine
                 error={advanceErrorBehind(advance.error, pending !== null)}
               />
@@ -442,5 +457,9 @@ function DealRecordView({
   const t = useT();
   const edit = useDealEdit(deal, useViewerId() ?? "");
   const rename = useRailRename(edit, "name", t("create.dealName"));
-  return <RecordView {...view} rename={rename} />;
+  return (
+    <DealEditContext.Provider value={edit}>
+      <RecordView {...view} rename={rename} />
+    </DealEditContext.Provider>
+  );
 }

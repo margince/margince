@@ -18,7 +18,22 @@ const SERVER_WORDS = new Set(["message", "detail", "title"]);
 // The contract schemas whose words are the server's.
 const CONTRACT_SCHEMAS = new Set(["Problem", "AiFieldError"]);
 
-const OWNERS = /^src\/lib\/problem[a-z]*\.ts$/;
+const OWNER = "src/lib/problem.ts";
+
+// lib/problem.ts and each lib module it re-exports from are one path.
+function owners(tree: CensusTree): ReadonlySet<string> {
+  const found = new Set([OWNER]);
+  const owner = tree.files.find((file) => file.rel === OWNER);
+  for (const statement of owner?.source?.statements ?? []) {
+    const from = ts.isExportDeclaration(statement)
+      ? statement.moduleSpecifier
+      : undefined;
+    if (from && ts.isStringLiteral(from) && from.text.startsWith("./")) {
+      found.add(`src/lib/${from.text.slice(2)}.ts`);
+    }
+  }
+  return found;
+}
 
 // Files that read the words without printing them, each with why.
 export const WAIVED: ReadonlyMap<string, string> = new Map([
@@ -40,8 +55,7 @@ const isProductSource = (file: CensusFile) =>
   (file.area === "src" || file.area === "extensions") &&
   /\.tsx?$/.test(file.rel) &&
   !/\.(test|stories|testrun)\.tsx?$/.test(file.rel) &&
-  !file.rel.endsWith(".d.ts") &&
-  !OWNERS.test(file.rel);
+  !file.rel.endsWith(".d.ts");
 
 // A property is the server's words when its declaration sits in a field
 // fault's type or in one of the contract schemas above.
@@ -91,7 +105,12 @@ function readsIn(source: ts.SourceFile, checker: ts.TypeChecker): number[] {
 
 export const rule: CensusRule = {
   name: "problem-words",
-  corpus: (tree) => tree.files.filter(isProductSource),
+  corpus: (tree) => {
+    const owned = owners(tree);
+    return tree.files.filter(
+      (file) => isProductSource(file) && !owned.has(file.rel),
+    );
+  },
   across: (corpus, tree: CensusTree) => {
     const program = tree.checked();
     const checker = program.getTypeChecker();

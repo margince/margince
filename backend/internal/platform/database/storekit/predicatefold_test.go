@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // fixtureID is any well-formed id; an id leaf compiles the same for all.
@@ -50,7 +52,7 @@ func TestAFoldedFieldBindsItsOperandLowercasedAndAnUnfoldedOneAsTyped(t *testing
 
 func TestADayOnATimestampCompilesToBoundsOnTheRawColumn(t *testing.T) {
 	fields := map[string]Field{"seen": {Expr: "t.seen_at", Type: FieldDate, Instant: true}}
-	const start, next = "($1::date)::timestamptz", "($1::date + 1)::timestamptz"
+	start, next := occurredday.DayStartSQL("$1::date"), occurredday.DayStartSQL("$1::date + 1")
 	for op, want := range map[string]string{
 		OpEq:  "(t.seen_at >= " + start + " AND t.seen_at < " + next + ")",
 		OpNeq: "(t.seen_at IS NULL OR t.seen_at < " + start + " OR t.seen_at >= " + next + ")",
@@ -65,7 +67,7 @@ func TestADayOnATimestampCompilesToBoundsOnTheRawColumn(t *testing.T) {
 		}
 	}
 	sql, _, err := compileCollecting(t, Predicate{Field: "seen", Op: OpLt, Value: map[string]any{"days_ago": 45.0}}, fields)
-	if err != nil || sql != "t.seen_at < ((CURRENT_DATE - $1::integer))::timestamptz" {
+	if err != nil || sql != "t.seen_at < "+occurredday.DayStartSQL("("+occurredday.TodaySQL("now()")+" - $1::integer)") {
 		t.Errorf("a relative day compiled to %q (%v), want the start of that day", sql, err)
 	}
 }

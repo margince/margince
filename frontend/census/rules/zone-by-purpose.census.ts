@@ -100,6 +100,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins the zones a scheduled send was chosen in, so a reopened send proves it keeps the chosen clock and zone, not the runner's.",
   },
   {
+    file: "features/mail/composeschedule.test.tsx",
+    why: "Pins the zone the dialog schedules in, so which hours are past and the day the picker opens on read the same on every runner.",
+  },
+  {
     file: "format/dueintent.test.ts",
     why: "Pins a chosen deadline zone against a different reader zone, so the printed clock is the chosen one and the zone suffix shows only when they differ.",
   },
@@ -359,6 +363,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/worklist/taskdetail.testkit.tsx",
     why: "The task dialog renders its logged and due dates; the suite names the reader's zone so a snapshot of the dialog does not move with the machine it runs on.",
+  },
+  {
+    file: "features/contacts/employmentcurrency.test.ts",
+    why: "A departure day is judged in the installation zone; the suite names zones west and east of UTC so the day a job ends does not move with the machine it runs on.",
   },
   {
     file: "features/worklist/taskactions.due.test.tsx",
@@ -660,6 +668,22 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "components/meetingsheld.stories.tsx",
     why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the table dates a held meeting by the date it names.",
+  },
+  {
+    file: "components/relationships.edges.test.ts",
+    why: "Pins the record zone so a relationship's start and end days print the same on every runner.",
+  },
+  {
+    file: "components/relationships.test.tsx",
+    why: "Pins the record zone so the company list's role dates print the same on every runner.",
+  },
+  {
+    file: "components/relationships.stories.tsx",
+    why: "Pins the record zone so the story's current and former role dates read the same in every browser.",
+  },
+  {
+    file: "design-system/dealcard.test.tsx",
+    why: "Pins the record zone so the day a closed card names is the same on every runner.",
   },
 ];
 

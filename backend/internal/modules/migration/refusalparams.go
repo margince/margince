@@ -26,11 +26,13 @@ const (
 	ParamColumn      RefusalParam = "column"
 	ParamOtherColumn RefusalParam = "other_column"
 	ParamRefTarget   RefusalParam = "ref_target"
+	ParamFileNames   RefusalParam = "file_names"
 )
 
 var refusalParams = []RefusalParam{
 	ParamReason, ParamFile, ParamOtherFile, ParamLine, ParamPosition, ParamName, ParamObject, ParamFiles,
 	ParamMaxFiles, ParamMaxMB, ParamRows, ParamTarget, ParamColumn, ParamOtherColumn, ParamRefTarget,
+	ParamFileNames,
 }
 
 // RefusalValues are a refusal's values keyed by name, as its params carry them.

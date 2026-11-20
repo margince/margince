@@ -142,9 +142,9 @@ func TestTheLeadRetentionActionClearsTheSameColumns(t *testing.T) {
 // the words and removes who they named. Both are asked for the same reason the
 // subject-row writers are — the census is satisfied by ONE statement clearing a
 // column, so a second arm that stopped clearing it would fail nothing.
-var deliveryScrubs = map[string]func(context.Context, pgx.Tx, []ids.UUID, PayloadPurger) error{
-	"an Art. 17 request": func(ctx context.Context, tx pgx.Tx, activities []ids.UUID, payloads PayloadPurger) error {
-		return redactDeliveries(ctx, tx, activities, "erased", payloads)
+var deliveryScrubs = map[string]func(context.Context, pgx.Tx, []ids.UUID) error{
+	"an Art. 17 request": func(ctx context.Context, tx pgx.Tx, activities []ids.UUID) error {
+		return redactDeliveries(ctx, tx, activities, "erased")
 	},
 	"a restriction": redactDeliveryAddressing,
 }
@@ -180,7 +180,7 @@ func TestEveryDeliveryScrubClearsTheBounceTextThatQuotesTheAddress(t *testing.T)
 				         '550 5.1.1 <hedda@anon.test>: Recipient address rejected: User unknown')`,
 				delivery, activity, user, delivery.String()+"@margince.test", "hedda@anon.test")
 
-			if err := scrub(ctx, tx, []ids.UUID{activity}, noPayloads{t: t}); err != nil {
+			if err := scrub(ctx, tx, []ids.UUID{activity}); err != nil {
 				t.Fatalf("scrubbing the delivery: %v", err)
 			}
 
@@ -189,17 +189,6 @@ func TestEveryDeliveryScrubClearsTheBounceTextThatQuotesTheAddress(t *testing.T)
 				"comms_outbound.bounce_reason")
 		})
 	}
-}
-
-// noPayloads stands in for the vault purger. The fixture row carries no
-// payload reference, so a call here would mean the scrub found link material
-// this test never seeded — which is a fact worth failing on rather than
-// absorbing.
-type noPayloads struct{ t *testing.T }
-
-func (p noPayloads) Delete(_ context.Context, ref string) error {
-	p.t.Errorf("the vault purger was asked to delete %q, and this fixture seeded no payload", ref)
-	return nil
 }
 
 // subjectColumnsTx opens a transaction that is rolled back when the test ends,

@@ -19,19 +19,28 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-func individualRSVPRecord(t *testing.T, provider, owner, first, second, answer string) connector.NormalizedRecord {
+// meetingStartAhead is 10:00 on a Monday a month out: still upcoming, and
+// inside the working hours availability counts.
+func meetingStartAhead(t *testing.T) time.Time {
+	t.Helper()
+	day := clocktest.Now(t).AddDate(0, 0, 30).Truncate(24 * time.Hour)
+	return day.AddDate(0, 0, (8-int(day.Weekday()))%7).Add(10 * time.Hour)
+}
+
+func individualRSVPRecord(t *testing.T, start time.Time, provider, owner, first, second, answer string) connector.NormalizedRecord {
 	t.Helper()
 	var event map[string]any
 	if provider == sourceGCal {
 		event = map[string]any{
 			"id": "shared-review", "status": "confirmed", "summary": "Customer review",
-			"start":     map[string]string{"dateTime": "2030-01-07T10:00:00Z"},
+			"start":     map[string]string{"dateTime": start.Format(time.RFC3339)},
 			"organizer": map[string]string{"email": first},
 			"attendees": []map[string]any{
 				{"email": first, "responseStatus": "accepted", "self": owner == first},
@@ -46,7 +55,7 @@ func individualRSVPRecord(t *testing.T, provider, owner, first, second, answer s
 		}
 		event = map[string]any{
 			"id": "shared-review-" + owner, "iCalUId": "shared-review@calendar.test", "subject": "Customer review",
-			"start":          map[string]string{"dateTime": "2030-01-07T10:00:00", "timeZone": "UTC"},
+			"start":          map[string]string{"dateTime": start.Format("2006-01-02T15:04:05"), "timeZone": "UTC"},
 			"organizer":      map[string]any{"emailAddress": map[string]string{"address": first}},
 			"responseStatus": map[string]string{"response": own},
 			"attendees": []map[string]any{
@@ -84,13 +93,14 @@ func TestAnAttendeesOwnDeclineKeepsTheSharedMeetingAndSurvivesAColleaguesReplay(
 					e.WsExec(t, `INSERT INTO capture_connection(provider,user_id,status,account_label) VALUES($1,$2,'connected',$3)`, provider, seat, seatAddress(t, e, seat))
 				}
 				sink := newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil)
-				rec := individualRSVPRecord(t, provider, first, first, second, "accepted")
+				start := meetingStartAhead(t)
+				rec := individualRSVPRecord(t, start, provider, first, first, second, "accepted")
 				ref, err := sink.Upsert(connectorOwnerCtx(e, e.Rep1, provider), rec)
 				if err != nil {
 					t.Fatal(err)
 				}
 				for _, answer := range []string{"declined", "accepted"} {
-					incoming := individualRSVPRecord(t, provider, second, first, second, answer)
+					incoming := individualRSVPRecord(t, start, provider, second, first, second, answer)
 					if existingOnly {
 						if err := sink.ReplayMeeting(connectorOwnerCtx(e, e.Rep2, provider), incoming); err != nil {
 							t.Fatal(err)
@@ -126,8 +136,7 @@ func TestAnAttendeesOwnDeclineKeepsTheSharedMeetingAndSurvivesAColleaguesReplay(
 					}); err != nil {
 						t.Fatal(err)
 					}
-					from := time.Date(2030, 1, 7, 10, 0, 0, 0, time.UTC)
-					free, _, err := activities.NewStore(e.DB()).Availability(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), ids.From[ids.UserKind](e.Rep2), from, from.Add(time.Hour), time.Hour)
+					free, _, err := activities.NewStore(e.DB()).Availability(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), ids.From[ids.UserKind](e.Rep2), start, start.Add(time.Hour), time.Hour)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -177,7 +186,8 @@ func TestAnExistingMeetingReplayCreatesNothingAndCannotUseAnotherSeatsKey(t *tes
 		e.WsExec(t, `INSERT INTO capture_connection(provider,user_id,status,account_label) VALUES($1,$2,'connected',$3)`, sourceGCal, seat, seatAddress(t, e, seat))
 	}
 	sink := newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil)
-	rec := individualRSVPRecord(t, sourceGCal, first, first, "buyer@customer.test", "accepted")
+	start := meetingStartAhead(t)
+	rec := individualRSVPRecord(t, start, sourceGCal, first, first, "buyer@customer.test", "accepted")
 	if err := sink.ReplayMeeting(calendarOwnerCtx(e, e.Rep1), rec); !errors.Is(err, connector.ErrSkip) {
 		t.Fatalf("uncaptured replay: %v", err)
 	}
@@ -206,7 +216,8 @@ func TestAFirstDeclinedInvitationCreatesNothing(t *testing.T) {
 	e.GrantRole(t, e.Rep1, "admin")
 	e.WsExec(t, `INSERT INTO capture_connection(provider,user_id,status,account_label) VALUES($1,$2,'connected',$3)`, sourceGCal, e.Rep1, owner)
 	sink := newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil)
-	rec := individualRSVPRecord(t, sourceGCal, owner, "organizer@customer.test", owner, "declined")
+	start := meetingStartAhead(t)
+	rec := individualRSVPRecord(t, start, sourceGCal, owner, "organizer@customer.test", owner, "declined")
 	if _, err := sink.Upsert(calendarOwnerCtx(e, e.Rep1), rec); !errors.Is(err, connector.ErrSkip) {
 		t.Fatalf("new decline: %v", err)
 	}
@@ -227,12 +238,13 @@ func TestRemovingAnAttendeesCalendarCopyKeepsTheOrganizersMeeting(t *testing.T) 
 				e.WsExec(t, `INSERT INTO capture_connection(provider,user_id,status,account_label) VALUES($1,$2,'connected',$3)`, provider, seat, seatAddress(t, e, seat))
 			}
 			sink := newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil)
-			rec := individualRSVPRecord(t, provider, first, first, second, "accepted")
+			start := meetingStartAhead(t)
+			rec := individualRSVPRecord(t, start, provider, first, first, second, "accepted")
 			ref, err := sink.Upsert(connectorOwnerCtx(e, e.Rep1, provider), rec)
 			if err != nil {
 				t.Fatal(err)
 			}
-			own := individualRSVPRecord(t, provider, second, first, second, "accepted")
+			own := individualRSVPRecord(t, start, provider, second, first, second, "accepted")
 			if _, err := sink.Upsert(connectorOwnerCtx(e, e.Rep2, provider), own); err != nil {
 				t.Fatal(err)
 			}
@@ -245,7 +257,7 @@ func TestRemovingAnAttendeesCalendarCopyKeepsTheOrganizersMeeting(t *testing.T) 
 			if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND user_id=$2 AND roster_seat=$2`, ref.ID, e.Rep2); n != 0 {
 				t.Fatalf("removal kept %d own calendar rows", n)
 			}
-			if err := sink.RemoveCalendarMeeting(connectorOwnerCtx(e, e.Rep1, provider), rec.NaturalKey, rec.CrossDoorIdentity, time.Date(2030, 1, 7, 10, 0, 0, 0, time.UTC)); err != nil {
+			if err := sink.RemoveCalendarMeeting(connectorOwnerCtx(e, e.Rep1, provider), rec.NaturalKey, rec.CrossDoorIdentity, start); err != nil {
 				t.Fatal(err)
 			}
 			if status, _ := readMeetingStatus(t, e, ref.ID); status != "canceled" {

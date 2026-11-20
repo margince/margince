@@ -173,8 +173,8 @@ func (s *Store) NoteLinkRequest(ctx context.Context, email string) error {
 		}
 		for _, st := range seats {
 			if _, err := storekit.Audit(ctx, tx, "update", participantObject, st.id,
-				map[string]any{fieldRoomID: st.roomID, "link_requested_at": st.before},
-				map[string]any{fieldRoomID: st.roomID, "link_requested_at": st.after}); err != nil {
+				map[string]any{fieldRoomID: st.roomID, fieldLinkRequestedAt: st.before},
+				map[string]any{fieldRoomID: st.roomID, fieldLinkRequestedAt: st.after}); err != nil {
 				return err
 			}
 		}

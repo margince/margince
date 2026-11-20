@@ -4262,7 +4262,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 2821,
+      "tokens": 2841,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -4308,7 +4308,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 2808,
+      "tokens": 2825,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"
@@ -4425,7 +4425,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 2260,
+      "tokens": 2301,
       "agents": [],
       "required_by_cases": [
         "case40_sort_the_queue",

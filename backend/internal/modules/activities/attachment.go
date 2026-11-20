@@ -42,6 +42,7 @@ const (
 	fieldEntityType = "entity_type"
 	fieldEntityID   = "entity_id"
 	fieldCategory   = "category"
+	fieldTitle      = "title"
 	fieldStatus     = "status"
 )
 

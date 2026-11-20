@@ -24,6 +24,7 @@ func clearableContactColumns(current crmcontracts.Contact) map[string]storekit.C
 		"title":             {Column: "title", Current: current.Title},
 		"owner_id":          {Column: ownerIDColumn, Current: current.OwnerId},
 		"relationship_mark": {Column: fieldRelationshipMark, Current: current.RelationshipMark},
+		"greeting_register": {Column: fieldGreetingRegister, Current: current.GreetingRegister},
 	}
 }
 

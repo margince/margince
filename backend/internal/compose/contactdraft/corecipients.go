@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -31,6 +32,9 @@ type CoRecipients interface {
 type CoRecipientIn struct {
 	Name  string `json:"name"`
 	Email string `json:"-"`
+	// Register is the greeting register a rep stored on this contact. It
+	// reaches the model through the envelope, decided once for the group.
+	Register greetingregister.Register `json:"-"`
 }
 
 // errNoCoRecipients is a composition defect, never a client error: a surface
@@ -68,7 +72,7 @@ func (s *Service) coRecipients(ctx context.Context, to ids.ContactID, also []ids
 		if err != nil {
 			return nil, err
 		}
-		co := CoRecipientIn{Name: contact.FullName}
+		co := CoRecipientIn{Name: contact.FullName, Register: greetingregister.Of(contact.GreetingRegister)}
 		if contact.PrimaryEmail != nil {
 			co.Email = string(*contact.PrimaryEmail)
 		}

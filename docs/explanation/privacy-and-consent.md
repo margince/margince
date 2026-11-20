@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/de -->
+<!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/eu extensions/apac -->
 # Privacy, consent & the GDPR engines
 
 ## The authorization engine (`consent`)
@@ -430,8 +430,8 @@ record, or is listed as owing one.
 ## The installation's jurisdiction
 
 An installation runs under one jurisdiction, stored as `installation.country`. It comes from
-`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/de`, `extensions/vn`), built in through the
-`ports/jurisdiction` seam; see [extensibility.md](extensibility.md). Core code never names a
+`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/eu`, `extensions/apac`), built in through the
+`ports/jurisdiction` seam; see [extensibility.md](extensibility.md), and [messaging-policy-packs.md](messaging-policy-packs.md) for where their rules are read. Core code never names a
 jurisdiction.
 
 The selected pack is the jurisdiction of the installation's default legal entity. It decides the retention
@@ -471,8 +471,8 @@ adds the unsubscribe link in every case. The email domain, the jurisdiction of t
 and the least strict pack never stand in for the recipient's jurisdiction.
 
 Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`, and a compiled
-pack's `ruleset_digest`) and the `data_protection_country` of the user who sends. `CheckMessage` reads the codes back, so the advertising label is
-owed if any recipient's pack asks for it. One message goes to every recipient, so its foot carries
+pack's `ruleset_digest`) and the `data_protection_country` of the user who sends. Preview and staging refuse an advertising subject without a recipient's label (`subject_label_missing`).
+They also refuse recipients whose packs fix different labels (`subject_labels_conflict`); no exception passes either. `CheckMessage` parks a delivery that got past them at transmit; all three ask `subjectLabelCheck` in `internal/modules/consent/requirements.go`. One message goes to every recipient, so its foot carries
 each recipient's marketing duties.
 
 ### Request deadlines
@@ -617,4 +617,4 @@ Later mail capture and data tasks keep a user's confirmed source decision.
 | Decision counters | `internal/modules/consent/decisioncounter.go`, exported by `internal/compose/authzmetrics.go` |
 | The engine-and-gate report | `internal/modules/consent/authorizedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
 | Cross-store agreement | `backend/gates/tableownershipwaivers_test.go` |
-| Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/de/` |
+| Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/eu/`, `extensions/apac/` |

@@ -36,6 +36,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -54,8 +56,11 @@ type FXRate struct {
 // cache would price a rollup at a rate the estate has since corrected. The
 // caller builds one, uses it, and drops it.
 type FXRates struct {
-	base  string
+	base string
+	// asOf is the instant the rate is read at. day, when set, is a calendar
+	// day the caller names, and then the instant plays no part.
 	asOf  time.Time
+	day   *time.Time
 	found map[string]FXRate
 	// missing is remembered too. A currency with no rate is a fact about the
 	// estate, and re-asking per deal turns one refusal into a query per row.
@@ -63,9 +68,34 @@ type FXRates struct {
 }
 
 // NewFXRates opens a lookup against the installation's base currency, reading
-// the newest rate dated on or before asOf.
+// the newest rate dated on or before the installation's day at the instant
+// asOf. The instant is the contract. BaseValueSQL reads the same day from it,
+// so a screen and a figure on it never pick two rates. A day cut in UTC and
+// handed in as an instant would name the wrong day west of UTC.
 func NewFXRates(base string, asOf time.Time) *FXRates {
 	return &FXRates{base: base, asOf: asOf, found: map[string]FXRate{}, missing: map[string]bool{}}
+}
+
+// NewFXRatesOnDay is NewFXRates for a calendar day somebody else named, such as
+// the issue date an invoice states. The day is used as written and is never
+// moved into the installation's zone.
+func NewFXRatesOnDay(base string, day time.Time) *FXRates {
+	utcDay := storekit.AsDate(day)
+	return &FXRates{base: base, asOf: utcDay, day: &utcDay, found: map[string]FXRate{}, missing: map[string]bool{}}
+}
+
+// rateDay is the day the lookup reads at. A named day is itself. An instant is
+// cut in the installation's zone by the database, once per lookup.
+func (r *FXRates) rateDay(ctx context.Context, tx pgx.Tx) (time.Time, error) {
+	if r.day != nil {
+		return *r.day, nil
+	}
+	var day time.Time
+	if err := tx.QueryRow(ctx, `SELECT `+occurredday.TodaySQL("$1::timestamptz"), r.asOf).Scan(&day); err != nil {
+		return time.Time{}, fmt.Errorf("read the installation's day for the FX rate: %w", err)
+	}
+	r.day = &day
+	return day, nil
 }
 
 // Base is the currency everything converts to.
@@ -81,7 +111,8 @@ func (r *FXRates) Base() string { return r.base }
 // differently.
 func (r *FXRates) For(ctx context.Context, tx pgx.Tx, currency string) (FXRate, bool, error) {
 	if currency == r.base {
-		return FXRate{Rate: oneRate(), On: r.asOf}, true, nil
+		day, err := r.rateDay(ctx, tx)
+		return FXRate{Rate: oneRate(), On: day}, err == nil, err
 	}
 	if rate, ok := r.found[currency]; ok {
 		return rate, true, nil
@@ -89,16 +120,17 @@ func (r *FXRates) For(ctx context.Context, tx pgx.Tx, currency string) (FXRate, 
 	if r.missing[currency] {
 		return FXRate{}, false, nil
 	}
+	day, err := r.rateDay(ctx, tx)
+	if err != nil {
+		return FXRate{}, false, err
+	}
 	var rate FXRate
-	// The as-of day is the UTC calendar date, matching fx_rate's
-	// one-rate-per-pair-per-UTC-day grain; the text bind + cast keeps the
-	// comparison independent of the session timezone.
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT rate, rate_date FROM fx_rate
 		WHERE from_currency = $1 AND to_currency = $2 AND rate_date <= $3::date
 		ORDER BY rate_date DESC
 		LIMIT 1`,
-		currency, r.base, r.asOf.Format(time.DateOnly)).Scan(&rate.Rate, &rate.On)
+		currency, r.base, day.Format(time.DateOnly)).Scan(&rate.Rate, &rate.On)
 	if errors.Is(err, pgx.ErrNoRows) {
 		r.missing[currency] = true
 		return FXRate{}, false, nil

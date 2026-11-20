@@ -103,7 +103,7 @@ func (h Handlers) WithRecipientFiler(filer RecipientFiler) Handlers {
 func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	ctx := r.Context()
 	anchor := ids.From[ids.ActivityKind](ids.UUID(id))
-	recipient, err := h.store.ReplyRecipientFor(ctx, anchor)
+	recipient, err := h.replyRecipient(ctx, anchor)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -166,7 +166,7 @@ func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID) (stri
 	if h.colleagues == nil {
 		return "", nil
 	}
-	covers, err := h.colleagues.Covers(ctx)
+	covers, err := h.ownAddress(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -189,8 +189,8 @@ func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID) (stri
 // counterparty produce the same empty field, and only the log tells them
 // apart afterwards.
 func (h Handlers) replyAddresses(ctx context.Context, anchor ids.ActivityID) *[]openapi_types.Email {
-	recipient, err := h.store.ReplyRecipientFor(ctx, anchor)
 	address := ""
+	recipient, err := h.replyRecipient(ctx, anchor)
 	if err == nil {
 		address, err = h.offeredAddress(ctx, anchor, recipient)
 	}
@@ -227,7 +227,7 @@ func DeterministicEmailDraft(answering DraftContext) (subject, body string) {
 	if topic != "" {
 		thread = draftfloor.Fill(draftfloor.SubstanceFor(lang).Thread, topic)
 	}
-	greeting := draftfloor.Greeting(lang, band, answering.Recipient)
+	greeting := draftfloor.OpeningLine(lang, band, answering.Formal, answering.Recipient, answering.LastName)
 	return subject, draftfloor.Body(lang, greeting, phrases.Opener, thread, phrases.Ask)
 }
 
@@ -260,6 +260,10 @@ type DraftContext struct {
 	// Empty means the caller has no envelope — the two-tier detection below is
 	// then the honest answer rather than a guess at one.
 	Language textlang.Lang
+	// LastName and Formal choose the opening: a formal draft names the
+	// surname beside the first name, in every language.
+	LastName string
+	Formal   bool
 	// Band is where the correspondence stands. The zero value is BandNone.
 	Band convstate.Band
 }

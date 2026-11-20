@@ -6,18 +6,30 @@ import {
   companyEditFields,
   mapCompanyUpdate,
 } from "../../components/companyform";
-import { changeChoice } from "../../testing/choicedialog.testkit";
+import { pickOption } from "../../design-system/select-testing";
 import { company, jsonResponse } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyScreen } from "./companies";
 import { openProfile, openRecordMenu, render } from "./companies.testkit";
+import { openSection } from "./companyrail.testkit";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.location.hash = "";
 });
+
+async function pickIndustry(industry: string) {
+  const user = userEvent.setup();
+  const about = await openSection(user, "About");
+  await pickOption(
+    user,
+    within(about).getByRole("combobox", { name: /^Industry/ }),
+    industry,
+  );
+  await user.click(within(about).getByRole("button", { name: "Save" }));
+}
 
 describe("CompanyScreen — edit with If-Match (P-1)", () => {
   it("PATCHes /companies/{id} with If-Match:<version> and only update fields", async () => {
@@ -40,7 +52,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    await changeChoice(userEvent.setup(), "Industry", "Manufacturing");
+    await pickIndustry("Manufacturing");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchHeader).toBe("1");
@@ -76,7 +88,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    await changeChoice(userEvent.setup(), "Industry", "Manufacturing");
+    await pickIndustry("Manufacturing");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({
@@ -104,18 +116,11 @@ describe("CompanyScreen — edit domains round-trip (B7)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    // The fixture has no domain yet, so its row is folded in the details.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Change Domain/ }),
-    );
-    // The modal's own row-adder. The rail's details grid also offers an inline
-    // "Add domain" to a seat with the grant, and this test is about the form.
-    await userEvent.click(screen.getByRole("button", { name: "Add domain" }));
-    await userEvent.type(screen.getByLabelText("Domain *"), "brandt.example");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    const user = userEvent.setup();
+    const about = await openSection(user, "About");
+    await user.click(within(about).getByRole("button", { name: "Add domain" }));
+    await user.type(within(about).getByLabelText("Domain *"), "brandt.example");
+    await user.click(within(about).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({

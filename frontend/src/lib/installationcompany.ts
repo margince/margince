@@ -10,9 +10,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
 import { useHoldsAdminRole } from "./capability";
+import { coldFieldLabel } from "./coldfieldlabels";
 import {
-  problemFieldErrorsOf,
+  type FieldLabels,
   problemMessageOf,
+  type RefusalSentences,
+  refusalSentences,
   throwProblem,
 } from "./problem";
 import { useMe } from "./session";
@@ -54,22 +57,48 @@ export function storeCompany(
   void client.invalidateQueries({ queryKey: ["me"] });
 }
 
-// A site-read confirm nests the profile, so its name is `profile.display_name`.
-const COMPANY_NAME_FIELDS = new Set(["display_name", "profile.display_name"]);
+// The contract's maxLength for the company's display_name, which is also the
+// installation's name.
+export const COMPANY_NAME_MAX = 120;
 
-// The name is the installation's too, so the server caps its length. That
-// refusal reads in the reader's language; any other keeps the server's words.
+// The profile fields a refusal can name, by wire path. A site-read confirm
+// nests the profile, so its name is `profile.display_name`.
+function companyLabels(t: (key: MessageKey) => string): FieldLabels {
+  const labels: Record<string, string> = {};
+  for (const field of COMPANY_FIELDS) {
+    const label = coldFieldLabel(field, t);
+    labels[field] = label;
+    labels[`profile.${field}`] = label;
+  }
+  return labels;
+}
+
+const COMPANY_FIELDS = ["display_name", "offer_summary", "icp"] as const;
+
+// A refused profile write, keyed by the form's own field names.
+export function companyRefusal(
+  error: unknown,
+  t: (key: MessageKey) => string,
+): RefusalSentences {
+  const refused = refusalSentences(error, t, companyLabels(t));
+  const byField = new Map<string, string>();
+  for (const [wire, sentence] of refused.byField) {
+    byField.set(wire.replace(/^profile\./, ""), sentence);
+  }
+  return { byField, rest: refused.rest };
+}
+
+// One sentence for a surface with no field to put the refusal on.
 export function companySaveMessage(
   error: unknown,
   t: (key: MessageKey) => string,
 ): string {
-  const tooLong = problemFieldErrorsOf(error).some(
-    (fault) =>
-      COMPANY_NAME_FIELDS.has(fault.field) && fault.code === "too_long",
+  const refused = companyRefusal(error, t);
+  return (
+    [...refused.byField.values()][0] ??
+    refused.rest ??
+    problemMessageOf(error, t)
   );
-  return tooLong
-    ? t("settings.companyNameTooLong")
-    : problemMessageOf(error, t);
 }
 
 // A served brand proves the anchor company exists; an absent field can also

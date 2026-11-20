@@ -13,6 +13,13 @@
   gap: var(--space-4);
   padding-block: var(--space-4) var(--space-2);
 }
+/* On a phone the record sheet's own inset and stack gap space the head. */
+@media (max-width: 700px) {
+  .meetingrows-head {
+    gap: var(--space-3);
+    padding-block: 0;
+  }
+}
 
 /* One meeting: its day as a small calendar page, what it is and when beside
    it, and its verbs at the far end. Every panel on the tab draws its meetings

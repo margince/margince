@@ -7,18 +7,27 @@ import { Button, type FieldControl } from "../../design-system/atoms";
 import { describedByIds } from "../../design-system/describedby";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { formatPercent } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
-import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
+import {
+  LOCALES,
+  type Locale,
+  localeNameKey,
+  useLocale,
+  useT,
+} from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
 import { useCurrencyNote } from "../../lib/installation-settings.currency";
 import {
-  problemFieldSentencesOf,
-  problemMessageOf,
+  type FieldLabels,
+  fieldCheckSentence,
+  percentLimit,
+  refusalSentences,
   unwrap,
 } from "../../lib/problem";
 // Shared with every upload form, which reads the ceiling off this same record.
@@ -72,6 +81,40 @@ const EDITABLE_FACTS = [
 // one record, one sparse PATCH, one Save — so this decides nothing about what
 // is written, only where focus lands when the dialog opens.
 export type EditedFact = (typeof EDITABLE_FACTS)[number];
+
+// The server's bounds on the Likely threshold, in percent.
+const LIKELY_THRESHOLD = { min: "1", max: "100" } as const;
+
+function factLabels(t: ReturnType<typeof useT>, locale: Locale): FieldLabels {
+  return {
+    timezone: t("installationSettings.timezone"),
+    base_currency: t("installationSettings.baseCurrency"),
+    base_language: t("installationSettings.baseLanguage"),
+    date_format: t("installationSettings.dateFormat"),
+    time_format: t("installationSettings.timeFormat"),
+    fiscal_year_start_month: t("installationSettings.fiscalYearStart"),
+    forecast_forward_measure: t("installationSettings.forwardMeasure"),
+    forecast_likely_threshold: {
+      label: t("installationSettings.likelyThreshold"),
+      limit: percentLimit(locale),
+    },
+  };
+}
+
+// A whole percent from 1 to 100, in the words the server's refusal gets.
+function thresholdFault(
+  percent: number,
+  labels: FieldLabels,
+  locale: Locale,
+): string | undefined {
+  const label = labels.forecast_likely_threshold;
+  if (!Number.isInteger(percent)) {
+    return fieldCheckSentence("not_integer", locale, label);
+  }
+  return percent < 1 || percent > 100
+    ? fieldCheckSentence("out_of_range", locale, label, LIKELY_THRESHOLD)
+    : undefined;
+}
 
 // Exported for the onboarding's preferences act, which writes the same sparse
 // patch from the same fields: a second mutation would be a second answer to
@@ -234,7 +277,21 @@ function InstallationSettingsForm({
   // Keyed by the wire field name because that is what the server asserts. The
   // patch is sparse and built from the same names, so the two cannot drift
   // without the request itself being wrong.
-  const refused = problemFieldSentencesOf(update.error, locale);
+  const labels = factLabels(t, locale);
+  const [faults, faultsRoot] = useFieldFaults();
+  const refused = new Map(
+    EDITABLE_FACTS.flatMap((fact) => {
+      const sentence = faults.of(fact);
+      return sentence === undefined ? [] : [[fact, sentence] as const];
+    }),
+  );
+  const blanket = refusalSentences(update.error, t, labels).rest;
+  const edit = (next: InstallationSettings) => {
+    for (const fact of EDITABLE_FACTS) {
+      if (next[fact] !== draft[fact]) faults.edited(fact);
+    }
+    setDraft(next);
+  };
 
   const dirty = EDITABLE_FACTS.some((fact) => draft[fact] !== settings[fact]);
   // The claim the Save button's own condition was already making privately.
@@ -257,7 +314,19 @@ function InstallationSettingsForm({
         Object.assign(patch, { [fact]: draft[fact] });
       }
     }
-    update.mutate(patch);
+    const threshold =
+      patch.forecast_likely_threshold === undefined
+        ? undefined
+        : thresholdFault(patch.forecast_likely_threshold, labels, locale);
+    if (threshold !== undefined) {
+      update.reset();
+      faults.show(new Map([["forecast_likely_threshold", threshold]]));
+      return;
+    }
+    update.mutate(patch, {
+      onError: (error) =>
+        faults.show(refusalSentences(error, t, labels).byField),
+    });
   };
 
   const editVerb = (fact: EditedFact, field: string) => {
@@ -396,13 +465,10 @@ function InstallationSettingsForm({
           dirty={dirty}
           pending={update.isPending}
           refused={refused}
-          blanketError={
-            update.isError && refused.size === 0
-              ? problemMessageOf(update.error, t)
-              : null
-          }
+          formRef={faultsRoot}
+          blanketError={blanket}
           describe={describe}
-          onChange={setDraft}
+          onChange={edit}
           onClose={() => setEditing(null)}
           onSubmit={submit}
         />

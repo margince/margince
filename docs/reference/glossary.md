@@ -62,8 +62,10 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | identity | Who sent a privacy request; closing one records how that was checked. |
 | IMAP | The standard protocol for reading mail from a mail server. |
 | incoming | An incoming webhook: the address a chat tool gives for posting into a channel. |
+| Italian | Of Italy, as in Italian law, whose pack is in `extensions/eu`. |
 | JPEG | A common photo file format, saved as .jpg or .jpeg. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
+| Korean | Of the Republic of Korea, as in Korean law, whose pack is in `extensions/apac`. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
 | Launchpad | The Ubuntu project service that records each package Ubuntu publishes. |
 | LICENSE | The file at the repository root that holds the license text. |

@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -396,7 +397,7 @@ func relativeDateOperand(relative map[string]any, invalid func(string) error) (R
 //craft:ignore naked-any value is a validated operand from scalarOperand, which spans the SQL scalar types
 func operandSQL(value any, arg func(any) int) string {
 	if days, ok := value.(RelativeDays); ok {
-		return fmt.Sprintf("(CURRENT_DATE - $%d::integer)", arg(int(days)))
+		return fmt.Sprintf("(%s - $%d::integer)", occurredday.TodaySQL("now()"), arg(int(days)))
 	}
 	return fmt.Sprintf("$%d", arg(value))
 }

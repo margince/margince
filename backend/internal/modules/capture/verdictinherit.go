@@ -47,7 +47,7 @@ const (
 // and the column belongs to this module. Every other kind — legal, personnel,
 // an explicit confidentiality marking — is business the workspace conducts
 // privately, whose parties are genuine contacts.
-const ThreadKindPersonal = "personal"
+const ThreadKindPersonal = threadverdict.KindPersonal
 
 // A classifier's confidentiality judgement is separate from a sender's explicit marking.
 // The sender's marking remains binding when an owner shares the thread.

@@ -78,6 +78,9 @@ ai:
 analytics:
   performance_enabled: false
 
+approvals:
+  auto_apply_enabled: true
+
 auth:
   password:
     enabled: true

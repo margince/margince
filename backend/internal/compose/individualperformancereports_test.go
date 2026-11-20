@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -89,6 +90,10 @@ func withoutActivityPrivacyGuard(expression string) string {
 	for _, match := range aliases.FindAllStringSubmatch(expression, -1) {
 		expression = strings.ReplaceAll(expression, auth.WorkspaceAudienceSQL(match[1]), "TRUE")
 	}
+	// A personal hold names the seat that holds it, which is privacy, not performance.
+	for _, match := range regexp.MustCompile(`\b([a-z_]+)\.audience_reason\b`).FindAllStringSubmatch(expression, -1) {
+		expression = strings.ReplaceAll(expression, relstrength.DealEvidenceSQL(match[1]), "TRUE")
+	}
 	return expression
 }
 
@@ -96,6 +101,10 @@ func TestMailReadabilityDoesNotCountAsAColleaguesPerformance(t *testing.T) {
 	spec := reportSpec{filters: map[string]string{"readable": auth.WorkspaceAudienceSQL("mail")}}
 	if got := unpolicedSeatColumns(map[string]reportSpec{"example": spec}, []string{"user_id", "owner_id"}); len(got) != 0 {
 		t.Fatalf("privacy join was counted as performance: %v", got)
+	}
+	spec.filters["evidence"] = relstrength.DealEvidenceSQL("a")
+	if got := unpolicedSeatColumns(map[string]reportSpec{"example": spec}, []string{"user_id", "owner_id"}); len(got) != 0 {
+		t.Fatalf("personal hold was counted as performance: %v", got)
 	}
 	spec.filters["readable"] += " AND d.owner_id IS NOT NULL"
 	if got := unpolicedSeatColumns(map[string]reportSpec{"example": spec}, []string{"user_id", "owner_id"}); len(got) != 1 {

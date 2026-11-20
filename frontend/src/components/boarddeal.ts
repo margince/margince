@@ -88,8 +88,12 @@ export function toBoardDeal(
     measuredAt,
     stalled: deal.stalled ?? false,
     archived: deal.archived_at != null,
-    closeDate: deal.expected_close_date ?? null,
-    closeDateProvisional: deal.close_date_provisional ?? false,
+    ...(deal.status === "open"
+      ? {
+          closeDate: deal.expected_close_date ?? null,
+          closeDateProvisional: deal.close_date_provisional ?? false,
+        }
+      : { closeDate: null, closedAt: deal.closed_at ?? null }),
     owner:
       ownerName && deal.owner_id
         ? {

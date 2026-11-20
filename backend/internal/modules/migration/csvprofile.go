@@ -191,21 +191,21 @@ func validateHeader(header []string) error {
 func SuggestMapping(p Profile, targets []string) map[string]string {
 	byNormal := make(map[string]string, len(targets))
 	for _, target := range targets {
-		byNormal[normalizeFieldName(target)] = target
+		byNormal[NormalizeFieldName(target)] = target
 	}
 
 	// A source name reaching a target more than once is ambiguous, and picking
 	// either would silently drop the loser's column. Count first, decide after.
 	hits := make(map[string]int, len(p.Columns))
 	for _, c := range p.Columns {
-		if _, ok := byNormal[normalizeFieldName(c.Header)]; ok {
-			hits[normalizeFieldName(c.Header)]++
+		if _, ok := byNormal[NormalizeFieldName(c.Header)]; ok {
+			hits[NormalizeFieldName(c.Header)]++
 		}
 	}
 
 	out := make(map[string]string)
 	for _, c := range p.Columns {
-		normal := normalizeFieldName(c.Header)
+		normal := NormalizeFieldName(c.Header)
 		target, ok := byNormal[normal]
 		if !ok || hits[normal] > 1 {
 			continue
@@ -215,11 +215,11 @@ func SuggestMapping(p Profile, targets []string) map[string]string {
 	return out
 }
 
-// normalizeFieldName reduces a name to the letters and digits in it, folded to
+// NormalizeFieldName reduces a name to the letters and digits in it, folded to
 // lower case, so "E-mail Address", "email_address" and "  Email address  " are
 // one name. Punctuation and spacing are how humans and systems spell the same
 // field differently; anything beyond that is a guess about meaning.
-func normalizeFieldName(s string) string {
+func NormalizeFieldName(s string) string {
 	var b strings.Builder
 	for _, r := range s {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {

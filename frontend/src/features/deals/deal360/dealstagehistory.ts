@@ -3,6 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api/client";
+import { dealStageHistoryKey } from "../../../lib/activitykeys";
 import { unwrap } from "../../../lib/problem";
 import { useViewerZone } from "../../../lib/viewerzone";
 import {
@@ -23,7 +24,7 @@ const STAGE_HISTORY_LIMIT = 100;
  */
 export function useDealStageHistory(dealId: string, enabled: boolean) {
   return useQuery({
-    queryKey: ["deal-stage-history", dealId],
+    queryKey: dealStageHistoryKey(dealId),
     enabled,
     queryFn: async () => {
       return unwrap(

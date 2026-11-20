@@ -19,24 +19,30 @@ import (
 // extensionsRoot is where the packs sit, seen from this package.
 const extensionsRoot = "../../../../extensions"
 
-// compiledPolicies compiles every pack's policy folder from its sources, as
-// gen-messaging-rules does, keyed by the jurisdiction it declares.
+// compiledPolicies compiles every unit's policy folder from its sources, as
+// gen-messaging-rules does, keyed by the jurisdiction each pack declares.
 func compiledPolicies(t *testing.T) map[string]messagingpolicy.Policy {
 	t.Helper()
-	indexes, err := filepath.Glob(filepath.Join(extensionsRoot, "*", "policy", messagingpolicy.IndexFile))
+	folders, err := filepath.Glob(filepath.Join(extensionsRoot, "*", "policy"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(indexes) == 0 {
-		t.Fatalf("no pack under %s has a policy folder; the packs moved", extensionsRoot)
+	if len(folders) == 0 {
+		t.Fatalf("no unit under %s has a policy folder; the packs moved", extensionsRoot)
 	}
 	out := map[string]messagingpolicy.Policy{}
-	for _, index := range indexes {
-		policy, err := messagingpolicy.Compile(os.DirFS(filepath.Dir(index)))
+	for _, folder := range folders {
+		unit, err := messagingpolicy.CompileUnit(os.DirFS(folder))
 		if err != nil {
-			t.Fatalf("%s: %v", index, err)
+			t.Fatalf("%s: %v", folder, err)
 		}
-		out[string(policy.Rules.Jurisdiction)] = policy
+		for _, policy := range unit.Policies {
+			country := string(policy.Rules.Jurisdiction)
+			if _, twice := out[country]; twice {
+				t.Fatalf("%s declares %s, which another pack already declares", folder, country)
+			}
+			out[country] = policy
+		}
 	}
 	return out
 }

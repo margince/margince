@@ -1,6 +1,10 @@
 import type { ChangeEvent, Dispatch, RefObject } from "react";
 import { useRef } from "react";
 import type { components } from "../../../api/schema";
+import {
+  ConnectAiFirst,
+  isAiNotConnected,
+} from "../../../design-system/connectai";
 import { ErrorLine } from "../../../design-system/errorline";
 import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n";
@@ -287,7 +291,12 @@ function VoiceSurface({
         canBuild={canBuild}
         startPending={build.start.isPending}
         startError={
-          build.start.isError ? problemMessageOf(build.start.error, t) : null
+          build.start.isError &&
+          (isAiNotConnected(build.start.error) ? (
+            <ConnectAiFirst />
+          ) : (
+            problemMessageOf(build.start.error, t)
+          ))
         }
       />
     );

@@ -294,6 +294,12 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `analytics.performance_enabled` | `MARGINCE_ANALYTICS_PERFORMANCE_ENABLED` | — | `bool` | `false` | api, worker | Ignored; kept so existing files load. |
 
+### `approvals`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `approvals.auto_apply_enabled` | `MARGINCE_APPROVALS_AUTO_APPLY_ENABLED` | — | `bool`, stored | `true` | api, worker | Let a proposal apply itself where its owner has that kind on automatic. Off stops every automatic apply. |
+
 ### `auth`
 
 | Key | Env | Flag | Type | Default | Programs | Doc |

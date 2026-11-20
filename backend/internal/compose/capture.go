@@ -86,7 +86,6 @@ var graphScopes = []string{"offline_access", "User.Read", "Mail.Read", graph.Sen
 // workspace's own, edited in the settings surface and read per transaction, so
 // a correction takes effect on the next message instead of the next restart.
 type CaptureConfig struct {
-	bookingVault       keyvault.Vault
 	TransactionalExtra []string // capture.transactional_extra (CAP-PARAM-6 infra eSLDs)
 	TransactionalNever []string // capture.transactional_never (CAP-PARAM-6 allowlist)
 	// TracePayloads is capture.trace_payloads, already resolved against its
@@ -197,7 +196,6 @@ func (c CaptureConfig) historyTuning() connector.BackfillTuning {
 // that takes it that way — asking which transports this binary compiled in is a
 // question about the binary, not about any database.
 func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureConfig) *capture.Registry {
-	cfg.bookingVault = vault
 	db := InstallationDB(pool)
 	r := capture.NewRegistry(db, newCaptureSink(pool, cfg), identity.NewService(pool), vault).
 		// How far back this installation lets a mailbox import reach. Zero
@@ -288,14 +286,14 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	// store). Asking which transports a binary compiled in must not hand
 	// anything the power to destroy mail.
 	var purgeRemoved capture.MessagePurger
-	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger(), cfg.bookingVault); purger != nil {
+	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger()); purger != nil {
 		purgeRemoved = purger.PurgeRemovedAdmitted
 	}
 	return capture.NewSink(InstallationDB(pool)).
 		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).
 		// A seat's own sent echo re-keys the send it copies when the send's
 		// read-back failed, through the module that owns the deliveries.
-		WithSentEchoAdoption(comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))).AdoptEchoIdentityTx).
+		WithSentEchoAdoption(comms.NewStore(InstallationDB(pool), time.Now, sentIdentity(InstallationDB(pool))).AdoptEchoIdentityTx).
 		WithPartyReceiptSettlement(sentPartySettlement(pool)).
 		WithMessagePurger(purgeRemoved).
 		// The files a captured message carried, written by the module that owns

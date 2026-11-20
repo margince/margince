@@ -431,6 +431,23 @@
         "null"
       ]
     },
+    "approvals": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "auto_apply_enabled": {
+          "description": "Let a proposal apply itself where its owner has that kind on automatic. Off stops every automatic apply.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        }
+      }
+    },
     "auth": {
       "type": [
         "object",

@@ -340,11 +340,12 @@ func (s *Service) consentSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	wire := make([]crmcontracts.ContactConsentState, 0, len(states))
 	for _, st := range states {
 		s := crmcontracts.ContactConsentState{
-			PurposeId:              openapi_types.UUID(st.PurposeID.UUID),
-			State:                  crmcontracts.ContactConsentStateState(st.State),
-			LawfulBasis:            st.LawfulBasis,
-			DoubleOptInConfirmedAt: st.DoubleOptInConfirmedAt,
-			UpdatedAt:              st.UpdatedAt,
+			PurposeId:                openapi_types.UUID(st.PurposeID.UUID),
+			State:                    crmcontracts.ContactConsentStateState(st.State),
+			LawfulBasis:              st.LawfulBasis,
+			DoubleOptInConfirmedAt:   st.DoubleOptInConfirmedAt,
+			ConfirmationPendingUntil: st.ConfirmationPendingUntil,
+			UpdatedAt:                st.UpdatedAt,
 		}
 		if st.PurposeKey != "" {
 			key := st.PurposeKey

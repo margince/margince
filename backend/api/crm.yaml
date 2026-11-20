@@ -2297,9 +2297,9 @@ paths:
         "Based on" line and the "Why this draft?" chips, and a body that explained itself
         would be a body the rep has to edit before sending.
 
-        When no model lane is configured, or the workspace's AI budget is exhausted, the draft
-        degrades to a deterministic one rather than failing — `generated_by` says which wrote
-        it.
+        When no model lane is configured, the workspace's AI budget is exhausted, the model call
+        fails, or the draft checks refuse the model's answer, the draft degrades to a
+        deterministic one rather than failing — `generated_by` says which wrote it.
 
         Human-only: drafting spends the workspace's model budget on prose for a contact to send
         under their own name.
@@ -3718,7 +3718,7 @@ paths:
         Renaming the installation's own company (`is_anchor`) renames the installation in the same
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-        past 200 characters (`too_long`); other companies' names have no length cap.
+        past 120 characters (`too_long`), the limit of every company name typed by hand.
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
@@ -4678,6 +4678,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'A scan would have to be queued and no AI model is connected (`code: ai_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /companies/{id}/growth-fit:
     parameters:
@@ -5005,9 +5010,9 @@ paths:
         the "Based on" line and the "Why this draft?" chips, and a body that explained
         itself would be a body the rep has to edit before sending.
 
-        When no model lane is configured, or the workspace's AI budget is exhausted, the
-        draft degrades to a deterministic one rather than failing — `generated_by` says
-        which wrote it.
+        When no model lane is configured, the workspace's AI budget is exhausted, the model
+        call fails, or the draft checks refuse the model's answer, the draft degrades to a
+        deterministic one rather than failing — `generated_by` says which wrote it.
 
         Human-only: drafting spends the workspace's model budget on prose for a contact to
         send under their own name.
@@ -5257,6 +5262,11 @@ paths:
               schema: { $ref: '#/components/schemas/SiteReadStarted' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
           description: No URL to read (no override, company has no domain).
           content:
@@ -6963,6 +6973,79 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /deals/{id}/move-pipeline:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: moveDealPipeline
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Move an open deal to another pipeline, onto its first open stage.
+      description: |
+        Puts the deal on the first open stage of a live pipeline other than its own. A caller
+        cannot choose the stage. It is a stage advance in every other way: it writes one
+        `deal_stage_history` row and one `advance_stage` audit row, emits `deal.stage_changed`,
+        sets the probability from the new stage, and the legal review gate and the object and row
+        permissions of an advance hold. The stage the deal leaves keeps its exit criteria; only a
+        required legal review blocks a move, and the first open stage has no gated stage before
+        it. The history row keeps no stage positions, because the positions of two pipelines do
+        not compare. The pipeline row is locked shared, so a retirement or a reorder waits for
+        the move.
+
+        A stale `If-Match` answers 409. A won or lost deal answers 422 `deal_closed`, the
+        pipeline the deal is in answers 422 `same_pipeline`, a retired pipeline answers 422
+        `pipeline_retired`, and a pipeline with no open stage answers 422
+        `pipeline_has_no_open_stage`.
+      x-mcp-tool: { verb: move_deal_pipeline, router: change_state, action: move_deal_pipeline, tier: auto_execute, scope: write, served_by: route }
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MoveDealPipelineRequest' }
+      responses:
+        '200':
+          description: The deal on its new stage, and the probability the move set.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealAdvanced' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deals/{id}/move-pipeline/undo:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: undoDealPipelineMove
+      security: [ { cookieAuth: [] } ]   # human session only — taking back a move is the mover's own act
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Put a deal back on the pipeline and stage its last move left.
+      description: |
+        Undoes the deal's latest stage move when it was a move to another pipeline. The source
+        pipeline and stage come from that move's `deal_stage_history` row, and the undo writes its
+        own row with `reversal_of` naming it. Anything that moved the deal since, an earlier undo
+        included, answers 422 `move_not_undoable`. A source pipeline retired since answers 422
+        `pipeline_retired`. A stale `If-Match` answers 409.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: The deal back on its earlier stage.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealAdvanced' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deals/{id}/close-day:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -8367,7 +8450,9 @@ paths:
         At most one default pipeline per workspace (409 if a second default). The opening
         `stages` keep the ladder's shape: a won or lost stage above an open one is refused
         `422` with the code `closing_stage_before_open`, and two stages naming one position
-        with `duplicate`.
+        with `duplicate`. A ladder without a won or without a lost stage gets the missing one
+        appended behind its last stage, named `Won` or `Lost`, so no pipeline is born unable to
+        close a deal.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -8650,7 +8735,9 @@ paths:
         `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
         instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
         behind the open ones, published as the same `pipeline.updated` position delta. A change
-        to either moves the pipeline's `version`.
+        to either moves the pipeline's `version`. Changing the `semantic` of a pipeline's only
+        live won (or lost) stage is refused `422` with the code `last_closing_stage` on
+        `semantic`: a pipeline keeps a way to win and a way to lose a deal.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -9464,6 +9551,11 @@ paths:
         `last_exchange` is the newest call, meeting, email or message on the record of any
         age, with whose move it leaves. It says where the record stands when nothing is
         next, such as waiting on them since the last mail sent.
+
+        `last_inbound` and `last_outbound` are the newest message the other side wrote and the
+        newest one we wrote, of any age, read over every row the caller may list and counted as
+        the account's last-touch clocks count them: it has happened, it kept us in touch, and
+        it is not automatic mail. Each is absent when there is none.
       parameters:
         - name: entity_type
           in: query
@@ -10488,6 +10580,11 @@ paths:
               schema: { $ref: '#/components/schemas/TranscriptReadStarted' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
           description: This activity carries no transcript, or its transcript is blank or too long for one reading.
           content:
@@ -12001,11 +12098,11 @@ paths:
                     enum: [not_requested, pending_confirmation, not_asked]
                     x-extensible-enum: true
                     description: |
-                      `not_requested` — the form carried no tick. `pending_confirmation` — the question
-                      was queued for delivery and the grant waits on the subject answering it; queued
-                      is not delivered. `not_asked` — the question could not be put, or this
-                      installation has no lane to put it on; the booking stands and no subscription
-                      mail follows.
+                      `not_requested` — the form carried no tick. `pending_confirmation` — the tick was
+                      accepted. If this address can receive our mail, a confirmation link is on its way,
+                      and nothing is subscribed until it is opened. The answer is the same whatever the
+                      address's state, so it reveals nothing about it. `not_asked` — this installation
+                      has no mail lane, so no subscription mail follows. The booking stands in every case.
         '409': { description: 'Slot no longer available (`code: slot_taken`).', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
         '422': { $ref: '#/components/responses/ValidationError' }
         '502': { $ref: '#/components/responses/CalendarUnavailable' }
@@ -13815,9 +13912,9 @@ paths:
         A lead with no email address on record is `422`: a draft addressed to nobody is not a
         message, and the composer can say so before spending a model call.
 
-        When no model lane is configured, or the workspace's AI budget is exhausted, the draft
-        degrades to a deterministic one rather than failing — `generated_by` says which wrote
-        it.
+        When no model lane is configured, the workspace's AI budget is exhausted, the model call
+        fails, or the draft checks refuse the model's answer, the draft degrades to a
+        deterministic one rather than failing — `generated_by` says which wrote it.
 
         Human-only: drafting spends the workspace's model budget on prose for a contact to send
         under their own name.
@@ -17437,7 +17534,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed.'
+          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), the chat refused the channel name even in the form derived from the record (`code: channel_name_refused`), or the request is malformed.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -18572,6 +18669,7 @@ paths:
             - deals-by-stage
             - forecast
             - leads-by-status
+            - loss-events
             - meeting-conversion
             - open-deals-per-company
             - pipeline-current
@@ -22244,9 +22342,10 @@ paths:
         on a deal at risk.
 
         Each row must be one the caller's Worklist draws now, under a scope they hold, with
-        every lane's own grant and row scope. Any other row answers 404, the same as one
-        that does not exist, and nothing in the batch is written. A source whose rows never
-        offer Done answers 422. A row named twice is written once.
+        every lane's own grant and row scope, or one the caller already marked done. A row
+        already done answers 204 and is not written again. Any other row answers 404, the
+        same as one that does not exist, and nothing in the batch is written. A source whose
+        rows never offer Done answers 422. A row named twice is written once.
       requestBody:
         required: true
         content:
@@ -25291,6 +25390,35 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /autonomy/installation:
+    put:
+      tags: [Approvals]
+      operationId: updateAutoApplyInstallation
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Switch automatic application on or off for the whole installation.
+      description: |
+        Admin only (`approvals.auto_apply_enabled`). Off, no proposal applies itself
+        for anybody, whatever a reader's own setting says. On, nothing changes for a
+        reader: their own mode per kind still decides, so turning it back on never
+        switches on a kind somebody turned off. The switch is read back as
+        `auto_apply_enabled` on `GET /autonomy`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AutoApplyInstallation' }
+      responses:
+        '200':
+          description: The switch as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutoApplyInstallation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
 
   /me/approval-preferences:
     get:
@@ -35203,6 +35331,77 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /attachments/links:
+    post:
+      tags: [Attachments]
+      operationId: addAttachmentLink
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: attach_link, router: change_activities, action: attach_link, tier: auto_execute, scope: write, served_by: route }
+      summary: Add a web link to a record's documents.
+      description: |
+        A document that lives somewhere else, such as a Google Doc or a web page, listed with the
+        record's files. The row keeps the address and holds no bytes: `url` is set,
+        `bytes_withheld` is true, and the download route answers 404 for it. The server does not
+        fetch the address here; `title` is what the caller read or typed.
+
+        The parent rules are the upload's: Update on the parent's type, and a parent the caller can
+        see (a hidden or cross-tenant one answers 404). `category` is what the document is; the two
+        provenance values and `link`, which marks a link a mail carried, are refused (422
+        `category_not_assertable`). The same address listed live on the same record answers 422
+        `link_already_listed`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddAttachmentLinkRequest' }
+      responses:
+        '201':
+          description: The listed link.
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attachment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /attachments/links/preview:
+    post:
+      tags: [Attachments]
+      operationId: previewAttachmentLink
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security   # an agent-named URL the server fetches
+      summary: Read the title a web page gives itself, before the link is added.
+      description: |
+        Fetches the address once through the public-web reader: SSRF-guarded, robots.txt honored,
+        no cookies sent. Answers the page's Open Graph title, else its `<title>`, and its Open
+        Graph site name. Writes nothing.
+
+        A page that cannot be read still answers 200 with `read: false` and no title, because the
+        link can be added all the same. Google Docs, Sheets, Slides, Forms and Drive addresses are
+        not fetched: they answer a sign-in page, never the document's title.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string, maxLength: 2048 }
+      responses:
+        '200':
+          description: What the page says about itself.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttachmentLinkPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts/{id}/network:
     get:
       tags: [Contacts]
@@ -36982,6 +37181,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The process role wired no model path or no job runner — declared absent, never a silent no-op.
@@ -37184,9 +37388,12 @@ paths:
         `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
         (with `max_mb`), `too_many_files` (with `files` and `max_files`),
         `password_protected`, `file_damaged` or `file_missing` (with `file`),
-        `two_files_one_type` (with `file`, `other_file` and `object`) or
-        `type_not_importable` (with `object`). A refusal of one file of a ZIP
-        also names it in `file`.
+        `two_files_one_type` (with `file`, `other_file` and `object`),
+        `type_not_importable` (with `object`), `spreadsheet` (an Excel
+        workbook, which holds no CSV) or `no_importable_file` (with
+        `file_names`, the names the import reads). A ZIP with no file the
+        import reads opens no run. A refusal of one file of a ZIP also names
+        it in `file`.
 
         A cell an export quoted against formula evaluation (a quote before `=`,
         `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -38082,7 +38289,7 @@ paths:
         Renaming the installation's own company (`is_anchor`) renames the installation in the same
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-        past 200 characters (`too_long`); other companies' names have no length cap.
+        past 120 characters (`too_long`), the limit of every company name typed by hand.
       x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -38371,10 +38578,13 @@ paths:
       summary: Add a document to this corpus.
       description: >-
         Accepts only files whose bytes are their own text — text/plain, text/markdown,
-        text/csv, application/json. Anything else is refused naming what is accepted;
-        there is no parser in this product, and a PDF arriving as an empty corpus is
-        worse than a PDF refused. A file whose content is not text, such as a program
-        renamed to `.md`, is refused the same way. Ingest is asynchronous: the document lands `queued`
+        text/csv, application/json. A `.txt`, `.md`, `.csv` or `.json` ending names the
+        type whatever type the client sent with it. Anything else is refused 415, naming
+        the kind of file in words and what to save it as; there is no parser in this
+        product, and a PDF arriving as an empty corpus is worse than a PDF refused. A file
+        whose content is not text, such as a program renamed to `.md`, is refused the
+        same way. An empty file is refused 422 `empty_file` on `file`, and nothing is
+        stored. Ingest is asynchronous: the document lands `queued`
         and its progress is read back from this path's GET. The set that ships with
         Margince takes no uploads: only Margince files pages in it.
       requestBody:
@@ -40872,6 +41082,14 @@ components:
             a file too large is refused before it is sent instead of after. The ceiling bounds
             the whole request, part framing included, which is why a client should leave a
             little room rather than compare a file against it exactly.
+        max_knowledge_document_bytes:
+          type: integer
+          format: int64
+          description: |
+            The largest document `uploadCorpusDocument` accepts, in bytes. Set by whoever operates
+            the installation, on the same terms as `max_upload_bytes`, and lower than it by
+            default because a corpus document becomes passages every ask scans. Absent from a
+            server older than this field; a client then leaves the refusal to the server.
         oauth_access_token_ttl_minutes:
           type: integer
           minimum: 5
@@ -43051,7 +43269,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site, unknown]
           x-extensible-enum: true
           description: |
             Why, as a code the client words in the reader's language.
@@ -43062,7 +43280,7 @@ components:
               as a company.
             - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
               company this business works with. `sender_kind` says which, when it is known.
-            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
               domain's open question, as `source` describes each one.
             - `unknown`: the row records a reason this server has no word for. `reason` still
               carries its stored sentence.
@@ -43081,7 +43299,7 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain]
+          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site]
           x-extensible-enum: true
           description: |
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
@@ -43091,7 +43309,9 @@ components:
             old to mint one from today's site; `near_duplicate` means more than one company
             here already carries the name it resolved to, and which of them this domain belongs
             to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-            as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+            as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+            `foreign_site` means the site names a different business than the domain, which may
+            have changed hands.
         decided_at: { type: string, format: date-time, description: 'When the decision was recorded. For an `undecided` domain, when the row last moved.' }
         company_id:
           type: string
@@ -45327,6 +45547,24 @@ components:
           type: array
           description: The deal's contract, legal and offer documents, newest first.
           items: { $ref: '#/components/schemas/LegalReviewPacketDocument' }
+        contracts:
+          type: array
+          description: |
+            The agreements filed against the deal, newest term first. Absent on a
+            pack asked for before agreements were packed. An agreement this reader
+            may not open, and every agreement for a reader without `deal.read`, is not listed.
+          items: { $ref: '#/components/schemas/LegalReviewPacketContract' }
+        touches:
+          type: array
+          description: |
+            The deal's latest calls, meetings, messages and notes, newest first. One
+            this reader may not read, such as mail outside their audience, is not
+            listed. Absent on an older pack.
+          items: { $ref: '#/components/schemas/LegalReviewPacketTouch' }
+        tasks:
+          type: array
+          description: The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+          items: { $ref: '#/components/schemas/LegalReviewPacketTask' }
 
     LegalReviewPacketDeal:
       type: object
@@ -45390,6 +45628,46 @@ components:
       properties:
         stage_name: { type: string }
         entered_at: { type: string, format: date-time }
+
+    LegalReviewPacketContract:
+      type: object
+      description: |
+        One agreement as it stood at the request. Its title is read now for this
+        reader. The dates and notice terms are the ones frozen with the pack.
+      required: [id, title, status]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        contract_number: { type: [string, 'null'] }
+        status: { type: string, enum: [draft, active, expired, cancelled, superseded], x-extensible-enum: true }
+        starts_on: { type: [string, 'null'], format: date }
+        ends_on: { type: [string, 'null'], format: date }
+        renewal_on: { type: [string, 'null'], format: date }
+        cancellation_notice_on: { type: [string, 'null'], format: date }
+        notice_period_days: { type: [integer, 'null'] }
+        auto_renew: { type: [boolean, 'null'] }
+
+    LegalReviewPacketTouch:
+      type: object
+      description: One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+      required: [activity_id, kind, occurred_at, occurred_precision]
+      properties:
+        activity_id: { type: string, format: uuid }
+        kind: { type: string, enum: [call, email, meeting, message, note], x-extensible-enum: true }
+        occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+        subject: { type: [string, 'null'] }
+
+    LegalReviewPacketTask:
+      type: object
+      description: One task that was open at the request. Its subject is read now.
+      required: [activity_id]
+      properties:
+        activity_id: { type: string, format: uuid }
+        subject: { type: [string, 'null'] }
+        due_at: { type: [string, 'null'], format: date-time }
 
     LegalReviewPacketDocument:
       type: object
@@ -45709,6 +45987,19 @@ components:
           items: { type: string, format: uuid }
         survivor_id: { type: string, format: uuid, description: 'The record that remains. Its values win where two members disagree.' }
         owner_id: { type: string, format: uuid, description: 'Who owns the remaining contact: the live owner of one of the selected members.' }
+        prefer: { $ref: '#/components/schemas/ContactCasePreference' }
+    ContactCasePreference:
+      type: object
+      additionalProperties: false
+      description: |
+        Where the selected members disagree, the member whose value the remaining contact takes.
+        Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+        No value is lost: every address, number and employment of every member stays on the remaining contact.
+      properties:
+        name: { type: string, format: uuid, description: 'The member whose first and last name the remaining contact takes.' }
+        title: { type: string, format: uuid, description: 'The member whose title the remaining contact takes.' }
+        email: { type: string, format: uuid, description: "The member whose primary email address becomes the remaining contact's primary one." }
+        employment: { type: string, format: uuid, description: "The member whose current employer becomes the remaining contact's current one." }
     ContactCaseOutcome:
       type: object
       description: What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant.
@@ -47013,6 +47304,14 @@ components:
       properties:
         file:    { type: string, description: 'The file name a ZIP entry needs for this object to be detected.' }
         object:  { $ref: '#/components/schemas/ImportObject' }
+        key_columns:
+          type: array
+          description: |
+            The columns that tell this file's rows apart. A file needs at
+            least one of them mapped, or the test run does not start, unless
+            the request names its own `source_key` column. Absent from a
+            server older than this field.
+          items: { type: string }
         columns:
           type: array
           items: { $ref: '#/components/schemas/ImportFormatColumn' }
@@ -47554,6 +47853,14 @@ components:
             code names other values carries them in `params`, an object of text values by
             name, so a screen can word the code in the reader's language; `message` stays
             the English sentence.
+
+            A value its field cannot hold names the field's path (`address.city` for a key of a
+            nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+            `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+            `invalid_type` for any other shape. A body that is not one JSON object, and a value
+            inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+            carries its bounds as `params.min` and `params.max`, as the schema spells them;
+            a date-time range states them as ISO dates.
 
             A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
             `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -48356,6 +48663,15 @@ components:
             one was named at creation. Absent on a contact a member typed, and
             absent to a reader who may not open that record, so the contact
             still reads rather than being refused.
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          x-extensible-enum: true
+          description: >-
+            How a message to this contact opens: `formal` takes the surname, `familiar` the first
+            name. A rep sets it once and every draft to the contact uses it ahead of what the
+            thread suggests. Null means nobody set it, and a draft reads the register from the
+            correspondence.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -48979,6 +49295,12 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          description: >-
+            Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null)
+            so drafts read the register from the correspondence again.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -50034,9 +50356,10 @@ components:
       x-extensible-enum: true
       description: |
         Which writer produced a piece of generated prose. `model` — the configured model
-        lane. `deterministic` — the structured fallback, used when no lane is configured
-        or the workspace's AI budget is exhausted. Never silently interchangeable: a
-        reader deciding how much to trust a sentence needs to know which wrote it.
+        lane. `deterministic` — the structured fallback, used when no lane is configured,
+        the workspace's AI budget is exhausted, the model call fails, or the checks the
+        surface runs refuse the model's answer. Never silently interchangeable: a reader
+        deciding how much to trust a sentence needs to know which wrote it.
 
     CompanyQuestion:
       type: string
@@ -50839,6 +51162,11 @@ components:
             from the company links only the recipients this is true for. A read-only share
             grants no attach right. The server rechecks every write.
         title: { type: [string, 'null'] }
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          x-extensible-enum: true
+          description: The register a rep set for opening a message to this contact; null when none is set.
         provider_title:
           type: [string, 'null']
           description: >-
@@ -53903,6 +54231,16 @@ components:
             `our_side` has carried a display name from the start, and a buyer-side seat
             that carries only an id is the same list rendered half-anonymous.
         role:      { type: string }
+        reach:
+          type: string
+          enum: [reached, not_reached, unknown]
+          x-extensible-enum: true
+          description: |
+            Whether a current colleague has exchanged mail with or met this seat, as the caller
+            can prove it. `not_reached` only when no activity links the seat to a colleague at
+            all. Anything withheld from the caller, or an exchange only with a colleague who has
+            left, is `unknown`. Absent for a seat the caller cannot read, and without the
+            `activity` grant.
         engaged:
           type: boolean
           description: 'A two-way exchange in the window — both directions, not just our sends.'
@@ -53916,6 +54254,21 @@ components:
         last_inbound_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
+
+    DealCoverageLine:
+      type: object
+      description: One colleague's exchange with one buyer seat, as the newest event in each direction.
+      required: [user_id, contact_id, colleague_name]
+      properties:
+        user_id:    { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        colleague_name: { type: string }
+        last_inbound_at:  { type: [string, 'null'], format: date-time, description: When the contact last wrote to this colleague. }
+        last_inbound_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_inbound_at`." }
+        last_outbound_at: { type: [string, 'null'], format: date-time, description: "When this colleague last wrote to the contact, or was copied on our mail to them." }
+        last_outbound_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_outbound_at`." }
+        last_met_at:      { type: [string, 'null'], format: date-time, description: The newest meeting or call of the pair that neither declined. }
+        last_met_precision: { allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }], description: "How to read `last_met_at`." }
 
     DealCoverageRisk:
       type: object
@@ -55035,6 +55388,14 @@ components:
             score is their warmest single relationship. `single_threaded_ours` reads the same
             entries, so its colleague is always one of them.
           items: { $ref: '#/components/schemas/ContactNetworkColleague' }
+        lines:
+          type: array
+          description: |
+            One entry per current colleague and readable seat who have exchanged mail or met,
+            from the activities the caller may open, at the time of the read. A seat the caller
+            cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+            the edge sections are withheld: absence says nothing about who has talked.
+          items: { $ref: '#/components/schemas/DealCoverageLine' }
         risks:        { type: array, items: { $ref: '#/components/schemas/DealCoverageRisk' } }
         sections_omitted:
           type: array
@@ -56832,6 +57193,7 @@ components:
         expected_close_date: { type: [string, 'null'], format: date, description: 'An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.' }
         close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.' }
         wait_until: { type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag." }
+        wait_ends_at: { type: [string, 'null'], format: date-time, readOnly: true, description: "The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date." }
         closed_at: { type: [string, 'null'], format: date-time }
         last_activity_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.' }
         stalled: { type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.' }
@@ -57068,6 +57430,11 @@ components:
           type: string
           format: date
           description: The calendar day the deal closed, in the installation's zone. Not after today.
+    MoveDealPipelineRequest:
+      type: object
+      required: [pipeline_id]
+      properties:
+        pipeline_id: { type: string, format: uuid, description: The live pipeline to move the deal to. It must differ from the deal's own. }
     AdvanceDealRequest:
       type: object
       required: [to_stage_id]
@@ -60533,6 +60900,8 @@ components:
           maxItems: 10
           items: { $ref: '#/components/schemas/LatestInbound' }
         last_exchange: { $ref: '#/components/schemas/LastExchange' }
+        last_inbound: { $ref: '#/components/schemas/Activity' }
+        last_outbound: { $ref: '#/components/schemas/Activity' }
 
     LastExchange:
       type: object
@@ -60640,7 +61009,9 @@ components:
 
             `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
             Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
-            and the category cannot be set or changed through a metadata patch.
+            and the category cannot be set or changed through a metadata patch. A link a user
+            added (`POST /attachments/links`) holds an address the same way under the category
+            they chose, never `link`; its `source` is `link`.
 
             `email_attachment` and `message_attachment` record PROVENANCE rather than
             content: capture derives them from the transport the file arrived on, so a
@@ -60692,14 +61063,14 @@ components:
           description: >-
             True for a file a private message carried that was recorded by name, size and
             type only: no bytes were kept, so there is nothing to download (404) or read.
-            Also true for a `link` row, which is a pointer and has no bytes.
+            Also true for any row with a `url`, which is a pointer and has no bytes.
         url:
           type: [string, 'null']
           readOnly: true
           description: >-
-            The address of a `link` row, and null for every other category. It is an http or https
-            address on a known document host. The reader renders it as an outbound link to open in
-            a new tab, never as a download.
+            The address of a document that lives elsewhere: a `link` row a mail carried, or a link
+            a user added. Null for a stored file. It is an http or https address. The reader
+            renders it as an outbound link to open in a new tab, never as a download.
         origin:
           $ref: '#/components/schemas/AttachmentOrigin'
         source: { type: string }
@@ -60728,6 +61099,39 @@ components:
           description: >-
             Who the mail is from, named as the caller may see them: a contact's name only when the
             caller may see that contact. Absent when capture recorded no sender.
+
+    AddAttachmentLinkRequest:
+      type: object
+      required: [entity_type, entity_id, url]
+      properties:
+        entity_type: { type: string, enum: [contact, company, deal, activity, lead, project] }
+        entity_id: { type: string, format: uuid }
+        url:
+          type: string
+          maxLength: 2048
+          description: An http or https address, without user info.
+        title:
+          type: [string, 'null']
+          maxLength: 120
+          description: What a reader looks for. Absent or blank lists the link under its host.
+        category:
+          type: string
+          enum: [contract, offer, legal, other]
+          description: What the document is. Absent leaves it uncategorised, as an upload is.
+        contract_id:
+          type: string
+          format: uuid
+          description: The agreement this document is about, as on the upload.
+
+    AttachmentLinkPreview:
+      type: object
+      required: [url, host, read]
+      properties:
+        url: { type: string, description: 'The address as it will be stored.' }
+        host: { type: string, description: 'The lowercased host the address names.' }
+        read: { type: boolean, description: 'False when the page was not fetched or did not answer.' }
+        title: { type: string, description: "The page's Open Graph title, else its <title>. Absent when it gave none." }
+        site_name: { type: string, description: "The page's Open Graph site name. Absent when it gave none." }
 
     AttachmentListResponse:
       type: object
@@ -65269,6 +65673,8 @@ components:
       - bookings_mix
       - qualified_opportunities_created
       - initiative_pipeline
+      - account_progression
+      - source_quality
       x-extensible-enum: true
     ReportingBlockKind:
       type: string
@@ -65283,6 +65689,10 @@ components:
         `lead_cohort` follows the leads that arrived in the interval the same
         way: one point, its `outcomes` saying whether each lead was accepted,
         qualified, disqualified or is still open.
+        `account_cohort` follows the distinct accounts of those leads: one point,
+        its `outcomes` saying the furthest outcome any of an account's leads
+        reached. `source_quality` is one point per lead origin: how many leads
+        arrived from it and how many of them were linked to an opportunity.
       enum:
       - bookings_trend
       - stage_distribution
@@ -65296,6 +65706,8 @@ components:
       - breakdown
       - stage_cohort
       - lead_cohort
+      - account_cohort
+      - source_quality
       x-extensible-enum: true
     ReportingStatus:
       type: string
@@ -65728,6 +66140,8 @@ components:
       - breakdown
       - stage_cohort
       - lead_cohort
+      - account_cohort
+      - source_quality
       - question
       - assessment
       x-extensible-enum: true
@@ -71181,7 +71595,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete], x-extensible-enum: true}
         sources:
           type: array
-          maxItems: 9
+          maxItems: 10
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -71196,7 +71610,13 @@ components:
       properties:
         id: {type: string}
         availability: {type: string, enum: [available, unknown, stale, failed, withheld, not_configured, not_monitored], x-extensible-enum: true}
-        condition: {type: string, enum: [clear, processing, retrying, waiting_human, technical, unverified, recovered, unknown], x-extensible-enum: true}
+        condition:
+          type: string
+          enum: [clear, processing, retrying, waiting_human, technical, unverified, recovered, unknown, information]
+          x-extensible-enum: true
+          description: >-
+            `information` is a fact an operator may want, never a fault: it needs no action, raises no
+            finding and leaves the assessment and completeness as they are.
         code: {type: string, description: "Safe presentation code, never raw failure text."}
         permission: {type: string}
         scope: {type: string, enum: [workspace, installation, shared], x-extensible-enum: true}
@@ -71209,6 +71629,26 @@ components:
         unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads], x-extensible-enum: true}
         window_start: {type: string, format: date-time}
         window_end: {type: string, format: date-time}
+        unplaced_changes:
+          type: array
+          maxItems: 50
+          description: >-
+            The `unplaced` source's breakdown of the machine changes in its window that the
+            `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds
+            the sum of these entries when more kinds occurred than are listed.
+          items: {$ref: '#/components/schemas/HealthUnplacedChange'}
+    HealthUnplacedChange:
+      type: object
+      additionalProperties: false
+      required: [entity_type, action, count]
+      properties:
+        entity_type: {type: string}
+        action:
+          type: string
+          description: >-
+            The audit action, or for a list membership or a tagging the link it filed:
+            `added`, `removed` or `applied`.
+        count: {type: integer, minimum: 1}
     HealthFinding:
       type: object
       additionalProperties: false
@@ -73148,7 +73588,7 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too, so it carries the installation name''s rule: `422 required` when blank, `422 too_long` past 200 characters.' }
+        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
         legal_name: { type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
@@ -74569,9 +75009,22 @@ components:
       description: |
         What the reader has decided about answering their own queue: one row per kind
         that is eligible to apply automatically, whether or not they have ever met it.
-      required: [data]
+      required: [data, auto_apply_enabled]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         data: { type: array, items: { $ref: '#/components/schemas/KindAutonomy' } }
+        auto_apply_enabled:
+          type: boolean
+          description: |
+            The installation's switch over every row. False means nothing applies
+            itself for anybody; the modes in `data` stay as the reader set them.
+
+    AutoApplyInstallation:
+      type: object
+      required: [enabled]
+      properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
+        enabled: { type: boolean }
 
     KindAutonomy:
       type: object
@@ -75296,6 +75749,10 @@ components:
         state: { type: string, enum: [unknown, granted, withdrawn], x-extensible-enum: true }
         lawful_basis: { type: [string, 'null'] }
         double_opt_in_confirmed_at: { type: [string, 'null'], format: date-time }
+        confirmation_pending_until:
+          type: [string, 'null']
+          format: date-time
+          description: When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
         updated_at: { type: [string, 'null'], format: date-time }
 
     ConsentEvent:
@@ -81639,8 +82096,9 @@ components:
     WorklistPlanCoverage:
       type: object
       description: |
-        Whose weekly plans this read looked at, present only when `scope` is `team` and the
-        due commitments were read across the team roster. Absent under every other scope.
+        Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+        Both read the due commitments across the reader's team roster, the reader included.
+        Absent under every other scope.
 
         It exists because "nothing due" and "not looked at" differ. A teammate whose plan
         could not be read contributes no rows, and without this a lead would read their

@@ -44,7 +44,7 @@ customer signs them, and Margince does not check them.
 [handbook/compliance.md](handbook/compliance.md) says why.
 
 - [compliance/README.md](compliance/README.md): the list, with each German document next to its
-  English copy. `extensions/de` ships them, and only the German text is the legal one.
+  English copy. `extensions/eu` ships them, and only the German text is the legal one.
 
 ### Attacks: what we must do as the maker
 
@@ -158,9 +158,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [design-a-bench-case.md](how-to/design-a-bench-case.md): add a screen to the daily-use speed test
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
-- [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
-- Extension text: [the work](reference/extensions-can-override-core-s-translati.md). Extension use of core's AI models and files: [the work](reference/extensions-can-use-core-s-ai-models-s3-a.md), [what it can use](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md).
-- Extension apps: [the work](reference/extensions-can-appear-as-apps-in-the-hom.md), [why](explanation/extension-apps-in-the-drawer.md).
+- [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`. Also [update-a-messaging-policy-pack.md](how-to/update-a-messaging-policy-pack.md): change the mail rules in `extensions/eu` or `extensions/apac`.
+- Extension text: [the work](reference/extensions-can-override-core-s-translati.md). Extension use of core's AI models and files: [the work](reference/extensions-can-use-core-s-ai-models-s3-a.md), [what it can use](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md). Extension apps: [the work](reference/extensions-can-appear-as-apps-in-the-hom.md), [why](explanation/extension-apps-in-the-drawer.md).
 - [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
   extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
@@ -322,6 +321,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 - [scheduling.md](explanation/scheduling.md): how the app finds a meeting time.
 - [privacy-and-consent.md](explanation/privacy-and-consent.md): whether a message may go, and the GDPR
   rules.
+- [messaging-policy-packs.md](explanation/messaging-policy-packs.md): where the mail rules of `extensions/eu` and `extensions/apac` are read.
 
 #### AI, search and workflows
 

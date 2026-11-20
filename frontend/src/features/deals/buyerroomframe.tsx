@@ -221,10 +221,9 @@ export function ContactCard({
             {stewardName ? <p className="t-h3">{stewardName}</p> : null}
           </div>
         </div>
-        <p className="t-caption buyer-meta">
-          {t("buyer.contact", { steward })}
-          {access === "closed" ? ` ${t("buyer.closedNote")}` : ""}
-        </p>
+        {access === "closed" ? (
+          <p className="t-caption buyer-meta">{t("buyer.closedNote")}</p>
+        ) : null}
         <p className="buyer-contact-body">
           {t("buyer.contactBody", { steward })}
         </p>

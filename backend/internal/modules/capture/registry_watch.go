@@ -120,13 +120,11 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 		return err
 	}
 	// FENCED ON THE GENERATION THE READ SAW. The connector call above is a round
-	// trip, and a rebind can commit inside it — pointing the row at a different
-	// mailbox and clearing the handle on the way past. Unfenced, this write puts
-	// the OLD mailbox's subscription back, which is the reset undone by a
-	// renewal that was already in flight when it happened. A rebind bumps the
-	// generation, so a stale renewal matches nothing and writes nothing; the
-	// scan picks the row up again on its own with no handle to renew by, and
-	// registers.
+	// trip under the credential read before it. A disconnect inside it withdraws
+	// that credential and bumps the generation, and a reconnect can set the
+	// status back before this write. The status guard cannot see that; the
+	// generation can, so the renewal writes nothing and the scan renews the row
+	// under the new grant.
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE capture_connection SET watch_expires_at = $2, watch_ref = NULLIF($3, '')

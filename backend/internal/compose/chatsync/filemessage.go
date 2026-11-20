@@ -61,7 +61,7 @@ func (f *Filer) FileMessage(ctx context.Context, kind string, id ids.UUID, ref s
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	reply, err := summarise(ctx, f.Lane, link, record, messages, true)
+	reply, err := summariser{lane: f.Lane, pool: f.Pool}.summarise(ctx, link, record, messages, true)
 	if errors.Is(err, errNoModel) {
 		return crmcontracts.Activity{}, chatlinks.ErrNoSummaryModel
 	}

@@ -7,10 +7,16 @@ import {
   currencyOptions,
   type LeadingCurrencies,
 } from "../../format/currencychoices";
-import { typedNumberFault } from "../../format/decimalinput";
+import { typedNumberFault, typedNumberOrNaN } from "../../format/decimalinput";
+import { typedMinorUnits } from "../../format/minorunits";
 import { billingModelLabel } from "../../format/productbilling";
 import type { Locale, Translator } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
+import {
+  fieldCheckSentence,
+  moneyLimit,
+  percentLimit,
+} from "../../lib/problem";
 import {
   BILLING_MONTHS,
   CADENCE,
@@ -43,14 +49,7 @@ export function productFields(
       required: true,
       showWhen: (values) => values.unit === OTHER_UNIT,
     },
-    amountField(
-      { key: "unit_price", label: "product.unitPrice", required: true },
-      {
-        currency: (values) => values.currency || leadingCurrencies[0],
-        locale,
-        t,
-      },
-    ),
+    priceField(leadingCurrencies, locale, t),
     {
       key: "currency",
       label: "product.currency",
@@ -62,7 +61,10 @@ export function productFields(
       key: "default_tax_rate",
       label: "product.taxRate",
       type: "decimal",
-      validate: (value) => typedNumberFault(value, locale, t),
+      limit: percentLimit(locale),
+      validate: (value) =>
+        typedNumberFault(value, locale, t) ??
+        percentFault(value, locale, t("product.taxRate"), { min: "0" }),
     },
     {
       // Which rate of the country an offer is issued from applies. Unset is
@@ -121,4 +123,68 @@ export function productFields(
       ],
     },
   ];
+}
+
+// The shared money box, with below zero in the server's words.
+function priceField(
+  leadingCurrencies: LeadingCurrencies,
+  locale: Locale,
+  t: Translator,
+): CreateField {
+  const currency = (values: Record<string, string>) =>
+    values.currency || leadingCurrencies[0];
+  const money = amountField(
+    {
+      key: "unit_price",
+      label: "product.unitPrice",
+      required: true,
+      wireField: "unit_price_minor",
+    },
+    { currency, locale, t },
+  );
+  const label = t("product.unitPrice");
+  return {
+    ...money,
+    // A refusal names no currency: the one the refused form was sent in.
+    limit: (wire, sent) => moneyLimit(currency(sent), locale)(wire),
+    validate: (value, values = {}) => {
+      const typed = typedMinorUnits(value, currency(values), locale);
+      if ("minor" in typed && typed.minor < 0) {
+        return fieldCheckSentence(
+          "out_of_range",
+          locale,
+          { label, limit: moneyLimit(currency(values), locale) },
+          { min: "0" },
+        );
+      }
+      return money.validate?.(value, values);
+    },
+  };
+}
+
+/**
+ * A typed percent outside the server's bounds, in the words of its refusal.
+ * `bounds` are percent, as the wire states them.
+ */
+export function percentFault(
+  text: string,
+  locale: Locale,
+  label: string,
+  bounds: Readonly<{ min?: string; max?: string }>,
+): string | undefined {
+  if (text.trim() === "") {
+    return undefined;
+  }
+  const value = typedNumberOrNaN(text, locale);
+  const { min, max } = bounds;
+  const below = min !== undefined && value < Number(min);
+  const above = max !== undefined && value > Number(max);
+  return below || above
+    ? fieldCheckSentence(
+        "out_of_range",
+        locale,
+        { label, limit: percentLimit(locale) },
+        bounds,
+      )
+    : undefined;
 }

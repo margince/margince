@@ -10,14 +10,16 @@ import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { QueryStates } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
 import { LEGAL_ENTITIES_KEY } from "../../lib/legalentities.queries";
 import { problemCode, unwrap } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
 import { MemberEntityField, useMemberEntityDraft } from "./users-entitycell";
+import { memberChecks, memberRefusal } from "./users-invite-form";
 import {
   memberMutationKey,
   offers,
@@ -35,8 +37,15 @@ export function EditMember({
   onClose,
 }: Readonly<{ member: User; onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const id = useId();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
+  const labels = {
+    display_name: t("users.nameLabel"),
+    email: t("users.emailLabel"),
+    role: t("users.roleLabel"),
+  };
   const refresh = useMemberRefresh();
   const toast = useToast();
   const [baseline, setBaseline] = useState(member);
@@ -87,7 +96,9 @@ export function EditMember({
       toast.show(t("users.saved"));
       onClose();
     },
+    onError: (error) => faults.show(memberRefusal(error, t, labels).byField),
   });
+  const refused = memberRefusal(save.error, t, labels);
   const reload = useMutation({
     mutationFn: async (memberId: string) =>
       unwrap(
@@ -125,43 +136,58 @@ export function EditMember({
       </Heading>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (ready && !save.isPending)
-            save.mutate({
-              name,
-              email,
-              role: roleChanged ? role : "",
-              teams: teamsChanged ? teamIds : undefined,
-              updatedAt: baseline.updated_at ?? "",
-              memberId: member.id,
-              entity: entity.change,
-            });
+          if (!ready || save.isPending) return;
+          const typed = { email, display_name: name };
+          if (faults.show(memberChecks(typed, labels, locale))) {
+            save.reset();
+            return;
+          }
+          save.mutate({
+            name,
+            email,
+            role: roleChanged ? role : "",
+            teams: teamsChanged ? teamIds : undefined,
+            updatedAt: baseline.updated_at ?? "",
+            memberId: member.id,
+            entity: entity.change,
+          });
         }}
       >
         {baseline.status === "invited" && <p>{t("users.invitedSetup")}</p>}
         {baseline.status === "deactivated" && <p>{t("users.editInactive")}</p>}
-        <Field label={t("users.nameLabel")} required>
+        <Field
+          label={labels.display_name}
+          required
+          error={faults.of("display_name")}
+        >
           {(control) => (
             <TextInput
               {...control}
-              required
               value={name}
               maxLength={255}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                faults.edited("display_name");
+              }}
             />
           )}
         </Field>
-        <Field label={t("users.emailLabel")} required>
+        <Field label={labels.email} required error={faults.of("email")}>
           {(control) => (
             <TextInput
               {...control}
               type="email"
               disabled={!baseline.email_editable}
-              required
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                faults.edited("email");
+              }}
             />
           )}
         </Field>
@@ -173,15 +199,19 @@ export function EditMember({
           {null}
         </QueryStates>
         <Field
-          label={t("users.roleLabel")}
+          label={labels.role}
           hint={stopsCapture(role, memberRole(baseline))}
           hintLive
+          error={faults.of("role")}
         >
           {(control) => (
             <Select
               {...control}
               value={role}
-              onChange={setRole}
+              onChange={(next) => {
+                setRole(next);
+                faults.edited("role");
+              }}
               disabled={!roles.isSuccess || !offers(member, "change_role")}
               options={roleOptions(t, roles.data ?? [])}
               placeholder={t("users.keepRoles")}
@@ -197,7 +227,7 @@ export function EditMember({
         {!managesTeams && <p>{t("users.teamAdminOnly")}</p>}
         <MemberEntityField draft={entity} />
         <MergedAccounts member={baseline} />
-        {save.error && <ErrorLine error={save.error} />}
+        {refused.rest !== null && <ErrorLine>{refused.rest}</ErrorLine>}
         {problemCode(save.error) === "version_skew" && (
           <Button
             type="button"
@@ -217,13 +247,7 @@ export function EditMember({
           type="submit"
           form={formId}
           variant="primary"
-          disabled={
-            !ready ||
-            save.isPending ||
-            reload.isPending ||
-            !name.trim() ||
-            !email.trim()
-          }
+          disabled={!ready || save.isPending || reload.isPending}
         >
           {t("users.editSave")}
         </Button>

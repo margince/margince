@@ -591,6 +591,7 @@ public.contact.anonymized_address_key_id document
 public.contact.captured_by document
 public.contact.first_name exempt captured name parts retain the existing ingestion name rules
 public.contact.full_name exempt captured names retain the existing ingestion name rules
+public.contact.greeting_register document
 public.contact.last_name exempt captured name parts retain the existing ingestion name rules
 public.contact.narrowing_reason note
 public.contact.photo_object_key document

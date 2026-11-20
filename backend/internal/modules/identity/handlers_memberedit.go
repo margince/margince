@@ -43,10 +43,17 @@ func (h Handlers) UpdateMember(w http.ResponseWriter, r *http.Request, id crmcon
 		LegalEntity: legalEntityOf(req.LegalEntityId), ExpectedUpdatedAt: req.ExpectedUpdatedAt,
 	})
 	if err != nil {
-		httperr.Write(w, r, err)
+		httperr.Write(w, r, memberEditRefusal(err))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// memberEditRefusal names an edit's taken email with the code an invite's has,
+// so a screen places it on the email field.
+func memberEditRefusal(err error) error {
+	return conflictIf(err, errEmailTaken, "email_taken",
+		"another member already signs in with this email; choose a different address")
 }
 
 // RemoveMember requires a reviewed dependency snapshot before permanent removal.

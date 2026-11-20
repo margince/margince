@@ -31,12 +31,13 @@ import (
 // A var rather than a const: the seat-name and meeting-ahead subselects are
 // built by functions. The meeting-ahead one sits beside last_activity_at so the
 // stalled flag reads both from one snapshot.
-var dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_id, currency, pipeline_id, stage_id,
+var dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_id, currency,
+	fx_rate_to_base::text, fx_rate_date, pipeline_id, stage_id,
 	company_id, project_id, owner_id, partner_company_id, partner_attribution, status, lost_reason,
 	lost_reason_code, lost_reason_basis, won_without_contract_reason, won_without_contract_detail,
 	description, commercial_motion, priority, acquisition_source,
 	expected_close_date, close_date_provisional, closed_at, win_probability_override, win_probability_set_by,
-	` + StageWinProbabilitySQL("") + `, wait_until, last_activity_at,
+	` + StageWinProbabilitySQL("") + `, wait_until, ` + PauseEndsSQL("") + `, last_activity_at,
 	` + MeetingAheadSQL("") + `,
 	source, captured_by,
 	source_system, source_author_id, source_author_name,
@@ -69,7 +70,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var override *int
 	var overrideBy *string
 	var stageProbability int
-	var expectedClose, waitUntil *time.Time
+	var expectedClose, waitUntil, fxRateDate, pauseEnds *time.Time
 	var closeDateProvisional, meetingAhead bool
 	var version int64
 
@@ -77,11 +78,12 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var sourceSystem, authorName, authorSeatName *string
 	var authorID *ids.UUID
 	dests := []any{
-		&id, &d.Name, &d.AmountMinor, &d.ExpectedArrMinor, &arrSource, &d.Currency, &pipelineID, &stageID,
+		&id, &d.Name, &d.AmountMinor, &d.ExpectedArrMinor, &arrSource, &d.Currency,
+		&d.FxRateToBase, &fxRateDate, &pipelineID, &stageID,
 		&companyID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
 		&d.LostReasonCode, &lossBasis, &wonReason, &d.WonWithoutContractDetail,
 		&d.Description, &motion, &priority, &d.AcquisitionSource,
-		&expectedClose, &closeDateProvisional, &d.ClosedAt, &override, &overrideBy, &stageProbability, &waitUntil, &d.LastActivityAt,
+		&expectedClose, &closeDateProvisional, &d.ClosedAt, &override, &overrideBy, &stageProbability, &waitUntil, &pauseEnds, &d.LastActivityAt,
 		&meetingAhead,
 		&d.Source, &d.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
@@ -97,6 +99,40 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	probability, source := EffectiveWinProbability(override, overrideBy, stageProbability)
 	wireSource := crmcontracts.DealWinProbabilitySource(source)
 	d.WinProbability, d.WinProbabilitySource, d.StageWinProbability = &probability, &wireSource, &stageProbability
+	setDealEnums(&d, wonReason, lossBasis, motion, priority)
+
+	d.Id = openapi_types.UUID(id)
+	pid := openapi_types.UUID(pipelineID)
+	d.PipelineId = &pid
+	sid := openapi_types.UUID(stageID)
+	d.StageId = &sid
+	d.CompanyId = uuidPtr(companyID)
+	d.ArrSourceOfferId = uuidPtr(arrSource)
+	d.ProjectId = uuidPtr(projectID)
+	d.OwnerId = uuidPtr(ownerID)
+	d.PartnerCompanyId = uuidPtr(partnerID)
+	d.Status = crmcontracts.DealStatus(status)
+	if expectedClose != nil {
+		d.ExpectedCloseDate = &openapi_types.Date{Time: *expectedClose}
+	}
+	if fxRateDate != nil {
+		d.FxRateDate = &openapi_types.Date{Time: *fxRateDate}
+	}
+	d.CloseDateProvisional = &closeDateProvisional
+	if waitUntil != nil {
+		d.WaitUntil = &openapi_types.Date{Time: *waitUntil}
+	}
+	d.WaitEndsAt = pauseEnds
+	d.Version = &version
+	d.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
+	d.ImportedFrom = provenance.ImportedFrom(sourceSystem)
+	stalled := IsStalled(status, d.CreatedAt, d.LastActivityAt, pauseEnds, meetingAhead, time.Now().UTC())
+	d.Stalled = &stalled
+	return d, nil
+}
+
+// setDealEnums maps the four nullable enum columns onto their wire types.
+func setDealEnums(d *crmcontracts.Deal, wonReason, lossBasis, motion, priority *string) {
 	if wonReason != nil {
 		reason := crmcontracts.DealWonWithoutContractReason(*wonReason)
 		d.WonWithoutContractReason = &reason
@@ -113,31 +149,6 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 		pr := crmcontracts.DealPriority(*priority)
 		d.Priority = &pr
 	}
-
-	d.Id = openapi_types.UUID(id)
-	pid := openapi_types.UUID(pipelineID)
-	d.PipelineId = &pid
-	sid := openapi_types.UUID(stageID)
-	d.StageId = &sid
-	d.CompanyId = uuidPtr(companyID)
-	d.ArrSourceOfferId = uuidPtr(arrSource)
-	d.ProjectId = uuidPtr(projectID)
-	d.OwnerId = uuidPtr(ownerID)
-	d.PartnerCompanyId = uuidPtr(partnerID)
-	d.Status = crmcontracts.DealStatus(status)
-	if expectedClose != nil {
-		d.ExpectedCloseDate = &openapi_types.Date{Time: *expectedClose}
-	}
-	d.CloseDateProvisional = &closeDateProvisional
-	if waitUntil != nil {
-		d.WaitUntil = &openapi_types.Date{Time: *waitUntil}
-	}
-	d.Version = &version
-	d.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
-	d.ImportedFrom = provenance.ImportedFrom(sourceSystem)
-	stalled := IsStalled(status, d.CreatedAt, d.LastActivityAt, waitUntil, meetingAhead, time.Now().UTC())
-	d.Stalled = &stalled
-	return d, nil
 }
 
 // attachModelWritten names the deal's fields a model wrote and nobody edited

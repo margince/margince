@@ -154,20 +154,33 @@ func CurrentLeadEngagementTx(ctx context.Context, tx pgx.Tx, source ids.UUID, ow
 // SystemTaskFiledOnTx reports whether a task from this source and key is filed
 // on the record, done or archived included, as LogActivityTx's replay check does.
 func SystemTaskFiledOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, sourceID, entityType string, entityID ids.UUID) (bool, error) {
+	filed, err := SourceFiledOnTx(ctx, tx, sourceSystem, []string{storekit.EscapeLike(sourceID)}, entityType, entityID)
+	return !filed.IsZero(), err
+}
+
+// SourceFiledOnTx answers an activity from this source, under a key matching
+// one of the LIKE patterns, that is filed on the record. Done and archived
+// rows count, as in LogActivityTx's replay check. None answers the zero id.
+func SourceFiledOnTx(ctx context.Context, tx pgx.Tx, sourceSystem string, keyPatterns []string, entityType string, entityID ids.UUID) (ids.UUID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
-		return false, err
+		return ids.Nil, err
 	}
 	column := linkColumn(entityType)
 	if column == "" {
-		return false, &InvalidLinkTypeError{EntityType: entityType}
+		return ids.Nil, &InvalidLinkTypeError{EntityType: entityType}
 	}
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	query := storekit.SQLf(`SELECT EXISTS (SELECT 1 FROM activity t JOIN activity_link l ON l.activity_id = t.id
-		 WHERE t.source_system = $%d AND t.source_id = $%d AND l.%s = $%d)`, arg(sourceSystem), arg(sourceID), column, arg(entityID))
-	var filed bool
-	if err := tx.QueryRow(ctx, query, args...).Scan(&filed); err != nil {
-		return false, fmt.Errorf("activities: reading the %s task on a %s: %w", sourceSystem, entityType, err)
+	query := storekit.SQLf(`SELECT t.id FROM activity t JOIN activity_link l ON l.activity_id = t.id
+		 WHERE t.source_system = $%d AND t.source_id LIKE ANY($%d) AND l.%s = $%d
+		 ORDER BY t.id LIMIT 1`, arg(sourceSystem), arg(keyPatterns), column, arg(entityID))
+	var filed ids.UUID
+	err := tx.QueryRow(ctx, query, args...).Scan(&filed)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.Nil, nil
+	}
+	if err != nil {
+		return ids.Nil, fmt.Errorf("activities: reading the %s activity on a %s: %w", sourceSystem, entityType, err)
 	}
 	return filed, nil
 }

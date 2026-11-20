@@ -63,7 +63,7 @@ function recordedVerdict(
   if (replied) {
     return repliedVerdict(replied, asOf, { t, locale, zone });
   }
-  if (waitHolds(deal.wait_until, zone, new Date(asOf))) {
+  if (waitHolds(deal.wait_until, deal.wait_ends_at, new Date(asOf))) {
     return {
       word: t("deal.verdict.onHold"),
       sentence: t("deal.verdict.onHoldUntil", { date: day(deal.wait_until) }),

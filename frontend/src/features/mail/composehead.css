@@ -91,6 +91,12 @@
   box-shadow: none;
   font-weight: var(--fontWeightMedium);
 }
+/* The bare lines still show which one the keyboard is in. */
+.compose-address-field .token-input:focus-within,
+.compose-subject-field .input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-glow);
+}
 
 /* The country a recipient's chip carries: a glyph and the code, as small as
    the remove cross beside it, with the same 24px floor for the press. */

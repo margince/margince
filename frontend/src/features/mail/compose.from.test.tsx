@@ -46,11 +46,12 @@ afterEach(() => {
 
 describe("the From choice", () => {
   it("offers each sending mailbox when the sender holds more than one", async () => {
+    const user = userEvent.setup();
     stubRoster([work, second]);
     const onChange = vi.fn();
     renderWithQueryClient(<FromMailboxRow value="" onChange={onChange} />);
-    await userEvent.click(await screen.findByTestId("compose-from-mailbox"));
-    await userEvent.click(
+    await user.click(await screen.findByTestId("compose-from-mailbox"));
+    await user.click(
       await screen.findByRole("option", { name: "rep@second.test" }),
     );
     expect(onChange).toHaveBeenCalledWith(second.id);

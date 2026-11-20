@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/storedmail"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
@@ -30,11 +31,11 @@ type senderAuthOriginal struct {
 }
 
 func estimateSenderAuthOriginals(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
-	return countStoredMail(ctx, q, senderAuthOriginalScope, maximum)
+	return storedmail.Count(ctx, q, senderAuthOriginalScope, maximum)
 }
 
 func restoreSenderAuthBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-	return pageStoredMail(ctx, tx, in, "a.id, a.counterparty_email, "+originalstore.SQL("rc"), senderAuthOriginalScope,
+	return storedmail.Page(ctx, tx, in, "a.id, a.counterparty_email, "+originalstore.SQL("rc"), senderAuthOriginalScope,
 		func(row *senderAuthOriginal) (ids.UUID, *[]byte) { return row.ID, &row.Payload }, restoreSenderAuth)
 }
 

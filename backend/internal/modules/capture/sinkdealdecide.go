@@ -49,12 +49,13 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	var channel *string
 	var filed bool
 	var project *ids.UUID
+	var sender string
 	err := tx.QueryRow(ctx, `
 		SELECT a.kind, a.channel_provider,
 		       EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'deal'),
 		       (SELECT l.project_id FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'project'),
-		       coalesce(a.deal_topic_digest, '')
-		  FROM activity a WHERE a.id = $1`, activityID).Scan(&kind, &channel, &filed, &project, &facts.topicMemo)
+		       coalesce(a.deal_topic_digest, ''), coalesce(a.counterparty_email, '')
+		  FROM activity a WHERE a.id = $1`, activityID).Scan(&kind, &channel, &filed, &project, &facts.topicMemo, &sender)
 	if err != nil {
 		return facts, fmt.Errorf("capture: reading the mail the deal rule files: %w", err)
 	}
@@ -69,6 +70,10 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	case project != nil:
 		facts.project = *project
 		return facts, nil
+	}
+	// No one a suppressed mail names files it on a deal.
+	if suppressed, err := senderSuppressedTx(ctx, tx, sender); err != nil || suppressed {
+		return facts, err
 	}
 	if facts.contacts, facts.provenContacts, err = mailContacts(ctx, tx, activityID); err != nil {
 		return facts, err
