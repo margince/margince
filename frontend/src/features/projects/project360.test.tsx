@@ -218,6 +218,32 @@ describe("ProjectScreen", () => {
     expect(
       within(drawer).getByText(/No file is attached to this project/),
     ).toBeTruthy();
+    await user.click(
+      within(drawer).getByRole("button", { name: en["docs.add.action"] }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: en["docs.add.title"] }),
+    ).toBeTruthy();
+  });
+
+  it("offers no upload on a project this caller may not change", async () => {
+    const user = userEvent.setup();
+    projectsBackend({
+      view: project360({
+        project: project({ owner_id: "u-someone-else", writable: false }),
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(
+      screen.getByRole("button", { name: en["project.documents.title"] }),
+    );
+    const drawer = await screen.findByRole("dialog", {
+      name: en["project.documents.title"],
+    });
+    expect(
+      within(drawer).queryByRole("button", { name: en["docs.add.action"] }),
+    ).toBeNull();
   });
 
   // The update itself is read in the full history, which the More menu opens.

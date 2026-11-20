@@ -3,38 +3,38 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
 import {
   Button,
   Field,
   Modal,
   SegmentedControl,
   TextInput,
-} from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
-import { ChoiceList } from "../../design-system/choicelist";
-import { FileDropzone } from "../../design-system/filedropzone";
-import { Heading } from "../../design-system/heading";
+} from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
+import { ChoiceList } from "../design-system/choicelist";
+import { FileDropzone } from "../design-system/filedropzone";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
-} from "../../design-system/recordpicker";
-import { Select } from "../../design-system/select";
-import { searchWords } from "../../format/collate";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import { fileListKeys } from "../../lib/attachmentkeys";
+} from "../design-system/recordpicker";
+import { Select } from "../design-system/select";
+import { searchWords } from "../format/collate";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
+import { fileListKeys } from "../lib/attachmentkeys";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
   type AttachmentParent,
   uploadAttachment,
-} from "../../lib/attachmentupload";
-import { useCanWrite } from "../../lib/capability";
-import { useHealthScope } from "../../lib/healthscope";
-import { labelFor } from "../../lib/labelfor";
-import { problemMessageOf, unwrap } from "../../lib/problem";
-import { formatUploadLimit, useMaxUploadBytes } from "../../lib/uploadlimit";
+} from "../lib/attachmentupload";
+import { useCanWrite } from "../lib/capability";
+import { useHealthScope } from "../lib/healthscope";
+import { labelFor } from "../lib/labelfor";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { formatUploadLimit, useMaxUploadBytes } from "../lib/uploadlimit";
 import {
   CATEGORY_KEYS,
   type Choosable,

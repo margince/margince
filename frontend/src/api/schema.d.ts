@@ -42027,7 +42027,7 @@ export interface components {
             };
             health?: components["schemas"]["Project360Health"];
             contracts?: components["schemas"]["ContractListResponse"];
-            /** @description The files attached to the project itself, newest first. */
+            /** @description The project's own uploads and the files of the activities filed under it, newest first. */
             documents?: {
                 data: components["schemas"]["Attachment"][];
                 page: components["schemas"]["PageInfo"];

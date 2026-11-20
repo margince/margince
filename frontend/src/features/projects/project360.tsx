@@ -259,7 +259,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         title={t("project.documents.title")}
         onClose={() => setDrawer(null)}
       >
-        <ProjectDocuments view={view} />
+        <ProjectDocuments view={view} readOnly={readOnly} />
       </ProjectDrawer>
       <ProjectDrawer
         open={drawer === "contacts"}

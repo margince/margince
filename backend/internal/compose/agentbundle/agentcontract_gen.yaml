@@ -39467,7 +39467,7 @@ components:
         contracts: {$ref: '#/components/schemas/ContractListResponse'}
         documents:
           type: object
-          description: The files attached to the project itself, newest first.
+          description: The project's own uploads and the files of the activities filed under it, newest first.
           required: [data, page]
           properties:
             data: {type: array, items: {$ref: '#/components/schemas/Attachment'}}

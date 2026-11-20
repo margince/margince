@@ -1,18 +1,18 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx frontend/src/features/projects/projectdocuments.tsx frontend/src/components/adddocument.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
 
-1. **Documents** on a company, a contact or a deal: the papers of the
-   relationship.
+1. **Documents** on a company, a contact, a deal or a project: the papers
+   of the relationship.
 2. **Files** on a deal: everything the deal has picked up, including
    attachments that arrived with email.
 3. **Document sets** in Settings → Knowledge: bodies of text the whole
    company can ask questions of.
 
 ### How do I upload a document?
-To upload a document in Margince, such as a customer's signed contract, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
+To upload a document in Margince, such as a customer's signed contract, open the company, contact or deal. Choose its **Documents** tab and click **Add document**. On a project, press **Documents** on the **Contracts** card and click **Add document** in the panel that opens.
 1. On a company, set **About** to **This company** or **A deal** and pick the deal.
 2. Choose a **Category** (a signed contract takes **SOW/Contract**); **Title** is optional.
 3. Drop the file on **File**, or click to choose one, and click **Upload**.

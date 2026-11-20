@@ -13,11 +13,11 @@ import {
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Button } from "../../design-system/atoms";
-import { pickOption } from "../../design-system/select-testing";
-import { LocaleProvider } from "../../i18n";
-import { companyDocumentsKey, dealFilesKey } from "../../lib/attachmentkeys";
-import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
+import { Button } from "../design-system/atoms";
+import { pickOption } from "../design-system/select-testing";
+import { LocaleProvider } from "../i18n";
+import { companyDocumentsKey, dealFilesKey } from "../lib/attachmentkeys";
+import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../lib/attachmentupload";
 import { AddDocumentDialog } from "./adddocument";
 
 // What this dialog owes the reader: the file lands on the record they chose,
