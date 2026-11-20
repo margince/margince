@@ -29,22 +29,25 @@ func TestContractRouterNegotiatesJSONCompressionAndLeavesStreamsFlushable(t *tes
 	for _, tt := range []struct {
 		name, mime, accept string
 		compressed, flush  bool
+		// sameForEveryClient: the client offered gzip and the type is never
+		// compressed, so the answer does not vary on Accept-Encoding.
+		sameForEveryClient bool
 	}{
-		{"JSON with gzip", "application/json; charset=utf-8", "gzip", true, false},
-		{"problem JSON with gzip", "application/problem+json", "gzip", true, false},
-		{"JSON without negotiation", "application/json", "", false, false},
-		{"refused gzip", "application/json", "gzip;q=0", false, false},
-		{"weighted gzip", "application/json", "gzip;q=0.5", true, false},
-		{"explicit refusal overrides wildcard", "application/json", "*;q=1, gzip;q=0", false, false},
-		{"wildcard accepts gzip", "application/json", "*;q=0.8", true, false},
-		{"identity preferred", "application/json", "gzip;q=0.5, identity;q=1", false, false},
-		{"uppercase coding", "application/json", "GZIP", true, false},
-		{"different coding token", "application/json", "notgzip", false, false},
-		{"malformed weight", "application/json", "gzip;q=invalid", false, false},
-		{"nonfinite weight", "application/json", "gzip;q=NaN", false, false},
+		{"JSON with gzip", "application/json; charset=utf-8", "gzip", true, false, false},
+		{"problem JSON with gzip", "application/problem+json", "gzip", true, false, false},
+		{"JSON without negotiation", "application/json", "", false, false, false},
+		{"refused gzip", "application/json", "gzip;q=0", false, false, false},
+		{"weighted gzip", "application/json", "gzip;q=0.5", true, false, false},
+		{"explicit refusal overrides wildcard", "application/json", "*;q=1, gzip;q=0", false, false, false},
+		{"wildcard accepts gzip", "application/json", "*;q=0.8", true, false, false},
+		{"identity preferred", "application/json", "gzip;q=0.5, identity;q=1", false, false, false},
+		{"uppercase coding", "application/json", "GZIP", true, false, false},
+		{"different coding token", "application/json", "notgzip", false, false, false},
+		{"malformed weight", "application/json", "gzip;q=invalid", false, false, false},
+		{"nonfinite weight", "application/json", "gzip;q=NaN", false, false, false},
 
-		{"event stream", "text/event-stream", "gzip", false, true},
-		{"attachment", "application/octet-stream", "gzip", false, false},
+		{"event stream", "text/event-stream", "gzip", false, true, true},
+		{"attachment", "application/octet-stream", "gzip", false, false, true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			server := responseCodecServer{serve: func(w http.ResponseWriter, _ *http.Request) {
@@ -75,8 +78,12 @@ func TestContractRouterNegotiatesJSONCompressionAndLeavesStreamsFlushable(t *tes
 				t.Fatal("unnegotiated or non-JSON response was compressed")
 			}
 			vary := strings.Join(rec.Header().Values("Vary"), ",")
-			if !strings.Contains(vary, "Accept-Encoding") || !strings.Contains(vary, "Accept-Language") {
-				t.Fatalf("Vary lost a negotiated header: %q", vary)
+			want := 1
+			if tt.sameForEveryClient {
+				want = 0
+			}
+			if strings.Count(vary, "Accept-Encoding") != want || !strings.Contains(vary, "Accept-Language") {
+				t.Fatalf("Vary = %q, want Accept-Language and Accept-Encoding %d time(s)", vary, want)
 			}
 			if !bytes.Equal(got, payload) {
 				t.Fatal("response body changed")
