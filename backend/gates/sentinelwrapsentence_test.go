@@ -16,6 +16,7 @@ package gates
 // package vars that wrap it in turn, in this package or another one.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -32,6 +33,10 @@ import (
 // packagePrefix is a leading identifier-shaped word and a colon. That is how a
 // Go package or step names itself, and never how a sentence for a caller opens.
 var packagePrefix = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_./-]*: `)
+
+// valueOpening is a format that opens with a value and a colon, the prefix
+// shape filled in at run time. %w is not one: it leads with the sentinel's text.
+var valueOpening = regexp.MustCompile(`^%[^w%]: `)
 
 // sentinelWrapRoots are the trees of this module that ship code. extensions/
 // is not here: a unit imports only backend/pkg, which holds no apperrors.
@@ -53,6 +58,19 @@ type sentinelWrap struct {
 	at     token.Position
 	format string
 	opaque bool
+	// opener is the value a format that opens with a verb puts first.
+	opener ast.Expr
+	// helper is set when opener is a parameter of the enclosing function. Its
+	// callers then write the opening, and each call is judged instead.
+	helper *wrapHelper
+}
+
+// wrapHelper is a function that wraps a sentinel around a sentence its caller
+// passes as the parameter at index. rest is the format after that opening.
+type wrapHelper struct {
+	pkg, fn string
+	index   int
+	rest    string
 }
 
 func TestEverySentinelWrapOpensAsASentence(t *testing.T) {
@@ -61,21 +79,37 @@ func TestEverySentinelWrapOpensAsASentence(t *testing.T) {
 	for _, root := range sentinelWrapRoots {
 		sources = append(sources, wrapSources(t, root)...)
 	}
-	sentinels := sentinelVars(apperrorsSeed(t), sources)
-
-	wraps := 0
-	for _, src := range sources {
-		for _, wrap := range sentinelWrapsIn(src, sentinels) {
-			wraps++
-			if finding := wrap.finding(); finding != "" {
-				t.Errorf("%s: %s", wrap.at, finding)
-			}
-		}
+	wraps, findings := sentinelWrapFindings(sources, sentinelVars(apperrorsSeed(t), sources))
+	for _, finding := range findings {
+		t.Error(finding)
 	}
 	if wraps == 0 {
 		t.Fatalf("found no fmt.Errorf wrapping an apperrors sentinel under %v: the walk or the sentinel "+
 			"resolution is broken, not the tree", sentinelWrapRoots)
 	}
+}
+
+// sentinelWrapFindings judges every wrap in sources, and every call that hands a
+// wrap helper its opening. It returns how many wraps it read.
+func sentinelWrapFindings(sources []wrapSource, sentinels map[sentinelKey]bool) (int, []string) {
+	var findings []string
+	var helpers []wrapHelper
+	wraps := 0
+	for _, src := range sources {
+		for _, wrap := range sentinelWrapsIn(src, sentinels) {
+			wraps++
+			if wrap.helper != nil {
+				helpers = append(helpers, *wrap.helper)
+			}
+			if finding := wrap.finding(); finding != "" {
+				findings = append(findings, fmt.Sprintf("%s: %s", wrap.at, finding))
+			}
+		}
+	}
+	for _, src := range sources {
+		findings = append(findings, helperCallFindings(src, helpers)...)
+	}
+	return wraps, findings
 }
 
 // finding says what is wrong with the wrap's opening, or "" when it reads as a
@@ -85,6 +119,11 @@ func (w sentinelWrap) finding() string {
 	case w.opaque:
 		return "this wrap's format does not open with a string literal, so no reader of the source can " +
 			"tell what the caller sees first. Open it with the literal sentence"
+	case w.helper != nil:
+		return ""
+	case valueOpening.MatchString(w.format) && !isErrorText(w.opener):
+		return strconv.Quote(w.format) + " opens with a value, such as a check or a verb name, and the caller " +
+			"reads it first. Open with words; only a type's own Error() sentence may lead"
 	case packagePrefix.MatchString(w.format):
 		return strconv.Quote(w.format) + " opens with a package-style prefix, and the caller reads this " +
 			"text whole in the REST detail and the MCP refusal. Reword it as a sentence for that caller"
@@ -186,18 +225,90 @@ func sentinelVars(seed map[sentinelKey]bool, sources []wrapSource) map[sentinelK
 
 func sentinelWrapsIn(src wrapSource, sentinels map[sentinelKey]bool) []sentinelWrap {
 	var wraps []sentinelWrap
+	for _, decl := range src.file.Decls {
+		fn, params := helperShape(decl)
+		ast.Inspect(decl, func(n ast.Node) bool {
+			expr, ok := n.(ast.Expr)
+			if !ok {
+				return true
+			}
+			if wrap, found := sentinelWrapCall(src, expr, sentinels); found {
+				wrap.at = gatekit.SourceFileSet().Position(expr.Pos())
+				if id, isIdent := wrap.opener.(*ast.Ident); isIdent && fn != "" {
+					if index, isParam := params[id.Name]; isParam {
+						wrap.helper = &wrapHelper{pkg: src.pkg, fn: fn, index: index, rest: wrap.format[2:]}
+					}
+				}
+				wraps = append(wraps, wrap)
+			}
+			return true
+		})
+	}
+	return wraps
+}
+
+// helperShape names a plain function and the index of each parameter. A wrap
+// that opens with one of them takes its opening from the caller.
+func helperShape(decl ast.Decl) (string, map[string]int) {
+	fn, ok := decl.(*ast.FuncDecl)
+	if !ok || fn.Recv != nil {
+		return "", nil
+	}
+	params := map[string]int{}
+	index := 0
+	for _, field := range fn.Type.Params.List {
+		for _, name := range field.Names {
+			params[name.Name] = index
+			index++
+		}
+		if len(field.Names) == 0 {
+			index++
+		}
+	}
+	return fn.Name.Name, params
+}
+
+// helperCallFindings judges the opening each call in src hands a wrap helper of
+// its own package, as the caller would read it.
+func helperCallFindings(src wrapSource, helpers []wrapHelper) []string {
+	var findings []string
 	ast.Inspect(src.file, func(n ast.Node) bool {
-		expr, ok := n.(ast.Expr)
+		call, ok := n.(*ast.CallExpr)
 		if !ok {
 			return true
 		}
-		if wrap, found := sentinelWrapCall(src, expr, sentinels); found {
-			wrap.at = gatekit.SourceFileSet().Position(expr.Pos())
-			wraps = append(wraps, wrap)
+		name, ok := call.Fun.(*ast.Ident)
+		if !ok {
+			return true
+		}
+		for _, helper := range helpers {
+			if helper.pkg != src.pkg || helper.fn != name.Name || helper.index >= len(call.Args) {
+				continue
+			}
+			at := gatekit.SourceFileSet().Position(call.Pos())
+			opening, literal := gatekit.ConcatenatedString(call.Args[helper.index])
+			switch {
+			case !literal || !opensWithLiteral(call.Args[helper.index]):
+				findings = append(findings, fmt.Sprintf("%s: %s opens a refusal with a value; pass it the literal sentence", at, helper.fn))
+			case packagePrefix.MatchString(opening + helper.rest):
+				findings = append(findings, fmt.Sprintf("%s: %s is handed %s, which opens with a package-style prefix; "+
+					"reword it as a sentence for the caller", at, helper.fn, strconv.Quote(opening)))
+			}
 		}
 		return true
 	})
-	return wraps
+	return findings
+}
+
+// isErrorText reports a call of Error() with no arguments: a type's own
+// sentence, which the type already answers as its whole detail.
+func isErrorText(opener ast.Expr) bool {
+	call, ok := opener.(*ast.CallExpr)
+	if !ok || len(call.Args) != 0 {
+		return false
+	}
+	method, ok := call.Fun.(*ast.SelectorExpr)
+	return ok && method.Sel.Name == "Error"
 }
 
 // sentinelWrapCall reports whether expr is a fmt.Errorf that wraps a sentinel,
@@ -211,6 +322,9 @@ func sentinelWrapCall(src wrapSource, expr ast.Expr, sentinels map[sentinelKey]b
 	wrap.format, _ = gatekit.ConcatenatedString(call.Args[0])
 	if !wrap.opaque && !strings.Contains(wrap.format, "%w") {
 		return sentinelWrap{}, false
+	}
+	if valueOpening.MatchString(wrap.format) {
+		wrap.opener = call.Args[1]
 	}
 	for _, arg := range call.Args[1:] {
 		if refersToSentinel(src, arg, sentinels) {
@@ -301,6 +415,29 @@ const step = "settings"
 func f() error { return fmt.Errorf(step+": %w", apperrors.ErrNotFound) }`,
 			wraps: 1, flagged: 1,
 		},
+		"a check name that opens the refusal": {
+			source: `package probe
+import ("fmt"; "github.com/margince/margince/backend/internal/shared/apperrors")
+func f() error { check := "deal.update"; return fmt.Errorf("%s: %w", check, apperrors.ErrPermissionDenied) }`,
+			wraps: 1, flagged: 1,
+		},
+		"a type's own sentence that opens the refusal": {
+			source: `package probe
+import ("fmt"; "github.com/margince/margince/backend/internal/shared/apperrors")
+type ceiling struct{}
+func (ceiling) Error() string { return "at most ten a minute" }
+func f() error { return fmt.Errorf("%s: %w", ceiling{}.Error(), apperrors.ErrBudgetExceeded) }`,
+			wraps: 1, flagged: 0,
+		},
+		"a helper whose callers write the opening": {
+			source: `package probe
+import ("fmt"; "github.com/margince/margince/backend/internal/shared/apperrors")
+func invalid(message string) error { return fmt.Errorf("%s: %w", message, apperrors.ErrInvalidArgument) }
+func a() error { return invalid("choose a valid product") }
+func b() error { return invalid("reporting: no window") }
+func c(name string) error { return invalid(name) }`,
+			wraps: 1, flagged: 2,
+		},
 		"an internal error, which is not a refusal": {
 			source: `package probe
 import "fmt"
@@ -313,16 +450,10 @@ func f(err error) error { return fmt.Errorf("store: %w", err) }`,
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}
-			src := newWrapSource("example.test/probe", file)
-			wraps := sentinelWrapsIn(src, sentinelVars(seed, []wrapSource{src}))
-			flagged := 0
-			for _, wrap := range wraps {
-				if wrap.finding() != "" {
-					flagged++
-				}
-			}
-			if len(wraps) != tc.wraps || flagged != tc.flagged {
-				t.Errorf("found %d wrap(s), %d flagged; want %d and %d", len(wraps), flagged, tc.wraps, tc.flagged)
+			sources := []wrapSource{newWrapSource("example.test/probe", file)}
+			wraps, findings := sentinelWrapFindings(sources, sentinelVars(seed, sources))
+			if wraps != tc.wraps || len(findings) != tc.flagged {
+				t.Errorf("found %d wrap(s), flagged %v; want %d and %d", wraps, findings, tc.wraps, tc.flagged)
 			}
 		})
 	}

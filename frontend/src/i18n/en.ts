@@ -2452,6 +2452,11 @@ export const en = {
   "history.undo.redo": "Redo",
   "history.undo.busy": "Undoing change…",
   "history.undo.confirmTitle": "Undo this change?",
+  "history.undo.redoConfirmTitle": "Redo this change?",
+  "history.undo.redoConfirmBody_one":
+    "{count} field goes back to its value before the undo:",
+  "history.undo.redoConfirmBody_other":
+    "{count} fields go back to their values before the undo:",
   "history.undo.confirmEdgeBody":
     "This changes the link with {other}. Both records stay; only the link between them changes.",
   "history.undo.confirmCreateBody":
@@ -7523,12 +7528,25 @@ export const en = {
   "create.companyName": "Company",
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
-    "Creates a new company unless one is picked from the list.",
+    "Links the company with this name, or creates it if there is none.",
   "create.companyPrefilled":
     "Matched to an existing company by the work email domain.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
   "create.amountNegative": "Enter an amount of zero or more.",
+  "create.emailNamesNoOne":
+    "This address belongs to a sending system that nobody answers. Enter the contact’s own address.",
+  "create.addressErased":
+    "This value was erased at its owner’s request and cannot be stored again.",
+  "create.linkedinMalformed":
+    "This is not a link. Paste the address of the LinkedIn page.",
+  "create.linkedinNotLinkedin": "Enter a link to a page on linkedin.com.",
+  "create.linkedinNotProfile":
+    "Enter a link to someone’s own profile, such as linkedin.com/in/name.",
+  "create.dateRangeReversed":
+    "The end date is before the start date. Choose a later end date.",
+  "create.countryCodeInvalid":
+    "Enter the country as its two-letter code, such as DE or US.",
   "create.referenceNotFound":
     "This record no longer exists, or you cannot see it.",
   "create.currency": "Currency",
@@ -7537,6 +7555,7 @@ export const en = {
   "create.expectedClose": "Expected close",
 
   "keyCode.label": "Key: {key}",
+  "field.rowRepeated": "{value} is in two rows. Remove one of them.",
   "field.addEmail": "Add email",
   "field.addPhone": "Add phone",
   "field.editEmails": "Edit emails",
@@ -19033,7 +19052,7 @@ export const en = {
   "contact.rail.employer": "Employer",
   "contact.rail.allCompaniesConnected":
     "All matches are already linked to this contact.",
-  "contact.rail.isCurrentEmployer": "This is their current employer",
+  "contact.rail.isPrimaryEmployer": "This is their primary employer",
   "contact.rail.markEnded": "Mark as ended",
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":

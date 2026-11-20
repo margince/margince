@@ -150,7 +150,7 @@ func TestAnUnreadableCurrentStageIsReportedRatherThanRaisedSilently(t *testing.T
 
 	for name, tool := range map[string]dynamicTool{
 		"the deal cannot be read": advanceDeal{
-			p:      &reopenProbeProvider{readErr: errors.New("deal.read: permission denied")},
+			p:      &reopenProbeProvider{readErr: errors.New("your role does not grant read on deal")},
 			stages: &reopenProbeStages{semantics: map[ids.UUID]string{target: "open"}},
 		},
 		"the deal has no readable stage": advanceDeal{

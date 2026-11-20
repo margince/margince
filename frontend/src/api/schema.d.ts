@@ -33826,6 +33826,15 @@ export interface components {
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
              *     `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
              *     The `Retry-After` header says how many seconds until the call can succeed.
+             *
+             *     A 403 that the caller's roles answer carries `missing_grant`: what those roles
+             *     lack, in the notation the tool table uses for a tool's requirement, with
+             *     alternatives joined by `,`. An object action (`deal.update`, `deal.create|update`)
+             *     is a grant an admin adds to a role. `admin` asks for the admin role, and
+             *     `scope:team` for a role whose row scope reaches team records or more. Each is
+             *     lifted by an admin changing the caller's roles. A refusal that no role change
+             *     lifts, such as a Deal Room participant's or a record kind the installation
+             *     switched off, carries none.
              */
             details?: {
                 [key: string]: unknown;
@@ -43374,7 +43383,7 @@ export interface components {
             /** @description Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`. */
             readonly task_type?: components["schemas"]["TaskType"];
             /**
-             * @description Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+             * @description Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
              * @enum {string|null}
              */
             readonly reply_channel?: "email" | "call" | "message" | null;

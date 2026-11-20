@@ -10,6 +10,7 @@ import { CompanyCard } from "../../design-system/companycard";
 import { ErrorLine } from "../../design-system/errorline";
 import { InlineText } from "../../design-system/inlinetext";
 import { formatDateAbbrev } from "../../format/format";
+import { formatMonthAbbrev } from "../../format/format.dates";
 import { type Locale, useLocale, useT } from "../../i18n";
 import {
   careerDate,
@@ -171,11 +172,17 @@ function employmentDetail(
 ): string {
   // A line the reader scans, so the abbreviated month.
   const day = (value: string) => formatDateAbbrev(value, locale, zone);
+  const month = (value: string) => formatMonthAbbrev(value, locale);
   const start = employment.started_at
-    ? careerDate(employment.started_at, employment.started_precision, day)
+    ? careerDate(
+        employment.started_at,
+        employment.started_precision,
+        day,
+        month,
+      )
     : undefined;
   const end = employment.ended_at
-    ? careerDate(employment.ended_at, employment.ended_precision, day)
+    ? careerDate(employment.ended_at, employment.ended_precision, day, month)
     : undefined;
   if (start && end) {
     return `${start} – ${end}`;

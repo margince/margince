@@ -9114,6 +9114,18 @@
      "Acquisition source",
     "merge_profile_field/text/address":
      "Address",
+    "merge_profile_field/text/address_city":
+     "City",
+    "merge_profile_field/text/address_country":
+     "Country code (ISO 3166)",
+    "merge_profile_field/text/address_line1":
+     "Street and number",
+    "merge_profile_field/text/address_line2":
+     "Address line 2",
+    "merge_profile_field/text/address_postal_code":
+     "Postal code",
+    "merge_profile_field/text/address_region":
+     "State or region",
     "merge_profile_field/text/admission":
      "Domain intake check",
     "merge_profile_field/text/admission_reason":
@@ -9448,6 +9460,18 @@
      "Acquisition source",
     "merge_profile_field/lifecycle/address":
      "Address",
+    "merge_profile_field/lifecycle/address_city":
+     "City",
+    "merge_profile_field/lifecycle/address_country":
+     "Country code (ISO 3166)",
+    "merge_profile_field/lifecycle/address_line1":
+     "Street and number",
+    "merge_profile_field/lifecycle/address_line2":
+     "Address line 2",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Postal code",
+    "merge_profile_field/lifecycle/address_region":
+     "State or region",
     "merge_profile_field/lifecycle/admission":
      "Domain intake check",
     "merge_profile_field/lifecycle/admission_reason":
@@ -29148,6 +29172,18 @@
      "Akquisitionsquelle",
     "merge_profile_field/text/address":
      "Adresse",
+    "merge_profile_field/text/address_city":
+     "Stadt",
+    "merge_profile_field/text/address_country":
+     "Ländercode (ISO 3166)",
+    "merge_profile_field/text/address_line1":
+     "Straße und Hausnummer",
+    "merge_profile_field/text/address_line2":
+     "Adresszusatz",
+    "merge_profile_field/text/address_postal_code":
+     "Postleitzahl",
+    "merge_profile_field/text/address_region":
+     "Bundesland oder Region",
     "merge_profile_field/text/admission":
      "Eingangsprüfung der Domain",
     "merge_profile_field/text/admission_reason":
@@ -29482,6 +29518,18 @@
      "Akquisitionsquelle",
     "merge_profile_field/lifecycle/address":
      "Adresse",
+    "merge_profile_field/lifecycle/address_city":
+     "Stadt",
+    "merge_profile_field/lifecycle/address_country":
+     "Ländercode (ISO 3166)",
+    "merge_profile_field/lifecycle/address_line1":
+     "Straße und Hausnummer",
+    "merge_profile_field/lifecycle/address_line2":
+     "Adresszusatz",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Postleitzahl",
+    "merge_profile_field/lifecycle/address_region":
+     "Bundesland oder Region",
     "merge_profile_field/lifecycle/admission":
      "Eingangsprüfung der Domain",
     "merge_profile_field/lifecycle/admission_reason":
@@ -49182,6 +49230,18 @@
      "Nguồn tiếp cận",
     "merge_profile_field/text/address":
      "Địa chỉ",
+    "merge_profile_field/text/address_city":
+     "Thành phố",
+    "merge_profile_field/text/address_country":
+     "Mã quốc gia (ISO 3166)",
+    "merge_profile_field/text/address_line1":
+     "Số nhà và tên đường",
+    "merge_profile_field/text/address_line2":
+     "Địa chỉ dòng 2",
+    "merge_profile_field/text/address_postal_code":
+     "Mã bưu chính",
+    "merge_profile_field/text/address_region":
+     "Tỉnh hoặc vùng",
     "merge_profile_field/text/admission":
      "Kiểm tra đầu vào tên miền",
     "merge_profile_field/text/admission_reason":
@@ -49516,6 +49576,18 @@
      "Nguồn tiếp cận",
     "merge_profile_field/lifecycle/address":
      "Địa chỉ",
+    "merge_profile_field/lifecycle/address_city":
+     "Thành phố",
+    "merge_profile_field/lifecycle/address_country":
+     "Mã quốc gia (ISO 3166)",
+    "merge_profile_field/lifecycle/address_line1":
+     "Số nhà và tên đường",
+    "merge_profile_field/lifecycle/address_line2":
+     "Địa chỉ dòng 2",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Mã bưu chính",
+    "merge_profile_field/lifecycle/address_region":
+     "Tỉnh hoặc vùng",
     "merge_profile_field/lifecycle/admission":
      "Kiểm tra đầu vào tên miền",
     "merge_profile_field/lifecycle/admission_reason":
