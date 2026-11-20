@@ -168,7 +168,7 @@ export const en = {
     "The access export includes the recorded breakdown.",
   "privacy.proofUnknown": "Not recorded",
   "analytics.q.conversionFrame":
-    "Base currency: {currency}. Rates as of {date}.",
+    "Base currency: {currency}. Exchange rates as of {date}.",
 
   "homeRepair.taskPermission":
     "Activity archive permission is required to archive reviewed tasks.",
@@ -3027,7 +3027,7 @@ export const en = {
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deals",
   "board.weightedLabel": "weighted",
-  "board.ratesOn": "Rates {date}",
+  "board.ratesOn": "Exchange rates {date}",
   "board.unpriced_one": "{count} not priced",
   "board.unpriced_other": "{count} not priced",
   "board.totalsTip":
@@ -3036,7 +3036,7 @@ export const en = {
     "{count} deal has no price and is left out of both totals.",
   "board.unpricedTip_other":
     "{count} deals have no price and are left out of both totals.",
-  "board.convertedTip": "Converted at rates as of {date}.",
+  "board.convertedTip": "Converted at exchange rates as of {date}.",
   "board.matchesIn_one": "{count} result in {columns}",
   "board.matchesIn_other": "{count} results in {columns}",
   "board.showMatches": "Go to column",
@@ -3880,7 +3880,7 @@ export const en = {
   // suggestion means. "Whose move" is the question the 0-100 score was
   // mistaken for.
   "co.strip.title": "Company status",
-  "co.strip.convertedAsOf": "{count} converted, rates {date}",
+  "co.strip.convertedAsOf": "{count} converted, exchange rates {date}",
   "co.strip.noOpenDeals": "None",
   "co.strip.pipeline": "Open deals",
   "co.description.label": "Description",
@@ -16904,7 +16904,7 @@ export const en = {
   "setup.step.languageDone": "Your language is saved.",
   "setup.step.permissions": "See what Margince may do",
   "setup.caption.permissions": "What it reads, what it writes and how to undo.",
-  "setup.action.permissions": "Read",
+  "setup.action.permissions": "Review",
   "setup.step.permissionsDone": "You have read what Margince may do.",
   "account.keepChoice": "Keep {value}",
   "setup.permissions.title": "What Margince reads and writes",

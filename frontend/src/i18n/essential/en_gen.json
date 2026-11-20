@@ -4289,7 +4289,7 @@
   "setup.step.languageDone": "Your language is saved.",
   "setup.step.permissions": "See what Margince may do",
   "setup.caption.permissions": "What it reads, what it writes and how to undo.",
-  "setup.action.permissions": "Read",
+  "setup.action.permissions": "Review",
   "setup.step.permissionsDone": "You have read what Margince may do.",
   "setup.permissions.title": "What Margince reads and writes",
   "setup.permissions.reads": "Margince reads the mail and calendar you connect, files you upload and public company websites. You can disconnect mail and calendar in Settings, under Connections.",
