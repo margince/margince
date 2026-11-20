@@ -225,10 +225,11 @@ it("puts a blocker at the top of the removal dialog and labels the address as th
     en["users.retirement.deactivate_first"],
   );
   const callout = blocker.closest(".callout");
-  expect(callout?.textContent).toContain(en["users.retirement.blocked_one"]);
+  if (!callout) throw new Error("the blocker is not inside a callout");
+  expect(callout.textContent).toContain(en["users.retirement.blocked_one"]);
   const body = screen.getByText(en["users.removeBody"]);
   expect(
-    callout?.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING,
+    callout.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(
     screen.getByText(`${en["users.retirement.address"]}: rep2@example.test`),
