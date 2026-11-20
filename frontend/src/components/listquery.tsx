@@ -305,15 +305,17 @@ export function useListQuery<Row>({
   const sortRefused = problemFieldErrorsOf(infinite.error).some(
     (refusal) => refusal.field === "sort" && SORT_REFUSALS.has(refusal.code),
   );
+  // Keyed on the sort too: a cached read that kept its rows also keeps its
+  // refusal, so the way back to a refused opening order changes nothing else.
   useEffect(() => {
-    if (!sortRefused) {
+    if (!sortRefused || query.sort === "") {
       return;
     }
     setQuery((prev) => ({
       ...prev,
       sort: prev.sort === opening.sort ? "" : opening.sort,
     }));
-  }, [sortRefused, setQuery, opening.sort]);
+  }, [sortRefused, query.sort, setQuery, opening.sort]);
   const rows = (infinite.data?.pages ?? []).flatMap((page) => page.data);
   return {
     rows,

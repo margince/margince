@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProblemError } from "../lib/problem";
+import { replaceDial } from "../lib/urlstate";
 import {
   emptyPage,
   ListTableHarness,
@@ -21,9 +22,14 @@ afterEach(() => {
 });
 
 // The shape httperr.Validation writes for a storekit.SortError.
-function refusingSort(field: string, code: string) {
+function refusingSort(
+  field: string,
+  code: string,
+  refused: (sort: string) => boolean = (sort) =>
+    sort === "bogus" || sort === "a,b",
+) {
   return vi.fn(async (query: ListQuery, _cursor: string | null) => {
-    if (query.sort === "bogus" || query.sort === "a,b") {
+    if (refused(query.sort)) {
       throw new ProblemError({
         status: 422,
         code: "validation_error",
@@ -53,6 +59,33 @@ describe("an address whose sort the server refuses", () => {
       );
     },
   );
+
+  // The opening sort's cached read keeps its rows and its refusal, so the
+  // refusal does not clear on the way back to it.
+  it("asks for no sort once its opening order was refused after it had loaded", async () => {
+    globalThis.history.replaceState(null, "", "#/contacts");
+    const refused = new Set(["bogus"]);
+    const fetchPage = refusingSort("sort", "sort_field_not_allowed", (sort) =>
+      refused.has(sort),
+    );
+    render(<ListTableHarness fetchPage={fetchPage} />);
+    await screen.findByRole("cell", { name: "No Contacts yet." });
+
+    refused.add("-created_at");
+    act(() => {
+      globalThis.dispatchEvent(new Event("visibilitychange"));
+    });
+    await waitFor(() => expect(fetchPage.mock.calls.at(-1)?.[0].sort).toBe(""));
+    act(() => replaceDial("sort", "bogus"));
+
+    await waitFor(() =>
+      expect(globalThis.location.hash).not.toContain("bogus"),
+    );
+    await waitFor(() => expect(fetchPage.mock.calls.at(-1)?.[0].sort).toBe(""));
+    expect(
+      await screen.findByRole("cell", { name: "No Contacts yet." }),
+    ).toBeTruthy();
+  });
 
   it("still shows any other refusal with its Retry", async () => {
     globalThis.history.replaceState(null, "", "#/contacts?sort=bogus");
