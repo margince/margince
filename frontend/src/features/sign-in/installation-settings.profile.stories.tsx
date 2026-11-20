@@ -45,7 +45,12 @@ const SETTINGS: InstallationSettings = {
 function ProfileForm({
   locale,
   start = SETTINGS,
-}: Readonly<{ locale?: "de" | "vi"; start?: InstallationSettings }>) {
+  refused = new Map(),
+}: Readonly<{
+  locale?: "de" | "vi";
+  start?: InstallationSettings;
+  refused?: ReadonlyMap<string, string>;
+}>) {
   const [draft, setDraft] = useState(start);
   return (
     <StoryProviders locale={locale}>
@@ -57,7 +62,8 @@ function ProfileForm({
           canManage
           dirty={false}
           pending={false}
-          refused={new Map()}
+          refused={refused}
+          formRef={() => undefined}
           blanketError={null}
           describe={(control) => control["aria-describedby"]}
           onChange={setDraft}
@@ -97,4 +103,21 @@ export const FiscalStartMoved: Story = {
     });
     return <ProfileForm start={{ ...SETTINGS, fiscal_year_start_month: 4 }} />;
   },
+};
+
+// A cleared Likely threshold, refused on its field with the bounds in percent.
+export const ThresholdRefused: Story = {
+  render: () => (
+    <ProfileForm
+      start={{ ...SETTINGS, forecast_likely_threshold: 0 }}
+      refused={
+        new Map([
+          [
+            "forecast_likely_threshold",
+            "Likely threshold must be from 1% to 100%.",
+          ],
+        ])
+      }
+    />
+  ),
 };

@@ -43283,7 +43283,7 @@ type CompanyProfileInput struct {
 	CustomerPains    *string `json:"customer_pains,omitempty"`
 	DesiredOutcomes  *string `json:"desired_outcomes,omitempty"`
 
-	// DisplayName The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters.
+	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.
 	DisplayName string  `json:"display_name"`
 	History     *string `json:"history,omitempty"`
 	Icp         *string `json:"icp,omitempty"`
@@ -60611,6 +60611,14 @@ type Problem struct {
 	// code names other values carries them in `params`, an object of text values by
 	// name, so a screen can word the code in the reader's language; `message` stays
 	// the English sentence.
+	//
+	// A value its field cannot hold names the field's path (`address.city` for a key of a
+	// nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+	// `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+	// `invalid_type` for any other shape. A body that is not one JSON object, and a value
+	// inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+	// carries its bounds as `params.min` and `params.max`, as the schema spells them;
+	// a date-time range states them as ISO dates.
 	//
 	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),

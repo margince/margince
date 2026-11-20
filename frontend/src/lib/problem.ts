@@ -1,9 +1,12 @@
-import { openingCase } from "../format/collate";
-import { formatNumber } from "../format/format";
-import { type Locale, translate } from "../i18n";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { effectiveDisplayLocale, isLocale } from "../i18n/locale";
 import { ConnectivityError, writeFailureKey } from "./connectivity";
+import {
+  type FieldLabels,
+  faultSentence,
+  wordsFaultInEnglish,
+} from "./faultsentence";
 import {
   type FieldProblem,
   isRecord,
@@ -16,16 +19,19 @@ import {
   roleCannotCaptureCopy,
 } from "./problemcodecopy";
 
+export type { FieldLabel, FieldLabels } from "./faultsentence";
+export {
+  faultSentence,
+  fieldCheckSentence,
+  moneyLimit,
+  percentLimit,
+} from "./faultsentence";
 export type { FieldProblem } from "./problembody";
 export {
   problemCode,
   problemExistingId,
   problemFieldErrors,
 } from "./problembody";
-
-// The words a screen holds for the fields a refusal can name, keyed by the
-// field's wire path.
-export type FieldLabels = Readonly<Record<string, string>>;
 
 // Known codes select localized copy. Compatibility API details are English;
 // other readers receive local fallback wording for an unknown code. A field
@@ -43,7 +49,11 @@ function problemDetail(
   if (t && copyKey) return t(copyKey);
   const fault = problemFieldErrors(problem)[0];
   const locale = t ? problemLocale(t) : null;
-  if (locale && fault && (locale !== "en" || fault.code === TOO_LONG)) {
+  if (
+    locale &&
+    fault &&
+    (locale !== "en" || wordsFaultInEnglish(fault, labels))
+  ) {
     return faultSentence(fault, locale, labels);
   }
   if (locale && locale !== "en") return null;
@@ -64,54 +74,13 @@ function problemLocale(t: (key: MessageKey) => string): Locale {
     : effectiveDisplayLocale();
 }
 
-const TOO_LONG = "too_long";
-
-// The one wording of a field fault, for the callout and for the line under
-// the field alike. It opens a line and ends in a full stop.
-export function faultSentence(
-  fault: FieldProblem,
-  locale: Locale,
-  labels?: FieldLabels,
-): string {
-  const key = PROBLEM_CODE_COPY.get(fault.code);
-  const message = key
-    ? translate(locale, key)
-    : fault.code === TOO_LONG
-      ? tooLongMessage(fault, locale, labels?.[fault.field])
-      : locale === "en"
-        ? fault.message
-        : translate(
-            locale,
-            fault.code === "required"
-              ? "record.fieldRequired"
-              : "common.fieldInvalid",
-          );
-  const sentence = openingCase(message, locale);
-  return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
-}
-
 // faultSentence in the translator's own language, for a caller holding only t.
 export function faultSentenceFor(
   fault: FieldProblem,
   t: (key: MessageKey) => string,
+  labels?: FieldLabels,
 ): string {
-  return faultSentence(fault, problemLocale(t));
-}
-
-// A server older than the limit on the wire sends no max, and the copy then
-// says "too long" without a number.
-function tooLongMessage(
-  fault: FieldProblem,
-  locale: Locale,
-  label: string | undefined,
-): string {
-  if (fault.max === undefined) {
-    return translate(locale, "common.valueTooLong");
-  }
-  const max = formatNumber(fault.max, locale);
-  return label
-    ? translate(locale, "common.fieldTooLongMax", { field: label, max })
-    : translate(locale, "common.valueTooLongMax", { max });
+  return faultSentence(fault, problemLocale(t), labels);
 }
 
 // A module's own refusal reaches the wire as a `validation_error` with its code
@@ -282,14 +251,64 @@ export function problemFieldErrorsOf(error: unknown): FieldProblem[] {
 export function problemFieldSentencesOf(
   error: unknown,
   locale: Locale,
+  labels?: FieldLabels,
 ): ReadonlyMap<string, string> {
   return new Map(
     problemFieldErrorsOf(error).map((fault) => [
       fault.field,
-      faultSentence(fault, locale),
+      faultSentence(fault, locale, labels),
     ]),
   );
 }
+
+export type RefusalSentences = Readonly<{
+  // The sentence for each field of the form the refusal names, by wire path,
+  // for that field's `error` slot.
+  byField: ReadonlyMap<string, string>;
+  // What the foot of the form says: null once every fault stands beside a
+  // field, and for no refusal at all.
+  rest: string | null;
+}>;
+
+// A refusal split between a form's fields (those `labels` names) and its foot.
+// `conflict` puts a 409 of its `code` ("conflict" by default) on one field.
+export function refusalSentences(
+  error: unknown,
+  t: (key: MessageKey) => string,
+  labels: FieldLabels,
+  options: Readonly<{
+    conflict?: Readonly<{ field: string; sentence: string; code?: string }>;
+    fallback?: string;
+  }> = {},
+): RefusalSentences {
+  const byField = new Map<string, string>();
+  if (error === null || error === undefined) return { byField, rest: null };
+  const { conflict, fallback } = options;
+  if (conflict && problemCodeOf(error) === (conflict.code ?? CONFLICT)) {
+    byField.set(conflict.field, conflict.sentence);
+    return { byField, rest: null };
+  }
+  const locale = problemLocale(t);
+  const faults = problemFieldErrorsOf(error);
+  const unplaced = faults.filter(
+    (fault) => !Object.hasOwn(labels, fault.field),
+  );
+  for (const fault of faults) {
+    if (!byField.has(fault.field) && Object.hasOwn(labels, fault.field)) {
+      byField.set(fault.field, faultSentence(fault, locale, labels));
+    }
+  }
+  if (byField.size === 0) {
+    return { byField, rest: problemMessageOf(error, t, fallback, labels) };
+  }
+  return {
+    byField,
+    rest: unplaced[0] ? faultSentence(unplaced[0], locale, labels) : null,
+  };
+}
+
+// The code of a 409 that says the value is already taken, naming no field.
+const CONFLICT = "conflict";
 
 // A 409 naming the If-Match precondition failure: the record changed under the
 // caller since the form opened, which problemExistingId's duplicate is not.

@@ -2333,7 +2333,7 @@ export interface paths {
          * @description Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          *     A `parent_company_id` that names a company the caller cannot read answers 422 naming
          *     `parent_company_id`, the same for a missing record and for one hidden by row scope.
          */
@@ -26384,7 +26384,7 @@ export interface paths {
          *     Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
-         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          */
         patch: operations["updateCompanyProfileField"];
         trace?: never;
@@ -33920,6 +33920,14 @@ export interface components {
              *     code names other values carries them in `params`, an object of text values by
              *     name, so a screen can word the code in the reader's language; `message` stays
              *     the English sentence.
+             *
+             *     A value its field cannot hold names the field's path (`address.city` for a key of a
+             *     nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+             *     `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+             *     `invalid_type` for any other shape. A body that is not one JSON object, and a value
+             *     inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+             *     carries its bounds as `params.min` and `params.max`, as the schema spells them;
+             *     a date-time range states them as ISO dates.
              *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -53716,7 +53724,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
-            /** @description The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters. */
+            /** @description The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;
