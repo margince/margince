@@ -18,10 +18,9 @@ import (
 
 var routeParam = regexp.MustCompile(`\{[^}]+\}`)
 
-// Every GET the contract declares is a route the /v1 router serves, and every
-// one of them answers with a Cache-Control even when its handler sets none. The
-// route set comes from the router itself, held against the contract so a walk
-// that finds fewer routes than exist fails instead of passing.
+// Every GET the contract declares is a route the /v1 router serves. Each one
+// answers with a Cache-Control even when its handler sets none. The route set
+// comes from the router and is held against the contract, so a short walk fails.
 func TestEveryContractReadAnswersWithACacheControl(t *testing.T) {
 	router := contractRouter(crmcontracts.Unimplemented{})
 	var walked []string

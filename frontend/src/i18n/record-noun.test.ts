@@ -900,9 +900,9 @@ describe.each(Object.keys(CATALOGS))(
 
 // The company record is called a company, and English once called it an
 // account. The word also names a mail, user, channel or provider account, so a
-// sweep of every value cannot tell the two apart. The key can: these keys, and
-// every key under these prefixes, say "account" in their name about the company
-// record, so their English value must not.
+// sweep of every value cannot tell the two apart. The key can. These keys, and
+// the keys under these prefixes, use "account" for the company record. Their
+// English value must not.
 const COMPANY_SENSE_ACCOUNT_KEYS = [
   "analytics.sectionAccounts",
   "analytics.accounts.",
