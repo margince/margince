@@ -168,9 +168,12 @@ func TestAnIntroductionCountsOnlyForAReaderWhoMayReadIt(t *testing.T) {
 func (w workEnv) meeting(booker context.Context, t *testing.T, host ids.UUID, at time.Time, shape func(*activities.LogActivityInput)) ids.UUID {
 	t.Helper()
 	subject, status, hostID, start := "Demo", "booked", ids.From[ids.UserKind](host), at.Add(7*24*time.Hour)
+	// Rep1 owns the guest and shares it for writing, so every seat may attach a meeting to it.
+	guest := w.e.SeedContact(t, "Guest", &w.e.Rep1)
+	w.e.ShareForWriting(t, "contact", guest, "user", w.e.Rep2, w.e.Rep3)
 	in := activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, OccurredAt: &start, MeetingStatus: &status, HostUserID: &hostID, Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: w.e.SeedContact(t, "Guest", &w.e.Rep1)}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: guest}},
 	}
 	if shape != nil {
 		shape(&in)
@@ -214,7 +217,8 @@ func TestAMeetingCountsForTheSeatThatBookedItForAColleague(t *testing.T) {
 	w.meeting(rep1, t, rep2, ninth, sourced(meetingoutcome.TranscriptSourceSystem))
 	w.meeting(w.e.ConnectorOwnerCtx(w.e.Rep1, "google"), t, rep2, july, nil)
 	w.meeting(w.e.AutomationCtx(w.e.Rep1), t, rep2, ninth, nil)
-	w.meeting(nobodys, t, rep2, ninth, nil)
+	// An agent acting for nobody may change no record, so its meeting links none.
+	w.meeting(nobodys, t, rep2, ninth, func(in *activities.LogActivityInput) { in.Links = nil })
 	archived := w.meeting(rep1, t, rep2, ninth, nil)
 	if _, err := w.e.Activities.ArchiveActivity(w.e.Admin(), ids.From[ids.ActivityKind](archived), nil); err != nil {
 		t.Fatal(err)
