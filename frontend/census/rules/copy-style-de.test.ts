@@ -35,6 +35,7 @@ describe("the de copy checks, over planted catalogs", () => {
     ["spells an ellipsis as the one character …", "Lädt..."],
     ["has no double space", "Speichern  jetzt"],
     ["uses no exclamation mark", "Fertig!"],
+    ["keeps the -e of a du imperative", "Schreib zuerst einen Grund."],
     ["says bitte once, to open a recovery step in a sentence", "Bitte warten"],
     ["uses no abbreviation", "Kontakte usw. laden."],
     ["uses no apostrophe contraction", "Lars’s Deals"],
@@ -49,6 +50,29 @@ describe("the de copy checks, over planted catalogs", () => {
         line.startsWith(`${check}: `),
       ),
     ).toEqual([`${check}: de.ts a.b: ${JSON.stringify(value)}`]);
+  });
+
+  // Freigeben is approval. A value whose English shares says teilen, and one
+  // whose English also approves keeps the approval word.
+  it("says teilen where the English says share", () => {
+    const shared = styleFindings([
+      {
+        source: "de.ts",
+        catalog: {
+          "a.share": "Für dich freigegeben",
+          "a.approve": "Wird erst nach einer Freigabe geteilt.",
+          "a.ok": "Mit dir geteilt",
+        },
+        english: {
+          "a.share": "Shared with me",
+          "a.approve": "This share takes effect only after approval.",
+          "a.ok": "Shared with me",
+        },
+      },
+    ]).filter((line) => line.startsWith("says teilen"));
+    expect(shared).toEqual([
+      'says teilen where the English says share: de.ts a.share: "Für dich freigegeben"',
+    ]);
   });
 
   it("holds the retired words to the Vocabulary table, both ways", () => {

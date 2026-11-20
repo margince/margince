@@ -311,7 +311,7 @@ const SHORT_IMPERATIVE = word(
 const SHARE_IN_ENGLISH = /\bshar(?:e|es|ed|ing)\b/i;
 const APPROVE_IN_ENGLISH = /\bapprov/i;
 const APPROVE_IN_GERMAN = new RegExp(
-  `freigeb|Freigabe|(?<![${LETTER}])frei(?![${LETTER}])`,
+  `frei(?:ge|zu)?g[ei]b|Freigabe|(?<![${LETTER}])frei(?![${LETTER}])`,
 );
 
 function sharesWithTheApprovalWord(english: string, german: string): boolean {
