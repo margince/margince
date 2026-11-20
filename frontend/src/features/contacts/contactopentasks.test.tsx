@@ -11,6 +11,7 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
+import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -120,7 +121,7 @@ function mount(page: () => Contact360, routes: RouteMap = {}) {
       }
     >
       <LocaleProvider initial="en">
-        <ViewerZoneProvider zone="Europe/Berlin">
+        <ViewerZoneProvider zone={FIXTURE_TIMEZONE}>
           <ToastProvider>
             <Card />
             <ToastRegion />
