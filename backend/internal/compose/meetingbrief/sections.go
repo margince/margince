@@ -464,20 +464,6 @@ func (said briefCopy) talkingPointLine(claim ClaimIn) string {
 	}
 }
 
-// looksKeptLines say once, plainly, that a promise looks kept and is no open
-// driver of this meeting.
-func looksKeptLines(in Input) []Sentence {
-	said := in.words()
-	out := make([]Sentence, 0, len(in.LooksKept))
-	for _, kept := range in.LooksKept {
-		out = append(out, Sentence{
-			Text:     fmt.Sprintf(said.Say(touchWords.LooksKept), kept.Body, kept.Guest, said.occurredDay(kept.MeetingAt)),
-			Evidence: []Evidence{{EntityType: citeActivity, EntityID: kept.SourceID}},
-		})
-	}
-	return out
-}
-
 // companyContextSection recalls earlier meetings with this room; no history
 // means no background section.
 func companyContextSection(in Input) []Sentence {

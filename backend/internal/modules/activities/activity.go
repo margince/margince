@@ -90,7 +90,9 @@ type LogActivityInput struct {
 	// AdmitInvitedAssignee for a promiser's own task. Every other automatic
 	// writer leaves it false and hands work to active seats only.
 	invitedAssignee bool
-	Kind            string
+	// confirmedDue skips the due window for a date a human kept when asked.
+	confirmedDue bool
+	Kind         string
 	// LinksFromRequest says the caller typed Links, so a missing record is
 	// refused naming `links`. A writer that derives its links leaves it false.
 	LinksFromRequest bool

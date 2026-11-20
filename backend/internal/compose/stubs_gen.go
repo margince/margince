@@ -1139,6 +1139,10 @@ func (stubs) ListChannelProviders(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "ListChannelProviders")
 }
 
+func (stubs) ReopenConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReopenConversationClaim")
+}
+
 func (stubs) SettleConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SettleConversationClaim")
 }
@@ -1833,6 +1837,10 @@ func (stubs) CreateCustomField(w nethttp.ResponseWriter, r *nethttp.Request, par
 
 func (stubs) RenameCustomField(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RenameCustomFieldParams) {
 	httperr.NotImplemented(w, r, "RenameCustomField")
+}
+
+func (stubs) ListCustomFieldChoiceUse(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListCustomFieldChoiceUse")
 }
 
 func (stubs) ListCustomFieldLiveLists(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

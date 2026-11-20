@@ -126,6 +126,10 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     ],
     // A colleague's request: the summary names who asked and what it moves.
     contact_share: [],
+    task_due_date: [
+      { field: "summary", label: "approval.field.step", as: "text" },
+      { field: "due_date", label: "approval.field.due_date", as: "date" },
+    ],
     ownership_transfer: [textRow("note", "approval.field.note")],
     // Two records that look like one contact. The names are the comparison; the
     // position and the title beside them are what "Use as job title" weighs.

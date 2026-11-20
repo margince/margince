@@ -293,7 +293,7 @@ func (s *Store) Cancel(ctx context.Context, id ids.ContractID, noticeOn, effecti
 		// contract.updated like any other field write. A consumer watching for
 		// the state change gets it when the status actually moves, which is the
 		// honest moment.
-		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract cancellation"); err != nil {
+		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, storekit.LiveOnly, "contract cancellation"); err != nil {
 			return err
 		}
 		out, err = readContractForCaller(ctx, tx, id, today, active)
