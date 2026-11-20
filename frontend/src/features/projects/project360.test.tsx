@@ -98,6 +98,13 @@ describe("ProjectScreen", () => {
       stepper.querySelector('[aria-current="step"]')?.textContent,
     ).toContain("Initiative");
     expect(screen.getByTestId("project-step-closed").tagName).toBe("BUTTON");
+    // Each move says what pressing it does, not only the phase it names.
+    expect(
+      screen.getAllByRole("button", { name: "Move to Pursuing" }),
+    ).toContain(screen.getByTestId("project-step-pursuing"));
+    expect(screen.getByRole("button", { name: "Close project" })).toBe(
+      screen.getByTestId("project-step-closed"),
+    );
 
     // The figures: the phase's days, the open tasks, no file attached.
     const figures = screen.getByTestId("project-figures");
@@ -872,7 +879,9 @@ describe("a commitment's tick", () => {
 
     await userEvent.click(
       lastOf(
-        await screen.findAllByRole("checkbox", { name: en["tasks.complete"] }),
+        await screen.findAllByRole("checkbox", {
+          name: "Mark Confirm the depot slot done",
+        }),
       ),
     );
 

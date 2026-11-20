@@ -59,6 +59,12 @@ export function PhaseStepper({
       steps={PROJECT_PHASES.map((step, rung) => ({
         key: step,
         label: t(labelFor(PHASE_LABEL, step)),
+        actionLabel:
+          step === "closed"
+            ? t("project.advance.close")
+            : t("project.advance.title", {
+                phase: t(labelFor(PHASE_LABEL, step)),
+              }),
         done: rung < here,
         current: step === phase,
         terminal: step === "closed",

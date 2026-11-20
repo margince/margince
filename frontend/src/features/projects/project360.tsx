@@ -353,6 +353,7 @@ function CommitmentTick({
   return (
     <TaskCompleteCheck
       activityId={commitment.activity_id}
+      subject={commitment.subject}
       version={commitment.version}
       update={update}
     />

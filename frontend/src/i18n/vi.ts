@@ -8520,6 +8520,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.actionFailed": "Yêu cầu không thành công. Thử lại.",
 
   "tasks.complete": "Xong",
+  "tasks.completeNamed": "Đánh dấu {subject} đã xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
   "tasks.log.action": "Ghi lại kết quả",

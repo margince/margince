@@ -8732,6 +8732,7 @@ export const en = {
   "compose.actionFailed": "The request failed. Retry.",
 
   "tasks.complete": "Done",
+  "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
   "tasks.log.action": "Log what happened",

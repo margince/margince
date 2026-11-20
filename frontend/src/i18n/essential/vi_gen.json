@@ -3135,6 +3135,7 @@
   "compose.relinkThread": "Chuyển phần còn lại của chuỗi thư",
   "compose.relinkThreadHint": "Mọi tin nhắn bạn có quyền sửa trong chuỗi thư này sẽ được chuyển trong một bước.",
   "tasks.complete": "Xong",
+  "tasks.completeNamed": "Đánh dấu {subject} đã xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
   "tasks.log.action": "Ghi lại kết quả",

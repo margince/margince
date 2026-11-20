@@ -8749,6 +8749,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",
 
   "tasks.complete": "Erledigt",
+  "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
   "tasks.log.action": "Ergebnis erfassen",
