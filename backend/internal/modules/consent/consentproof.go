@@ -47,8 +47,8 @@ func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID)
 // thing that confirms one is the subject spending a single-use link that was
 // mailed to their own live primary address. Non-DOI paths return nil.
 //
-// A contact and a lead confirm the same way, by spending the link mailed to
-// their own address, so the subject kind does not change the answer.
+// A contact and a lead confirm the same way: by spending the link mailed to
+// their own address.
 func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, requiresDOI bool) (*time.Time, error) {
 	if ConsentState(in.NewState) != StateGranted || !requiresDOI {
 		return nil, nil

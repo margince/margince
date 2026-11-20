@@ -256,9 +256,9 @@ func repointCarriedConsent(ctx context.Context, tx pgx.Tx, spec consentCarrySpec
 }
 
 // copyConfirmedProof gives a promoted contact the double opt-in proof behind a
-// carried grant. The delivery gate accepts a grant of such a purpose only with
-// a confirmed, mailbox-triggered event on the same record, and the lead's
-// events stay on the lead as the evidence of when the grant was given.
+// carried grant. The delivery gate accepts such a grant only with a confirmed,
+// mailbox-triggered event on the same record. The lead's events stay on the
+// lead as the evidence of when the grant was given.
 func copyConfirmedProof(ctx context.Context, tx pgx.Tx, spec consentCarrySpec, fromID, toID ids.UUID) error {
 	_, err := tx.Exec(ctx, storekit.SQLf(`
 		INSERT INTO consent_event (%[2]s, purpose_id, new_state, lawful_basis, source, policy_text, policy_version,

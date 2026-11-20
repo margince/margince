@@ -37,10 +37,10 @@ import (
 // the LIVE record, so a grant that moved while its confirmation stayed on the
 // archived one would be a grant nobody can act on.
 //
-// FALSE for promotion: the lead-scoped events ARE the evidence that the
-// consent predates the promotion, and re-keying them to the contact destroys
-// the only record of when it was given and to whom. A confirmed double opt-in
-// proof is copied, not moved; see TestAPromotionCopiesTheConfirmedProofOfACarriedGrant.
+// FALSE for promotion: the lead-scoped events are the evidence that the
+// consent predates the promotion. Re-keying them to the contact destroys the
+// only record of when it was given and to whom. A confirmed double opt-in
+// proof is copied, not moved (TestAPromotionCopiesTheConfirmedProofOfACarriedGrant).
 var proofRehomesExpected = map[consentCarryKind]bool{
 	consentCarryContactMerge:  true,
 	consentCarryLeadMerge:     true,
@@ -105,9 +105,9 @@ func (e *promoteConsentEnv) assertProofRule(t *testing.T, kind consentCarryKind,
 	}
 }
 
-// A lead's confirmed double opt-in grant must still authorize mail once the lead
-// is promoted: the gate reads the proof off the contact, so the carry copies it
-// and leaves the lead's own events in place.
+// A lead's confirmed double opt-in grant must still authorize mail after
+// promotion. The gate reads the proof off the contact, so the carry copies it.
+// The lead's own events stay in place.
 func TestAPromotionCopiesTheConfirmedProofOfACarriedGrant(t *testing.T) {
 	e := setupPromoteConsent(t)
 	ctx := context.Background()

@@ -127,20 +127,7 @@ func (s *Store) issueLinkTx(
 			return err
 		}
 		expires := issued.Add(confirmTokenTTL)
-		// Per KIND, and per purpose within a kind. A fresh record-confirmation
-		// link must not expire somebody's pending consent link and the other
-		// way round: they ask different questions and arrive in different
-		// mails, so superseding across them would silently kill an answer the
-		// subject was still coming back to.
-		//
-		// The earlier link's issued_at may come from another replica's clock,
-		// running ahead of this one. Its expiry is then held just after that
-		// stamp: never before its own issue, which the lifetime check refuses.
-		if _, err := tx.Exec(ctx, `
-			UPDATE confirm_token SET expires_at = greatest($2, issued_at + interval '1 microsecond')
-			WHERE `+who.column+` = $1 AND consumed_at IS NULL AND expires_at > $2
-			  AND kind = $3 AND purpose_id IS NOT DISTINCT FROM $4`,
-			who.id, issued, kind, nullablePurpose(purposeID)); err != nil {
+		if err := supersedeLiveLinksTx(ctx, tx, who, kind, purposeID, issued); err != nil {
 			return err
 		}
 		// The mail below is rendered in this same language, so the row and the
@@ -210,6 +197,22 @@ func (s *Store) issueLinkTx(
 		return mintedLink{}, err
 	}
 	return out, nil
+}
+
+// supersedeLiveLinksTx expires the subject's earlier unspent links of the same
+// kind and purpose. Different kinds ask different questions in different mails.
+// A fresh link of one must not kill an answer the subject still owes the other.
+//
+// An earlier link's issued_at may come from a replica whose clock runs ahead.
+// Its expiry is then held just after that stamp, because the lifetime check
+// refuses an expiry before the link's own issue.
+func supersedeLiveLinksTx(ctx context.Context, tx pgx.Tx, who subject, kind string, purposeID ids.PurposeID, issued time.Time) error {
+	_, err := tx.Exec(ctx, `
+		UPDATE confirm_token SET expires_at = greatest($2, issued_at + interval '1 microsecond')
+		WHERE `+who.column+` = $1 AND consumed_at IS NULL AND expires_at > $2
+		  AND kind = $3 AND purpose_id IS NOT DISTINCT FROM $4`,
+		who.id, issued, kind, nullablePurpose(purposeID))
+	return err
 }
 
 // contactLink is one confirm_token row a contact's link is minted as.
