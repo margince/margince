@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package cardphoto
 
 import (
 	"bytes"
@@ -105,13 +105,13 @@ func TestCardPhotoReaderTurnsEachOutcomeIntoARefusalAClientCanAct(t *testing.T) 
 	}
 	photo := cardPNG(t)
 
-	_, err := cardPhotoReader(&cardLane{carries: []string{"image/png"}})(context.Background(), []byte("BEGIN:VCARD"))
+	_, err := Reader(&cardLane{carries: []string{"image/png"}})(context.Background(), []byte("BEGIN:VCARD"))
 	if got := code(err); got != "unsupported_type" {
 		t.Errorf("a vCard sent as a photo: code = %s", got)
 	}
 
 	heic := &cardLane{carries: []string{"image/heic", "image/png"}}
-	_, err = cardPhotoReader(heic)(context.Background(), []byte("\x00\x00\x00\x18ftypheic\x00\x00\x00\x00"))
+	_, err = Reader(heic)(context.Background(), []byte("\x00\x00\x00\x18ftypheic\x00\x00\x00\x00"))
 	var refusal *contacts.CardPhotoRefusal
 	if got := code(err); got != "unsupported_type" || heic.calls != 0 {
 		t.Errorf("a HEIC photo: code = %s, calls = %d, want unsupported_type and no model call", got, heic.calls)
@@ -121,17 +121,17 @@ func TestCardPhotoReaderTurnsEachOutcomeIntoARefusalAClientCanAct(t *testing.T) 
 	}
 
 	textOnly := &cardLane{}
-	_, err = cardPhotoReader(textOnly)(context.Background(), photo)
+	_, err = Reader(textOnly)(context.Background(), photo)
 	if got := code(err); got != "not_readable" || textOnly.calls != 0 {
 		t.Errorf("a text-only binding: code = %s, calls = %d, want not_readable and no call", got, textOnly.calls)
 	}
 
-	_, err = cardPhotoReader(&cardLane{carries: []string{"image/png"}, reply: `{"cards":[]}`})(context.Background(), photo)
+	_, err = Reader(&cardLane{carries: []string{"image/png"}, reply: `{"cards":[]}`})(context.Background(), photo)
 	if got := code(err); got != "no_cards" {
 		t.Errorf("a photo with no card: code = %s", got)
 	}
 
-	entries, err := cardPhotoReader(&cardLane{carries: []string{"image/png"}, reply: twoCards})(context.Background(), photo)
+	entries, err := Reader(&cardLane{carries: []string{"image/png"}, reply: twoCards})(context.Background(), photo)
 	if err != nil || len(entries) != 1 || !entries[0].ModelRead {
 		t.Errorf("entries = %+v, err = %v, want one model-read card", entries, err)
 	}

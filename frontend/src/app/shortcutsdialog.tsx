@@ -81,7 +81,7 @@ function keymapGroup(
       continue;
     }
     const way: ShortcutWay = {
-      caps: bindingCaps(entry.keys),
+      caps: bindingCaps(entry.keys, t),
       sequence: entry.keys.kind === "sequence",
     };
     // A destination reads as the sidebar names it, which for Progress

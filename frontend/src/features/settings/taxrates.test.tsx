@@ -56,7 +56,7 @@ afterEach(() => {
 it("lists the rates and offers no editor to a seat that only reads them", async () => {
   vi.stubGlobal("fetch", backend(READER));
   render(<TaxRatesCard />);
-  expect(await screen.findByText("19.00 %")).toBeInTheDocument();
+  expect(await screen.findByText("19%")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: en["taxRates.add"] })).toBeNull();
 });
 

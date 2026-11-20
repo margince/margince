@@ -298,7 +298,7 @@ describe("CreateAction refusals of a row list or a set", () => {
     expect(screen.queryByText("Check Tag and try again.")).toBeNull();
   });
 
-  it("shows a picker's own refusal before the form sends", async () => {
+  it("shows a picker's own refusal after a pick, not when the form opens", async () => {
     const user = userEvent.setup();
     render(
       <CreateAction
@@ -315,6 +315,10 @@ describe("CreateAction refusals of a row list or a set", () => {
       />,
     );
     await user.click(screen.getByText("New contact"));
+    await screen.findByRole("combobox", { name: /^Tag/ });
+    expect(screen.queryByText("Pick one tag at most.")).toBeNull();
+    await user.click(screen.getByRole("combobox", { name: /^Tag/ }));
+    await user.click(screen.getByRole("option", { name: "A" }));
     expect(await screen.findByText("Pick one tag at most.")).toBeTruthy();
   });
 });

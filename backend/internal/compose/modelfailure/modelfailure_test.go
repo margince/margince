@@ -32,14 +32,14 @@ func TestAModelLaneThatFailedEveryTierIsRecognisable(t *testing.T) {
 
 	served := fmt.Errorf("%w for %s: %w", ai.ErrAllTiersFailed, "cold_start",
 		errors.New("openai-compat: response has no choices"))
-	if !unanswered(served) {
+	if !Unanswered(served) {
 		t.Error("the every-tier-failed aggregate was not recognised, so the handler answers 500 and names no remedy")
 	}
 
 	// A fault in the REQUEST is not the lane being down, and must not be
 	// reported as one: telling somebody the assistant is unavailable when their
 	// input was rejected sends them to check a binding that is fine.
-	if unanswered(errors.New("history: too many messages")) {
+	if Unanswered(errors.New("history: too many messages")) {
 		t.Error("an ordinary error was reported as the model lane being unreachable")
 	}
 }
@@ -67,7 +67,7 @@ func TestAnOrdinaryProviderFailureStillDegradesRatherThanFallingThrough(t *testi
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if !unanswered(fmt.Errorf("%w: %w", ai.ErrAllTiersFailed, cause)) {
+			if !Unanswered(fmt.Errorf("%w: %w", ai.ErrAllTiersFailed, cause)) {
 				t.Error("the walk ended with no answer and the handler would still report an opaque 500")
 			}
 		})
@@ -98,9 +98,7 @@ func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testin
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/onboarding/company/messages", nil)
-			if !answered(rec, req, fmt.Errorf("ai: anthropic: %s: %w", providerText, tc.cause)) {
-				t.Fatal("the walk ended with no answer and the handler would still report an opaque 500")
-			}
+			Write(rec, req, fmt.Errorf("ai: anthropic: %s: %w", providerText, tc.cause))
 			if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), codeAssistantUnavailable) {
 				t.Errorf("want 503 %s, got %d %s", codeAssistantUnavailable, rec.Code, rec.Body.String())
 			}
@@ -125,11 +123,11 @@ func TestAWalkThatEndedOnAnOutcomeIsAnsweredAsTheAssistantNotAnswering(t *testin
 // An error that is not the model lane is left for httperr.Write to answer.
 func TestAnErrorThatIsNotTheModelLaneIsNotAnsweredAsOne(t *testing.T) {
 	t.Parallel()
-	rec := httptest.NewRecorder()
-	if answered(rec, httptest.NewRequest(http.MethodPost, "/", nil), errors.New("history: too many messages")) {
-		t.Errorf("an ordinary error was answered as the assistant being unavailable: %d", rec.Code)
+	ordinary := errors.New("history: too many messages")
+	if got := Refusal(t.Context(), ordinary); got != ordinary {
+		t.Errorf("an ordinary error was answered as the assistant being unavailable: %v", got)
 	}
-	rec = httptest.NewRecorder()
+	rec := httptest.NewRecorder()
 	Write(rec, httptest.NewRequest(http.MethodPost, "/", nil), apperrors.ErrNotFound)
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("a missing record reached Write and was answered %d rather than httperr's 404", rec.Code)
@@ -163,5 +161,17 @@ func TestAProviderTheRouterBlockedIsAnsweredWithItsReason(t *testing.T) {
 				t.Errorf("the detail must send the reader to their administrator and name no provider: %s", body)
 			}
 		})
+	}
+}
+
+// The budget stop is a reason of its own. The reader is told the allowance is
+// used up, not that the assistant failed.
+func TestABudgetStopIsAnsweredAsTheAllowanceUsedUp(t *testing.T) {
+	t.Parallel()
+	deferred := &ai.BudgetDeferralError{Task: ai.TaskDocumentExtract}
+	rec := httptest.NewRecorder()
+	Write(rec, httptest.NewRequest(http.MethodPost, "/", nil), fmt.Errorf("reading: %w", deferred))
+	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), codeAllowanceUsedUp) {
+		t.Errorf("want 503 %s, got %d %s", codeAllowanceUsedUp, rec.Code, rec.Body.String())
 	}
 }

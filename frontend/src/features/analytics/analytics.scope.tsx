@@ -2,7 +2,7 @@ import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { AnalyticsScope } from "./analytics.context";
-import { scopeKey } from "./analytics.context";
+import { scopeKey, scopeName } from "./analytics.context";
 
 /**
  * Which population the numbers on this page are about.
@@ -29,7 +29,7 @@ export function AnalyticsScopePicker({
   if (scopes.length <= 1) {
     return (
       <p className="sub">
-        {t("analytics.scopeFixed", { scope: selected.label })}
+        {t("analytics.scopeFixed", { scope: scopeName(selected, t) ?? "" })}
       </p>
     );
   }
@@ -43,7 +43,7 @@ export function AnalyticsScopePicker({
           {...field}
           options={scopes.map((scope) => ({
             value: scopeKey(scope),
-            label: scope.label,
+            label: scopeName(scope, t) ?? "",
           }))}
           value={scopeKey(selected)}
           onChange={(next) => {

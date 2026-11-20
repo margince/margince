@@ -345,9 +345,8 @@ export function CommandPalette({
               }
             }}
           />
-          {/* The key's own name, not copy: it is what is printed on the cap a
-              reader is looking at, in every locale, the way the ⌘/Ctrl caps
-              beside the search box are. */}
+          {/* The key's own name, not copy: every keyboard prints Esc on this
+              cap, unlike Ctrl, which a German keyboard prints as Strg. */}
           <Kbd>{"esc"}</Kbd>
         </div>
         {!creates && Object.keys(every.counts).length > 0 && (

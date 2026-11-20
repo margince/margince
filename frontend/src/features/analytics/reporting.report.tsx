@@ -15,6 +15,7 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { scopeName } from "./analytics.context";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingComparison } from "./reporting.comparison";
 import { useCreateReport } from "./reporting.create";
@@ -488,7 +489,7 @@ function ReportTitle({ report }: Readonly<{ report: ReportingReport }>) {
         <p className="reporting-description">{report.description}</p>
       )}
       <p className="t-caption">
-        {report.selection.scope.label} ·{" "}
+        {scopeName(report.selection.scope, t)} ·{" "}
         {t(`reporting.${report.selection.period}`)} ·{" "}
         {t(`reporting.${report.audience}`)}
       </p>
