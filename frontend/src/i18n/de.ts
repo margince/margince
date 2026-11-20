@@ -22160,7 +22160,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
   "approval.commitment.noDueDay": "Kein Tag genannt",
   "approval.commitment.strength": "Wie verbindlich",
-  "approval.commitment.oddDue": "Dieses Datum wirkt weit weg: behalten, ändern oder leeren",
+  "approval.commitment.oddDue":
+    "Dieses Datum wirkt weit weg: behalten, ändern oder leeren",
   "approval.commitment.tentative": "Mit Vorbehalt: Es hieß, man versuche es",
   "approval.commitment.promiseStatus": "Stand der Zusage",
   "approval.commitment.notFulfilled":
