@@ -50,7 +50,7 @@ What the switch cannot promise:
 
 Also called: works council, Betriebsrat, figures per rep, team figures.
 
-## The four compliance documents, in order
+## Employee email capture documents for Germany
 
 1. **Tell the colleagues whose mail will be read**: the
    *Beschäftigteninformation* (Art. 13 GDPR). Do it before a mailbox is
@@ -81,6 +81,13 @@ Also called: works council, Betriebsrat, figures per rep, team figures.
 With Germany chosen as the law, the templates are on **Settings → Compliance →
 Jurisdiction**, to read and download. The English set is for reading and for
 passing around inside the company; the German versions are the ones to sign.
+
+## Employee email capture documents for Vietnam
+
+With Vietnam selected under **Settings → Compliance → Jurisdiction**, open the employee
+notice, its English reading copy or the acknowledgment of receipt. Fill in the Vietnamese
+notice and give it to employees before connecting their mailboxes. Keep the signed
+acknowledgment as a record that they received the notice.
 
 ## What Margince gives you to point at
 

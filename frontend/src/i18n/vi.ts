@@ -14457,7 +14457,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.rule.pack": "Bộ quy tắc {rule}",
   "jurisdiction.documents.title": "Tài liệu",
   "jurisdiction.documents.empty":
-    "Gói của khu vực pháp lý này không có tài liệu.",
+    "Không có mẫu tài liệu tuân thủ tích hợp sẵn cho quốc gia này.",
   "jurisdiction.documents.emptyUnset":
     "Chưa đặt khu vực pháp lý, nên không có tài liệu để hiển thị.",
   "jurisdiction.documents.read": "Đọc",

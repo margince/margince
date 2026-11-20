@@ -14786,7 +14786,7 @@ export const en = {
   "jurisdiction.rule.pack": "Rule set {rule}",
   "jurisdiction.documents.title": "Documents",
   "jurisdiction.documents.empty":
-    "This jurisdiction’s pack ships no documents.",
+    "No built-in compliance templates are available for this country.",
   "jurisdiction.documents.emptyUnset":
     "No jurisdiction is set, so there are no documents to show.",
   "jurisdiction.documents.read": "Read",
