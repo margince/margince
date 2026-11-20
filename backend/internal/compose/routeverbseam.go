@@ -45,8 +45,7 @@ type routeVerbShape struct {
 	HumanOnly []string
 }
 
-// egresses is whether an operation sends something out of the workspace: an
-// outbound cap, unless the contract says the operation sends nothing.
+// egresses: an outbound cap leaves the workspace unless the contract says not.
 func (p agentPolicy) egresses() bool {
 	return principal.Scope(p.Scope).Egresses() && !p.StaysInside
 }

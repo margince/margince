@@ -100,6 +100,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		Body:                 &recorded,
 		Direction:            &direction,
 		Links:                m.links,
+		continues:            chain.continues,
 		Source:               sourceManual,
 		SourceSystem:         &sourceSystem,
 		SourceID:             &m.messageID,

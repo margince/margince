@@ -137,6 +137,7 @@ func writeCommitmentTask(
 	// The promiser's own task waits for them as a task made by hand would,
 	// also before they first sign in.
 	in.AdmitInvitedAssignee()
+	in.ContinueFiling(sourceActivity)
 	if t.DueConfirmed {
 		in.AdmitConfirmedDue()
 	}
@@ -221,10 +222,15 @@ func commitmentTaskEffect(
 			if proposal.ExistingTaskID != nil {
 				return attachCommitmentRecipients(writer, tx, tasks, claims, proposal)
 			}
+			// The same question the precheck asked, so the two cannot disagree.
+			links, err := tasks.FilingLinksTx(writer, tx, proposal.SourceActivityID, proposal.Links)
+			if err != nil {
+				return err
+			}
 			task := commitmentTask{
 				Locator: proposal.Locator,
 				Summary: proposal.Summary, Body: proposal.Body, SystemText: proposal.SystemText,
-				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
+				SourceActivityID: proposal.SourceActivityID, Links: links,
 				DueDate: proposal.DueDate, DueZone: proposal.DueZone, DueConfirmed: proposal.DueDate != "" && proposal.DueDate == proposal.OddDueDate,
 				Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
 				PrivateTo: privateTo, Origin: activities.OriginAgent,
@@ -378,7 +384,7 @@ func commitmentTaskPrecheck(db *database.DB, tasks *activities.Store) approvals.
 			return err
 		}
 		if !heldByAnotherThanOwner(privateTo, holder) {
-			if err := tasks.ProbeLinkWrites(ctx, proposal.Links); err != nil {
+			if _, err := tasks.FilingLinks(ctx, proposal.SourceActivityID, proposal.Links); err != nil {
 				return err
 			}
 		}

@@ -44353,11 +44353,26 @@ type ConsentPurpose struct {
 	RequiresDoubleOptIn *bool `json:"requires_double_opt_in,omitempty"`
 }
 
-// ConsentPurposeClass What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
+// ConsentPurposeClass Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
 type ConsentPurposeClass string
 
 // ConsentPurposeFrequency How often the purpose's mail goes out, roughly. The subscription question states it.
 type ConsentPurposeFrequency string
+
+// ConsentPurposeSendCount defines model for ConsentPurposeSendCount.
+type ConsentPurposeSendCount struct {
+	// Class The purpose's class. Absent under `unknown`.
+	Class *ConsentPurposeClass `json:"class,omitempty"`
+
+	// Disputed Of those, the messages whose claimed kind differs from the kind the record bore out.
+	Disputed int `json:"disputed"`
+
+	// PurposeKey The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none.
+	PurposeKey string `json:"purpose_key"`
+
+	// Sends Messages staged under this purpose in the window.
+	Sends int `json:"sends"`
+}
 
 // ConsentQualifyingEvent A recorded exchange that may support a scoped message. The send check also
 // uses its sending company, request or deal context, current stops and source
@@ -52493,8 +52508,11 @@ type HandoverCounts struct {
 	Lead    int `json:"lead" minimum:"0"`
 
 	// List Live lists owned by the member.
-	List    int `json:"list" minimum:"0"`
-	Project int `json:"project" minimum:"0"`
+	List int `json:"list" minimum:"0"`
+
+	// MailDraft Unsent messages the member saved in the composer. Only the count is shown; the words stay readable by the author alone until a handover moves them.
+	MailDraft int `json:"mail_draft" minimum:"0"`
+	Project   int `json:"project" minimum:"0"`
 
 	// RecordAssignment Current user responsibilities on records.
 	RecordAssignment int `json:"record_assignment" minimum:"0"`
@@ -71241,6 +71259,9 @@ type UserHandoverResult struct {
 	// Left Live records per kind.
 	Left HandoverCounts `json:"left"`
 
+	// MailDraftDiscarded The member's saved drafts deleted because the receiver already had a draft in the same place.
+	MailDraftDiscarded int `json:"mail_draft_discarded" minimum:"0"`
+
 	// Moved Live records per kind.
 	Moved HandoverCounts `json:"moved"`
 }
@@ -73204,7 +73225,7 @@ type Worklist struct {
 	ScopeTruncated *bool `json:"scope_truncated,omitempty"`
 
 	// ServedStale True when this answer is Home's kept answer past its five-minute freshness,
-	// served while the server reads it again. It still holds every access rule the
+	// or older than the reader's own latest write, served while the server reads it again. It still holds every access rule the
 	// fresh read would apply. A client asks again a few seconds later for the fresh
 	// answer. Absent or false means the answer is fresh.
 	ServedStale *bool `json:"served_stale,omitempty"`
@@ -78041,6 +78062,12 @@ type DismissConnectorSilenceParams struct {
 	// the caller holds one mailbox of the provider; with several, a call without it answers 422
 	// and names this parameter.
 	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// ListConsentPurposeSendCountsParams defines parameters for ListConsentPurposeSendCounts.
+type ListConsentPurposeSendCountsParams struct {
+	// Days How many days back the window reaches from now.
+	Days *int `form:"days,omitempty" json:"days,omitempty" maximum:"366" minimum:"1"`
 }
 
 // ListContactsParams defines parameters for ListContacts.
@@ -100508,6 +100535,9 @@ type ServerInterface interface {
 	// Define a consent purpose — a human-only admin write.
 	// (POST /consent-purposes)
 	CreateConsentPurpose(w http.ResponseWriter, r *http.Request)
+	// How many messages went out under each declared consent purpose, and how many the record disputes.
+	// (GET /consent-purposes/send-counts)
+	ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request, params ListConsentPurposeSendCountsParams)
 	// List contacts (live by default; cursor-paginated).
 	// (GET /contacts)
 	ListContacts(w http.ResponseWriter, r *http.Request, params ListContactsParams)
@@ -105032,6 +105062,12 @@ func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Reques
 // Define a consent purpose — a human-only admin write.
 // (POST /consent-purposes)
 func (_ Unimplemented) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How many messages went out under each declared consent purpose, and how many the record disputes.
+// (GET /consent-purposes/send-counts)
+func (_ Unimplemented) ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request, params ListConsentPurposeSendCountsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -127248,6 +127284,47 @@ func (siw *ServerInterfaceWrapper) CreateConsentPurpose(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateConsentPurpose(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListConsentPurposeSendCounts operation middleware
+func (siw *ServerInterfaceWrapper) ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListConsentPurposeSendCountsParams
+
+	// ------------- Optional query parameter "days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "days", r.URL.Query(), &params.Days, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListConsentPurposeSendCounts(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -160122,6 +160199,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/consent-purposes", wrapper.CreateConsentPurpose)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/consent-purposes/send-counts", wrapper.ListConsentPurposeSendCounts)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts", wrapper.ListContacts)

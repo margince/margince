@@ -51,8 +51,7 @@ const taskColumns = `id, approval_id, tool, status, COALESCE(status_message, '')
 // connection, which a token refresh keeps while it retires the passport.
 const taskOwnedBy = `(passport_id = $2 OR connection_id = $3)`
 
-// taskOwnerOf answers the passport a task method acts under, and its connection
-// (nil without one, which SQL compares as NULL and so matches no row).
+// taskOwnerOf answers the caller's passport and connection; a nil one is NULL.
 //
 // A ZERO passport is refused as hard as a missing principal. principal.Actor
 // answers ok for a zero-value Principal, and a passport-less task row would be

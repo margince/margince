@@ -130,13 +130,17 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 		}
 		return cmp.Compare(a.EntityID.String(), b.EntityID.String())
 	})
+	carried, err := carriedLinks(ctx, tx, in.continues)
+	if err != nil {
+		return err
+	}
 	seen := make(map[ActivityLinkInput]struct{}, len(links))
 	for _, link := range ordered {
 		if _, duplicate := seen[link]; duplicate {
 			continue
 		}
 		seen[link] = struct{}{}
-		if err := mayAttach(ctx, tx, link); err != nil {
+		if err := gateFor(carried, link)(ctx, tx, link); err != nil {
 			return linkRefusal(fromRequest, err)
 		}
 		column := linkColumn(link.EntityType)
@@ -165,6 +169,34 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 // inserted. It runs ahead of the insert it gates, so no refusal depends on the
 // caller aborting its transaction.
 func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
+	// ATTACH: the named record gains an activity that every reader of it will
+	// see, so the caller must be allowed to change the record.
+	return mayLink(ctx, tx, link, auth.EnsureAttachTarget)
+}
+
+// gateFor picks the question one link is asked: mayCarry for a link the
+// continued activity holds, mayAttach for every other.
+func gateFor(carried map[ActivityLinkInput]bool, link ActivityLinkInput) func(context.Context, pgx.Tx, ActivityLinkInput) error {
+	if carried[link] {
+		return mayCarry
+	}
+	return mayAttach
+}
+
+// mayCarry is mayAttach for a link the continued activity already holds. That
+// is a reply on its thread, a transcript on its meeting, a reminder on its
+// message.
+// The record already shows that conversation. So the caller must see it and
+// need not be allowed to change it. Mail capture files a colleague's contact
+// the same way. A reply that refused what capture then files anyway would only
+// move the row.
+func mayCarry(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
+	return mayLink(ctx, tx, link, auth.EnsureLinkTarget)
+}
+
+func mayLink(ctx context.Context, tx pgx.Tx, link ActivityLinkInput,
+	probe func(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error,
+) error {
 	if linkColumn(link.EntityType) == "" {
 		return &InvalidLinkTypeError{EntityType: link.EntityType}
 	}
@@ -176,15 +208,34 @@ func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
 			return err
 		}
 	}
-	// ATTACH: the named record gains an activity that every reader of it
-	// will see, so a share marked read-only does not confer this.
-	if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
+	if err := probe(ctx, tx, link.EntityType, link.EntityID); err != nil {
 		return err
 	}
 	if link.EntityType == linkEntityDeal {
 		return refuseAnotherMembersDeal(ctx, tx, link.EntityID)
 	}
 	return nil
+}
+
+// carriedLinks are the links the continued activity holds. Nil continues
+// nothing, so it carries no link.
+func carriedLinks(ctx context.Context, tx pgx.Tx, continued *ids.UUID) (map[ActivityLinkInput]bool, error) {
+	if continued == nil {
+		return map[ActivityLinkInput]bool{}, nil
+	}
+	rows, err := tx.Query(ctx, `SELECT entity_type, `+linkIDCoalesce+` FROM activity_link WHERE activity_id = $1`, *continued)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading where the continued activity is filed: %w", err)
+	}
+	links, err := pgx.CollectRows(rows, pgx.RowToStructByPos[ActivityLinkInput])
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading where the continued activity is filed: %w", err)
+	}
+	carried := make(map[ActivityLinkInput]bool, len(links))
+	for _, link := range links {
+		carried[link] = true
+	}
+	return carried, nil
 }
 
 // linkRefusal names the body field when the caller typed the links. Links a

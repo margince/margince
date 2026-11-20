@@ -5,13 +5,15 @@
 
 package agentaccess
 
-// A retry key belongs to the connected agent, not to one passport row. A refresh
-// retires the passport and mints a replacement under the same grant, and the
-// retry of a write whose answer was lost often arrives on that replacement.
+// A retry key and a task handle belong to the connected agent, not to one
+// passport row. A refresh retires the passport and mints a replacement under the
+// same grant, and the retry or the poll that follows often arrives on it.
 
 import (
 	"fmt"
 	"net/http"
+	"net/url"
+	"regexp"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -81,4 +83,42 @@ func TestARESTRetryAfterATokenRefreshReplaysTheFirstWrite(t *testing.T) {
 		t.Errorf("the retry on the refreshed token created %s, want the first call's %s replayed", retry, first)
 	}
 	assertOwnerCount(t, o, 1, `SELECT count(*) FROM contact WHERE full_name = $1`, name)
+}
+
+// taskHandle reads the handle a task-mode call answered with.
+var taskHandle = regexp.MustCompile(`"taskId":"([0-9a-f-]{36})"`)
+
+func TestATaskHandleOutlivesItsConnectionsTokenRefresh(t *testing.T) {
+	o := setupOAuth(t)
+	code := o.authorize(t, url.Values{"scope": {"read enrich offline_access"}})
+	_, tokens := o.exchange(t, url.Values{"code": {code}})
+	access, _ := tokens["access_token"].(string)
+	refresh, _ := tokens["refresh_token"].(string)
+	var company struct {
+		ID string `json:"id"`
+	}
+	if status := o.Call(t, "POST", "/v1/companies", integration.AnyMap{
+		"source": "manual", "display_name": "Task Handle GmbH",
+		"domains": []integration.AnyMap{{"domain": "task-handle.test", "is_primary": true}},
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("company create → %d", status)
+	}
+	bearer := func(token string) map[string]string { return map[string]string{"Authorization": "Bearer " + token} }
+
+	// enrich waits for a human even on its user's passport, so task mode hands back a handle.
+	staged := mcpRaw(t, o.AppEnv, http.MethodPost, "/mcp", fmt.Sprintf(
+		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{%s,"name":"enrich","arguments":{"company_id":%q}}}`,
+		tasksMeta, company.ID), modernHeaders(bearer(access), "tools/call", "enrich"))
+	handle := taskHandle.FindStringSubmatch(staged.Body)
+	if handle == nil {
+		t.Fatalf("a task-mode enrich answered no handle: %d %s", staged.StatusCode, staged.Body)
+	}
+
+	access, _ = o.renewedAccess(t, refresh)
+	polled := mcpRaw(t, o.AppEnv, http.MethodPost, "/mcp", fmt.Sprintf(
+		`{"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{%s,"taskId":%q}}`, tasksMeta, handle[1]),
+		modernHeaders(bearer(access), "tasks/get", handle[1]))
+	if result := rpcResult(t, polled.Body); result["status"] != "working" {
+		t.Fatalf("the refreshed token polled its connection's task and got %v", result)
+	}
 }

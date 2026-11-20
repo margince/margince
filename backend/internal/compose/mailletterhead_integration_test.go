@@ -150,7 +150,7 @@ func TestPrivacyNoticesAndProductMailNameTheSameCompany(t *testing.T) {
 	var body string
 	if err := InstallationDB(e.Pool).Tx(e.Admin(), func(tx pgx.Tx) error {
 		var err error
-		mail, err := presentControllerMailTx(e.Admin(), tx, consent.Rendered{Body: "We recorded your request.", Language: "en", Subject: "Your request"})
+		mail, err := presentControllerMailTx(e.Admin(), tx, consent.Rendered{Body: "We recorded your request.", Language: "en", Subject: "Your request"}, ids.UUID{})
 		body = mail.body
 		return err
 	}); err != nil {
@@ -192,7 +192,7 @@ func TestAControllerMailIsHeadedByTheControllerItNames(t *testing.T) {
 	var mail presentedControllerMail
 	if err := InstallationDB(e.Pool).Tx(e.Admin(), func(tx pgx.Tx) error {
 		var err error
-		mail, err = presentControllerMailTx(e.Admin(), tx, consent.Rendered{Body: "We recorded your request.", Language: "en", Subject: "Your request"})
+		mail, err = presentControllerMailTx(e.Admin(), tx, consent.Rendered{Body: "We recorded your request.", Language: "en", Subject: "Your request"}, ids.UUID{})
 		return err
 	}); err != nil {
 		t.Fatal(err)

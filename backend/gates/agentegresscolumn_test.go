@@ -82,3 +82,28 @@ func TestTheGuidesEgressColumnIsTheServedOne(t *testing.T) {
 		t.Fatalf("only %d rows of %s were compared against the served list", compared, catalogPage)
 	}
 }
+
+// A spec's Egress flag tells an operator the act leaves the workspace; its scope
+// is what the passport pays for it. A send or enrich act may stay inside only
+// as a route verb whose contract operation declares `egress: false`.
+func TestEverySpecsEgressAgreesWithItsScope(t *testing.T) {
+	t.Parallel()
+	staysInside := map[string]bool{}
+	for _, verb := range compose.RouteVerbs() {
+		staysInside[verb.Verb] = verb.Scope.Egresses() && !verb.Egress
+	}
+	inside := 0
+	for name, spec := range servedSpecs() {
+		if staysInside[name] {
+			inside++
+		}
+		if want := spec.RequiredScope.Egresses() && !staysInside[name]; spec.Egress != want {
+			t.Errorf("%s declares Egress=%v but spends the %q cap, and the contract says egress is %v — "+
+				"an operator reading the tool surface would be told the wrong thing about where this act goes",
+				name, spec.Egress, spec.RequiredScope, want)
+		}
+	}
+	if inside == 0 {
+		t.Fatal("the contract declares no operation that stays inside, so half of this sweep checked nothing")
+	}
+}

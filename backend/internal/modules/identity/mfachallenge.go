@@ -147,25 +147,36 @@ func (s *Service) checkChallengedCode(ctx context.Context, tx pgx.Tx, wsID ids.W
 
 // WithRequireMFA injects the require-MFA policy reader, read at admission so an
 // admin turning it on takes effect without a restart. Unset leaves MFA optional.
-func (s *Service) WithRequireMFA(fn func(ctx context.Context) (bool, error)) *Service {
+func (s *Service) WithRequireMFA(fn func(ctx context.Context, tx pgx.Tx) (bool, error)) *Service {
 	s.requireMFA = fn
 	return s
 }
 
-// mfaMandatory reports whether the installation requires a second factor. An
-// unwired reader is "not required"; a read that fails propagates, so a policy
-// outage confines rather than silently admits.
+// mfaMandatory reports whether the installation requires a second factor, read
+// in the caller's transaction. An unwired reader is "not required"; a read that
+// fails propagates, so a policy outage confines rather than silently admits.
 //
 // A service with no vault also answers "not required", whatever the stored
 // policy says: with no seal there is no enrolment, so confining a member to
 // enrolment routes that can only refuse would lock every factorless member out
 // of the whole product with no way back in. The composition root reports the
 // misconfiguration at boot; admission must not convert it into a lockout.
-func (s *Service) mfaMandatory(ctx context.Context) (bool, error) {
+func (s *Service) mfaMandatory(ctx context.Context, tx pgx.Tx) (bool, error) {
 	if s.requireMFA == nil || s.vault == nil {
 		return false, nil
 	}
-	return s.requireMFA(ctx)
+	return s.requireMFA(ctx, tx)
+}
+
+// mustEnrolMFA reports whether a password session of this member is confined to
+// enrolment: the installation requires a factor and the member has none confirmed.
+func (s *Service) mustEnrolMFA(ctx context.Context, tx pgx.Tx, userID ids.UserID) (bool, error) {
+	mandatory, err := s.mfaMandatory(ctx, tx)
+	if err != nil || !mandatory {
+		return false, err
+	}
+	confirmed, err := hasConfirmedMFA(ctx, tx, userID)
+	return !confirmed, err
 }
 
 // CompleteMFAChallenge verifies a second factor for a member the password step

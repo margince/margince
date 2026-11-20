@@ -34,6 +34,7 @@ import { useHoverIntent } from "./hoverintent";
 import { OverviewList, OverviewRow } from "./overviewcard";
 import { usePanelDismiss } from "./popoverdismiss";
 import { usePortalPanelFocus } from "./portalfocus";
+import { useTopLayer } from "./toplayer";
 import "./popover.css";
 import "./peek.css";
 
@@ -82,6 +83,7 @@ export function usePeek<Anchor extends HTMLElement>({
   const [openedBy, setOpenedBy] = useState<Opened>("hover");
   const anchor = useRef<Anchor | null>(null);
   const panel = useRef<HTMLElement | null>(null);
+  useTopLayer(panel, open);
   const panelId = useId();
   const at = useAnchoredToTrigger(open, anchor, panel, "start");
   // A hover or a focus is not a request to be moved into the panel; only a
@@ -177,6 +179,7 @@ export function usePeek<Anchor extends HTMLElement>({
         <section
           id={panelId}
           ref={panel}
+          popover="manual"
           className="popover-panel peek-panel"
           aria-label={content?.head}
           {...hover}

@@ -521,11 +521,13 @@ func TestIdempotentReplayDoesNotDiscloseOutOfScopeRecords(t *testing.T) {
 }
 
 // Link targets are validated against the caller's visibility before the
-// insert: the FK alone runs as the table owner and would persist a guessed
-// or unreadable UUID as a link. Another team's plain contact is readable and
-// so linkable; their capture-private contact is neither.
+// insert. The FK alone runs as the table owner and would persist a guessed or
+// unreadable UUID as a link. Another team's plain contact is readable but not
+// the caller's to change, so filing onto it answers 403. Their capture-private
+// contact is not even readable, so it answers 404.
 func TestActivityLinkTargetsMustBeVisible(t *testing.T) {
 	e := Setup(t)
+	ownContact := e.SeedContact(t, "Own contact", &e.Rep1)
 	theirContact := e.SeedContact(t, "Their contact", &e.Rep3)
 	foreignContact := e.SeedContact(t, "Foreign", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", foreignContact, e.Rep3)
@@ -533,9 +535,15 @@ func TestActivityLinkTargetsMustBeVisible(t *testing.T) {
 
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
 		Kind: "note", Subject: new("Linked note"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: theirContact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ownContact}},
 	}); err != nil {
-		t.Errorf("link to another team's readable contact → %v, want success", err)
+		t.Errorf("link to the caller's own contact → %v, want success", err)
+	}
+	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: theirContact}},
+	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("link to another team's readable contact → %v, want ErrPermissionDenied", err)
 	}
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
 		Kind: "note", Subject: new("Linked note"), Source: "manual",

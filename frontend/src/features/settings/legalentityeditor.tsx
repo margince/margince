@@ -26,6 +26,7 @@ import {
 } from "../../lib/legalentities.queries";
 import { problemMessageOf } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
+import { DefaultEntityCountry } from "./jurisdictionentities";
 import {
   ADDRESS_KEYS,
   DEFAULT_ENTITY_KEYS,
@@ -153,7 +154,7 @@ export function EditEntityDialog({
         name: entity.display_name || t("legalEntities.defaultUnnamed"),
       })}
       onClose={onClose}
-      fieldCount={own ? 21 : 7}
+      fieldCount={own ? 21 : 6}
       unsaved={dirty}
       closeDisabled={busy}
       form={
@@ -180,7 +181,11 @@ export function EditEntityDialog({
           ) : (
             <p className="t-caption">{t("legalEntities.defaultFromCompany")}</p>
           )}
-          <CountryField required={own} {...text("country")} />
+          {own ? (
+            <CountryField {...text("country")} />
+          ) : (
+            <DefaultEntityCountry />
+          )}
           {own && (
             <>
               <SectionHeader
@@ -271,12 +276,10 @@ export function EditEntityDialog({
 }
 
 export function CountryField({
-  required,
   value,
   error,
   onChange,
 }: Readonly<{
-  required: boolean;
   value: string;
   error?: string;
   onChange: (value: string) => void;
@@ -289,25 +292,13 @@ export function CountryField({
     label: option.label,
   }));
   return (
-    <Field
-      label={t("legalEntities.country")}
-      hint={required ? undefined : t("legalEntities.countryInstallationHint")}
-      required={required}
-      error={error}
-    >
+    <Field label={t("legalEntities.country")} required error={error}>
       {(control) => (
         <Select
           {...control}
           value={value}
           placeholder={t("legalEntities.countryPlaceholder")}
-          options={
-            required
-              ? options
-              : [
-                  { value: "", label: t("legalEntities.countryInstallation") },
-                  ...options,
-                ]
-          }
+          options={options}
           onChange={onChange}
         />
       )}

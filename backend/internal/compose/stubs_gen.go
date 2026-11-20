@@ -1571,6 +1571,10 @@ func (stubs) CreateConsentPurpose(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "CreateConsentPurpose")
 }
 
+func (stubs) ListConsentPurposeSendCounts(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListConsentPurposeSendCountsParams) {
+	httperr.NotImplemented(w, r, "ListConsentPurposeSendCounts")
+}
+
 func (stubs) ListContacts(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListContactsParams) {
 	httperr.NotImplemented(w, r, "ListContacts")
 }
