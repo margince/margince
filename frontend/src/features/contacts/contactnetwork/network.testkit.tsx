@@ -50,6 +50,24 @@ export function jsonResponse(body: unknown): Response {
  * query run before the answer lands would pass against a page that has not yet
  * consulted the grants at all.
  */
+// The ask list's answer: none ever, a server error, or the asks.
+function asksAnswer(
+  asks: readonly IntroRequest[],
+  pending: boolean,
+  fail: boolean,
+): Response | Promise<Response> {
+  if (pending) {
+    return new Promise<Response>(() => {});
+  }
+  if (fail) {
+    return new Response(
+      JSON.stringify({ status: 500, code: "internal", detail: "down" }),
+      { status: 500, headers: { "content-type": "application/problem+json" } },
+    );
+  }
+  return jsonResponse({ data: asks });
+}
+
 function stub(
   graph: ContactGraph,
   allow: GrantSpec = {},
@@ -78,19 +96,7 @@ function stub(
         });
       }
       if (url.includes("/intro-requests")) {
-        if (asksPending) {
-          return new Promise<Response>(() => {});
-        }
-        if (asksFail) {
-          return new Response(
-            JSON.stringify({ status: 500, code: "internal", detail: "down" }),
-            {
-              status: 500,
-              headers: { "content-type": "application/problem+json" },
-            },
-          );
-        }
-        return jsonResponse({ data: asks });
+        return asksAnswer(asks, asksPending, asksFail);
       }
       if (url.includes("/me")) {
         answered();

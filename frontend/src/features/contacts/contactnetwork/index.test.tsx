@@ -39,15 +39,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// The contact alone in its graph; `over` is what a case changes.
+function alone(over: Partial<ContactGraph> = {}): ContactGraph {
+  return {
+    contact_id: CONTACT,
+    nodes: [anchor],
+    edges: [],
+    routes: [],
+    groups_omitted: [],
+    ...over,
+  };
+}
+
 describe("a contact nobody here reaches", () => {
   it("says so once, not twice", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [],
-      groups_omitted: [],
-    });
+    renderTab(alone());
 
     // The strip is this page's answer-first surface, so the reading belongs
     // there. A paragraph under it repeating the same words made one finding
@@ -60,13 +66,7 @@ describe("a contact nobody here reaches", () => {
   });
 
   it("draws no card offering a choice of nothing", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [],
-      groups_omitted: [],
-    });
+    renderTab(alone());
 
     await screen.findByText(NO_ROUTE);
     // "Ways in — best first, pick the one you can actually use" over an empty
@@ -76,13 +76,7 @@ describe("a contact nobody here reaches", () => {
   });
 
   it("draws no map of the contact alone and no handoff to start", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [],
-      groups_omitted: [],
-    });
+    renderTab(alone());
 
     await screen.findByText(NO_ROUTE);
     expect(
@@ -98,22 +92,20 @@ describe("a contact nobody here reaches", () => {
   });
 
   it("draws no map when only the contact's own colleagues are known", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [
-        anchor,
-        {
-          id: "contact:018f3a1b-0000-7000-8000-000000000031",
-          type: "contact",
-          group: "account",
-          label: "Lena Vogt",
-          contact_id: "018f3a1b-0000-7000-8000-000000000031",
-        },
-      ],
-      edges: [],
-      routes: [],
-      groups_omitted: [],
-    });
+    renderTab(
+      alone({
+        nodes: [
+          anchor,
+          {
+            id: "contact:018f3a1b-0000-7000-8000-000000000031",
+            type: "contact",
+            group: "account",
+            label: "Lena Vogt",
+            contact_id: "018f3a1b-0000-7000-8000-000000000031",
+          },
+        ],
+      }),
+    );
 
     await screen.findByText(NO_ROUTE);
     expect(
@@ -122,13 +114,7 @@ describe("a contact nobody here reaches", () => {
   });
 
   it("draws the map when who corresponds is withheld from the reader", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [],
-      groups_omitted: ["direct"],
-    });
+    renderTab(alone({ groups_omitted: ["direct"] }));
 
     expect(
       await screen.findByRole("group", { name: en["contact.intro.mapRegion"] }),
@@ -136,18 +122,7 @@ describe("a contact nobody here reaches", () => {
   });
 
   it("keeps the Retry of an introduction list that could not be read", async () => {
-    renderTab(
-      {
-        contact_id: CONTACT,
-        nodes: [anchor],
-        edges: [],
-        routes: [],
-        groups_omitted: [],
-      },
-      "en",
-      {},
-      { asksFail: true },
-    );
+    renderTab(alone(), "en", {}, { asksFail: true });
 
     expect(
       await screen.findByText(en["contact.intro.asksFailed"]),
@@ -240,13 +215,7 @@ describe("a route that cannot be asked for", () => {
   });
 
   it("offers no button that would answer 409", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [taken],
-      groups_omitted: [],
-    });
+    renderTab(alone({ routes: [taken] }));
 
     await screen.findByText(en["contact.intro.unavailable"]);
     expect(
@@ -320,13 +289,7 @@ describe("several ways in", () => {
 
   it("opens the ask drawer from an alternative's own button", async () => {
     const user = userEvent.setup();
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [direct, viaContact],
-      groups_omitted: [],
-    });
+    renderTab(alone({ routes: [direct, viaContact] }));
 
     await user.click(
       await screen.findByRole("button", {
@@ -380,13 +343,7 @@ describe("the verdict and its evidence", () => {
 
   it("cites the receipts and splits the count by who sent it", async () => {
     const user = userEvent.setup();
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [sofia],
-      groups_omitted: [],
-    });
+    renderTab(alone({ routes: [sofia] }));
 
     await screen.findByText(en["contact.intro.bestWayIn"]);
     expect(screen.getByText(en["contact.intro.lastYesterday"])).toBeTruthy();
