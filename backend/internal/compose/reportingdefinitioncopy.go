@@ -9,13 +9,21 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 )
 
-// The words each metric carries live in metriccopy; these names keep the
+// The words reporting says live in metriccopy; these names keep the
 // compose package's spelling.
 var (
-	reportingMetricNames      = metriccopy.Names
-	reportingDefinitionWords  = metriccopy.Definitions
-	reportingAttributionWords = metriccopy.Attribution
-	reportingIncompleteWords  = metriccopy.Incomplete
+	reportingMetricNames         = metriccopy.Names
+	reportingDefinitionWords     = metriccopy.Definitions
+	reportingAttributionWords    = metriccopy.Attribution
+	reportingIncompleteWords     = metriccopy.Incomplete
+	reportingLabelWords          = metriccopy.Labels
+	reportingBreakdownLabels     = metriccopy.BreakdownLabels
+	reportingLeadStatusLabels    = metriccopy.LeadStatusLabels
+	reportingCoverageWords       = metriccopy.Coverage
+	reportingForecastWords       = metriccopy.ForecastWords
+	reportingForecastCaveats     = metriccopy.ForecastCaveats
+	cohortWords                  = metriccopy.CohortWords
+	reportingComponentKindLabels = metriccopy.ComponentKindLabels
 )
 
 // reportingMetricName names a metric in the reading's language. An edition

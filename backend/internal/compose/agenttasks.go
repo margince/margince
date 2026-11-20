@@ -50,10 +50,8 @@ const taskColumns = `id, approval_id, tool, status, COALESCE(status_message, '')
 // taskOwnedBy scopes a query to the agent's passport ($2) or connection ($3).
 const taskOwnedBy = `(passport_id = $2 OR connection_id = $3)`
 
-// taskOwnerOf answers the caller's passport and connection; a nil one is NULL.
-//
-// A zero passport is refused like a missing principal: a passport-less task
-// row would be one row every such caller shares.
+// taskOwnerOf answers the caller's passport and connection (nil reads as NULL).
+// A zero passport is refused: a passport-less row would be every such caller's.
 func taskOwnerOf(ctx context.Context, verb string) (ids.UUID, *ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.PassportID.IsZero() {

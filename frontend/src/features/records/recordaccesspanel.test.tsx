@@ -216,6 +216,66 @@ describe("WhoCanSeePanel", () => {
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
+  // The Sharing page also shows each share's end date as a chip; both read alike.
+  it("writes a share's end date the way the share chip does", async () => {
+    serve(
+      answer({
+        data: [
+          owner,
+          member("u-share", "Priya Shah", {
+            group: "shared",
+            read_reasons: [
+              {
+                code: "user_share",
+                access: "read",
+                expires_at: "2026-11-23T12:00:00Z",
+              },
+            ],
+          }),
+        ],
+        page: { has_more: false, total: 2 },
+        group_counts: { owner: 1, shared: 1, team_shared: 0, everyone: 0 },
+      }),
+    );
+    render(<WhoCanSeePanel kind="contact" recordId="c-1" />);
+
+    const shared = await screen.findByTestId("who-can-see-shared");
+    expect(
+      within(shared).getByText("Shared directly until 23 Nov 2026"),
+    ).toBeTruthy();
+  });
+
+  // Pages are read at different times, so one member can come back on two.
+  it("lists a member once, as the later page has them, when two pages both carry them", async () => {
+    const user = userEvent.setup();
+    serve(
+      answer({
+        data: [owner, member("u-kim", "Kim Rep", {})],
+        page: { has_more: true, next_cursor: "c-2", total: 3 },
+      }),
+      {
+        // Between the two reads Kim was shared the contact directly.
+        "c-2": answer({
+          data: [
+            member("u-kim", "Kim Rep", {
+              group: "shared",
+              read_reasons: [{ code: "user_share", access: "read" }],
+            }),
+            member("u-noor", "Noor Rep", {}),
+          ],
+          page: { has_more: false, next_cursor: null, total: 3 },
+        }),
+      },
+    );
+    render(<WhoCanSeePanel kind="contact" recordId="c-1" />);
+    await screen.findByTestId("who-can-see-owner");
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+    const shared = await screen.findByTestId("who-can-see-shared");
+
+    expect(screen.getAllByText("Kim Rep")).toHaveLength(1);
+    expect(within(shared).getByText("Kim Rep")).toBeTruthy();
+  });
+
   it("counts, without naming, the colleagues a team adds", async () => {
     serve(answer({ team_access_count: 3 }));
     render(<WhoCanSeePanel kind="contact" recordId="c-1" />);

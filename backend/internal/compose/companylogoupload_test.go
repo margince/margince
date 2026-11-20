@@ -5,8 +5,6 @@ package compose
 
 import (
 	"bytes"
-	"image"
-	"image/color"
 	"image/png"
 	"mime/multipart"
 	"net/http"
@@ -37,22 +35,8 @@ func multipartWith(t *testing.T, part, filename string, content []byte) (*bytes.
 	return body, form.FormDataContentType()
 }
 
-// A real PNG, taller than it is wide, so the aspect-preserving re-encode has
-// something to do.
-func tallPNG(t *testing.T) []byte {
-	t.Helper()
-	img := image.NewRGBA(image.Rect(0, 0, 300, 600))
-	for y := range 600 {
-		for x := range 300 {
-			img.Set(x, y, color.RGBA{R: 200, G: 40, B: 40, A: 255})
-		}
-	}
-	var out bytes.Buffer
-	if err := png.Encode(&out, img); err != nil {
-		t.Fatalf("encode png: %v", err)
-	}
-	return out.Bytes()
-}
+// A PNG taller than it is wide, so the aspect-preserving re-encode has something to do.
+func tallPNG(t *testing.T) []byte { return encodedPicture(t, pngOf, halvesImage(300, 600)) }
 
 func decodeUpload(t *testing.T, body *bytes.Buffer, contentType string) (*httptest.ResponseRecorder, []byte, string, bool) {
 	t.Helper()
@@ -85,17 +69,20 @@ func TestAnUploadedLogoKeepsItsAspectAndFitsWithinTheStoredEdge(t *testing.T) {
 	}
 }
 
-func TestBytesThatAreNotAnImageAreRefusedAsUnsupportedMedia(t *testing.T) {
-	body, contentType := multipartWith(t, "file", "notes.txt", []byte("this is not a picture"))
-	rec, _, _, ok := decodeUpload(t, body, contentType)
-	if ok {
-		t.Fatal("text was accepted as an image")
-	}
-	if rec.Code != http.StatusUnsupportedMediaType {
-		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusUnsupportedMediaType, rec.Body.String())
-	}
-	if !strings.Contains(rec.Body.String(), "unsupported_media_type") {
-		t.Fatalf("refusal does not name its code: %s", rec.Body.String())
+func TestAnUnreadableOrOversizedPictureIsRefusedWithItsOwnCode(t *testing.T) {
+	for _, refused := range []struct {
+		filename, code string
+		status         int
+		content        []byte
+	}{
+		{"notes.txt", "unsupported_media_type", http.StatusUnsupportedMediaType, []byte("this is not a picture")},
+		{"photo.jpg", "too_many_pixels", http.StatusUnprocessableEntity, phonePhoto(t)},
+	} {
+		body, contentType := multipartWith(t, "file", refused.filename, refused.content)
+		rec, _, _, ok := decodeUpload(t, body, contentType)
+		if ok || rec.Code != refused.status || !strings.Contains(rec.Body.String(), refused.code) {
+			t.Errorf("%s: got %d %s, want %d %s", refused.filename, rec.Code, rec.Body.String(), refused.status, refused.code)
+		}
 	}
 }
 

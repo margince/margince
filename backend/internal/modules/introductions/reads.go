@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
@@ -148,12 +149,17 @@ func (s *Store) ForContact(ctx context.Context, contactID ids.UUID, limit int) (
 		// The full row, not a summary: the colleague deciding reads the reason
 		// and the note on this payload, and a second round-trip per ask to
 		// fetch what the list already had in hand would be one.
+		args := []any{contactID}
+		readable, err := ReadableSQL(ctx, Table, func(v any) int { args = append(args, v); return len(args) })
+		if err != nil {
+			return err
+		}
+		args = append(args, limit)
 		rows, err := tx.Query(ctx, requestColumns+`
 			  FROM intro_request
-			 WHERE contact_id = $1 AND archived_at IS NULL
-			   AND (requester_user_id = $2 OR introducer_user_id = $2 OR origin = 'recorded')
+			 WHERE contact_id = $1 AND `+readable+`
 			 ORDER BY requested_at DESC, id DESC
-			 LIMIT $3`, contactID, actor.UserID, limit)
+			 LIMIT $`+strconv.Itoa(len(args)), args...)
 		if err != nil {
 			return fmt.Errorf("introductions: listing the asks about this contact: %w", err)
 		}

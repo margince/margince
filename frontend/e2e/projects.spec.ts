@@ -80,7 +80,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await expect(
     page
       .getByRole("region", { name: "Phasenverlauf" })
-      .getByText(/Lars Brandt hat das Projekt angelegt/),
+      .getByText(/Lars Brandt hat das Projekt erstellt/),
   ).toBeVisible();
   // A new project has filed no documents, and its standing says so.
   await expect(
@@ -92,7 +92,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await page.goto("/#/deals/d-fleet");
   await page.getByRole("button", { name: "Weitere Aktionen" }).click();
   await page.getByRole("button", { name: "Details bearbeiten" }).click();
-  await page.getByRole("button", { name: /^Unternehmen ändern/ }).click();
+  await page
+    .getByRole("button", { name: /^Feld „Unternehmen“ ändern/ })
+    .click();
   const group = page.getByRole("dialog", { name: "Unternehmen", exact: true });
   await choose(
     page,

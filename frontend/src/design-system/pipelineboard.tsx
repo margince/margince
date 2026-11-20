@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Fragment, useContext, useRef } from "react";
-import { formatNumber } from "../format/format";
+import { formatNumber, formatPercent } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { AnsweredSearch } from "./answeredsearch";
 import { Button, OptionCount } from "./atoms";
@@ -306,6 +306,9 @@ function BoardLayout<Record extends BoardRecord>({
       <div className="board" ref={board}>
         {columns.map((column) => {
           const money = moneyFor(column);
+          // Written as a deal card writes its own chance.
+          const chance =
+            money && formatPercent(money.probabilityPct / 100, locale);
           const dealCount = column.count ?? column.deals.length;
           const countHidden =
             column.count === null || (!money && column.sumHidden);
@@ -371,11 +374,7 @@ function BoardLayout<Record extends BoardRecord>({
                 >
                   <OptionCount count={dealCount} />
                 </span>
-                {money && (
-                  <span className="prob">
-                    {formatNumber(money.probabilityPct, locale)}%
-                  </span>
-                )}
+                {money && <span className="prob">{chance}</span>}
               </div>
               {/* The stage's money leads the sub. The count is in the head;
                   a screen reader gets it here with its unit, as "12 deals". */}

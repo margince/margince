@@ -30,6 +30,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem } from "../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import { useInstallationSettings } from "../../lib/uploadlimit";
+import { scopeName } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import type { ReportingMetricID } from "./reporting.model";
 import { useReportingCatalog } from "./reporting.queries";
@@ -175,7 +176,7 @@ export function ReportingTargetDialog({
             )}
           </QueryGate>
           {target ? (
-            <p>{scope.label}</p>
+            <p>{scopeName(scope, t)}</p>
           ) : (
             <AnalyticsScopePicker
               scopes={context.allowed_scopes.filter(

@@ -11,6 +11,7 @@ import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { hideHomeRows } from "../lib/homerows";
 import { noteHomeTaskDone } from "../lib/installhint";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { useRoute } from "../lib/router";
@@ -58,6 +59,11 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
       // skew by the very write it is undoing.
       return data?.version;
     },
+    // A completed task leaves Home at once; every other edit keeps its row.
+    onMutate: (input) =>
+      input.body.is_done
+        ? hideHomeRows(queryClient, [{ source: "task", id: input.id }])
+        : undefined,
     // Returned, so the mutation stays pending until the reads have landed.
     // Until then the row keeps the version it was fetched at. A second press
     // in that window would re-send it and be refused as skew.
@@ -65,6 +71,7 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
       input.body.due_at
         ? undefined
         : refetchAfterWrite(queryClient, invalidateKeys, input.id),
+    onSettled: (_data, _error, _input, settle) => settle?.(),
     // A stale press is not a failed one: the task moved on under it, so the
     // reads are refreshed to show where it is now.
     onError: (error, input) => {

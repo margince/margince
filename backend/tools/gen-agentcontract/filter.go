@@ -5,6 +5,7 @@ package main
 
 import (
 	"slices"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -40,9 +41,11 @@ func keepAgentOperations(root, paths *yaml.Node) ([]operation, map[string]bool) 
 		return nil, tags
 	}
 	globalSecurity, _ := oasnode.Lookup(root, "security")
+	components, _ := oasnode.Lookup(root, "components")
 	keptPaths := paths.Content[:0]
 	for i := 0; i+1 < len(paths.Content); i += 2 {
 		path, item := paths.Content[i].Value, paths.Content[i+1]
+		dropHiddenParameters(item, components)
 		keptKeys := item.Content[:0]
 		before := len(kept)
 		for j := 0; j+1 < len(item.Content); j += 2 {
@@ -54,6 +57,7 @@ func keepAgentOperations(root, paths *yaml.Node) ([]operation, map[string]bool) 
 				if security, own := oasnode.Lookup(value, "security"); own {
 					passportOnly(security)
 				}
+				dropHiddenParameters(value, components)
 				kept = append(kept, readOperation(method, path, value))
 				collectNames(tags, value, "tags")
 			}
@@ -139,4 +143,23 @@ func collectNames(into map[string]bool, node *yaml.Node, key string) {
 	for _, item := range seq.Content {
 		into[item.Value] = true
 	}
+}
+
+// dropHiddenParameters removes an operation's or path item's parameters marked `x-agent-hidden: true`,
+// reading a $ref's component. Such a switch serves one human screen and would narrow an agent's answer.
+func dropHiddenParameters(node, components *yaml.Node) {
+	params, ok := oasnode.Lookup(node, "parameters")
+	if !ok {
+		return
+	}
+	params.Content = slices.DeleteFunc(params.Content, func(p *yaml.Node) bool {
+		if ref, isRef := oasnode.Lookup(p, "$ref"); isRef {
+			name, local := strings.CutPrefix(ref.Value, "#/components/parameters/")
+			if resolved, found := component(components, componentRef{"parameters", name}); local && found {
+				p = resolved
+			}
+		}
+		hidden, _ := oasnode.Lookup(p, "x-agent-hidden")
+		return hidden != nil && hidden.Value == "true"
+	})
 }

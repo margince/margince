@@ -45,7 +45,6 @@ type routeVerbShape struct {
 	HumanOnly []string
 }
 
-// egresses: an outbound cap leaves the workspace unless the contract says not.
 func (p agentPolicy) egresses() bool {
 	return principal.Scope(p.Scope).Egresses() && !p.StaysInside
 }
@@ -70,7 +69,6 @@ func declaredRouteVerbs(policies map[string]agentPolicy) []agents.RouteVerb {
 	return verbs
 }
 
-// routeRetryKeyVerbs names the route verbs whose route claims a retry key.
 func routeRetryKeyVerbs(policies map[string]agentPolicy) map[string]bool {
 	verbs := map[string]bool{}
 	for route, pol := range policies {

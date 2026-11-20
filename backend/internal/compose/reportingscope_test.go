@@ -8,8 +8,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// A saved edition shows an introduction only to a reader the live read would.
+func TestAFrozenIntroductionKeepsTheIntroductionReadRule(t *testing.T) {
+	ctx := principal.WithActor(t.Context(), principal.Principal{Type: principal.PrincipalHuman, UserID: ids.NewV7()})
+	got, err := reportingSourceScope(ctx, reportingVisibilityKey{table: introductions.Table}, new(reportingBindings))
+	want, wantErr := introductions.ReadableSQL(ctx, "source", new(reportingBindings).arg)
+	if err != nil || wantErr != nil || got != want {
+		t.Fatalf("a frozen introduction is read by %q (%v, %v), want %q", got, err, wantErr, want)
+	}
+}
 
 func TestScopedReportHandleKeepsItsPopulation(t *testing.T) {
 	owner := ids.NewV7()

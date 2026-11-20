@@ -175,6 +175,10 @@ export const recordListsKey = (recordType: string, recordId: string) =>
 // stakeholder is seated from the contact's page as readily as from the deal's.
 export const DEAL_COVERAGE_KEY: QueryKey = ["deal-coverage"];
 
+// The chance the forecast uses for each open stage. A stage's typed chance is
+// one of its inputs, so every stage write makes it stale.
+export const STAGE_CHANCES_KEY: QueryKey = ["forecast", "stage-chances"];
+
 const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey[]> = {
   deal: (id) => [DEAL_STATUS_KEY(id), recordListsKey("deal", id)],
   contact: (id) => [recordListsKey("contact", id)],
@@ -183,6 +187,7 @@ const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey[]> = {
   // Keyed on the relationship's own id nowhere: what goes stale is the deal the
   // edge names, and the edit form knows only the edge. The prefix covers it.
   relationship: () => [DEAL_COVERAGE_KEY],
+  stage: () => [STAGE_CHANCES_KEY],
 };
 
 // What a logged activity makes stale: the record's timeline, or its task reads.

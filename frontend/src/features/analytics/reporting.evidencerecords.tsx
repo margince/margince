@@ -46,6 +46,8 @@ const metricDateHeading: Partial<
   lead_cohort_outcomes: "reporting.arrivedOn",
   account_progression: "reporting.arrivedOn",
   source_quality: "reporting.arrivedOn",
+  introductions_made: "reporting.introducedOn",
+  meetings_booked_for_colleagues: "reporting.bookedOn",
 };
 
 // A cohort member's row carries its days to an outcome, or open so far, where

@@ -216,7 +216,7 @@ describe("a reader who may change one end of a pair", () => {
     await user.click(member(/Mira Kovač/));
     expect(member(/M\. Kovac/)).not.toBeChecked();
     expect(screen.getByRole("radio", { name: /Mira Kovač/ })).toBeChecked();
-    expect(screen.getByRole("radio", { name: /Mira Kovac$/ })).toBeDisabled();
+    expect(screen.queryByRole("radio", { name: /Mira Kovac$/ })).toBeNull();
     const owner = screen.getByRole("combobox", { name: /Owner/ });
     expect(owner).toHaveTextContent("Ben Seller");
     await user.click(owner);
@@ -366,7 +366,7 @@ describe("who may own the remaining contact", () => {
         name: "Cleo Reader",
       }),
     );
-    await user.click(screen.getByRole("radio", { name: /Mira Kovac$/ }));
+    await user.click(screen.getByRole("radio", { name: /M\. Kovac/ }));
     expect(owner).toHaveTextContent("Cleo Reader");
   });
 });
@@ -385,11 +385,133 @@ describe("members that share a name", () => {
       {},
     );
     mount();
+    const user = userEvent.setup();
+    const boxes = await screen.findAllByRole("checkbox");
+    await user.click(boxes[1]);
     expect(
       await screen.findByRole("radio", {
-        name: /Alex Example \(m\.kovac@northwind\.de\)/,
+        name: /Alex Example \(m\.kovac@northwind\.de\) stays/,
       }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("the two choices", () => {
+  it("offers a stays radio only for ticked contacts, in a group with its own question", async () => {
+    stubWithSession(
+      { [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()) },
+      {},
+    );
+    const user = userEvent.setup();
+    mount();
+    await screen.findByRole("checkbox", { name: /Mira Kovac\b/ });
+    expect(screen.getAllByRole("radio")).toHaveLength(1);
+    const group = screen.getByRole("group", { name: "Which contact stays?" });
+    expect(
+      within(group).getByRole("radio", { name: "Mira Kovac stays" }),
+    ).toBeChecked();
+    expect(
+      within(group).getByText(
+        "The other ticked contacts merge into it and are archived.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/Keep this record/)).toBeNull();
+
+    await user.click(member(/Mira Kovač/));
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+    await user.click(member(/Mira Kovac\b/));
+    expect(screen.getAllByRole("radio")).toHaveLength(1);
+    expect(
+      screen.getByRole("radio", { name: "Mira Kovač stays" }),
+    ).toBeChecked();
+  });
+
+  it("previews and merges the chosen survivor and exactly the ticked contacts", async () => {
+    type Decision = {
+      survivor_id: string;
+      member_ids: string[];
+      owner_id: string;
+    };
+    const previews: Decision[] = [];
+    const merges: Decision[] = [];
+    const echo = (body: unknown) => {
+      const sent = body as Decision;
+      return previewOutcome({
+        survivor_id: sent.survivor_id,
+        merged_ids: sent.member_ids.filter((id) => id !== sent.survivor_id),
+        owner_id: sent.owner_id,
+      });
+    };
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()),
+        [`POST ${CASE_PATH}/preview`]: (body) => {
+          previews.push(body as Decision);
+          return jsonResponse(echo(body));
+        },
+        [`POST ${CASE_PATH}/merge`]: (body) => {
+          merges.push(body as Decision);
+          return jsonResponse({ ...echo(body), committed: true });
+        },
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mount();
+    await user.click(
+      await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
+    );
+    await user.click(member(/M\. Kovac/));
+    await user.click(member(/Mira Kovac\b/));
+    await user.click(member(/M\. Kovac/));
+    await user.click(member(/M\. Kovac/));
+    await user.click(screen.getByRole("radio", { name: "M. Kovac stays" }));
+    await user.click(screen.getByRole("button", { name: "Preview merge" }));
+    const preview = await screen.findByTestId("contact-case-preview");
+    expect(previews[0]).toMatchObject({
+      survivor_id: CLEO,
+      member_ids: [BEN, CLEO],
+    });
+    expect(
+      within(preview).getByText(/^M\. Kovac stays, owned by/),
+    ).toBeVisible();
+    expect(within(preview).getByText("Mira Kovač")).toBeVisible();
+    expect(within(preview).queryByText("M. Kovac")).toBeNull();
+    expect(within(preview).queryByText("Mira Kovac")).toBeNull();
+
+    await user.click(screen.getByTestId("contact-case-merge"));
+    await vi.waitFor(() => expect(merges).toHaveLength(1));
+    expect(merges[0].survivor_id).toBe(CLEO);
+    expect(merges[0].member_ids).toEqual([BEN, CLEO]);
+  });
+
+  it("makes the first contact ticked from a card the survivor", async () => {
+    stubWithSession(
+      { [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()) },
+      {},
+    );
+    const user = userEvent.setup();
+    mount({ chosen: false });
+    await screen.findByRole("button", { name: "Preview merge" });
+    await user.click(member(/Mira Kovač/));
+    expect(
+      screen.getByRole("radio", { name: "Mira Kovač stays" }),
+    ).toBeChecked();
+    await user.click(member(/M\. Kovac/));
+    expect(
+      screen.getByRole("radio", { name: "Mira Kovač stays" }),
+    ).toBeChecked();
+  });
+
+  it("says what Not the same person does to the pair and to unticked contacts", async () => {
+    stubWithSession(
+      { [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()) },
+      {},
+    );
+    mount();
+    expect(
+      await screen.findByText(/stops only that pair from being suggested/),
+    ).toBeVisible();
   });
 });
 

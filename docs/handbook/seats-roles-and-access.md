@@ -240,7 +240,7 @@ Also called: record missing, access denied, 404, cannot open a contact.
 ### Why can't I create a contact a colleague already has?
 A contact that capture made from a colleague's mail can be private to that colleague. When you create a contact with the same email address, Margince refuses it, so the CRM does not hold the contact twice. It says "A colleague already has this contact. Margince asked them to share it with you."
 
-Your colleague then finds a request in **Review**: "Mira Voss asks you to share this contact." **Accept** shares it with you for writing, or for reading if your seat may only read. **Decline** closes the request. Another try does not ask again while a request is open or after your colleague declined. After a decline Margince says only "A colleague already has this contact."
+Your colleague then finds the request on **Home**, under **Waiting on you**: "Mira Voss asks you to share this contact. Approving gives write access, or read access to a read-only seat." They choose **Decide**, then **Approve** to share the contact with you, or **Reject** to close the request. Another try does not ask again while a request is open or after your colleague rejected it. After they reject it, Margince says only "A colleague already has this contact."
 
 The refusal does not name the contact or its owner.
 Also called: contact already exists, email already taken, hidden contact.
@@ -250,7 +250,7 @@ Also called: contact already exists, email already taken, hidden contact.
 2. Under **Grant access**, pick the colleague or team. A contact's or company's owner is not on the list, because the record is already theirs. They can edit it when their role allows changes. An owner with the **Read-only** role can only read it. A new team share starts at **Write** with **No expiry (until revoked)**. A share with a colleague starts at **Read** for 7 days.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
-5. If you like, add a **Reason**, then choose **Grant access**.
+5. If you like, add a **Reason**, then choose **Grant access**. Margince confirms who now has which access, for example "Mira Voss now has Read access to Acme renewal."
 You cannot share more than you hold, and **Grant access** needs the right to change the record.
 
 On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
@@ -258,7 +258,7 @@ On a company, choose **Share contacts** to share contacts who work there now wit
 Margince reports how many contacts it shared and skipped. A contact you can read but cannot share is skipped. Hidden contacts are not counted. Contacts who left the company are left out. Being on the same team alone gives no new access.
 
 ### How do I stop sharing a record?
-To take back a share in Margince, open the record and choose **Share**. Under **Shared with**, choose **Revoke** on your own share, or on any share of a record you may change, archived or not. The question says: "Revoke this access? It ends at the next request and cannot be undone." To lower write to read instead, share again with **Read**; Margince asks **Reduce access?** first.
+To take back a share in Margince, open the record and choose **Share**. Under **Shared with**, choose **Revoke** on your own share, or on any share of a record you may change, archived or not. The button and the question name the person or team and the record, for example: "Revoke Read access to Acme renewal for Mira Voss? It ends at the next request and cannot be undone." To lower write to read instead, share again with **Read**; Margince asks **Reduce access?** first.
 Also called: unshare, remove access.
 
 ### How do I make a contact or company visible to everyone?

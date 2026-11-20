@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package metriccopy
 
 // Two copies of the catalog's metric names live where the catalog cannot reach.
 // One is the frontend's test fixture, and one the weekly mail's platform copy.
-// Each is held to reportingMetricNames, so a renamed metric fails here rather
+// Each is held to Names, so a renamed metric fails here rather
 // than leaving a test or a mail on the old name.
 
 import (
@@ -16,14 +16,18 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-const frontendReportingFixture = "../../../frontend/src/testing/reporting.fixtures.ts"
+const frontendReportingFixture = "../../../../frontend/src/testing/reporting.fixtures.ts"
 
 // fixtureMetricName reads one trimmed `id: "Name",` line, the id bare or quoted.
 var fixtureMetricName = regexp.MustCompile(`^["']?([a-z][a-z0-9_]*)["']?\s*:\s*"([^"]*)",?$`)
 
 func TestTheFrontendFixtureNamesEveryMetricAsTheCatalogDoes(t *testing.T) {
+	if err := gatekit.DeclareInputs(os.Getenv, frontendReportingFixture); err != nil {
+		t.Fatal(err)
+	}
 	source, err := os.ReadFile(frontendReportingFixture)
 	if err != nil {
 		t.Fatalf("reading the frontend reporting fixture: %v", err)
@@ -56,7 +60,7 @@ func TestTheFrontendFixtureNamesEveryMetricAsTheCatalogDoes(t *testing.T) {
 		}
 		browser[pair[1]] = pair[2]
 	}
-	for id, phrase := range reportingMetricNames {
+	for id, phrase := range Names {
 		got, named := browser[string(id)]
 		if !named {
 			t.Errorf("the fixture does not name %s; the catalog calls it %q", id, phrase.En)
@@ -65,14 +69,14 @@ func TestTheFrontendFixtureNamesEveryMetricAsTheCatalogDoes(t *testing.T) {
 		}
 	}
 	for id := range browser {
-		if _, served := reportingMetricNames[crmcontracts.ReportingMetricID(id)]; !served {
+		if _, served := Names[crmcontracts.ReportingMetricID(id)]; !served {
 			t.Errorf("the fixture names %s, which the catalog does not serve", id)
 		}
 	}
 }
 
 func TestTheWeeklyMailNamesMeetingsHeldAsTheCatalogDoes(t *testing.T) {
-	catalog := reportingMetricNames[reportingMeetingsHeld]
+	catalog := Names["meetings_held"]
 	for language, want := range map[mailcopy.Language]string{
 		mailcopy.English: catalog.En, mailcopy.German: catalog.De, mailcopy.Vietnamese: catalog.Vi,
 	} {

@@ -112,12 +112,9 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 			endpoint := r.Method + " " + r.URL.Path
 
 			outcome, hold, stored, err := claimKey(r.Context(), pool, retryHolder(actor), key, endpoint, digest)
-			if err != nil && admittedByTheTool(r) {
-				// A tool's caller asked for at most once, so the tool door refuses
-				// rather than running unprotected, as its own claim does.
+			if err != nil && admittedByTheTool(r) { // a tool's caller asked for at most once, so it is refused
 				slog.ErrorContext(r.Context(), "idempotency claim failed; a tool call was not run", "err", err)
-				httperr.Write(w, r, fmt.Errorf("this call could not be made safe to retry just now, so it was not run; "+
-					"retry the identical call: %w", apperrors.ErrConflict))
+				httperr.Write(w, r, fmt.Errorf("this call could not be made safe to retry just now, so it was not run; retry the identical call: %w", apperrors.ErrConflict))
 				return
 			}
 			if err != nil {
@@ -133,8 +130,7 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 				outcome, hold, stored = claimFresh, claimHold{}, storedResponse{}
 			}
 			if outcome != claimFresh {
-				// A replay changes nothing, so it charges no write or send.
-				if outcome == claimReplay {
+				if outcome == claimReplay { // a replay changes nothing, so it charges no write or send
 					agentvolume.NoteEffects(r.Context(), 0)
 				}
 				writeClaimOutcome(w, r, pool, probes, restore, route, outcome, stored)

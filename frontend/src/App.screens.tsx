@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { lazy, useEffect } from "react";
 import { AuthScreen } from "./app/authscreens";
 import { findCustomScreen } from "./app/custom";
 import { opensReservedPage } from "./app/nav";
@@ -348,11 +348,22 @@ export function ShareRoute({
   );
 }
 
-// Drawn by `App` ahead of the session gate and by the routed table. Sign-in
-// replaces onto home, or the reader stays on a spent link Back would reopen.
+// The reset form, which `App` draws ahead of the session gate for an address
+// that carries its token. Sign-in replaces onto home, or the reader stays on a
+// spent link Back would reopen.
 export function ResetRoute() {
   const { navigateReplacing } = useAddressWriters();
   return <AuthScreen onAuthed={() => navigateReplacing({ screen: "home" })} />;
+}
+
+// The routed table's answer to #/reset-password: a signed-in session at an
+// address with no token to redeem. There is no form to show, so it goes home.
+export function ResetAddressSignedIn() {
+  const { navigateReplacing } = useAddressWriters();
+  useEffect(() => {
+    navigateReplacing({ screen: "home" });
+  }, [navigateReplacing]);
+  return null;
 }
 
 // #/ext/<unit> (ADR-0120): the composed extension tier's one route into the

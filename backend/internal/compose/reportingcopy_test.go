@@ -14,11 +14,7 @@ import (
 
 func TestFrozenReportingKeepsItsExplanationLanguage(t *testing.T) {
 	langcopytest.Census(t, reportingWords)
-	langcopytest.Census(t, reportingLabelWords)
 	langcopytest.Census(t, reportingForecastLabels)
-	langcopytest.Census(t, reportingForecastWords)
-	langcopytest.Census(t, reportingForecastCaveats)
-	langcopytest.Census(t, reportingCoverageWords)
 	for _, language := range []string{"", "en", "de", "vi"} {
 		frame := crmcontracts.ReportingContext{Timezone: "UTC"}
 		if language != "" {

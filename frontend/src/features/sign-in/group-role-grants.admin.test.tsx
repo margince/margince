@@ -8,8 +8,9 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { UnsavedGuard } from "../../components/unsaved";
 import { LocaleProvider } from "../../i18n";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { GroupRoleGrants } from "./group-role-grants";
@@ -28,7 +29,10 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function mount(initial: Record<string, string>) {
+function mount(
+  initial: Record<string, string>,
+  page: (grants: ReactNode) => ReactNode = (grants) => grants,
+) {
   const calls: unknown[] = [];
   vi.stubGlobal(
     "fetch",
@@ -47,7 +51,13 @@ function mount(initial: Record<string, string>) {
     </QueryClientProvider>
   );
   render(
-    <GroupRoleGrants initial={initial} canManage lock={{ disabled: false }} />,
+    page(
+      <GroupRoleGrants
+        initial={initial}
+        canManage
+        lock={{ disabled: false }}
+      />,
+    ),
     { wrapper: Wrap },
   );
   return { calls };
@@ -113,5 +123,38 @@ describe("the group roles admin confirmation", () => {
       ]),
     );
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+// The settings page holds an unsaved mapping as it holds any other draft.
+function GuardedPage({ grants }: Readonly<{ grants: ReactNode }>) {
+  const [address, setAddress] = useState("grants");
+  return (
+    <>
+      <button type="button" onClick={() => setAddress("notifications")}>
+        go to notifications
+      </button>
+      <UnsavedGuard address={address} onKeep={setAddress}>
+        {(shown) => (shown === "grants" ? grants : <p>Notifications</p>)}
+      </UnsavedGuard>
+    </>
+  );
+}
+
+describe("an unsaved group mapping", () => {
+  it("asks before a move off the page drops it", async () => {
+    const user = userEvent.setup();
+    mount({}, (grants) => <GuardedPage grants={grants} />);
+    await user.click(await screen.findByRole("button", { name: "Add group" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Directory group" }),
+      "sales",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "go to notifications" }),
+    );
+
+    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    expect(screen.queryByText("Notifications")).toBeNull();
   });
 });

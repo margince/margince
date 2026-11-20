@@ -9,7 +9,7 @@ type documentCopy struct{ langcopy.Spoken }
 
 func documentCopyFor(language string) documentCopy { return documentCopy{langcopy.For(language)} }
 
-var documentWords = struct{ NoFields, Bytes, NoType, UnsupportedType, PDFNoText, PDFUnreadable, Chars, Empty, Mislabelled, Refused, Missing, NoStorage, NoModel langcopy.Phrase }{
+var documentWords = struct{ NoFields, Bytes, NoType, UnsupportedType, PDFNoText, PDFUnreadable, Chars, Empty, Mislabelled, Refused, Missing, NoStorage, NoModel, Unanswered, Unfinished langcopy.Phrase }{
 	NoFields:        langcopy.Phrase{En: "this document states none of the deal fields clearly enough to offer one", De: "Dieses Dokument nennt keines der Deal-Felder eindeutig genug für einen Vorschlag.", Vi: "Tài liệu này không nêu rõ trường deal nào để đề xuất."},
 	Bytes:           langcopy.Phrase{En: "this document is larger than the %d MB one reading carries; a reading of part of it could not say which part it saw", De: "Dieses Dokument überschreitet die Grenze von %d MB pro Lesevorgang. Beim Lesen eines Ausschnitts wäre nicht klar, welcher Teil erfasst wurde.", Vi: "Tài liệu vượt giới hạn %d MB mỗi lần đọc; đọc một phần sẽ không xác định được phần nào đã được xem."},
 	NoType:          langcopy.Phrase{En: "this document declares no content type, so nothing can say how to read it", De: "Für dieses Dokument ist kein Inhaltstyp angegeben. Daher ist unklar, wie es gelesen werden kann.", Vi: "Tài liệu không có loại nội dung nên không xác định được cách đọc."},
@@ -23,4 +23,6 @@ var documentWords = struct{ NoFields, Bytes, NoType, UnsupportedType, PDFNoText,
 	Missing:         langcopy.Phrase{En: "this document is no longer available to read", De: "Dieses Dokument ist nicht mehr zum Lesen verfügbar.", Vi: "Tài liệu không còn khả dụng để đọc."},
 	NoStorage:       langcopy.Phrase{En: "this installation stores no document bytes, so there is nothing to read", De: "Es werden keine Dateiinhalte gespeichert. Daher steht kein Dokument zum Lesen bereit.", Vi: "Hệ thống không lưu nội dung tệp nên không có tài liệu để đọc."},
 	NoModel:         langcopy.Phrase{En: "this installation has no AI model configured for reading documents", De: "Es ist kein KI-Modell zum Lesen von Dokumenten konfiguriert.", Vi: "Chưa cấu hình mô hình AI để đọc tài liệu."},
+	Unanswered:      langcopy.Phrase{En: "the AI model did not answer after several tries; the document is unchanged and can be read again", De: "Das KI-Modell hat nach mehreren Versuchen nicht geantwortet. Das Dokument ist unverändert und kann erneut gelesen werden.", Vi: "Mô hình AI không phản hồi sau nhiều lần thử; tài liệu không thay đổi và có thể đọc lại."},
+	Unfinished:      langcopy.Phrase{En: "the reading could not finish after several tries; the document is unchanged and can be read again", De: "Das Lesen konnte nach mehreren Versuchen nicht abgeschlossen werden. Das Dokument ist unverändert und kann erneut gelesen werden.", Vi: "Không thể hoàn tất việc đọc sau nhiều lần thử; tài liệu không thay đổi và có thể đọc lại."},
 }

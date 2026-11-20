@@ -15,7 +15,6 @@ import { useSaveDraft } from "../../design-system/savepage";
 import { MultiSelect, Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { type StatusKind, statusTone } from "../../design-system/statusbadge";
-import { useToast } from "../../design-system/toast";
 import { vendorOf } from "../../format/connectorprovider";
 import { formatNumber } from "../../format/format";
 import { formatElapsed, useNow } from "../../format/now";
@@ -107,7 +106,6 @@ function useCalendarDraft(
   profile: Profile,
   titleRef: RefObject<HTMLSpanElement | null>,
 ) {
-  const t = useT();
   const [baseline, setBaseline] = useState(profile);
   const [form, setForm] = useState(profile);
   const calendar = useMeetingCalendar(
@@ -115,7 +113,6 @@ function useCalendarDraft(
     baseline,
   );
   const patch = usePatchSchedulingProfile();
-  const toast = useToast();
   const { provider, ready, selected, calendars } = calendar;
   const dirty =
     JSON.stringify(calendarFields(form)) !==
@@ -141,7 +138,6 @@ function useCalendarDraft(
       titleRef.current?.focus();
       setBaseline(value);
       setForm(value);
-      toast.show(t("settings.saved"));
     },
     discard: () => {
       patch.reset();

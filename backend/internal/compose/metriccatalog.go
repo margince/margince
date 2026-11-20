@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/initiatives"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -59,6 +60,8 @@ var reportingMetrics = []metricSpec{
 	{crmcontracts.ReportingMetricDefinition{Id: reportingBookingsMix, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingBookingsMix].En}, string(recordTypeDeal), readReportingBookingsMix},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingQualifiedOpportunitiesCreated, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingQualifiedOpportunitiesCreated].En}, string(recordTypeDeal), readReportingQualifiedCount},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingInitiativePipeline, Version: "1", Unit: reportingMoney, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingInitiativePipeline].En}, string(recordTypeDeal), readReportingInitiativePipeline},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingIntroductionsMade, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingIntroductionsMade].En}, introductions.Object, readReportingIntroductionsMade},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingMeetingsBookedForColleagues, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingMeetingsBookedForColleagues].En}, string(recordTypeActivity), readReportingMeetingsBooked},
 }
 
 // reportingPresets are the selections the Analytics screen opens on. A preset

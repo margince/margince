@@ -24,3 +24,18 @@
   inline-size: 14px;
   block-size: 14px;
 }
+
+/* A thumb gets a 44px-tall target from a layer above and below the glyph, as
+   `.overflow-menu-labelled` takes it. It reaches nothing sideways, where the
+   value and its pencil sit a few pixels away. */
+@media (pointer: coarse) {
+  .info-tip {
+    position: relative;
+  }
+  .info-tip::before {
+    content: "";
+    position: absolute;
+    inset-block: calc((100% - max(44px, 100%)) / 2);
+    inset-inline: 0;
+  }
+}

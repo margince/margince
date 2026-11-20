@@ -6,7 +6,6 @@ import { rowsOf } from "../../api/rows";
 import { Button, EmptyState, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { KeyCode } from "../../design-system/keyedname";
 import { NameDialog, nameRefusal } from "../../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
@@ -197,7 +196,6 @@ function StageNameDialog({
       )}
       label={t("acqSources.addLabel")}
       initial={renaming?.label ?? ""}
-      hint={renaming && <KeyCode code={renaming.key} />}
       confirmLabel={t(
         renaming ? "leadSources.renameSave" : "partnerStages.addConfirm",
       )}

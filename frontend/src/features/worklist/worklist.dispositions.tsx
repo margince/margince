@@ -186,6 +186,7 @@ export function usePutDown(item: WorklistItem) {
     set.mutate(
       {
         activityId: item.id,
+        source: item.source,
         disposition,
         ...(disposition === "snooze"
           ? event

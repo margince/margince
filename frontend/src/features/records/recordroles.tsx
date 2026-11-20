@@ -22,7 +22,6 @@ import {
 import { CellStack } from "../../design-system/cellstack";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { KeyCode } from "../../design-system/keyedname";
 import {
   NameDialog,
   nameRefusal,
@@ -357,7 +356,6 @@ export function RecordRolesCard() {
         title={t("recordRoles.renameTitle")}
         label={t("recordRoles.addLabel")}
         initial={renaming?.label ?? ""}
-        hint={renaming && <KeyCode code={renaming.key} />}
         confirmLabel={t("leadSources.renameSave")}
         pending={rename.isPending}
         problem={rename.isError ? problemMessageOf(rename.error, t) : null}
