@@ -139,7 +139,7 @@ func TestAnAccountOwingNothingGetsTheQuietState(t *testing.T) {
 // — and this card never looked at what those rows fired on.
 func TestTheQuietAccountCardClaimsOnlyThePromisesItRead(t *testing.T) {
 	got := accountMomentOf(nil, nil)
-	if got.Headline != "Nothing is owed to this account" {
+	if got.Headline != "Nothing is owed to this company" {
 		t.Errorf("headline = %q, want a claim bounded by what the card checked", got.Headline)
 	}
 	if !strings.Contains(got.WhyNow, "promise") {

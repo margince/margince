@@ -56,6 +56,7 @@ func syntheticUnit() extension.Extension {
 				return accounting.Document{ContentType: "application/pdf", Body: []byte("%PDF-1.4 role sweep\n")}, nil
 			},
 		}},
+		Tools:         []extension.Tool{{Name: cacheReadVerb.Tool, Handle: listNothing}},
 		Jurisdictions: []jurisdiction.Pack{integration.GoBDFloorPack{}},
 		Documents: []compliancedocs.Document{{
 			Jurisdiction: jurisdiction.Code(unitJurisdiction), ID: unitDocument, Title: "Role sweep note", Language: "en",

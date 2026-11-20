@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 const deals: PeekContent = {
-  head: "Open deals on this account",
+  head: "Open deals on this company",
   items: [
     {
       key: "a",
@@ -78,7 +78,7 @@ it("opens on a settled pointer and names what it counts", () => {
   });
 
   const card = screen.getByRole("region", {
-    name: "Open deals on this account",
+    name: "Open deals on this company",
   });
   expect(card.textContent).toContain("Expansion");
   expect(card.textContent).toContain("€95k");
@@ -92,7 +92,7 @@ it("opens when keyboard focus lands on the door inside the tile", async () => {
   await user.tab();
 
   expect(
-    screen.getByRole("region", { name: "Open deals on this account" }),
+    screen.getByRole("region", { name: "Open deals on this company" }),
   ).toBeTruthy();
 });
 

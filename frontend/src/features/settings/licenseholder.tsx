@@ -3,7 +3,7 @@ import type { components } from "../../api/schema";
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
-import { formatDateAbbrev } from "../../format/format";
+import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 
@@ -32,7 +32,7 @@ export function LicenseHolderCard({
   const readerZone = useViewerZone();
   // The record zone is the one zone this product renders dates in, so an
   // expiry and an activity beside it can never be read in two different zones.
-  const expiry = formatDateAbbrev(holder.expiry, locale, readerZone);
+  const expiry = formatDate(holder.expiry, locale, readerZone);
 
   return (
     <Panel title={t("license.holder.title")}>

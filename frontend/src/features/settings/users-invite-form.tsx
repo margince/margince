@@ -14,7 +14,7 @@ import { Select } from "../../design-system/select";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useHoldsAdminRole } from "../../lib/capability";
-import { looksLikeEmail } from "../../lib/emailshape";
+import { emailFault } from "../../lib/emailshape";
 import { nameFromEmail } from "../../lib/namefromemail";
 import {
   type FieldLabels,
@@ -77,13 +77,11 @@ export function memberChecks(
 ): ReadonlyMap<string, string> {
   const found = new Map<string, string>();
   const email = member.email.trim();
+  const malformed = emailFault(email, locale, labels.email);
   if (email === "") {
     found.set("email", fieldCheckSentence("required", locale, labels.email));
-  } else if (!looksLikeEmail(email)) {
-    found.set(
-      "email",
-      fieldCheckSentence("email_malformed", locale, labels.email),
-    );
+  } else if (malformed) {
+    found.set("email", malformed);
   }
   if (member.display_name.trim() === "" && "display_name" in labels) {
     found.set(

@@ -85,7 +85,7 @@ it("refuses an edit whose start day cannot be read and keeps the stored day", as
   expect(writes).toHaveLength(0);
   expect(box).toHaveAttribute("aria-invalid", "true");
   expect((box as HTMLInputElement).validationMessage).toMatch(
-    /^Enter a date as /,
+    /^There is no 31\/02\/2026 in the calendar/,
   );
 });
 
@@ -101,6 +101,6 @@ it("refuses a renewal whose start day cannot be read", async () => {
 
   expect(writes).toHaveLength(0);
   expect((box as HTMLInputElement).validationMessage).toMatch(
-    /^Enter a date as /,
+    /^There is no 31\/02\/2026 in the calendar/,
   );
 });

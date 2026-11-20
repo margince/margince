@@ -67,7 +67,9 @@ it("refuses a save while the end day cannot be read, and keeps the stored day", 
   await user.click(screen.getByRole("button", { name: "Save changes" }));
 
   expect(writes).toHaveLength(0);
-  expect(screen.getByRole("alert")).toHaveTextContent(/^Enter a date as /);
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    /^There is no 31\/02\/2027 in the calendar/,
+  );
   expect(box).toHaveAttribute("aria-invalid", "true");
   expect(box).toHaveValue("31/02/2027");
 });

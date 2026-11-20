@@ -37,14 +37,14 @@ func accountSendComponent(cmd SendCompanyEmailCommand, links []RecordLink) *syst
 	if len(cmd.Cc) > 0 {
 		parts = append(parts, systemtext.Sentence("agent.cc", systemtext.Text(strings.Join(cmd.Cc, ", "))))
 	}
-	parts = append(parts, systemtext.Sentence("agent.accountSendFiled", systemtext.Text(cmd.Subject), systemtext.Count(int64(len(links)))))
+	parts = append(parts, systemtext.Sentence("agent.accountSendFiled", systemtext.Text(systemtext.Inline(cmd.Subject)), systemtext.Count(int64(len(links)))))
 	sentence := systemtext.Sequence(systemtext.Sentence("agent.accountSend", systemtext.Text(strings.Join(cmd.To, ", "))), parts...)
 	sentence.Layout = systemtext.LayoutConcat
 	return sentence
 }
 
 func bookingComponent(cmd BookMeetingCommand, links []RecordLink) *systemtext.Component {
-	subject := systemtext.Text(cmd.Subject)
+	subject := systemtext.Text(systemtext.Inline(cmd.Subject))
 	if strings.TrimSpace(cmd.Subject) == "" {
 		subject = systemtext.MessageArgument("agent.noSubject")
 	}
@@ -101,7 +101,7 @@ func sendComponent(cmd SendEmailCommand) *systemtext.Component {
 	if len(cmd.Cc) > 0 {
 		following = append(following, systemtext.Sentence("agent.cc", systemtext.Text(strings.Join(cmd.Cc, ", "))))
 	}
-	following = append(following, systemtext.Sentence("agent.sendSubject", systemtext.Text(cmd.Subject)))
+	following = append(following, systemtext.Sentence("agent.sendSubject", systemtext.Text(systemtext.Inline(cmd.Subject))))
 	sentence := systemtext.Sequence(systemtext.Sentence("agent.sendEmail", systemtext.Text(strings.Join(cmd.To, ", "))), following...)
 	sentence.Layout = systemtext.LayoutConcat
 	return sentence

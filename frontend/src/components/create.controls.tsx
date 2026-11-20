@@ -119,6 +119,12 @@ function referenceControl(
   );
 }
 
+// The keyboard a number box asks for: a whole number has no decimal sign.
+const TYPED_NUMBER_MODE: Partial<Record<string, "numeric" | "decimal">> = {
+  number: "numeric",
+  decimal: "decimal",
+};
+
 export function fieldControl(
   field: CreateField | SubField,
   control: FieldControl,
@@ -189,12 +195,11 @@ export function fieldControl(
   return (
     <TextInput
       {...control}
-      type={field.type === "decimal" ? "text" : (field.type ?? "text")}
-      inputMode={field.type === "decimal" ? "decimal" : undefined}
-      // A bare number input steps by 1, so the browser refuses 14.60 before
-      // any handler sees it. A money field has to say it takes cents.
-      step={field.step}
-      min={field.min}
+      // A number is typed as text, because the record forms set noValidate.
+      // A number box hands over "" for text it cannot read, so a typo would
+      // save as no value. The field's validate reads the text instead.
+      type={field.type === "email" ? "email" : "text"}
+      inputMode={TYPED_NUMBER_MODE[field.type ?? "text"]}
       maxLength={field.maxLength}
       value={value}
       placeholder={field.placeholder}

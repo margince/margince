@@ -3108,6 +3108,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhập số tiền không có dấu phân cách hàng nghìn, ví dụ {example}.",
   "amount.refused.notNumber": "Nhập số tiền bằng chữ số, ví dụ {example}.",
   "amount.refused.tooLarge": "Số tiền này quá lớn để lưu.",
+  "amount.refused.noCurrency": "Số tiền này cần có loại tiền trước.",
+  "amount.waitsForCurrency": "Mở khi đã có loại tiền.",
+  "amount.currencyUnread":
+    "Không đọc được loại tiền, nên chưa thể nhập số tiền.",
   "amount.refused.negative": "Nhập số tiền từ 0 trở lên.",
   "number.refused.ambiguous": "Nhập số dưới dạng {whole} hoặc {fraction}.",
   "number.refused.grouping":
@@ -6096,8 +6100,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.amount": "Số tiền ({currency})",
   "lead.qualify.amountHint":
     "Không bắt buộc. Theo loại tiền cơ sở của bản cài đặt.",
-  "lead.qualify.amountNoCurrency":
-    "Mở khi loại tiền cơ sở của bản cài đặt đã tải xong.",
   "lead.qualify.why": "Lý do",
   "lead.qualify.reasonReplied": "Lý do: lead đã trả lời vào {at}.",
   "lead.qualify.reasonMeetingBooked": "Lý do: đã đặt cuộc họp vào {at}.",
@@ -6223,7 +6225,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.standing.figure.probability": "Xác suất",
   "deal.winProbability": "Xác suất",
   "deal.winProbability.hint": "Để trống để dùng xác suất của giai đoạn.",
-  "deal.winProbability.invalid": "Nhập một số nguyên từ 0 đến 100.",
   "deal.winProbability.source.stage": "theo giai đoạn",
   "deal.winProbability.source.human": "đặt thủ công",
   "deal.winProbability.source.you": "do bạn đặt",
@@ -8213,6 +8214,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "calendar.patternMonth": "mm",
   "calendar.patternYear": "yyyy",
   "calendar.invalidDate": "Nhập ngày theo dạng {pattern}.",
+  "calendar.noSuchDay": "Không có ngày {date}.",
   "calendar.patternHour": "gg",
   "calendar.patternMinute": "pp",
   "calendar.invalidTime": "Nhập giờ theo dạng {pattern}.",
@@ -14926,8 +14928,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Để trống nếu là hôm nay. Yêu cầu ghi nhận muộn vẫn giữ thời hạn theo ngày nhận thực tế.",
   "privacy.earlierDue": "Thời hạn sớm hơn",
   "privacy.earlierDueHint":
-    "Không bắt buộc. Chỉ chấp nhận ngày trước thời hạn ở trên.",
+    "Không bắt buộc. Một ngày từ ngày nhận yêu cầu đến thời hạn ở trên.",
   "privacy.earlierDueTooLate": "Chọn ngày trước {date}.",
+  "privacy.earlierDueTooEarly": "Chọn ngày {date} hoặc sau đó.",
   "privacy.dueRule": "Quy tắc thời hạn",
   "privacy.dueRuleUnknown": "Nhập tay trước khi thời hạn được tính tự động",
   "privacy.dueOverridden": "Đặt sớm hơn quy tắc",

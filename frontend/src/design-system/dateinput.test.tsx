@@ -159,7 +159,10 @@ describe("typing", () => {
     expect(report).not.toHaveBeenCalledWith("2026-05-06");
     expect(box().value).toBe("31/02/2026");
     expect(box().getAttribute("aria-invalid")).toBe("true");
-    expect(box().validationMessage).toBe("Enter a date as DD/MM/YYYY.");
+    // The text is in the pattern; it is the day that does not exist.
+    expect(box().validationMessage).toBe(
+      "There is no 31/02/2026 in the calendar.",
+    );
   });
 
   it("is invalid from the key press that makes the text unreadable, with nothing reported", async () => {
@@ -271,7 +274,7 @@ describe("a caller that refuses an empty box", () => {
 
     expect(box().value).toBe("31/02/2026");
     expect(screen.getByRole("alert").textContent).toBe(
-      "Enter a date as DD/MM/YYYY.",
+      "There is no 31/02/2026 in the calendar.",
     );
   });
 });

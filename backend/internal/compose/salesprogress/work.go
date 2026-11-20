@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // ListSalesProgressDeals lists the open deals behind a Progress reading. The
@@ -195,7 +196,7 @@ func nextDealTasks(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, now time.
 	}
 	current := storekit.CurrentTaskClause("a", now, identities, arg)
 	due := storekit.TaskDueSQL("a")
-	rows, err := tx.Query(ctx, `SELECT DISTINCT ON (l.deal_id) l.deal_id, a.subject, `+due+`, a.assignee_id
+	rows, err := tx.Query(ctx, `SELECT DISTINCT ON (l.deal_id) l.deal_id, a.subject, a.system_text, `+due+`, a.assignee_id
 		FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		WHERE l.deal_id = ANY($1) AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done`+
 		auth.AudienceWorkspaceOnly("a")+` AND `+current+`
@@ -209,9 +210,11 @@ func nextDealTasks(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, now time.
 		var task crmcontracts.SalesProgressNextTask
 		var assignee *ids.UUID
 		var dueAt *time.Time
-		if err := rows.Scan(&deal, &task.Subject, &dueAt, &assignee); err != nil {
+		var written *systemtext.Message
+		if err := rows.Scan(&deal, &task.Subject, &written, &dueAt, &assignee); err != nil {
 			return nil, err
 		}
+		task.Subject = written.SubjectIn(task.Subject, systemtext.Locale(ctx))
 		task.DueAt = dueAt
 		if assignee != nil {
 			task.AssigneeId = new(openapi_types.UUID(*assignee))

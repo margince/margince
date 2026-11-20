@@ -43,7 +43,7 @@
       "tasks": [
         {
           "task": "account_scan",
-          "label": "Reading what an account needs",
+          "label": "Reading what a company needs",
           "tier": "cheap_cloud",
           "model": {
             "provider": "gemini",
@@ -1071,7 +1071,7 @@
       "tasks": [
         {
           "task": "account_scan",
-          "label": "Reading what an account needs",
+          "label": "Reading what a company needs",
           "tier": "cheap_cloud",
           "model": {
             "provider": "gemini_vertex",
@@ -2461,7 +2461,7 @@
       "tasks": [
         {
           "task": "account_scan",
-          "label": "Reading what an account needs",
+          "label": "Reading what a company needs",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -3458,7 +3458,7 @@
       "tasks": [
         {
           "task": "account_scan",
-          "label": "Reading what an account needs",
+          "label": "Reading what a company needs",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -4455,7 +4455,7 @@
       "tasks": [
         {
           "task": "account_scan",
-          "label": "Reading what an account needs",
+          "label": "Reading what a company needs",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -5452,7 +5452,7 @@
       "tasks": [
         {
           "task": "account_scan",
-          "label": "Reading what an account needs",
+          "label": "Reading what a company needs",
           "tier": "cheap_cloud",
           "model": {
             "provider": "openai_compatible",
@@ -6449,7 +6449,7 @@
       "tasks": [
         {
           "task": "account_scan",
-          "label": "Reading what an account needs",
+          "label": "Reading what a company needs",
           "tier": "cheap_cloud",
           "model": {
             "provider": "ollama",
@@ -7446,7 +7446,7 @@
       "tasks": [
         {
           "task": "account_scan",
-          "label": "Reading what an account needs",
+          "label": "Reading what a company needs",
           "tier": "cheap_cloud",
           "model": {
             "provider": "vllm",
