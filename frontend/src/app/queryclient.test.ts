@@ -22,8 +22,8 @@ import {
 } from "../lib/problem";
 import {
   createQueryClient,
-  liveInterval,
   LIVE_ANSWER_CURRENT_MS,
+  liveInterval,
   liveOnMount,
   liveOnReturn,
   notePrefetched,
