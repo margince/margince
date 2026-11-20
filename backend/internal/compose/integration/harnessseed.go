@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -256,7 +257,27 @@ func seedSystemRoleRows(ctx context.Context, t *testing.T, owner *pgx.Conn) {
 // have.
 func (e *Env) GrantRole(t *testing.T, user ids.UUID, roleKey string) {
 	t.Helper()
-	if !e.tryGrantRole(t, user, roleKey) {
+	grantSystemRole(t, e.Admin(), e.Pool, user, roleKey)
+}
+
+// GrantRole is Env.GrantRole for a search fixture, which seeds no roles until
+// a case asks for one.
+func (e *SearchEnv) GrantRole(t *testing.T, user ids.UUID, roleKey string) {
+	t.Helper()
+	var seeded bool
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT EXISTS (SELECT 1 FROM role WHERE is_system)`).Scan(&seeded); err != nil {
+		t.Fatalf("reading whether the shipped roles exist: %v", err)
+	}
+	if !seeded {
+		seedSystemRoleRows(context.Background(), t, e.Owner)
+	}
+	grantSystemRole(t, e.Admin(), e.Pool, user, roleKey)
+}
+
+func grantSystemRole(t *testing.T, admin context.Context, pool *pgxpool.Pool, user ids.UUID, roleKey string) {
+	t.Helper()
+	if !tryGrantSystemRole(t, admin, pool, user, roleKey) {
 		t.Fatalf("no shipped role is called %q, so %s was granted nothing and every authority "+
 			"check below would refuse them — which is what this call exists to prevent", roleKey, user)
 	}
@@ -272,8 +293,13 @@ func (e *Env) GrantRole(t *testing.T, user ids.UUID, roleKey string) {
 // A review pass caught that; planting it confirmed it.
 func (e *Env) tryGrantRole(t *testing.T, user ids.UUID, roleKey string) bool {
 	t.Helper()
+	return tryGrantSystemRole(t, e.Admin(), e.Pool, user, roleKey)
+}
+
+func tryGrantSystemRole(t *testing.T, admin context.Context, pool *pgxpool.Pool, user ids.UUID, roleKey string) bool {
+	t.Helper()
 	var assigned int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			WITH granted AS (
 			  INSERT INTO role_assignment (role_id, user_id)
@@ -287,15 +313,20 @@ func (e *Env) tryGrantRole(t *testing.T, user ids.UUID, roleKey string) bool {
 	}
 	// An insert that touched no row is either "already held" or "no such
 	// shipped role", and only the second is a refusal.
-	return assigned > 0 || e.holdsRole(t, user, roleKey)
+	return assigned > 0 || holdsSystemRole(t, admin, pool, user, roleKey)
 }
 
 // holdsRole answers whether the seat already carries the role, which is the
 // only honest reading of an insert that touched no row.
 func (e *Env) holdsRole(t *testing.T, user ids.UUID, roleKey string) bool {
 	t.Helper()
+	return holdsSystemRole(t, e.Admin(), e.Pool, user, roleKey)
+}
+
+func holdsSystemRole(t *testing.T, admin context.Context, pool *pgxpool.Pool, user ids.UUID, roleKey string) bool {
+	t.Helper()
 	var held bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT EXISTS (
 			  SELECT 1 FROM role_assignment ra JOIN role r ON r.id = ra.role_id

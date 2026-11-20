@@ -53,6 +53,10 @@ type caseEnv struct {
 func setupCases(t *testing.T) *caseEnv {
 	t.Helper()
 	e := integration.Setup(t)
+	// A merge keeps each former owner's access at what their role allows.
+	for _, colleague := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
+		e.GrantRole(t, colleague, "rep")
+	}
 	consentStore := consent.NewStore(e.DB())
 	return &caseEnv{e: e, phone: 1000, store: contacts.NewStore(e.DB()).
 		WithStopCarrier(consentStore).

@@ -12,12 +12,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// ValidateRecordGrantRecipientTx checks the recipient even when a bulk share has no eligible records.
-func ValidateRecordGrantRecipientTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {
+// ValidateRecordGrantRecipientTx checks the recipient even when a bulk share
+// has no eligible records. It answers the access each of its grants will save.
+func ValidateRecordGrantRecipientTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (access string, limitedByRole bool, err error) {
 	if err := grantRecipientExists(ctx, tx, in); err != nil {
-		return err
+		return "", false, err
 	}
-	return refuseWriteGrantToReadSeat(ctx, tx, in)
+	return grantAccessFor(ctx, tx, in)
 }
 
 func grantRecipientExists(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {

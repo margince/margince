@@ -62534,6 +62534,11 @@ type RecordGrant struct {
 	GrantedBy openapi_types.UUID `json:"granted_by"`
 	Id        openapi_types.UUID `json:"id"`
 
+	// LimitedByRole Only on the answer to a share. True when the share asked for `write` and the user's role
+	// cannot change records of this type, so the grant was saved as `read`. A team grant is never
+	// limited, because its members hold different roles.
+	LimitedByRole *bool `json:"limited_by_role,omitempty"`
+
 	// Reason Accountability/lawful-basis note surfaced in the audit row.
 	Reason     *string               `json:"reason,omitempty"`
 	RecordId   openapi_types.UUID    `json:"record_id"`
@@ -67746,8 +67751,10 @@ type ShareCompanyContactsRequestSubjectType string
 
 // ShareCompanyContactsResult defines model for ShareCompanyContactsResult.
 type ShareCompanyContactsResult struct {
-	Shared  int `json:"shared" minimum:"0"`
-	Skipped int `json:"skipped" minimum:"0"`
+	// LimitedByRole True when the share asked for `write` and the user's role cannot change contacts, so every grant was saved as `read`.
+	LimitedByRole bool `json:"limited_by_role"`
+	Shared        int  `json:"shared" minimum:"0"`
+	Skipped       int  `json:"skipped" minimum:"0"`
 }
 
 // SharedForecastView What one caller reads through a share.

@@ -337,8 +337,8 @@ Rules worth knowing:
 - Sharing never widens what a *role* may do, only which records it reaches.
   Share a deal with someone whose role cannot read deals at all and the share
   does nothing.
-- A write share to someone on a read seat is refused: "A read-only seat cannot
-  hold write access. Upgrade the seat first, or grant read access."
+- A write share to someone on a read seat is refused: "A read-only seat cannot hold write access. Upgrade the seat first, or grant read access."
+- A write share to a colleague whose role cannot change that kind of record is saved as read, and Margince says so: "Saved as read access. Mira Voss can't edit Acme renewal with their role." A team share keeps write; each member edits only when their own role allows it.
 - Sharing the same record again **replaces** the whole share. Anything you leave out
   is cleared.
 - Taking back a share counts from the next request of the user it was shared with. There is no undo.
@@ -351,7 +351,7 @@ There are no levels of shares, no sharing by rules, and no way to give someone e
 
 When two contacts merge, the owner of the merged-away contact keeps access to the contact that remains. Margince gives them a share on it:
 
-- **Write** for a full seat, **Read** for a read seat.
+- **Write** for a full seat whose role can change contacts, **Read** otherwise.
 - A share they already held keeps its end date. It only goes from read to write.
 - A colleague who has left gets nothing, and the owner of the remaining contact needs no share.
 

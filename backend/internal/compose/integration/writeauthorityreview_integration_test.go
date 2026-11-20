@@ -41,6 +41,7 @@ import (
 // shareRecord writes a grant through the real writer, as the record's owner.
 func shareRecord(owner context.Context, t *testing.T, e *Env, recordType string, record, subject ids.UUID, access string) {
 	t.Helper()
+	e.GrantRole(t, subject, "rep")
 	if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
 		RecordType: recordType, RecordID: record,
 		SubjectType: "user", SubjectID: subject, Access: access,

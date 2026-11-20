@@ -11,7 +11,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -21,7 +20,7 @@ import (
 )
 
 // CarryOwnerAccessTx keeps a former owner's access to a record a merge folded
-// theirs into, at the widest access their seat allows. A grant they already
+// theirs into, at the widest access their seat and role allow. A grant they already
 // hold keeps its term, reason and grantor; only its access may rise. A new grant
 // is persistent. A colleague who has left gets nothing. mergedFrom may be zero
 // when no single record retired.
@@ -38,7 +37,7 @@ func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType 
 		out.Skipped = authz.OwnerCarryInactive
 		return out, nil
 	}
-	access, err := ShareAccessForTx(ctx, tx, owner)
+	access, err := ShareAccessForTx(ctx, tx, recordType, owner)
 	if err != nil {
 		return out, err
 	}
@@ -104,9 +103,6 @@ func foldPriorGrant(ctx context.Context, tx pgx.Tx, in *CreateGrantInput, granto
 	}
 	return grantor, grantImage(prior), false, nil
 }
-
-// grantAccessWrite is the wider of a grant's two access levels.
-const grantAccessWrite = string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite)
 
 // grantLiveNow judges expiry against the database clock, as the visibility
 // predicates do.

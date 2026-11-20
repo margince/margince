@@ -64,7 +64,11 @@ func (h Handlers) CreateRecordGrant(w http.ResponseWriter, r *http.Request, _ cr
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusCreated, wireGrant(grant))
+	out := wireGrant(grant)
+	if grant.LimitedByRole {
+		out.LimitedByRole = &grant.LimitedByRole
+	}
+	httperr.WriteJSON(w, http.StatusCreated, out)
 }
 
 func (h Handlers) RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RevokeRecordGrantParams) {

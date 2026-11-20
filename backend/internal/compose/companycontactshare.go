@@ -61,9 +61,11 @@ func ShareCompanyContacts(ctx context.Context, db *database.DB, grants *identity
 		if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 			return err
 		}
-		if err := identity.ValidateRecordGrantRecipientTx(ctx, tx, in); err != nil {
+		access, limitedByRole, err := identity.ValidateRecordGrantRecipientTx(ctx, tx, in)
+		if err != nil {
 			return err
 		}
+		in.Access, out.LimitedByRole = access, limitedByRole
 		roster, err := contacts.LockCompanyRosterTx(ctx, tx, companyID)
 		if err != nil {
 			return err

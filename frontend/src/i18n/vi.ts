@@ -3224,6 +3224,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "share.revokeConfirm":
     "Thu hồi quyền {access} với {record} của {name}? Quyền sẽ bị hủy ở yêu cầu tiếp theo và không thể hoàn tác.",
   "share.granted": "{name} giờ có quyền {access} với {record}.",
+  "share.limitedByRole":
+    "Đã lưu với quyền đọc. Vai trò của {name} không cho phép sửa {record}.",
+  "share.companyContactsLimitedByRole":
+    "Đã lưu với quyền đọc. Vai trò của {name} không cho phép sửa liên hệ.",
   "share.thisRecord": "hồ sơ này",
   "share.until": "Đến {date}",
   "share.approvalRequired":
