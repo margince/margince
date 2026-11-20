@@ -65,3 +65,11 @@ func (b BookerContacts) FillBookerGaps(ctx context.Context, contact ids.UUID, ho
 	}
 	return b.Store.FillBookerGaps(hostCtx, contact, host, source)
 }
+
+// Writer carries the seat lookup a system door uses to act as the host.
+type Writer struct{ Seats *identity.Service }
+
+// HostMayWrite says whether the host may change the live record now.
+func (w Writer) HostMayWrite(ctx context.Context, tx pgx.Tx, host ids.UserID, table string, id ids.UUID) (bool, error) {
+	return WritableLiveBy(ctx, w.Seats, tx, host, table, id)
+}

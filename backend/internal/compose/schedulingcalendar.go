@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/hostauthority"
@@ -27,12 +26,12 @@ import (
 
 type schedulingCalendar struct {
 	registry *capture.Registry
-	identity *identity.Service
-	pool     *pgxpool.Pool
+	hostauthority.Writer
+	pool *pgxpool.Pool
 }
 
 func newSchedulingCalendar(pool *pgxpool.Pool, registry *capture.Registry) schedulingCalendar {
-	return schedulingCalendar{registry: registry, identity: identity.NewService(pool), pool: pool}
+	return schedulingCalendar{registry: registry, Writer: hostauthority.Writer{Seats: identity.NewService(pool)}, pool: pool}
 }
 
 func (c schedulingCalendar) Check(ctx context.Context, host ids.UserID, provider string) error {
@@ -53,7 +52,7 @@ func (c schedulingCalendar) hostMayBook(ctx context.Context, host ids.UserID) er
 	if !ok {
 		return apperrors.ErrPermissionDenied
 	}
-	rbac, seat, err := c.identity.EffectiveAuthority(ctx, workspace, host.UUID)
+	rbac, seat, err := c.Seats.EffectiveAuthority(ctx, workspace, host.UUID)
 	if err != nil {
 		return err
 	}
@@ -93,7 +92,7 @@ func (c schedulingCalendar) Save(ctx context.Context, host ids.UserID, provider 
 		return connector.CalendarReceipt{}, err
 	}
 	if !in.PassportID.IsZero() {
-		live, err := c.identity.AuthenticateAgentByID(ctx, ids.From[ids.PassportKind](in.PassportID))
+		live, err := c.Seats.AuthenticateAgentByID(ctx, ids.From[ids.PassportKind](in.PassportID))
 		if err != nil {
 			return connector.CalendarReceipt{}, err
 		}
@@ -202,12 +201,8 @@ func (c schedulingCalendar) checkAppointmentRecipient(ctx context.Context, host 
 	return &activities.SchedulingArgumentError{Field: "attendee_email", Code: "recipient_mismatch", Message: "Use the lead's email before sending an invitation"}
 }
 
-func (c schedulingCalendar) HostMayWrite(ctx context.Context, tx pgx.Tx, host ids.UserID, table string, id ids.UUID) (bool, error) {
-	return hostauthority.WritableLiveBy(ctx, c.identity, tx, host, table, id)
-}
-
 func (c schedulingCalendar) recipientContext(ctx context.Context, host ids.UserID) (context.Context, error) {
-	return hostauthority.Context(ctx, c.identity, host)
+	return hostauthority.Context(ctx, c.Seats, host)
 }
 
 func (c schedulingCalendar) List(ctx context.Context, host ids.UserID, provider string) ([]connector.CalendarOption, error) {

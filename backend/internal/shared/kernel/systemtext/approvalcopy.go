@@ -48,3 +48,12 @@ var approvalDefinitions = map[string]Definition{
 	"approval.createdUnder":                 {Words: langcopy.Phrase{En: "under", De: "unter", Vi: "thuộc"}, Arguments: []string{}},
 	"approval.nestedFields":                 {Words: langcopy.Phrase{En: "{%d fields}", De: "{%d Felder}", Vi: "{%d trường}"}, Arguments: []string{argumentCount}},
 }
+
+// TaskClosedKey names the receipt sentence for a task Margince closed, by
+// whether a booking or a sent mail closed it.
+func TaskClosedKey(booking bool) string {
+	if booking {
+		return "approval.taskBooked"
+	}
+	return "approval.taskCompleted"
+}
