@@ -34,16 +34,7 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var raw string
-	if req.Label != nil {
-		raw = *req.Label
-	}
-	label, err := httperr.RequireNonBlank("label", raw)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	in := IssuePassportInput{Label: &label}
+	in := IssuePassportInput{Label: &req.Label}
 	if req.Areas != nil {
 		areas, err := h.requestedAreas(r.Context(), *req.Areas)
 		if err != nil {

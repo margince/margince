@@ -9892,6 +9892,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.passportLabel": "Agentenname",
   "settings.passportUnnamed": "Passport ohne Namen",
   "settings.passportNameRequired": "Gib dem Agenten einen Namen",
+  "settings.passportNameTooLong": "Verwende höchstens 120 Zeichen.",
   "settings.mint": "Passport ausstellen",
   "settings.minting": "Wird ausgestellt…",
   "settings.mintCancel": "Abbrechen",

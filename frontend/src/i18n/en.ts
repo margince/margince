@@ -9835,6 +9835,7 @@ export const en = {
   "settings.passportLabel": "Agent name",
   "settings.passportUnnamed": "Unnamed passport",
   "settings.passportNameRequired": "Give the agent a name",
+  "settings.passportNameTooLong": "Use at most 120 characters.",
   "settings.mint": "Mint passport",
   "settings.minting": "Minting…",
   "settings.mintCancel": "Cancel",

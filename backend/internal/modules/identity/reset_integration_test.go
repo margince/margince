@@ -143,7 +143,7 @@ func TestPasswordResetRevokesPassportsToo(t *testing.T) {
 	e := setupRevocationEnv(t, "reset-passport-cascade")
 	ctx := e.wsOnlyCtx()
 
-	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("issue passport: %v", err)
 	}
@@ -180,7 +180,7 @@ func TestOperatorResetPasswordRevokesPassportsToo(t *testing.T) {
 	e := setupRevocationEnv(t, "operator-reset-passport-cascade")
 	ctx := e.wsOnlyCtx()
 
-	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("issue passport: %v", err)
 	}

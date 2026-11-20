@@ -35,8 +35,10 @@ function scopeLabelKey(scope: PassportScope): MessageKey {
   return `passport.scope.${scope}`;
 }
 
-// The server refuses a longer name, so the box stops at it.
+// The server counts the trimmed name in code points, so the form does too.
 const PASSPORT_LABEL_MAX = 120;
+const nameTooLong = (label: string) =>
+  Array.from(label.trim()).length > PASSPORT_LABEL_MAX;
 
 // Why New passport cannot be pressed yet, or undefined when it can.
 function mintRefusal(
@@ -48,6 +50,7 @@ function mintRefusal(
 ): string | undefined {
   if (pending) return undefined;
   if (label.trim() === "") return t("settings.passportNameRequired");
+  if (nameTooLong(label)) return t("settings.passportNameTooLong");
   if (scopeCount === 0) return t("settings.passportScopesRequired");
   return areasComplete(areas) ? undefined : t("workArea.pickOne");
 }
@@ -162,6 +165,7 @@ export function MintDialog({
             event.preventDefault();
             if (
               label.trim() !== "" &&
+              !nameTooLong(label) &&
               scopes.size > 0 &&
               areasComplete(areas) &&
               !mint.isPending
@@ -170,12 +174,17 @@ export function MintDialog({
             }
           }}
         >
-          <Field label={t("settings.passportLabel")} required>
+          <Field
+            label={t("settings.passportLabel")}
+            required
+            error={
+              nameTooLong(label) ? t("settings.passportNameTooLong") : undefined
+            }
+          >
             {(control) => (
               <TextInput
                 {...control}
                 value={label}
-                maxLength={PASSPORT_LABEL_MAX}
                 onChange={(event) => setLabel(event.target.value)}
               />
             )}

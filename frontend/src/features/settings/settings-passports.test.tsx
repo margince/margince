@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -189,11 +190,34 @@ describe("PassportCard — minting", () => {
     ).toBe("Give the agent a name");
 
     const name = within(dialog).getByLabelText(/^Agent name/);
-    expect(name).toHaveAttribute("maxlength", "120");
     await user.type(name, "   ");
     expect(submit).toBeDisabled();
     await user.type(name, "Scout");
     expect(submit).toBeEnabled();
+  });
+
+  // The server trims and counts code points: 120 emoji with spaces around
+  // them fit, 121 do not.
+  it("counts the trimmed name in code points against the 120 limit", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", mintBackend());
+    const dialog = await openUnnamedMintDialog(user);
+    const submit = within(dialog).getByRole("button", {
+      name: "Mint passport",
+    });
+    const name = within(dialog).getByLabelText(/^Agent name/);
+    fireEvent.change(name, { target: { value: `  ${"😀".repeat(120)}  ` } });
+    expect(submit).toBeEnabled();
+
+    fireEvent.change(name, { target: { value: `  ${"😀".repeat(121)}  ` } });
+    expect(submit).toBeDisabled();
+    expect(
+      within(dialog).getAllByText("Use at most 120 characters."),
+    ).toBeTruthy();
+    expect(
+      document.getElementById(submit.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe("Use at most 120 characters.");
   });
 
   it("puts the form in a form-width dialog, with the scopes as a named group", async () => {

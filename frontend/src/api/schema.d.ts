@@ -58872,8 +58872,8 @@ export interface components {
             reason?: string | null;
         };
         IssuePassportRequest: {
-            /** @description Which agent this binds, e.g. "Claude Desktop". Required: an absent, null, empty or whitespace-only name is refused with 422 on `label`, so every passport can be told apart. */
-            label?: string | null;
+            /** @description Which agent this binds, e.g. "Claude Desktop". An empty or whitespace-only name is refused with 422 on `label`, so every passport can be told apart. */
+            label: string;
             /** @description Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC. */
             scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
             /** @description Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time. */

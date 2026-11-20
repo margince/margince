@@ -9629,6 +9629,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.passportLabel": "Tên agent",
   "settings.passportUnnamed": "Passport chưa đặt tên",
   "settings.passportNameRequired": "Hãy đặt tên cho agent",
+  "settings.passportNameTooLong": "Dùng tối đa 120 ký tự.",
   "settings.mint": "Tạo passport",
   "settings.minting": "Đang tạo…",
   "settings.mintCancel": "Hủy",
