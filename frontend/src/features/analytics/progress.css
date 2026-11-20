@@ -291,6 +291,7 @@
   grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
   align-items: start;
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
 }
 .goals-board-plan {
   display: flex;

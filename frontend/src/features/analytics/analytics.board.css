@@ -5,6 +5,7 @@
   grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
   align-items: start;
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
 }
 .analytics-board-main,
 .analytics-board-rail {

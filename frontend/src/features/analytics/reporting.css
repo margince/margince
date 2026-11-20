@@ -2,6 +2,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
   /* Two charts sharing a row stand as tall as the taller one, so the row ends
      on one line instead of a ragged edge. */
   align-items: stretch;

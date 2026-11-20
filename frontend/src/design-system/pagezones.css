@@ -20,6 +20,7 @@
   --zonesGap: var(--gapCards);
   display: grid;
   gap: var(--zonesGap);
+  column-gap: var(--gapPanes);
   align-items: start;
   /* The pane's open width, spelled ONCE: it is both the track the pane holds
      and the width its cards keep while that track is travelling. */
@@ -59,10 +60,10 @@
   --asideW: 0px;
 }
 .page-zones[data-aside="closed"] > .page-zones-main {
-  margin-inline-end: calc(-1 * var(--zonesGap));
+  margin-inline-end: calc(-1 * var(--gapPanes));
 }
 .page-zones.page-zones-panes {
-  --zonesGap: var(--gapPanes);
+  --zonesGap: var(--space-6);
 }
 /* Armed one frame after mount (pagezones.tsx), which is what keeps a page that
    LOADS with its pane open — or with it folded — from animating into the state

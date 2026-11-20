@@ -36,7 +36,7 @@
   .worklist-columns {
     display: grid;
     grid-template-columns: 14rem minmax(0, 1fr);
-    column-gap: var(--space-6);
+    column-gap: var(--gapPanes);
     align-items: start;
   }
   .worklist-lanes {

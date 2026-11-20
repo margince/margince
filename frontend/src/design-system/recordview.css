@@ -14,7 +14,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: var(--gapPanes);
+  gap: var(--space-6) var(--gapPanes);
 }
 
 .record-split-details {
@@ -63,9 +63,6 @@
       .reachcard
     ) {
     border-color: transparent;
-  }
-  .record-split-row {
-    column-gap: var(--pageGutter);
   }
   /* Room for a focus ring on content that stands on the sheet's edge. */
   .record-split-sheet {
