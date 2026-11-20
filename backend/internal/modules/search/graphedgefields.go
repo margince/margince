@@ -39,12 +39,13 @@ const participantRows = "participant rows"
 // the fold's SQL fragments use for the activity alias.
 var activityColumnRef = regexp.MustCompile(`(?:^|[^\w."])"?a"?\.([a-z_]+)`)
 
-// foldReadsActivityColumns is every activity column the edge folds name in
+// foldReadsActivityColumns holds the activity columns the edge folds name in
 // their SQL. It comes from the statements, so a column a fold starts to read
-// is covered without editing a list.
+// is covered without editing a list. countingActivities splices the same
+// fragments, so it adds none.
 var foldReadsActivityColumns = columnsNamedBy(
 	foldPairsSQL(false), pruneInteractionEdgesSQL(),
-	foldContactPairsSQL(false), pruneContactEdgesSQL(), countingActivitiesSQL,
+	foldContactPairsSQL(false), pruneContactEdgesSQL(),
 )
 
 func columnsNamedBy(statements ...string) map[string]bool {
