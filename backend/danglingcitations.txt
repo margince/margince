@@ -101,8 +101,6 @@ backend/internal/modules/activities/scheduledsendprovenance.go core 0260
 backend/internal/modules/activities/threadwire_integration_test.go migration 0093
 backend/internal/modules/agents/tools_comms_test.go core 0251
 backend/internal/modules/ai/callstats.go migration 0088
-backend/internal/modules/automation/automations_catalog.go core 0035
-backend/internal/modules/automation/automations_catalog.go core 0078
 backend/internal/modules/automation/automations_runs.go migration 0061
 backend/internal/modules/automation/automations_runs_test.go migration 0061
 backend/internal/modules/automation/engine_blocked.go migration 0061

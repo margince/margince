@@ -298,13 +298,13 @@ export function refusalSentences(
       byField.set(fault.field, faultSentence(fault, locale, labels));
     }
   }
-  if (byField.size === 0) {
+  // One refusal with nothing beside a field keeps the problem's own words,
+  // which a code the copy table knows can sharpen.
+  if (byField.size === 0 && unplaced.length < 2) {
     return { byField, rest: problemMessageOf(error, t, fallback, labels) };
   }
-  return {
-    byField,
-    rest: unplaced[0] ? faultSentence(unplaced[0], locale, labels) : null,
-  };
+  const rest = unplaced.map((fault) => faultSentence(fault, locale, labels));
+  return { byField, rest: rest.length > 0 ? rest.join(" ") : null };
 }
 
 // The code of a 409 that says the value is already taken, naming no field.

@@ -187,3 +187,61 @@ export const FailingSincePhone: Story = {
     await expect(lineTops(shortTime).size).toBe(1);
   },
 };
+
+// A rule that could not finish, named once.
+const TROUBLED: MagicLine[] = [
+  {
+    id: "00000000-0000-7000-8000-0000000c0005",
+    occurred_at: "2026-09-13T05:02:00Z",
+    lane: "could_not_complete",
+    summary: {
+      key: "magic.action.automation_troubled",
+      values: {
+        name: "Route new lead to a task",
+        outcome: "failed",
+        reason_code: "target_missing",
+      },
+    },
+    entity: {
+      type: "automation",
+      id: "00000000-0000-7000-8000-0000000c00aa",
+      label: "Route new lead to a task",
+    },
+    consequence: "magic.consequence.automation_did_nothing",
+    actor: { type: "system", id: "system:automation" },
+    undo: { undoable: false, reason: "no_completed_change" },
+  },
+];
+
+function troubledLane() {
+  return (
+    <StoryProviders>
+      <Panel title="Since your last brief">
+        <MagicLaneSection
+          lane="could_not_complete"
+          title="Could not be finished"
+          rows={TROUBLED}
+          since="2026-09-12T18:00:00Z"
+          zone={browserZone()}
+          byDay={false}
+        />
+      </Panel>
+    </StoryProviders>
+  );
+}
+
+export const RuleCouldNotFinish: Story = {
+  render: troubledLane,
+  play: async ({ canvasElement }) => {
+    const line = canvasElement.querySelector(".magic-line");
+    const text = line?.textContent ?? "";
+    await expect(text.split("Route new lead to a task")).toHaveLength(2);
+    await expect(text).not.toMatch(/:\s*Route/);
+    await expect(line?.querySelector(".magic-line-sep")).not.toBeNull();
+  },
+};
+
+export const RuleCouldNotFinishDark: Story = {
+  globals: { theme: "dark" },
+  render: troubledLane,
+};

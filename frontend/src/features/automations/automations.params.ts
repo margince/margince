@@ -21,6 +21,7 @@ export type ParamField = {
     | "stages";
   min?: number;
   max?: number;
+  required: boolean;
   initial: string;
   // Set only for kind "enum" — the schema's own closed value list (e.g.
   // renewal_reminder's object property), rendered as a picker instead of
@@ -96,6 +97,7 @@ export function paramFields(schema: Record<string, unknown>): ParamField[] {
   // unrelated — is what selects the picker over a free-text box.
   const isDateFieldPicker =
     "object" in properties && "date_field" in properties;
+  const required = new Set(stringOptions(schema.required));
   return Object.entries(properties).flatMap(([key, raw]) => {
     if (!isRecord(raw)) {
       return [];
@@ -115,6 +117,7 @@ export function paramFields(schema: Record<string, unknown>): ParamField[] {
         kind,
         min: typeof raw.minimum === "number" ? raw.minimum : undefined,
         max: typeof raw.maximum === "number" ? raw.maximum : undefined,
+        required: required.has(key),
         initial: scalarText(raw.default),
         options,
         entityTypes: stringOptions(raw["x-entity-types"]),
@@ -129,10 +132,13 @@ export function paramsFromValues(
 ): Record<string, unknown> {
   return Object.fromEntries(
     fields
+      // An optional parameter left empty is left out, and is read as its
+      // default, or for a cap, no cap.
       .filter(
         (field) =>
-          field.kind !== "timezone" ||
-          (values[field.key] ?? field.initial) !== "",
+          field.required ||
+          field.kind === "boolean" ||
+          (values[field.key] ?? field.initial).trim() !== "",
       )
       .map((field) => {
         const value = values[field.key] ?? field.initial;

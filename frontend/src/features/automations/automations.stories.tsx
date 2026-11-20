@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { de } from "../../i18n/de";
 import { en } from "../../i18n/en";
 import {
   installFetchStub,
@@ -60,11 +61,13 @@ function Card({
   none = false,
   view = "mine",
   setupStates = false,
+  locale = "en",
 }: Readonly<{
   readOnly?: boolean;
   none?: boolean;
   view?: AutomationsView;
   setupStates?: boolean;
+  locale?: "en" | "de";
 }>) {
   const routes = none
     ? {
@@ -91,7 +94,7 @@ function Card({
       : routes,
   );
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <AutomationsAdmin view={view} />
     </StoryProviders>
   );
@@ -136,6 +139,15 @@ export const Library: Story = {
   render: () => <Card view="library" />,
 };
 
+// The catalog's names and descriptions in the reader's language, by key.
+export const LibraryInGerman: Story = {
+  play: async ({ canvasElement }) => {
+    const row = await within(canvasElement).findByTestId("template-route_lead");
+    await expect(row).toHaveTextContent(de["auto.template.route_lead.name"]);
+  },
+  render: () => <Card view="library" locale="de" />,
+};
+
 // The library stays readable without the create grant; its rows stop opening.
 export const AdminCardReadOnly: Story = {
   play: async ({ canvasElement }) => {
@@ -153,7 +165,9 @@ export const CreatingFromATemplate: Story = {
     const user = userEvent.setup();
     const canvas = within(canvasElement);
     const row = await canvas.findByTestId("template-renewal_reminder");
-    await user.click(within(row).getByText("Renewal reminder"));
+    await user.click(
+      within(row).getByText(en["auto.template.renewal_reminder.name"]),
+    );
     await within(canvasElement.ownerDocument.body).findByRole("dialog");
   },
   render: () => <Card view="library" />,

@@ -19,13 +19,19 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
-import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
+import { AutomationInspectors } from "./automationdetail";
+import { nameToStore, ruleName } from "./automations.catalogwords";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
-import { type AutomationPatch, patchAutomation } from "./automations.patch";
+import {
+  type AutomationPatch,
+  patchAutomation,
+  samePopulationParams,
+} from "./automations.patch";
 import { ScheduledPopulationReview } from "./automations.populationreview";
 import { recipeSentence } from "./automations.recipe";
 import { AutomationRecipientSummary } from "./automations.recipient";
+import { outcomeLook } from "./automations.runrow";
 import { AutomationStatus } from "./automations.status";
 import "./automations.css";
 
@@ -35,6 +41,9 @@ import "./automations.css";
 type Automation = components["schemas"]["Automation"];
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Inspecting = Readonly<{ runs: boolean; preview: boolean }>;
+type Panel = keyof Inspecting;
+// The panel a menu choice opened, which takes focus once it mounts.
+type FocusRequest = Readonly<{ id: string; panel: Panel; seq: number }>;
 
 const CLOSED: Inspecting = { runs: false, preview: false };
 const RUNS_ONLY: Inspecting = { runs: true, preview: false };
@@ -74,6 +83,7 @@ export function ConfiguredAutomations({
     Readonly<Record<string, Inspecting>>
   >({});
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
   const [populationReview, setPopulationReview] = useState<{
     automation: Automation;
     patch: AutomationPatch;
@@ -96,11 +106,17 @@ export function ConfiguredAutomations({
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ["automations"] }),
   });
-  const toggle = (id: string, panel: keyof Inspecting) =>
-    setInspecting((prior) => {
-      const was = prior[id] ?? CLOSED;
-      return { ...prior, [id]: { ...was, [panel]: !was[panel] } };
-    });
+  const open = (id: string, panel: Panel) => {
+    setInspecting((prior) => ({
+      ...prior,
+      [id]: { ...(prior[id] ?? CLOSED), [panel]: true },
+    }));
+    setFocusRequest((prior) => ({ id, panel, seq: (prior?.seq ?? 0) + 1 }));
+  };
+  const rows = automations.map((automation) => ({
+    ...automation,
+    name: ruleName(automation, entryFor(automation.key), t),
+  }));
   const columns = instanceColumns({
     t,
     now,
@@ -111,9 +127,8 @@ export function ConfiguredAutomations({
         canEdit={canEdit && entryFor(automation.key) !== undefined}
         canViewRuns={canViewRuns}
         canDelete={canDelete}
-        inspecting={inspecting[automation.id] ?? CLOSED}
         focusAfterDelete={focusAfterDelete}
-        onToggle={(panel) => toggle(automation.id, panel)}
+        onOpen={(panel) => open(automation.id, panel)}
         onEdit={() => {
           edit.reset();
           setEditing((prior) => ({
@@ -139,7 +154,7 @@ export function ConfiguredAutomations({
         fold
         label={t("auto.instances")}
         columns={columns}
-        rows={automations}
+        rows={rows}
         rowKey={(automation) => automation.id}
         rowTestId={(automation) => `automation-${automation.id}`}
         detail={
@@ -149,23 +164,30 @@ export function ConfiguredAutomations({
                 toggleLabel: (automation) =>
                   t("auto.runsFor", { name: automation.name }),
                 expanded: new Set(
-                  automations
+                  rows
                     .filter((one) => anyOpen(inspecting[one.id]))
                     .map((one) => one.id),
                 ),
-                onToggle: (id) =>
+                onToggle: (id) => {
+                  setFocusRequest(null);
                   setInspecting((prior) => ({
                     ...prior,
                     [id]: anyOpen(prior[id]) ? CLOSED : RUNS_ONLY,
-                  })),
+                  }));
+                },
                 render: (automation) => {
                   const open = inspecting[automation.id] ?? CLOSED;
+                  const focus =
+                    focusRequest?.id === automation.id
+                      ? focusRequest
+                      : undefined;
                   return (
                     <AutomationInspectors
                       automationId={automation.id}
                       runsOpen={open.runs}
                       previewOpen={open.preview}
                       canConfigure={canViewRuns}
+                      focus={focus && { panel: focus.panel, seq: focus.seq }}
                     />
                   );
                 },
@@ -191,16 +213,24 @@ export function ConfiguredAutomations({
             initialParams={editing.automation.params}
             submitLabel={t("trust.save")}
             pending={edit.isPending}
-            refusal={<ErrorLine error={edit.error} />}
+            error={edit.error}
             onSubmit={(name, params) => {
               // The version as the list now holds it, not as it stood at open.
               const current =
                 automations.find((one) => one.id === editing.automation.id) ??
                 editing.automation;
+              const stored = nameToStore(
+                name,
+                editing.automation.name,
+                current.name,
+              );
               const patch = {
                 id: current.id,
                 version: current.version,
-                body: { name, params },
+                body: {
+                  ...(stored === current.name ? {} : { name: stored }),
+                  params,
+                },
               };
               if (
                 current.status === "enabled" &&
@@ -234,17 +264,6 @@ export function ConfiguredAutomations({
         />
       )}
     </>
-  );
-}
-
-function samePopulationParams(
-  before: Record<string, unknown>,
-  after: Record<string, unknown>,
-): boolean {
-  const keys = Object.keys(before);
-  return (
-    keys.length === Object.keys(after).length &&
-    keys.every((key) => before[key] === after[key])
   );
 }
 
@@ -343,7 +362,7 @@ function RunOutcome({
   if (!outcome) {
     return null;
   }
-  const look = OUTCOME_LOOK[outcome];
+  const look = outcomeLook(outcome);
   return outcome === "failed" || outcome === "blocked" ? (
     <Badge tone={look.tone}>{t(look.word)}</Badge>
   ) : (
@@ -436,18 +455,17 @@ function AutomationVerbs({
   canEdit,
   canViewRuns,
   canDelete,
-  inspecting,
   focusAfterDelete,
-  onToggle,
+  onOpen,
   onEdit,
 }: Readonly<{
   automation: Automation;
   canEdit: boolean;
   canViewRuns: boolean;
   canDelete: boolean;
-  inspecting: Inspecting;
   focusAfterDelete?: () => HTMLElement | null;
-  onToggle: (panel: keyof Inspecting) => void;
+  /** Opens the panel, or takes focus back to it; the row's chevron closes it. */
+  onOpen: (panel: Panel) => void;
   onEdit: () => void;
 }>) {
   const t = useT();
@@ -459,18 +477,8 @@ function AutomationVerbs({
       {canEdit && <Button onClick={onEdit}>{t("trust.edit")}</Button>}
       {canViewRuns && (
         <>
-          <Button
-            variant={inspecting.runs ? "primary" : "ghost"}
-            aria-pressed={inspecting.runs}
-            onClick={() => onToggle("runs")}
-          >
-            {t("auto.runs.open")}
-          </Button>
-          <Button
-            variant={inspecting.preview ? "primary" : "ghost"}
-            aria-pressed={inspecting.preview}
-            onClick={() => onToggle("preview")}
-          >
+          <Button onClick={() => onOpen("runs")}>{t("auto.runs.open")}</Button>
+          <Button onClick={() => onOpen("preview")}>
             {t("auto.preview.open")}
           </Button>
         </>

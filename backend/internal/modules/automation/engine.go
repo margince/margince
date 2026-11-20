@@ -356,12 +356,7 @@ func applyOne(ctx context.Context, ex Executors, eff workflow.Effect, action wor
 	case workflow.ActionUpdateRecord:
 		return action, nil, applyUpdate(ctx, ex.Provider, action)
 	case workflow.ActionAssignOwner:
-		// AUTO-T07's dynamic tier: every real firing today is single-entity
-		// (assign_owner_tier.go's AssignOwnerScope doc) — the zero-value
-		// scope here is that honest default, not a fabricated bulk signal.
-		// applyAssignOwner's own branch (🟢 write vs 🟡 stage) is proven
-		// against a synthetic scaled scope by its unit tests.
-		return action, nil, applyAssignOwner(ctx, ex, action, AssignOwnerScope{})
+		return action, nil, applyAssignOwner(ctx, ex, action, ruleFiringScope)
 	case workflow.ActionEmitFlowEvent:
 		// request_approval's own executor, confirm-first by its very nature: the
 		// action IS the asking, so staging it is executing it. A deterministic

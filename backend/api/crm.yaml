@@ -75217,6 +75217,12 @@ components:
           type: [string, 'null']
           description: |
             The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is.
+        effect_failure_code:
+          type: string
+          description: |
+            `effect_failure` as a code a client words in the reader's language: approval_lapsed,
+            effect_not_run, effect_unconfirmed, follow_up_failed or window_not_widened. Absent when
+            the sentence has no code; the client then shows `effect_failure`.
         mailbox_send_capable:
           type: boolean
           description: |
@@ -77930,7 +77936,7 @@ components:
         automation_id: { type: string, format: uuid }
         occurred_at: { type: string, format: date-time, description: 'Maps to automation_run.ran_at.' }
         outcome: { type: string, enum: [fired, failed, blocked, skipped, queued_for_approval], x-extensible-enum: true, description: 'Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.' }
-        tier: { type: string, enum: [auto_execute, confirmation_required], x-extensible-enum: true, description: 'The tier that fired for this run.' }
+        tier: { type: string, enum: [auto_execute, confirmation_required], x-extensible-enum: true, description: 'The rule''s mode, as its catalog entry reads it: confirmation_required when every run waits for approval.' }
         approval_required: { type: boolean }
         trigger_evidence: { type: [string, 'null'], description: 'What matched (e.g. "no activity 14d on deal BÄR Pharma") — the "why did this fire?" line.' }
         target_ref: { type: [string, 'null'], description: 'Record the run acted on (type + id or label).' }
@@ -77943,6 +77949,36 @@ components:
             target_missing, not_permitted, conflict, record_changed, no_consent, budget_exhausted,
             not_completed or blocked. A code a client does not know reads as not_completed.
         audit_id: { type: [string, 'null'], description: 'Link into the audit_log row for this run.' }
+        event_id: { type: string, format: uuid, description: 'The event that fired the run, for technical details. A clock rule''s run names its scan.' }
+        trigger_event_type:
+          type: string
+          description: What fires the rule, in the catalog's trigger vocabulary, e.g. deal.stage_changed or clock:renewal_scan.
+        trigger_stage_name:
+          type: string
+          description: >-
+            For a run a stage move fired, the stage the deal moved to. Absent once the event is no
+            longer on record, and when the reader may not see the run's target.
+        action_kinds:
+          type: array
+          items: { type: string }
+          description: >-
+            The action kinds the run applied, or for a run queued for approval the kinds it queued, in
+            order. A create another rule had already made is left out. Empty when the run did nothing.
+        target:
+          allOf: [{ $ref: '#/components/schemas/MagicEntityRef' }]
+          description: The record the run acted on. Its label is absent when the reader may not see the record.
+        created: { $ref: '#/components/schemas/AutomationRunCreatedRecord' }
+
+    AutomationRunCreatedRecord:
+      type: object
+      description: >-
+        A task a fired run created. Its id is absent for a run recorded before runs kept it. Its label
+        is the task's subject, present only when the reader may read the task itself.
+      required: [type]
+      properties:
+        type: { type: string, description: 'The record type, e.g. activity for a task.' }
+        id: { type: string, format: uuid }
+        label: { type: string }
 
     SettleClaimRequest:
       type: object
@@ -81740,6 +81776,11 @@ components:
             On an `automation_run` item: why the firing stopped, in the code set of
             AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
             engine's English sentence.
+        effect_failure_code:
+          type: string
+          description: |
+            On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+            language. `detail` keeps the English sentence.
         domain_context: { $ref: '#/components/schemas/DomainQuestionContext' }
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
@@ -83600,6 +83641,11 @@ components:
             On an `automation_run` item: why the firing stopped, in the code set of
             AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
             engine's English sentence.
+        effect_failure_code:
+          type: string
+          description: |
+            On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+            language. `detail` keeps the English sentence.
         domain_context: { $ref: '#/components/schemas/DomainQuestionContext' }
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
