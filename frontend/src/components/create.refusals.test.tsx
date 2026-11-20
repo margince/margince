@@ -261,7 +261,6 @@ describe("CreateAction refusals of a row list or a set", () => {
         create={() => throwProblem(problem)}
         invalidate="contacts"
         screen="contacts"
-        requires={{ object: "contact", action: "create" }}
       />,
     );
     await user.click(screen.getByText("New contact"));
@@ -313,7 +312,6 @@ describe("CreateAction refusals of a row list or a set", () => {
         create={() => throwProblem(refusal("tags", "unknown_tag"))}
         invalidate="contacts"
         screen="contacts"
-        requires={{ object: "contact", action: "create" }}
       />,
     );
     await user.click(screen.getByText("New contact"));
