@@ -1429,7 +1429,7 @@
     position: fixed;
     inset: 0;
     z-index: 29;
-    background: color-mix(in srgb, var(--textPrimary) 38%, transparent);
+    background: var(--overlayScrim);
     animation: railscrim-in var(--dur-state) var(--ease-out);
   }
   @keyframes railscrim-in {

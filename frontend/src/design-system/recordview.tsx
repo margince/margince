@@ -6,6 +6,7 @@ import { type ReactNode, useState } from "react";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import { AppLink } from "./applink";
+import { useAwaitedArrivalFocus } from "./arrivalfocus";
 import { Avatar } from "./atoms";
 import { EditableValue } from "./editablevalue";
 import { useFieldEditor } from "./fieldeditdialog";
@@ -213,15 +214,19 @@ function RecordHead({
   );
 }
 
+// A record a press just opened, such as a create, takes focus on its name.
 function RecordTitle({
   name,
   children,
 }: Readonly<{ name: string; children: ReactNode }>) {
+  const title = useAwaitedArrivalFocus<HTMLHeadingElement>();
   return (
     <Heading
       size="large"
       as="h1"
-      className="record-split-name"
+      className="record-split-name arrival-focus"
+      ref={title}
+      tabIndex={-1}
       title={name}
       aria-label={name}
     >

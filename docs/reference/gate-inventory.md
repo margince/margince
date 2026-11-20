@@ -279,7 +279,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `briefevidencestrip_test.go` | H2 | "Never persist an email summary" is spelled once, and every writer that caches evidence says it that way. |
 | `briefsectioncensus_test.go` | H2 | Every worklist category reaches a section of the morning. |
 | `buildinputfetch_test.go` | H3 | A build input fetched over the network survives a transient failure. |
-| `cachedtestinputs_test.go` | H2 | A cached test file that runs a process to read the tree for it declares what that process read through gatekit. |
+| `cachedtestinputs_test.go` | H2 | A cached test file that runs a process declares what that process read through gatekit. |
 | `calendaroccurrenceexpansion_test.go` | H2 | Every calendar pull lists occurrences, never recurring series masters. |
 | `capturecontainers_test.go` | H2 | Every mail connector tells the sink where the provider filed a message. |
 | `captureseatlessrows_test.go` | H2 | A shared mailbox is a capture\_connection with no user, and its import rows name the connection instead of a seat. |
