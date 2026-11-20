@@ -212,7 +212,7 @@ func (s *Store) liftAdmittedTx(
 	})
 	if !verdict.may {
 		return auth.RefuseRow(ctx, "communication_suppression",
-			fmt.Errorf("%s: %w", liftRefusal(verdict.blockedBy), apperrors.ErrPermissionDenied))
+			liftRefusal(verdict.blockedBy))
 	}
 
 	basis := ""
@@ -359,17 +359,18 @@ const (
 	liftBasisCorrection = "recorded_by_mistake"
 )
 
-// liftRefusal says, in the 403's words, why this stop is not the caller's.
-func liftRefusal(blockedBy crmcontracts.ContactStopLiftBlockedBy) string {
+// liftRefusal is the 403 that says why this stop is not the caller's.
+func liftRefusal(blockedBy crmcontracts.ContactStopLiftBlockedBy) error {
 	switch blockedBy {
 	case crmcontracts.ContactStopLiftBlockedByRestriction:
-		return "a processing restriction is lifted only after the contact is told in advance: an admin lifts it with the notice"
+		return fmt.Errorf("a processing restriction is lifted only after the contact is told in advance: an admin lifts it with the notice: %w",
+			apperrors.ErrPermissionDenied)
 	case crmcontracts.ContactStopLiftBlockedBySubjectDecision:
-		return "the contact set this stop themselves; only they can change it"
+		return fmt.Errorf("the contact set this stop themselves; only they can change it: %w", apperrors.ErrPermissionDenied)
 	case crmcontracts.ContactStopLiftBlockedByPermission:
-		return "only an admin signed in to a seat corrects an objection a colleague typed"
+		return fmt.Errorf("only an admin signed in to a seat corrects an objection a colleague typed: %w", apperrors.ErrPermissionDenied)
 	}
-	return "this stop was recorded at a level you do not outrank"
+	return fmt.Errorf("this stop was recorded at a level you do not outrank: %w", apperrors.ErrPermissionDenied)
 }
 
 // suppressionLiftedPayload says a stop was taken back and by whose authority.

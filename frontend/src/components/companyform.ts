@@ -210,7 +210,11 @@ export const ADDRESS_FIELDS: CreateField[] = [
   { key: "address_postal_code", label: "create.postalCode" },
   { key: "address_city", label: "create.city" },
   { key: "address_region", label: "create.region" },
-  { key: "address_country", label: "create.country" },
+  {
+    key: "address_country",
+    label: "create.country",
+    wireField: "address.country",
+  },
 ];
 
 // addressFrom prefills the six flat fields from the record's nested address.
@@ -300,6 +304,7 @@ export function companyCreateFields(
       addLabel: "field.addDomain",
       rowFields: [{ key: "domain", label: "field.domain", required: true }],
       primaryKey: "is_primary",
+      rowsUnique: true,
     },
   ];
 }
@@ -409,6 +414,7 @@ export function companyEditFields(
       addLabel: "field.addDomain",
       rowFields: [{ key: "domain", label: "field.domain", required: true }],
       primaryKey: "is_primary",
+      rowsUnique: true,
     },
   ];
 }

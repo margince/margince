@@ -160,9 +160,9 @@ describe("LicenseCard", () => {
   });
 
   // The seat reading is ONE row, and what counts as a seat is that row's
-  // DESCRIPTION rather than a note under the figures. Which order it is in
-  // matters: the rule excludes read-only seats and counts agents, so a reader
-  // who meets it after the numbers has already taken them for something else.
+  // DESCRIPTION rather than a note under the figures. Its order matters: the
+  // rule excludes read-only seats and agents. A reader who meets it after the
+  // numbers has already taken them for something else.
   it("puts what counts as a seat above the figures it qualifies", async () => {
     vi.stubGlobal(
       "fetch",
@@ -176,7 +176,11 @@ describe("LicenseCard", () => {
     );
     render(<LicenseCard />);
 
-    const rule = await waitFor(() => screen.getByText(/Read-only seats/));
+    const rule = await waitFor(() => screen.getByText(en["license.counting"]));
+    // The meter leaves agents out (identity/seatusage.go), so the rule says so.
+    expect(rule.textContent).toMatch(
+      /Agents and read-only seats are not counted/,
+    );
     const reading = screen.getByText(ofGranted("9", "10"));
     // One row holds the name, the rule and the figure, with no card inside it.
     expect(reading.closest(".settingrow")?.contains(rule)).toBe(true);

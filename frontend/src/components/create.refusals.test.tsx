@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { throwProblem } from "../lib/problem";
+import { seedWriter } from "../testing/mefixture";
 import { CreateAction } from "./create";
 import type { CreateField } from "./create.fields";
 
@@ -26,6 +27,7 @@ function render(ui: ReactNode, locale: "en" | "de" = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  seedWriter(client);
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>{ui}</LocaleProvider>
@@ -56,6 +58,7 @@ function refusal(field: string, code: string) {
 async function submitWith(problem: unknown, locale: "en" | "de" = "en") {
   render(
     <CreateAction
+      requires={{ object: "deal", action: "create" }}
       label="New deal"
       fields={fields}
       create={() => throwProblem(problem)}
@@ -75,6 +78,7 @@ describe("CreateAction field refusals", () => {
   it("declares the lowest amount the browser accepts", async () => {
     render(
       <CreateAction
+        requires={{ object: "deal", action: "create" }}
         label="New deal"
         fields={fields}
         create={() => Promise.resolve({ id: "1" })}
@@ -124,6 +128,7 @@ describe("CreateAction field refusals", () => {
     const user = userEvent.setup();
     render(
       <CreateAction
+        requires={{ object: "deal", action: "create" }}
         label="New deal"
         fields={fields}
         conflict={{ field: "name", sentence: "A deal already has this name." }}
@@ -153,6 +158,7 @@ describe("CreateAction field refusals", () => {
     const user = userEvent.setup();
     render(
       <CreateAction
+        requires={{ object: "deal", action: "create" }}
         label="New deal"
         fields={[
           { key: "name", label: "create.dealName", required: true },
@@ -194,6 +200,7 @@ describe("CreateAction field refusals", () => {
     const user = userEvent.setup();
     render(
       <CreateAction
+        requires={{ object: "deal", action: "create" }}
         label="New deal"
         fields={fields}
         create={() => Promise.resolve({ id: "1" })}
@@ -223,5 +230,89 @@ describe("CreateAction field refusals", () => {
     await user.click(screen.getByText("New deal"));
     await screen.findByRole("dialog");
     expect(screen.queryByText("Enter a whole number for Value.")).toBeNull();
+  });
+});
+
+describe("CreateAction refusals of a row list or a set", () => {
+  const listFields: CreateField[] = [
+    { key: "name", label: "create.dealName", required: true },
+    {
+      key: "emails",
+      label: "create.email",
+      type: "repeatable",
+      addLabel: "field.addEmail",
+      rowFields: [{ key: "email", label: "create.email", type: "email" }],
+    },
+    {
+      key: "tags",
+      label: "nav.tags",
+      type: "multiselect",
+      options: [{ value: "a", label: "A" }],
+    },
+  ];
+
+  async function submitList(problem: unknown) {
+    const user = userEvent.setup();
+    render(
+      <CreateAction
+        label="New contact"
+        fields={listFields}
+        create={() => throwProblem(problem)}
+        invalidate="contacts"
+        screen="contacts"
+      />,
+    );
+    await user.click(screen.getByText("New contact"));
+    await user.type(screen.getByLabelText(/Deal.name/i), "Probe");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    return user;
+  }
+
+  it("shows a refused address under the email rows", async () => {
+    await submitList(refusal("emails", "email_invalid"));
+    await waitFor(() =>
+      expect(screen.getByText("Check Email and try again.")).toBeTruthy(),
+    );
+  });
+
+  it("shows a refused set beside its picker", async () => {
+    await submitList(refusal("tags", "unknown_tag"));
+    await waitFor(() =>
+      expect(screen.getByText("Check Tag and try again.")).toBeTruthy(),
+    );
+  });
+
+  it("drops a refused address once its rows are edited", async () => {
+    const user = await submitList(refusal("emails", "email_invalid"));
+    expect(await screen.findByText("Check Email and try again.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Add email" }));
+    expect(screen.queryByText("Check Email and try again.")).toBeNull();
+  });
+
+  it("drops a refused set once another pick is made", async () => {
+    const user = await submitList(refusal("tags", "unknown_tag"));
+    expect(await screen.findByText("Check Tag and try again.")).toBeTruthy();
+    await user.click(screen.getByRole("combobox", { name: /^Tag/ }));
+    await user.click(screen.getByRole("option", { name: "A" }));
+    expect(screen.queryByText("Check Tag and try again.")).toBeNull();
+  });
+
+  it("shows a picker's own refusal before the form sends", async () => {
+    const user = userEvent.setup();
+    render(
+      <CreateAction
+        label="New contact"
+        fields={listFields.map((field) =>
+          field.type === "multiselect"
+            ? { ...field, validate: () => "Pick one tag at most." }
+            : field,
+        )}
+        create={() => throwProblem(refusal("tags", "unknown_tag"))}
+        invalidate="contacts"
+        screen="contacts"
+      />,
+    );
+    await user.click(screen.getByText("New contact"));
+    expect(await screen.findByText("Pick one tag at most.")).toBeTruthy();
   });
 });

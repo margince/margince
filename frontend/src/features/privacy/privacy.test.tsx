@@ -465,7 +465,7 @@ describe("PrivacyInboxCard", () => {
             // What auth.Require actually sends: the RBAC object and verb
             // wrapped around the sentinel. Internals, not copy — so the screen
             // must show the catalog sentence instead of echoing it.
-            detail: "data_subject_request.update: permission denied",
+            detail: "your role does not grant update on data subject request",
             status: 403,
             code: "permission_denied",
           },
@@ -482,7 +482,9 @@ describe("PrivacyInboxCard", () => {
     expect(
       await screen.findByText(en["common.permissionDenied"]),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/data_subject_request/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/does not grant update on data subject request/i),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/else decided this/i)).not.toBeInTheDocument();
   });
 
@@ -605,7 +607,7 @@ describe("PrivacyInboxCard", () => {
             // What auth.Require actually sends: the RBAC object and verb
             // wrapped around the sentinel. Internals, not copy — so the screen
             // must show the catalog sentence instead of echoing it.
-            detail: "data_subject_request.update: permission denied",
+            detail: "your role does not grant update on data subject request",
             status: 403,
             code: "permission_denied",
           },
@@ -623,7 +625,7 @@ describe("PrivacyInboxCard", () => {
       await within(row).findByText(en["common.permissionDenied"]),
     ).toBeInTheDocument();
     expect(
-      within(row).queryByText(/data_subject_request/i),
+      within(row).queryByText(/does not grant update on data subject request/i),
     ).not.toBeInTheDocument();
   });
 

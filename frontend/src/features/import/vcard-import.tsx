@@ -8,7 +8,12 @@ import { IMPORT_ID } from "../../app/nav";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { AppLink } from "../../design-system/applink";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
-import { Badge, Button } from "../../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  PendingBody,
+} from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FileDropzone } from "../../design-system/filedropzone";
 import { Heading } from "../../design-system/heading";
@@ -22,6 +27,7 @@ import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
+import { useActionRefusal, useMeSettled } from "../../lib/writerefusal";
 import "./vcard-import.css";
 
 type VCardReport = components["schemas"]["VCardImportReport"];
@@ -146,14 +152,37 @@ function useImportVCards() {
 }
 
 /**
+ * Why this seat is refused the vCard import, or undefined when it is not. The
+ * import writes a new contact or updates the one a card matches, so it asks
+ * both grants (contacts/vcardimport.go).
+ */
+export function useVCardImportRefusal(): string | undefined {
+  const create = useActionRefusal({ object: "contact", action: "create" });
+  const update = useActionRefusal({ object: "contact", action: "update" });
+  return create ?? update;
+}
+
+/**
  * The link a contact follows to import address cards. A handed-over card is
  * first-party data — the contact gave it — which is what justifies storing their
  * details, and a human pressing this is what makes the import WRITE rather than
  * stage. So the verb lives on the contact list beside the other ways a contact
  * comes to exist, not in a settings page.
  */
-export function VCardImportAction() {
+export function VCardImportAction({
+  refusalId,
+}: Readonly<{
+  // The page's sentence saying why the import is refused, when it is.
+  refusalId?: string;
+}>) {
   const t = useT();
+  if (refusalId !== undefined) {
+    return (
+      <Button reasonId={refusalId} data-testid="vcard-import">
+        {t("vcardImport.action")}
+      </Button>
+    );
+  }
   return (
     <AppLink
       className="btn btn-ghost"
@@ -169,6 +198,10 @@ export function VCardImportAction() {
  * each card. Leaving discards the file and the report. */
 export function VCardImportPage() {
   const t = useT();
+  const refusal = useVCardImportRefusal();
+  // No file field before the seat's access is read: a file picked then would
+  // be sent at once.
+  const settled = useMeSettled();
   const importer = useImportVCards();
   const [picked, setPicked] = useState<File | undefined>(undefined);
   const title = useArrivalFocus<HTMLHeadingElement>();
@@ -198,50 +231,59 @@ export function VCardImportPage() {
       >
         {t("vcardImport.title")}
       </Heading>
-      <Panel>
-        <PanelBody className="form-stack">
-          <div data-testid="vcard-import-file" ref={fileField}>
-            {/* Withdrawn while an import is running. A second file chosen mid-
+      {!settled ? (
+        <PendingBody label={t("vcardImport.title")} />
+      ) : (
+        <Panel>
+          <PanelBody className="form-stack">
+            <div data-testid="vcard-import-file" ref={fileField}>
+              {/* Withdrawn while an import is running. A second file chosen mid-
                 flight would start a second write, and this page holds ONE
                 report — so one set of contact changes would land with nothing
                 on screen saying what happened to it. */}
-            {importer.isPending ? (
-              <p className="t-sub">{t("vcardImport.working")}</p>
-            ) : (
-              <FileDropzone
-                label={t("vcardImport.fileLabel")}
-                hint={t("vcardImport.whichFile")}
-                emptyLabel={t("vcardImport.choose")}
-                accept={ACCEPT_ATTR}
-                file={picked}
-                onPick={(file) => {
-                  setPicked(file);
-                  importer.mutate(file);
-                }}
-              />
+              {/* A refusal takes the file field's place only: an import already
+                  sent keeps its report, whatever /me says since. */}
+              {importer.isPending ? (
+                <p className="t-sub">{t("vcardImport.working")}</p>
+              ) : refusal !== undefined ? (
+                <EmptyState>{refusal}</EmptyState>
+              ) : (
+                <FileDropzone
+                  label={t("vcardImport.fileLabel")}
+                  hint={t("vcardImport.whichFile")}
+                  emptyLabel={t("vcardImport.choose")}
+                  accept={ACCEPT_ATTR}
+                  file={picked}
+                  onPick={(file) => {
+                    setPicked(file);
+                    importer.mutate(file);
+                  }}
+                />
+              )}
+            </div>
+            {importer.isError && (
+              <div data-testid="vcard-import-error">
+                <Callout
+                  tone="danger"
+                  kind="outcome"
+                  title={t("vcardImport.failed")}
+                >
+                  {problemMessageOf(importer.error, t)}
+                </Callout>
+              </div>
             )}
-          </div>
-          {importer.isError && (
-            <div data-testid="vcard-import-error">
-              <Callout
-                tone="danger"
-                kind="outcome"
-                title={t("vcardImport.failed")}
-              >
-                {problemMessageOf(importer.error, t)}
-              </Callout>
-            </div>
-          )}
-          {importer.isSuccess && <ImportReport report={importer.data} />}
-          {(importer.isSuccess || importer.isError) && (
-            <div>
-              <Button data-testid="vcard-import-next" onClick={startNext}>
-                {t("vcardImport.next")}
-              </Button>
-            </div>
-          )}
-        </PanelBody>
-      </Panel>
+            {importer.isSuccess && <ImportReport report={importer.data} />}
+            {(importer.isSuccess || importer.isError) &&
+              refusal === undefined && (
+                <div>
+                  <Button data-testid="vcard-import-next" onClick={startNext}>
+                    {t("vcardImport.next")}
+                  </Button>
+                </div>
+              )}
+          </PanelBody>
+        </Panel>
+      )}
     </div>
   );
 }

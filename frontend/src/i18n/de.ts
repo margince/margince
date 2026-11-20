@@ -2543,6 +2543,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.undo.redo": "Erneut anwenden",
   "history.undo.busy": "Änderung wird rückgängig gemacht…",
   "history.undo.confirmTitle": "Diese Änderung rückgängig machen?",
+  "history.undo.redoConfirmTitle": "Diese Änderung erneut anwenden?",
+  "history.undo.redoConfirmBody_one":
+    "{count} Feld erhält wieder seinen Wert vor dem Rückgängigmachen:",
+  "history.undo.redoConfirmBody_other":
+    "{count} Felder erhalten wieder ihre Werte vor dem Rückgängigmachen:",
   "history.undo.confirmEdgeBody":
     "Damit ändert sich die Verknüpfung mit {other}. Beide Datensätze bleiben bestehen, nur die Verknüpfung zwischen ihnen ändert sich.",
   "history.undo.confirmCreateBody":
@@ -3216,6 +3221,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
+  "record.accessUnknown":
+    "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
     "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.logActivityRefused":
@@ -3241,6 +3248,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.ceiling.noWider": "nicht weiter",
   "share.ceiling.post": ".",
   "share.unknownRecord": "Dieser Datensatz kann nicht geteilt werden.",
+  "share.missingRecord":
+    "Diesen Datensatz gibt es nicht, oder er ist nicht mit dir geteilt.",
   "share.grantAccess": "Zugriff gewähren",
   "share.subject": "Person oder Team",
   "share.holdsRead": "Hat Lesezugriff",
@@ -7503,12 +7512,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.companyPicked":
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
   "create.companyNew":
-    "Erstellt ein neues Unternehmen, sofern keines aus der Liste ausgewählt wird.",
+    "Verknüpft das Unternehmen mit diesem Namen oder legt es an, wenn es keines gibt.",
   "create.companyPrefilled":
     "Über die Domain der geschäftlichen E-Mail-Adresse einem bestehenden Unternehmen zugeordnet.",
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
   "create.amountNegative": "Gib einen Betrag von null oder mehr ein.",
+  "create.emailNamesNoOne":
+    "Diese Adresse gehört zu einem Versandsystem, an dem niemand antwortet. Gib die eigene Adresse des Kontakts ein.",
+  "create.addressErased":
+    "Dieser Wert wurde auf Wunsch der betroffenen Person gelöscht und kann nicht wieder gespeichert werden.",
+  "create.linkedinMalformed":
+    "Das ist kein Link. Füge die Adresse der LinkedIn-Seite ein.",
+  "create.linkedinNotLinkedin":
+    "Gib einen Link zu einer Seite auf linkedin.com ein.",
+  "create.linkedinNotProfile":
+    "Gib einen Link zu einem persönlichen Profil ein, etwa linkedin.com/in/name.",
+  "create.dateRangeReversed":
+    "Das Enddatum liegt vor dem Startdatum. Wähle ein späteres Enddatum.",
+  "create.countryCodeInvalid":
+    "Gib das Land als Code aus zwei Buchstaben ein, etwa DE oder US.",
   "create.referenceNotFound":
     "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",
@@ -7517,6 +7540,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.expectedClose": "Erwarteter Abschluss",
 
   "keyCode.label": "Schlüssel: {key}",
+  "field.rowRepeated": "{value} steht in zwei Zeilen. Entferne eine davon.",
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",
   "field.editEmails": "E-Mail-Adressen bearbeiten",
@@ -14494,10 +14518,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.home.seatLabel": "Dein Platz",
   "settings.home.seat.full": "Voller Platz: Änderungen erlaubt",
   "settings.home.seat.read": "Leseplatz: nur ansehen",
-  "settings.home.reachLabel": "Sichtbare Datensätze",
-  "settings.home.reach.own": "Deine eigenen Datensätze",
-  "settings.home.reach.team": "Datensätze deines Teams",
-  "settings.home.reach.all": "Alle Datensätze des Unternehmens",
+  "settings.home.reachLabel": "Datensätze, die du ändern darfst",
+  "settings.home.reach.none": "Keine",
+  "settings.home.reach.own": "Deine eigenen",
+  "settings.home.reach.team": "Deine und die deines Teams",
+  "settings.home.reach.all": "Alle im Unternehmen",
+  "settings.home.readLabel": "Datensätze, die du lesen darfst",
+  "settings.home.read.some":
+    "Alle {kinds}, außer privaten anderer, die nicht mit dir geteilt sind",
+  "settings.home.read.none": "Keine",
   "settings.home.access": "Dein Zugriff",
   "settings.home.accessLoading": "Dein Zugriff wird geladen…",
   "settings.boundary.deniedTitle": "Kein Zugriff auf diese Einstellungsseite",
@@ -15245,7 +15274,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "license.check.failed":
     "Das Lizenz-Token ließ sich nicht neu einlesen. Das letzte Ergebnis gilt weiter, und das Server-Log nennt den Grund.",
   "license.counting":
-    "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
+    "Volle Plätze, die nicht deaktiviert oder gesperrt sind. Agenten und Leseplätze zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",
   "settings.rates.fxIntro":
     "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später. Ein früheres Datum geht nur vor dem ersten Kurs der Währung. Ein Kurs, der schon gilt, ändert sich nie.",
@@ -15642,7 +15671,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.renameSubmit": "Name speichern",
   "roles.scopeTitle": "Wessen Datensätze Mitglieder ändern",
   "roles.scopeSub":
-    "Kontakte, Unternehmen, Leads und Deals bleiben für jede Rolle lesbar, die sie lesen darf. Diese Einstellung legt fest, was Mitglieder ändern dürfen und welche Projekte sie sehen.",
+    "Jede Rolle, die Kontakte, Unternehmen, Leads, Deals und Projekte lesen darf, liest alle davon. Diese Einstellung legt fest, welche davon Mitglieder ändern dürfen.",
   "roles.scope.own": "Eigene",
   "roles.scope.ownSub": "Datensätze, die dem Mitglied gehören.",
   "roles.scope.team": "Die der Teammitglieder",
@@ -15855,8 +15884,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.notArchived": "Team nicht archiviert",
   "users.teamNotChanged": "Mitgliedschaft nicht geändert",
   "users.access.title": "Zugriff des Mitglieds",
-  "users.access.identity":
-    "Liest alle Kontakte, Unternehmen, Leads und Deals dieses Unternehmens.",
+  "users.access.reads": "Liest alle {kinds} dieses Unternehmens.",
+  "users.access.readsNone": "Liest keine Datensätze.",
+  "users.access.writesNone": "Ändert keine Datensätze.",
   "users.access.writesAll": "Bearbeitet alle Datensätze.",
   "users.access.writesTeam":
     "Bearbeitet eigene Datensätze und die der Teams {teams}.",
@@ -19271,7 +19301,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.employer": "Arbeitgeber",
   "contact.rail.allCompaniesConnected":
     "Alle Treffer sind bereits mit diesem Kontakt verknüpft.",
-  "contact.rail.isCurrentEmployer": "Das ist der aktuelle Arbeitgeber",
+  "contact.rail.isPrimaryEmployer": "Das ist der Hauptarbeitgeber",
   "contact.rail.markEnded": "Als beendet markieren",
   "contact.rail.removeEmploymentTitle":
     "Verknüpfung zum Unternehmen entfernen?",
