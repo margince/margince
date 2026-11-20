@@ -61,10 +61,13 @@ export function useContactCaseMerge() {
           body,
         }),
       ),
-    onSuccess: (outcome, { body }) =>
-      invalidateAfterContactMerge(client, [
+    // Not awaited: the refreshed case can unmount the form before the other
+    // reads land, and a per-call onSuccess then never runs.
+    onSuccess: (outcome, { body }) => {
+      void invalidateAfterContactMerge(client, [
         ...body.member_ids,
         outcome.survivor_id,
-      ]),
+      ]);
+    },
   });
 }

@@ -120,7 +120,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // Through the head's own verb: the deal page carries no standing log form,
   // because a form open on every read asks for a note nobody came to write.
   await page
-    .getByRole("button", { name: "Aktivität erfassen", exact: true })
+    .getByRole("button", { name: "Notiz, Aktivität erfassen", exact: true })
     .click();
   // Inside the dialog, and exactly: the head's own verb is still on the page
   // behind it, and "Erfassen" matches "Aktivität erfassen" as a substring.

@@ -24,7 +24,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { DeleteAutomationAction } from "./automations.delete";
-import { AutomationForm } from "./automations.form";
+import { AutomationDialog } from "./automations.form";
 import {
   ListParamSelect,
   RulePausedReason,
@@ -341,7 +341,8 @@ describe("a list rule's form", () => {
     const user = userEvent.setup();
     render(
       <StoryProviders>
-        <AutomationForm
+        <AutomationDialog
+          open
           entry={{
             key: "list_membership_shortlist",
             name: "Add to a Shortlist",
@@ -355,19 +356,25 @@ describe("a list rule's form", () => {
               },
             },
           }}
-          formId="automation"
           initialName="Add to a Shortlist"
+          submitLabel="Create"
+          pending={false}
           onSubmit={() => undefined}
+          onClose={() => undefined}
         />
       </StoryProviders>,
     );
     expect(
       await screen.findByText(en["auto.lists.needsWatched"]),
     ).toBeInTheDocument();
-    const watched = screen.getByRole("combobox", { name: "list_id" });
+    const watched = screen.getByRole("combobox", {
+      name: en["auto.lists.watched"],
+    });
     await waitFor(() => expect(watched).toBeEnabled());
     await pickOption(user, watched, liveList.name);
-    const target = screen.getByRole("combobox", { name: "shortlist_id" });
+    const target = screen.getByRole("combobox", {
+      name: en["auto.lists.shortlist"],
+    });
     await waitFor(() => expect(target).toBeEnabled());
   });
 });

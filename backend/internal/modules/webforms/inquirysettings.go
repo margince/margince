@@ -21,6 +21,7 @@ type InquirySettings interface {
 	HandleExisting(context.Context, ids.UUID, crmcontracts.WebsiteInquiryExistingRequest) (crmcontracts.WebsiteInquiryHandlingResults, error)
 	Preview(context.Context, ids.UUID, crmcontracts.WebsiteInquiryPreviewRequest, time.Time) (crmcontracts.WebsiteInquiryHandlingPreview, error)
 	Save(context.Context, ids.UUID, int64, crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error)
+	SwitchOff(ctx context.Context, automationID ids.UUID) error
 }
 
 // WithInquirySettings is a copy of the store that saves and runs inquiry

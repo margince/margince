@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // relinkLender gives Rep1 a real role holding what staging, releasing and the
@@ -101,9 +102,10 @@ func TestACredentialRelinksExactlyTheNamedActivitiesToACompanyAtOnce(t *testing.
 	}
 }
 
-// A credential files an activity under a project at once, and stamps it. The
-// undo is a named member's decision the credential cannot make.
-func TestACredentialFilesUnderAProjectAndOnlyAMemberUndoesTheFiling(t *testing.T) {
+// A credential's filing under a project waits for a human, then files and
+// stamps the activity. The undo is a named member's decision the credential
+// cannot make.
+func TestACredentialFilesUnderAProjectOnceApprovedAndOnlyAMemberUndoesTheFiling(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -111,10 +113,19 @@ func TestACredentialFilesUnderAProjectAndOnlyAMemberUndoesTheFiling(t *testing.T
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	agent := relinkAgentCtx(e, e.SeedPassport(t, owner, "relink project"))
 
+	args := `{"activity_ids":["` + f.mine[0].String() + `"],"entity_type":"project","entity_id":"` + f.project.String() + `"`
+	_, err := registry.Invoke(agent, "relink_activities", json.RawMessage(args+`}`))
+	staged, ok := errors.AsType[*workflow.StagedApprovalError](err)
+	if !ok {
+		t.Fatalf("relink_activities onto a project on a passport → %v, want it staged for a human", err)
+	}
+	if _, err := compose.NewApprovalsService(e.DB()).Decide(e.Admin(), staged.ApprovalID, true, nil); err != nil {
+		t.Fatalf("approving the filing: %v", err)
+	}
 	out, err := registry.Invoke(agent, "relink_activities", json.RawMessage(
-		`{"activity_ids":["`+f.mine[0].String()+`"],"entity_type":"project","entity_id":"`+f.project.String()+`"}`))
+		args+`,"approval_id":"`+staged.ApprovalID.String()+`"}`))
 	if err != nil {
-		t.Fatalf("relink_activities onto a project on a passport → %v, want it filed at once", err)
+		t.Fatalf("the approved relink → %v, want it filed", err)
 	}
 	if got := relinkedCount(t, out); got != 1 {
 		t.Errorf("relinked = %d, want the one named activity", got)

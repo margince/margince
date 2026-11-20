@@ -477,6 +477,7 @@ export function CreateRecordModal({
       }}
       onClose={onClose}
       intent="create"
+      resetToken={resetToken}
     />
   );
 }

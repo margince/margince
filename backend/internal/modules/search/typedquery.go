@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // mailPrefixFloor is how many letters the word being typed needs before a
@@ -77,7 +78,9 @@ func splitTypedQuery(query string) (head, tail string) {
 	if i < 0 {
 		return "", query
 	}
-	return query[:i], query[i+1:]
+	// A separator such as U+2003 spans several bytes, and all of them belong to it.
+	_, width := utf8.DecodeRuneInString(query[i:])
+	return query[:i], query[i+width:]
 }
 
 // carriesOperators reports whether the query uses the websearch grammar rather

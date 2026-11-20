@@ -72,7 +72,7 @@ func listRuleEntries() []CatalogEntry {
 		return CatalogEntry{
 			Group: crmcontracts.AutomationCatalogEntryGroupLists,
 			Key:   key, Name: name, Description: description + listRuleDescription,
-			Trigger: eventListEvaluated, Action: string(action), Tier: tierAutoExecute,
+			Trigger: eventListEvaluated, Action: string(action),
 			ParamsSchema: listRuleSchema(extra), Validate: validateListRuleParams(extra),
 			ValidateRefs: validateListRuleRefs,
 		}

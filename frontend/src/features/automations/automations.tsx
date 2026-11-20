@@ -7,7 +7,6 @@ import { WebsiteInquiryDialog } from "../../components/websiteinquirydialog";
 import { EmptyState } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { type QueryLike, QueryStates } from "../../design-system/querystates";
@@ -19,6 +18,11 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
+import {
+  nameToStore,
+  templateDescription,
+  templateName,
+} from "./automations.catalogwords";
 import { AutomationDialog } from "./automations.form";
 import { ConfiguredAutomations, shut } from "./automations.instances";
 import { triggerLabel } from "./automations.recipe";
@@ -165,12 +169,20 @@ export function AutomationsAdmin({
           key={staged.seq}
           open={staged.open}
           entry={staged.entry}
-          initialName={staged.entry.name}
+          initialName={templateName(staged.entry, t)}
           submitLabel={t("auto.create")}
           pending={create.isPending}
-          refusal={<ErrorLine error={create.error} />}
+          error={create.error}
           onSubmit={(name, params) =>
-            create.mutate({ key: staged.entry.key, name, params })
+            create.mutate({
+              key: staged.entry.key,
+              name: nameToStore(
+                name,
+                templateName(staged.entry, t),
+                staged.entry.name,
+              ),
+              params,
+            })
           }
           onClose={() => setStaged(shut)}
         />
@@ -315,16 +327,19 @@ function libraryColumns(
       header: t("auto.name"),
       fold: "title",
       grow: true,
-      render: (entry) => (
-        <CellStack>
-          <span>{entry.name}</span>
-          {entry.description && (
-            <span className="t-caption">
-              {leadSentence(entry.description, locale)}
-            </span>
-          )}
-        </CellStack>
-      ),
+      render: (entry) => {
+        const description = templateDescription(entry, t);
+        return (
+          <CellStack>
+            <span>{templateName(entry, t)}</span>
+            {description && (
+              <span className="t-caption">
+                {leadSentence(description, locale)}
+              </span>
+            )}
+          </CellStack>
+        );
+      },
     },
     {
       key: "trigger",
@@ -352,7 +367,7 @@ function libraryColumns(
       fold: "end",
       render: (entry) => (
         <RowOpen
-          label={t("auto.useNamed", { name: entry.name })}
+          label={t("auto.useNamed", { name: templateName(entry, t) })}
           opensDialog
           onOpen={() => onUse(entry)}
         />

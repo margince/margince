@@ -102,7 +102,7 @@ describe("the receipt draws every lane it promises", () => {
     ).toBeTruthy();
     expect(
       within(await lane("Could not be finished")).getByText(
-        "Nightly follow-up could not finish (Failed): the record it acts on no longer exists",
+        "Could not finish (Failed): the record it acts on no longer exists",
       ),
     ).toBeTruthy();
     expect(
@@ -318,8 +318,9 @@ describe("the receipt draws every lane it promises", () => {
     renderMagic();
     const waiting = await lane("Waiting on you");
     expect(within(waiting).queryByText(/capture_counterparty/)).toBeNull();
+    expect(within(waiting).getByText(/Someone new wrote to you/)).toBeTruthy();
     expect(
-      within(waiting).getByText(/Boris <boris@customer\.example> wrote to you/),
+      within(waiting).getByText("Boris <boris@customer.example>"),
     ).toBeTruthy();
   });
 
@@ -770,7 +771,7 @@ describe("a rule that could not finish says why in the reader's language", () =>
     renderMagic("de");
     expect(
       within(await lane("Konnte nicht abgeschlossen werden")).getByText(
-        "Route new lead to a task konnte nicht abgeschlossen werden (Fehlgeschlagen): der Datensatz, auf den sie wirkt, existiert nicht mehr",
+        "Konnte nicht abgeschlossen werden (Fehlgeschlagen): der Datensatz, auf den sie wirkt, existiert nicht mehr",
       ),
     ).toBeTruthy();
   });

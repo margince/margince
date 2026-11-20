@@ -17,7 +17,6 @@ import {
   CF_TYPES,
   type CfObject,
   type CfType,
-  ddlPreview,
   looksStructural,
 } from "../../lib/customfields.logic";
 import { fieldCheckSentence, refusalSentences } from "../../lib/problem";
@@ -292,9 +291,6 @@ export function FieldBuilder({
           }
         >
           <p>{t("cf.gate.body", { object: t(`cf.obj.${object}`) })}</p>
-          <code className="cf-ddl t-caption">
-            {ddlPreview(object, label, type, currency)}
-          </code>
         </Callout>
         {rest !== null && <ErrorLine>{rest}</ErrorLine>}
       </div>

@@ -195,10 +195,8 @@ describe("ArchiveAction", () => {
 
   it("says what went, once it has gone", async () => {
     const user = userEvent.setup();
-    // An archive is destructive and the contract has no restore endpoint, so
-    // the closing dialog was the whole of what a reader got — and a dialog
-    // closing is dismissal, not confirmation. It names the record because
-    // "Archived." beside a list of twenty is a sentence about nothing.
+    // A dialog closing is dismissal, not confirmation. It names the record
+    // because "Archived." beside a list of twenty is a sentence about nothing.
     render(
       <ArchiveAction
         label="Archive contact"
@@ -301,5 +299,64 @@ describe("ArchiveAction", () => {
       expect(go.mock.calls).toEqual([[-1]]);
       go.mockRestore();
     });
+  });
+
+  it("takes the archive back from its confirmation, when the screen can", async () => {
+    const user = userEvent.setup();
+    const undone: { id: string }[] = [];
+    render(
+      <ArchiveAction
+        label="Archive contact"
+        confirmText="You can bring it back from its history."
+        archive={() => Promise.resolve({ id: "p-1" })}
+        invalidate="contacts"
+        recordKey="contact"
+        archivedMessage="“Jana Brandt” archived"
+        onArchived={() => undefined}
+        undo={async (archived) => {
+          undone.push(archived);
+        }}
+        requires={{ object: "contact", action: "delete" }}
+      />,
+    );
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+
+    expect(undone).toEqual([{ id: "p-1" }]);
+  });
+
+  it("says why an undo from the confirmation was refused", async () => {
+    const user = userEvent.setup();
+    render(
+      <ArchiveAction
+        label="Archive contact"
+        confirmText="You can bring it back from its history."
+        archive={() => Promise.resolve({ id: "p-1" })}
+        invalidate="contacts"
+        recordKey="contact"
+        archivedMessage="“Jana Brandt” archived"
+        onArchived={() => undefined}
+        undo={async () => throwProblem({ detail: "the record changed since" })}
+        requires={{ object: "contact", action: "delete" }}
+      />,
+    );
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+
+    expect(await screen.findByText("the record changed since")).toBeTruthy();
   });
 });

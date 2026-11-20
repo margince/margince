@@ -74,7 +74,7 @@ type Router struct {
 	// (MCP-SESS-COST). Nil in every role that serves no inbound agent.
 	agentSpend      AgentTokenSpender
 	budget          BudgetPolicy
-	stripper        model.SecretStripper
+	stripper        textStripper
 	cache           *resultCache
 	calls           callStore
 	capturePayloads bool
@@ -155,7 +155,7 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 	r := &Router{
 		meter:           meter,
 		budget:          budget,
-		stripper:        NewSecretStripper(),
+		stripper:        secretStripper{},
 		cache:           newResultCache(resultCacheTTL),
 		calls:           calls,
 		capturePayloads: capturePayloads,

@@ -57,8 +57,14 @@ func TestColleagueWorkReadsAgainstItsTargetInMyOutcomes(t *testing.T) {
 	intros := introductions.NewStore(InstallationDB(m.e.Pool), func() time.Time { return m.clock().Add(-time.Hour) })
 	introduced := func(introducer ids.UUID) ids.UUID {
 		ask, err := intros.Create(as(teammate), introductions.NewRequest{ContactID: m.customer, IntroducerUser: introducer, RouteType: "direct", InternalReason: "they run procurement", DueAt: m.clock().AddDate(0, 0, 7)})
-		if err != nil || intros.Decide(as(introducer), ask, introductions.StatusAccepted, "", nil, 1) != nil || intros.Complete(as(introducer), ask, nil, 2) != nil {
-			t.Fatalf("the introduction by %s: %v", introducer, err)
+		if err != nil {
+			t.Fatalf("asking %s for the introduction: %v", introducer, err)
+		}
+		if err := intros.Decide(as(introducer), ask, introductions.StatusAccepted, "", nil, 1); err != nil {
+			t.Fatalf("%s accepting the ask: %v", introducer, err)
+		}
+		if err := intros.Complete(as(introducer), ask, nil, 2); err != nil {
+			t.Fatalf("%s completing the introduction: %v", introducer, err)
 		}
 		return ask
 	}

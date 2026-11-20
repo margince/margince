@@ -338,6 +338,7 @@ describe("the header's writing verb", () => {
     const lead = await leadVerb("Message on Zalo OA");
     expect(lead.querySelector(".lucide-message-square")).toBeTruthy();
     expect(lead.querySelector(".lucide-mail")).toBeNull();
+    expect(lead.querySelector(".verb-word")?.textContent).toBe("Message");
   });
 
   it("promises neither transport when the composer will ask which", async () => {
@@ -353,6 +354,7 @@ describe("the header's writing verb", () => {
     expect(lead.querySelector(".lucide-send")).toBeTruthy();
     expect(lead.querySelector(".lucide-mail")).toBeNull();
     expect(lead.querySelector(".lucide-message-square")).toBeNull();
+    expect(lead.querySelector(".verb-word")?.textContent).toBe("Write");
 
     // And the picker it stayed neutral for is really there.
     await user.click(lead);
