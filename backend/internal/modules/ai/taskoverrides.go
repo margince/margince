@@ -118,17 +118,26 @@ type EffectiveTask struct {
 	Thinking        string
 	DecisionTimeout time.Duration
 	AttemptTimeout  time.Duration
+	// WalkTimeout bounds every try of one logical call together; zero leaves
+	// the walk unbounded.
+	WalkTimeout time.Duration
 }
 
-// TaskDefaults is what a task's calls are sent with when nothing overrides it.
-func TaskDefaults() EffectiveTask {
-	return EffectiveTask{DecisionTimeout: DecisionCallTimeout, AttemptTimeout: CallCeiling}
+// TaskDefaults is what task's calls are sent with when nothing overrides it:
+// the limits its certified models measured (attemptlimits_gen.go), or
+// CallCeiling on each try and no walk bound where none measured it.
+func TaskDefaults(task Task) EffectiveTask {
+	out := EffectiveTask{DecisionTimeout: DecisionCallTimeout, AttemptTimeout: CallCeiling}
+	if limit, ok := certifiedAttemptTimeouts[task]; ok {
+		out.AttemptTimeout, out.WalkTimeout = limit, walkBound(limit)
+	}
+	return out
 }
 
 // Effective is what task's calls are sent with. An override stored for a task
 // the contract no longer declares is ignored (Stale lists it).
 func (v TaskOverrides) Effective(task Task) EffectiveTask {
-	out := TaskDefaults()
+	out := TaskDefaults(task)
 	o := v[task]
 	if _, known := taskLadders[task]; !known {
 		return out
@@ -139,6 +148,10 @@ func (v TaskOverrides) Effective(task Task) EffectiveTask {
 	}
 	if o.AttemptTimeoutMs != 0 {
 		out.AttemptTimeout = time.Duration(o.AttemptTimeoutMs) * time.Millisecond
+		// The bound follows the admin's limit, so it never cuts a try short of it.
+		if out.WalkTimeout != 0 {
+			out.WalkTimeout = walkBound(out.AttemptTimeout)
+		}
 	}
 	return out
 }
@@ -184,16 +197,21 @@ func (r *Router) taskOverrides() TaskOverrides {
 
 // taskSettings is what task's calls are sent with right now.
 func (r *Router) taskSettings(task Task) EffectiveTask {
-	return r.taskOverrides().Effective(task)
+	settings := r.taskOverrides().Effective(task)
+	if r.unlimited {
+		settings.AttemptTimeout, settings.WalkTimeout = CallCeiling, 0
+	}
+	return settings
 }
 
 // callSettings is what one logical call's task is sent with, read on first use
 // and kept, so a save mid-call cannot give two of its attempts different
-// deadlines or record one it was not sent under.
+// deadlines or record one it was not sent under. The first read starts the
+// call's walk bound.
 func (r *Router) callSettings(lc *logicalCall, task Task) EffectiveTask {
 	if lc.settings == nil {
 		settings := r.taskSettings(task)
-		lc.settings = &settings
+		lc.settings, lc.started = &settings, r.now()
 	}
 	return *lc.settings
 }

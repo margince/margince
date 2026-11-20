@@ -391,9 +391,10 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 // completers. This thin passthrough exists so the raw ai.NewLocalRouter
 // construction stays inside this file — the one seam
 // arch_test.go's TestNoModelClientOutsideTheGate enforces — rather than
-// aicert becoming a second, ungated construction site.
+// aicert becoming a second, ungated construction site. It lifts the
+// interactive limits, because the lane measures the latency they come from.
 func NewLocalRouterForCert(cfg ai.RoutingConfig, opts ...ai.LocalOption) (*ai.Router, error) {
-	return ai.NewLocalRouter(cfg, opts...)
+	return ai.NewLocalRouter(cfg, append([]ai.LocalOption{ai.WithoutInteractiveLimits()}, opts...)...)
 }
 
 // Router exposes the model path's underlying router — the same one every model

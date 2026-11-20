@@ -196,11 +196,18 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		if err := ctx.Err(); err != nil {
 			return model.Response{}, lastTier, false, err
 		}
-		// The rail's lease covers one model call, and this is the next one.
-		lc.renewRailLease(ctx)
 		// Each rung gets its own deadline, so one slow host spends at most its
 		// share and the walk still reaches the rung above it.
-		callCtx, cancel := context.WithTimeout(ctx, r.callSettings(lc, task).AttemptTimeout)
+		timeout, spent := r.tryTimeout(lc, task)
+		if spent != nil {
+			if lastErr != nil {
+				spent = fmt.Errorf("%w (the rung: %w)", spent, lastErr)
+			}
+			return model.Response{}, lastTier, false, spent
+		}
+		// The rail's lease covers one model call, and this is the next one.
+		lc.renewRailLease(ctx)
+		callCtx, cancel := context.WithTimeout(ctx, timeout)
 		out, callErr := b.clients[t].Complete(callCtx, req)
 		cancel()
 		if callErr != nil {
@@ -248,7 +255,9 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			if meterErr := r.meterWithheld(ctx, task, t, callErr); meterErr != nil {
 				return model.Response{}, t, false, meterErr
 			}
-			if err := ctx.Err(); err != nil {
+			// Checked before this rung's row is appended, so the rung that
+			// spent the walk bound is the terminal and is recorded once.
+			if err := r.stopped(ctx, lc, task); err != nil {
 				return model.Response{}, t, false, fmt.Errorf("%w (the rung: %w)", err, callErr)
 			}
 			if i < len(boundRungs)-1 {

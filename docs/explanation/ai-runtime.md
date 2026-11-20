@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/api/ai-tasks.yaml backend/internal/modules/ai/router.go backend/internal/modules/ai/decideroute.go backend/internal/modules/ai/budget.go backend/internal/modules/ai/routeplan.go backend/internal/modules/ai/usage.go backend/internal/modules/ai/providerregistry.go backend/internal/compose/jobs_aibudget.go -->
+<!-- describes: backend/api/ai-tasks.yaml backend/internal/modules/ai/router.go backend/internal/modules/ai/decideroute.go backend/internal/modules/ai/budget.go backend/internal/modules/ai/routeplan.go backend/internal/modules/ai/interactivelimits.go backend/internal/modules/ai/usage.go backend/internal/modules/ai/providerregistry.go backend/internal/compose/jobs_aibudget.go -->
 # The AI runtime: tasks, tiers, routing, and the one gate
 
 How every AI call in Margince is *named*, *routed*, *metered*, *traced*, and *certified*. This is the
@@ -369,8 +369,13 @@ same metering, tracing and budget path that production does. `TestNoModelClientO
 
 **Every ladder rung runs under its own deadline.** The rung's context is the caller's, with the task's
 attempt timeout on it. So one slow host spends at most its share, and the walk still reaches the rung
-above. A call that its deadline stops is recorded with the `timeout` sentinel. The limits an admin may
-set, and the call figures: [ai-request-settings.md](../reference/ai-request-settings.md).
+above. A call that its deadline stops is recorded with the `timeout` sentinel.
+
+A task a user waits on gets a shorter deadline, built from the time its slowest certified model took.
+It also has a bound on all its calls together, so the retries and steps up of one answer cannot keep the
+user for many minutes. A background task keeps 300 seconds on each call and no bound. How the numbers
+are built, the limits an admin may set, and the call figures:
+[ai-request-settings.md](../reference/ai-request-settings.md).
 
 ## Tracing: what certification counts
 

@@ -116,13 +116,13 @@ func TestACanceledCallIsNotATimeout(t *testing.T) {
 	}
 }
 
-func TestNoOverrideReproducesTodaysDeadlines(t *testing.T) {
+func TestABackgroundTaskKeepsTheCallCeilingOnEachTryAndNoWalkBound(t *testing.T) {
 	client := &deadlineClient{}
 	r := newTracingRouter(t, client, &fakeCallStore{})
-	if got := r.taskSettings(TaskColdStart); got != (EffectiveTask{AttemptTimeout: CallCeiling, DecisionTimeout: DecisionCallTimeout}) {
+	if got := r.taskSettings(TaskAccountScan); got != (EffectiveTask{AttemptTimeout: CallCeiling, DecisionTimeout: DecisionCallTimeout}) {
 		t.Fatalf("defaults = %+v", got)
 	}
-	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err != nil {
+	if _, _, err := r.serveCompletion(wsCtx(), TaskAccountScan, []Tier{TierCheapCloud}, model.Request{}); err != nil {
 		t.Fatal(err)
 	}
 	if client.deadline <= CallCeiling-time.Minute || client.deadline > CallCeiling {
@@ -155,7 +155,7 @@ func TestTaskOverrideBoundsAreTheSpecs(t *testing.T) {
 func TestAnOverrideForARemovedTaskIsIgnoredAndReportedStale(t *testing.T) {
 	retired := Task("retired_task")
 	v := TaskOverrides{retired: {Thinking: "low"}, TaskColdStart: {Thinking: "high"}}
-	if got := v.Effective(retired); got != TaskDefaults() {
+	if got := v.Effective(retired); got != (EffectiveTask{AttemptTimeout: CallCeiling, DecisionTimeout: DecisionCallTimeout}) {
 		t.Fatalf("a removed task is sent %+v, want the defaults", got)
 	}
 	if stale := v.Stale(); len(stale) != 1 || stale[0] != retired {
@@ -336,7 +336,7 @@ func TestTwoTiersRecordTheirOwnWireBlocks(t *testing.T) {
 		if err := json.Unmarshal(snap.ProviderParams, &params); err != nil {
 			t.Fatal(err)
 		}
-		if params.DeadlineMs != CallCeiling.Milliseconds() {
+		if params.DeadlineMs != TaskDefaults(TaskColdStart).AttemptTimeout.Milliseconds() {
 			t.Errorf("deadline_ms = %d", params.DeadlineMs)
 		}
 		if bytes.Contains(snap.ProviderParams, []byte("embed_dimensions")) {

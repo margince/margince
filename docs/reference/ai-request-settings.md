@@ -15,8 +15,8 @@ beside `ai.routing`. An admin edits it in each task's sheet under AI tasks
   ([AI thinking levels](ai-thinking.md)).
 - **`decision_timeout_ms`**: how long the decision model may take on a task that asks one, 5,000 to
   60,000; 15,000 when not set (`DecisionCallTimeout`).
-- **`attempt_timeout_ms`**: how long each model call on the ladder may take, 10,000 to 300,000; 300,000
-  when not set (`CallCeiling`).
+- **`attempt_timeout_ms`**: how long each model call on the ladder may take, 10,000 to 300,000. When it
+  is not set, a task a user waits on gets the limit below, and any other task gets 300,000 (`CallCeiling`).
 
 When a field is not set, the router uses the default above; for `thinking`, the binding and the site
 floor decide. The routing watcher publishes the overrides again on every role within its check window.
@@ -25,6 +25,26 @@ So a save takes effect across the installation within a minute.
 The save does not move the routing version, so cached briefs stay keyed as they were. A changed `thinking` is part of a call's result cache key. So that
 task's next calls miss answers cached at the old level, and ask the model again. Calls ignore an override
 for a task that a later release drops, and the preview names it as stale.
+
+## The limits of a task a user waits on
+
+A task whose `execution_mode` is `interactive` gets its own default for each call. `make gen` builds it
+from the committed certification records into `backend/internal/modules/ai/attemptlimits_gen.go`, and
+`make drift` fails a table the records no longer give. It reads the slowest record whose verdict lets the
+model serve the task: `certified` or `supported_degraded`. The limit is 1.5 times that record's p95,
+rounded up to a whole second, at least 30 seconds and at most 300 (`InteractiveAttemptTimeout`).
+
+Two kinds of task keep 300 seconds: a task no such record measures, and `transcript`. The time of a
+transcript grows with the length of its recording, so the p95 of short test recordings cannot bound it.
+
+The same tasks also have a bound on the whole call. It covers every try: the steps up the ladder, the retry
+after an answer the check refused, and the step up after that. The bound is two calls at the task's limit,
+and at most 300 seconds. When it runs out, no further call starts, and the call ends with the `timeout`
+sentinel. An admin's `attempt_timeout_ms` wins over the default, and the bound follows it. A background
+task has no bound on the whole call.
+
+The certification lane sends every task at 300 seconds with no bound. It measures the time the limits are
+built from, so a run stopped at the limit would record the limit itself.
 
 ## The `timeout` sentinel
 

@@ -19,6 +19,7 @@ import (
 type localOpts struct {
 	callStore       CallRecorder
 	cacheOff        bool
+	unlimited       bool
 	monthlyBudget   int64
 	fakeClient      *FakeClient
 	capturePayloads bool
@@ -54,6 +55,14 @@ func WithCallStore(cs CallRecorder) LocalOption {
 // scripted responses into one.
 func WithoutResultCache() LocalOption {
 	return func(o *localOpts) { o.cacheOff = true }
+}
+
+// WithoutInteractiveLimits sends every task at CallCeiling with no walk bound.
+// The cert lane measures how long a model takes, and the interactive limits
+// are derived from those measurements: a run cut at its limit would record
+// the limit, and a slower model could never raise it.
+func WithoutInteractiveLimits() LocalOption {
+	return func(o *localOpts) { o.unlimited = true }
 }
 
 // WithMonthlyBudget overrides the static token ceiling the in-memory
@@ -182,6 +191,7 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	// WithCallStore opts a caller into tracing.
 	router := assembleRouter(clients, embedder, cfg.Profile, &memoryMeter{}, StaticBudget(o.monthlyBudget), o.callStore, meta, o.capturePayloads, nil)
 	router.cacheOff = o.cacheOff
+	router.unlimited = o.unlimited
 	router.captureWhole = o.captureWhole
 	decisions, err := localDecisionLane(cfg, o.fakeDecider)
 	if err != nil {

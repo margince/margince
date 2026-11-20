@@ -87,6 +87,9 @@ type Router struct {
 	// the cert lane and scripted repeat-call tests need every call to reach
 	// the model, not collapse onto a cached answer.
 	cacheOff bool
+	// unlimited sends every task at CallCeiling with no walk bound
+	// (ai.WithoutInteractiveLimits), for a lane that measures latency.
+	unlimited bool
 	// overrides is the admin's per-task thinking level and deadlines
 	// (ai.task_overrides), republished by the routing watcher.
 	overrides atomic.Pointer[TaskOverrides]

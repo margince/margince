@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -52,6 +53,8 @@ type logicalCall struct {
 	// so every attempt, its deadline and its recorded snapshot agree even when
 	// an admin saves new overrides mid-call.
 	settings *EffectiveTask
+	// started is when settings was read, which the walk bound counts from.
+	started time.Time
 }
 
 func newLogicalCall() *logicalCall {

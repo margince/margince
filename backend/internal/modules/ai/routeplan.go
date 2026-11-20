@@ -169,7 +169,7 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 		if task != TaskEmbeddings {
 			degrades := DegradesOnOutage(task)
 			row.DegradesOnOutage = &degrades
-			decides, defaults := TaskDecides(task), TaskDefaults()
+			decides, defaults := TaskDecides(task), TaskDefaults(task)
 			row.Decides = &decides
 			row.Defaults = &crmcontracts.AiTaskSettings{
 				DecisionTimeoutMs: int(defaults.DecisionTimeout.Milliseconds()), AttemptTimeoutMs: int(defaults.AttemptTimeout.Milliseconds()),
