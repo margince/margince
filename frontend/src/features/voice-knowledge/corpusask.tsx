@@ -86,8 +86,9 @@ export function AskMarginceModal({
   const sets = useAskableSets(canAsk && open);
   const [corpusId, setCorpusId] = useState("");
   const [question, setQuestion] = useState("");
-  const questionLength = question.length;
-  // `maxLength` holds what a reader types, not a question the palette carried.
+  // Code points, because the server counts runes: "😀" is one, not two units.
+  // No `maxLength`, which counts units; the error and Ask hold the limit.
+  const questionLength = [...question].length;
   const tooLong = questionLength > QUESTION_MAX;
   // Which citation the document pane is showing, by its position in the answer.
   // Null is "nothing picked yet", which is a different pane from "picked one
@@ -218,7 +219,6 @@ export function AskMarginceModal({
             {(control) => (
               <Textarea
                 {...control}
-                maxLength={QUESTION_MAX}
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
               />

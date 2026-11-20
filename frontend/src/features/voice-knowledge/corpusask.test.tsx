@@ -639,7 +639,6 @@ describe("AskMarginceModal", () => {
     vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
     render(<AskMarginceModal open onClose={() => {}} />);
     const box = await screen.findByLabelText(/your question/i);
-    expect(box.getAttribute("maxlength")).toBe("1000");
     await user.type(box, "Why?");
     expect(screen.queryByText(/of 1,000 characters/)).toBeNull();
     await user.click(box);
@@ -648,9 +647,14 @@ describe("AskMarginceModal", () => {
     expect(
       screen.getByText("904 of 1,000 characters").getAttribute("role"),
     ).toBe("status");
+
+    await user.paste("x".repeat(100));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your question: at most 1,000 characters.",
+    );
+    expect(screen.getByRole("button", { name: "Ask" })).toBeDisabled();
   });
 
-  // The box's limit holds what a reader types, not what the palette put there.
   it("asks nothing for a carried question past the limit until the reader shortens it", async () => {
     const user = userEvent.setup();
     const backend = backendFor(ASKER);
@@ -675,6 +679,20 @@ describe("AskMarginceModal", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     await waitFor(() => expect(ask).toBeEnabled());
     expect(backend.asked).toHaveLength(0);
+  });
+
+  it("counts a question in characters as the server does, so emoji count once", async () => {
+    const backend = backendFor(ASKER);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const emoji = "😀".repeat(600);
+    render(
+      <AskMarginceModal open onClose={() => {}} carriedQuestion={emoji} />,
+    );
+    const box = await screen.findByLabelText(/your question/i);
+    await waitFor(() => expect(box).toHaveValue(emoji));
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText(/of 1,000 characters/)).toBeNull();
   });
 
   it("says nothing read the passages when no writer was in the path", async () => {
