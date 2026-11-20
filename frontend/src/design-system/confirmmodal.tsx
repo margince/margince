@@ -136,8 +136,7 @@ export function ConfirmModal({
   const holdConfirm = useCallback(
     (node: HTMLButtonElement | null) => {
       confirmButton.current = node;
-      if (typeof confirmRef === "function") confirmRef(node);
-      else if (confirmRef) confirmRef.current = node;
+      handOn(confirmRef, node);
     },
     [confirmRef],
   );
@@ -230,4 +229,15 @@ export function ConfirmModal({
       </div>
     </Modal>
   );
+}
+
+function handOn(
+  ref: Ref<HTMLButtonElement> | undefined,
+  node: HTMLButtonElement | null,
+) {
+  if (typeof ref === "function") {
+    ref(node);
+  } else if (ref) {
+    ref.current = node;
+  }
 }
