@@ -71206,6 +71206,9 @@ type UserHandoverResult struct {
 	// Left Live records per kind.
 	Left HandoverCounts `json:"left"`
 
+	// MailDraftDiscarded The member's saved drafts deleted because the receiver already had a draft in the same place.
+	MailDraftDiscarded int `json:"mail_draft_discarded" minimum:"0"`
+
 	// Moved Live records per kind.
 	Moved HandoverCounts `json:"moved"`
 }

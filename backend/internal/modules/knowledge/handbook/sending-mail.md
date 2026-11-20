@@ -54,7 +54,7 @@ A channel reply, such as Telegram, has no subject, so Margince checks only the b
 Also called: validation error, why is Send not working.
 
 ### Can I use an email template?
-Margince has no email templates, snippets or canned replies in the composer. To start from something ready, press **Draft email**, which drafts in your own writing voice. Margince also keeps what you type as a draft, so you can come back to it. Margince adds your **Email signature** for you.
+Margince has no email templates, snippets or canned replies in the composer. To start from something ready, press **Draft email**, which drafts in your own writing voice. Margince also keeps what you type as a draft, so you can come back to it. Only you can open your draft. If you leave and an admin hands over your work, your drafts go to the colleague who takes over. Margince adds your **Email signature** for you.
 
 Offer templates are a different thing: they shape an offer, not an email. See [Offers and the rate card](offers-and-products.md).
 Also called: canned response, saved reply, mail template, snippet.

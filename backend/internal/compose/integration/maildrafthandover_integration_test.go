@@ -80,17 +80,33 @@ type handoverCounts struct {
 	Contact   int `json:"contact"`
 }
 
-func (d *draftHandoverEnv) handOver(t *testing.T, key string) (moved, left handoverCounts) {
+type handoverResult struct {
+	Moved     handoverCounts `json:"moved"`
+	Left      handoverCounts `json:"left"`
+	Discarded int            `json:"mail_draft_discarded"`
+}
+
+func (d *draftHandoverEnv) handOverTo(t *testing.T, receiver, key string) handoverResult {
 	t.Helper()
-	var out struct {
-		Moved handoverCounts `json:"moved"`
-		Left  handoverCounts `json:"left"`
-	}
+	var out handoverResult
 	if status := d.admin.Call(t, "POST", "/v1/users/"+d.leaverID+"/handover",
-		AnyMap{"to_user_id": d.successorID}, map[string]string{"Idempotency-Key": key}, &out); status != http.StatusOK {
+		AnyMap{"to_user_id": receiver}, map[string]string{"Idempotency-Key": key}, &out); status != http.StatusOK {
 		t.Fatalf("handing over the leaver's work → %d, want 200", status)
 	}
+	return out
+}
+
+func (d *draftHandoverEnv) handOver(t *testing.T, key string) (moved, left handoverCounts) {
+	t.Helper()
+	out := d.handOverTo(t, d.successorID, key)
 	return out.Moved, out.Left
+}
+
+func (d *draftHandoverEnv) leaverLeaves(t *testing.T) {
+	t.Helper()
+	if status := d.admin.Call(t, "POST", "/v1/users/"+d.leaverID+"/deactivate", AnyMap{}, nil, nil); status != http.StatusOK {
+		t.Fatalf("deactivating the leaver → %d, want 200", status)
+	}
 }
 
 func (d *draftHandoverEnv) draftsWrittenBy(t *testing.T, author string) int {
@@ -142,6 +158,7 @@ func TestAHandoverMovesTheLeaversDraftsToTheSuccessor(t *testing.T) {
 	saveContactDraft(t, d.leaver, d.adopt, "The leaver's words")
 	saveContactDraft(t, d.leaver, shared, "The leaver's other words")
 	saveContactDraft(t, d.successor, shared, "The successor's own words")
+	d.leaverLeaves(t)
 
 	var preview struct {
 		Owned handoverCounts `json:"owned"`
@@ -149,9 +166,10 @@ func TestAHandoverMovesTheLeaversDraftsToTheSuccessor(t *testing.T) {
 	if status := d.admin.Call(t, "GET", "/v1/users/"+d.leaverID+"/handover", nil, nil, &preview); status != http.StatusOK || preview.Owned.MailDraft != 2 {
 		t.Fatalf("the handover preview → %d with %d drafts, want 200 with 2", status, preview.Owned.MailDraft)
 	}
-	moved, left := d.handOver(t, "draft-handover-1")
-	if moved.MailDraft != 1 || left.MailDraft != 0 {
-		t.Errorf("handover moved %d and left %d drafts, want 1 moved (one place was the successor's) and 0 left", moved.MailDraft, left.MailDraft)
+	out := d.handOverTo(t, d.successorID, "draft-handover-1")
+	if out.Moved.MailDraft != 1 || out.Discarded != 1 || out.Left.MailDraft != 0 {
+		t.Errorf("handover moved %d, discarded %d and left %d drafts, want 1 moved, 1 discarded (one place was the successor's) and 0 left",
+			out.Moved.MailDraft, out.Discarded, out.Left.MailDraft)
 	}
 
 	if status, got := readContactDraft(t, d.successor, d.adopt); status != http.StatusOK || got.Body != "The leaver's words" {
@@ -160,11 +178,27 @@ func TestAHandoverMovesTheLeaversDraftsToTheSuccessor(t *testing.T) {
 	if status, got := readContactDraft(t, d.successor, shared); status != http.StatusOK || got.Body != "The successor's own words" {
 		t.Errorf("the successor's own draft after the handover → %d %q, want it kept", status, got.Body)
 	}
-	if status, _ := readContactDraft(t, d.leaver, d.adopt); status != http.StatusNotFound {
-		t.Errorf("the leaver reading a draft they handed over → %d, want 404", status)
-	}
 	if n := d.draftsWrittenBy(t, d.leaverID); n != 0 {
 		t.Errorf("the leaver still holds %d drafts after the handover, want 0", n)
+	}
+}
+
+// An admin who hands an active colleague's work to themselves gets the records
+// and not the drafts: those stay with their author, counted as left.
+func TestAnAdminCannotTakeAnActiveColleaguesDrafts(t *testing.T) {
+	d := setupDraftHandover(t)
+	saveContactDraft(t, d.leaver, d.adopt, "Not for the admin")
+
+	out := d.handOverTo(t, apptest.SessionUserID(t, d.admin), "draft-handover-self")
+	if out.Moved.MailDraft != 0 || out.Left.MailDraft != 1 || out.Moved.Contact != 1 {
+		t.Errorf("handover of an active rep to the admin moved %d drafts and %d contacts, left %d drafts; want 0, 1, 1",
+			out.Moved.MailDraft, out.Moved.Contact, out.Left.MailDraft)
+	}
+	if status, _ := readContactDraft(t, d.admin, d.adopt); status != http.StatusNotFound {
+		t.Errorf("the admin reading the rep's draft after the handover → %d, want 404", status)
+	}
+	if status, got := readContactDraft(t, d.leaver, d.adopt); status != http.StatusOK || got.Body != "Not for the admin" {
+		t.Errorf("the rep reading their own draft after the handover → %d %q, want it still theirs", status, got.Body)
 	}
 }
 
@@ -177,14 +211,12 @@ func TestAHandoverOfAMemberWithNoDraftsMovesNone(t *testing.T) {
 	}
 }
 
-// Removing a member who left moves their drafts with the rest of their work,
-// so a saved draft is never a reason the removal must wait.
+// Removing a member who left moves their drafts with the rest of their work.
+// A saved draft is never a reason the removal must wait.
 func TestRemovingAMemberWhoLeftMovesTheirDrafts(t *testing.T) {
 	d := setupDraftHandover(t)
 	saveContactDraft(t, d.leaver, d.adopt, "The leaver's words")
-	if status := d.admin.Call(t, "POST", "/v1/users/"+d.leaverID+"/deactivate", AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("deactivating the leaver → %d, want 200", status)
-	}
+	d.leaverLeaves(t)
 	var preview struct {
 		Owned    handoverCounts `json:"owned"`
 		Blockers []string       `json:"blockers"`

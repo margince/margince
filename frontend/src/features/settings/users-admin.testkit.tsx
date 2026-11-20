@@ -327,7 +327,11 @@ export function backend(
     // to it renders an expiry from `undefined` — an unhandled error rather
     // than a failed assertion, which fails the run without naming a test.
     if (req.url.includes("/handover")) {
-      return jsonResponse({ moved: HANDOVER_OWNED, left: NOTHING_OWNED });
+      return jsonResponse({
+        moved: HANDOVER_OWNED,
+        left: NOTHING_OWNED,
+        mail_draft_discarded: 0,
+      });
     }
     if (req.url.includes("/password-link")) {
       return jsonResponse(

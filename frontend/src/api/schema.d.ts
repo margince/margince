@@ -7700,9 +7700,9 @@ export interface paths {
          * @description A draft is the composer's state, kept so that closing it does not lose a message. It
          *     is not an activity, not a scheduled send and never on a timeline, and only the seat
          *     that wrote it can read, change or discard it: not a colleague, an admin, or an agent
-         *     acting for someone else. There is at most one per author and anchor. A handover of the
-         *     author's work (`handOverUserWork`) moves their drafts to the colleague who takes over,
-         *     who from then on is the only one who reads them.
+         *     acting for someone else. There is at most one per author and anchor. Once the author has
+         *     left, a handover of their work (`handOverUserWork`) moves their drafts to the colleague
+         *     who takes over, who from then on is the only one who reads them.
          *
          *     The AI drafting routes still persist nothing. A draft exists because the rep's composer
          *     saved one here, or because an agent acting for the rep drafted a first message to a
@@ -20381,9 +20381,11 @@ export interface paths {
          *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
          *     owner (an active human seat that can write), else `422`
          *     with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
-         *     caller may not change stays with the member. The member's saved composer drafts move too,
-         *     and from then on only the new holder reads them; where the new holder already has a draft
-         *     in the same place, theirs stays and the member's is discarded. Automations and deal-room
+         *     caller may not change stays with the member. For a member who left, their saved composer
+         *     drafts move too, and from then on only the new holder reads them. Where the new holder
+         *     already has a draft in the same place, theirs stays and the member's is discarded, counted
+         *     in `mail_draft_discarded`. An active member keeps every draft, and so does a draft a
+         *     scheduled or held message still waits on; both count in `left`. Automations and deal-room
          *     stewardships are not moved.
          */
         post: operations["handOverUserWork"];
@@ -42291,6 +42293,8 @@ export interface components {
         UserHandoverResult: {
             moved: components["schemas"]["HandoverCounts"];
             left: components["schemas"]["HandoverCounts"];
+            /** @description The member's saved drafts deleted because the receiver already had a draft in the same place. */
+            mail_draft_discarded: number;
         };
         /**
          * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every

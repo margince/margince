@@ -78,6 +78,10 @@ func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, tar
 		*tally[table] = len(pins)
 		stamp = append(stamp, pins...)
 	}
+	report.Transferable.MailDraft, err = s.tasks.TransferableMailDraftsTx(ctx, tx, ids.From[ids.UserKind](source))
+	if err != nil {
+		return report, err
+	}
 	visible, err := s.countOwned(ctx, tx, source)
 	if err != nil {
 		return report, err

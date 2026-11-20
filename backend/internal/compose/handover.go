@@ -254,14 +254,16 @@ func (s handoverSeam) handOverInTx(
 		return crmcontracts.UserHandoverResult{}, err
 	}
 	moved.SdrHandoff, moved.RecordAssignment = staffing.SdrHandoff, staffing.RecordAssignment
-	if moved.MailDraft, err = s.tasks.HandOverMailDraftsTx(ctx, tx, ids.From[ids.UserKind](member), receiver); err != nil {
+	drafts, err := s.tasks.HandOverMailDraftsTx(ctx, tx, ids.From[ids.UserKind](member), receiver)
+	if err != nil {
 		return crmcontracts.UserHandoverResult{}, err
 	}
+	moved.MailDraft = drafts.Moved
 	// Either failure aborts the transaction, so both are reported together.
 	var taskErr error
 	moved.Task, taskErr = s.tasks.HandOverOpenTasksTx(ctx, tx, ids.From[ids.UserKind](member), receiver)
 	left, countErr := s.countOwned(ctx, tx, member)
-	return crmcontracts.UserHandoverResult{Moved: moved, Left: left}, errors.Join(taskErr, countErr)
+	return crmcontracts.UserHandoverResult{Moved: moved, Left: left, MailDraftDiscarded: drafts.Discarded}, errors.Join(taskErr, countErr)
 }
 
 // handOverKind moves one record type, each row in its own savepoint. A row its

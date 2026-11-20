@@ -15897,6 +15897,12 @@ export const en = {
   "users.handover.deactivateNote":
     "Deactivating moves none of them. Hand them over first, or later from this menu.",
   "users.handover.done": "{records} handed over to {name}.",
+  "users.handover.draftsNote":
+    "Saved email drafts move only after {name} is deactivated. If the colleague you pick already has a draft in the same place, theirs stays and the one from {name} is deleted.",
+  "users.handover.draftsDiscarded_one":
+    "{count} saved email draft was deleted, because {name} already had a draft in the same place.",
+  "users.handover.draftsDiscarded_other":
+    "{count} saved email drafts were deleted, because {name} already had a draft in the same place.",
   "users.handover.nothingMoved": "Nothing was left to hand over.",
   "users.handover.left":
     "Still with {name}: {records}. You may not change these.",

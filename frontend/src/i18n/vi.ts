@@ -15577,6 +15577,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.deactivateNote":
     "Vô hiệu hóa không chuyển hồ sơ nào. Hãy bàn giao trước, hoặc sau đó từ menu này.",
   "users.handover.done": "Đã bàn giao {records} cho {name}.",
+  "users.handover.draftsNote":
+    "Bản nháp email đã lưu chỉ được chuyển sau khi {name} bị vô hiệu hóa. Nếu đồng nghiệp bạn chọn đã có bản nháp ở cùng chỗ, bản của họ được giữ và bản của {name} bị xóa.",
+  "users.handover.draftsDiscarded_one":
+    "Đã xóa {count} bản nháp email đã lưu, vì {name} đã có bản nháp ở cùng chỗ.",
+  "users.handover.draftsDiscarded_other":
+    "Đã xóa {count} bản nháp email đã lưu, vì {name} đã có bản nháp ở cùng chỗ.",
   "users.handover.nothingMoved": "Không còn gì để bàn giao.",
   "users.handover.left":
     "Vẫn ở chỗ {name}: {records}. Bạn không được thay đổi những hồ sơ này.",

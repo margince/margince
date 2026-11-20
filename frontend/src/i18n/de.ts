@@ -16010,6 +16010,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.deactivateNote":
     "Beim Deaktivieren wird nichts davon verschoben. Übergib es vorher oder später über dieses Menü.",
   "users.handover.done": "{records} an {name} übergeben.",
+  "users.handover.draftsNote":
+    "Gespeicherte E-Mail-Entwürfe werden erst verschoben, wenn {name} deaktiviert ist. Hat die Kollegin oder der Kollege, die du wählst, schon einen Entwurf an derselben Stelle, bleibt dieser, und der von {name} wird gelöscht.",
+  "users.handover.draftsDiscarded_one":
+    "{count} gespeicherter E-Mail-Entwurf wurde gelöscht, weil {name} an derselben Stelle schon einen Entwurf hatte.",
+  "users.handover.draftsDiscarded_other":
+    "{count} gespeicherte E-Mail-Entwürfe wurden gelöscht, weil {name} an derselben Stelle schon einen Entwurf hatte.",
   "users.handover.nothingMoved": "Es war nichts mehr zu übergeben.",
   "users.handover.left":
     "Noch bei {name}: {records}. Diese darfst du nicht ändern.",
