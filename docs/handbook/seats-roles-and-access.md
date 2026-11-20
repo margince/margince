@@ -240,7 +240,7 @@ Also called: record missing, access denied, 404, cannot open a contact.
 ### Why can't I create a contact a colleague already has?
 A contact that capture made from a colleague's mail can be private to that colleague. When you create a contact with the same email address, Margince refuses it, so the CRM does not hold the contact twice. It says "A colleague already has this contact. Margince asked them to share it with you."
 
-Your colleague then finds the request on **Home**, under **Waiting on you**: "Mira Voss asks you to share this contact. Approving gives write access, or read access to a read-only seat." They choose **Decide**, then **Approve** to share the contact with you, or **Reject** to close the request. Another try does not ask again while a request is open or after your colleague rejected it. After they reject it, Margince says only "A colleague already has this contact."
+Your colleague then finds the request on **Home**, under **Waiting on you**: "Mira Voss asks you to share this contact. Approving gives write access, or read access when their seat or role cannot edit contacts." They choose **Decide**, then **Approve** to share the contact with you, or **Reject** to close the request. Another try does not ask again while a request is open or after your colleague rejected it. After they reject it, Margince says only "A colleague already has this contact."
 
 The refusal does not name the contact or its owner.
 Also called: contact already exists, email already taken, hidden contact.
