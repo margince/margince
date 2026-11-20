@@ -6685,6 +6685,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
   "contact.archiveRefused":
     "Nur der Verantwortliche des Kontakts oder eine Führungskraft kann diesen Kontakt archivieren.",
+  "contact.undoArchiveNothing":
+    "Das Archivieren ließ sich nicht rückgängig machen. Öffne den Kontakt und stelle ihn im vollständigen Verlauf wieder her.",
   "company.archiveRefused":
     "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",

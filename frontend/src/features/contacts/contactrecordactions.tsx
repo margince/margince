@@ -9,6 +9,7 @@ import { ifMatch, requireVersion } from "../../api/version";
 import { ArchiveAction } from "../../components/archive";
 import { MergeAction } from "../../components/merge";
 import type { RecordPickerCandidate } from "../../design-system/recordpicker";
+import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { unwrap } from "../../lib/problem";
@@ -72,6 +73,7 @@ export function ContactRecordActions({
   // ContactPageV2 closes the form over a page still showing what the reader
   // just corrected.
   const queryClient = useQueryClient();
+  const toast = useToast();
   return (
     <>
       <MergeAction
@@ -151,6 +153,8 @@ export function ContactRecordActions({
           await queryClient.invalidateQueries({ queryKey: ["contacts"] });
           if (restored) {
             navigate({ screen: "contacts", id: archived.id });
+          } else {
+            toast.show(t("contact.undoArchiveNothing"), { tone: "danger" });
           }
         }}
       />

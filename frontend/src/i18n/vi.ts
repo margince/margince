@@ -6507,6 +6507,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ chủ deal hoặc quản lý mới có thể lưu trữ deal này.",
   "contact.archiveRefused":
     "Chỉ chủ sở hữu liên hệ hoặc quản lý mới có thể lưu trữ liên hệ này.",
+  "contact.undoArchiveNothing":
+    "Không thể hoàn tác việc lưu trữ. Hãy mở liên hệ và khôi phục từ lịch sử đầy đủ.",
   "company.archiveRefused":
     "Chỉ chủ sở hữu công ty hoặc quản lý mới có thể lưu trữ công ty này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",

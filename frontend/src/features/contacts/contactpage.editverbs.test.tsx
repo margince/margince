@@ -1,8 +1,9 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import {
   mount,
@@ -24,6 +25,7 @@ type Contact360 = components["schemas"]["Contact360"];
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
 });
 
 describe("a live contact that is not the viewer's to change refuses its core write verbs", () => {
@@ -138,6 +140,47 @@ describe("the header's core record verbs — edit, merge, archive", () => {
     );
 
     await waitFor(() => expect(archived).toBe(true));
+  });
+
+  it("says so when the Undo of an archive finds no archive to put back", async () => {
+    // The confirmation and its Undo leave on a timer, so the clock is the test's.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    mount(
+      "overview",
+      view,
+      [],
+      {
+        "DELETE /contacts/p-1": () =>
+          jsonResponse({
+            ...view.contact,
+            archived_at: "2026-08-14T00:00:00Z",
+          }),
+        "GET /records/contact/p-1/history": () =>
+          jsonResponse({ data: [], page: { has_more: false } }),
+      },
+      undefined,
+      (page) => (
+        <ToastProvider>
+          {page}
+          <ToastRegion />
+        </ToastProvider>
+      ),
+    );
+
+    await pressRecordVerb("archive-record");
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+
+    expect(
+      await screen.findByText(en["contact.undoArchiveNothing"]),
+    ).toBeTruthy();
   });
 
   it("offers merge from the header", async () => {

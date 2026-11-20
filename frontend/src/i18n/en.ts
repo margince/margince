@@ -6646,6 +6646,8 @@ export const en = {
     "Only the deal’s owner or a manager can archive this deal.",
   "contact.archiveRefused":
     "Only the contact’s owner or a manager can archive this contact.",
+  "contact.undoArchiveNothing":
+    "This archive could not be undone. Open the contact and restore it from its full history.",
   "company.archiveRefused":
     "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
