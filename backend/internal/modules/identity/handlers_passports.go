@@ -34,7 +34,7 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	in := IssuePassportInput{Label: &req.Label}
+	in := IssuePassportInput{Label: req.Label}
 	if req.Areas != nil {
 		areas, err := h.requestedAreas(r.Context(), *req.Areas)
 		if err != nil {

@@ -197,13 +197,15 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	if err := admitAreas(in.Areas); err != nil {
 		return IssuedPassport{}, err
 	}
-	// Every path names its passport: a row nobody can tell from another cannot
-	// be revoked with confidence. The stored name is the trimmed one.
-	if in.Label == nil || strings.TrimSpace(*in.Label) == "" {
-		return IssuedPassport{}, &InvalidPassportFieldError{Field: "label", Code: requiredFieldCode, Message: "label is required"}
+	// A name that is given must say something, or two rows cannot be told
+	// apart. An absent name stays accepted for older API clients.
+	if in.Label != nil {
+		label := strings.TrimSpace(*in.Label)
+		if label == "" {
+			return IssuedPassport{}, &InvalidPassportFieldError{Field: "label", Code: requiredFieldCode, Message: "label must not be blank"}
+		}
+		in.Label = &label
 	}
-	label := strings.TrimSpace(*in.Label)
-	in.Label = &label
 	if grantID == nil {
 		if err := admitCallerChosenFields(in); err != nil {
 			return IssuedPassport{}, err

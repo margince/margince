@@ -142,13 +142,11 @@ func TestAPassportLifetimeFaultNamesTheLifetimeField(t *testing.T) {
 	}
 }
 
-func TestAPassportRequestWithoutAUsableNameIsRefusedOnTheLabelField(t *testing.T) {
+func TestAPassportRequestWithABlankNameIsRefusedOnTheLabelField(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Passport name", "name@fable.test", "Admin")
 
 	for name, body := range map[string]AnyMap{
-		"no label":     {"scopes": []string{"read"}},
-		"null label":   {"label": nil, "scopes": []string{"read"}},
 		"empty label":  {"label": "", "scopes": []string{"read"}},
 		"spaces label": {"label": "   ", "scopes": []string{"read"}},
 	} {
@@ -164,6 +162,20 @@ func TestAPassportRequestWithoutAUsableNameIsRefusedOnTheLabelField(t *testing.T
 		if status != http.StatusUnprocessableEntity || len(problem.Details.Errors) == 0 ||
 			problem.Details.Errors[0].Field != "label" || problem.Details.Errors[0].Code != "required" {
 			t.Errorf("%s → %d %+v, want 422 naming label as required", name, status, problem)
+		}
+	}
+}
+
+func TestAPassportRequestWithNoNameIsStillAccepted(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Passport legacy", "legacy@fable.test", "Admin")
+
+	for name, body := range map[string]AnyMap{
+		"no label":   {"scopes": []string{"read"}},
+		"null label": {"label": nil, "scopes": []string{"read"}},
+	} {
+		if status := e.Call(t, "POST", "/v1/passports", body, nil, nil); status != http.StatusCreated {
+			t.Errorf("%s → %d, want 201", name, status)
 		}
 	}
 }
