@@ -22,6 +22,7 @@ import {
 } from "../lib/problem";
 import {
   createQueryClient,
+  LIVE_ANSWER_CURRENT_MS,
   liveInterval,
   liveOnMount,
   liveOnReturn,
@@ -200,7 +201,7 @@ describe("the query client defaults", () => {
     );
   });
 
-  it("re-reads a live work read on mount unless it is the prefetched answer, under a second old", () => {
+  it("re-reads a live work read on mount unless it is the prefetched answer of this load", () => {
     const day = { queryKey: ["worklist", "handled"], queryHash: "day" };
     const at = (dataUpdatedAt: number) => ({
       ...day,
@@ -208,8 +209,12 @@ describe("the query client defaults", () => {
     });
     expect(liveOnMount(at(10_000), 10_100)).toBe("always");
     notePrefetched("day", 10_000);
-    expect(liveOnMount(at(10_000), 10_999)).toBe(true);
-    expect(liveOnMount(at(10_000), 11_000)).toBe("always");
+    expect(liveOnMount(at(10_000), 10_000 + LIVE_ANSWER_CURRENT_MS - 1)).toBe(
+      true,
+    );
+    expect(liveOnMount(at(10_000), 10_000 + LIVE_ANSWER_CURRENT_MS)).toBe(
+      "always",
+    );
     expect(liveOnMount(at(10_500), 10_600)).toBe("always");
     expect(
       liveOnMount(

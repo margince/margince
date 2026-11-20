@@ -233,8 +233,7 @@ var decisionGrants = map[string][]DecisionGrant{
 		{targetFxRate, principal.ActionCreate},
 		{targetFxRate, principal.ActionUpdate},
 	},
-	// Accepting a deep site read writes profile fields and category facts
-	// onto the target company — the same update authority enrich needs.
+	// A deep site read writes profile fields and facts onto the target company.
 	"deepread": {{tableCompany, principal.ActionUpdate}},
 	// Accepting a site_lead proposal (a published contact from a deep read's
 	// team page) captures them as a LEAD through the capture sink — the
@@ -249,11 +248,12 @@ var decisionGrants = map[string][]DecisionGrant{
 	// the domain is free-mail, the company behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
 	approvalsubject.KindCounterparty: {{tableContact, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
-	// Accepting a contact_share request shares the contact with the colleague
-	// who asked, which is the grant the Share button itself requires.
+	// A contact_share request takes the grant the Share button itself requires.
 	approvalsubject.KindContactShare: {{tableContact, principal.ActionUpdate}},
 	// Answering a due-date question writes the date onto the captured task.
 	approvalsubject.KindTaskDueDate: {{objectActivity, principal.ActionUpdate}},
+	// Accepting an employer change starts the new employment and ends the old one.
+	approvalsubject.KindEmployerChange: {{tableContact, principal.ActionUpdate}, {targetRelationship, principal.ActionCreate}, {targetRelationship, principal.ActionUpdate}},
 	// The card decides nothing; a seat needs the grants the review's own answer takes.
 	approvalsubject.KindLegalReviewRequest: legalReviewGrants(),
 	// Accepting a vcard_create proposal (an imported card the dedupe pass

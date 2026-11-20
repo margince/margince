@@ -1988,6 +1988,13 @@ paths:
           in: query
           schema: {$ref: '#/components/schemas/PartnerStageMeaning'}
           description: Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise).
+        - name: dormancy
+          in: query
+          schema: {$ref: '#/components/schemas/DormancyRung'}
+          description: |-
+            Companies on this rung of the dormancy ladder today, read from the stored
+            `last_activity_at` by the same rule the company page's `state_strip.dormancy` uses.
+            `stale` includes companies with no activity at all.
         - name: source_system
           in: query
           schema: {type: string, maxLength: 128}
@@ -33808,6 +33815,38 @@ components:
           type: [integer, 'null']
           description: >-
             Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities.
+    DormancyRung:
+      type: string
+      enum: [active, cooling, dormant, stale]
+      description: |-
+        How cold an account has gone, counted in calendar days of the installation zone since its
+        stored `last_activity_at`. `active` before the first day of the ladder, `cooling` from it,
+        `dormant` from the second and `stale` from the third. The days are the installation's
+        `contacts.dormancy_days` setting, 30, 60 and 90 by default. An account with no activity at
+        all is `stale`.
+    DormancyReading:
+      type: object
+      description: Where one account stands on the dormancy ladder, with the facts that put it there.
+      required: [rung, silent_days, no_activity, ladder_days]
+      properties:
+        rung: {$ref: '#/components/schemas/DormancyRung'}
+        last_activity_at:
+          type: [string, 'null']
+          format: date-time
+          description: The account's stored last activity the rung is counted from. Null when it has none.
+        silent_days:
+          type: integer
+          minimum: 0
+          description: Calendar days from `last_activity_at` to today in the installation zone. 0 when there is no activity.
+        no_activity:
+          type: boolean
+          description: True when the account has no activity recorded at all, which is why it reads as `stale`.
+        ladder_days:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: {type: integer}
+          description: The silent days on which `cooling`, `dormant` and `stale` begin, each from 1 to 3650 and in rising order, so a reader can see the rule.
     Company360StateStrip:
       type: object
       description: |-
@@ -33827,6 +33866,9 @@ components:
             relationship_types:
               type: array
               items: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
+        dormancy:
+          allOf: [{$ref: '#/components/schemas/DormancyReading'}]
+          description: How cold the account has gone, read from its stored `last_activity_at`.
         engagement:
           type: [object, 'null']
           description: Null when the caller has no activity grant — not assessed, as distinct from never contacted.
@@ -33836,7 +33878,7 @@ components:
               type: string
               enum: [never_contacted, active, waiting_on_them, waiting_on_us, dormant]
               description: >-
-                `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
+                `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting. `dormant` is the dormancy ladder's `dormant` or `stale` rung, so the strip and `dormancy` cannot disagree either.
             last_inbound_at: {type: [string, 'null'], format: date-time}
             last_outbound_at: {type: [string, 'null'], format: date-time}
             last_inbound_precision:
@@ -34204,9 +34246,9 @@ components:
       properties:
         kind:
           type: string
-          enum: [no_reply, stalled_deal, no_next_step, lifecycle_conflict, commitment_unmet, question_unanswered, risk_raised, need_raised]
+          enum: [no_reply, stalled_deal, no_next_step, lifecycle_conflict, gone_dormant, commitment_unmet, question_unanswered, risk_raised, need_raised]
           description: |-
-            The four RULE kinds, computed from the account's records with no model:
+            The five RULE kinds, computed from the account's records with no model:
         title:
           type: [string, 'null']
           description: |-
@@ -52446,8 +52488,8 @@ components:
         partner_fit_score: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.'}
         partner_fit_score_computed: {type: [integer, 'null'], minimum: 0, maximum: 100, readOnly: true, description: 'Retained machine-computed partner-fit value while a Commercial Judgement override is in force.'}
         partner_fit_override_reason: {type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.'}
-        relationship_health: {type: [string, 'null'], description: 'Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.'}
-        last_contact_at: {type: [string, 'null'], format: date-time}
+        relationship_health: {type: [string, 'null'], deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.'}
+        last_contact_at: {type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.'}
         next_step: {type: [string, 'null'], deprecated: true, description: 'Deprecated as stored text: a value sent here is written as a task on the partner''s company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.'}
         next_step_due_at: {type: [string, 'null'], format: date, deprecated: true, description: 'Deprecated as stored text: the day the next step''s task is due. Sent without `next_step` it is refused.'}
         served_segments: {type: [array, 'null'], items: {type: string}}

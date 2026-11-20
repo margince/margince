@@ -19,7 +19,7 @@ import (
 // GetSignatureTemplate reads the workspace's signature layout through the
 // settings gate, so only a seat that may read installation settings sees it.
 func (s *Store) GetSignatureTemplate(ctx context.Context) (string, error) {
-	if err := auth.Require(ctx, "installation_settings", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, installationSettingsObject, principal.ActionRead); err != nil {
 		return "", err
 	}
 	if s.settings == nil {
@@ -33,7 +33,7 @@ func (s *Store) GetSignatureTemplate(ctx context.Context) (string, error) {
 // sanitizes the markup, so what an admin types never reaches a recipient
 // unchecked.
 func (s *Store) SaveSignatureTemplate(ctx context.Context, template string) (string, error) {
-	if err := auth.Require(ctx, "installation_settings", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, installationSettingsObject, principal.ActionUpdate); err != nil {
 		return "", err
 	}
 	if s.settings == nil {
