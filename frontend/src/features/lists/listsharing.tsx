@@ -62,26 +62,28 @@ function useTeamName(): (teamId: string) => string {
  *
  * `ownerIsReader` decides how the owner's-teams choice is worded: a list's
  * owner reads it as their own teams, a steward editing someone else's list
- * does not.
+ * does not. `openedWith` is an existing list's sharing as the form opened.
  */
 export function ListAudienceFields({
   value,
   onChange,
   ownerIsReader,
+  openedWith,
 }: Readonly<{
   value: ListAudience;
   onChange: (next: ListAudience) => void;
   ownerIsReader: boolean;
+  openedWith?: List["sharing"];
 }>) {
   const t = useT();
   const me = useMe();
   const teamName = useTeamName();
   const inNoTeam = useInNoTeam();
   const mine = me.data?.teams ?? [];
-  // A list already shared with a team keeps that answer on offer.
-  const teamBarred = ownerIsReader && inNoTeam && value.sharing !== "team";
-  // A list already shared with a team the reader is not in keeps that team on
+  // A list already shared with a team keeps that answer, and that team, on
   // offer, so opening the form never silently proposes a different one.
+  const teamBarred =
+    ownerIsReader && inNoTeam && (openedWith ?? value.sharing) !== "team";
   const teamIds =
     value.teamId !== null && !mine.includes(value.teamId)
       ? [...mine, value.teamId]
