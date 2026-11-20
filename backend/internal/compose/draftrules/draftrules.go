@@ -44,8 +44,20 @@ sending.`
 const Revise = `rewrite_of, when present, is the draft already on the salesperson's screen, and the ask is to REWRITE it rather than to write again. Keep what it says — its subject, its one ask, the detail it carries — and change only what the ask names. A different message is the one answer that is always wrong, because the salesperson has already read and often edited this one.`
 
 // Rewrite binds a surface whose input can carry rewrite_of. It is not in Shared
-// because a surface with no such field has nothing for it to refer to.
-const Rewrite = Revise + ` Everything else still binds: the greeting rule, the sign-off rule, and the refusal to state anything the data does not support, so a claim the old draft invented does not survive the rewrite.`
+// because a surface with no such field has nothing for it to refer to. Unlike
+// Revise, the ask here is the draft's purpose, so a changed purpose may replace
+// the old message.
+const Rewrite = `rewrite_of, when present, is the draft already on the salesperson's screen, and the ask is the purpose they want this message to have now. If the ask names the same purpose, or only a change of wording such as shorter, warmer or another language, REWRITE the draft: keep what it says, its subject, its one ask and the detail it carries, and change only what the ask names. If the ask names a different topic or format, write that new message instead and let the old subject and ask go. Everything else still binds: the greeting rule, the sign-off rule, and the refusal to state anything the data does not support, so a claim the old draft invented does not survive the rewrite.`
+
+// ReplyRewrite is Rewrite for the reply surface. The selected message is
+// always what the draft answers.
+// The ask may change wording or angle, never that message.
+const ReplyRewrite = `rewrite_of, when present, is the draft already on the salesperson's screen, and the ask says how they want it changed. Keep it a reply to the selected message: keep what the draft says, its subject, its one ask and the detail it carries, and change only what the ask names. An ask for a different topic or format is still answered as a reply to that message. Everything else still binds: the greeting rule, the sign-off rule, and the refusal to state anything the data does not support, so a claim the old draft invented does not survive the rewrite.`
+
+// Purpose binds a surface that writes from the correspondence as well as from
+// the ask. It is not in Shared because the reply surface answers its selected
+// message by design.
+const Purpose = `When an intent is given, it is what the salesperson asked this message to be, and it sets the message's topic and format: a poem is a poem, a short note is short. Earlier messages, snippets, claims and commitments are background. Use one only where it bears on the intent; where none does, write the intent alone and leave the history out, even an overdue commitment or an open question.`
 
 // Turns binds a surface that reads earlier turns of the conversation, ours
 // included. It is not in Shared because a first touch has no earlier turns.

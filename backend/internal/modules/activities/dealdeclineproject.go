@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -22,36 +21,38 @@ import (
 // the message was just declined on. It goes through the project-filing undo.
 // A retention rule, a project the caller cannot see or an unnamed account
 // keeps the link, and the answer says so.
-func unfileDealProject(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID, out *crmcontracts.ActivityDealDecline) error {
+func unfileDealProject(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) (projectUnfiling, error) {
 	derived, err := projectCameFromDeal(ctx, tx, mail, deal)
 	if err != nil || !derived {
-		return err
+		return projectUnfiling{}, err
 	}
 	// An inherited link that stamped nothing has no retention to judge.
 	if dropped, err := dropOrphanedInheritedProject(ctx, tx, mail, ids.Nil); err != nil || dropped {
-		out.ProjectUnfiled = dropped
-		return err
+		return projectUnfiling{unfiled: dropped}, err
 	}
 	actor, err := admitDeclineUndoDecider(ctx)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		out.ProjectKept = true
-		return nil
+		return projectUnfiling{kept: true}, nil
 	}
 	if err != nil {
-		return err
+		return projectUnfiling{}, err
 	}
 	var refused *ProjectFilingRefusedError
 	var unnamed *DeciderUnnamedError
 	err = undoProjectFilingLocked(ctx, tx, mail, actor, dealDeclineUndoReason)
 	switch {
 	case errors.As(err, &refused), errors.As(err, &unnamed):
-		out.ProjectKept = true
-		return nil
+		return projectUnfiling{kept: true}, nil
 	case err != nil:
-		return err
+		return projectUnfiling{}, err
 	}
-	out.ProjectUnfiled = true
-	return nil
+	return projectUnfiling{unfiled: true}, nil
+}
+
+// projectUnfiling is what unfileDealProject did: the link came off, or a
+// rule kept it.
+type projectUnfiling struct {
+	unfiled, kept bool
 }
 
 // admitDeclineUndoDecider is admitUndoDecider widened for a deal decline: it

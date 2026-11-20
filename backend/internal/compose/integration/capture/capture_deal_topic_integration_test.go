@@ -17,8 +17,8 @@ import (
 )
 
 // One open deal on a project, and a mail the model judges by the verdict
-// given. Only a confident "about" files the mail, and the project follows the
-// deal only then.
+// given. Only a confident "about" files the mail, marked relevant by the
+// classifier, and the project follows the deal only then.
 func TestASuggestedDealIsFiledOnlyOnAConfidentAnswer(t *testing.T) {
 	for _, c := range []struct {
 		name       string
@@ -44,6 +44,7 @@ func TestASuggestedDealIsFiledOnlyOnAConfidentAnswer(t *testing.T) {
 
 			if c.filed {
 				wantDeals(t, e, "topic1@acme.example", deal)
+				wantMark(t, e, "topic1@acme.example", deal, "relevant/classifier")
 				if got := linkedProject(t, e, "topic1@acme.example"); got != rollout.ID {
 					t.Fatalf("the filed mail is on project %s, want the deal's %s", got, rollout.ID)
 				}

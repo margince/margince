@@ -112,5 +112,5 @@ func reminderReachSet(alias string) string {
 		    UNION SELECT t.activity_id FROM activity_link rl JOIN activity_link t ON t.contact_id = rl.contact_id
 		     WHERE rl.activity_id = %[1]s.id
 		    UNION SELECT reach.activity_id FROM activity_link rl CROSS JOIN LATERAL (%[2]s) reach
-		     WHERE rl.activity_id = %[1]s.id AND rl.company_id IS NOT NULL`, alias, companyLinkReach("rl.company_id"))
+		     WHERE rl.activity_id = %[1]s.id AND rl.company_id IS NOT NULL`, alias, storekit.CompanyFiledActivityReach("rl.company_id"))
 }

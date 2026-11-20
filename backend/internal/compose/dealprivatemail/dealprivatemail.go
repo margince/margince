@@ -30,7 +30,7 @@ func ChecksumSQL(limit int) string {
 		          WHERE pl.deal_id = d.id AND pa.archived_at IS NULL AND pa.kind = 'email'
 		            AND %s AND %s AND %s
 		          ORDER BY pa.occurred_at DESC, pa.id DESC LIMIT %d) r)`,
-		auth.PrivateAudienceSQL("pa"), relstrength.OriginIsEngagementSQL("pa"), relstrength.DealEvidenceSQL("pa"), limit)
+		auth.PrivateAudienceSQL("pa"), relstrength.OriginIsEngagementSQL("pa"), relstrength.DealEvidenceSQL("pa", "pl.deal_id"), limit)
 }
 
 // Read puts the newest limit private mails of the deal into in, oldest first.
@@ -41,7 +41,7 @@ func Read(ctx context.Context, tx pgx.Tx, deal ids.UUID, limit int, in *dealverd
 		  FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		 WHERE l.deal_id = $1 AND a.archived_at IS NULL AND a.kind = 'email'
 		   AND `+auth.PrivateAudienceSQL("a")+` AND `+relstrength.OriginIsEngagementSQL("a")+`
-		   AND `+relstrength.DealEvidenceSQL("a")+`
+		   AND `+relstrength.DealEvidenceSQL("a", "l.deal_id")+`
 		 ORDER BY a.occurred_at DESC, a.id DESC LIMIT $2`, deal, limit)
 	if err != nil {
 		return fmt.Errorf("compose: reading the deal's private mail dates: %w", err)

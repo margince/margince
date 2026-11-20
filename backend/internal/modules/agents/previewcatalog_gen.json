@@ -854,6 +854,8 @@
      "Occurred",
     "occurred_precision":
      "Time precision",
+    "odd_due_date":
+     "This date looks far off: keep it, change it or clear it",
     "offer_line_position":
      "Position",
     "offer_number":
@@ -10802,6 +10804,26 @@
      "Unknown",
     "occurred_precision/boolean/true":
      "Yes",
+    "odd_due_date/lifecycle/customer":
+     "Customer",
+    "odd_due_date/lifecycle/disqualified":
+     "Disqualified",
+    "odd_due_date/lifecycle/former_customer":
+     "Former customer",
+    "odd_due_date/lifecycle/live":
+     "Live",
+    "odd_due_date/lifecycle/onboarding":
+     "Onboarding",
+    "odd_due_date/lifecycle/opportunity":
+     "Opportunity",
+    "odd_due_date/lifecycle/prospect":
+     "Prospect",
+    "odd_due_date/lifecycle/target":
+     "Target",
+    "odd_due_date/lifecycle/unknown":
+     "Unknown",
+    "odd_due_date/boolean/true":
+     "Yes",
     "offer_line_position/lifecycle/customer":
      "Customer",
     "offer_line_position/lifecycle/disqualified":
@@ -18596,6 +18618,12 @@
      "Not set",
     "occurred_precision/execution":
      "Set when applied",
+    "odd_due_date/boolean":
+     "No",
+    "odd_due_date/empty":
+     "Not set",
+    "odd_due_date/execution":
+     "Set when applied",
     "offer_line_position/boolean":
      "No",
     "offer_line_position/empty":
@@ -20912,6 +20940,8 @@
      "Zeitpunkt",
     "occurred_precision":
      "Zeitgenauigkeit",
+    "odd_due_date":
+     "Dieses Datum wirkt weit weg: behalten, ändern oder leeren",
     "offer_line_position":
      "Position",
     "offer_number":
@@ -30860,6 +30890,26 @@
      "Unbekannt",
     "occurred_precision/boolean/true":
      "Ja",
+    "odd_due_date/lifecycle/customer":
+     "Kunde",
+    "odd_due_date/lifecycle/disqualified":
+     "Disqualifiziert",
+    "odd_due_date/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "odd_due_date/lifecycle/live":
+     "Live",
+    "odd_due_date/lifecycle/onboarding":
+     "Onboarding",
+    "odd_due_date/lifecycle/opportunity":
+     "Chance",
+    "odd_due_date/lifecycle/prospect":
+     "Interessent",
+    "odd_due_date/lifecycle/target":
+     "Zielunternehmen",
+    "odd_due_date/lifecycle/unknown":
+     "Unbekannt",
+    "odd_due_date/boolean/true":
+     "Ja",
     "offer_line_position/lifecycle/customer":
      "Kunde",
     "offer_line_position/lifecycle/disqualified":
@@ -38654,6 +38704,12 @@
      "Nicht gesetzt",
     "occurred_precision/execution":
      "Wird beim Anwenden festgelegt",
+    "odd_due_date/boolean":
+     "Nein",
+    "odd_due_date/empty":
+     "Nicht gesetzt",
+    "odd_due_date/execution":
+     "Wird beim Anwenden festgelegt",
     "offer_line_position/boolean":
      "Nein",
     "offer_line_position/empty":
@@ -40970,6 +41026,8 @@
      "Thời điểm xảy ra",
     "occurred_precision":
      "Độ chính xác của thời gian",
+    "odd_due_date":
+     "Ngày này có vẻ quá xa: giữ, đổi hoặc xóa",
     "offer_line_position":
      "Số thứ tự",
     "offer_number":
@@ -50918,6 +50976,26 @@
      "Chưa rõ",
     "occurred_precision/boolean/true":
      "Có",
+    "odd_due_date/lifecycle/customer":
+     "Khách hàng",
+    "odd_due_date/lifecycle/disqualified":
+     "Đã loại",
+    "odd_due_date/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "odd_due_date/lifecycle/live":
+     "Đang vận hành",
+    "odd_due_date/lifecycle/onboarding":
+     "Đang triển khai",
+    "odd_due_date/lifecycle/opportunity":
+     "Cơ hội",
+    "odd_due_date/lifecycle/prospect":
+     "Tiềm năng",
+    "odd_due_date/lifecycle/target":
+     "Mục tiêu",
+    "odd_due_date/lifecycle/unknown":
+     "Chưa rõ",
+    "odd_due_date/boolean/true":
+     "Có",
     "offer_line_position/lifecycle/customer":
      "Khách hàng",
     "offer_line_position/lifecycle/disqualified":
@@ -58711,6 +58789,12 @@
     "occurred_precision/empty":
      "Chưa đặt",
     "occurred_precision/execution":
+     "Được xác định khi áp dụng",
+    "odd_due_date/boolean":
+     "Không",
+    "odd_due_date/empty":
+     "Chưa đặt",
+    "odd_due_date/execution":
      "Được xác định khi áp dụng",
     "offer_line_position/boolean":
      "Không",

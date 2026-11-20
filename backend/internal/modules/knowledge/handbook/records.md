@@ -322,11 +322,8 @@ Putting a change back is an ordinary edit. It follows the same rules as typing t
 
 Not every entry can be put back, and the history says which and why before you press anything. The reasons you will see:
 
-- **The field changed again since.** Putting the entry back would lose
-  whatever was written after it, so it is refused. The reason names the field,
-  so you can look at what happened in between and decide.
-- **The record was archived.** A change cannot be put back on an archived
-  record; bring a contact, company or deal back first with **Undo** on its archive entry.
+- **The field changed again since.** Putting the entry back would lose whatever was written after it, so it is refused. The reason names the field, so you can look at what happened in between and decide.
+- **The record was archived.** A change cannot be put back on an archived record; bring a contact, company or deal back first with **Undo** on its archive entry.
 - **You cannot make that change by hand.** Some entries record changes no edit can make, such as clearing a field that must not be empty. They show as history only.
 - **The earlier text held a password.** History keeps a password, an access key or a token only masked. A note still holds the text you typed, so putting the masked text back would replace it, and the change is refused. An email is always stored masked, so an email change can still be put back.
 
@@ -342,7 +339,7 @@ Also called: edit conflict, simultaneous editing, someone overwrote my change.
 
 ## Custom fields
 
-Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice** and **yes/no**, on contacts, companies, deals, leads, projects, contracts and activities. A field of many choices holds many answers at once, and a filter finds the record by any one of them.
+Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice**, **yes/no** and **web address**, on contacts, companies, deals, leads, projects, contracts and activities. A field of many choices holds many answers at once, and a filter finds the record by any one of them. A web address field takes only an `http://` or `https://` address and shows it as a link.
 
 ### How do I add a custom field?
 To add a custom field in Margince, open Settings → **Records and fields**, pick the **Object**, and choose **New field**.
@@ -357,6 +354,10 @@ Also called: custom property, extra column, new attribute, hide a field on new r
 Renaming a field changes its label and keeps your reports working. To name a field and its choices per language, choose **Names in other languages** in its row menu. A colleague whose Margince is in that language sees those names in forms and on records. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
 
 A deal or company picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. A company field groups each deal by its company's value. Everyone who reads deal reports then sees the field's name and choices.
+
+### How do I change the choices of a field?
+To change the choices of a **picklist** or **multiple choice** field, choose **Edit choices** in its row menu in Settings → **Records and fields**. Each choice shows how many records hold it, and before you save Margince says how many lose a removed choice. Add one with **Add option**, take one away with **Remove option**, and choose **Save**; a field keeps at least one choice. Saving takes a removed choice off each record: a picklist record has no value left, and a **multiple choice** record keeps the rest. Each record's history shows the change, and a saved filter that names the removed choice finds no record by it.
+Also called: delete a picklist value, retire an option.
 
 ## Tags
 
@@ -376,8 +377,7 @@ Also called: label, add a label, categorise a record.
 
 Renaming a tag renames it everywhere, because every record shares the one tag.
 
-- **Retire** takes a tag out of use without changing the records that have it,
-  and **Restore** brings it back.
+- **Retire** takes a tag out of use without changing the records that have it, and **Restore** brings it back.
 - **Merge** puts one tag into another and **cannot be undone**. The warning reads: "Records carrying {name} will carry the other tag instead, and the name is released for anyone to use again". After that it reports what moved: "{moved} records moved to the surviving tag. {collapsed} already carried both, so their duplicate was dropped". An agent may not merge tags on its own; it can only suggest a merge for a human to approve.
 
 ### Can Margince suggest a tag from mail and meeting notes?

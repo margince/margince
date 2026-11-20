@@ -6,9 +6,10 @@
 package gates
 
 // A Go reader that judges whether a deal is alive asks
-// relstrength.DealEvidenceSQL, so a personal thread keeps no deal warm. The
-// census is every hand-written file whose SQL names a deal and an activity
-// recency rule. Each must call the check or say here why it need not.
+// relstrength.DealEvidenceSQL with the deal it reads. A personal thread, or a
+// link marked not about the deal, then keeps no deal warm. The census is every
+// hand-written file whose SQL names a deal and an activity recency rule. Each
+// must call the check or say here why it need not.
 
 import (
 	"os"
@@ -36,7 +37,7 @@ var dealEvidenceReaders = []string{
 
 // gatekit:fixture the census hits that need not call the check, each with why.
 var dealEvidenceExempt = map[string]string{
-	"internal/compose/dealclosefacts.go":             "reads customerProgressAnyAudienceSQL and dealMeetingAheadSQL, which carry it",
+	"internal/compose/dealclosefacts.go":             "keeps a deal open on relstrength.DealKeptOpenSQL, so doubt closes nothing; its refusal reads customerRefusalAnyAudienceSQL, which carries the check",
 	"internal/compose/company360/pipelineread.go":    "reads deals.MeetingAheadSQL, which carries it",
 	"internal/modules/deals/closedaterun.go":         "reads deals.MeetingAheadSQL, which carries it",
 	"internal/modules/deals/deal_singleread.go":      "reads deals.MeetingAheadSQL, which carries it",
@@ -84,7 +85,7 @@ func TestEveryDealRecencyReaderAsksTheDealEvidenceCheck(t *testing.T) {
 		}
 		if !slices.Contains(dealEvidenceReaders, rel) {
 			t.Errorf("%s reads an activity recency rule about a deal and never calls relstrength.DealEvidenceSQL, "+
-				"so a personal thread can keep a deal warm. Call it, or name why not in dealEvidenceExempt", rel)
+				"so a personal thread or a link marked not about the deal can keep it warm. Call it, or name why not in dealEvidenceExempt", rel)
 		}
 		return nil
 	})
@@ -106,7 +107,7 @@ func TestEveryDealRecencyReaderAsksTheDealEvidenceCheck(t *testing.T) {
 			continue
 		}
 		if !strings.Contains(string(src), dealEvidenceCall) {
-			t.Errorf("%s no longer calls relstrength.DealEvidenceSQL, so a personal thread can keep a deal warm", rel)
+			t.Errorf("%s no longer calls relstrength.DealEvidenceSQL, so a personal thread or a link marked not about the deal can keep it warm", rel)
 		}
 	}
 }

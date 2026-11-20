@@ -80,6 +80,7 @@ function Frame({
       jsonResponse({
         declined_deal_ids: ["d-1", "d-2", "d-3"],
         unlinked: false,
+        marked_unrelated: false,
         project_unfiled: false,
         project_kept: false,
         questions_closed: 1,

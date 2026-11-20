@@ -8,7 +8,7 @@ import {
 import { daysPast } from "../../format/lateness";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { LooksKept } from "./claimlookskept";
+import type { AutoKept, LooksKept } from "./claimlookskept";
 import type { TakenOver } from "./claimtakeover";
 import { omitted } from "./contact360";
 
@@ -28,6 +28,8 @@ export type OverviewRow = Readonly<{
   takenBy?: TakenOver;
   // An accepted invitation suggests this promise is kept; the reader decides.
   looksKept?: LooksKept;
+  // Margince closed this promise; the reader may undo it.
+  autoKept?: AutoKept;
 }>;
 
 // --- Commitments ----------------------------------------------------------
@@ -52,7 +54,24 @@ type OpenLoop = Readonly<{
   takeable: boolean;
   takenBy?: TakenOver;
   looksKept?: LooksKept;
+  autoKept?: AutoKept;
 }>;
+
+type Claim = NonNullable<Contact360["claims"]>[number];
+
+function autoKeptOf(claim: Claim): AutoKept | undefined {
+  if (!claim.auto_kept) {
+    return undefined;
+  }
+  const evidence = claim.auto_kept.evidence;
+  return {
+    evidence: evidence && {
+      guest: evidence.guest_name,
+      at: evidence.meeting_at,
+      precision: evidence.meeting_precision,
+    },
+  };
+}
 
 /**
  * The promises the record's conversations hold, both ways, with the open
@@ -74,6 +93,7 @@ function openLoops(view: Contact360): readonly OpenLoop[] {
           !claim.needs_review &&
           (!claim.task_activity_id ||
             claim.taken_at ||
+            claim.auto_kept ||
             (claim.status === "done" &&
               !openTasks.has(claim.task_activity_id))),
       )
@@ -98,6 +118,7 @@ function openLoops(view: Contact360): readonly OpenLoop[] {
                 precision: claim.looks_kept.meeting_precision,
               }
             : undefined,
+          autoKept: autoKeptOf(claim),
           takenBy: claim.taken_at
             ? { name: claim.taken_by_name ?? null, at: claim.taken_at }
             : undefined,
@@ -136,6 +157,7 @@ export function commitmentRows(
       takeable: loop.takeable,
       takenBy: loop.takenBy,
       looksKept: loop.looksKept,
+      autoKept: loop.autoKept,
     };
   });
 }

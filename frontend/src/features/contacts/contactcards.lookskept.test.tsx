@@ -129,3 +129,57 @@ describe("a promise that looks kept", () => {
     expect(screen.queryByText(/Looks kept/)).toBeNull();
   });
 });
+
+const AUTO_KEPT: ConversationClaim = {
+  ...OWNERLESS,
+  status: "done",
+  auto_kept: {
+    evidence: {
+      meeting_id: "m-1",
+      guest_name: "Riley Reed",
+      meeting_at: "2026-08-30T10:00:00Z",
+      meeting_precision: "instant",
+    },
+  },
+};
+
+describe("a promise Margince closed itself", () => {
+  it("says who accepted which meeting and undoes only through the reopen endpoint", async () => {
+    const reopened: string[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"], contact: ["read", "update"] }),
+      "POST /claims/c-1/reopen": () => {
+        reopened.push("c-1");
+        return new Response(null, { status: 204 });
+      },
+    });
+    renderCard([AUTO_KEPT]);
+    expect(
+      await screen.findByText(
+        /Margince marked this kept: Riley Reed accepted the 30 Aug meeting/,
+      ),
+    ).toBeTruthy();
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(reopened).toEqual(["c-1"]));
+  });
+
+  it("stays plain when the reader may not open the meeting, and offers no undo without update rights", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"], contact: ["read"] }),
+    });
+    renderCard([{ ...AUTO_KEPT, auto_kept: {} }]);
+    expect(await screen.findByText("Margince marked this kept.")).toBeTruthy();
+    await act(async () => {});
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+  });
+
+  it("shows even when the promise still has an open task", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"], contact: ["read", "update"] }),
+    });
+    renderCard([{ ...AUTO_KEPT, task_activity_id: "t-1" }], ["t-1"]);
+    expect(await screen.findByText(/Margince marked this kept/)).toBeTruthy();
+  });
+});

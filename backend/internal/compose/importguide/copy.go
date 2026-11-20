@@ -279,6 +279,11 @@ var Custom = map[string]Column{
 		De: "Ein benutzerdefiniertes Feld. Die ID eines Datensatzes der Art, auf die das Feld verweist.",
 		Vi: "Trường tùy chỉnh. Mã của một bản ghi thuộc loại mà trường trỏ tới.",
 	}, Example: same("0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f")},
+	fieldcatalog.TypeURL: {Description: langcopy.Phrase{
+		En: "A custom field. A web address that starts with http:// or https://.",
+		De: "Ein benutzerdefiniertes Feld. Eine Webadresse, die mit http:// oder https:// beginnt.",
+		Vi: "Trường tùy chỉnh. Một địa chỉ web bắt đầu bằng http:// hoặc https://.",
+	}, Example: same("https://example.com/offer")},
 	fieldcatalog.TypeBoolean: {Description: langcopy.Phrase{
 		En: "A custom field. Yes or no: true, yes or 1, or false, no or 0.",
 		De: "Ein benutzerdefiniertes Feld. Ja oder nein: true, yes oder 1, oder false, no oder 0.",

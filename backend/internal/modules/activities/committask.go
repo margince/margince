@@ -56,6 +56,12 @@ func (in *LogActivityInput) AdmitInvitedAssignee() {
 	in.invitedAssignee = true
 }
 
+// AdmitConfirmedDue lets the task keep a due date outside the window. Only a
+// writer acting for the human who was shown that date and kept it may call it.
+func (in *LogActivityInput) AdmitConfirmedDue() {
+	in.confirmedDue = true
+}
+
 // MessageParties is who wrote one message and who it went to, as capture
 // recorded them.
 type MessageParties struct {

@@ -6,6 +6,8 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.promise_kept":
+    "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
   "systemJob.transcript_audience":
     "Terminnotizen erhalten die Lesenden des Termins",
   "systemJob.meeting_profile":
@@ -2496,6 +2498,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.coldstart": "Erstansprache",
   "agentJob.company_name_promotion": "Aktualisierung des Firmennamens",
   "agentJob.contact_share": "Anfrage zum Teilen eines Kontakts",
+  "agentJob.task_due_date": "Frage zum Fälligkeitsdatum",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website-Analyse",
@@ -4698,6 +4701,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commitment.looksKept":
     "Sieht erledigt aus: {name} hat den Termin am {date} angenommen.",
   "commitment.markKept": "Als erledigt markieren",
+  "commitment.autoKept":
+    "Margince hat das als erledigt markiert: {name} hat den Termin am {date} angenommen.",
+  "commitment.autoKeptPlain": "Margince hat das als erledigt markiert.",
+  "commitment.undo": "Rückgängig",
   "commitment.quote": "„{quote}“",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
@@ -4852,6 +4859,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
   "approval.kind.contact_share": "Kontakt teilen",
+  "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
@@ -11088,6 +11096,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
+  "jobs.kind.promise_kept_sweep": "Durch Termine erfüllte Zusagen",
   "jobs.kind.transcript_audience_sweep": "Lesende von Terminnotizen",
   "jobs.kind.meeting_profile_retract_sweep": "Unternehmensfelder aus Terminen",
   "jobs.kind.initiative_enrolment_sweep":
@@ -13473,6 +13482,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand muss die erste Person sein, die in Margince arbeitet. Füge diese Person jetzt hinzu oder später in den Einstellungen unter Personen.",
   "ob.conv.team.invitedLabel": "Bisher eingeladen",
   "ob.conv.team.invitedLine": "{name} ist eingeladen.",
+  "ob.conv.team.inviteUnconfirmed":
+    "Margince konnte die Einladung nicht bestätigen. Vielleicht ist sie trotzdem angekommen, also prüfe Einstellungen → Mitglieder, bevor du diese Adresse erneut einlädst.",
   "ob.conv.team.skip": "Vorerst überspringen",
   "ob.conv.team.finish": "Einrichtung abschließen",
   "ob.conv.team.done":
@@ -14451,6 +14462,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.removeOption": "Option entfernen",
   "cf.optionPlaceholder": "Bezeichnung der Option",
   "cf.lastOptionBlocked": "Eine Auswahlliste braucht mindestens eine Option",
+  "cf.type.url": "Webadresse",
+  "cf.url.invalid":
+    "Gib eine Webadresse ein, die mit http:// oder https:// beginnt.",
+  "cf.choices.edit": "Auswahl bearbeiten",
+  "cf.choices.title": "Auswahl von „{label}“",
+  "cf.choices.checking": "Zähle die Datensätze mit jeder Auswahl",
+  "cf.choices.held_one": "{count} Datensatz",
+  "cf.choices.held_other": "{count} Datensätze",
+  "cf.choices.clears_one":
+    "Beim Speichern wird die entfernte Auswahl aus {count} Datensatz gelöscht.",
+  "cf.choices.clears_other":
+    "Beim Speichern wird die entfernte Auswahl aus {count} Datensätzen gelöscht.",
+  "cf.choices.saved_one":
+    "Auswahl von „{label}“ gespeichert. {count} Datensatz geändert.",
+  "cf.choices.saved_other":
+    "Auswahl von „{label}“ gespeichert. {count} Datensätze geändert.",
   "cf.gate.title": "Dieses Feld hinzufügen?",
   "cf.gate.body":
     "Nach der Bestätigung wird es zu einer aktiven Spalte auf jedem {object}: auf der 360-Seite, in Suche und Filtern, Listen, Export und der API. Das Hinzufügen wird im Audit-Log erfasst.",
@@ -15841,10 +15868,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.newTeamLabel": "Neues Team",
   "users.newTeamOpen": "Neues Team",
   "users.teamNameLabel": "Teamname",
-  "users.emailTaken":
-    "Ein Mitglied mit dieser E-Mail-Adresse gibt es schon. Wurde es deaktiviert, reaktiviere es stattdessen.",
-  "users.emailReserved":
-    "Diese Adresse gehörte einem endgültig entfernten Mitglied und bleibt reserviert.",
   "users.teamDuplicate":
     "Ein Team mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "users.newTeamPlaceholder": "Zum Beispiel DACH Sales",
@@ -15969,6 +15992,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Tu das nur für ein Mitglied, das seine Authenticator-App und seine Wiederherstellungscodes verloren hat. Es wird überall abgemeldet und kann sich danach allein mit seinem Passwort anmelden, bis es die zweistufige Anmeldung wieder einrichtet.",
   "users.mfaRemoved": "Zweistufige Anmeldung für {name} entfernt",
   "users.link.action": "Passwort-Link erstellen",
+  "users.inviteUnconfirmed":
+    "Margince konnte die Einladung nicht bestätigen. Das Mitglied steht vielleicht schon in der Liste, also prüfe sie, bevor du erneut einlädst.",
+  "users.alreadyInvited":
+    "Für diese Adresse wartet schon eine Einladung. Sende sie unter Einstellungen → Mitglieder erneut.",
+  "users.emailTaken":
+    "Ein Mitglied mit dieser Adresse gibt es schon. Wurde es deaktiviert, reaktiviere es in der Liste.",
+  "users.removedEmail":
+    "Diese Adresse gehört einem dauerhaft entfernten Mitglied und bleibt reserviert.",
   "users.resendInvite": "Einladung erneut senden",
   "users.inviteResent": "Einladung erneut an {name} gesendet",
   "users.link.title": "Passwort-Link für {name}",
@@ -17038,6 +17069,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.action.calendar": "Kalender verbinden",
   "setup.action.voice": "Beispiele hinzufügen",
   "setup.action.booking": "Einschalten",
+  "setup.step.timezone": "Wähle, wo du arbeitest",
+  "setup.caption.timezone":
+    "Legt deine Zeitzone fest. Zeiten, Buchungen und E-Mails richten sich danach.",
+  "setup.action.timezone": "Ort wählen",
+  "setup.step.timezoneDone": "Zeiten folgen {zone}.",
+  "setup.step.timezoneDoneUnnamed": "Deine Zeitzone ist gewählt.",
+  "setup.step.language": "Wähle deine Sprache",
+  "setup.caption.language":
+    "Margince zeigt seine Bildschirme in dieser Sprache.",
+  "setup.action.language": "Sprache wählen",
+  "setup.step.languageDone": "Deine Sprache ist gespeichert.",
+  "setup.step.permissions": "Sieh, was Margince darf",
+  "setup.caption.permissions":
+    "Was es liest, was es schreibt und wie du es rückgängig machst.",
+  "setup.action.permissions": "Lesen",
+  "setup.step.permissionsDone": "Du hast gelesen, was Margince darf.",
+  "account.keepChoice": "{value} behalten",
+  "setup.permissions.title": "Was Margince liest und schreibt",
+  "setup.permissions.reads":
+    "Margince liest die E-Mails und den Kalender, die du verbindest, Dateien, die du hochlädst, und öffentliche Unternehmenswebsites. Du trennst E-Mail und Kalender jederzeit in den Einstellungen unter Verbindungen.",
+  "setup.permissions.writes":
+    "Es legt Gelesenes bei Kontakten, Unternehmen und Deals ab, erstellt Aufgaben und Notizen und entwirft Antworten. Eine Antwort von dir geht raus, wenn du auf Senden drückst oder eine geplante Nachricht fällig ist. Einladungen und Passwort-Zurücksetzen verschickt Margince selbst.",
+  "setup.permissions.undo":
+    "Was es ändert, steht in der Worklist unter Für dich erledigt. Die meisten Änderungen machst du dort rückgängig.",
+  "setup.permissions.confirm": "Verstanden",
+  "setup.permissions.later": "Später",
   "settings.home.setup.title": "Deine Einrichtung",
   "connectors.tile.notSetUp": "Nicht eingerichtet",
   "connectors.tile.askAdmin": "Ein Admin schaltet {vendor} unter {page} frei.",
@@ -22255,6 +22312,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
   "approval.commitment.noDueDay": "Kein Tag genannt",
   "approval.commitment.strength": "Wie verbindlich",
+  "approval.commitment.oddDue":
+    "Dieses Datum wirkt weit weg: behalten, ändern oder leeren",
   "approval.commitment.tentative": "Mit Vorbehalt: Es hieß, man versuche es",
   "approval.commitment.promiseStatus": "Stand der Zusage",
   "approval.commitment.notFulfilled":
@@ -22797,13 +22856,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiServing.previewFailed":
     "Der Server konnte diesen Wert nicht prüfen: {reason} Speichern bleibt deaktiviert, bis der Server den Wert prüfen kann.",
   "dealDecline.action": "Gehört nicht zu diesem Deal",
-  "dealDecline.title": "E-Mail von diesem Deal lösen?",
-  "dealDecline.body":
-    "Die E-Mail wird von diesem Deal gelöst, und Margince ordnet sie ihm nicht wieder zu. Eine Projektzuordnung, die sie über diesen Deal bekommen hat, wird ebenfalls gelöst.",
-  "dealDecline.confirm": "Vom Deal lösen",
-  "dealDecline.done": "E-Mail vom Deal gelöst",
+  "dealDecline.done":
+    "Als nicht zu diesem Deal gehörig markiert. Der Eintrag hält den Deal nicht mehr aktiv.",
   "dealDecline.doneProjectKept":
-    "E-Mail vom Deal gelöst. Die Projektzuordnung bleibt.",
+    "Als nicht zu diesem Deal gehörig markiert. Die Projektzuordnung bleibt.",
+  "dealRelevance.about": "Gehört zu diesem Deal",
+  "dealRelevance.restored":
+    "Als zu diesem Deal gehörig markiert. Der Eintrag zählt wieder für den Deal.",
+  "dealRelevance.unrelated": "Gehört nicht zu diesem Deal",
+  "dealRelevance.uncertain": "Gehört vielleicht nicht zu diesem Deal",
   "projectFiling.action": "Ablage rückgängig machen",
   "projectFiling.title": "Projektablage rückgängig machen?",
   "projectFiling.loading":

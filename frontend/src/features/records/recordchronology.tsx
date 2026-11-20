@@ -128,6 +128,7 @@ export function useRecordChronology({
   kind,
   recordId,
   filter,
+  enabled = true,
   changesInPanel = false,
   activities,
   activitiesHaveMore,
@@ -139,6 +140,7 @@ export function useRecordChronology({
   kind: EntityKind;
   recordId: string;
   filter: TimelineFilter;
+  enabled?: boolean;
   // True where the page draws Changes with RecordHistoryTab, which reads and
   // pages its own feed. A second read here would fetch rows nobody sees.
   changesInPanel?: boolean;
@@ -169,12 +171,14 @@ export function useRecordChronology({
   const viewerId = useViewerId();
   // Only the Changes cut reads the change feed. The kind, word and date dials
   // narrow the exchanges, so they never hide a change.
-  const wantsChanges = !readsExchangesOnly(filter) && !changesInPanel;
+  const wantsChanges =
+    enabled && !readsExchangesOnly(filter) && !changesInPanel;
   const changes = useFieldHistory(kind, recordId, { enabled: wantsChanges });
   // `page.data ?? []`: a 200 with no body is a shape the contract permits, and
   // flattening it would hand the mapper below an `undefined` row.
-  const changeRows =
-    changes.data?.pages.flatMap((page) => page.data ?? []) ?? [];
+  const changeRows = enabled
+    ? (changes.data?.pages.flatMap((page) => page.data ?? []) ?? [])
+    : [];
   const byId = new Map(activities.map((activity) => [activity.id, activity]));
   // The contacts on each exchange, named through the resolver the change rows
   // use for their stored ids. Both cuts then name a contact the same way.
@@ -208,9 +212,11 @@ export function useRecordChronology({
   const extensionHistory = useExtensionHistory(
     kind,
     recordId,
-    readsExchangesOnly(filter),
+    enabled && readsExchangesOnly(filter),
   );
-  const extensionEntries = extensionTimeline(extensionHistory.data?.data ?? []);
+  const extensionEntries = extensionTimeline(
+    enabled ? (extensionHistory.data?.data ?? []) : [],
+  );
   // historyFieldLabel, not coldFieldLabel: changeRows is the same
   // FieldHistoryEntry feed the Changes tab renders, and COLD_FIELD_LABELS
   // names a different vocabulary (site-read/enrichment fields) that has no

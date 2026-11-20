@@ -66,6 +66,8 @@ type UpdateActivityInput struct {
 	// doneAtAnyVersion lets a caller's Done land on a task already done at any
 	// version. A machine completion leaves it off: its skew says it did not flip the task.
 	doneAtAnyVersion bool
+	// confirmedDue admits a due date outside the window that a human kept when asked.
+	confirmedDue bool
 }
 
 // UpdateActivity keeps an authorized edit and its audit in one transaction.

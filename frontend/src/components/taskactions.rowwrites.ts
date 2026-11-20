@@ -186,7 +186,7 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
  */
 export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
-  const queryClient = useQueryClient();
+  const rereadClaims = useClaimReread(invalidateKeys);
   return useMutation({
     mutationFn: async (input: {
       id: string;
@@ -200,13 +200,35 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
         t,
       );
     },
-    onSuccess: () => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      for (const queryKey of CLAIM_SETTLED_KEYS) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-    },
+    onSuccess: rereadClaims,
   });
+}
+
+/**
+ * Undoing Margince's own close of a promise. The server reopens only the claim,
+ * the one thing the automatic close changed.
+ */
+export function useClaimReopen(invalidateKeys: readonly QueryKey[]) {
+  const t = useT();
+  const rereadClaims = useClaimReread(invalidateKeys);
+  return useMutation({
+    mutationFn: async (input: { id: string }) => {
+      unwrap(
+        await api.POST("/claims/{id}/reopen", {
+          params: { path: { id: input.id } },
+        }),
+        t,
+      );
+    },
+    onSuccess: rereadClaims,
+  });
+}
+
+function useClaimReread(invalidateKeys: readonly QueryKey[]) {
+  const queryClient = useQueryClient();
+  return () => {
+    for (const queryKey of [...invalidateKeys, ...CLAIM_SETTLED_KEYS]) {
+      queryClient.invalidateQueries({ queryKey });
+    }
+  };
 }

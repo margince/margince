@@ -6,6 +6,7 @@ import { historyFieldLabel } from "./historyfieldlabels";
 
 const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   promise_strength: "approval.commitment.strength",
+  odd_due_date: "approval.commitment.oddDue",
   import_create_tag: "approval.import.createTag",
   import_apply_tag: "approval.import.applyTag",
   import_context_tag: "approval.import.contextTag",
