@@ -85,7 +85,7 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 		at := s.now()
 		for _, code := range codes {
 			for _, f := range packDraftFindings(code, sender, subject, body) {
-				f.Provision = shownProvision(f.Requirement, citationContext{Recipient: RecipientCountry{Code: code}, Sender: sender, At: at})
+				f.Provision = shownProvision(code, f.Requirement, citationContext{Recipient: RecipientCountry{Code: code}, Sender: sender, At: at})
 				// The same words under two laws are two findings, one per law.
 				if !slices.ContainsFunc(findings, func(have DraftFinding) bool {
 					return have.Detail == f.Detail && have.Provision == f.Provision
