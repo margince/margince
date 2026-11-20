@@ -133,7 +133,7 @@ TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(T
 
 .DEFAULT_GOAL := help
 
-.PHONY: mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: preflight-gates mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -335,7 +335,7 @@ test-uncached: composition
 # The gates a few added lines turn red, asked alone: they answer in the time
 # the gates package takes to link, where the full package takes minutes.
 PREFLIGHT_GATE_TESTS := TestTheRootComposePackageDoesNotGrow
-preflight: composition ## The size gates a small diff trips, in seconds; `make check` still runs them
+preflight-gates: composition ## The size gates a small diff trips, in seconds; `make check` still runs them
 	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -run '^($(PREFLIGHT_GATE_TESTS))$$' ./gates
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
@@ -940,13 +940,9 @@ drift: messaging-rules-drift ## Fail when a committed generated file drifted fro
 # disagree on; tools/check-generators-twice says how it finds them and which it
 # skips. It puts the work tree back, so it judges determinism and leaves
 # currency to drift.
-#
-# Outside CI it runs nothing when the branch changed no generator and no
-# generated file since CHECK_BASE_REF: such a branch runs what its base ran.
-# CI passes no -since, so every pull request still gets both passes.
 generators-twice: ## Fail when two runs of the generators found in the tree disagree in any byte
 	@../scripts/keep-unchanged-mtimes.sh save ../.tmp/generators-twice-mtimes
-	$(GOWORK_ROOT) $(GO) run ./tools/check-generators-twice -root .. $(if $(CI),,-since "$(CHECK_BASE_REF)")
+	$(GOWORK_ROOT) $(GO) run ./tools/check-generators-twice -root ..
 	@../scripts/keep-unchanged-mtimes.sh restore ../.tmp/generators-twice-mtimes
 
 # The MCP App admission vocabulary and the per-view action lists are AUTHORED in frontend/src/mcp-apps, where

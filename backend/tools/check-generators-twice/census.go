@@ -68,7 +68,6 @@ func (p *plan) addGoTests(root string, tracked []string) error {
 	}
 	taggedTests := map[string]bool{}
 	for _, g := range found {
-		p.goldenDirs = append(p.goldenDirs, g.Dir)
 		if g.Tags != "" {
 			p.tagged = append(p.tagged, g)
 			for _, test := range g.Tests {

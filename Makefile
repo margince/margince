@@ -71,7 +71,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: gate-timings
+.PHONY: gate-timings preflight
 .PHONY: repeat-changed-tests test-repeat-changed-tests
 .PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
@@ -157,8 +157,7 @@ endif
 ## caps, the comment budget and density, and the root compose size ceiling.
 ## Optional, before a gate run; `make check` runs every one of them again.
 preflight:
-	$(MAKE) -k go-file-length fe-file-length comment-budget comment-density
-	$(MAKE) -C backend preflight
+	$(MAKE) -k go-file-length fe-file-length comment-budget comment-density preflight-gates
 
 ## check-root-gates — the root deterministic script gates, side by side.
 ##
@@ -600,9 +599,10 @@ verify-boot:
 ## in no local gate at all.
 ##
 ## One sub-make under -k, so a red leg does not hide the legs after it: a run
-## names every finding. The legs still run one at a time and in this order.
+## names every finding. -j1 keeps the legs one at a time under a parallel
+## caller, because several of them install into one frontend/node_modules.
 frontend-check:
-	$(MAKE) -k fe-ds-gates fe-drift fe-file-length fe-lint fe-compiler-lint fe-unit fe-census fe-build
+	$(MAKE) -k -j1 fe-ds-gates fe-drift fe-file-length fe-lint fe-compiler-lint fe-unit fe-census fe-build
 
 ## fe-ds-gates — the frontend's cheap grep gates on their own, so the CI job that
 ## wants only them does not also pull a vitest run behind them. Most are
@@ -1576,11 +1576,11 @@ test-fe-file-length:
 	@./scripts/check-fe-file-length.test.sh
 
 ## comment-budget — a change may not add more comment lines than the code they
-## explain. Diff-scoped against origin/main, Go and TypeScript; `doc.go` and generated
+## explain. Diff-scoped against CHECK_BASE_REF, Go and TypeScript; `doc.go` and generated
 ## files are exempt. The counterweight to the function ceiling, which does not
 ## count comment lines at all.
 comment-budget:
-	@./scripts/check-comment-budget.sh
+	@CHECK_BASE_REF="$(CHECK_BASE_REF)" ./scripts/check-comment-budget.sh
 
 ## comment-density — backend's comment-to-code ratio may fall and never rise,
 ## pinned in scripts/comment-density-baseline.txt. The aggregate counterpart to

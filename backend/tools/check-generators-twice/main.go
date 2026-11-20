@@ -35,13 +35,12 @@ import (
 func main() {
 	root := flag.String("root", "..", "the repository root")
 	list := flag.Bool("list", false, "print the generators and outputs the census finds, and run nothing")
-	since := flag.String("since", "", "run nothing when no generator, input or generated file changed since the merge base with this ref")
 	flag.Parse()
 	abs, err := filepath.Abs(*root)
 	if err == nil && *list {
 		err = printCensus(abs, log.New(os.Stdout, "", 0))
 	} else if err == nil {
-		err = run(abs, *since, log.New(os.Stdout, "", 0))
+		err = run(abs, log.New(os.Stdout, "", 0))
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "check-generators-twice: %v\n", err)
@@ -64,35 +63,14 @@ type plan struct {
 	// skipped are the frontend scripts, when pnpm is absent. The outputs no
 	// other generator wrote are then listed as not checked.
 	skipped []generator
-	// goldenDirs are the packages whose tests rewrite a golden file.
-	goldenDirs []string
 }
 
-func run(root, since string, out *log.Logger) error {
+func run(root string, out *log.Logger) error {
 	p, err := census(root)
 	if err != nil {
 		return err
 	}
-	if since != "" && !asksForBothPasses(root, since, p, out) {
-		return nil
-	}
 	return twice(root, p, out)
-}
-
-// asksForBothPasses reports whether the branch changed anything a pass reads.
-// A ref it cannot read runs the passes: the skip has to be proved.
-func asksForBothPasses(root, since string, p plan, out *log.Logger) bool {
-	changed, err := changedSince(root, since)
-	if err != nil {
-		out.Printf("check-generators-twice: cannot read the changes since %s, so both passes run: %v\n", since, err)
-		return true
-	}
-	if file, hit := p.touchesGenerator(changed); hit {
-		out.Printf("check-generators-twice: %s changed since %s, so both passes run\n", file, since)
-		return true
-	}
-	out.Printf("check-generators-twice: SKIP, no generator, input or generated file changed since %s; CI runs both passes\n", since)
-	return false
 }
 
 // twice runs the plan's generators twice and puts the work tree back.
