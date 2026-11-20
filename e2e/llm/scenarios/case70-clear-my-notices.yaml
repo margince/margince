@@ -33,5 +33,8 @@ must_not_call_with:
 must_mention:
   - "(?i)notice"
 
+must_end_with:
+  - me "admin@demo.test" unread_notices=0
+
 runs: 3
 pass_at: 2
