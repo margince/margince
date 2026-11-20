@@ -99,7 +99,7 @@ func (e ExtensionTask) apply() {
 	taskStatus[e.Task] = StatusShipped
 	taskSites[e.Task] = sites
 	noPayloadTasks[e.Task] = true
-	taskSubjectRestriction[e.Task] = SubjectRestrictionPosture{Posture: "honour"}
+	taskSubjectRestriction[e.Task] = SubjectRestrictionPosture{Posture: postureHonour}
 	railOwners[e.Task] = SourceRouter
 }
 
@@ -146,3 +146,6 @@ func ResetExtensionTasks() {
 	}
 	clear(extensionTasks.units)
 }
+
+// postureHonour is the subject-restriction posture of a task that reads contact data.
+const postureHonour = "honour"

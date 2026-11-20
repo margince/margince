@@ -102,6 +102,9 @@ func declaredSystemReads(unit string) []extension.SystemRead {
 // systemReadTraced is the action a system read leaves in system_log.
 const systemReadTraced = "extension_system_read"
 
+// traceUnitKey names the extension whose read the trace row is about.
+const traceUnitKey = "extension"
+
 // traceReadKey names which read the trace row is about.
 const traceReadKey = "read"
 

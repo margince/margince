@@ -90,7 +90,7 @@ func serviceMemberConnectedTx(ctx context.Context, tx pgx.Tx, unit string, membe
 // it ran as. requested lists the keys a read was asked for, when it has any.
 func (s systemSeat) trace(recordType, recordID string, requested []string) error {
 	detail := map[string]any{
-		"extension": s.rt.unit, traceReadKey: string(s.read), traceTypeKey: recordType, traceRecordKey: recordID,
+		traceUnitKey: s.rt.unit, traceReadKey: string(s.read), traceTypeKey: recordType, traceRecordKey: recordID,
 		"act_as": s.member.String(),
 	}
 	if requested != nil {

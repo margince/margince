@@ -88,13 +88,10 @@ func implementers(t *testing.T, ports map[string]bool) map[string]string {
 // callsSeatRead reports whether the method named name on recv calls seatRead.
 func callsSeatRead(t *testing.T, recv, name string) bool {
 	t.Helper()
-	files, err := parser.ParseDir(token.NewFileSet(), ".", nil, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	files := parsePackageFiles(t, token.NewFileSet(), ".")
 	found, calls := false, false
-	for _, pkg := range files {
-		for _, file := range pkg.Files {
+	{
+		for _, file := range files {
 			for _, decl := range file.Decls {
 				fn, ok := decl.(*ast.FuncDecl)
 				if !ok || fn.Recv == nil || fn.Name.Name != name || receiverName(fn.Recv.List[0].Type) != recv {

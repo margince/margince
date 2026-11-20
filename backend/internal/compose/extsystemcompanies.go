@@ -133,8 +133,8 @@ func summarizeCompany(ctx context.Context, c crmcontracts.Company, source outsid
 	}
 	masked := auth.MaskedFields(own, string(recordTypeCompany), false)
 	for field, text := range map[string]*string{
-		"display_name": &out.Name, "legal_name": &out.LegalName, "lifecycle": &out.Lifecycle,
-		"source_system": &out.SourceSystem, "source_id": &out.SourceID,
+		"display_name": &out.Name, "legal_name": &out.LegalName, previewValueLifecycle: &out.Lifecycle,
+		"source_system": &out.SourceSystem, memberSourceArgument: &out.SourceID,
 	} {
 		if slices.Contains(masked, field) {
 			*text = ""
