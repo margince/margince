@@ -236,7 +236,7 @@ func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Re
 // would withhold a notice the law owes the subject over a branding setting. The
 // company logo stays only while the company is the controller.
 func controllerLetterheadTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (string, string, error) {
-	if further, name, key, err := furtherEntityLetterheadTx(ctx, tx, entity); err != nil || further {
+	if further, name, key, err := contacts.FurtherEntityLetterheadTx(ctx, tx, entity); err != nil || further {
 		return name, key, err
 	}
 	brand, key, err := letterheadNameTx(ctx, tx)
@@ -272,25 +272,4 @@ func controllerExpiry(expiry time.Time) *time.Time {
 		return nil
 	}
 	return &expiry
-}
-
-// furtherEntityLetterheadTx is the legal name and logo of the further legal
-// entity a controller mail goes out for. further is false for the default
-// entity and for none, which keep the installation's letterhead.
-func furtherEntityLetterheadTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (further bool, name, key string, err error) {
-	if entity.IsZero() {
-		return false, "", "", nil
-	}
-	identity, _, err := contacts.ResolveLegalEntity(ctx, tx, ids.From[ids.LegalEntityKind](entity))
-	if err != nil || identity.IsDefault {
-		return false, "", "", err
-	}
-	name = identity.DisplayName
-	if identity.LegalName != nil && *identity.LegalName != "" {
-		name = *identity.LegalName
-	}
-	if identity.LogoObjectKey != nil {
-		key = *identity.LogoObjectKey
-	}
-	return true, name, key, nil
 }
