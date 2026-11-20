@@ -343,9 +343,6 @@ func (s *Store) updateRelationshipInTx(
 // authority is two questions: the edge must be visible through its endpoints,
 // and removing it is editing its anchor.
 func (s *Store) RefuseArchiveRelationship(ctx context.Context, id ids.UUID) error {
-	if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
-		return err
-	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		current, err := s.visibleRelationship(ctx, tx, id)
 		if err != nil {
@@ -354,11 +351,7 @@ func (s *Store) RefuseArchiveRelationship(ctx context.Context, id ids.UUID) erro
 		if err := refuseGenericProjectCompany(current.Kind); err != nil {
 			return err
 		}
-		anchorObject, _ := relationshipAnchor(current.Kind)
-		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
-			return err
-		}
-		return ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints())
+		return requireRelationshipArchive(ctx, tx, current)
 	})
 }
 

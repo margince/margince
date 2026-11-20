@@ -18,9 +18,6 @@ import (
 )
 
 func (s *Store) archiveRelationshipTx(ctx context.Context, tx pgx.Tx, id ids.UUID, ifVersion *int64, evidence map[string]any) (relationshipRow, error) {
-	if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
-		return relationshipRow{}, err
-	}
 	var out relationshipRow
 	var err error
 
@@ -35,11 +32,7 @@ func (s *Store) archiveRelationshipTx(ctx context.Context, tx pgx.Tx, id ids.UUI
 	if err := refuseGenericProjectCompany(current.Kind); err != nil {
 		return relationshipRow{}, err
 	}
-	anchorObject, _ := relationshipAnchor(current.Kind)
-	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
-		return relationshipRow{}, err
-	}
-	if err := ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints()); err != nil {
+	if err := requireRelationshipArchive(ctx, tx, current); err != nil {
 		return relationshipRow{}, err
 	}
 	p := storekit.NewPatch()
@@ -64,4 +57,21 @@ func (s *Store) archiveRelationshipTx(ctx context.Context, tx pgx.Tx, id ids.UUI
 		return relationshipRow{}, err
 	}
 	return out, promoteThenFileEmployerTwins(ctx, tx, *out.ContactID, capturedBy)
+}
+
+// requireRelationshipArchive asks the authority questions of an edge removal,
+// shared by the archive and its stage-time refusal. A deal stakeholder seat is
+// removed by whoever may write its deal, as it is added; every other kind also
+// needs the relationship delete grant.
+func requireRelationshipArchive(ctx context.Context, tx pgx.Tx, current relationshipRow) error {
+	if current.Kind != dealStakeholderKind {
+		if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
+			return err
+		}
+	}
+	anchorObject, _ := relationshipAnchor(current.Kind)
+	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
+		return err
+	}
+	return ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints())
 }

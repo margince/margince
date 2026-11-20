@@ -55,11 +55,8 @@ export function DealCommitteeCard({
   roleLabel: (role: string) => string;
 }>) {
   const t = useT();
-  // Both asked on every render: hooks run in one order, so no short circuit.
   const canCreate = useCanWrite("relationship", "create") && canWrite;
-  const canUpdate = useCanWrite("relationship", "update");
-  const canDelete = useCanWrite("relationship", "delete");
-  const canChange = (canUpdate || canDelete) && canWrite;
+  const canChange = canWrite;
   const { locale } = useLocale();
   const zone = useViewerZone();
   const assignments = useRecordAssignments("deal", dealId);
@@ -123,6 +120,7 @@ export function DealCommitteeCard({
             scope={{ deal_id: dealId }}
             refusedReasonId={refusedReasonId}
             stacked
+            dealWriter
           />
         </Disclosure>
       )}

@@ -126,9 +126,13 @@ export function RelationshipRows({
   refusedReasonId,
   extra,
   stacked,
+  dealWriter,
 }: Readonly<{
   scope: RelationshipScope;
   refusedReasonId?: string;
+  // The reader may write the deal this scope names. The server lets a deal
+  // writer take its stakeholders off without the relationship delete grant.
+  dealWriter?: boolean;
   extra?: {
     label: string;
     render: (rel: Relationship) => ReactNode;
@@ -149,7 +153,9 @@ export function RelationshipRows({
   // is no fact about the record to report — where the anchor's refusal above
   // keeps the verb and says why.
   const canUpdate = useCanWrite("relationship", "update");
-  const canDelete = useCanWrite("relationship", "delete");
+  const canDeleteGrant = useCanWrite("relationship", "delete");
+  const mayRemove = (rel: Relationship) =>
+    canDeleteGrant || (dealWriter === true && rel.kind === "deal_stakeholder");
   const query = useQuery({
     queryKey: scopeQueryKey(scope),
     queryFn: () => fetchRelationships(scope),
@@ -213,7 +219,7 @@ export function RelationshipRows({
   // trailing cell and the stacked block's foot. Two copies would be two
   // versions of a hard DELETE the day either one is touched.
   const verbsFor = (rel: Relationship) =>
-    canUpdate || canDelete ? verbBar(rel) : null;
+    canUpdate || mayRemove(rel) ? verbBar(rel) : null;
   const verbBar = (rel: Relationship) => (
     <div
       className={
@@ -265,7 +271,7 @@ export function RelationshipRows({
           recordKey="relationship"
         />
       )}
-      {canDelete && (
+      {mayRemove(rel) && (
         <Button
           variant="danger"
           reasonId={refusedReasonId}
