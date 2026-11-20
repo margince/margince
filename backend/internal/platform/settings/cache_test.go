@@ -162,9 +162,7 @@ func TestConcurrentReadsAndWritesAreSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	var wrong atomic.Int32
 	for i := range 8 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for j := range 200 {
 				if raw, found, err := c.read("a.b", l.load); err != nil || !found || string(raw) != "1" {
 					wrong.Add(1)
@@ -174,7 +172,7 @@ func TestConcurrentReadsAndWritesAreSafe(t *testing.T) {
 					clock.advance(time.Second)
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	if n := wrong.Load(); n != 0 {

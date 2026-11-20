@@ -29,10 +29,9 @@ func TestTheFoldsReadTheColumnsTheirSQLNames(t *testing.T) {
 }
 
 func TestEveryChangedFieldOfAnActivityUpdateIsPlaced(t *testing.T) {
-	fields := reflect.TypeOf(crmcontracts.PublicEventActivityChangedFields{})
 	seen := map[string]bool{}
-	for i := range fields.NumField() {
-		key, _, _ := strings.Cut(fields.Field(i).Tag.Get("json"), ",")
+	for field := range reflect.TypeFor[crmcontracts.PublicEventActivityChangedFields]().Fields() {
+		key, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 		seen[key] = true
 		if _, placed := updatedFieldWrites[key]; !placed {
 			t.Errorf("changed field %q is not in updatedFieldWrites; say which columns it writes", key)
@@ -103,7 +102,7 @@ var edgeKeyColumns = []string{"user_id", "contact_id", "contact_a", "contact_b"}
 
 func splitColumns(list string) []string {
 	var out []string
-	for _, column := range strings.Split(list, ",") {
+	for column := range strings.SplitSeq(list, ",") {
 		column = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(column), "e."))
 		if column != "" {
 			out = append(out, column)
