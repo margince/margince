@@ -13047,6 +13047,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cần có một người đầu tiên làm việc trong Margince. Thêm ngay, hoặc thêm sau trong Cài đặt, mục Nhân sự.",
   "ob.conv.team.invitedLabel": "Đã mời",
   "ob.conv.team.invitedLine": "Đã mời {name}.",
+  "ob.conv.team.inviteUnconfirmed":
+    "Margince không thể xác nhận lời mời. Lời mời có thể vẫn đã được gửi, vì vậy hãy kiểm tra Cài đặt → Thành viên trước khi mời lại địa chỉ này.",
   "ob.conv.team.skip": "Tạm bỏ qua",
   "ob.conv.team.finish": "Hoàn tất thiết lập",
   "ob.conv.team.done":
@@ -15462,6 +15464,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ làm việc này cho thành viên đã mất cả ứng dụng xác thực lẫn mã khôi phục. Họ sẽ bị đăng xuất ở mọi nơi và sau đó có thể đăng nhập chỉ bằng mật khẩu, cho đến khi thiết lập lại đăng nhập hai bước.",
   "users.mfaRemoved": "Đã gỡ đăng nhập hai bước của {name}",
   "users.link.action": "Lấy liên kết đặt mật khẩu",
+  "users.inviteUnconfirmed":
+    "Margince không thể xác nhận lời mời. Thành viên có thể đã có trong danh sách, vì vậy hãy kiểm tra trước khi mời lại.",
+  "users.alreadyInvited":
+    "Địa chỉ này đã có một lời mời đang chờ. Hãy gửi lại lời mời trong Cài đặt → Thành viên.",
+  "users.emailTaken":
+    "Đã có thành viên dùng địa chỉ này. Nếu họ đã bị vô hiệu hóa, hãy kích hoạt lại từ danh sách.",
+  "users.removedEmail":
+    "Địa chỉ này thuộc về một thành viên đã bị xóa vĩnh viễn và vẫn được giữ lại.",
   "users.resendInvite": "Gửi lại lời mời",
   "users.inviteResent": "Đã gửi lại lời mời cho {name}",
   "users.link.title": "Liên kết đặt mật khẩu cho {name}",

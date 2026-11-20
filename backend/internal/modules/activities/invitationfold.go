@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,6 +24,14 @@ var foldedCalendarMailSQL = "(a.kind = 'email' AND a.calendar_uid IS NOT NULL AN
 // foldsInvitations is a record's History read: one row per mail, on one record.
 func (in ListActivitiesInput) foldsInvitations() bool {
 	return in.CollapseSeatCopies && in.EntityType != nil && in.EntityID != nil
+}
+
+// canFoldCalendarMail requires both the mail and its meeting to appear in
+// the same cut. A kind-only cut still reads invitation counts on its meetings.
+func (in ListActivitiesInput) canFoldCalendarMail() bool {
+	return in.foldsInvitations() && in.Kind == nil && (len(in.Kinds) == 0 ||
+		slices.Contains(in.Kinds, string(crmcontracts.ActivityKindEmail)) &&
+			slices.Contains(in.Kinds, string(crmcontracts.ActivityKindMeeting)))
 }
 
 // InvitationFoldSQL leaves out the calendar mail whose meeting is itself one

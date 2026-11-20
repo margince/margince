@@ -178,7 +178,7 @@ func TestAnInvitationsChangedEmailMovesTheInternalAddress(t *testing.T) {
 		t.Fatal("the internal address did not move with the invitation's email")
 	}
 	// The email change ends the first invitation's token, so a new one is sent.
-	token, err := users.ResendInvite(e.Admin(), recoveryAdminIdentity(e), seat)
+	_, token, err := users.ResendInvite(e.Admin(), recoveryAdminIdentity(e), seat)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,216 +14,36 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// CompanyLinkedActivityExists is the ONE spelling of "this activity reaches the
-// account", for a query that aliases activity as a.
-//
-// A message, a task or a meeting belongs to a company through any of four
-// arms — its own link, its deal's, the contact it is about, or the employer of
-// somebody who was on it — and every reader of the account's timeline needs the
-// same walk: the timeline list itself, the company view's next-steps section,
-// and the two suggestion reads. Spelling it once is what keeps them from
-// drifting apart: an arm added to the model reaches every reader, or none of
-// them.
-//
-// It lives in this module rather than next to the company view because a module
-// may not import compose, and the timeline list is a reader too — the drift this
-// replaces was exactly that, a flat company_id match in the list against
-// the three-arm walk in the view.
-//
-// The predicate answers WHICH activities belong to the account and nothing else.
-// WHO may read one is auth.ActivityContentClause, which every caller composes
-// alongside this.
-//
-// companyPos is the bind position carrying the company id; the caller registers
-// it once and every arm reads the same one.
+// CompanyLinkedActivityExists tests the activity aliased as a against one account.
 func CompanyLinkedActivityExists(companyPos int) string {
-	return activityReachesCompany(sprintf("$%d", companyPos))
+	return storekit.CompanyActivityExists(sprintf("$%d", companyPos))
 }
 
-// CompanyLinkedActivityExistsAny is the same walk over a SET of companies, for
-// a caller that binds an id array rather than one id.
-//
-// The hierarchy roll-up needs it, for a 30-day count that must answer the same
-// question as the timeline it is displayed above. Capture files mail against
-// the CONTACT it was with, so a flat company_id match misses an account's
-// busiest correspondence. One walk, two operand shapes, so a fourth link added
-// to the model still reaches both.
-//
-// companiesPos is the bind position carrying the company id array.
+// CompanyLinkedActivityExistsAny tests the activity against a bound array of accounts.
 func CompanyLinkedActivityExistsAny(companiesPos int) string {
-	return activityReachesCompany(sprintf("ANY($%d)", companiesPos))
+	return storekit.CompanyActivityExists(sprintf("ANY($%d)", companiesPos))
 }
 
-// CompanyReachedActivities is the timeline's four-arm reach for the bound
-// accounts: (activity_id, company_id) for each account an activity reaches.
-// CompanyReachSet is the three-arm set signals are filed through instead.
+// CompanyReachedActivities returns (activity_id, company_id) for the bound accounts.
 func CompanyReachedActivities(companiesPos int) string {
-	return companyReach(sprintf("ANY($%d)", companiesPos))
+	return storekit.CompanyActivityReach(sprintf("ANY($%d)", companiesPos))
 }
 
-// companyReach is the walk as a set with one branch per arm. Each branch filters
-// on its arm's indexed company column, so a plan starts from the account. An
-// `OR` across the arms would leave Postgres no index to start from.
-//
-// participantEmployerArm correlates on a.occurred_at inside its join condition,
-// so Postgres keeps it a per-activity probe that cannot start from the account.
-// Its branch reaches the employees' activities through participantEntry first,
-// and that same `EXISTS` decides which of them count.
-func companyReach(operand string) string {
-	participantBranch := sprintf(participantEntry+participantEmployerArm, operand, "e0.company_id")
-	return companyLinkReach(operand) + "\n\t\t    UNION " + participantBranch
-}
-
-// companyLinkReach is companyReach without the participant arm: the activities
-// filed against the account, its deals or its employees.
-func companyLinkReach(operand string) string {
-	linkBranch := func(column, arms string) string {
-		return sprintf("SELECT l.activity_id, %[1]s AS company_id %[2]s\n\t\t    WHERE %[1]s = %[3]s",
-			column, arms, operand)
-	}
-	return linkBranch("l.company_id", directLinkArm) + "\n\t\t    UNION " + linkBranch("d.company_id", companyArms) +
-		"\n\t\t    UNION " + linkBranch("r.company_id", companyArms)
-}
-
-// directLinkArm is the arm that needs none of companyArms' joins. Joining the
-// activity there only to read its timestamp makes Postgres hash every activity
-// of the installation, and the foreign keys already guarantee the row.
-const directLinkArm = "FROM activity_link l"
-
-// CompanyFiledActivityExists is the predicate over the three link arms only. A
-// file of a mail that merely CC'd an employee is not a document of that
-// employee's employer.
+// CompanyFiledActivityExists leaves out participant employers: a file does
+// not belong to an account merely because its employee was copied.
 func CompanyFiledActivityExists(companyPos int) string {
-	return "a.id IN (SELECT reach.activity_id FROM (" + companyLinkReach(sprintf("$%d", companyPos)) + ") reach)"
+	return storekit.CompanyFiledActivityExists(sprintf("$%d", companyPos))
 }
 
-// companyArms is the three links themselves — the account an activity is filed
-// against, the account its deal belongs to, and the employer of the contact it
-// is about.
-//
-// The arms live apart from the shapes built on them, because drift happens in
-// the arms: one spelling gains a condition and another does not. The
-// shapes differ for a reason that will not go away (CompanyReachSet says it).
-//
-// search/graphcompanyreach.go spells the SAME arms for the context walk, because a
-// module never imports a sibling (ADR-0054). The two texts are held equal by
-// gates/accountreachcopies_test.go rather than by anybody remembering to change
-// both — an arm added here alone is a failure, not a divergence nobody sees.
-//
-// The deal arm deliberately does not exclude archived or lost deals: a set
-// stricter than the predicate would show a message on the timeline whose
-// account never gets a signal about it.
-//
-// The employment arm is bounded by when the message was sent. The set form has
-// no outer activity to read that from, so the arms join the activity.
-var companyArms = `FROM activity_link l
-		    JOIN activity la ON la.id = l.activity_id
-		    LEFT JOIN deal d ON d.id = l.deal_id
-		    LEFT JOIN relationship r ON r.contact_id = l.contact_id
-		      AND ` + employment.CurrentMembershipSQL("r") + `
-		      AND ` + employment.InPlaceForSQL("r", "la") + `
-		      AND ` + relationshipmark.ContactNotMarkedSQL("r.contact_id")
-
-// participantEmployerArm is the READER's fourth arm: the employer of somebody
-// who is on the event as a participant rather than as a link.
-//
-// The three arms above all start from activity_link, and a meeting may not
-// carry a direct company link at all — a company is not somebody you can
-// meet. So a meeting whose only contact is on the invitation reaches no company
-// through them, and the account whose contact sat in the room sees an empty
-// afternoon. search.employerSubjects already walks BOTH contact sources for the
-// context prep; this is the same pair for the reach walk, and the two agreeing
-// is the point.
-//
-// Anchored on the activity rather than folded into companyArms, because companyArms is
-// shared with CompanyReachSet and this arm deliberately is not — the ruling, and
-// why, is on CompanyReachSet.
-//
-// CURRENT employment, exactly as the link arm reads it: a former colleague's
-// company is one they left.
-//
-// The alias is emp rather than r: the row-scope clause a caller composes
-// alongside this one is recognized by its "r." tokens, and a second
-// relationship in scope under that name reads as the first.
-var participantEmployerArm = `EXISTS (
-		    SELECT 1 FROM activity_participant ap
-		      JOIN relationship emp ON emp.contact_id = ap.contact_id
-		        AND ` + employment.CurrentMembershipSQL("emp") + `
-		        AND ` + employment.InPlaceForSQL("emp", "a") + `
-		        AND ` + relationshipmark.ContactNotMarkedSQL("emp.contact_id") + `
-		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
-
-// participantEntry is where companyReach's participant branch starts: every
-// activity an employee of the account is on, for participantEmployerArm to
-// decide.
-var participantEntry = `SELECT a.id, e0.company_id FROM relationship e0
-		    JOIN activity_participant p0 ON p0.contact_id = e0.contact_id
-		    JOIN activity a ON a.id = p0.activity_id
-		    WHERE e0.company_id = %s AND e0.kind = 'employment'
-		      AND ` + relationshipmark.ContactNotMarkedSQL("e0.contact_id") + ` AND `
-
-// activityReachesCompany is the walk as a PREDICATE, for a query that aliases
-// activity as a. operand is what each arm compares its company id against: a
-// single bind or ANY(array).
-//
-// It is a membership test against companyReach rather than an `EXISTS` per arm.
-// Correlated `EXISTS` joined by `OR` leave Postgres walking activity
-// newest-first, so a quiet account costs the whole table. The set starts from
-// the account, at the price of building a busy account's whole set first.
-func activityReachesCompany(operand string) string {
-	return "a.id IN (SELECT reach.activity_id FROM (" + companyReach(operand) + ") reach)"
-}
-
-// CompanyReachSet is the same walk as a SET: the body of a derived table producing
-// one (activity_id, company_id) row per account an activity reaches.
-//
-// The predicate above answers "does this activity reach account X" and takes
-// the account as a bind. A producer scanning the whole workspace has the
-// opposite question — it holds an activity and needs the accounts — so it
-// cannot use the predicate at all.
-//
-// THREE ARMS, NOT THE PREDICATE'S FOUR. The predicate also reaches through a
-// participant's employer; this set does not, and the difference is the point
-// rather than a lag. This set is what a SIGNAL is filed through, and the note
-// below already draws the line it sits on: a timeline showing something is
-// arguably being helpful, a signal filed against that account is a claim
-// nobody made. Somebody Cc'd on a message is weaker evidence than somebody the
-// message was filed against, and filing against every Cc'd contact's employer
-// would put claims on accounts that were never in the conversation.
-//
-// TestTheReachSetDoesNotFileThroughParticipants holds the split, so collapsing
-// it is a decision somebody makes rather than a line they add.
-//
-// DISTINCT collapses an activity that reaches one account through several arms
-// (its own link and its deal's, say) to one row, so a caller counting messages
-// is not counting links. An activity that reaches TWO accounts is two rows on
-// purpose: whether that is an ambiguity to refuse or a fact to file twice is
-// the caller's ruling, not this fragment's.
-//
-// No entity_type filter: the activity_link_shape CHECK already guarantees
-// exactly one of the three id columns is set per row, and the predicate omits
-// it for the same reason.
-//
-// Every caller runs this fragment inside its workspace-bound transaction.
-//
-// The employment arm reaches only mail sent while the edge was in place
-// (employment.InPlaceForSQL). Mail from someone's previous job is therefore not
-// filed against their employer today. An edge with no date stays unbounded.
-// For those, the extractor's one-account rule carries the weight: a contact
-// with two live employers makes their conversations ambiguous and skipped.
+// CompanyReachSet attributes signals through links only. A copied participant
+// makes an activity relevant to an account's history without filing it there.
 func CompanyReachSet() string {
-	return sprintf(`SELECT DISTINCT l.activity_id, o.company_id AS company_id
-		    %s
-		    CROSS JOIN LATERAL (VALUES (l.company_id), (d.company_id),
-		                              (r.company_id)) AS o(company_id)
-		    WHERE o.company_id IS NOT NULL`, companyArms)
+	return storekit.CompanyActivityLinkAttribution()
 }
 
 // ActivityWithinProject is the ONE spelling of "this activity belongs to the
