@@ -62,9 +62,9 @@ func TestACachedHomeAnswerIsServedToItsReaderUntilTheFenceMoves(t *testing.T) {
 	}
 }
 
-// A read that began before its reader's write and stores after it would hand
-// the reader the day as it was before they acted.
-func TestAnAnswerComputedBeforeItsReadersWriteIsNeverServed(t *testing.T) {
+// A read that began before its reader's write and stores after it must not
+// pass as current. It stays marked behind the write.
+func TestAnAnswerComputedBeforeItsReadersWriteIsNeverServedAsCurrent(t *testing.T) {
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -79,13 +79,13 @@ func TestAnAnswerComputedBeforeItsReadersWriteIsNeverServed(t *testing.T) {
 	if err := homecache.Store(ctx, c, e.Rep1, homecache.Worklist, "home", stamp, nil, crmcontracts.Worklist{}); err != nil {
 		t.Fatal(err)
 	}
-	if served(ctx, t, c, e.Rep1, homecache.Worklist) {
-		t.Error("an answer stamped before the reader's write was served")
+	if _, standing, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home"); err != nil || !hit || !standing.Written {
+		t.Errorf("an answer stamped before the reader's write: hit %v, written %v (err %v); want kept and marked behind the write", hit, standing.Written, err)
 	}
 
 	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "today")
-	if !served(ctx, t, c, e.Rep1, homecache.Worklist) {
-		t.Error("an answer stamped after the write was not served")
+	if _, standing, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home"); err != nil || !hit || standing.Written {
+		t.Errorf("an answer stamped after the write: hit %v, written %v (err %v); want kept and current", hit, standing.Written, err)
 	}
 }
 
@@ -205,9 +205,9 @@ func TestAnAnswerNearTheEndOfItsLifeIsServedAndReadAgainBehindIt(t *testing.T) {
 	if reads != 1 {
 		t.Fatalf("read again %d times behind the served answer, want once", reads)
 	}
-	kept, age, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home")
-	if err != nil || !hit || kept.View == nil || *kept.View != crmcontracts.WorklistViewToday || age > time.Minute {
-		t.Errorf("after the refresh the kept answer is %+v aged %s (hit %v, err %v), want the fresh one", kept, age, hit, err)
+	kept, standing, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home")
+	if err != nil || !hit || kept.View == nil || *kept.View != crmcontracts.WorklistViewToday || standing.Age > time.Minute {
+		t.Errorf("after the refresh the kept answer is %+v aged %s (hit %v, err %v), want the fresh one", kept, standing.Age, hit, err)
 	}
 }
 
@@ -358,4 +358,96 @@ func homeCacheReads(t *testing.T, read homecache.Read, outcome string) int {
 	}
 	t.Fatalf("no %s series in:\n%s", prefix, out.String())
 	return 0
+}
+
+// serveToday serves the Home worklist from c, counting how often it is read
+// fresh. The fake page is "today", the kept one "decisions".
+func serveToday(ctx context.Context, t *testing.T, c *homecache.Cache, reader ids.UUID, reads *int) (crmcontracts.Worklist, bool) {
+	t.Helper()
+	fresh := func(context.Context) (crmcontracts.Worklist, error) {
+		*reads++
+		return crmcontracts.Worklist{View: new(crmcontracts.WorklistViewToday)}, nil
+	}
+	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake page starts no walk, which Serve reads as nil
+	got, stale, err := homecache.Serve(ctx, c, reader, homecache.Worklist, "home", fresh, noWalk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got, stale
+}
+
+func TestAReadersWriteLeavesTheKeptDayServedStaleAndReadsItAgainBehind(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
+	if err := c.Forget(ctx, []ids.UUID{e.Rep1}); err != nil {
+		t.Fatal(err)
+	}
+
+	reads := 0
+	got, stale := serveToday(ctx, t, c, e.Rep1, &reads)
+	if !stale || got.View == nil || *got.View != "decisions" {
+		t.Fatalf("after the reader's write Home served %+v (stale %v), want the kept day flagged stale", got, stale)
+	}
+	c.Settle()
+	if reads != 1 {
+		t.Fatalf("read again %d times behind the stale day, want once", reads)
+	}
+	got, stale = serveToday(ctx, t, c, e.Rep1, &reads)
+	if stale || got.View == nil || *got.View != crmcontracts.WorklistViewToday || reads != 1 {
+		t.Errorf("after the refresh Home served %+v (stale %v, %d reads), want the refreshed day, current, from the cache", got, stale, reads)
+	}
+}
+
+func TestAReceiptBehindAReadersWriteIsReadFresh(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	keep(ctx, t, c, e.Rep1, homecache.Magic, nil, "decisions")
+	if err := c.Forget(ctx, []ids.UUID{e.Rep1}); err != nil {
+		t.Fatal(err)
+	}
+	reads := 0
+	fresh := func(context.Context) (crmcontracts.Worklist, error) {
+		reads++
+		return crmcontracts.Worklist{}, nil
+	}
+	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake page starts no walk, which Serve reads as nil
+	if _, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Magic, "home", fresh, noWalk); err != nil || stale || reads != 1 {
+		t.Errorf("a receipt behind a write: stale %v, %d fresh reads (err %v); want it read fresh once", stale, reads, err)
+	}
+}
+
+// A stale day is a copy of what the reader could see before. When their reach
+// narrows (a record moves to a colleague, a team membership ends) it is never
+// shown, even marked stale.
+func TestAStaleDayIsNeverServedAcrossAChangeInWhoMayReadWhat(t *testing.T) {
+	changes := map[string]func(*testing.T, *Env, ids.UUID){
+		"a record leaves the reader's reach": func(t *testing.T, e *Env, contact ids.UUID) {
+			e.WsExec(t, `UPDATE contact SET owner_id = $1 WHERE id = $2`, e.Rep2, contact)
+		},
+		"the reader leaves their team": func(t *testing.T, e *Env, _ ids.UUID) {
+			e.WsExec(t, `DELETE FROM team_membership WHERE user_id = $1`, e.Rep1)
+		},
+	}
+	for name, change := range changes {
+		t.Run(name, func(t *testing.T) {
+			e := Setup(t)
+			c := homecache.New(e.Pool)
+			ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+			contact := e.SeedContact(t, "Moves away", &e.Rep1)
+			keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
+			if err := c.Forget(ctx, []ids.UUID{e.Rep1}); err != nil {
+				t.Fatal(err)
+			}
+			change(t, e, contact)
+
+			reads := 0
+			got, stale := serveToday(ctx, t, c, e.Rep1, &reads)
+			if stale || reads != 1 || got.View == nil || *got.View != crmcontracts.WorklistViewToday {
+				t.Errorf("%s: Home served %+v (stale %v, %d fresh reads), want one fresh read and no stale copy", name, got, stale, reads)
+			}
+		})
+	}
 }

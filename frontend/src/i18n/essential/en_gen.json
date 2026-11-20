@@ -2691,6 +2691,7 @@
   "brief.view.label": "Home view",
   "brief.view.morning": "Today",
   "brief.view.weekly": "Weekly",
+  "brief.updating": "Updating…",
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",

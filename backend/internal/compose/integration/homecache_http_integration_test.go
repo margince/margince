@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const homeWorklistPath = "/v1/worklist?scope=mine&filter=all&relationships=omit&view=today&limit=100"
@@ -229,9 +228,9 @@ func TestAnUnchangedWorklistComesBackAs304AndNoSharedCacheKeepsIt(t *testing.T) 
 	}
 
 	overdueTask(t, e, admin, "Chase the signed order")
-	if err := homecache.New(e.Pool).Forget(
-		principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)),
-		[]ids.UUID{admin}); err != nil {
+	// The kept day is dropped outright: a reader's write only marks it behind, and
+	// this case is about the tag of a day that changed.
+	if _, err := e.Owner.Exec(context.Background(), `DELETE FROM home_read_cache WHERE reader_id = $1`, admin); err != nil {
 		t.Fatal(err)
 	}
 	if status, header, body = worklistAnswer(t, e, etag); status != http.StatusOK || header.Get("ETag") == etag ||

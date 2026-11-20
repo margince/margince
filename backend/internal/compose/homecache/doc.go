@@ -19,8 +19,11 @@
 //
 // An answer served in its last minute of Life, or past it, is read again behind
 // it. So a reader who keeps Home open does not wait on its expiry. A refresh
-// that fails is not tried again for a minute. The reader's own writes drop
-// their answers (Forget), so what they do shows at once. That covers the writes that emit no event and no audit row.
+// that fails is not tried again for a minute. The reader's own writes mark
+// their answers as behind (Forget). The next day read serves the kept day at
+// once, flagged stale, and reads it again behind. A receipt is read fresh.
+// That covers the writes that emit no event and no audit row. The fence still
+// ends an answer, stale or not, on a permission change, team change or revocation.
 //
 // UNLIKE worklistsnap, an answer holds display text. That is safe only because
 // the fence moves before a revocation commits a reader out of reach. A copy
