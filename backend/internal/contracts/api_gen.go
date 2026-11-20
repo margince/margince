@@ -28040,6 +28040,7 @@ func (e WorklistView) Valid() bool {
 const (
 	WorklistBandBandBuildPipeline WorklistBandBand = "build_pipeline"
 	WorklistBandBandKeepMomentum  WorklistBandBand = "keep_momentum"
+	WorklistBandBandMore          WorklistBandBand = "more"
 	WorklistBandBandNow           WorklistBandBand = "now"
 	WorklistBandBandReview        WorklistBandBand = "review"
 )
@@ -28050,6 +28051,8 @@ func (e WorklistBandBand) Valid() bool {
 	case WorklistBandBandBuildPipeline:
 		return true
 	case WorklistBandBandKeepMomentum:
+		return true
+	case WorklistBandBandMore:
 		return true
 	case WorklistBandBandNow:
 		return true
@@ -28286,6 +28289,7 @@ func (e WorklistItemActions) Valid() bool {
 const (
 	WorklistItemBandBuildPipeline WorklistItemBand = "build_pipeline"
 	WorklistItemBandKeepMomentum  WorklistItemBand = "keep_momentum"
+	WorklistItemBandMore          WorklistItemBand = "more"
 	WorklistItemBandNow           WorklistItemBand = "now"
 	WorklistItemBandReview        WorklistItemBand = "review"
 )
@@ -28296,6 +28300,8 @@ func (e WorklistItemBand) Valid() bool {
 	case WorklistItemBandBuildPipeline:
 		return true
 	case WorklistItemBandKeepMomentum:
+		return true
+	case WorklistItemBandMore:
 		return true
 	case WorklistItemBandNow:
 		return true
@@ -73473,9 +73479,12 @@ type WorklistItem struct {
 	// scanning for "what must happen now" should not have to know which levels mean that.
 	//
 	// Derived from the level and the row's own subject, so it cannot disagree with the order:
-	// the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-	// interleave prospecting and deal follow-up. A client
-	// draws a heading when the band changes and never re-sorts.
+	// the queue arrives already sorted, and across the pages of one walk a band never comes
+	// back once a later band has started. `more` heads the rows past the ranked top, which a
+	// walk reaches after every ranked row. They follow each store's own date order, are not
+	// ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+	// `due_group` still say what each one is. A client draws a heading when the band changes
+	// and never re-sorts.
 	Band *WorklistItemBand `json:"band,omitempty"`
 
 	// Batch A group of routine decisions that read alike, standing on the queue as one row.
@@ -73879,9 +73888,12 @@ type WorklistItemActions string
 // scanning for "what must happen now" should not have to know which levels mean that.
 //
 // Derived from the level and the row's own subject, so it cannot disagree with the order:
-// the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-// interleave prospecting and deal follow-up. A client
-// draws a heading when the band changes and never re-sorts.
+// the queue arrives already sorted, and across the pages of one walk a band never comes
+// back once a later band has started. `more` heads the rows past the ranked top, which a
+// walk reaches after every ranked row. They follow each store's own date order, are not
+// ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+// `due_group` still say what each one is. A client draws a heading when the band changes
+// and never re-sorts.
 type WorklistItemBand string
 
 // WorklistItemBriefActions defines model for WorklistItem.BriefActions.

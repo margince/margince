@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { WorklistView } from "../../lib/worklistviews";
 import type { Worklist, WorklistItem } from "./worklist.queries";
-import { rowIdentity } from "./worklist.rowidentity";
 
 // The headings the page draws, and which rows sit under each. They come from
 // the server's `bands`, so a band with no rows can still say it is clear.
-// Each band draws once, where its first row falls in the server's order. Rows
-// a later page or the backlog tail names under it join that one heading.
+// A heading labels each consecutive run, so a loaded page only adds rows after
+// the last. The server never reopens a band; rows past its ranking come last,
+// under `more`.
 
 type Band = NonNullable<WorklistItem["band"]>;
 
@@ -19,30 +18,27 @@ export type BandSection = Readonly<{
 }>;
 
 /**
- * The page's sections, one per band, in the order the QUEUE first names each.
+ * The page's sections, in the QUEUE's order.
  *
- * A band the server declared but the loaded rows do not reach yields an empty
- * section in the server's own position. That is what lets the page say the
- * band is clear.
+ * Each is a run of consecutive rows naming one band. A band the server declared
+ * but the loaded rows do not reach yields an empty run in the server's own
+ * position, which is what lets the page say the band is clear.
  */
 export function bandSections(
   day: Worklist,
   queue: readonly WorklistItem[],
 ): BandSection[] {
   const runs: { band: Band; items: WorklistItem[] }[] = [];
-  const held = new Map<Band, WorklistItem[]>();
   for (const item of queue) {
     if (!item.band) {
       continue;
     }
-    const items = held.get(item.band);
-    if (items) {
-      items.push(item);
+    const open = runs.at(-1);
+    if (open?.band === item.band) {
+      open.items.push(item);
       continue;
     }
-    const opened = [item];
-    held.set(item.band, opened);
-    runs.push({ band: item.band, items: opened });
+    runs.push({ band: item.band, items: [item] });
   }
   // The server's bands, minus the ones whose work is no longer drawn here.
   //
@@ -89,30 +85,6 @@ function withDeclaredEmpties(
     out.push({ band, items: [] });
   }
   return [...out, ...runs.slice(at)];
-}
-
-/**
- * The rows in the order the page draws them: band by band, then the unbanded.
- * Rank numbers count this order, so they ascend down the page.
- */
-export function drawnOrder(
-  day: Worklist,
-  queue: readonly WorklistItem[],
-): readonly WorklistItem[] {
-  return [
-    ...bandSections(day, queue).flatMap((section) => section.items),
-    ...unbandedRows(queue),
-  ];
-}
-
-/** Each row's rank. Today draws by band, so its numbers count the drawn order. */
-export function positionsOf(
-  day: Worklist,
-  queue: readonly WorklistItem[],
-  view: WorklistView,
-): ReadonlyMap<string, number> {
-  const drawn = view === "today" ? drawnOrder(day, queue) : queue;
-  return new Map(drawn.map((item, at) => [rowIdentity(item), at] as const));
 }
 
 /**

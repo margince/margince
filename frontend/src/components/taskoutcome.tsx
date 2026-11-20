@@ -30,8 +30,12 @@ export function TaskOutcomeForm({
   const [selecting, setSelecting] = useState(filing === null);
   const record = filing === UNFILED ? null : filing;
   // Back or a new pick unmounts the form, and its remount mints a new
-  // idempotency key; so neither is offered while a log is out.
-  const logging = useIsMutating({ mutationKey: ["activity-log"] }) > 0;
+  // idempotency key. So neither is offered while the log is out, or once the
+  // activity exists and only its retry is left.
+  const [loggedOnly, setLoggedOnly] = useState(false);
+  const logging =
+    useIsMutating({ mutationKey: ["activity-log", record?.entity_id] }) > 0;
+  const held = logging || loggedOnly;
   const search = useCallback(async (q: string) => {
     const page = unwrap(
       await api.GET("/search", {
@@ -47,7 +51,7 @@ export function TaskOutcomeForm({
   return (
     <div className="form-stack">
       <div className="form-actions">
-        <Button variant="ghost" onClick={onBack} disabled={logging}>
+        <Button variant="ghost" onClick={onBack} disabled={held}>
           {t("tasks.log.back")}
         </Button>
       </div>
@@ -87,7 +91,7 @@ export function TaskOutcomeForm({
               <Button
                 variant="ghost"
                 onClick={() => setSelecting(true)}
-                disabled={logging}
+                disabled={held}
               >
                 {t(record ? "tasks.log.chooseRecord" : "tasks.log.pickRecord")}
               </Button>
@@ -109,6 +113,7 @@ export function TaskOutcomeForm({
               link.entity_id === record?.entity_id,
           )}
           onLogged={onLogged}
+          onLoggedOnly={() => setLoggedOnly(true)}
         />
       )}
     </div>

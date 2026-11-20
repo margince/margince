@@ -3,8 +3,16 @@
 
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
+import { en } from "../../i18n/en";
+import {
+  day,
+  renderWorklist,
+  row,
+  stub,
+  stubWalk,
+} from "../../testing/worklist.testkit";
 
 // The headings, and the band that holds nothing.
 //
@@ -113,45 +121,115 @@ describe("the headings follow the QUEUE", () => {
   });
 });
 
-describe("a band draws under one heading as more rows load", () => {
-  // Later pages and the backlog tail name bands the first page already drew.
-  // Each band keeps one heading where it first appears, and the numbers count
-  // the rows as drawn.
-  it("joins a band named again to its first heading", async () => {
-    const warn = vi.spyOn(console, "error").mockImplementation(() => {});
-    stub(
+describe("a page that loads only appends", () => {
+  const bands = [
+    { band: "now" as const, shown: 1 },
+    { band: "keep_momentum" as const, shown: 1 },
+    { band: "more" as const, shown: 2 },
+  ];
+  const ranks = () =>
+    [...document.querySelectorAll(".worklist-rank")].map((n) => n.textContent);
+
+  // Rows past the ranking arrive last under their own heading, so the rows a
+  // reader already saw keep their numbers and their headings.
+  it("keeps the ranks already drawn when the next page loads", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined);
+    stubWalk([
       day({
-        bands: [
-          { band: "now", shown: 2 },
-          { band: "keep_momentum", shown: 2 },
-        ],
+        bands,
         queue: [
           row({ id: "a", title: "Call the buyer", band: "now" }),
           row({ id: "b", title: "Send the quote", band: "keep_momentum" }),
-          row({ id: "c", title: "Answer the request", band: "now" }),
-          row({ id: "d", title: "Book the review", band: "keep_momentum" }),
         ],
-        summary: { urgent: 2, due: 0, lower_priority: 2, total: 4 },
+        summary: { urgent: 1, due: 0, lower_priority: 3, total: 4 },
+        next_cursor: "page-2",
+      }),
+      day({
+        bands,
+        queue: [
+          row({ id: "c", title: "An older overdue task", band: "more" }),
+          row({ id: "d", title: "Another overdue task", band: "more" }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 3, total: 4 },
+      }),
+    ]);
+    renderWorklist("en");
+
+    await screen.findByText("Send the quote");
+    expect(ranks()).toEqual(["1", "2"]);
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: en["list.loadMore"] }));
+
+    await screen.findByText("Another overdue task");
+    expect(ranks()).toEqual(["1", "2", "3", "4"]);
+    expect(headings()).toEqual(["Now", "Keep momentum", "More in your list"]);
+  });
+
+  // A frozen walk re-reads each row's facts, so a later page can still name a
+  // band drawn above. The page appends it rather than moving it up.
+  it("never renumbers drawn rows for a band a later page names again", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined);
+    stubWalk([
+      day({
+        bands,
+        queue: [
+          row({ id: "a", title: "Call the buyer", band: "now" }),
+          row({ id: "b", title: "Send the quote", band: "keep_momentum" }),
+        ],
+        summary: { urgent: 2, due: 0, lower_priority: 1, total: 3 },
+        next_cursor: "page-2",
+      }),
+      day({
+        bands,
+        queue: [row({ id: "c", title: "Became urgent", band: "now" })],
+        summary: { urgent: 2, due: 0, lower_priority: 1, total: 3 },
+      }),
+    ]);
+    renderWorklist("en");
+
+    await screen.findByText("Send the quote");
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: en["list.loadMore"] }));
+
+    const rankOf = async (title: string) =>
+      (await screen.findByText(title))
+        .closest(".worklist-row")
+        ?.querySelector(".worklist-rank")?.textContent;
+    expect(await rankOf("Became urgent")).toBe("3");
+    expect(await rankOf("Send the quote")).toBe("2");
+  });
+
+  // A due sub-heading opens inside the section that holds it, so an overdue
+  // row past the ranking never lands under the Later run above it.
+  it("starts the due runs again under the rows past the ranking", async () => {
+    stub(
+      day({
+        bands,
+        queue: [
+          row({
+            id: "a",
+            title: "Due next month",
+            band: "keep_momentum",
+            due_group: "later",
+          }),
+          row({
+            id: "b",
+            title: "An older overdue task",
+            band: "more",
+            due_group: "overdue",
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 2, total: 2 },
       }),
     );
     renderWorklist("en");
 
-    await screen.findByText("Book the review");
-    expect(headings()).toEqual(["Now", "Keep momentum"]);
-    const drawn = [...document.querySelectorAll(".worklist-queue-band")].map(
-      (band) => band.textContent ?? "",
-    );
-    expect(drawn[0]).toContain("Answer the request");
-    expect(drawn[1]).toContain("Send the quote");
-    expect(
-      [...document.querySelectorAll(".worklist-rank")].map(
-        (n) => n.textContent,
-      ),
-    ).toEqual(["1", "2", "3", "4"]);
-    expect(
-      warn.mock.calls.some((call) => String(call[0]).includes("same key")),
-    ).toBe(false);
-    warn.mockRestore();
+    const overdue = await screen.findByText("An older overdue task");
+    const section = overdue.closest(".worklist-queue-band");
+    expect(section?.querySelector("h3")?.textContent).toBe("More in your list");
+    expect(section?.querySelector("h4")).toBeNull();
   });
 });
 

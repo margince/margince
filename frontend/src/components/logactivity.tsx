@@ -98,6 +98,7 @@ export function LogActivityForm({
   sourceActivityId,
   taskToComplete,
   inheritSourceLinks = false,
+  onLoggedOnly,
 }: Readonly<{
   entityType?: EntityKind;
   entityId?: string;
@@ -110,6 +111,9 @@ export function LogActivityForm({
   sourceActivityId?: string;
   taskToComplete?: Readonly<{ id: string; version?: number }>;
   inheritSourceLinks?: boolean;
+  // Told when the activity is created but a step after it is left; a retry must
+  // keep this form, and its idempotency key, mounted.
+  onLoggedOnly?: () => void;
 }>) {
   const t = useT();
   const toast = useToast();
@@ -220,7 +224,10 @@ export function LogActivityForm({
       };
     },
     onError: (error, input) => {
-      if (error instanceof TaskLeftOpenError) setLogged(true);
+      if (error instanceof TaskLeftOpenError) {
+        setLogged(true);
+        onLoggedOnly?.();
+      }
       recordOf.keep(input.record);
       for (const queryKey of failedLogKeys(input, entityType, entityId))
         queryClient.invalidateQueries({ queryKey });
@@ -244,6 +251,7 @@ export function LogActivityForm({
       if (input.completion && logged.unattached.length > 0) {
         toast.show(t("tasks.log.leftOpen"), { tone: "danger", sticky: true });
         setLogged(true);
+        onLoggedOnly?.();
         return;
       }
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));

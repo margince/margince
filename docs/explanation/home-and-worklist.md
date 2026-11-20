@@ -80,7 +80,7 @@ The screen shows the facts that admit work, without a sentence for each comparis
 Deadline leads the steps after `level` because an agreed date runs out.
 
 Bands are headings drawn from the level and the source, never stored (`bands.go`). `bandOrder` is `now`,
-`keep_momentum`, `build_pipeline`, `review`. Crowding moves a row down and never up. Past the first group of waiting customers, the rest leave the `now` band but stay ahead of upkeep work. Without that rule a hundred
+`keep_momentum`, `build_pipeline`, `review`, `more`. Crowding moves a row down and never up. Past the first group of waiting customers, the rest leave the `now` band but stay ahead of upkeep work. Without that rule a hundred
 replies would fill the page with one kind of work.
 
 The classifiers hold the windows. `waitingStaleDays` (14, `classifywaiting.go`) moves an old wait out of the
@@ -185,8 +185,10 @@ A count that fails leaves the category a floor and does not fail the page.
 Once the ranked rows run out, the next pages load a tail (`attention/backlogtail.go`). Each cut source goes on
 from its own keyset, skipping the rows the ranked top already holds. The tail rows go through the same admission,
 scope, Done, view and filter steps as the top. The reader's Done marks are read for the tail rows too.
-Every tail row is marked crowded (`crowdedOut`), so none heads Now. The client draws each band once, where
-the queue first names it (`bandSections` in `worklist.bands.ts`), and a tail row joins its band's heading.
+
+Every tail row heads the last band, `more` (`pastTheRanking`), so a walk never reopens a band. Tail rows
+carry no `above_next`, and the ranked row above the first one claims no order over it. The client draws a
+heading per run and adds each page after the last, so a row already drawn keeps its place and its number.
 
 The cursor carries where each source stopped, and binds the same scope, owner, view and filter as before. The list ends when
 every source in the tail is read to its end. A source that fails while the tail loads is named in

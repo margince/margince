@@ -11,7 +11,6 @@ import type { WorklistView } from "../../lib/worklistviews";
 import {
   bandSections,
   canReportEmptyBands,
-  positionsOf,
   unbandedRows,
 } from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
@@ -140,7 +139,9 @@ export function WorklistBody({
     // list that starts at 4 and skips 5 cannot tell a correct number from a
     // broken one. A rank answers "where in this list", and the day's own order
     // is what put the rows in these lists.
-    positions: positionsOf(day, queue, view),
+    positions: new Map(
+      queue.map((item, at) => [rowIdentity(item), at] as const),
+    ),
     owner,
     // The resolved selection, not the raw state. The pane falls back to the
     // first row when the reader has chosen nothing. A highlight reading the
@@ -292,7 +293,7 @@ export function WorklistBody({
                   and not its place within its heading. */}
                     {bandSections(day, queue).map((section) => (
                       <QueueBand
-                        key={section.band}
+                        key={`${section.band}:${section.items[0]?.id ?? ""}`}
                         section={section}
                         canReportEmpty={canReportEmptyBands(hasMore)}
                         rows={QueueRows}

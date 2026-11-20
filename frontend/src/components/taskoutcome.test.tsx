@@ -93,6 +93,40 @@ describe("the outcome of a task filed on no record", () => {
     );
   });
 
+  it("keeps Back held once the note exists and only the task is left open", async () => {
+    const user = userEvent.setup();
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "POST /activities": createdActivity,
+        "GET /activities/t1": () => jsonResponse(unfiled),
+        "PATCH /activities/t1": () =>
+          jsonResponse({ title: "unavailable", status: 503 }, 503),
+      },
+      captured,
+    );
+    render(
+      <TaskOutcomeForm task={unfiled} onLogged={() => {}} onBack={() => {}} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Log without a record" }),
+    );
+    await user.type(await screen.findByLabelText("Subject *"), "Renewed");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await screen.findByText(
+      /The activity is logged and can no longer be changed/,
+    );
+    expect(screen.getByRole("button", { name: "Back" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    expect(
+      captured.filter((entry) => entry.key === "POST /activities"),
+    ).toHaveLength(1);
+  });
+
   it("goes back to the task's actions", async () => {
     const user = userEvent.setup();
     stubApi({});

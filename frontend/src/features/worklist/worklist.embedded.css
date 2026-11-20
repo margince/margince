@@ -105,10 +105,9 @@
   margin-block: var(--space-3) var(--space-2);
 }
 
-/* The kind chip heads the work it labels, so a long kind reads whole and the
-   title keeps the card's width. The verbs stand beside the work only from the
-   width the queue page uses for the same move (worklist.row.css, 70rem): below
-   it a row with several verbs left its title a few words a line. */
+/* The kind chip heads the work it labels, so a long kind reads whole. The verbs
+   sit under the work, so the title and its caption keep the card's width; from
+   70rem, the width worklist.row.css uses for the same move, they stand beside it. */
 .worklist-embedded .worklist-list > li > .worklist-row {
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--space-3);

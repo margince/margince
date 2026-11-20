@@ -134,15 +134,14 @@ func (s *Service) withTail(
 	above := s.aboveTheTail(ranking)
 	page.dealsAbove = dealsReported(ranking, above)
 	tail, rest, failed := s.backlogTail(ctx, page, limit-len(shown), from, above)
-	return append(shown, crowdedOut(tail)...), rest, failed
+	return append(shown, pastTheRanking(tail)...), rest, failed
 }
 
-// crowdedOut marks every tail row crowded. The tail holds what a bounded lane
-// left out of the ranking. Crowding keeps each one out of the Now band, as it
-// does a ranked row past its source's lead group (bandOfRow).
-func crowdedOut(tail []ranked) []ranked {
+// pastTheRanking marks the tail's rows as read in store order, not ranked. They
+// head their own last band and explain no order (renderInOrder).
+func pastTheRanking(tail []ranked) []ranked {
 	for i := range tail {
-		tail[i].crowded = true
+		tail[i].pastRanking = true
 	}
 	return tail
 }

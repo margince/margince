@@ -174,9 +174,9 @@
 }
 
 /* The dot ends the fact before it, as a timeline head's does (composed.css),
-   so a line that wraps never opens on a dot. */
+   so a line that wraps never opens on a dot; a screen reader hears no dot. */
 .worklist-row-facts-line > :has(+ *)::after {
-  content: "·";
+  content: "·" / "";
   margin-inline-start: var(--space-2);
 }
 

@@ -32,11 +32,30 @@ describe("a row's verbs leave the title its width", () => {
     expect(drawer).toEqual(page);
   });
 
+  // The Brief hides some captions, which still count as siblings; its dot rule
+  // must skip the captions its hide rule hides, and no others.
+  it("puts no dot before a caption the Brief hides", () => {
+    const css = sheet("../brief/brief.feed.css");
+    const hidden = [
+      ...(
+        /((?:\.brief-triage-lead [^,{]+,\s*)+[^,{]+)\{\s*display: none;/.exec(
+          css,
+        )?.[1] ?? ""
+      ).matchAll(/\.(worklist-row-(?:about|when|host|facts))\b/g),
+    ].map((m) => m[1]);
+    const skipped = /:not\(([^)]*)\):has\(\s*~ :not\(([^)]*)\)/.exec(css);
+    const names = (list = "") =>
+      list.split(",").map((part) => part.trim().replace(/^\./, ""));
+    expect(hidden.length).toBeGreaterThan(0);
+    expect(names(skipped?.[1]).sort()).toEqual([...hidden].sort());
+    expect(names(skipped?.[2]).sort()).toEqual([...hidden].sort());
+  });
+
   it("never opens a wrapped caption line on its separator", () => {
     const css = sheet("worklist.row.css");
     expect(css).not.toMatch(/\.worklist-row-facts-line > \* \+ \*::before/);
     expect(css).toMatch(
-      /\.worklist-row-facts-line > :has\(\+ \*\)::after\s*\{\s*content: "·";/,
+      /\.worklist-row-facts-line > :has\(\+ \*\)::after\s*\{\s*content: "·" \/ "";/,
     );
   });
 });

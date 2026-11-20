@@ -281,7 +281,7 @@ A band you have cleared still shows its heading and says so, but only when the w
 
 Inside a band, work due tomorrow, this week or later has its own heading. Late work and today's work sit under the band heading, because that is what the band already means.
 
-A row that does not fit moves down, never up. When one band fills, the rows that do not fit drop to Keep momentum. They never go before work that was already urgent.
+A row that does not fit moves down, never up. When one band fills, the rows that do not fit drop to Keep momentum. They never go before work that was already urgent. Past the ranked work, the rest of your list loads last under **More in your list**, earliest due date first. Those rows are not ranked, and a heading above them never comes back.
 
 ### Which mail is mine?
 Mine shows reply work addressed to you. Owning a contact does not make every message to that contact your work. Being copied alone does not assign a reply. Team shows shared work under the access you already have.
