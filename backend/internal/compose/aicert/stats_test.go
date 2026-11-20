@@ -71,3 +71,17 @@ func TestTheReliabilityCellPrintsTheWilsonInterval(t *testing.T) {
 		}
 	}
 }
+
+// A printed end on the edge is the edge exactly, on every CPU. Without it, 0
+// of 9 printed a lower bound of about -5e-18 on one machine and 0 on another,
+// and the committed report could not match both.
+func TestAPrintedIntervalAtTheEdgeIsTheEdgeExactly(t *testing.T) {
+	for _, runs := range []int{1, 2, 3, 9, 50} {
+		if got := ReliabilityIntervalOf(0, runs); got.Lower != 0 {
+			t.Errorf("0 of %d: lower = %v, want exactly 0", runs, got.Lower)
+		}
+		if got := ReliabilityIntervalOf(runs, runs); got.Upper != 1 {
+			t.Errorf("%d of %d: upper = %v, want exactly 1", runs, runs, got.Upper)
+		}
+	}
+}

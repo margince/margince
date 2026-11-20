@@ -44,6 +44,15 @@ func ReliabilityIntervalOf(passed, runs int) *ReliabilityInterval {
 		return nil
 	}
 	lower, upper := wilsonBounds(passed, runs)
+	// At 0 or all passes an end is exactly the edge. The formula leaves a
+	// rounding residue there that differs between CPUs, and the printed report
+	// must read the same on every machine.
+	if passed == 0 {
+		lower = 0
+	}
+	if passed == runs {
+		upper = 1
+	}
 	return &ReliabilityInterval{Lower: lower, Upper: upper}
 }
 
