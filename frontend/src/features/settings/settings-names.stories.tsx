@@ -6,7 +6,6 @@ import { userEvent, within } from "storybook/test";
 import { Panel } from "../../design-system/panel";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { SettingList } from "../../design-system/settingrow";
-import { useToast } from "../../design-system/toast";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -16,8 +15,7 @@ import {
 import { NameSettingRows, useAccountNames } from "./settings-names";
 
 function NameRows() {
-  const toast = useToast();
-  const names = useAccountNames(toast);
+  const names = useAccountNames();
   return (
     <Panel>
       <SettingList bleed="settings">

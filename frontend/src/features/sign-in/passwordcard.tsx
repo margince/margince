@@ -8,7 +8,14 @@ import { Panel } from "../../design-system/panel";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import type { MessageKey } from "../../i18n/en";
+import {
+  ProblemError,
+  problemCode,
+  problemFieldErrors,
+  problemMessageOf,
+  unwrap,
+} from "../../lib/problem";
 import { passwordFault } from "./passwordrule";
 
 // Changing your own password, from the account settings page.
@@ -32,6 +39,31 @@ import { passwordFault } from "./passwordrule";
 type ChangeFields = { current: string; next: string; confirm: string };
 
 const EMPTY: ChangeFields = { current: "", next: "", confirm: "" };
+
+// The server's details are English for API readers; this route's refusals,
+// top-level or on the new password, get the reader's language.
+const REFUSAL_COPY = new Map<string, MessageKey>([
+  ["current_password_invalid", "password.currentWrong"],
+  ["account_locked", "password.locked"],
+  ["unchanged", "password.unchanged"],
+  ["length", "password.length"],
+  ["blank", "password.blank"],
+  ["repeated", "password.repeated"],
+  ["email", "password.email"],
+]);
+
+function refusalKey(error: unknown): MessageKey | undefined {
+  if (!(error instanceof ProblemError)) return undefined;
+  const codes = [
+    problemCode(error.problem),
+    ...problemFieldErrors(error.problem).map((fault) => fault.code),
+  ];
+  for (const code of codes) {
+    const key = code === null ? undefined : REFUSAL_COPY.get(code);
+    if (key) return key;
+  }
+  return undefined;
+}
 
 /**
  * The password setting as one row: what it is, and the verb that changes it.
@@ -99,6 +131,13 @@ export function PasswordSettingRow({
       onChanged?.();
     },
   });
+
+  const refusalCopy = (error: unknown) => {
+    const key = refusalKey(error);
+    return key
+      ? t(key)
+      : problemMessageOf(error, t, t("password.errorGeneric"));
+  };
 
   const set = (key: keyof ChangeFields) => (value: string) =>
     setFields((current) => ({ ...current, [key]: value }));
@@ -181,7 +220,7 @@ export function PasswordSettingRow({
               tone="danger"
               title={t("password.changeFailedTitle")}
             >
-              {problemMessageOf(change.error, t, t("password.errorGeneric"))}
+              {refusalCopy(change.error)}
             </Callout>
           )}
           {/* Every password field carries a reveal, this one included. A

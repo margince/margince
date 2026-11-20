@@ -495,7 +495,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "scheduling.unavailable",
     // Human account holders whose full seats determine the shared allowance.
     "aiAdmin.fixed",
-    "aiAdmin.formula",
+    "aiAdmin.formula_one",
+    "aiAdmin.formula_other",
     "aiAdmin.floor",
     "aiAdmin.perUser",
     "aiAdmin.overrideHint",

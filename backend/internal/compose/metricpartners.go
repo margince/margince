@@ -84,8 +84,7 @@ func readReportingPartnerWon(ctx context.Context, tx pgx.Tx, frame crmcontracts.
 
 // readReportingPartnerActivity reads every live partner as it stands now, one
 // fact each, grouped active or inactive. Active is certified with an activity
-// on its company within partnerActiveWindow. company.last_activity_at is kept
-// by trigger; partner.last_contact_at has no writer, so it decides nothing.
+// on its company within partnerActiveWindow, read from company.last_activity_at.
 func readReportingPartnerActivity(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
 		return nil, noPipelineGap(frame), nil

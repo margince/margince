@@ -3180,8 +3180,11 @@ type Partner struct {
 	CreatedAt time.Time `json:"created_at"`
 
 	// GateMetrics Program gate metrics (certified seats, CSAT, ...).
-	GateMetrics   *map[string]interface{} `json:"gate_metrics,omitempty"`
-	LastContactAt *time.Time              `json:"last_contact_at,omitempty"`
+	GateMetrics *map[string]interface{} `json:"gate_metrics,omitempty"`
+
+	// LastContactAt Never set; always null. Kept so existing clients keep compiling.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	LastContactAt *time.Time `json:"last_contact_at,omitempty"`
 
 	// MarginTier The partner's margin tier; the allowed values are in the table's CHECK constraint.
 	MarginTier *PartnerMarginTier `json:"margin_tier,omitempty"`
@@ -3213,7 +3216,8 @@ type Partner struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	PartnerRole *PartnerPartnerRole `json:"partner_role,omitempty"`
 
-	// RelationshipHealth Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.
+	// RelationshipHealth Never set; always null. Kept so existing clients keep compiling.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	RelationshipHealth *string `json:"relationship_health,omitempty"`
 
 	// RelationshipStage The key of the stage from `/partner-stages` the partner stands on.

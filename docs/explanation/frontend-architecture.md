@@ -324,8 +324,9 @@ The app shell has a panel rail and a clear top bar over the theme ground, as
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
 
-The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`,
-`--overlayScrim`) is the one dark green field, the same in both themes. It is
+The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`) is the one
+dark green field, the same in both themes. `--overlayScrim` sits beside it but
+has a dark-theme value of its own. The green tint is lighter than the dark ground. The field is
 for what passes over the page, such as the tooltips the folded sidebar shows
 and the bar of the client surface. The sidebar is never on it. A new app panel styled from those tokens
 is styled in error.

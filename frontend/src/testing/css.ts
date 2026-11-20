@@ -24,6 +24,9 @@ export function withoutComments(text: string): string {
   );
 }
 
+/** The coarse-pointer floor every touch target stands at; no token carries it. */
+export const TOUCH_TARGET_PX = 44;
+
 /**
  * One CSS rule: its selector, its OWN declarations, and where it starts.
  *

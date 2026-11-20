@@ -67,6 +67,7 @@ const (
 	filterAiWritten           = "ai_written"
 	filterIndustry            = "industry"
 	filterSizeBand            = "size_band"
+	filterDormancy            = "dormancy"
 	filterSource              = "source"
 	filterOrigin              = "origin"
 	filterSLAState            = "sla_state"
@@ -131,6 +132,7 @@ var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
 	filterPartnerKind:         storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Partner.Kind = v }),
 	filterPartnerStage:        storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Partner.Stage = v }),
 	filterPartnerStageMeaning: storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Partner.Meaning = v }),
+	filterDormancy:            storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Dormancy = v }),
 }
 
 // Partner lists by kind, stage, stage meaning and certification, the dials GET

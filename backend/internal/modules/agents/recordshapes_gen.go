@@ -93,6 +93,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "ai_written", Type: "boolean"},
 		{Name: "captured_by_kind", Type: "string", Enum: []string{"human", "agent", "connector", "system"}},
 		{Name: "domain", Type: "string"},
+		{Name: "dormancy", Type: "string"},
 		{Name: "extension_relationship_type", Type: "string"},
 		{Name: "id", Type: "string"},
 		{Name: "include_anchor", Type: "boolean"},

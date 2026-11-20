@@ -99,8 +99,8 @@ export function captureRefusalOf(
  * mail connection, not a calendar. Unanswered reads as none, because a drawer
  * offered on a guess would open onto a refusal.
  */
-export function useMailboxConnected(): boolean {
-  const connectors = useConnectors();
+export function useMailboxConnected(enabled = true): boolean {
+  const connectors = useConnectors({ enabled });
   return (connectors.data?.data ?? []).some(
     (connection) =>
       connection.status === "connected" && isMailbox(connection.provider),

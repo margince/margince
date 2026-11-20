@@ -144,7 +144,8 @@ func validateRetentionAction(scope RetentionScope, action string) error {
 	}
 }
 
-// retainDaysCeiling is a century, in days.
+// RetainDaysCeiling is a century, in days, mirrored by the frontend's
+// RETAIN_DAYS.max (gates/frontendretaindays_test.go).
 //
 // The selectors read a policy as `now() - make_interval(days => retain_days)`,
 // and Postgres answers "timestamp out of range" somewhere past two million
@@ -153,7 +154,7 @@ func validateRetentionAction(scope RetentionScope, action string) error {
 // A century is the product line. A record older than that is past any records
 // regime a business answers to. The way to keep records indefinitely is to
 // leave the policy disabled, not to name a window nothing reaches.
-const retainDaysCeiling = 36500
+const RetainDaysCeiling = 36500
 
 // validateRetainDays refuses a window that would act on a record as soon as it
 // exists, and one no pass could evaluate.
@@ -168,13 +169,13 @@ func validateRetainDays(days int) error {
 			Message: "retain_days must be at least 1 — a zero-day window would act on a record the moment it is created",
 		}
 	}
-	if days > retainDaysCeiling {
+	if days > RetainDaysCeiling {
 		return PolicyFieldError{
 			Field: fieldRetainDays, Code: codeInvalidRetainDays,
 			Message: fmt.Sprintf(
 				"retain_days must be at most %d (a century) — a longer window is one the retention pass "+
 					"cannot evaluate; to keep records indefinitely, leave the policy disabled",
-				retainDaysCeiling,
+				RetainDaysCeiling,
 			),
 		}
 	}

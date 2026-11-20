@@ -3,6 +3,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { useUnsavedGuard } from "../../components/unsaved";
 import { Button, EmptyState, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -104,6 +105,14 @@ function draftChanged(
   );
 }
 
+// Held by the page's guard with no saver: a new Admin grant needs its typed
+// confirmation, which only this panel's own Save asks for.
+function useUnsavedGrants(canManage: boolean, dirty: boolean): boolean {
+  const unsaved = canManage && dirty;
+  useUnsavedGuard(unsaved);
+  return unsaved;
+}
+
 // The map waiting on the typed confirmation is held as it was when Save was
 // pressed, so the dialog confirms what the admin read.
 function useGrantCommit(
@@ -174,6 +183,7 @@ export function GroupRoleGrants({
   const lockReasonId = lock.disabled ? lockId : undefined;
   const draft = Object.fromEntries(rows.map((row) => [row.group, row.role]));
   const dirty = draftChanged(rows, initial);
+  const unsaved = useUnsavedGrants(canManage, dirty);
   const { confirming, setConfirming, write, commit } = useGrantCommit(
     save,
     initial,
@@ -282,8 +292,7 @@ export function GroupRoleGrants({
         )
       }
       actions={
-        canManage &&
-        dirty && (
+        unsaved && (
           <div className="group-grants-actions">
             <Button
               variant="primary"

@@ -220,7 +220,7 @@ var Declared = map[string][]string{
 	"GET /v1/commissions/{id}":                                                 {},
 	"GET /v1/commitments":                                                      {"assignee_id", "limit", "project_id"},
 	"GET /v1/communication-reviews/{id}":                                       {},
-	"GET /v1/companies":                                                        {"ai_written", "captured_by_kind", "cursor", "domain", "extension_relationship_type", "id", "include_anchor", "include_archived", "industry", "lifecycle", "limit", "list_id", "owner_id", "owner_team_id", "partner_kind", "partner_stage", "partner_stage_meaning", "q", "relationship_type", "size_band", "sort", "source_id", "source_system", "tag_id", "tag_mode", "unassigned"},
+	"GET /v1/companies":                                                        {"ai_written", "captured_by_kind", "cursor", "domain", "dormancy", "extension_relationship_type", "id", "include_anchor", "include_archived", "industry", "lifecycle", "limit", "list_id", "owner_id", "owner_team_id", "partner_kind", "partner_stage", "partner_stage_meaning", "q", "relationship_type", "size_band", "sort", "source_id", "source_system", "tag_id", "tag_mode", "unassigned"},
 	"GET /v1/companies/for-address":                                            {"email"},
 	"GET /v1/companies/{id}":                                                   {},
 	"GET /v1/companies/{id}/360":                                               {"project_id"},

@@ -82,6 +82,7 @@ func (a *assembly) readStateStrip() error {
 		strip.Account.Lifecycle = crmcontracts.Company360StateStripAccountLifecycle(*lc)
 	}
 	strip.Account.RelationshipTypes = accountRelationshipTypes(a.out.Company.RelationshipTypes)
+	strip.Dormancy = in.dormancy.wire()
 
 	if in.timeline {
 		strip.Engagement = new(struct {

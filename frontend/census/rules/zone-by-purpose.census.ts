@@ -542,6 +542,14 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins browserZone()'s answer and its UTC fallback by pretending to be in a named zone.",
   },
   {
+    file: "format/timezoneoptions.ts",
+    why: "The table of renamed IANA zones names each zone as data, so the list shows today's city and still finds the old name.",
+  },
+  {
+    file: "design-system/timezoneselect.test.tsx",
+    why: "Finds zones in the list by their IANA id and a former name, which needs both names spelled out.",
+  },
+  {
     file: "features/voice-knowledge/adddocument.test.tsx",
     why: "Installation-settings fixture: the company timezone the document form reads back.",
   },

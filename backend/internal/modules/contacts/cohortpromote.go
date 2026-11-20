@@ -487,7 +487,7 @@ func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (in
 		if !live {
 			return nil
 		}
-		planted, err = plantDomainEmployment(ctx, tx, owed.Domain, owed.CompanyID)
+		planted, err = s.plantDomainEmploymentAndAsk(ctx, tx, owed.Domain, owed.CompanyID)
 		return err
 	})
 	if err != nil {

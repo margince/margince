@@ -33,6 +33,12 @@
 #   scripts/dev.sh snapshot [slug]            # copy this stack's db to its template
 #   scripts/dev.sh restore  [slug]            # put the db back as the template holds it
 set -euo pipefail
+
+# Build with -trimpath so worktrees share one Go build cache; CI keeps the paths.
+case " ${GOFLAGS:-} " in
+	*" -trimpath "*) ;;
+	*) [ -n "${CI:-}" ] || export GOFLAGS="${GOFLAGS:+$GOFLAGS }-trimpath" ;;
+esac
 # Runtime state (logs, pids, claims) lives under dev_state_root below, one
 # directory per machine rather than per worktree — keep everything this script
 # writes owner-only.

@@ -29,7 +29,7 @@ func plantedRepository(t *testing.T) (string, map[string]string) {
 
 func TestAReadOfAnUntrackedEntryIsReportedAsUndescribed(t *testing.T) {
 	pkg, plantedNames := plantedRepository(t)
-	findings, err := undeclaredReads(strings.NewReader("getenv TREE_DIGEST_BUILD\nopen ../../../build/out.json\n"), pkg, plantedNames)
+	findings, err := undeclaredReads(strings.NewReader("getenv TREE_DIGEST_BUILD\nopen ../../../build/out.json\n"), pkg, plantedNames, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestAReadOfAnUntrackedEntryIsReportedAsUndescribed(t *testing.T) {
 
 func TestAReadOutsideTheModuleWithoutItsDigestIsReported(t *testing.T) {
 	pkg, plantedNames := plantedRepository(t)
-	findings, err := undeclaredReads(strings.NewReader("# test log\nopen ../../../docs/page.md\n"), pkg, plantedNames)
+	findings, err := undeclaredReads(strings.NewReader("# test log\nopen ../../../docs/page.md\n"), pkg, plantedNames, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func TestADeclaredReadAndReadsTheCacheSeesAreNotReported(t *testing.T) {
 		{"git's own bookkeeping", "stat ../../../.git\n"},
 		{"a relative read after a chdir into the module", "chdir ../..\nopen internal/thing/x.go\n"},
 	} {
-		findings, err := undeclaredReads(strings.NewReader(tc.log), pkg, plantedNames)
+		findings, err := undeclaredReads(strings.NewReader(tc.log), pkg, plantedNames, nil)
 		if err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
@@ -80,7 +80,7 @@ func TestLocatingTheRepositoryFromANestedModuleIsNotReported(t *testing.T) {
 		t.Fatal(err)
 	}
 	findings, err := undeclaredReads(strings.NewReader("stat ../../.git\nstat ../../../.git\n"), pkg,
-		map[string]string{"backend": "TREE_DIGEST_BACKEND"})
+		map[string]string{"backend": "TREE_DIGEST_BACKEND"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,11 +90,30 @@ func TestLocatingTheRepositoryFromANestedModuleIsNotReported(t *testing.T) {
 }
 
 func TestACensusOverAnEmptyDirectoryReadsNothing(t *testing.T) {
-	findings, read, err := census(t.TempDir(), map[string]string{})
+	findings, read, err := census(t.TempDir(), map[string]string{}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if read != 0 || len(findings) != 0 {
 		t.Errorf("an empty log directory read %d logs with %d findings, want none — main's floor is what refuses it", read, len(findings))
+	}
+}
+
+func TestAReadOfAnUntrackedFileUnderADigestedEntryIsReportedEvenWhenDeclared(t *testing.T) {
+	pkg, plantedNames := plantedRepository(t)
+	repo := filepath.Join(pkg, "..", "..", "..")
+	for name, content := range map[string]string{"docs/tracked.md": "x", "docs/stray.md": "y"} {
+		if err := os.WriteFile(filepath.Join(repo, name), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tracked := map[string]bool{"docs": true, "docs/tracked.md": true}
+	log := "getenv TREE_DIGEST_DOCS\nopen ../../../docs/tracked.md\nopen ../../../docs/stray.md\nstat ../../../docs/missing.md\n"
+	findings, err := undeclaredReads(strings.NewReader(log), pkg, plantedNames, tracked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) != 1 || !strings.Contains(findings[0], "docs/stray.md") || !strings.Contains(findings[0], "does not track") {
+		t.Errorf("reads of a tracked, an untracked and a missing file produced %q, want one finding about the untracked file", findings)
 	}
 }
