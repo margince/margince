@@ -59,6 +59,7 @@ function review(over: Partial<TeamWeeklyReview> = {}): TeamWeeklyReview {
         help_requested: 0,
         focus_kind: "strong_week",
         focus_label: "Fastest first response on the team",
+        patterns: [],
       },
       {
         user_id: "u-tobias",
@@ -71,6 +72,7 @@ function review(over: Partial<TeamWeeklyReview> = {}): TeamWeeklyReview {
         help_requested: 1,
         focus_kind: "help_requested",
         focus_label: "Asked for help on the Hansa renewal",
+        patterns: [],
       },
     ],
     agenda: ["u-tobias", "u-lena"],
