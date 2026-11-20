@@ -48,8 +48,7 @@ func TestSessionSlotsAreSharedAndReturned(t *testing.T) {
 // returns as it came waits as a snooze within the reschedule bounds, and
 // spends none of the job's tries.
 func TestAJobToldNotNowSleepsAndSpendsNoTry(t *testing.T) {
-	// Instants no clock, skewed or not, comes near: the wait is capped or
-	// floored whatever the time is.
+	// Instants no skewed clock comes near, so the wait is capped or floored.
 	far := time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC)
 	other := errors.New("the database went away")
 	for name, tc := range map[string]struct {

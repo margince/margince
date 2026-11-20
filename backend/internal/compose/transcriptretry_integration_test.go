@@ -35,11 +35,11 @@ func (e *transcriptEnv) tryTranscript(t *testing.T, first int, brains ...complet
 	for i, brain := range brains {
 		worker := &transcriptProposeWorker{language: installationLanguage(e.Pool), activities: e.Activities, log: quiet}
 		worker.proposer = NewTranscriptProposer(e.Pool, brain, e.svc, now, quiet)
-		row := &rivertype.JobRow{Attempt: first + i, MaxAttempts: oneOffJobMaxAttempts}
 		ctx, cancel := context.WithCancel(context.Background())
-		if timeout, ok := brain.(*timingOutBrain); ok {
-			timeout.cancel = cancel
+		if hook, ok := brain.(*interruptedBrain); ok && hook.before == nil {
+			hook.before = cancel
 		}
+		row := &rivertype.JobRow{Attempt: first + i, MaxAttempts: oneOffJobMaxAttempts}
 		errs = append(errs, worker.Work(ctx, &river.Job[TranscriptProposeArgs]{JobRow: row, Args: args}))
 		cancel()
 	}
@@ -50,22 +50,24 @@ func (e *transcriptEnv) tryTranscript(t *testing.T, first int, brains ...complet
 	return read, errs
 }
 
-// timingOutBrain is a model call the job's timeout cut off: the try's context
-// is cancelled before the worker hands the reading back.
-type timingOutBrain struct{ cancel context.CancelFunc }
+// interruptedBrain runs before, then fails the call with err. With no before,
+// tryTranscript cancels the try's context: the job's timeout cut the call off.
+type interruptedBrain struct {
+	before func()
+	err    error
+}
 
-func (b *timingOutBrain) Complete(context.Context, model.Request) (model.Response, error) {
-	b.cancel()
-	return model.Response{}, context.Canceled
+func (b *interruptedBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	b.before()
+	return model.Response{}, b.err
 }
 
 // River repeats a failed try a second later, inside the claim's lease. The
-// repeat must find a reading it can claim. Else it ends as success, and the
-// rep watches "reading…" with no job behind it.
+// repeat must find a reading it can claim, or "reading…" has no job behind it.
 func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) {
 	e := setupTranscript(t)
 	for name, failing := range map[string]completer{
-		"model failed": cannedBrain{err: ai.ErrAllTiersFailed}, "try timed out": &timingOutBrain{},
+		"model failed": cannedBrain{err: ai.ErrAllTiersFailed}, "try timed out": &interruptedBrain{err: context.Canceled},
 	} {
 		read, errs := e.tryTranscript(t, 1, failing, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 		if errs[0] == nil || errs[1] != nil || read.Status != activities.TranscriptReadDone {
@@ -74,62 +76,35 @@ func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) 
 	}
 }
 
-// The last try leaves no job to hand the reading back to. It closes the
-// reading with a sentence, and the rep can press Read again.
-func TestATranscriptReadingWhoseLastTryFailedSaysSo(t *testing.T) {
+// The last try closes its reading with a reason chosen from the cause. The
+// budget stop sleeps; a close another claim refuses sleeps one lease.
+func TestATranscriptReadingsLastTry(t *testing.T) {
 	e := setupTranscript(t)
-	for brain, code := range map[completer]string{
-		cannedBrain{err: ai.ErrAllTiersFailed}: activities.TranscriptFailureUnanswered,
-		&timingOutBrain{}:                      activities.TranscriptFailureUnfinished,
-	} {
-		read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, brain)
-		if errs[0] == nil || read.Status != activities.TranscriptReadFailed || failureCode(read) != code {
-			t.Errorf("err = %v, reading %q coded %q; want the fault on the job and the reading failed as %q",
-				errs[0], read.Status, failureCode(read), code)
-		}
-	}
-}
-
-func failureCode(read activities.TranscriptRead) string {
-	if read.Outcome == nil || read.Outcome.Failure == nil {
-		return ""
-	}
-	return read.Outcome.Failure.Code
-}
-
-// The budget stop is not a failed try. Even on its last try the job sleeps
-// until the next budget window, and the reading waits queued.
-func TestATranscriptReadingToldNotNowSleepsInsteadOfFailing(t *testing.T) {
-	e := setupTranscript(t)
-	deferral := &ai.BudgetDeferralError{Task: ai.TaskTranscriptPropose, NextAttemptAt: clocktest.Now(t).Add(240 * time.Hour)}
-	read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, cannedBrain{err: deferral})
-	if _, snoozed := errors.AsType[*river.JobSnoozeError](errs[0]); !snoozed || read.Status != activities.TranscriptReadQueued {
-		t.Errorf("err = %v, reading %q; want a snooze, which spends no try, and the reading queued", errs[0], read.Status)
-	}
-}
-
-// stolenClaimBrain fails the call after another claim took the reading, so
-// the worker's release misses and its last-try close is refused.
-type stolenClaimBrain struct{ steal func() }
-
-func (b stolenClaimBrain) Complete(context.Context, model.Request) (model.Response, error) {
-	b.steal()
-	return model.Response{}, ai.ErrAllTiersFailed
-}
-
-// A last try that cannot close its reading keeps a job behind it: the job
-// sleeps one lease rather than ending with the reading left running.
-func TestALastTryThatCannotCloseItsReadingWaitsForIt(t *testing.T) {
-	e := setupTranscript(t)
-	brain := stolenClaimBrain{steal: func() {
+	steal := func() {
 		if _, err := e.owner.Exec(t.Context(), `UPDATE transcript_read SET started_at = started_at - interval '1 second'
 			WHERE activity_id = $1 AND status = 'running'`, e.activity.UUID); err != nil {
 			t.Errorf("taking the claim: %v", err)
 		}
-	}}
-	read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, brain)
-	snooze, snoozed := errors.AsType[*river.JobSnoozeError](errs[0])
-	if !snoozed || snooze.Duration != activities.TranscriptReadLease || read.Status != activities.TranscriptReadRunning {
-		t.Errorf("err = %v, reading %q; want a snooze of one lease while the other claim holds the reading", errs[0], read.Status)
+	}
+	deferral := &ai.BudgetDeferralError{Task: ai.TaskTranscriptPropose, NextAttemptAt: clocktest.Now(t).Add(240 * time.Hour)}
+	for name, tc := range map[string]struct {
+		brain        completer
+		status, code string
+		snooze       bool
+	}{
+		"model failed":  {cannedBrain{err: ai.ErrAllTiersFailed}, activities.TranscriptReadFailed, activities.TranscriptFailureUnanswered, false},
+		"try timed out": {&interruptedBrain{err: context.Canceled}, activities.TranscriptReadFailed, activities.TranscriptFailureUnfinished, false},
+		"budget stop":   {cannedBrain{err: deferral}, activities.TranscriptReadQueued, "", true},
+		"claim taken":   {&interruptedBrain{before: steal, err: ai.ErrAllTiersFailed}, activities.TranscriptReadRunning, "", true},
+	} {
+		read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, tc.brain)
+		_, snoozed := errors.AsType[*river.JobSnoozeError](errs[0])
+		code := ""
+		if read.Outcome != nil && read.Outcome.Failure != nil {
+			code = read.Outcome.Failure.Code
+		}
+		if errs[0] == nil || snoozed != tc.snooze || read.Status != tc.status || code != tc.code {
+			t.Errorf("%s: err = %v, reading %q coded %q; want snooze %v, %q coded %q", name, errs[0], read.Status, code, tc.snooze, tc.status, tc.code)
+		}
 	}
 }

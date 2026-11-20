@@ -253,21 +253,18 @@ func TestADocumentReadingIsHandedBackAndClosedOnItsLastTry(t *testing.T) {
 	blob := blobstore.NewMemory()
 	store := activities.NewStore(env.DB()).WithBlobstore(blob)
 	for _, tc := range []struct {
-		name     string
-		err      error
-		timeout  bool
-		attempt  int
-		status   string
-		detailed string
+		name                     string
+		err                      error
+		timeout                  bool
+		attempt                  int
+		status, detailedContains string
 	}{
 		{"timed out with tries left", context.Canceled, true, 1, activities.ExtractionReadQueued, ""},
 		{"model failed on the last try", ai.ErrAllTiersFailed, false, oneOffJobMaxAttempts, activities.ExtractionReadFailed, "did not answer"},
 		{"timed out on the last try", context.Canceled, true, oneOffJobMaxAttempts, activities.ExtractionReadFailed, "could not finish"},
 	} {
-		attachment, err := store.UploadAttachment(env.Admin(), activities.AttachmentInput{
-			EntityType: "deal", EntityID: deal,
-			Filename: tc.name + ".txt", ContentType: "text/plain", Content: strings.NewReader("Price: 10 EUR."),
-		})
+		in := activities.AttachmentInput{EntityType: "deal", EntityID: deal, Filename: tc.name + ".txt", ContentType: "text/plain", Content: strings.NewReader("Price: 10 EUR.")}
+		attachment, err := store.UploadAttachment(env.Admin(), in)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -281,13 +278,9 @@ func TestADocumentReadingIsHandedBackAndClosedOnItsLastTry(t *testing.T) {
 			brain.cancel = cancel
 		}
 		worker := newDocumentExtractWorker(env.Pool, brain, blob, discardLogger())
-		workErr := worker.Work(ctx, &river.Job[DocumentExtractArgs]{
-			JobRow: &rivertype.JobRow{Attempt: tc.attempt, MaxAttempts: oneOffJobMaxAttempts},
-			Args: DocumentExtractArgs{
-				Workspace: env.WS, AttachmentID: ids.UUID(attachment.Id),
-				ExtractionReadID: reading.ID, RequestedBy: "human:" + env.AdminUser.String(),
-			},
-		})
+		args := DocumentExtractArgs{Workspace: env.WS, AttachmentID: ids.UUID(attachment.Id), ExtractionReadID: reading.ID, RequestedBy: "human:" + env.AdminUser.String()}
+		row := &rivertype.JobRow{Attempt: tc.attempt, MaxAttempts: oneOffJobMaxAttempts}
+		workErr := worker.Work(ctx, &river.Job[DocumentExtractArgs]{JobRow: row, Args: args})
 		cancel()
 		after, err := store.GetExtractionRead(env.Admin(), ids.UUID(attachment.Id), reading.ID)
 		if err != nil {
@@ -297,9 +290,8 @@ func TestADocumentReadingIsHandedBackAndClosedOnItsLastTry(t *testing.T) {
 		if after.StatusDetail != nil {
 			detail = *after.StatusDetail
 		}
-		if workErr == nil || after.Status != tc.status || !strings.Contains(detail, tc.detailed) {
-			t.Errorf("%s: err = %v, reading %q %q; want the fault on the job and the reading %q saying %q",
-				tc.name, workErr, after.Status, detail, tc.status, tc.detailed)
+		if workErr == nil || after.Status != tc.status || !strings.Contains(detail, tc.detailedContains) {
+			t.Errorf("%s: err = %v, reading %q %q; want the fault on the job and the reading %q saying %q", tc.name, workErr, after.Status, detail, tc.status, tc.detailedContains)
 		}
 	}
 }

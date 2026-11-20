@@ -223,14 +223,10 @@ func TestAnAgentStepTheRouterDeclinedReachesTheRunnerAsItsReason(t *testing.T) {
 	if err := meter.Record(ctx, ai.Usage{Task: ai.TaskAgentLoop, Tier: ai.TierCheapCloud, TokensIn: 10}); err != nil {
 		t.Fatalf("spending the allowance: %v", err)
 	}
-	cfg, err := ai.ParseRouting([]byte("profile: eu_hosted\ntiers:\n  cheap_cloud: {provider: fake, model: m}\n" +
-		"embeddings: {provider: fake, model: e, dimensions: 8}\n"))
-	if err != nil {
-		t.Fatalf("ParseRouting: %v", err)
-	}
-	router, err := ai.NewRouter(cfg, meter, ai.StaticBudget(5), nil, false, nil)
-	if err != nil {
-		t.Fatalf("NewRouter: %v", err)
+	cfg, err := ai.ParseRouting([]byte("profile: eu_hosted\ntiers:\n  cheap_cloud: {provider: fake, model: m}\nembeddings: {provider: fake, model: e, dimensions: 8}\n"))
+	router, routerErr := ai.NewRouter(cfg, meter, ai.StaticBudget(5), nil, false, nil)
+	if err != nil || routerErr != nil {
+		t.Fatalf("binding the router: %v, %v", err, routerErr)
 	}
 	brain := agentBrain{router: router, companyContext: newCompanyContextProvider(nil)}
 	_, _, err = brain.Complete(ctx, model.Request{Messages: []model.Message{{Role: "user", Content: "go"}}})
@@ -240,8 +236,7 @@ func TestAnAgentStepTheRouterDeclinedReachesTheRunnerAsItsReason(t *testing.T) {
 	if err := agentStepRefusal(&ai.ProviderDownError{Provider: "p", Health: model.HealthDown}); !errors.Is(err, runner.ErrProviderBlocked) {
 		t.Errorf("blocked provider = %v, want the runner's blocked-provider refusal", err)
 	}
-	tripped := &ai.ProviderDownError{Provider: "p", Health: model.HealthDown, Cause: ai.ErrProviderUnavailable}
-	if err := agentStepRefusal(tripped); errors.Is(err, runner.ErrProviderBlocked) {
+	if err := agentStepRefusal(&ai.ProviderDownError{Health: model.HealthDown, Cause: ai.ErrProviderUnavailable}); errors.Is(err, runner.ErrProviderBlocked) {
 		t.Errorf("the call that tripped the provider = %v, want it left a failed call: it was made", err)
 	}
 }
