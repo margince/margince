@@ -35,7 +35,8 @@ type NoticeRequest struct {
 	// their rights, as an ingest is. A send with a caller leaves it empty.
 	ActAs UserID
 	// Record is what the notice is about. The body the reader sees is a link to
-	// it. What a reader may see of the record is decided when they open it.
+	// it. For a kind the unit declared, the link opens the unit's screen at that
+	// kind's View. What a reader may see of the record is decided when they open it.
 	// No personal data is copied into the notice.
 	Record RecordRef
 	// Subject is one short line of the unit's own words.
@@ -54,7 +55,8 @@ func NoticeRecordTypes() []string {
 	return []string{contactRecord, string(KindCompany), string(KindDeal)}
 }
 
-// RecordRef names one core record. Type is one of NoticeRecordTypes.
+// RecordRef names one record. Type is one of NoticeRecordTypes, or a record
+// kind the sending unit declared, spelled `ext:<unit>:<kind>`.
 type RecordRef struct {
 	Type string
 	ID   string

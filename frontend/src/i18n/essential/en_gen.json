@@ -3749,6 +3749,7 @@
   "ob.field.register_number": "Register number",
   "ob.field.industry": "Industry",
   "ob.field.history": "Company history",
+  "extUnits.openNamed": "Settings for {name}",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGdocs": "Google Docs",

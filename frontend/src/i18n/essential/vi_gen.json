@@ -3749,6 +3749,7 @@
   "ob.field.register_number": "Số đăng ký kinh doanh",
   "ob.field.industry": "Ngành",
   "ob.field.history": "Lịch sử công ty",
+  "extUnits.openNamed": "Cài đặt cho {name}",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGdocs": "Google Docs",

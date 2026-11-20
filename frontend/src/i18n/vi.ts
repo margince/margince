@@ -11263,6 +11263,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.action.openDeal": "Mở deal",
   "notifications.action.openLead": "Mở lead",
   "notifications.action.openProject": "Mở dự án",
+  "notifications.action.openExtensionRecord": "Mở bản ghi",
   "notifications.action.review": "Xem lại yêu cầu",
   "notifications.action.systemHealth": "Mở Tình trạng hệ thống",
   "notifications.markAllFailed": "Không thể đánh dấu các thông báo là đã đọc",
@@ -12138,6 +12139,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // Các đơn vị bản cài đặt này ghép vào, đặt trên trang cài đặt giữ loại thông tin
   // đăng nhập mà đơn vị đó dùng.
   "extUnits.openNamed": "Cài đặt cho {name}",
+  "extUnits.openApp": "Mở {name}",
   "extUnits.user.title": "Tài khoản khác",
   "extUnits.user.sub":
     "Các tiện ích bản cài đặt này cung cấp, đăng nhập với tư cách của bạn. Mỗi tiện ích chỉ thuộc về bạn, và ngắt kết nối chỉ ảnh hưởng tới bạn.",
@@ -14671,6 +14673,37 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Người gửi là hạ tầng thư, không phải công ty đang làm việc cùng",
   "captureActivity.reason.transactional_prefix":
     "Người gửi có vẻ là trình gửi thư tự động, không phải một người",
+  "captureActivity.filing.core": "CRM đã gắn thư vào giao dịch: {reason}",
+  "captureActivity.filing.core.moved":
+    "CRM đã chuyển liên kết giao dịch: {reason}",
+  "captureActivity.filing.core.retracted":
+    "CRM đã rút lại liên kết giao dịch: {reason}",
+  "captureActivity.filing.basis.project": "dự án của thư",
+  "captureActivity.filing.basis.thread": "một thư trước đó trong chuỗi",
+  "captureActivity.filing.basis.sole_open_deal":
+    "giao dịch mở duy nhất của công ty",
+  "captureActivity.filing.basis.stakeholder":
+    "một bên liên quan trong giao dịch",
+  "captureActivity.filing.basis.named_stakeholder":
+    "một bên liên quan được nêu trong thư",
+  "captureActivity.filing.basis.ambiguous":
+    "nhiều giao dịch phù hợp, đã hỏi đồng nghiệp",
+  "captureActivity.filing.ext.linked":
+    "{unit} đã gắn thư vào một giao dịch: {reason}",
+  "captureActivity.filing.ext.none":
+    "{unit} giữ thư ngoài mọi giao dịch: {reason}",
+  "captureActivity.filing.ext.ambiguous":
+    "{unit} đã thu hẹp các giao dịch có thể thuộc về: {reason}",
+  "captureActivity.filing.ext.parties_changed":
+    "{unit} đã đổi liên hệ và công ty mà thư được đọc theo: {reason}",
+  "captureActivity.filing.ext.failed":
+    "{unit} bị lỗi nên thư chưa được gắn và sẽ thử lại sau",
+  "captureActivity.filing.ext.ignored":
+    "Câu trả lời của {unit} bị bỏ qua: {reason}",
+  "captureActivity.filing.ext.moved":
+    "{unit} đã chuyển liên kết giao dịch: {reason}",
+  "captureActivity.filing.ext.retracted":
+    "{unit} đã rút lại liên kết giao dịch: {reason}",
   "captureActivity.outcome.deferred_capped": "Không vào hàng đợi",
   "captureActivity.outcome.deferred_sent": "Đã gửi đi kiểm tra",
   "captureActivity.resolution.pending": "Vẫn đang chờ",
@@ -15366,6 +15399,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.objects": "Đối tượng phân quyền",
   "extAccess.brings.routes": "Đường dẫn",
   "extAccess.brings.jobs": "Tác vụ nền",
+  "extAccess.brings.needs": "Dùng từ lõi",
+  "extAccess.need.models": "Mô hình AI",
+  "extAccess.need.objects": "Lưu trữ tệp",
   "extAccess.brings.none": "Không có",
   "extAccess.noObjects":
     "Đơn vị này không đăng ký đối tượng phân quyền nào, nên không có gì để cấp.",

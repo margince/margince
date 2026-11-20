@@ -11586,6 +11586,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.action.openDeal": "Deal öffnen",
   "notifications.action.openLead": "Lead öffnen",
   "notifications.action.openProject": "Projekt öffnen",
+  "notifications.action.openExtensionRecord": "Datensatz öffnen",
   "notifications.action.review": "Anfrage prüfen",
   "notifications.action.systemHealth": "Systemzustand öffnen",
   "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
@@ -12476,6 +12477,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // die Art von Zugangsdaten trägt, mit der die jeweilige Einheit konfiguriert
   // wird.
   "extUnits.openNamed": "Einstellungen für {name}",
+  "extUnits.openApp": "{name} öffnen",
   "extUnits.user.title": "Weitere Konten",
   "extUnits.user.sub":
     "Erweiterungen dieser Installation, die sich in deinem Namen anmelden. Jede ist privat, und das Trennen betrifft nur dich.",
@@ -15085,6 +15087,36 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Absendeadresse gehört zur E-Mail-Infrastruktur, nicht zu einem Unternehmen, mit dem du arbeitest",
   "captureActivity.reason.transactional_prefix":
     "Die Absendeadresse wirkt wie ein automatisierter Versand, nicht wie eine Person",
+  "captureActivity.filing.core": "Vom CRM einem Deal zugeordnet: {reason}",
+  "captureActivity.filing.core.moved":
+    "Das CRM hat die Deal-Zuordnung verschoben: {reason}",
+  "captureActivity.filing.core.retracted":
+    "Das CRM hat die Deal-Zuordnung zurückgenommen: {reason}",
+  "captureActivity.filing.basis.project": "das Projekt der Mail",
+  "captureActivity.filing.basis.thread": "eine frühere Mail im Thread",
+  "captureActivity.filing.basis.sole_open_deal":
+    "der einzige offene Deal des Unternehmens",
+  "captureActivity.filing.basis.stakeholder": "ein Beteiligter am Deal",
+  "captureActivity.filing.basis.named_stakeholder":
+    "ein in der Mail genannter Beteiligter",
+  "captureActivity.filing.basis.ambiguous":
+    "mehrere Deals passen, ein Mitglied wurde gefragt",
+  "captureActivity.filing.ext.linked":
+    "{unit} hat sie einem Deal zugeordnet: {reason}",
+  "captureActivity.filing.ext.none":
+    "{unit} hat sie von jedem Deal ferngehalten: {reason}",
+  "captureActivity.filing.ext.ambiguous":
+    "{unit} hat die möglichen Deals eingegrenzt: {reason}",
+  "captureActivity.filing.ext.parties_changed":
+    "{unit} hat Kontakte und Unternehmen geändert, nach denen sie gelesen wurde: {reason}",
+  "captureActivity.filing.ext.failed":
+    "{unit} ist ausgefallen, deshalb bleibt die Mail unzugeordnet und wird später erneut versucht",
+  "captureActivity.filing.ext.ignored":
+    "Die Antwort von {unit} wurde ignoriert: {reason}",
+  "captureActivity.filing.ext.moved":
+    "{unit} hat die Deal-Zuordnung verschoben: {reason}",
+  "captureActivity.filing.ext.retracted":
+    "{unit} hat die Deal-Zuordnung zurückgenommen: {reason}",
   "captureActivity.outcome.deferred_capped": "Nicht geplant",
   "captureActivity.outcome.deferred_sent":
     "Zur Prüfung der Absendeadresse gesendet",
@@ -15803,6 +15835,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.objects": "Berechtigungsobjekte",
   "extAccess.brings.routes": "Routen",
   "extAccess.brings.jobs": "Hintergrund-Jobs",
+  "extAccess.brings.needs": "Nutzt vom Kern",
+  "extAccess.need.models": "KI-Modelle",
+  "extAccess.need.objects": "Dateispeicher",
   "extAccess.brings.none": "Keine",
   "extAccess.noObjects":
     "Es gibt nichts zu vergeben, da diese Einheit keine Berechtigungsobjekte registriert.",

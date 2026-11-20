@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4545 |
+| Columns | 4546 |
 | Foreign keys | 634 |
 | Owning areas | 40 |
 
@@ -225,7 +225,7 @@ erDiagram
 | [`capture_sync_state`](capture.md#capture_sync_state) | capture | 11 | 0 |
 | [`capture_test_mailbox_sent`](capture.md#capture_test_mailbox_sent) | capture | 8 | 0 |
 | [`capture_thread_verdict`](capture.md#capture_thread_verdict) | capture | 16 | 0 |
-| [`capture_trace`](capture.md#capture_trace) | capture | 12 | 0 |
+| [`capture_trace`](capture.md#capture_trace) | capture | 13 | 0 |
 | [`channel_connection`](capture.md#channel_connection) | capture | 14 | 1 |
 | [`channel_provider`](compose.md#channel_provider) | compose | 5 | 2 |
 | [`chat_link`](chatlinks.md#chat_link) | chatlinks | 20 | 1 |

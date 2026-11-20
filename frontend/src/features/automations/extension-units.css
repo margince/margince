@@ -12,3 +12,10 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* The two ways out of a row sit together at its far edge. */
+.extunits-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+}

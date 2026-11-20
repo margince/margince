@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -513,7 +514,7 @@ func TestWorkerMailAuthorityAnswersFromItsRegistry(t *testing.T) {
 // so the connect surface keeps its declared 501.
 func TestNoMicrosoftAppRegistersNoMicrosoftConnector(t *testing.T) {
 	reg := NewCaptureRegistry(&pgxpool.Pool{}, fakeVault{}, CaptureConfig{})
-	registerMicrosoftConnectors(reg, nil, GraphConfig{}, nil)
+	registerMicrosoftConnectors(reg, nil, GraphConfig{}, nil, connector.BackfillTuning{})
 	for _, descriptor := range reg.Connectors() {
 		if descriptor.Name == providerGraph || descriptor.Name == providerGraphCal {
 			t.Errorf("%s was registered with no Microsoft app to run on", descriptor.Name)

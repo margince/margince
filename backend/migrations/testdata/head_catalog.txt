@@ -2759,6 +2759,7 @@ public.capture_trace.capture_trace_stage_outcome_check CHECK ((((stage = 'intern
 public.capture_trace.capture_trace_subject_check CHECK (((subject IS NULL) OR (char_length(subject) <= 300)))
 public.capture_trace.connector text NOT NULL gen=- def=-
 public.capture_trace.counterparty text gen=- def=-
+public.capture_trace.filing jsonb gen=- def=-
 public.capture_trace.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_trace.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_trace.outcome text NOT NULL gen=- def=-

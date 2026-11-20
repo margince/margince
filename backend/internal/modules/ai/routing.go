@@ -406,15 +406,14 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 }
 
 // UnboundLadderWarnings reports every task whose entire fallback ladder
-// has no bound tier in cfg.Tiers: a call for that task has nowhere to
+// has no bound tier in cfg.Tiers. A call for that task has nowhere to
 // route and is refused outright, not merely degraded. This is not a
-// startup error — a deployment legitimately narrows to only the
-// workloads it actually runs — but it must be loud: an operator should
-// read the gap off the boot log, not discover it from a refused call at
-// 3am. AllTasks()'s sorted order keeps the result deterministic.
+// startup error, because a deployment legitimately narrows to the
+// workloads it runs. It must be loud, so an operator reads the gap off
+// the boot log and not from a refused call at 3am. RoutedTasks()'s sorted order keeps the result deterministic.
 func (cfg RoutingConfig) UnboundLadderWarnings() []string {
 	var warnings []string
-	for _, task := range AllTasks() {
+	for _, task := range RoutedTasks() {
 		ladder := taskLadders[task]
 		bound := false
 		for _, tier := range ladder {

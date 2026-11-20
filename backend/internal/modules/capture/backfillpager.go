@@ -270,10 +270,14 @@ const (
 	backfillRateBackoffCap  = 30 * time.Minute
 )
 
-// backfillPageDelay is the wait between a committed page and the next one. The
-// admission slot already keeps an import from crowding out another, so a page
-// that finished starts the next at once.
-const backfillPageDelay time.Duration = 0
+// WithBackfillPageDelay sets the wait between a committed page and the next
+// one. The admission slot already keeps an import from crowding out another,
+// so the default is none: a page that finished starts the next at once. A
+// longer wait trades import speed for load on the database and the worker.
+func (r *Registry) WithBackfillPageDelay(d time.Duration) *Registry {
+	r.backfillPageDelay = max(0, d)
+	return r
+}
 
 // commitBackfillPage advances the cursor and remaining counters together.
 // Creation credits already belong to their domain transactions.
@@ -316,7 +320,7 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 				}
 				return retryWeatheredSyncTx(ctx, tx, backfillID)
 			}
-			return rescheduleBackfillTx(ctx, tx, backfillID, backfillPageDelay)
+			return rescheduleBackfillTx(ctx, tx, backfillID, r.backfillPageDelay)
 		}
 		return cancelReboundBackfillTx(ctx, tx, backfillID)
 	})
