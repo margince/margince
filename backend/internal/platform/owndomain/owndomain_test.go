@@ -133,3 +133,37 @@ func TestOfAddressReadsTheDomainAfterTheLastAt(t *testing.T) {
 		}
 	}
 }
+
+func TestParseDomainStoresOneFormForBothSpellings(t *testing.T) {
+	for _, in := range []string{"münchen.de", "MÜNCHEN.DE", "https://www.münchen.de/kontakt", "xn--mnchen-3ya.de", "müNchen.de."} {
+		got, err := ParseDomain(in)
+		if err != nil || got.String() != "xn--mnchen-3ya.de" {
+			t.Errorf("ParseDomain(%q) = %q, %v; want xn--mnchen-3ya.de", in, got, err)
+		}
+	}
+	if OfAddress("someone@münchen.de") != "xn--mnchen-3ya.de" || OfAddress("someone@xn--mnchen-3ya.de") != "xn--mnchen-3ya.de" {
+		t.Error("a sender at either spelling must fold to the stored domain")
+	}
+}
+
+func TestParseDomainRefusesWhatIsNotAHost(t *testing.T) {
+	for _, in := range []string{
+		"аpple.com",
+		"münchen",
+		"xn--mün.de",
+		"mün chen.de",
+		"-münchen.de",
+		"mün_chen.de",
+		"",
+	} {
+		if got, err := ParseDomain(in); err == nil {
+			t.Errorf("ParseDomain(%q) = %q, want a refusal", in, got)
+		}
+	}
+	if _, err := ParseDomain("пример.рф"); err != nil {
+		t.Errorf("a single-script Cyrillic domain is refused: %v", err)
+	}
+	if _, err := ParseDomain("日本語ひらがな.jp"); err != nil {
+		t.Errorf("Han and kana in one label are one script group: %v", err)
+	}
+}

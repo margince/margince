@@ -19,10 +19,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -165,7 +165,7 @@ func companyDomainClause(domain *string, includeArchived bool, arg func(any) int
 // page with nothing in it, not a request the surface should refuse: the
 // caller named an account by something, and no account has it.
 func foldDomainQuery(raw string) string {
-	parsed, err := values.ParseDomain(raw)
+	parsed, err := owndomain.ParseDomain(raw)
 	if err != nil {
 		return ""
 	}

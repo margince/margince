@@ -17,9 +17,9 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/geocode"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // comparisonSQL is closed over the operator constants above; compileLeaf
@@ -305,9 +305,8 @@ func scalarBoolOperand(value any, invalid func(string) error) (any, error) {
 // scalarDomainOperand folds a domain operand to the host the column stores.
 //
 // `https://www.acme.example/careers`, `WWW.Acme.Example` and `acme.example` are
-// one question, and values.ParseDomain is the answer the company list
-// already gives it — the same function on both surfaces, so the two answer the
-// same rows.
+// one question. owndomain.ParseDomain answers it for the company list too, so
+// both surfaces answer the same rows.
 //
 // Held by: TestADomainFilterAnswersTheSameAccountOnBothSurfaces
 // (backend/internal/compose/integration/domainleafparity_integration_test.go)
@@ -322,7 +321,7 @@ func scalarDomainOperand(value any, invalid func(string) error) (any, error) {
 	if !ok {
 		return nil, invalid("a domain")
 	}
-	parsed, err := values.ParseDomain(text)
+	parsed, err := owndomain.ParseDomain(text)
 	if err != nil {
 		return nil, invalid("a domain, or a URL one can be read from")
 	}
@@ -342,7 +341,7 @@ func inDomainOperand(raw []any, name string) ([]string, error) {
 				Message: "in on a domain field takes strings",
 			}
 		}
-		parsed, err := values.ParseDomain(text)
+		parsed, err := owndomain.ParseDomain(text)
 		if err != nil {
 			return nil, &PredicateError{
 				Field: name, Code: CodeFilterValueInvalid,

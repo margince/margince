@@ -19,10 +19,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -256,7 +256,7 @@ func leadDomain(key *string) string {
 	if key == nil {
 		return ""
 	}
-	domain, err := values.ParseDomain(*key)
+	domain, err := owndomain.ParseDomain(*key)
 	if err != nil {
 		return ""
 	}

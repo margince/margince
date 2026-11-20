@@ -24,6 +24,7 @@ import {
   useFieldEditor,
 } from "../../design-system/fieldeditdialog";
 import { Select } from "../../design-system/select";
+import { displayDomain } from "../../format/domaindisplay";
 import { useT } from "../../i18n";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { useCan, useCanWrite, useCanWriteRecord } from "../../lib/capability";
@@ -448,7 +449,7 @@ export function CompanyActionBadges({
 // we cannot parse is shown whole rather than silently dropped.
 export function displayHost(url: string): string {
   try {
-    return new URL(url).host.replace(/^www\./, "");
+    return displayDomain(new URL(url).host.replace(/^www\./, ""));
   } catch {
     return url;
   }
