@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package legalreviewdesk tells the seats that may answer a legal review that a
-// deal waits for one: an entry in each seat's approvals inbox, which the
-// approval notice lane announces in the app. Nothing is sent by email.
+// deal waits for one. Each gets an entry in their approvals inbox. The approval
+// notice lane announces it in the app, and nothing is sent by email.
 package legalreviewdesk
 
 import (
@@ -31,7 +31,7 @@ const (
 	actor       = "system:legal_review_desk"
 	summaryCode = "approval.legalReviewAsked"
 	targetType  = "legal_review"
-	objectName  = "legal_review"
+	objectName  = approvalsubject.ObjectLegalReview
 	identityKey = "review_id"
 	settledNote = "the legal review was answered or withdrawn"
 )

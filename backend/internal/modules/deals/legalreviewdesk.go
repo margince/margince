@@ -5,7 +5,7 @@ package deals
 
 // Telling the seats that may answer a legal review that one is waiting. Who they
 // are and how they are told belong to identity, notices and approvals, which this
-// module may not import, so compose injects the desk. Who among them may NOT
+// module may not import, so compose injects the desk. Who among them may not
 // answer is the review's own rule and is decided here.
 
 import (

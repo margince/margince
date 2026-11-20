@@ -5,9 +5,9 @@
 
 package legalreviewdesk_test
 
-// The legal review desk against a real roster and the real notice lane: each
-// reviewer gets one inbox entry and one in-app notice, a seat without the grants
-// gets neither, and settling the review clears both.
+// The legal review desk against a real roster and the real notice lane. Each
+// reviewer gets one inbox entry and one in-app notice. A seat without the grants
+// gets neither. Settling the review clears both.
 
 import (
 	"context"

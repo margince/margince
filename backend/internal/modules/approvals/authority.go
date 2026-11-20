@@ -104,9 +104,6 @@ const KindScheduledSendHeld = "scheduled_send_held"
 // already decided under it stay readable.
 const kindCommunicationReview = "communication_review"
 
-// objectLegalReview is the RBAC object a legal review is read and answered under.
-const objectLegalReview = "legal_review"
-
 // objectCommunicationException is the RBAC object directing a send answers to,
 // spelled here as identity's policy spells it.
 const objectCommunicationException = "communication_exception"
@@ -257,9 +254,8 @@ var decisionGrants = map[string][]DecisionGrant{
 	approvalsubject.KindContactShare: {{tableContact, principal.ActionUpdate}},
 	// Answering a due-date question writes the date onto the captured task.
 	approvalsubject.KindTaskDueDate: {{objectActivity, principal.ActionUpdate}},
-	// Answering a legal review needs the grants the review's own decision takes.
-	// The card decides nothing; a seat without them is not told about the review.
-	approvalsubject.KindLegalReviewRequest: {{objectLegalReview, principal.ActionRead}, {objectLegalReview, principal.ActionUpdate}},
+	// The card decides nothing; a seat needs the grants the review's own answer takes.
+	approvalsubject.KindLegalReviewRequest: {{approvalsubject.ObjectLegalReview, principal.ActionRead}, {approvalsubject.ObjectLegalReview, principal.ActionUpdate}},
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
 	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create

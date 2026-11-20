@@ -10,6 +10,9 @@ import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 // screen, and the card leaves the inbox when the review is answered or withdrawn.
 const KindLegalReviewRequest = "legal_review_request"
 
+// ObjectLegalReview is the RBAC object a legal review is read and answered under.
+const ObjectLegalReview = "legal_review"
+
 // LegalReviewRequest is that card. OwnerID is the reviewer it is for, and it
 // names the deal and the review but holds none of what the requester wrote.
 type LegalReviewRequest struct {
