@@ -459,7 +459,12 @@ function DockedDraft() {
 function SignOutBesideADock({
   signOut,
   withPage = true,
-}: Readonly<{ signOut: () => void; withPage?: boolean }>) {
+  save = savesAtOnce,
+}: Readonly<{
+  signOut: () => void;
+  withPage?: boolean;
+  save?: () => Promise<boolean>;
+}>) {
   return (
     <LocaleProvider>
       <UnsavedExits>
@@ -469,7 +474,7 @@ function SignOutBesideADock({
         </BesidePage>
         {withPage && (
           <UnsavedGuard address="first" onKeep={() => undefined}>
-            {() => <SaveableCard save={savesAtOnce} />}
+            {() => <SaveableCard save={save} />}
           </UnsavedGuard>
         )}
       </UnsavedExits>
@@ -562,6 +567,52 @@ describe("useExitAsking", () => {
 
     expect(dialog()).not.toBeNull();
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  // The composer can fill itself, from a voice draft, while the question is up.
+  const dockFills = () =>
+    fireEvent.change(screen.getByRole("textbox", { name: /Message/ }), {
+      target: { value: "Hi" },
+    });
+
+  it("takes Save away once a draft beside the page arrives while it asks", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn();
+    render(<SignOutBesideADock signOut={signOut} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+    expect(screen.getByRole("button", { name: "Save" })).toBeVisible();
+
+    dockFills();
+
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the session when a draft beside the page arrives while Save writes", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn();
+    let written: (saved: boolean) => void = () => undefined;
+    const save = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          written = resolve;
+        }),
+    );
+    render(<SignOutBesideADock signOut={signOut} save={save} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    dockFills();
+    written(true);
+
+    expect(
+      await screen.findByRole("button", { name: "Discard changes" }),
+    ).toBeVisible();
+    expect(save).toHaveBeenCalledTimes(1);
     expect(signOut).not.toHaveBeenCalled();
   });
 

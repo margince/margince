@@ -253,17 +253,11 @@ export function UnsavedGuard<Address extends string>({
   const asking = address !== shown.address && dirty;
 
   const exits = useContext(ExitContext);
-  // `savable` is false while a draft beside the page is unkept: Save would
-  // write the page and leave that draft to be lost.
-  const [exit, setExit] = useState<{
-    run: () => void;
-    savable: boolean;
-  } | null>(null);
+  const [exit, setExit] = useState<{ run: () => void } | null>(null);
   useLayoutEffect(() => {
     if (!exits) return;
     const ask: AskThen = (then) => {
-      const beside = exits.beside.current;
-      if (dirty || beside) setExit({ run: then, savable: !beside });
+      if (dirty || exits.beside.current) setExit({ run: then });
       else then();
     };
     return exits.holdAsk(ask);
@@ -274,7 +268,8 @@ export function UnsavedGuard<Address extends string>({
       {children(shown.address)}
       <LeaveQuestion
         open={asking || exit !== null}
-        savers={exit?.savable === false ? [] : registry.savers}
+        savers={registry.savers}
+        exitsBeside={exit !== null}
         onStay={
           exit ? () => setExit(null) : () => onKeep(shown.address, shown.depth)
         }
@@ -300,11 +295,16 @@ export function UnsavedGuard<Address extends string>({
 function LeaveQuestion({
   open,
   savers,
+  exitsBeside = false,
   onStay,
   onLeave,
 }: Readonly<{
   open: boolean;
   savers: readonly Saver[];
+  /** Sign out and other exits that also end the drafts beside the page. Save
+   *  writes only the page, so it is offered only while those are kept, and one
+   *  that arrives as Save writes holds the exit. */
+  exitsBeside?: boolean;
   onStay: () => void;
   onLeave: () => void;
 }>) {
@@ -312,7 +312,9 @@ function LeaveQuestion({
   const [saving, setSaving] = useState(false);
   const [refused, setRefused] = useState(false);
   const saveButton = useRef<HTMLButtonElement>(null);
-  if (savers.length === 0) {
+  const exits = useContext(ExitContext);
+  const besideHeld = useContext(BesideContext)?.dirty ?? false;
+  if (savers.length === 0 || (exitsBeside && besideHeld)) {
     return (
       <ConfirmModal
         open={open}
@@ -336,8 +338,8 @@ function LeaveQuestion({
     setRefused(false);
     const saved = await Promise.all(savers.map((saver) => saver()));
     setSaving(false);
-    if (saved.every(Boolean)) onLeave();
-    else setRefused(true);
+    if (!saved.every(Boolean)) setRefused(true);
+    else if (!(exitsBeside && exits?.beside.current)) onLeave();
   };
   return (
     <ConfirmModal
