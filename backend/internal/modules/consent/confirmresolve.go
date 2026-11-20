@@ -62,8 +62,8 @@ func (s *Store) ResolveConfirmToken(
 	var language, questionKey *string
 	var questionVersion *int
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		// A lead's link is live while the lead is. The only link a lead holds
-		// is a website lead's privacy notice.
+		// A lead's link is live while the lead is. A lead holds a privacy
+		// notice or a consent question, and no other kind.
 		err := tx.QueryRow(ctx, `
 			UPDATE confirm_token ct
 			   SET first_fetched_at = coalesce(ct.first_fetched_at, $2),
