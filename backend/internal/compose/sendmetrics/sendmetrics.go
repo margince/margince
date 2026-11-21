@@ -55,6 +55,8 @@ const (
 // caller was told about, such as the engine refusing the resumed message again.
 const (
 	confirmSent         = "sent"
+	confirmScheduled    = "scheduled"
+	confirmAlreadySent  = "already_sent"
 	confirmStale        = "stale_revision"
 	confirmWrongWarning = "wrong_warning"
 	confirmRefused      = "refused"
@@ -64,7 +66,7 @@ var (
 	outcomes = []string{outcomeQueued, outcomeScheduled, outcomeReview, outcomeRepair}
 	contexts = []string{contextRoutine, contextOutreach}
 	verdicts = []string{verdictAllowed, verdictRefused}
-	confirms = []string{confirmSent, confirmStale, confirmWrongWarning, confirmRefused}
+	confirms = []string{confirmSent, confirmScheduled, confirmAlreadySent, confirmStale, confirmWrongWarning, confirmRefused}
 )
 
 // decisionBounds are the decision histogram's upper bounds in seconds. The
@@ -176,11 +178,17 @@ func (c *collector) observeDecision(allowed bool, elapsed time.Duration) {
 // ObserveSendAnyway records what one Send anyway confirmation came to. A
 // server fault is no answer about the confirmation, and is not counted.
 func ObserveSendAnyway(err error) {
-	shared.observeSendAnyway(err)
+	shared.observeSendAnyway(err, confirmSent)
 }
 
-func (c *collector) observeSendAnyway(err error) {
-	result, counted := confirmationOf(err)
+// ObserveSendAnywayLater records a Send anyway that named a moment, which
+// schedules the message rather than sending it.
+func ObserveSendAnywayLater(err error) {
+	shared.observeSendAnyway(err, confirmScheduled)
+}
+
+func (c *collector) observeSendAnyway(err error, done string) {
+	result, counted := confirmationOf(err, done)
 	if !counted {
 		return
 	}
@@ -189,9 +197,12 @@ func (c *collector) observeSendAnyway(err error) {
 	c.anyway[result]++
 }
 
-func confirmationOf(err error) (string, bool) {
+func confirmationOf(err error, done string) (string, bool) {
 	if err == nil {
-		return confirmSent, true
+		return done, true
+	}
+	if _, sent := errors.AsType[*consent.MessageAlreadySentError](err); sent {
+		return confirmAlreadySent, true
 	}
 	if _, stale := errors.AsType[*consent.InstructionStaleError](err); stale {
 		return confirmStale, true

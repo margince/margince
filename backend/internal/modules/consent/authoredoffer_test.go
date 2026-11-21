@@ -94,6 +94,7 @@ func TestACarriedOverSubjectIsLeftForTheRecipientToSettle(t *testing.T) {
 		{"Re: Termin und Angebot", false, true},
 		{"AW: re:  termin und angebot", false, true},
 		{"WG: Termin und Angebot", false, true},
+		{"FW: Termin und Angebot", false, true},
 		{"Re: Termin und Angebot mit 20 % Rabatt", true, false},
 		{"Unser Angebot", true, false},
 	} {

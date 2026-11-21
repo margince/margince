@@ -86,6 +86,7 @@ function mount(
   rows: Send[],
   preview: PreviewFor = allowedPreview,
   mailboxes: readonly unknown[] = [],
+  routes: Readonly<Record<string, () => Response>> = {},
 ) {
   const calls: Call[] = [];
   vi.stubGlobal(
@@ -113,6 +114,8 @@ function mount(
         body,
         ifMatch: headers.get("If-Match"),
       });
+      const route = routes[`${method} ${url.pathname.replace(/^\/v1/, "")}`];
+      if (route) return route();
       if (url.pathname.endsWith("/cancel")) {
         return new Response(null, { status: 204 });
       }
@@ -255,8 +258,51 @@ it("offers the review a held message's refusal opened", async () => {
   expect(
     await screen.findByRole("button", { name: en["directSend.open"] }),
   ).toBeTruthy();
-  expect(screen.getByText(en["sched.held.confirmSendsNow"])).toBeTruthy();
+  expect(screen.getByText(en["sched.held.confirmChoosesWhen"])).toBeTruthy();
 });
+
+// The row says what the Send anyway came to: the message went, or another
+// tab had already sent it.
+it.each([
+  ["sent", 201, { id: "act-1" }, en["directSend.queued"]],
+  [
+    "already sent",
+    409,
+    { code: "already_sent", title: "Conflict", status: 409 },
+    en["directSend.alreadySent"],
+  ],
+])(
+  "tells the sender a held Send anyway was %s",
+  async (_case, status, body, said) => {
+    const reviewId = "019f7e65-fbf7-7114-b114-40af4af63af0";
+    const user = userEvent.setup();
+    mount(
+      [{ ...HELD, review_id: reviewId, review_actions: ["direct_send"] }],
+      allowedPreview,
+      [],
+      {
+        [`GET /communication-reviews/${reviewId}`]: () =>
+          Response.json({
+            id: reviewId,
+            state: "needs_context",
+            kind: "single",
+            reason_code: "consent_withdrawn",
+            refusals: [],
+            warning: { version: "override-v2", text: "The refusal stands." },
+          }),
+        [`POST /communication-reviews/${reviewId}/direct-send`]: () =>
+          Response.json(body, { status }),
+      },
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["directSend.open"] }),
+    );
+    await user.click(await screen.findByRole("checkbox"));
+    await user.type(screen.getByLabelText(/^explanation$/i), "They asked.");
+    await user.click(screen.getByRole("button", { name: /send email/i }));
+    expect(await screen.findByText(said)).toBeTruthy();
+  },
+);
 
 // The id alone is a pointer, never permission: without the server's action
 // the row offers nothing to press.
@@ -266,7 +312,7 @@ it("offers no confirm on a review the reader may only read", async () => {
   expect(
     screen.queryByRole("button", { name: en["directSend.open"] }),
   ).toBeNull();
-  expect(screen.queryByText(en["sched.held.confirmSendsNow"])).toBeNull();
+  expect(screen.queryByText(en["sched.held.confirmChoosesWhen"])).toBeNull();
 });
 
 it("counts the recipients it is not listing", async () => {
@@ -389,6 +435,24 @@ it("refuses to move a message to nowhere", async () => {
       .hasAttribute("disabled"),
   ).toBe(true);
   expect(calls.some((call) => call.method === "PATCH")).toBe(false);
+});
+
+it("refuses to move a message to a moment already past", async () => {
+  const user = userEvent.setup();
+  const { calls } = mount([WAITING]);
+  await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
+  const day = screen.getByRole("textbox", { name: /^New day for/ });
+  await user.clear(day);
+  await user.type(day, "02/09/2020");
+  await user.tab();
+  const save = screen.getByRole("button", { name: "Move message" });
+  expect(
+    save.hasAttribute("disabled") ||
+      save.getAttribute("aria-disabled") === "true",
+  ).toBe(true);
+  await user.click(save);
+  expect(calls.some((call) => call.method === "PATCH")).toBe(false);
+  expect(screen.getByText("Choose a time in the future.")).toBeTruthy();
 });
 
 it("asks before taking a message back, and sends nothing if the reader declines", async () => {
