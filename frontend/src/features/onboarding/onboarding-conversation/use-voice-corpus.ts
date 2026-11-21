@@ -15,7 +15,10 @@ import {
   pasteLabel,
   sourceRef,
 } from "../../../lib/voice-intake-core";
-import { removeSource } from "../../../lib/voice-sample-remove";
+import {
+  readCorpusSummary,
+  removeSource,
+} from "../../../lib/voice-sample-remove";
 import type {
   ConversationEvent,
   ConversationState,
@@ -167,10 +170,20 @@ export function useVoiceCorpus({
 
   const recordIngest = useCallback(
     (seq: number, outcome: Ingested, reactionKey: MessageKey) => {
+      const { ref, source, stats, summary: next } = outcome;
+      const newest = seq > appliedSummarySeq.current;
+      // The probe outlives this step, so Back finds the sample even if the
+      // reader left before the server answered.
+      patchProbe((old) => ({
+        summary: newest ? next : old.summary,
+        sources: [
+          ...old.sources.filter((stored) => stored.source_ref !== ref),
+          source,
+        ],
+      }));
       if (!mounted.current) {
         return;
       }
-      const { ref, source, stats, summary: next } = outcome;
       setManifest((prev) => [
         ...prev.filter((existing) => existing.ref !== ref),
         {
@@ -184,14 +197,6 @@ export function useVoiceCorpus({
           lines: outcome.transcript ? [] : excerptLines(outcome.content),
         },
       ]);
-      const newest = seq > appliedSummarySeq.current;
-      patchProbe((old) => ({
-        summary: newest ? next : old.summary,
-        sources: [
-          ...old.sources.filter((stored) => stored.source_ref !== ref),
-          source,
-        ],
-      }));
       say(`react:${ref}`, reactionKey, {
         kept: formatNumber(stats.kept_words, locale),
         total: formatNumber(stats.input_words, locale),
@@ -397,6 +402,21 @@ export function useVoiceCorpus({
 
   // The removal's summary is the newest corpus there is, so it outranks any
   // ingest issued before it, as a later ingest would.
+  const applyRemovalSummary = useCallback(
+    (seq: number, next: CorpusSummary) => {
+      if (seq <= appliedSummarySeq.current) {
+        return;
+      }
+      appliedSummarySeq.current = seq;
+      patchProbe(() => ({ summary: next }));
+      if (mounted.current) {
+        summaryRef.current = next;
+        setSummary(next);
+      }
+    },
+    [patchProbe],
+  );
+
   const removeSample = useCallback(
     (entry: CorpusManifestEntry) => {
       setFailures([]);
@@ -404,38 +424,45 @@ export function useVoiceCorpus({
       ingestSeq.current += 1;
       const seq = ingestSeq.current;
       removeSource(entry.id, entry.version)
-        .then((next) => {
-          if (!mounted.current) {
-            return;
-          }
-          setManifest((prev) => prev.filter((row) => row.ref !== entry.ref));
-          const newest = seq > appliedSummarySeq.current;
-          patchProbe((old) => ({
-            summary: newest ? next : old.summary,
-            sources: old.sources.filter((source) => source.id !== entry.id),
-          }));
-          if (newest) {
-            appliedSummarySeq.current = seq;
-            summaryRef.current = next;
-            setSummary(next);
-          }
-        })
-        .catch((err: unknown) => {
-          if (mounted.current) {
-            noteFailure({
-              id: `remove:${entry.ref}`,
-              i18nKey: "ob.conv.voice.removeFailed",
-              params: { name: entry.label, detail: problemMessageOf(err, t) },
-            });
-          }
-        })
+        .then(
+          (profileId) => {
+            // Gone at the server once the DELETE lands, whatever the meter
+            // read after it answers, and whether or not the step is still open.
+            patchProbe((old) => ({
+              sources: old.sources.filter((source) => source.id !== entry.id),
+            }));
+            if (mounted.current) {
+              setManifest((prev) =>
+                prev.filter((row) => row.ref !== entry.ref),
+              );
+            }
+            return readCorpusSummary(profileId).then(
+              (next) => applyRemovalSummary(seq, next),
+              // The meter is re-read by the next probe rather than left stale there.
+              () =>
+                queryClient.invalidateQueries({ queryKey: VOICE_PROBE_KEY }),
+            );
+          },
+          (err: unknown) => {
+            if (mounted.current) {
+              noteFailure({
+                id: `remove:${entry.ref}`,
+                i18nKey: "ob.conv.voice.removeFailed",
+                params: {
+                  name: entry.label,
+                  detail: problemMessageOf(err, t),
+                },
+              });
+            }
+          },
+        )
         .finally(() => {
           if (mounted.current) {
             setRemoving(null);
           }
         });
     },
-    [noteFailure, patchProbe, t],
+    [applyRemovalSummary, noteFailure, patchProbe, queryClient, t],
   );
 
   return {
@@ -447,9 +474,9 @@ export function useVoiceCorpus({
     addFiles,
     addPaste,
     answerSpeaker,
-    /** True while any probe, ingest, or speaker question is still open —
-     * a build starting now would misrepresent what the voice is made of. */
-    busy: probesInFlight > 0 || asks.length > 0,
+    /** True while any probe, ingest, removal or speaker question is still
+     * open — a build starting now would misrepresent what the voice is made of. */
+    busy: probesInFlight > 0 || asks.length > 0 || removing !== null,
     /** Each source of the latest pick the corpus could not add; cleared
      * when the reader hands over the next file, paste or speaker answer. */
     failures,

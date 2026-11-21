@@ -325,7 +325,7 @@ export function VoiceCollectScene({
                         name: entry.label,
                       })}
                       pending={removing === entry.ref}
-                      disabled={removing !== null}
+                      disabled={removing !== null && removing !== entry.ref}
                       onClick={() => onRemove(entry)}
                     >
                       {t("ob.conv.voice.removeSource")}

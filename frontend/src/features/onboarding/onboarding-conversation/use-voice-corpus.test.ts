@@ -14,7 +14,7 @@ import {
 } from "./conversation-machine";
 import { VOICE_PROBE_KEY, type VoiceRestoreProbe } from "./restore";
 import { useVoiceCorpus } from "./use-voice-corpus";
-import { documentStats, stubApi, summaryOf } from "./voice-act.testkit";
+import { documentStats, gate, stubApi, summaryOf } from "./voice-act.testkit";
 
 // ingest/classifyUpload never throw for a server refusal — that path
 // narrates through the server's own safe detail and resolves normally
@@ -284,5 +284,43 @@ describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => 
     await waitFor(() => expect(cached()?.sources).toEqual([]));
     expect(cached()?.summary?.total_words).toBe(0);
     expect(probe).not.toHaveBeenCalled();
+  });
+
+  it("drops a removed sample from the probe even when the step closed first", async () => {
+    const removal = gate();
+    stubApi({
+      ingests: [{ stats: documentStats, summary: summaryOf(900) }],
+      afterRemove: summaryOf(0),
+      removeRelease: removal.held,
+    });
+    const client = new QueryClient();
+    client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, {
+      built: false,
+      summary: null,
+      sources: [],
+    });
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const { result, unmount } = renderHook(
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
+      {
+        wrapper: ({ children }) =>
+          createElement(QueryClientProvider, { client }, children),
+      },
+    );
+    const cached = () =>
+      client.getQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY);
+    act(() => {
+      result.current.addPaste("A paragraph I actually wrote.", "Pasted text");
+    });
+    await waitFor(() => expect(cached()?.sources).toHaveLength(1));
+    const [added] = result.current.manifest;
+    if (added) {
+      act(() => result.current.removeSample(added));
+    }
+
+    unmount();
+    removal.open();
+    await waitFor(() => expect(cached()?.sources).toEqual([]));
+    expect(cached()?.summary?.total_words).toBe(0);
   });
 });

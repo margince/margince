@@ -19,13 +19,20 @@ export async function deleteVoiceSample(
   );
 }
 
-/** Removes one sample, then reads the corpus meter as it stands without it. */
+/** Removes one sample and answers the profile it was removed from. */
 export async function removeSource(
   sourceId: string,
   version: number,
-): Promise<CorpusSummary> {
+): Promise<string> {
   const profileId = await ensureProfileId();
   await deleteVoiceSample(profileId, sourceId, version);
+  return profileId;
+}
+
+/** The corpus meter as it stands now. */
+export async function readCorpusSummary(
+  profileId: string,
+): Promise<CorpusSummary> {
   const after = unwrap(
     await api.GET("/voice-profiles/{id}/sources", {
       params: { path: { id: profileId } },

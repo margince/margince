@@ -11,6 +11,7 @@ import {
   collectingState,
   documentStats,
   INGEST_WAITER_MS,
+  gate,
   render,
   requestsTo,
   stubApi,
@@ -54,13 +55,16 @@ function stored(
   };
 }
 
-function Resumed({ sources }: Readonly<{ sources: readonly CorpusSource[] }>) {
+function Resumed({
+  sources,
+  words = 701,
+}: Readonly<{ sources: readonly CorpusSource[]; words?: number }>) {
   const [state, dispatch] = useReducer(conversationReducer, collectingState());
   return (
     <VoiceAct
       state={state}
       dispatch={dispatch}
-      initialSummary={summaryOf(701)}
+      initialSummary={summaryOf(words)}
       initialSources={sources}
     />
   );
@@ -109,6 +113,55 @@ describe("the Sources list on the voice step", () => {
       await screen.findByText("351 of 800 words", { exact: false }),
     ).toBeTruthy();
     expect(screen.getByText("notes.txt")).toBeTruthy();
+  });
+
+  // Until the server answers, the meter still counts the sample being removed.
+  it("holds Build while a sample is being removed, and keeps the pressed Remove focusable", async () => {
+    const removal = gate();
+    const calls = stubApi({
+      afterRemove: summaryOf(351),
+      removeRelease: removal.held,
+    });
+    const user = userEvent.setup();
+    render(
+      <Resumed
+        words={1052}
+        sources={[
+          stored({ id: "s1", source_label: "offer.pdf", word_count: 701 }),
+          stored({ id: "s2", source_label: "notes.txt", word_count: 351 }),
+        ]}
+      />,
+    );
+
+    const pressed = screen.getByRole("button", { name: "Remove offer.pdf" });
+    await user.click(pressed);
+    await waitFor(() =>
+      expect(pressed.getAttribute("aria-disabled")).toBe("true"),
+    );
+    expect(pressed).not.toHaveProperty("disabled", true);
+    expect(
+      screen.getByRole("button", { name: "Remove notes.txt" }),
+    ).toHaveProperty("disabled", true);
+    await user.click(
+      screen.getByRole("button", { name: /Build my voice profile/ }),
+    );
+    expect(requestsTo(calls, "/builds", "POST")).toHaveLength(0);
+
+    removal.open();
+    await waitFor(() => expect(screen.queryByText("offer.pdf")).toBeNull());
+  });
+
+  it("drops the row once the server removed it, even when the meter cannot be read after", async () => {
+    stubApi({ afterRemoveStatus: 500 });
+    const user = userEvent.setup();
+    render(
+      <Resumed sources={[stored({ id: "s1", source_label: "offer.pdf" })]} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Remove offer.pdf" }));
+
+    await waitFor(() => expect(screen.queryByText("offer.pdf")).toBeNull());
+    expect(screen.queryByText(/could not remove/i)).toBeNull();
   });
 
   it("names two pasted texts by their own opening words", async () => {
