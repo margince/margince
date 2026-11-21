@@ -4,6 +4,7 @@
 package reporting
 
 import (
+	"math"
 	"runtime/debug"
 	"slices"
 	"strconv"
@@ -188,11 +189,17 @@ func TestALateWeeklyEvidencePageAllocatesOnlyForItsRows(t *testing.T) {
 			facts[i].OwnerLabel = "Ada"
 		}
 		cursor := strconv.Itoa(count - 50)
-		return testing.AllocsPerRun(5, func() {
-			if _, err := evidencePage(frame, facts, "meetings_held", "interval", "week:2026-03-02", nil, &cursor, 50); err != nil {
-				t.Fatal(err)
-			}
-		})
+		// The count is process-wide, so another goroutine can only add to it.
+		// The smallest of several rounds is the page's own cost.
+		fewest := math.Inf(1)
+		for range 5 {
+			fewest = min(fewest, testing.AllocsPerRun(20, func() {
+				if _, err := evidencePage(frame, facts, "meetings_held", "interval", "week:2026-03-02", nil, &cursor, 50); err != nil {
+					t.Fatal(err)
+				}
+			}))
+		}
+		return fewest
 	}
 	if few, many := allocs(100), allocs(2000); many != few {
 		t.Errorf("a late page allocates %v times over 2000 facts and %v over 100, want the same", many, few)
