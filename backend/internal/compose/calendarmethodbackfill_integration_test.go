@@ -28,7 +28,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // declineMail is the shape Google sends when an attendee declines: a text part
@@ -87,14 +91,39 @@ func (o *owedEnv) calendarMethod(t *testing.T, message ids.UUID) string {
 	return method
 }
 
+// calendarMethodTaskCtx is the system actor the executor supplies, with the
+// object store a worker binds.
+func calendarMethodTaskCtx(o *owedEnv, blob blobstore.Store) context.Context {
+	ctx := principal.SystemActing(o.e.Admin(), "system:datatask-test")
+	if blob != nil {
+		ctx = originalstore.Bind(ctx, InstallationDB(o.e.Pool), blob)
+	}
+	return ctx
+}
+
+// runCalendarMethodBackfill runs the task's step from the start, batch after
+// batch as the executor does, and reports how many messages it settled.
 func runCalendarMethodBackfill(t *testing.T, o *owedEnv, blob blobstore.Store) int {
 	t.Helper()
-	files := activities.NewStore(InstallationDB(o.e.Pool)).WithBlobstore(blob)
-	n, err := backfillCalendarMethodBatch(o.e.Admin(), o.e.Pool, files, calendarMethodBackfillPerTick, slog.Default())
-	if err != nil {
-		t.Fatalf("running the calendar method backfill: %v", err)
+	ctx := calendarMethodTaskCtx(o, blob)
+	step := calendarMethodsDataTask(o.e.Pool).Steps[0]
+	in := datatask.BatchIn{Limit: step.Limit, RunID: ids.NewV7()}
+	settled := 0
+	for {
+		var out datatask.BatchOut
+		if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+			var err error
+			out, err = step.Batch(principal.WithCorrelationID(ctx, ids.NewV7()), tx, in)
+			return err
+		}); err != nil {
+			t.Fatalf("running the calendar method task: %v", err)
+		}
+		settled += out.Changed
+		if out.Done {
+			return settled
+		}
+		in.Cursor = out.Cursor
 	}
-	return n
 }
 
 // asCapturedBeforeTheColumn makes a captured row read as mail from before
@@ -134,11 +163,13 @@ func TestTheBackfillReadsTheMethodOfALegacyDecline(t *testing.T) {
 		t.Fatal("legacy unjudged decline must lack its method without claiming a reply")
 	}
 
-	if n := runCalendarMethodBackfill(t, o, nil); n != 1 {
-		t.Fatalf("the pass settled %d messages, want 1", n)
-	}
+	task := calendarMethodsDataTask(o.e.Pool)
+	o.e.RunDataTask(calendarMethodTaskCtx(o, nil), t, task)
 	if got := o.calendarMethod(t, decline); got != "REPLY" {
-		t.Fatalf("the pass stored calendar method %q, want REPLY", got)
+		t.Fatalf("the task stored calendar method %q, want REPLY", got)
+	}
+	if n := o.count(t, `SELECT count(*) FROM data_task_run WHERE task_id = $1 AND status = 'done'`, task.ID); n != 1 {
+		t.Errorf("the executor recorded %d finished steps, want 1", n)
 	}
 	if n := o.count(t, `SELECT count(*) FROM activity_calendar_method_backfill
 		WHERE activity_id = $1 AND outcome = 'set'`, decline); n != 1 {
@@ -336,5 +367,28 @@ func TestTheBackfillReadsOnlyTheMessagesOwnStoredParts(t *testing.T) {
 	if n := o.count(t, `SELECT count(*) FROM activity_calendar_method_backfill
 		WHERE activity_id = $1 AND outcome = 'unreadable'`, forgery); n != 1 {
 		t.Errorf("the marker says unreadable %d times, want 1", n)
+	}
+}
+
+// The re-read is the data task's alone: the daily participant pass reads no
+// mail by a missing calendar method.
+func TestTheParticipantBackfillLeavesTheCalendarMethodToTheTask(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	decline := o.captureRaw(t, declineMail(o.seat, o.now.Add(-time.Hour)))
+	o.asCapturedBeforeTheColumn(t, decline, time.Hour)
+	reads := &graphFoldObserver{marker: "calendar_method IS NULL", started: make(chan uint32, 1)}
+	config := o.e.Pool.Config()
+	config.ConnConfig.Tracer = reads
+	pool, err := testdb.OwnPoolFromConfig(t.Context(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	if _, err := newParticipantBackfillWorker(pool, slog.Default()).backfillWorkspace(context.Background(), o.e.WS); err != nil {
+		t.Fatalf("running the participant backfill: %v", err)
+	}
+	if n := reads.folds.Load(); n != 0 || o.calendarMethod(t, decline) != "" {
+		t.Errorf("the participant backfill read mail by a missing calendar method %d times", n)
 	}
 }

@@ -54,6 +54,16 @@ func Bind(ctx context.Context, db *database.DB, blob blobstore.Store) context.Co
 	return context.WithValue(ctx, contextKey{}, &Service{db: db, blob: blob, ledger: storedobjects.NewLedger(db)})
 }
 
+// Objects is the object store Bind put on ctx. A background reader restores a
+// slimmed original's moved parts from it.
+func Objects(ctx context.Context) (blobstore.Store, error) {
+	s, err := serviceOf(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.blob, nil
+}
+
 func serviceOf(ctx context.Context) (*Service, error) {
 	s, ok := ctx.Value(contextKey{}).(*Service)
 	if !ok || s == nil || s.blob == nil {

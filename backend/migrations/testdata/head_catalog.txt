@@ -199,9 +199,6 @@ public.activity_calendar_method_backfill.outcome text NOT NULL gen=- def=-
 public.activity_calendar_method_backfill.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_calendar_method_backfill FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000, "direction": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"direction":20000,"outcome":20000}')
 public.activity_calendar_method_backfill.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_calendar_method_backfill FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "direction": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"direction":20000,"outcome":20000}')
 public.activity_calendar_method_backfill_pkey CREATE UNIQUE INDEX activity_calendar_method_backfill_pkey ON public.activity_calendar_method_backfill USING btree (activity_id)
-public.activity_calendar_method_backfill_resume CREATE INDEX activity_calendar_method_backfill_resume ON public.activity_calendar_method_backfill USING btree (direction, activity_created_at, activity_id)
-public.activity_calendar_method_unread CREATE INDEX activity_calendar_method_unread ON public.activity USING btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email'::text) AND (direction = 'inbound'::text))
-public.activity_calendar_method_unread_outbound CREATE INDEX activity_calendar_method_unread_outbound ON public.activity USING btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email'::text) AND (direction = 'outbound'::text))
 public.activity_class_needs_evidence() secdef=false cfg=- acl=- 
 BEGIN
   IF EXISTS (SELECT 1 FROM activity a
