@@ -327,7 +327,11 @@
    further down, nowhere near the control. */
 .modal > :is(h1, h2, h3, .modal-title):first-child,
 .modal > .form-stack > :is(h1, h2, h3):first-child,
-.modal > .drawer-head > :is(h1, h2, h3, .modal-title):first-child,
+/* No :first-child on the band's own title: a drawer head may carry a mark
+   before it, as the activity drawer does, and the title has to clear the
+   corner wherever it sits among them. Pinned to first, a head that gained a
+   badge lost the clearance and ran under the close control. */
+.modal > .drawer-head > :is(h1, h2, h3, .modal-title),
 .modal
   > .drawer-head
   > :first-child
