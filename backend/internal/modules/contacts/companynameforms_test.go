@@ -441,3 +441,26 @@ func TestWesternNamesAreUnchanged(t *testing.T) {
 		}
 	}
 }
+
+// Every trailing form, read from the real tables, leaves the brand alone. A
+// form written in a spelling no folded name has would never fire.
+func TestEveryTrailingFormStripsToTheBrand(t *testing.T) {
+	forms := make([]string, 0, len(trailingFormWords)+len(trailingFormRuns))
+	for word := range trailingFormWords {
+		forms = append(forms, word)
+	}
+	for _, run := range trailingFormRuns {
+		forms = append(forms, strings.Join(run, " "))
+	}
+	if len(trailingFormWords) == 0 || len(trailingFormRuns) == 0 {
+		t.Fatal("a trailing form table is empty, so the census would pass against nothing")
+	}
+	for _, form := range forms {
+		if got := companyNameForMatching("Zzbrandzz Telecom " + form); got != "zzbrandzz telecom" {
+			t.Errorf("%q reduces to %q, want the brand alone", form, got)
+		}
+	}
+	if got := companyNameForMatching("Zzbrandzz Day Spa"); got != "zzbrandzz day spa" {
+		t.Errorf("an everyday last word was stripped: %q", got)
+	}
+}
