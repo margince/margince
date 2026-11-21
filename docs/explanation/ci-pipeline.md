@@ -35,9 +35,9 @@ is not a pass. The job is not required, so a vendor that is down blocks no merge
 `make fe-uat` renders only the stories the diff reaches, so a story that fails on `main` stays hidden until
 some change reaches it.
 
-Once a week `scheduled.yml` also measures the PERF budgets and the use cases a model drives, and records the
-results. It never writes them to `main`. It opens one pull request with the records and the pages they feed,
-and a record is published when a maintainer merges that pull request. See [the workflows beside the merge
+Once a week `scheduled.yml` also measures the PERF budgets; the use cases a model drives cost tokens, so only a
+maintainer starts them, by hand. Neither writes a record to `main`. The workflow opens a pull request with the
+records and the pages they feed, and a record is published when a maintainer merges that pull request. See [the workflows beside the merge
 gate](../reference/ci-workflows.md#scheduledyml).
 
 **The merge queue is a ruleset setting**, not a file in this tree. Both required checks, `ci` and `cla`,

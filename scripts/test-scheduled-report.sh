@@ -148,7 +148,7 @@ expect_llm() {
 	echo "ok: $name"
 }
 
-LLM_LANE_TITLE="the weekly model-driven use cases could not run"
+LLM_LANE_TITLE="the model-driven use cases could not run"
 LLM_CASE_TITLE="a use case is failing when driven by a real model"
 
 expect_llm "a model lane that never drove a scenario is not reported as a bad answer" \
@@ -156,11 +156,11 @@ expect_llm "a model lane that never drove a scenario is not reported as a bad an
 expect_llm "a scenario that drove and failed is reported as the use case failing" \
 	"scenario-failed" "$LLM_CASE_TITLE"
 expect_llm "a shard that ran out of time is reported as cut off, not as a bad answer" \
-	"cut-off" "the weekly model-driven use cases were cut off"
+	"cut-off" "the model-driven use cases were cut off"
 expect_actions "a model lane the runner cancelled is reported as cut off" \
-	"create the weekly model-driven use cases were cut off" "" LLM_RESULT=cancelled
+	"create the model-driven use cases were cut off" "" LLM_RESULT=cancelled
 expect_actions "a finished run retracts an open cut-off issue" \
-	"close 10" "$(printf '10\t%s\n' "the weekly model-driven use cases were cut off")" LLM_RESULT=success
+	"close 10" "$(printf '10\t%s\n' "the model-driven use cases were cut off")" LLM_RESULT=success
 
 # The body told a reader that case 6 was a known standing failure and to file a
 # case 6 red away as the existing finding. #6298 fixed case 6 — it passes 3 of 3
@@ -374,7 +374,7 @@ expect_split mobile MOBILE_RESULT MOBILE_OUTCOME breach \
 	"PERF-1's perceived budget is breaching on main"
 
 expect_split llm LLM_RESULT LLM_OUTCOME scenario-failed \
-	"the weekly model-driven use cases could not run" \
+	"the model-driven use cases could not run" \
 	"a use case is failing when driven by a real model"
 
 expect_split backend-clock BACKEND_CLOCK_RESULT BACKEND_CLOCK_OUTCOME calendar \

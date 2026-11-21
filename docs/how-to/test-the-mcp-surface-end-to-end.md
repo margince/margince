@@ -290,10 +290,14 @@ A verdict whose stamp no longer matches the tree, or that has none, is stale.
 stale gets a comment that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you
 do not run them again.
 
-The weekly scheduled run sweeps every case in parts, side by side. It opens a pull request with its
-verdicts only when every case has a new one from a stack whose search ranks by meaning. The
-`RECORDS_OWNER` repository variable names who owns that pull request. That colleague runs the lane
-by hand when the weekly run cannot.
+No cron runs this lane. Sweep it by hand in the pull request that changes the tool copy or the
+harness, and commit the verdicts there. The surface changes often, and a verdict from an older tree
+is stale as soon as it lands.
+
+A maintainer can also start the sweep in CI: run `scheduled.yml` by hand with the `llm` input. It
+sweeps every case in parts, side by side. It opens a pull request with its verdicts only when every
+case has a new one from a stack whose search ranks by meaning. The `RECORDS_OWNER` repository
+variable names who owns that pull request.
 
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a run to try something.
@@ -302,4 +306,4 @@ Do not leave it next to the others without a commit.
 ## 9. Run the role sweep with every pass
 
 A pass also needs `make test-roles` green. It calls every tool and action as every seeded role, costs no tokens and needs `make db-up`.
-It checks the `mcp-tool-roles/` and `toolchecks/` folders and `mcp-tool-roles.md`. A change in those files means a role is now allowed or refused a call, so `tools/list` offers the wrong tools: follow [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md). `make e2e-llm` does not run it, as that lane costs money. The weekly scheduled run does both.
+It checks the `mcp-tool-roles/` and `toolchecks/` folders and `mcp-tool-roles.md`. A change in those files means a role is now allowed or refused a call, so `tools/list` offers the wrong tools: follow [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md). `make e2e-llm` does not run it, so a sweep by hand runs both. `scheduled.yml` also runs the role sweep every Monday, as it costs no tokens.

@@ -754,9 +754,9 @@ fi
 # would be false, and a job the runner stopped ends `cancelled`, which no other
 # arm reads. It publishes nothing, so the issue is the only trace it leaves.
 if [[ "${LLM_OUTCOME:-}" = "cut-off" ]] || [[ "${LLM_RESULT:-}" = "cancelled" ]]; then
-  report "the weekly model-driven use cases were cut off" "priority: normal,area: ci-tests,bug" \
-"The weekly run of \`make e2e-llm\` on \`main\` stopped before every scenario had a
-verdict: $RUN_URL
+  report "the model-driven use cases were cut off" "priority: normal,area: ci-tests,bug" \
+"A dispatched run of \`make e2e-llm\` on \`main\` stopped before every scenario
+had a verdict: $RUN_URL
 
 A shard of the sweep ran out of its time limit, or the runner stopped it. The
 scenarios it did drive are in the shard's transcripts, kept 30 days; the run
@@ -768,8 +768,8 @@ waits that add up past the step's limit look like this. If a shard is simply too
 long, raise the shard count in \`e2e/llm/shards.py plan\` in the workflow."\
     || unreported=1
 elif [[ "${LLM_RESULT:-}" = "failure" ]] && [[ "${LLM_OUTCOME:-}" != "scenario-failed" ]]; then
-  report "the weekly model-driven use cases could not run" "priority: normal,area: ci-tests,bug" \
-"\`make e2e-llm\` failed on the weekly run of \`main\` WITHOUT driving the
+  report "the model-driven use cases could not run" "priority: normal,area: ci-tests,bug" \
+"\`make e2e-llm\` failed on a dispatched run of \`main\` WITHOUT driving the
 scenarios: $RUN_URL
 
 No scenario is known to be failing, and none is known to pass — the lane did not
@@ -792,10 +792,10 @@ Reproduce locally with \`MARGINCE_E2E_LLM=1 make e2e-llm\`."\
 elif [[ "${LLM_RESULT:-}" = "success" ]] || [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
   # A scenario that drove and failed proves the lane RAN, so "could not run"
   # is no longer true and the arm below owns what is.
-  resolve "the weekly model-driven use cases could not run"
+  resolve "the model-driven use cases could not run"
 fi
 if [[ "${LLM_RESULT:-}" = "success" ]] || [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
-  resolve "the weekly model-driven use cases were cut off"
+  resolve "the model-driven use cases were cut off"
 fi
 
 if [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then

@@ -66,9 +66,9 @@ name: scheduled
 #                        judge only added lines, and this is what shows whether
 #                        the rest of the tree gets better.
 #
-# The three weekly measurements also RECORD what they measured. records-pr
-# proposes those records as one pull request and never writes to main: a
-# record is published when a human reviews and merges it.
+# The weekly perf measurements and a dispatched model run also RECORD what they
+# measured. records-pr proposes those records as pull requests and never writes
+# to main: a record is published when a human reviews and merges it.
 #
 # One more job earns its place here for the same reason rather than the same
 # question. reap-caches is maintenance, not a verdict on main — but the state it
@@ -435,12 +435,14 @@ jobs:
 
   # The MCP use cases (e2e/llm/scenarios), driven by a REAL assistant.
   #
-  # WEEKLY, and gated on a secret that may not exist. The Go suite pins the
-  # payloads, the refusals and the legibility fields; only a model trying can
-  # say whether an assistant can drive this surface and say something TRUE. It
-  # costs real tokens, so it is weekly, on the Monday cron with perf-budgets.
+  # BY HAND ONLY: a maintainer dispatches it with `llm`, and no cron starts it.
+  # The Go suite pins the payloads, the refusals and the legibility fields; only
+  # a model trying can say whether an assistant can drive this surface and say
+  # something TRUE. Each run costs real tokens, and its verdicts go stale as soon
+  # as the tool copy or the harness changes, so the sweep belongs to the pull
+  # request that changes them.
   #
-  # It runs the way a maintainer runs it by hand: scripts/e2e-llm-sweep.sh in
+  # It runs the way a maintainer runs it locally: scripts/e2e-llm-sweep.sh in
   # lanes, on a stack whose search ranks by meaning (E2E_LLM_STACK_PRESET and its
   # key). The folder is dealt into shards, each with its own time limit, and the
   # verdicts are published only when every scenario has a fresh one. Without the
@@ -451,13 +453,10 @@ jobs:
   # setup-token`; it bills the account that minted it, and anybody with write
   # access can spend it by dispatching this workflow) drives the CLI and the
   # judge. OPENAI_COMPATIBLE_API_KEY funds the embedding model of the preset.
-  # An absent token SKIPS the lane, because an unfunded lane must not turn main
-  # red every Monday.
+  # An absent token SKIPS the lane, so an unfunded dispatch does not turn main red.
   llm-plan:
     name: use cases, driven by a model (plan)
-    if: >-
-      (github.event.schedule == '0 2 * * 1'
-        || (github.event_name == 'workflow_dispatch' && inputs.llm))
+    if: github.event_name == 'workflow_dispatch' && inputs.llm
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1236,7 +1235,7 @@ jobs:
             {
               echo "## What"
               echo
-              echo "The $title the weekly scheduled run measured on \`$GITHUB_SHA\`, with the pages the"
+              echo "The $title the scheduled workflow measured on \`$GITHUB_SHA\`, with the pages the"
               echo "record feeds rendered again by their own generators. Run: $RUN_URL"
               echo
               echo "$how"
@@ -1260,15 +1259,15 @@ jobs:
             branch="records/weekly-$part"
             git switch -q --force-create "$branch" "origin/$BASE"
             git apply --index "$RECORDS/$part.patch"
-            git commit -q -m "chore(records): weekly $title of $day"
+            git commit -q -m "chore(records): $title of $day"
             # --force: the branch is this part's one standing proposal.
             git push --force origin "$branch"
             existing="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
             if [ -n "$existing" ]; then
-              gh pr edit "$existing" --title "chore(records): weekly $title of $day" --body-file "$body"
+              gh pr edit "$existing" --title "chore(records): $title of $day" --body-file "$body"
             else
               existing="$(gh pr create --base "$BASE" --head "$branch" \
-                --title "chore(records): weekly $title of $day" --body-file "$body")"
+                --title "chore(records): $title of $day" --body-file "$body")"
             fi
             # Best effort: a label the repository has not synced, or an owner
             # who cannot be assigned, must not lose the proposal itself.
