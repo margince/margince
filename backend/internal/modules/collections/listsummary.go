@@ -39,18 +39,9 @@ type liveList struct {
 // nobody looks after reports that before a retired field or tag, which only
 // its steward can replace.
 func (s *Store) summarize(ctx context.Context, lists []listRow) ([]*listSummary, error) {
-	out := make([]*listSummary, 0, len(lists))
-	gated := map[string]bool{}
-	for _, l := range lists {
-		// Before any filter is judged, so a list whose filter no longer
-		// compiles is refused to a reader who may not read its records.
-		if !gated[l.EntityType] {
-			if err := auth.Require(ctx, l.EntityType, principal.ActionRead); err != nil {
-				return nil, err
-			}
-			gated[l.EntityType] = true
-		}
-		out = append(out, &listSummary{listRow: l, Health: healthOK, CanEdit: mayEditList(ctx, l)})
+	out, err := gatedSummaries(ctx, lists)
+	if err != nil {
+		return nil, err
 	}
 	// Resolved before the transaction: the catalog reads take a connection of
 	// their own (see liveFilter).
@@ -58,24 +49,9 @@ func (s *Store) summarize(ctx context.Context, lists []listRow) ([]*listSummary,
 	if err != nil {
 		return nil, err
 	}
-	shortlists := map[string][]*listSummary{}
-	live := map[string][]liveList{}
-	for _, summary := range out {
-		if summary.ListType != listTypeDynamic {
-			shortlists[summary.EntityType] = append(shortlists[summary.EntityType], summary)
-			continue
-		}
-		pred, err := predicateFromDefinition(summary.Definition)
-		switch {
-		case errors.Is(err, errNotAFilterTree):
-			summary.Health = healthInvalid
-		case err != nil:
-			return nil, fmt.Errorf("stored definition for list %s: %w", summary.ID, err)
-		case !compiles(vocab[summary.EntityType].engine, pred):
-			summary.Health = healthInvalid
-		default:
-			live[summary.EntityType] = append(live[summary.EntityType], liveList{summary: summary, pred: pred})
-		}
+	shortlists, live, err := splitByKind(out, vocab)
+	if err != nil {
+		return nil, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		for entityType, page := range shortlists {
@@ -94,6 +70,49 @@ func (s *Store) summarize(ctx context.Context, lists []listRow) ([]*listSummary,
 		return nil, err
 	}
 	return out, nil
+}
+
+// gatedSummaries checks read access once per record type before any filter is
+// judged, so a list whose filter no longer compiles is refused to a reader who
+// may not read its records.
+func gatedSummaries(ctx context.Context, lists []listRow) ([]*listSummary, error) {
+	out := make([]*listSummary, 0, len(lists))
+	gated := map[string]bool{}
+	for _, l := range lists {
+		if !gated[l.EntityType] {
+			if err := auth.Require(ctx, l.EntityType, principal.ActionRead); err != nil {
+				return nil, err
+			}
+			gated[l.EntityType] = true
+		}
+		out = append(out, &listSummary{listRow: l, Health: healthOK, CanEdit: mayEditList(ctx, l)})
+	}
+	return out, nil
+}
+
+// splitByKind groups the Shortlists and the compiling Live Lists by record
+// type, and marks a Live List whose filter no longer compiles invalid.
+func splitByKind(summaries []*listSummary, vocab map[string]liveVocabulary) (map[string][]*listSummary, map[string][]liveList, error) {
+	shortlists := map[string][]*listSummary{}
+	live := map[string][]liveList{}
+	for _, summary := range summaries {
+		if summary.ListType != listTypeDynamic {
+			shortlists[summary.EntityType] = append(shortlists[summary.EntityType], summary)
+			continue
+		}
+		pred, err := predicateFromDefinition(summary.Definition)
+		switch {
+		case errors.Is(err, errNotAFilterTree):
+			summary.Health = healthInvalid
+		case err != nil:
+			return nil, nil, fmt.Errorf("stored definition for list %s: %w", summary.ID, err)
+		case !compiles(vocab[summary.EntityType].engine, pred):
+			summary.Health = healthInvalid
+		default:
+			live[summary.EntityType] = append(live[summary.EntityType], liveList{summary: summary, pred: pred})
+		}
+	}
+	return shortlists, live, nil
 }
 
 // liveVocabularies resolves the engine and the retired columns once per
@@ -137,9 +156,10 @@ func countShortlists(ctx context.Context, tx pgx.Tx, entityType string, page []*
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(
+	query := fmt.Sprintf(
 		"SELECT lm.list_id, count(*) FROM list_member lm WHERE lm.list_id = ANY($%d) AND %s GROUP BY lm.list_id",
-		arg(listIDs), visible), args...)
+		arg(listIDs), visible)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -217,16 +237,23 @@ func (s *Store) judgeHealth(ctx context.Context, tx pgx.Tx, summaries []*listSum
 			}
 		}
 		slices.SortFunc(l.RetiredTags, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
-		switch {
-		case l.StewardID == nil || !live[*l.StewardID]:
-			l.Health = healthOwnerless
-		case len(l.RetiredFields) > 0:
-			l.Health = healthRetiredField
-		case len(l.RetiredTags) > 0:
-			l.Health = healthRetiredTag
-		}
+		l.Health = healthOf(l, live)
 	}
 	return nil
+}
+
+// healthOf names the first problem of a counted list: no live steward, then a
+// retired field, then a retired tag.
+func healthOf(l *listSummary, live map[ids.UserID]bool) string {
+	switch {
+	case l.StewardID == nil || !live[*l.StewardID]:
+		return healthOwnerless
+	case len(l.RetiredFields) > 0:
+		return healthRetiredField
+	case len(l.RetiredTags) > 0:
+		return healthRetiredTag
+	}
+	return l.Health
 }
 
 // liveStewards is which stewards of these lists may still act. Without the
