@@ -32042,6 +32042,9 @@ export interface components {
             subject?: string | null;
             /** Format: date-time */
             due_at?: string | null;
+            /** @description True when due_at names a time of day; false when the task was due on a date with no time. */
+            due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
         };
         /**
          * @description One document as it stood at the request, read now for this reader. A

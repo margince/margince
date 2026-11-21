@@ -26,7 +26,7 @@ import { type ProjectMoment, projectMoments } from "./projectstanding.timeline";
 // The words How it stands draws for a project, from the readings in
 // projectstanding.ts. Dates are drawn in the record's zone.
 
-type Ctx = Words & Readonly<{ zone: string }>;
+type Ctx = Words & Readonly<{ zone: string; companyZone?: string }>;
 
 const STATE_WORD: Readonly<Record<ProjectHealthState, MessageKey>> = {
   on_track: "projectHealth.state.onTrack",
@@ -35,13 +35,13 @@ const STATE_WORD: Readonly<Record<ProjectHealthState, MessageKey>> = {
 };
 
 // A day in another year than the record's today says its year.
-function dayNearYear(iso: string, view: Project360, ctx: Ctx): string {
-  return formatDayMonthNearYear(
-    iso,
-    ctx.locale,
-    ctx.zone,
-    new Date(view.as_of),
-  );
+function dayNearYear(
+  iso: string,
+  view: Project360,
+  ctx: Ctx,
+  zone: string = ctx.zone,
+): string {
+  return formatDayMonthNearYear(iso, ctx.locale, zone, new Date(view.as_of));
 }
 
 export function phaseName(phase: string, t: Translator): string {
@@ -302,7 +302,12 @@ function momentTitle(moment: ProjectMoment, ctx: Ctx): string {
 }
 
 function momentSub(moment: ProjectMoment, view: Project360, ctx: Ctx): string {
-  const date = dayNearYear(moment.at, view, ctx);
+  const date = dayNearYear(
+    moment.at,
+    view,
+    ctx,
+    moment.what === "due" ? moment.zone : undefined,
+  );
   switch (moment.what) {
     case "opened":
       return `${date} · ${phaseMoverSentence(moment.by, true, ctx.t)}`;
@@ -324,7 +329,7 @@ function momentSub(moment: ProjectMoment, view: Project360, ctx: Ctx): string {
 }
 
 export function projectEvents(view: Project360, ctx: Ctx): TimelineEvent[] {
-  return projectMoments(view, ctx.zone).map((moment) => ({
+  return projectMoments(view, ctx).map((moment) => ({
     key: moment.key,
     at: moment.at,
     kind: moment.kind,

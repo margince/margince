@@ -149,7 +149,7 @@ func project360Commitments(rows []crmcontracts.Project360Commitment, asOf time.T
 			Subject: c.Subject, DueAt: c.DueAt, Overdue: &c.Overdue,
 			AssigneeID: (*ids.UUID)(c.AssigneeId), AssigneeName: orBlank(c.AssigneeName),
 		}
-		out = append(out, promise.wire(asOf))
+		out = append(out, promise.wire(asOf, nil))
 	}
 	return out
 }

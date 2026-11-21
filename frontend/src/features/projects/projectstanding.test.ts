@@ -98,6 +98,27 @@ describe("the reading is a user's, never a default", () => {
   });
 });
 
+describe("a task with only a date on the axis", () => {
+  it("sits on its picked day for readers in different zones", () => {
+    const dated = task("a", {
+      due_at: "2026-11-17T07:59:59Z",
+      due_has_time: false,
+      due_intent: {
+        wall_clock: "2026-11-16T23:59:59",
+        timezone: "America/Los_Angeles",
+      },
+    });
+    const view = project360({ commitments: { data: [dated], page } });
+    const at = ["Asia/Tokyo", "Pacific/Honolulu"].map(
+      (zone) =>
+        projectMoments(view, { zone, companyZone: "Europe/Berlin" }).find(
+          (moment) => moment.what === "due",
+        )?.at,
+    );
+    expect(at[0]).toBe(at[1]);
+  });
+});
+
 describe("commitments", () => {
   it("counts overdue from the rows and open from the uncapped rollup", () => {
     const view = project360({
@@ -233,7 +254,7 @@ describe("the figures and the axis", () => {
       commitments: { data: [task("t", { overdue: true })], page },
     });
     expect(
-      projectMoments(view, UTC_ZONE).map((moment) => [
+      projectMoments(view, { zone: UTC_ZONE }).map((moment) => [
         moment.what,
         moment.kind,
       ]),
@@ -247,7 +268,7 @@ describe("the figures and the axis", () => {
   });
 
   it("opens the axis on the start day and draws no phase move", () => {
-    const moments = projectMoments(deliveringProject360(), UTC_ZONE);
+    const moments = projectMoments(deliveringProject360(), { zone: UTC_ZONE });
     expect(moments.filter((moment) => moment.key.startsWith("phase-"))).toEqual(
       [],
     );
@@ -283,7 +304,9 @@ describe("the figures and the axis", () => {
       },
     });
     expect(
-      projectMoments(view, UTC_ZONE).find((moment) => moment.what === "update"),
+      projectMoments(view, { zone: UTC_ZONE }).find(
+        (moment) => moment.what === "update",
+      ),
     ).toMatchObject({ kind: "last", subject: "Site report" });
   });
 

@@ -30021,6 +30021,8 @@ components:
         activity_id: {type: string, format: uuid}
         subject: {type: [string, 'null']}
         due_at: {type: [string, 'null'], format: date-time}
+        due_has_time: {type: boolean, description: 'True when due_at names a time of day; false when the task was due on a date with no time.'}
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
     LegalReviewPacketDocument:
       type: object
       description: |-

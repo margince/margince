@@ -388,6 +388,16 @@ describe("leadNext for a next task with only a date", () => {
     expect(next.late).toMatchObject({ tone: "danger" });
   });
 
+  it("prints the picked day to a reader far east of the picker", () => {
+    const next = leadNext(lead(picked), {
+      ...ctx,
+      zone: "Asia/Tokyo",
+      asOf: "2026-11-16T07:00:00Z",
+      record: "Europe/Berlin",
+    });
+    expect(next.sub).toBe(`co.next.due:{"when":"16 Nov"}`);
+  });
+
   it("is not late while the picked day is still running on the company's calendar", () => {
     const next = leadNext(lead(picked), {
       ...ctx,

@@ -103,9 +103,10 @@ func TaskPassed(due *time.Time, hasTime bool, wallClock string, now time.Time, l
 }
 
 // TaskDueOn is the instant a task's lateness and order are judged at. A task
-// with a chosen date and no time is judged at the end of that date in loc.
-// A comparison of instants then agrees with WallDayOffset. Any other task, and
-// a nil loc, keep the due instant.
+// with a chosen date and no time is due until the start of the next calendar
+// day in loc. It is judged at the last instant before that start. Any other
+// task, and a nil loc, keep the due instant. storekit.TaskDueOrderSQL spells
+// the same rule.
 func TaskDueOn(due *time.Time, hasTime bool, wallClock string, loc *time.Location) *time.Time {
 	if due == nil || hasTime || wallClock == "" || loc == nil || len(wallClock) < len(time.DateOnly) {
 		return due
@@ -114,6 +115,6 @@ func TaskDueOn(due *time.Time, hasTime bool, wallClock string, loc *time.Locatio
 	if err != nil {
 		return due
 	}
-	end := time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 59, 0, loc)
+	end := time.Date(day.Year(), day.Month(), day.Day()+1, 0, 0, 0, 0, loc).Add(-time.Nanosecond)
 	return &end
 }

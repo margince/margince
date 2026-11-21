@@ -56619,7 +56619,13 @@ type LegalReviewPacketStage struct {
 type LegalReviewPacketTask struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 	DueAt      *time.Time         `json:"due_at,omitempty"`
-	Subject    *string            `json:"subject,omitempty"`
+
+	// DueHasTime True when due_at names a time of day; false when the task was due on a date with no time.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   *string     `json:"subject,omitempty"`
 }
 
 // LegalReviewPacketTouch One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.

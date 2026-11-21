@@ -1,7 +1,7 @@
 import type { components } from "../../api/schema";
 import type { TimelineEventKind } from "../../design-system/standingtimeline";
-import { taskDueOnDay } from "../../format/calendarday";
 import { stable } from "../../format/collate";
+import { dueOnDay } from "../../lib/standingpeeks";
 import { lastUpdate } from "./projectstanding";
 
 // The project's dated moments for the How it stands axis, as data the page
@@ -20,7 +20,7 @@ export type ProjectMoment =
   | Moment<"opened", { phase: string; by: PhaseMover | null }>
   | Moment<"signed", { title: string }>
   | Moment<"won", { name: string; amountMinor?: number; currency?: string }>
-  | Moment<"due", { subject: string }>
+  | Moment<"due", { subject: string; zone: string }>
   | Moment<"update", { subject?: string }>
   | Moment<"end", Record<never, never>>;
 
@@ -87,41 +87,42 @@ function paperMoments(view: Project360): ProjectMoment[] {
 
 // The first overdue task and the first one still ahead: the axis shows what
 // slipped and what comes next, not the whole task list.
-function taskMoments(view: Project360, zone: string): ProjectMoment[] {
+function taskMoments(
+  view: Project360,
+  words: Readonly<{ zone: string; companyZone?: string }>,
+): ProjectMoment[] {
   const dated = (view.commitments?.data ?? []).filter((row) => row.due_at);
   const picks = [
     dated.find((row) => row.overdue),
     dated.find((row) => !row.overdue),
   ];
-  return picks.flatMap((row) =>
-    row?.due_at
-      ? [
-          {
-            key: `task-${row.activity_id}`,
-            at: taskDueOnDay(
-              row.due_at,
-              row.due_has_time,
-              row.due_intent,
-              zone,
-            ),
-            kind: row.overdue ? "late" : "ahead",
-            what: "due",
-            subject: row.subject,
-          },
-        ]
-      : [],
-  );
+  return picks.flatMap((row) => {
+    if (!row?.due_at) {
+      return [];
+    }
+    const due = dueOnDay(words, row.due_at, row.due_has_time, row.due_intent);
+    return [
+      {
+        key: `task-${row.activity_id}`,
+        at: due.at,
+        kind: row.overdue ? "late" : "ahead",
+        what: "due",
+        subject: row.subject,
+        zone: due.zone,
+      } satisfies ProjectMoment,
+    ];
+  });
 }
 
 /** Every moment the axis draws, in no particular order (the axis sorts). */
 export function projectMoments(
   view: Project360,
-  zone: string,
+  words: Readonly<{ zone: string; companyZone?: string }>,
 ): ProjectMoment[] {
   const moments = [
     ...openedMoment(view),
     ...paperMoments(view),
-    ...taskMoments(view, zone),
+    ...taskMoments(view, words),
   ];
   const last = lastUpdate(view);
   if (last) {

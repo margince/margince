@@ -7,6 +7,7 @@ import { OpenTaskRow, openTaskOf } from "../../components/opentaskrow";
 import { useTaskUpdate } from "../../components/taskactions";
 import { ErrorLine } from "../../design-system/errorline";
 import { OverviewList } from "../../design-system/overviewcard";
+import { taskDueOnDay } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
@@ -52,7 +53,7 @@ export function PartnerNextStep({
       <ErrorLine error={tasks.error} />
       {tasks.data && tasks.data.length > 0 && (
         <OverviewList>
-          {soonestFirst(tasks.data).map((task) => (
+          {soonestFirst(tasks.data, companyZone).map((task) => (
             <OpenTaskRow
               key={task.id}
               task={openTaskOf(task, asOf, t("task.untitled"), companyZone)}
@@ -73,9 +74,23 @@ export function PartnerNextStep({
   );
 }
 
-// Soonest due first, and a task with no date after every dated one.
-function soonestFirst(tasks: readonly Activity[]): Activity[] {
+// Soonest due first, and a task with no date after every dated one. A task
+// with only a date sorts by its picked day on the company's calendar, as the
+// server's due queue does.
+export function soonestFirst(
+  tasks: readonly Activity[],
+  companyZone: string,
+): Activity[] {
   const dueOf = (task: Activity) =>
-    task.due_at ? Date.parse(task.due_at) : Number.POSITIVE_INFINITY;
+    task.due_at
+      ? Date.parse(
+          taskDueOnDay(
+            task.due_at,
+            task.due_has_time,
+            task.due_intent,
+            companyZone,
+          ),
+        )
+      : Number.POSITIVE_INFINITY;
   return [...tasks].sort((a, b) => dueOf(a) - dueOf(b));
 }

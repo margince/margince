@@ -115,6 +115,7 @@ func TestWallDayOffsetFollowsThePickedDate(t *testing.T) {
 		Now       time.Time `json:"now"`
 		Zone      string    `json:"zone"`
 		Offset    int       `json:"offset"`
+		EndUTC    string    `json:"end_utc"`
 	}
 	if err := json.Unmarshal(raw, &cases); err != nil {
 		t.Fatal(err)
@@ -131,6 +132,17 @@ func TestWallDayOffsetFollowsThePickedDate(t *testing.T) {
 		if !ok || got != tc.Offset {
 			t.Errorf("%s at %s in %s: offset %d (%v), want %d", tc.WallClock, tc.Now, tc.Zone, got, ok, tc.Offset)
 		}
+		if tc.EndUTC == "" {
+			continue
+		}
+		want, err := time.Parse(time.RFC3339Nano, tc.EndUTC)
+		if err != nil {
+			t.Fatal(err)
+		}
+		due := tc.Now
+		if end := TaskDueOn(&due, false, tc.WallClock, loc); !end.Equal(want) {
+			t.Errorf("%s in %s is due until %s, want %s", tc.WallClock, tc.Zone, end.UTC().Format(time.RFC3339Nano), tc.EndUTC)
+		}
 	}
 	if _, ok := WallDayOffset("tomorrow", noon, time.UTC); ok {
 		t.Error("text that is not a date must report false")
@@ -144,7 +156,7 @@ func TestTaskDueOnJudgesADateOnlyTaskAtTheEndOfItsChosenDate(t *testing.T) {
 	}
 	due := time.Date(2026, 11, 17, 7, 59, 59, 0, time.UTC)
 	got := TaskDueOn(&due, false, "2026-11-16T23:59:59", berlin)
-	if want := time.Date(2026, 11, 16, 23, 59, 59, 0, berlin); !got.Equal(want) {
+	if want := time.Date(2026, 11, 17, 0, 0, 0, 0, berlin).Add(-time.Nanosecond); !got.Equal(want) {
 		t.Errorf("a date-only task is judged at %v, want %v", got, want)
 	}
 	if TaskDueOn(&due, true, "2026-11-16T22:30", berlin) != &due {

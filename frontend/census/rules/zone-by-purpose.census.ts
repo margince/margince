@@ -68,6 +68,22 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/companies/companystanding.events.test.ts",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "features/privacy/legalreviewpack.tasks.test.tsx",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "features/projects/partners.nextstep.order.test.ts",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "features/projects/projectstanding.test.ts",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
     file: "lib/standingpeeks.test.ts",
     why: "A task with only a date must print its picked day for readers east and west of the picker; only named zones apart from the runner's tell that from the instant's own day.",
   },
