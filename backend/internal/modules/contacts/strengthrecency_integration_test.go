@@ -146,3 +146,51 @@ func TestADeclinedMeetingDoesNotRefreshRecency(t *testing.T) {
 		t.Errorf("last engaged = %v, want their message at %v and not the declined meeting", got.LastEngaged, wrote)
 	}
 }
+
+// A message held to its participants is not visible in the number either. It
+// moves no count, no date and no cited message, on the contact page or in a set.
+func TestAHeldMessageDoesNotMoveTheStrength(t *testing.T) {
+	e := setupDedupe(t)
+	now := time.Date(2026, time.June, 1, 12, 0, 0, 0, time.UTC)
+	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
+	contact := e.seedVisibleContact(t, "Held Message Contact")
+	for _, ago := range []int{10, 20, 30} {
+		e.seedInteraction(t, contact, day(ago), "inbound")
+	}
+	for _, ago := range []int{15, 25} {
+		e.seedInteraction(t, contact, day(ago), "outbound")
+	}
+	read := func() (RelationshipStrength, RelationshipStrength) {
+		t.Helper()
+		ctx := e.as()
+		page, err := e.store.ContactStrength(ctx, contact, now)
+		if err != nil {
+			t.Fatalf("reading the contact's strength: %v", err)
+		}
+		var set []ContactStrength
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			set, err = StrengthForContacts(ctx, tx, []ids.ContactID{contact}, now)
+			return err
+		}); err != nil || len(set) != 1 {
+			t.Fatalf("reading the set's strength: %v (%d rows)", err, len(set))
+		}
+		return page, set[0].Strength
+	}
+	pageBefore, setBefore := read()
+
+	held := e.seedInteractionOfKind(t, contact, "email", day(2), "inbound")
+	e.hideInteraction(t, held, "audience = 'participants'")
+	pageAfter, setAfter := read()
+
+	for _, pair := range []struct {
+		where         string
+		before, after RelationshipStrength
+	}{{"the contact page", pageBefore, pageAfter}, {"a contact set", setBefore, setAfter}} {
+		b, a := pair.before, pair.after
+		if a.Strength != b.Strength || a.InteractionCount90d != b.InteractionCount90d || a.Inbound90d != b.Inbound90d ||
+			!a.LastInteraction.Equal(*b.LastInteraction) || !a.LastInbound.Equal(*b.LastInbound) ||
+			a.LastInboundActivity == nil || *a.LastInboundActivity != *b.LastInboundActivity {
+			t.Errorf("a held message moved %s's strength from %+v to %+v", pair.where, b, a)
+		}
+	}
+}
