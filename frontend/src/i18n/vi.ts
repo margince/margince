@@ -14011,6 +14011,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã ghi nhận câu trả lời. Nhân viên phụ trách sẽ xử lý yêu cầu của quý khách: chỉnh sửa thông tin trong 10 ngày và xóa thông tin trong 20 ngày. Nếu cần thêm thời gian, quý khách sẽ được báo lý do. Liên kết này đã hết lượt dùng.",
   "confirm.invalidLink":
     "Liên kết này không còn hiệu lực. Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
+  "confirm.deadLinkBody":
+    "Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
   "confirm.questionChanged":
     "Câu hỏi trên trang này đã thay đổi sau khi quý khách mở trang. Vui lòng tải lại trang và trả lời lại.",
   "prefs.lockedWhy": "Cần thiết cho việc quý khách đã yêu cầu, nên vẫn bật.",

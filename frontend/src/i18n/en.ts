@@ -14343,6 +14343,8 @@ export const en = {
     "Your answer is recorded. Staff here will handle your request and give you the reason if they need more time. This link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
+  "confirm.deadLinkBody":
+    "It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
   "confirm.questionChanged":
     "The question on this page changed after you opened it. Reload the page and answer again.",
   "prefs.lockedWhy": "Needed for something you requested, so it stays on.",
