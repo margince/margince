@@ -138,8 +138,9 @@ func (s *salesAssessments) answer(ctx context.Context, reader ids.UUID, subject 
 	return out, nil
 }
 
+// prepareAssessment evaluates the selection once and takes the candidate deals
+// from that evaluation's own evidence, so they match the figures beside them.
 func (s *salesAssessments) prepareAssessment(ctx context.Context, selection crmcontracts.ReportingSelection, view *crmcontracts.SalesAssessmentView, receipt *reporting.EvidenceExpectation, reader ids.UUID) (crmcontracts.ReportingEvaluation, salesassessment.Input, error) {
-	var evaluation crmcontracts.ReportingEvaluation
 	var in salesassessment.Input
 	if view != nil && !view.Valid() {
 		return crmcontracts.ReportingEvaluation{}, salesassessment.Input{}, apperrors.ErrInvalidArgument
@@ -147,28 +148,27 @@ func (s *salesAssessments) prepareAssessment(ctx context.Context, selection crmc
 	if view != nil && *view == crmcontracts.SalesAssessmentViewProspecting && (selection.Scope.Kind != ScopeKindOwner || (selection.Scope.Id != nil && selection.Scope.Id.String() != reader.String())) {
 		return crmcontracts.ReportingEvaluation{}, salesassessment.Input{}, apperrors.ErrPermissionDenied
 	}
-	var err error
-	if receipt == nil {
-		evaluation, err = s.reports.Evaluate(ctx, selection)
-	} else {
-		evaluation, err = s.reports.EvaluatedReceipt(ctx, selection, *receipt)
-	}
-	if err != nil {
-		return evaluation, in, err
-	}
-	in, err = s.gather(ctx, selection, evaluation)
-	if err != nil {
-		return evaluation, in, err
-	}
-	in.View = string(crmcontracts.SalesAssessmentViewSales)
+	viewName := string(crmcontracts.SalesAssessmentViewSales)
 	if view != nil {
-		in.View = string(*view)
+		viewName = string(*view)
 	}
-	if in.View != string(crmcontracts.SalesAssessmentViewSales) {
+	sales := viewName == string(crmcontracts.SalesAssessmentViewSales)
+	var dealsMetric crmcontracts.ReportingMetricID
+	if sales {
+		dealsMetric = reportingOpenPipeline
+	}
+	evaluation, deals, err := s.reports.EvaluateWithEvidence(ctx, selection, receipt, dealsMetric, assessmentCandidates)
+	if err != nil {
+		return evaluation, in, err
+	}
+	in, err = s.gather(ctx, evaluation, deals)
+	if err != nil {
+		return evaluation, in, err
+	}
+	in.View = viewName
+	if !sales {
 		in.Candidates = nil
 		in.Decisions = nil
-	}
-	if in.View != string(crmcontracts.SalesAssessmentViewSales) {
 		work, err := s.upcomingFacts(ctx, evaluation)
 		if err != nil {
 			return evaluation, in, err
@@ -299,7 +299,7 @@ func foldAssessment(out crmcontracts.SalesAssessment, written salesassessment.Wr
 // gather turns the evaluation into what the model reads. That is the cells
 // with their figures as text, the deals behind the open pipeline the reader
 // may see, and the decisions recorded on them.
-func (s *salesAssessments) gather(ctx context.Context, selection crmcontracts.ReportingSelection, evaluation crmcontracts.ReportingEvaluation) (salesassessment.Input, error) {
+func (s *salesAssessments) gather(ctx context.Context, evaluation crmcontracts.ReportingEvaluation, deals crmcontracts.ReportingEvidence) (salesassessment.Input, error) {
 	zone, err := time.LoadLocation(evaluation.Context.Timezone)
 	if err != nil {
 		return salesassessment.Input{}, fmt.Errorf("reporting timezone: %w", apperrors.ErrInvalidArgument)
@@ -346,10 +346,7 @@ func (s *salesAssessments) gather(ctx context.Context, selection crmcontracts.Re
 			in.Cells = append(in.Cells, assessmentCell("point:"+string(chart.Metric)+":"+point.Key, names.Say(reportingMetricNames[chart.Metric])+" · "+point.Label, point.Value, chart.Unit, assessmentWindow(evaluation.Context.Interval, zone), chart.Coverage))
 		}
 	}
-	candidates, err := s.candidates(ctx, selection, evaluation)
-	if err != nil {
-		return in, err
-	}
+	candidates := assessmentCandidateDeals(evaluation, deals)
 	in.Candidates = candidates
 	in.Decisions, err = s.recordedDecisions(ctx, candidates)
 	return in, err
@@ -404,9 +401,9 @@ func assessmentCell(id, label string, value *float64, unit string, window string
 	return cell
 }
 
-// candidates are the open pipeline's largest deals the reader may see, read
-// through the same evidence door the chart's drill-through uses.
-func (s *salesAssessments) candidates(ctx context.Context, selection crmcontracts.ReportingSelection, evaluation crmcontracts.ReportingEvaluation) ([]salesassessment.CandidateIn, error) {
+// assessmentCandidateDeals are the open pipeline's largest deals the reader
+// may see, paged from the evidence the chart's drill-through also reads.
+func assessmentCandidateDeals(evaluation crmcontracts.ReportingEvaluation, evidence crmcontracts.ReportingEvidence) []salesassessment.CandidateIn {
 	var hasOpen bool
 	for _, metric := range evaluation.Metrics {
 		if metric.Id == reportingOpenPipeline {
@@ -414,12 +411,7 @@ func (s *salesAssessments) candidates(ctx context.Context, selection crmcontract
 		}
 	}
 	if !hasOpen {
-		return nil, nil
-	}
-	expectation := reporting.EvidenceExpectation{Key: evaluation.EvaluationKey, At: evaluation.Context.EvaluatedAt, FrameworkRevision: evaluation.Context.FrameworkRevision}
-	evidence, err := s.reports.Evidence(ctx, selection, reportingOpenPipeline, "", "", nil, nil, assessmentCandidates, expectation)
-	if err != nil {
-		return nil, fmt.Errorf("read the deals behind the open pipeline: %w", err)
+		return nil
 	}
 	out := make([]salesassessment.CandidateIn, 0, len(evidence.Rows))
 	for _, row := range evidence.Rows {
@@ -432,7 +424,7 @@ func (s *salesAssessments) candidates(ctx context.Context, selection crmcontract
 		}
 		out = append(out, candidate)
 	}
-	return out, nil
+	return out
 }
 
 // recordedDecisions are the decisions on the candidate deals, newest first,

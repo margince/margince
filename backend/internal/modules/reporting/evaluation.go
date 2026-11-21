@@ -320,6 +320,36 @@ func (s *Service) EvaluatedReceipt(ctx context.Context, selection crmcontracts.R
 	return out, err
 }
 
+// EvaluateWithEvidence evaluates a selection, or checks the receipt the reader
+// saw, and pages the evidence one metric's reading points to from that same
+// snapshot. An empty metric, or one the selection does not read, has no rows.
+func (s *Service) EvaluateWithEvidence(ctx context.Context, selection crmcontracts.ReportingSelection, receipt *EvidenceExpectation, metric crmcontracts.ReportingMetricID, limit int) (crmcontracts.ReportingEvaluation, crmcontracts.ReportingEvidence, error) {
+	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
+		return crmcontracts.ReportingEvaluation{}, crmcontracts.ReportingEvidence{}, err
+	}
+	var evaluation Evaluation
+	var evidence crmcontracts.ReportingEvidence
+	err := s.store.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+		var err error
+		if receipt != nil {
+			evaluation, err = s.checkedEvaluation(ctx, tx, selection, *receipt)
+		} else {
+			evaluation, err = s.EvaluateFactsTx(ctx, tx, selection)
+		}
+		if err != nil || metric == "" {
+			return err
+		}
+		for _, reading := range evaluation.Result.Metrics {
+			if reading.Id == metric {
+				ref := reading.Evidence
+				evidence, err = evidencePage(evaluation.Result.Context, evaluation.Facts, ref.Metric, ref.ContextId, textOrEmpty(ref.GroupKey), ref.Through, nil, limit)
+			}
+		}
+		return err
+	})
+	return evaluation.Result, evidence, err
+}
+
 // EvaluateFactsTx evaluates a selection and keeps the facts behind it. A
 // reading that splits the figure by month, owner or category then adds up the
 // rows Analytics counted.

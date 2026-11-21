@@ -7,13 +7,17 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -124,5 +128,74 @@ func TestAnEmptyAssessmentDoesNotAskForReassurance(t *testing.T) {
 	out, err := written.Assess(initiativeManager(e), selection, false)
 	if err != nil || lane.calls != 0 || len(out.Sentences) != 0 || out.GeneratedBy != crmcontracts.WrittenByDeterministic {
 		t.Fatalf("empty assessment: %+v, calls %d, error %v", out, lane.calls, err)
+	}
+}
+
+// One assessment evaluates its selection once. Its candidates are the deals
+// the open pipeline's own drill-through lists. Beside one evaluation it reads
+// only the reader's language and the decisions on those deals.
+func TestTheSalesAssessmentEvaluatesItsSelectionOnce(t *testing.T) {
+	e := setupForecast(t)
+	start := clocktest.Now(t).UTC().Truncate(time.Second)
+	_, _, open := seedInitiativeDeals(t, e, start)
+	ctx := initiativeManager(e)
+	at := start.Add(time.Hour)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_quarter", TargetBasis: "fiscal_quarter", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingOpenPipeline}, Blocks: []crmcontracts.ReportingBlockKind{"metric_reading"}}
+	assessments := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool))
+
+	metered, meter := database.WithStatementMeter(ctx)
+	evaluation, err := service.Evaluate(metered, selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evaluated := meter.Cost().Statements
+	var drill crmcontracts.ReportingEvidenceRef
+	for _, metric := range evaluation.Metrics {
+		if metric.Id == reportingOpenPipeline {
+			drill = metric.Evidence
+		}
+	}
+	expectation := reporting.EvidenceExpectation{Key: evaluation.EvaluationKey, At: evaluation.Context.EvaluatedAt, FrameworkRevision: evaluation.Context.FrameworkRevision}
+	evidence, err := service.Evidence(ctx, selection, drill.Metric, drill.ContextId, "", nil, nil, assessmentCandidates, expectation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		t.Fatal("the manager has no actor")
+	}
+	_, in, err := assessments.prepareAssessment(ctx, selection, nil, &expectation, actor.UserID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{}
+	for _, row := range evidence.Rows {
+		want = append(want, row.SourceId.String())
+	}
+	got := []string{}
+	for _, candidate := range in.Candidates {
+		got = append(got, candidate.ID)
+	}
+	if len(want) != len(open) || !slices.Equal(got, want) {
+		t.Fatalf("the candidates are %v, want the drill-through's %v for the %d open deals", got, want, len(open))
+	}
+
+	metered, meter = database.WithStatementMeter(ctx)
+	if lang := identity.BaseLanguageForPrompt(metered, e.Pool); lang == "" {
+		t.Fatal("the reader has no prompt language")
+	}
+	if _, err := assessments.recordedDecisions(metered, in.Candidates); err != nil {
+		t.Fatal(err)
+	}
+	own := meter.Cost().Statements
+	metered, meter = database.WithStatementMeter(ctx)
+	if _, err := assessments.Assess(metered, selection, false); err != nil {
+		t.Fatal(err)
+	}
+	// A warm service evaluates in fewer statements than the first, cold call,
+	// so one evaluation's share is at most the count measured above.
+	if assessed := meter.Cost().Statements; assessed-own > evaluated {
+		t.Fatalf("one assessment ran %d statements, want at most %d for one evaluation and %d for its language and decisions", assessed, evaluated, own)
 	}
 }
