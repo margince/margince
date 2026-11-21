@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -44,11 +47,7 @@ func TestALinkedTaskPastTheCapLeavesItsPromiseOwed(t *testing.T) {
 		t.Fatalf("archiving a task: %v", err)
 	}
 
-	asOf := p.SentAt.AddDate(0, 0, 1)
-	svc := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, consent.NewStore(e.DB()),
-		comms.NewStore(e.DB(), func() time.Time { return asOf }, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()),
-		func() time.Time { return asOf })
-	page, err := svc.Assemble(e.Admin(), p.Contact)
+	page, err := taskOpenService(e, p.SentAt.AddDate(0, 0, 1)).Assemble(e.Admin(), p.Contact)
 	if err != nil {
 		t.Fatalf("assembling the page: %v", err)
 	}
@@ -82,6 +81,66 @@ func TestALinkedTaskPastTheCapLeavesItsPromiseOwed(t *testing.T) {
 	}
 }
 
+// A task filed only under a contact private to a colleague is hidden from a
+// rep on another team. Their page still shows the promise, and says its task is
+// not open to them, so the promise is not counted as owed.
+func TestATaskTheReaderCannotSeeLeavesNoPromiseOwed(t *testing.T) {
+	e := Setup(t)
+	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
+	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Lena Kunde", &e.Rep3))
+	private := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, objContact, private, e.Rep3)
+	note, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "note", Subject: new("Call notes"), Body: new("I will send the floor plan."), Source: provenance.RecordSourceManual,
+		Links: []activities.ActivityLinkInput{{EntityType: objContact, EntityID: contact.UUID}},
+	})
+	if err != nil {
+		t.Fatalf("logging the source note: %v", err)
+	}
+	claim := e.RecordClaim(e.Admin(), t, contacts.ClaimInput{
+		ContactID: contact, Kind: "commitment_ours", Body: "Send the floor plan", ActivityID: ids.UUID(note.Id),
+		Quote: "I will send the floor plan.", Source: provenance.RecordSourceManual,
+	})
+	task, _, err := e.Activities.LogActivity(colleague, activities.LogActivityInput{
+		Kind: "task", Subject: new("Send the floor plan"), Source: provenance.RecordSourceManual,
+		Links: []activities.ActivityLinkInput{{EntityType: objContact, EntityID: private}},
+	})
+	if err != nil {
+		t.Fatalf("filing the hidden task: %v", err)
+	}
+	e.LinkClaimTask(colleague, t, ids.UUID(claim.Id), ids.UUID(task.Id))
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	if _, err := e.Activities.GetActivity(rep, ids.From[ids.ActivityKind](ids.UUID(task.Id)), storekit.LiveOnly); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("the rep reads the task (%v), so the fixture does not hide it", err)
+	}
+
+	page, err := taskOpenService(e, time.Now()).Assemble(rep, contact)
+	if err != nil {
+		t.Fatalf("assembling the rep's page: %v", err)
+	}
+	if page.Claims == nil {
+		t.Fatal("the rep's page carries no claims section, so it proves nothing about task_open")
+	}
+	for _, got := range *page.Claims {
+		if got.Id != claim.Id {
+			continue
+		}
+		if got.TaskOpen == nil {
+			t.Error("the claim on a task the rep cannot see carries no task_open, want false")
+		} else if *got.TaskOpen {
+			t.Error("the claim on a task the rep cannot see says task_open=true, want false")
+		}
+		return
+	}
+	t.Error("the rep's page does not carry the claim")
+}
+
+func taskOpenService(e *Env, asOf time.Time) *contact360.Service {
+	return contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, consent.NewStore(e.DB()),
+		comms.NewStore(e.DB(), func() time.Time { return asOf }, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()),
+		func() time.Time { return asOf })
+}
+
 // promiseOnItsOwnTask records one more promise from the thread and files the
 // task that stands for it. Its own quote makes it a claim of its own.
 func (e *Env) promiseOnItsOwnTask(t *testing.T, p PromiseThread, body string) ids.UUID {
@@ -97,6 +156,6 @@ func (e *Env) promiseOnItsOwnTask(t *testing.T, p PromiseThread, body string) id
 		ContactID: p.Contact, Kind: "commitment_ours", Body: body, ActivityID: ids.UUID(p.Claim.SourceActivityId),
 		Quote: "I will " + body + " this week.", Source: provenance.RecordSourceManual,
 	})
-	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, ids.UUID(task.Id), ids.UUID(claim.Id))
+	e.LinkClaimTask(e.Admin(), t, ids.UUID(claim.Id), ids.UUID(task.Id))
 	return ids.UUID(task.Id)
 }

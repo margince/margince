@@ -266,7 +266,8 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 
 // claimStandsAlone reports whether a claim is owed in its own name. It names
 // no task, or its task is open (task_open) but past the next_steps cap. The
-// same rule counts the page in contactpromises.ts.
+// same rule counts the page in contactpromises.ts, and
+// testdata/claimstandsalone.json holds the two equal.
 func claimStandsAlone(claim crmcontracts.ConversationClaim, listed map[openapi_types.UUID]bool) bool {
 	if claim.TaskActivityId == nil {
 		return true

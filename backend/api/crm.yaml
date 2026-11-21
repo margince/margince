@@ -53047,10 +53047,10 @@ components:
         task_open:
           type: boolean
           description: >-
-            True when the task `task_activity_id` names is open and this reader may see it. The
-            contact 360 read sets it on every claim with a task, because `next_steps` is capped:
-            a claim whose task is past the cap still counts as owed, and one whose task is done
-            or hidden does not. Absent when the claim names no task.
+            True when the task `task_activity_id` names is open and this reader may see it. Set
+            only by the contact 360 read; absent elsewhere and when the claim names no task.
+            `next_steps` is capped, so a claim whose task is past the cap still counts as owed,
+            and one whose task is done or hidden does not.
         taken_by_user_id:
           type: [string, 'null']
           format: uuid

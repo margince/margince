@@ -1,0 +1,7 @@
+[
+  { "name": "a claim with no task is owed by itself", "task": null, "task_open": null, "listed": ["t-1"], "stands_alone": true },
+  { "name": "a claim whose task is listed is left to the task", "task": "t-1", "task_open": true, "listed": ["t-1"], "stands_alone": false },
+  { "name": "a claim whose open task is past the cap is owed by itself", "task": "t-2", "task_open": true, "listed": ["t-1"], "stands_alone": true },
+  { "name": "a claim whose task is done or hidden is not owed", "task": "t-3", "task_open": false, "listed": ["t-1"], "stands_alone": false },
+  { "name": "a claim whose task was not asked about is not owed", "task": "t-4", "task_open": null, "listed": [], "stands_alone": false }
+]

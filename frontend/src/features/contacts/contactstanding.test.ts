@@ -398,11 +398,51 @@ describe("contactDims", () => {
           task_open: false,
         },
       ],
-      next_steps: { data: [task], page: { has_more: true } },
+      next_steps: {
+        data: [task, { ...task, id: "t-r", captured_by: "system:renewal" }],
+        page: { has_more: true },
+      },
     };
     expect(contactDims(view, t, "en")[0]).toMatchObject({
       key: "promises",
       value: "2 open",
+    });
+  });
+
+  it("reads the count as a floor when colleague-filed tasks run past the cap", () => {
+    const task = (id: string, due: string) => ({
+      id,
+      kind: "task" as const,
+      subject: `Task ${id}`,
+      occurred_at: "2026-08-01T09:00:00Z",
+      occurred_precision: "instant" as const,
+      due_at: due,
+      is_done: false,
+      offers_email: false,
+      source: "manual",
+      captured_by: "human:u-1",
+      created_at: "2026-08-01T09:00:00Z",
+      updated_at: "2026-08-01T09:00:00Z",
+    });
+    const capped = (last: string): Contact360 => ({
+      ...VIEW,
+      claims: [],
+      next_steps: {
+        data: [task("t-1", "2026-08-10T09:00:00Z"), task("t-2", last)],
+        page: { has_more: true },
+      },
+    });
+    expect(
+      contactDims(capped("2026-08-20T09:00:00Z"), t, "en")[0],
+    ).toMatchObject({
+      value: "1 overdue",
+      sub: "of 2+ open · Task t-1",
+    });
+    expect(
+      contactDims(capped("2026-08-11T09:00:00Z"), t, "en")[0],
+    ).toMatchObject({
+      value: "2+ overdue",
+      sub: "of 2+ open · Task t-1",
     });
   });
 

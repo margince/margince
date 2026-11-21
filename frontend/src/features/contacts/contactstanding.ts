@@ -13,7 +13,7 @@ import {
 import { bucketLabel } from "../../lib/bucketlabel";
 import { valueFor } from "../../lib/labelfor";
 import { omitted } from "./contact360";
-import { owedPromises } from "./contactpromises";
+import { lastTaskBeforeCap, owedPromises } from "./contactpromises";
 import { directionSentence } from "./contactrail";
 import { changeSentence } from "./relationshipchange";
 
@@ -181,8 +181,15 @@ function promisesDim(
     (owed) => owed.due != null && daysPast(Date.parse(owed.due), asOf).late,
   );
   const label = t("contact.standing.dim.promises");
-  const count = (base: PluralBase, n: number) =>
-    translatePlural(locale, base, n, { count: formatNumber(n, locale) });
+  // Colleague-filed tasks past the cap make a count a floor. One more overdue
+  // task can hide there only if the last listed task is overdue itself.
+  const last = lastTaskBeforeCap(view);
+  const lastLate =
+    last?.due_at != null && daysPast(Date.parse(last.due_at), asOf).late;
+  const count = (base: PluralBase, n: number, floor: boolean) =>
+    translatePlural(locale, base, n, {
+      count: `${formatNumber(n, locale)}${floor ? "+" : ""}`,
+    });
   if (open.length === 0) {
     return {
       key: "promises",
@@ -196,8 +203,8 @@ function promisesDim(
     return {
       key: "promises",
       label,
-      value: count("standing.overdue", overdue.length),
-      sub: [count("standing.ofOpen", open.length), named]
+      value: count("standing.overdue", overdue.length, lastLate),
+      sub: [count("standing.ofOpen", open.length, last != null), named]
         .filter(Boolean)
         .join(" · "),
       tone: "danger",
@@ -206,7 +213,7 @@ function promisesDim(
   return {
     key: "promises",
     label,
-    value: count("standing.open", open.length),
+    value: count("standing.open", open.length, last != null),
     sub: named,
     tone: "success",
   };

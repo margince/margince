@@ -9,6 +9,7 @@ import { omitted } from "./contact360";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ConversationClaim = components["schemas"]["ConversationClaim"];
+type Contact360Task = NonNullable<Contact360["next_steps"]>["data"][number];
 
 /** One thing our side owes the contact, by what it says and when it falls due. */
 export type OwedPromise = Readonly<{
@@ -58,6 +59,27 @@ export function owedPromises(
   return [...tasks, ...claims];
 }
 
+/**
+ * The last task `next_steps` lists when colleague-filed work may run past its
+ * cap, or undefined when the list is whole. The server sorts colleague-filed
+ * tasks ahead of reminders. So a capped page whose last row is a reminder
+ * holds every colleague-filed task, and a count of them is exact.
+ */
+export function lastTaskBeforeCap(
+  view: Contact360,
+): Contact360Task | undefined {
+  const tasks = view.next_steps?.data ?? [];
+  const last = tasks.at(-1);
+  if (
+    view.next_steps?.page.has_more !== true ||
+    !last ||
+    provenanceOf(last.captured_by).kind === "system"
+  ) {
+    return undefined;
+  }
+  return last;
+}
+
 /** The ids of the tasks the page lists in `next_steps`. */
 export function listedTaskIds(view: Contact360): ReadonlySet<string> {
   return new Set((view.next_steps?.data ?? []).map((task) => task.id));
@@ -67,7 +89,8 @@ export function listedTaskIds(view: Contact360): ReadonlySet<string> {
  * Whether a claim is owed in its own name: it names no task, or its task is
  * open (`task_open`) but past the `next_steps` cap. A listed task stands for
  * its claim. A task that is done or hidden from this reader leaves nothing
- * owed. claimStandsAlone in the contact360 compose package holds the same rule.
+ * owed. claimStandsAlone in the contact360 compose package holds the same rule,
+ * and one case table there (testdata/claimstandsalone.json) runs both.
  */
 export function claimStandsAlone(
   claim: ConversationClaim,
