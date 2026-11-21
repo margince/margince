@@ -218,3 +218,11 @@
   text-align: left;
   cursor: pointer;
 }
+
+/* The score cell takes a tab stop for its reason's tip, so it wears the app's
+   focus ring. */
+.lead-score:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}

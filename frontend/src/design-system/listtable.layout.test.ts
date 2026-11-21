@@ -29,15 +29,44 @@ describe("columnLayout", () => {
     const layout = columnLayout(catalogue, {}, 707);
     expect(layout.floor).toBeCloseTo(707);
     expect(px(layout.widthOf(catalogue[1]))).toBe(110);
-    expect(px(layout.widthOf(catalogue[0]))).toBeGreaterThan(200);
+    expect(px(layout.widthOf(catalogue[0]))).toBeGreaterThan(280);
+  });
+
+  it("never draws the identity column narrower than 280px", () => {
+    const layout = columnLayout(catalogue, {}, 0);
+    expect(layout.widthOf(catalogue[0])).toBe("280px");
   });
 
   it("holds every column at its minimum when the box has no room for them", () => {
     const layout = columnLayout(catalogue, {}, 400);
     expect(catalogue.map((column) => px(layout.widthOf(column)))).toEqual([
-      200, 110, 130, 130, 56,
+      280, 110, 130, 130, 56,
     ]);
-    expect(layout.floor).toBe(626);
+    expect(layout.floor).toBe(706);
+  });
+
+  it("gives the room past every minimum to the identity column first", () => {
+    const layout = columnLayout(catalogue, {}, 806);
+    expect(catalogue.map((column) => px(layout.widthOf(column)))).toEqual([
+      380, 110, 130, 130, 56,
+    ]);
+    expect(layout.floor).toBeCloseTo(806);
+  });
+
+  it("lets the other columns grow by their shares once the identity column holds 400px", () => {
+    const layout = columnLayout(catalogue, {}, 1000);
+    expect(px(layout.widthOf(catalogue[0]))).toBe(400);
+    expect(px(layout.widthOf(catalogue[2]))).toBeGreaterThan(130);
+    expect(layout.floor).toBeCloseTo(1000);
+
+    const wide = columnLayout(catalogue, {}, 1400);
+    expect(px(wide.widthOf(catalogue[0]))).toBeGreaterThan(400);
+  });
+
+  it("gives a dragged identity column no room ahead of the others", () => {
+    const layout = columnLayout(catalogue, { name: 300 }, 806);
+    expect(layout.widthOf(catalogue[0])).toBe("300px");
+    expect(px(layout.widthOf(catalogue[2]))).toBeGreaterThan(130);
   });
 
   const contacts: SizedColumn[] = [
@@ -88,7 +117,7 @@ describe("columnLayout", () => {
   it("never sets a numeric column narrower than the widest figure it holds", () => {
     const layout = columnLayout(catalogue, {}, 400, figures(150));
     expect(px(layout.widthOf(catalogue[1]))).toBe(150);
-    expect(layout.floor).toBe(666);
+    expect(layout.floor).toBe(746);
   });
 
   it("lets a figure wider than the numeric cap widen its column past it", () => {

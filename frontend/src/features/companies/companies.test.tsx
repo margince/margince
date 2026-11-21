@@ -19,6 +19,7 @@ import {
 } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { openFilterValues } from "../../testing/listquery.testkit";
+import { openViewStep } from "../../testing/listview.testkit";
 import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { CompaniesScreen } from "./companies";
 import { render } from "./companies.testkit";
@@ -30,6 +31,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.location.hash = "";
+  localStorage.clear();
 });
 
 describe("CompaniesScreen — search/sort/pagination (P-14)", () => {
@@ -210,6 +212,13 @@ describe("CompaniesScreen — whose account each row is", () => {
 });
 
 describe("CompaniesScreen — how many work here, how many deals are open", () => {
+  // Contacts is offered under View rather than drawn by default.
+  async function showContacts() {
+    const user = userEvent.setup();
+    const step = within(await openViewStep(user, "Columns"));
+    await user.click(step.getByRole("checkbox", { name: "Contacts" }));
+  }
+
   it("shows both counts, zero included", async () => {
     stubFetch(async () =>
       jsonResponse({
@@ -227,6 +236,7 @@ describe("CompaniesScreen — how many work here, how many deals are open", () =
       }),
     );
     render(<CompaniesScreen />);
+    await showContacts();
     const first = (await screen.findByText("Brandt Automotive GmbH")).closest(
       "tr",
     );
@@ -251,6 +261,7 @@ describe("CompaniesScreen — how many work here, how many deals are open", () =
       }),
     );
     render(<CompaniesScreen />);
+    await showContacts();
     const row = (await screen.findByText("Brandt Automotive GmbH")).closest(
       "tr",
     );
@@ -259,6 +270,37 @@ describe("CompaniesScreen — how many work here, how many deals are open", () =
     }
     expect(within(row).getByText("3")).toBeTruthy();
     expect(within(row).queryByText("0")).toBeNull();
+  });
+});
+
+describe("CompaniesScreen — default columns", () => {
+  it("draws the columns a 1440px window fits and offers the rest under View", async () => {
+    const user = userEvent.setup();
+    stubFetch(async () =>
+      jsonResponse({
+        data: [company],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<CompaniesScreen />);
+    await screen.findByText("Brandt Automotive GmbH");
+    expect(
+      within(screen.getByRole("table"))
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      "Select every row on this pageCompany",
+      "Open deals",
+      "Lifecycle",
+      "Relationship type",
+      "Owner",
+      "Last activity",
+      "Created",
+    ]);
+    const step = within(await openViewStep(user, "Columns"));
+    for (const offered of ["Description", "Tags", "Website", "Contacts"]) {
+      expect(step.getByRole("checkbox", { name: offered })).not.toBeChecked();
+    }
   });
 });
 

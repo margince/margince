@@ -2,6 +2,7 @@
 // caption behind the name: a queue of hundreds of leads is worked company by
 // company, so the company has to be readable and sortable, and a long name in
 // front of it can no longer push it off the row.
+import { useId } from "react";
 import type { components } from "../../api/schema";
 import type { CreateFieldOption } from "../../components/create.fields";
 import {
@@ -12,6 +13,7 @@ import {
 } from "../../components/recordlist";
 import { Avatar, Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
+import { useDetailTooltip } from "../../design-system/tooltip";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import type { useLocale, useT } from "../../i18n";
 import { type LeadOrigin, originLabelFor } from "../../lib/leadorigins";
@@ -26,6 +28,7 @@ import {
   scoreTone,
 } from "./leadpresentation";
 import { terminalBadge } from "./leadstanding";
+import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];
 type Translate = ReturnType<typeof useT>;
@@ -82,16 +85,15 @@ export function leadColumns(
       key: "score",
       header: t("lead.score"),
       cell: (lead: Lead) => (
-        <CellStrip>
-          <Badge tone={scoreTone(lead.score)}>
-            {formatNumber(lead.score, locale)}
-          </Badge>
-          <span className="t-caption">
-            {lead.score_reason
+        <LeadScoreCell
+          score={formatNumber(lead.score, locale)}
+          tone={scoreTone(lead.score)}
+          reason={
+            lead.score_reason
               ? scoreFactorLabel(lead.score_reason, t)
-              : t("lead.scoreNoSignals")}
-          </span>
-        </CellStrip>
+              : t("lead.scoreNoSignals")
+          }
+        />
       ),
       sort: "score",
       numeric: true,
@@ -138,20 +140,53 @@ export function leadColumns(
       phoneOnly: true,
     },
     // The shared column, now that this header can offer a sort.
-    lastActivityColumn<Lead>(t, locale, recordZone),
+    {
+      ...lastActivityColumn<Lead>(t, locale, recordZone),
+      initiallyHidden: true,
+    },
     {
       key: "origin",
       header: t("lead.origin"),
+      initiallyHidden: true,
       sort: "origin", // the catalog's label, which is what the cell prints
       cell: (lead: Lead) => (
         <span>{originLabelFor(lead, origins) ?? t("lead.originUnset")}</span>
       ),
     },
     ...partnerColumns(t, partners),
-    tagsColumn<Lead>(t),
+    { ...tagsColumn<Lead>(t), initiallyHidden: true },
     ownerColumn<Lead>(t),
     createdColumn<Lead>(t, locale, recordZone),
   ];
+}
+
+// The reason stays the score's description while the tip is shut. Not
+// `sr-only` text: the numeric floor measures every text box in the cell.
+function LeadScoreCell({
+  score,
+  tone,
+  reason,
+}: Readonly<{
+  score: string;
+  tone: ReturnType<typeof scoreTone>;
+  reason: string;
+}>) {
+  const { ref, trigger, tip } = useDetailTooltip<HTMLSpanElement>(reason);
+  const reasonId = useId();
+  return (
+    <span
+      ref={ref}
+      className="lead-score"
+      {...trigger}
+      aria-describedby={reasonId}
+    >
+      <Badge tone={tone}>{score}</Badge>
+      <span id={reasonId} hidden>
+        {reason}
+      </span>
+      {tip}
+    </span>
+  );
 }
 
 // The referring partner, once the installation has one. A referral still
@@ -165,6 +200,7 @@ function partnerColumns(
     {
       key: "partner",
       header: t("lead.partner"),
+      initiallyHidden: true,
       cell: (lead: Lead) =>
         lead.partner_company_id ? (
           <CellStrip>

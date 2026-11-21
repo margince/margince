@@ -55,3 +55,35 @@ export const NameFallbacks: Story = {
     await expect(canvas.getByText("Unnamed lead")).toBeVisible();
   },
 };
+
+// The score alone in its cell; its main reason is the tip on hover and focus.
+export const ScoreWithItsReason: Story = {
+  render: () => {
+    const score = leadColumns(
+      (key) => translate("en", key),
+      "en",
+      UTC_ZONE,
+      [],
+    ).find((column) => column.key === "score");
+    return (
+      <LocaleProvider initial="en">
+        {[
+          { ...leads[0], score: 72, score_reason: "decision_maker_title" },
+          { ...leads[1], score: 12 },
+        ].map((lead) => (
+          <div key={lead.id}>{score?.cell(lead)}</div>
+        ))}
+      </LocaleProvider>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const first = canvas.getByText("72").closest<HTMLElement>(".lead-score");
+    if (!first) throw new Error("the score cell drew no anchor");
+    first.focus();
+    await expect(
+      await within(document.body).findByRole("tooltip"),
+    ).toHaveTextContent("Decision-maker title");
+    await expect(canvas.getByText("12")).toBeVisible();
+  },
+};

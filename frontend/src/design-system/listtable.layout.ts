@@ -31,6 +31,9 @@ type ColumnSize = Readonly<{
   // For a value whose length hardly changes. The width past it goes to the text
   // columns, or to the trailing gap once only capped columns are left.
   max?: number;
+  // Taken from the room past every minimum before any other column grows. A
+  // narrow page spends its spare pixels on the name.
+  first?: number;
 }>;
 
 const COLUMN_SIZES: Readonly<
@@ -45,7 +48,9 @@ const COLUMN_SIZES: Readonly<
     ColumnSize
   >
 > = {
-  identity: { share: 2.4, min: 200 },
+  // `first` holds about 40 characters of name beside a selection box and an
+  // avatar.
+  identity: { share: 2.4, min: 280, first: 400 },
   numeric: { share: 0.9, min: 110, max: 200 },
   // "28. Sept. 2027" in German, the longest abbreviated date this tree ships.
   date: { share: 0.8, min: 120, max: 150 },
@@ -92,7 +97,7 @@ function boundsOf(column: SizedColumn, floors: Widths): ColumnSize {
   const size = sizeOf(column);
   const floor = floors[column.key] ?? 0;
   return {
-    share: size.share,
+    ...size,
     min: Math.max(size.min, floor),
     max: size.max === undefined ? undefined : Math.max(size.max, floor),
   };
@@ -201,7 +206,7 @@ export function columnLayout(
   available: number,
   floors: NumericFloors = NO_FLOORS,
 ): ColumnLayout {
-  const sizeOf = (column: SizedColumn) => boundsOf(column, floors.held);
+  const boundsAt = (column: SizedColumn) => boundsOf(column, floors.held);
   const fixedWidth = (column: SizedColumn) => {
     const resized = widths[column.key];
     // A width the reader set is theirs. A figure on screen raises it, since a
@@ -209,10 +214,23 @@ export function columnLayout(
     if (resized) {
       return Math.max(resized, floors.onScreen[column.key] ?? 0);
     }
-    const { share, min } = sizeOf(column);
+    const { share, min } = boundsAt(column);
     return share === null ? min : undefined;
   };
   const shared = shown.filter((column) => fixedWidth(column) === undefined);
+  const othersNeed = (column: SizedColumn) => {
+    const { first, min } = boundsAt(column);
+    return fixedWidth(column) ?? (first === undefined ? min : 0);
+  };
+  const roomFirst =
+    available - shown.reduce((total, column) => total + othersNeed(column), 0);
+  // A column that grows first takes the room left, up to `first`, as its floor.
+  const sizeOf = (column: SizedColumn): ColumnSize => {
+    const size = boundsAt(column);
+    return size.first === undefined
+      ? size
+      : { ...size, min: Math.max(size.min, Math.min(size.first, roomFirst)) };
+  };
   const held = new Map<string, number>();
   const pinnedWidth = (column: SizedColumn) =>
     fixedWidth(column) ?? held.get(column.key);

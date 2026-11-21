@@ -11,6 +11,7 @@ import {
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openFilterValues } from "../../testing/listquery.testkit";
+import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, LeadsScreen } from "./leads";
 import {
@@ -521,7 +522,13 @@ describe("LeadsScreen — rich create (P-15)", () => {
       }
       return emptyPage();
     });
+    const user = userEvent.setup();
     render(<LeadsScreen />);
+    // Partner is offered under View rather than drawn by default.
+    const step = within(await openViewStep(user, "Columns"));
+    await user.click(
+      await step.findByRole("checkbox", { name: "Referred by partner" }),
+    );
 
     expect(await screen.findByText("Former Partner AG")).toBeTruthy();
     expect(screen.queryByText("c-old")).toBeNull();

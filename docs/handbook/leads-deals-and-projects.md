@@ -125,7 +125,7 @@ To edit a lead in Margince, open it from **Leads** and press **Edit** in a secti
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead is read-only.
 Also called: update a lead, rename a lead, correct a prospect.
 
-**Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
+**Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then offers a **Referred by partner** column under **View** → **Columns**. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
 
 ### How do I change a lead's owner?
 To change or set the owner of a lead in Margince, open the lead. Press **Edit** in the **Ownership** section of its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
@@ -140,7 +140,7 @@ To name a lead's product in Margince, open the lead, press **Edit** in the **Abo
 Also called: lead product, the product a lead asks about.
 
 ### How do I see why a lead has its score?
-To see why a lead has its score in Margince, open the lead and look at its **Score** panel. Each factor lists what counted, and **{count} activities** on a factor opens **Activities behind this factor**.
+To see why a lead has its score in Margince, open the lead and look at its **Score** panel. Each factor lists what counted, and **{count} activities** on a factor opens **Activities behind this factor**. On the **Leads** table, point at a score or move to it with Tab to read its main reason.
 Also called: lead score explained, why is this lead hot.
 
 ### Scoring

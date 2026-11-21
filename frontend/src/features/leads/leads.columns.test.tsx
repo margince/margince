@@ -1,7 +1,15 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import type { CreateFieldOption } from "../../components/create.fields";
@@ -9,6 +17,7 @@ import { type ListColumn, ListTable } from "../../design-system/listtable";
 import { LocaleProvider, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
+import { openViewStep } from "../../testing/listview.testkit";
 import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { leadColumns } from "./leads.columns";
 
@@ -255,6 +264,76 @@ describe("the referring partner column", () => {
     cleanup();
     renderCell("partner", lead, undefined, PARTNERS);
     expect(screen.getByTestId("cell").textContent).toBe("No partner");
+  });
+});
+
+describe("the lead score cell", () => {
+  it("shows the score alone and keeps its reason as the score's description", () => {
+    renderCell("score", {
+      ...lead,
+      score: 72,
+      score_reason: "decision_maker_title",
+    });
+    const score = screen.getByText("72").closest(".lead-score");
+    if (!(score instanceof HTMLElement)) throw new Error("no score anchor");
+    expect(score).toHaveAccessibleDescription("Decision-maker title");
+    expect(screen.getByText("Decision-maker title")).not.toBeVisible();
+  });
+
+  it("raises the reason as a tip from the keyboard", () => {
+    renderCell("score", { ...lead, score: 12 });
+    const score = screen.getByText("12").closest(".lead-score");
+    if (!(score instanceof HTMLElement)) throw new Error("no score anchor");
+    act(() => score.focus());
+    expect(screen.getByRole("tooltip")).toHaveTextContent("No signals");
+  });
+});
+
+describe("the lead table's default columns", () => {
+  function Table() {
+    const t = useT();
+    const zone = useCompanyZone();
+    return (
+      <ListTable
+        rows={[lead]}
+        columns={leadColumns(t, "en", zone, undefined, PARTNERS)}
+        rowKey={(row) => row.id}
+        unit="leads"
+      />
+    );
+  }
+
+  it("draws the columns a 1440px window fits and offers the rest under View", async () => {
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <Table />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(
+      within(screen.getByRole("table"))
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      "Name",
+      "Company",
+      "Score",
+      "Status",
+      "Next step",
+      "Owner",
+      "Created",
+    ]);
+    const step = within(await openViewStep(user, "Columns"));
+    for (const offered of [
+      "Last activity",
+      "Origin",
+      "Referred by partner",
+      "Tags",
+    ]) {
+      expect(step.getByRole("checkbox", { name: offered })).not.toBeChecked();
+    }
   });
 });
 
