@@ -5992,6 +5992,8 @@ export const en = {
   "lead.bulkAssignedDone_other": "{count} leads assigned to {owner}.",
   "lead.bulkDisqualifiedDone_one": "{count} lead disqualified.",
   "lead.bulkDisqualifiedDone_other": "{count} leads disqualified.",
+  "lead.bulkAssignTitle_one": "Assign this lead to {owner}?",
+  "lead.bulkAssignTitle_other": "Assign {count} leads to {owner}?",
   "lead.bulkFailed": "{count} not applied:",
   "lead.bulkFailedRow": "not saved",
   "lead.bulkOutcomeConflict": "changed by someone else in the meantime",

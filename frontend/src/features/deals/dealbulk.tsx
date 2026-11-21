@@ -75,6 +75,8 @@ export function DealBulkBar({
   if (armedFor !== selectionKey) {
     setArmedFor(selectionKey);
     setStageId("");
+    // An open dialog would otherwise describe the new selection with no stage.
+    setConfirming(false);
   }
 
   // Shown only for rows still in the selection. A run that partly failed

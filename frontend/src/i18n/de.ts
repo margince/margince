@@ -6069,6 +6069,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.bulkAssignedDone_other": "{count} Leads an {owner} zugewiesen.",
   "lead.bulkDisqualifiedDone_one": "{count} Lead disqualifiziert.",
   "lead.bulkDisqualifiedDone_other": "{count} Leads disqualifiziert.",
+  "lead.bulkAssignTitle_one": "Diesen Lead an {owner} zuweisen?",
+  "lead.bulkAssignTitle_other": "{count} Leads an {owner} zuweisen?",
   "lead.bulkFailed": "{count} nicht übernommen:",
   "lead.bulkFailedRow": "nicht gespeichert",
   "lead.bulkOutcomeConflict": "inzwischen von jemand anderem geändert",
