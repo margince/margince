@@ -4,51 +4,63 @@
 package main
 
 import (
-	"slices"
+	"fmt"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/tools/internal/agentmarks"
 	"github.com/margince/margince/backend/tools/internal/oasnode"
 )
 
-// narrowForAgents offers the skill's reader only what an agent may send. A
-// member marked x-human-only leaves its object. A member marked x-agent-values
-// keeps only those values in its enum. The agent gate refuses
-// the rest, so a schema that listed it would describe a call that fails.
-func narrowForAgents(n *yaml.Node) {
-	if n.Kind == yaml.MappingNode {
-		if props, ok := oasnode.Lookup(n, "properties"); ok && props.Kind == yaml.MappingNode {
-			dropped := narrowProperties(props)
-			if required, has := oasnode.Lookup(n, "required"); has {
-				required.Content = slices.DeleteFunc(required.Content, func(name *yaml.Node) bool {
-					return slices.Contains(dropped, name.Value)
-				})
-			}
+// narrowRequestBodies offers the skill's reader only what an agent may send,
+// narrowed as the action catalog narrows it. A marked body becomes its own
+// inline copy, so a component that is also an answer keeps every member there.
+func narrowRequestBodies(root *yaml.Node, ops []operation) error {
+	components, _ := oasnode.Lookup(root, "components")
+	declared, _ := oasnode.Lookup(components, "schemas")
+	//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+	var schemas map[string]any
+	if declared != nil {
+		if err := declared.Decode(&schemas); err != nil {
+			return fmt.Errorf("reading components.schemas: %w", err)
 		}
 	}
-	for _, child := range n.Content {
-		narrowForAgents(child)
-	}
-}
-
-// narrowProperties applies both markers to one properties map and names the
-// members it dropped.
-func narrowProperties(props *yaml.Node) []string {
-	var dropped []string
-	kept := props.Content[:0]
-	for i := 0; i+1 < len(props.Content); i += 2 {
-		name, member := props.Content[i], props.Content[i+1]
-		if oasnode.Scalar(member, "x-human-only") == "true" {
-			dropped = append(dropped, name.Value)
+	for _, op := range ops {
+		body, _ := oasnode.Lookup(op.node, "requestBody")
+		content, _ := oasnode.Lookup(body, "content")
+		if content == nil {
 			continue
 		}
-		if allowed, marked := oasnode.Lookup(member, "x-agent-values"); marked {
-			if enum, has := oasnode.Lookup(member, "enum"); has {
-				enum.Content = allowed.Content
+		for i := 1; i < len(content.Content); i += 2 {
+			if err := narrowMedia(content.Content[i], schemas); err != nil {
+				return fmt.Errorf("%s %s: %w", op.method, op.path, err)
 			}
 		}
-		kept = append(kept, name, member)
 	}
-	props.Content = kept
-	return dropped
+	return nil
+}
+
+// narrowMedia replaces one media type's schema with its narrowed copy when it
+// carries a marker, and leaves it as written otherwise.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func narrowMedia(media *yaml.Node, schemas map[string]any) error {
+	schema, ok := oasnode.Lookup(media, "schema")
+	if !ok {
+		return nil
+	}
+	var decoded any
+	if err := schema.Decode(&decoded); err != nil {
+		return err
+	}
+	narrowed, marks, err := agentmarks.Narrow(decoded, schemas)
+	if err != nil || (len(marks.HumanOnly) == 0 && len(marks.AgentValues) == 0) {
+		return err
+	}
+	var copied yaml.Node
+	if err := copied.Encode(narrowed); err != nil {
+		return err
+	}
+	*schema = copied
+	return nil
 }

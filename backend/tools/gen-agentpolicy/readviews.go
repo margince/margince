@@ -115,7 +115,7 @@ func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryP
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", p.Route, err)
 			}
-			shape.bodySchema, shape.humanOnly, shape.agentValues = body, marks.humanOnly, marks.agentValues
+			shape.bodySchema, shape.humanOnly, shape.agentValues = body, marks.HumanOnly, marks.AgentValues
 			answer, err := answerSchema(op.Responses, rawSchemas)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", p.Route, err)

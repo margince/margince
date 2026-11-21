@@ -484,8 +484,8 @@ content:
 	if !strings.Contains(got, `"status"`) || strings.Contains(got, `"kind"`) || strings.Contains(got, "x-human-only") {
 		t.Errorf("body schema %s, want status alone and no marker", got)
 	}
-	if !slices.Equal(marks.humanOnly, []string{"kind"}) {
-		t.Errorf("human-only members %v, want [kind] for the agent gate", marks.humanOnly)
+	if !slices.Equal(marks.HumanOnly, []string{"kind"}) {
+		t.Errorf("human-only members %v, want [kind] for the agent gate", marks.HumanOnly)
 	}
 	if _, _, err := bodySchema(body("kind"), map[string]any{}); err == nil || !strings.Contains(err.Error(), "kind") {
 		t.Errorf("a body requiring a human-only member answered %v, want a refusal naming it", err)
@@ -502,8 +502,8 @@ content:
 		t.Fatal(err)
 	}
 	got, marks, err = bodySchema(referenced.Content[0], map[string]any{"Kind": map[string]any{"type": "string"}})
-	if err != nil || strings.Contains(got, `"kind"`) || !slices.Equal(marks.humanOnly, []string{"kind"}) {
-		t.Errorf("a marker beside $ref: schema %s, human-only %v (%v), want kind left out and named", got, marks.humanOnly, err)
+	if err != nil || strings.Contains(got, `"kind"`) || !slices.Equal(marks.HumanOnly, []string{"kind"}) {
+		t.Errorf("a marker beside $ref: schema %s, human-only %v (%v), want kind left out and named", got, marks.HumanOnly, err)
 	}
 	var nested yaml.Node
 	if err := yaml.Unmarshal([]byte(`
@@ -548,8 +548,8 @@ func TestAnAgentIsOfferedOnlyTheValuesItMaySend(t *testing.T) {
 	if got != want {
 		t.Errorf("body schema %s, want %s", got, want)
 	}
-	if !slices.Equal(marks.agentValues["source"], []string{"agent"}) {
-		t.Errorf("agent values %v, want source: [agent] for the agent gate", marks.agentValues)
+	if !slices.Equal(marks.AgentValues["source"], []string{"agent"}) {
+		t.Errorf("agent values %v, want source: [agent] for the agent gate", marks.AgentValues)
 	}
 	for _, member := range []string{
 		`{ type: string, enum: [browser, agent], x-agent-values: [chosen] }`,

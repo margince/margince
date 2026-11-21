@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/tools/internal/agentmarks"
 )
 
 // maxBodyDepth bounds how deep a body schema's $refs are followed. A deeper or
@@ -26,19 +27,12 @@ const maxBodyDepth = 6
 // may send (refWalk.fieldDocs).
 var proseMembers = map[string]bool{"description": true, "example": true, "examples": true, "x-go-type": true}
 
-// bodyMarks are what a body's markers tell the agent gate. They name the members
-// a human alone sets, and the values an agent may send in a member.
-type bodyMarks struct {
-	humanOnly   []string
-	agentValues map[string][]string
-}
-
 // bodySchema is a route's JSON request body schema, $refs resolved, as one
-// compact JSON document; empty when the route takes no JSON body. The schema
-// leaves out each human-only member and narrows each agent-valued one.
-func bodySchema(requestBody *yaml.Node, schemas map[string]any) (schema string, marks bodyMarks, err error) {
+// compact JSON document; empty when the route takes no JSON body. The schema is
+// narrowed as the skill's is (agentmarks.Narrow), so both offer one shape.
+func bodySchema(requestBody *yaml.Node, schemas map[string]any) (schema string, marks agentmarks.Marks, err error) {
 	if requestBody == nil || requestBody.Kind == 0 {
-		return "", bodyMarks{}, nil
+		return "", agentmarks.Marks{}, nil
 	}
 	var body struct {
 		Content map[string]struct {
@@ -46,22 +40,20 @@ func bodySchema(requestBody *yaml.Node, schemas map[string]any) (schema string, 
 		} `yaml:"content"`
 	}
 	if err := requestBody.Decode(&body); err != nil {
-		return "", bodyMarks{}, err
+		return "", agentmarks.Marks{}, err
 	}
 	media, ok := body.Content["application/json"]
 	if !ok {
-		return "", bodyMarks{}, nil
+		return "", agentmarks.Marks{}, nil
+	}
+	narrowed, marks, err := agentmarks.Narrow(media.Schema, schemas)
+	if err != nil {
+		return "", agentmarks.Marks{}, err
 	}
 	walk := &refWalk{schemas: schemas, open: map[string]bool{}, fieldDocs: true}
-	resolved, err := walk.resolve(media.Schema, 0)
+	resolved, err := walk.resolve(narrowed, 0)
 	if err != nil {
-		return "", bodyMarks{}, err
-	}
-	if marks.humanOnly, err = withoutHumanOnly(resolved); err != nil {
-		return "", bodyMarks{}, err
-	}
-	if marks.agentValues, err = withAgentValues(resolved); err != nil {
-		return "", bodyMarks{}, err
+		return "", agentmarks.Marks{}, err
 	}
 	out, err := json.Marshal(unmarked(resolved))
 	return string(out), marks, err
@@ -214,7 +206,8 @@ func answeredUnder(node any, inherited string) any {
 		props, _ := v["properties"].(map[string]any)
 		withDisplays(props, inherited)
 		delete(v, nullableMarker)
-		delete(v, humanOnlyMarker)
+		delete(v, agentmarks.HumanOnly)
+		delete(v, agentmarks.AgentValues)
 		below := values.CurrencyBelow(declared(props, values.ConvertedCurrency), required(v, values.AmountCurrency), inherited)
 		for key, member := range v {
 			switch {
@@ -308,15 +301,7 @@ func (w *refWalk) resolve(node any, depth int) (any, error) {
 			}
 			w.open[name] = true
 			defer delete(w.open, name)
-			resolved, err := w.resolve(target, depth+1)
-			// A marker beside the $ref belongs to the member, not to the schema it names.
-			if fields, isMap := resolved.(map[string]any); isMap && v[humanOnlyMarker] == true {
-				fields[humanOnlyMarker] = true
-			}
-			if fields, isMap := resolved.(map[string]any); isMap && v[agentValuesMarker] != nil {
-				fields[agentValuesMarker] = v[agentValuesMarker]
-			}
-			return resolved, err
+			return w.resolve(target, depth+1)
 		}
 		if flat, combined, err := w.flattenCombinator(v, depth); combined {
 			return flat, err
