@@ -30,6 +30,43 @@ function isActivityKind(value: string): value is ActivityKind {
   return ACTIVITY_KINDS.some((kind) => kind === value);
 }
 
+function useSearchDraft(
+  value: TimelineFilters,
+  onChange: (next: TimelineFilters) => void,
+) {
+  const [draft, setDraft] = useState(value.q ?? "");
+  // Follows an outside reset, not this box's own trimmed commit coming back,
+  // which would drop the space before the next word.
+  const [draftFor, setDraftFor] = useState(value.q ?? "");
+  if ((value.q ?? "") !== draftFor) {
+    setDraftFor(value.q ?? "");
+    if ((value.q ?? "") !== draft.trim()) {
+      setDraft(value.q ?? "");
+    }
+  }
+  const [composing, setComposing] = useState(false);
+  const settled = useSettledValue(draft);
+  const lastCommitted = useRef(value.q ?? "");
+  useEffect(() => {
+    lastCommitted.current = value.q ?? "";
+  }, [value.q]);
+  const commitSearch = (text: string) => {
+    const q = text.trim();
+    if (q !== lastCommitted.current) {
+      lastCommitted.current = q;
+      onChange({ ...value, q });
+    }
+  };
+  // Only a pause on the text still in the box commits. A pause that ended
+  // before an outside reset must not write the old word back.
+  useEffect(() => {
+    if (!composing && settled === draft) {
+      commitSearch(settled);
+    }
+  });
+  return { draft, setDraft, setComposing, commitSearch };
+}
+
 /**
  * TimelineFilterBar is the ONE row of dials every record timeline narrows
  * by: a kind, a search, and a date range. Every dial is a server parameter
@@ -62,35 +99,10 @@ export function TimelineFilterBar({
   const t = useT();
   const fromId = useId();
   const toId = useId();
-  const [draft, setDraft] = useState(value.q ?? "");
-  // The draft follows a filter reset from outside (a record change): a box
-  // still showing the previous record's word would claim a search that is
-  // not running.
-  const [draftFor, setDraftFor] = useState(value.q ?? "");
-  if ((value.q ?? "") !== draftFor) {
-    setDraftFor(value.q ?? "");
-    setDraft(value.q ?? "");
-  }
-  const [composing, setComposing] = useState(false);
-  const settled = useSettledValue(draft);
-  const lastCommitted = useRef(value.q ?? "");
-  useEffect(() => {
-    lastCommitted.current = value.q ?? "";
-  }, [value.q]);
-  const commitSearch = (text: string) => {
-    const q = text.trim();
-    if (q !== lastCommitted.current) {
-      lastCommitted.current = q;
-      onChange({ ...value, q });
-    }
-  };
-  // Only a pause on the text still in the box commits. A pause that ended
-  // before an outside reset must not write the old word back.
-  useEffect(() => {
-    if (!composing && settled === draft) {
-      commitSearch(settled);
-    }
-  });
+  const { draft, setDraft, setComposing, commitSearch } = useSearchDraft(
+    value,
+    onChange,
+  );
   const kindOptions = [
     { value: "", label: t("timeline.filters.kind.all") },
     ...kinds.map((kind) => ({
