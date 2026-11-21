@@ -8,7 +8,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
@@ -298,11 +298,11 @@ function render(ui: ReactNode) {
   );
 }
 
-async function submitWebsite() {
+async function submitWebsite(user: UserEvent = userEvent.setup()) {
   const composer = await screen.findByRole("textbox", {
     name: /Website address/,
   });
-  await userEvent.type(composer, "gradion.com{Enter}");
+  await user.type(composer, "gradion.com{Enter}");
 }
 
 // The review's default face is the deck, one card at a time, with the whole
@@ -732,6 +732,7 @@ describe("the conversational company act", () => {
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
+    expect(requestsTo(calls, "/onboarding/state", "GET")).toHaveLength(1);
     const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
       .clone()
       .json()) as Record<string, unknown>;
@@ -739,6 +740,32 @@ describe("the conversational company act", () => {
     expect(body.source_mode).toBe("website");
     expect(body.step).toBe("read");
     expect(body.website_url).toBe("https://gradion.com");
+  });
+
+  // The read checkpoint names a run the restore would reattach. The restore
+  // routed at mount, so it must not fetch that run beside the act's own poll.
+  it("does not re-run the restore's reads when a checkpoint lands mid-journey", async () => {
+    const user = userEvent.setup();
+    const calls = stubApi();
+    render(<OnboardingScreen />);
+
+    await submitWebsite(user);
+    const accept = (await screen.findByRole("button", {
+      name: "Confirm profile",
+    })) as HTMLButtonElement;
+    await waitFor(() => {
+      expect(accept.disabled).toBe(false);
+    });
+    await user.click(accept);
+    await screen.findByRole("heading", { name: "Set the reporting basis" });
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("radio", { name: /Yes, I will work in Margince/ });
+    await waitFor(() => {
+      expect(requestsTo(calls, "/onboarding/state", "PUT")).toHaveLength(4);
+    });
+
+    expect(requestsTo(calls, "/onboarding/state", "GET")).toHaveLength(1);
+    expect(requestsTo(calls, "/company/site-reads/", "GET")).toHaveLength(1);
   });
 
   it("still concludes and reviews from the snapshot when the proposal fails", async () => {
