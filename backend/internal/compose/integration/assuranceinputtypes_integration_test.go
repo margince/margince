@@ -20,14 +20,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Over the whole event catalog, a new event starts unread for the deal check
-// when, and only when, the check reads its type. Compose binds the list at start-up.
+// Over the whole event catalog, a new event starts unread only when the
+// freshness consumer marks something for its type. inputChangesOf skips an
+// undeclared type and ScopeNone. The expectation reads that table, not
+// MarkingEventTypes, so a type dropped from the list fails here.
 func TestAnEventStartsUnreadOnlyWhenTheDealCheckReadsItsType(t *testing.T) {
 	e := Setup(t)
 	ctx := principal.WithCorrelationID(principal.SystemActing(e.Admin(), "system:assurance-test"), ids.NewV7())
-	marking := assurance.MarkingEventTypes()
-	if len(marking) == 0 {
-		t.Fatal("the deal check reads no event type, so the case proves nothing")
+	consumed := func(eventType string) bool {
+		change, ok := assurance.InputChangeOf(eventType)
+		return ok && change.Scope != assurance.ScopeNone
 	}
 	emitted := map[ids.UUID]string{}
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -42,9 +44,12 @@ func TestAnEventStartsUnreadOnlyWhenTheDealCheckReadsItsType(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("emitting one event of each type: %v", err)
 	}
+	if !slices.ContainsFunc(events.Types(), consumed) {
+		t.Fatal("the freshness consumer reads no event type, so the case proves nothing")
+	}
 	for entity, eventType := range emitted {
 		unread := e.WsScalar(t, `SELECT (NOT assurance_inputs_read)::text FROM event_outbox WHERE envelope->'entity'->>'id' = $1`, entity.String())
-		if want := slices.Contains(marking, eventType); (unread == "true") != want {
+		if want := consumed(eventType); (unread == "true") != want {
 			t.Errorf("a new %s event starts unread=%s, want %v", eventType, unread, want)
 		}
 	}
