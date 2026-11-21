@@ -13,8 +13,9 @@
 # any lane finished. After each batch the lane runs again on what is left.
 # A subscription limit makes it wait and go on. A case that stops the harness
 # waits until the others have run, since the lane runs a batch in file order
-# and stops at the first such case; once only it is left, a batch that
-# finishes nothing twice stops the lane, so that you read the log.
+# and stops at the first such case; once only such cases are left, they run
+# one per batch, and a batch that finishes nothing twice stops the lane, so
+# that you read the log.
 #
 # Run each lane from its own worktree: a worktree owns one dev stack, and two
 # lanes building in one would race. Lanes share the Postgres, Redis and object
@@ -81,7 +82,10 @@ while :; do
   fi
   run=()
   for name in "${left[@]}"; do [[ " ${deferred[*]-} " == *" $name "* ]] || run+=("$name"); done
-  [[ ${#run[@]} -eq 0 ]] && run=("${left[@]}")
+  # Once only stopped cases are left, one runs per batch, in turn: a batch
+  # runs in file order and ends at the first stop, so a case that always stops
+  # would otherwise keep every case after it from running.
+  [[ ${#run[@]} -eq 0 ]] && run=("${left[$((batch % ${#left[@]}))]}")
   batch=$((batch + 1))
   log="$logs/$slug.batch$batch.log"
   echo "BATCH $slug #$batch: ${#run[@]} cases, log $log"
