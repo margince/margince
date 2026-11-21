@@ -163,7 +163,7 @@ SELECT p.owner_id, p.full_name, cur.id, cur.company_id, curco.display_name, targ
   JOIN company target ON target.id = $2
   JOIN activity a ON a.id = $3 AND a.archived_at IS NULL AND a.direction = 'inbound' AND a.inbound_sender_authenticated
   JOIN LATERAL (SELECT fp.address FROM activity_participant fp
-                  JOIN contact_email fe ON fe.contact_id = p.id AND fe.archived_at IS NULL AND lower(fe.email) = lower(fp.address)
+                  JOIN contact_email fe ON fe.contact_id = p.id AND fe.archived_at IS NULL AND fe.email = lower(fp.address)
                  WHERE fp.activity_id = a.id AND fp.role = 'from'
                    AND ($5 = '' OR ` + owndomain.CoversSQL("fe.email_domain_folded", "$5") + `)
                  ORDER BY fp.address LIMIT 1) sender ON true
@@ -179,7 +179,7 @@ SELECT p.owner_id, p.full_name, cur.id, cur.company_id, curco.display_name, targ
 	SELECT 1 FROM contact_email pe
 	  JOIN company_domain cd ON cd.company_id = cur.company_id AND cd.archived_at IS NULL
 	   AND ` + owndomain.CoversSQL("pe.email_domain_folded", "cd.domain_folded") + `
-	  JOIN activity_participant ap ON lower(ap.address) = lower(pe.email) AND ap.role = 'from'
+	  JOIN activity_participant ap ON lower(ap.address) = pe.email AND ap.role = 'from'
 	  JOIN activity ev ON ev.id = ap.activity_id
 	 WHERE pe.contact_id = p.id AND (ev.id = a.id OR ` + occurredday.AnswersSQL("ev", "a") + `))`
 
@@ -229,7 +229,7 @@ func (s *Store) offerDomainEmployerChangesTx(ctx context.Context, tx pgx.Tx, dom
 		SELECT p.id, newest.id FROM contact p
 		  JOIN relationship cur ON cur.contact_id = p.id AND cur.company_id <> $2 AND `+employment.LiveCurrentPrimarySQL("cur")+`
 		  JOIN LATERAL (SELECT ev.id FROM contact_email pe
-		                  JOIN activity_participant ap ON lower(ap.address) = lower(pe.email) AND ap.role = 'from'
+		                  JOIN activity_participant ap ON lower(ap.address) = pe.email AND ap.role = 'from'
 		                  JOIN activity ev ON ev.id = ap.activity_id AND ev.archived_at IS NULL
 		                   AND ev.direction = 'inbound' AND ev.inbound_sender_authenticated
 		                 WHERE pe.contact_id = p.id AND pe.archived_at IS NULL
