@@ -189,7 +189,11 @@ export function EditOfferHeaderModal({
           body: {
             currency: input.currency,
             buyer_company_id: input.buyer_company_id,
-            valid_until: input.valid_until || null,
+            // Sent only when changed: a saved day that has since passed is
+            // left alone, and a typed one is held to today or later.
+            ...(input.valid_until === (offer.valid_until ?? "")
+              ? {}
+              : { valid_until: input.valid_until || null }),
             template_id: input.template_id,
             // Sent only when the reader picked one: an offer from before
             // offers named an entity keeps naming none until somebody does.

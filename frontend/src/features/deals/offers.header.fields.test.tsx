@@ -16,7 +16,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function openHeaderEdit() {
+function openHeaderEdit(validUntil: string | null = null) {
   const writes: Request[] = [];
   vi.stubGlobal(
     "fetch",
@@ -39,7 +39,7 @@ function openHeaderEdit() {
         <EditOfferHeaderModal
           open
           onClose={vi.fn()}
-          offer={offer({ valid_until: null })}
+          offer={offer({ valid_until: validUntil, version: 3 })}
         />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -59,6 +59,21 @@ it("refuses a valid-until day already past, and says the earliest day it takes",
   expect(writes).toHaveLength(0);
   expect(screen.getByRole("alert")).toHaveTextContent(/^Earliest date: /);
   expect(box).toHaveAttribute("aria-invalid", "true");
+});
+
+// A day saved before it passed is the offer's own; a Save of other fields
+// never writes it again.
+it("leaves a saved valid-until day out of a Save that did not change it", async () => {
+  const writes = openHeaderEdit("1999-01-01");
+  const user = userEvent.setup();
+  await user.type(
+    await screen.findByRole("textbox", { name: "Terms text" }),
+    "Net 30",
+  );
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  await vi.waitFor(() => expect(writes).toHaveLength(1));
+  expect(await writes[0].json()).not.toHaveProperty("valid_until");
 });
 
 // The PDF prints these texts with their line breaks, so the field keeps them.
