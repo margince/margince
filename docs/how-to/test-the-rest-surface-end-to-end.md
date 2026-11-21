@@ -16,7 +16,11 @@ MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=claude E2E_LLM_VIA=cli E2E_LLM_DOOR=rest \
   SCENARIO=case61_what_have_i_promised make e2e-llm
 ```
 
-Only a CLI can use REST mode, so `E2E_LLM_VIA=cli` is needed, with `claude` or `gpt`.
+Only a CLI can use REST mode, so `E2E_LLM_VIA=cli` is needed.
+
+**The REST API is tested on Claude only.** This is a decision, not a gap: the other models are
+tested through the MCP tools. A sweep follows the rules in
+[How a sweep is run](test-the-mcp-surface-end-to-end.md#how-a-sweep-is-run).
 
 ## What the assistant gets
 

@@ -11,6 +11,19 @@ This is the **lane that costs money**, and you turn it on yourself. Every run us
 
 See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red result), and [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface under test). The lane of [certify-an-ai-model.md](certify-an-ai-model.md) is a different one: one AI feature, one model. The `e2e-llm` row of [reference/make-targets.md](../reference/make-targets.md) lists every setting. [test-the-rest-surface-end-to-end.md](test-the-rest-surface-end-to-end.md) runs the same scenarios through the REST API.
 
+## How a sweep is run
+
+These rules hold for every sweep, on every model.
+
+1. **When.** Run a sweep by hand, in the pull request that changes the tool copy, the server instructions or the harness. No paid run is scheduled. To start one in CI, run [`mcp-sweep.yml`](../../.github/workflows/mcp-sweep.yml) by hand (section 8).
+2. **Order.** Claude runs first. Read each failure in its transcript. Sort it as a scenario bug, a harness bug, a product bug or a model limit. Fix the first three in the same pull request, open an issue for each as the record, and run again.
+   Gemini and GPT run only once no Claude failure is left to fix.
+3. **MCP and REST.** The MCP tools run on every model. The REST API runs on Claude only.
+4. **Grading.** Grade the result, not the path. Pin a path only where the path is what must hold. That is a send, an approval, an ask-first step, privacy, and instructions put in the data.
+   Never fail a case for extra calls. The verdict keeps calls and turns as a score of how direct the run was.
+5. **Re-grading.** When only the checker changes, grade the saved transcripts again instead of paying for a new run. Do this only while the scenario, tool and instruction hashes still match (section 8).
+6. **Quota.** When a model reaches its limit, stop that lane, and go on after the reset. Never retry in a loop.
+
 ## 1. Choose the assistant and how to reach it
 
 | `E2E_LLM_CANDIDATE` | Model (the default of the consumer app) |
@@ -303,40 +316,21 @@ router, that entry includes the bodies `read_workspace topic=actions` serves. It
 a hash of the server instructions and of the grading harness, the judge model, the commit and the
 time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
 
+To grade saved transcripts again, run `check.py --record` with `E2E_LLM_COMMIT` and `E2E_LLM_RAN_AT` set to the run's commit and time, and `E2E_LLM_GRADED_COMMIT` to the commit that grades.
+The stamp then holds `graded_commit` and `graded_at` too. Where the two commits differ, `make e2e-llm-report` and the coverage page say `re-graded`.
+
 A verdict whose stamp no longer matches the tree, or that has none, is stale.
 `make e2e-llm-report` names what moved. A pull request that makes a verdict
 stale gets a comment that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you
 do not run them again.
 
-No cron runs this lane. Sweep it by hand in the pull request that changes the server instructions,
-the tool copy or the harness, and commit the verdicts there. The surface changes often, and a verdict from an older tree
-is stale as soon as it lands.
+`mcp-sweep.yml` sweeps every case in parts, side by side, with `claude-sonnet-5-5` over the Claude CLI. Its header comment says what it needs.
+It uploads verdicts only when every case has a new one from a stack whose search ranks by meaning. Each part keeps its transcripts as an `e2e-llm-transcripts-*` artifact.
 
-You can also start the sweep in CI: run `mcp-sweep.yml` by hand (Actions, then **Run workflow**,
-then pick the branch). It sweeps every case in parts, side by side, with `claude-sonnet-5-5` over
-the Claude CLI. It uploads the `e2e-llm-verdicts` artifact only when every case has a new verdict
-from a stack whose search ranks by meaning. The verdicts are complete then, whether every case
-passed (`ok`) or some missed their bar (`scenario-failed`).
+Started on `main`, the run opens a pull request with its verdicts, owned by the `RECORDS_OWNER` repository variable. It files an issue on `main` for a run that was cut off, could not run, or has a failing case. Only a later run on `main` that proves the issue wrong closes it.
 
-A run that was cut off, could not run, or did not search by meaning uploads no verdicts. The run
-summary gives its outcome. Each part that ran keeps its transcripts as an `e2e-llm-transcripts-*`
-artifact. A run with no `CLAUDE_CODE_OAUTH_TOKEN` runs no part, and its summary says so.
-
-Started on `main`, the run opens the pull request with its verdicts. The `RECORDS_OWNER` repository
-variable names who owns it. The run also files an issue on `main` for a run that was cut off,
-could not run, or has a failing case. Only a later run on `main` that proves the issue wrong closes
-it, so start one after the fix lands.
-
-Started on any other branch, it opens no pull request and files no issue. It still renders the
-record: the `records-llm` artifact holds `llm.patch`, with the verdicts and the page made again, and
-`llm-table.md`, the scenarios whose result moved. To publish them in the pull request of that branch:
-
-1. Download the `records-llm` artifact of the run.
-2. On the branch, run `git apply llm.patch` from the root of the tree.
-3. Commit the result, and paste `llm-table.md` into the PR body.
-
-If the branch moved since the run, `git apply` may refuse a page the new commits changed. Generate
-the page again with the `go test` command at the top of this section.
+Started on another branch, it opens no pull request and files no issue. Its `records-llm` artifact holds `llm.patch`, with the verdicts and the page made again, and `llm-table.md`, the scenarios whose result moved.
+Run `git apply llm.patch` from the root of the tree, commit the result, and paste `llm-table.md` into the PR body. If the branch moved and `git apply` refuses the page, generate it again with the `go test` command above.
 
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a run to try something.
