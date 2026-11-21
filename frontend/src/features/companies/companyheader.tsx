@@ -24,7 +24,6 @@ import {
   useFieldEditor,
 } from "../../design-system/fieldeditdialog";
 import { Select } from "../../design-system/select";
-import { displayDomain } from "../../format/domaindisplay";
 import { useT } from "../../i18n";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { useCan, useCanWrite, useCanWriteRecord } from "../../lib/capability";
@@ -38,6 +37,7 @@ import { useShortcut } from "../../lib/shortcuts";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
+import { displayDomain } from "./domaindisplay";
 
 // The header's pieces that write: the owner, the lifecycle's shared PATCH and
 // the record menu. The facts and other verbs live in companyheader*.tsx.
