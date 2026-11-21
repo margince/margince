@@ -33239,7 +33239,7 @@ type AccountCoverageRow struct {
 
 // AccountCoverageThresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
 type AccountCoverageThresholds struct {
-	// MaxEngagedSeats A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1.
+	// MaxEngagedSeats A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. Account coverage and the deal page both judge by it. Default 1.
 	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty" maximum:"10" minimum:"0"`
 
 	// SilentDays A won account with no exchange within this many days is silent. Default 30.
@@ -41779,7 +41779,7 @@ type Company360Health struct {
 	// ReplyBalance Of the interactions in the strength window, the share that came from them. 0.5 is an even exchange; near 0 is us talking to ourselves. Null when nothing was captured.
 	ReplyBalance *float32 `json:"reply_balance,omitempty" maximum:"1" minimum:"0"`
 
-	// SingleThreaded The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
+	// SingleThreaded The relationship rests on no more contacts in touch than the published `account_coverage.max_engaged_seats` allows, the rule a deal's single-threaded finding follows too. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
 	SingleThreaded *bool `json:"single_threaded,omitempty"`
 }
 
@@ -48879,6 +48879,11 @@ type DealCoverage struct {
 	// the edge sections are withheld: absence says nothing about who has talked.
 	Lines *[]DealCoverageLine `json:"lines,omitempty"`
 
+	// MaxEngagedSeats The published `account_coverage.max_engaged_seats` that `single_threaded_theirs` was
+	// judged at: a touched deal with this many engaged contacts, or fewer, is single-threaded.
+	// Absent when the edge sections are withheld, since no finding is judged then.
+	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty" minimum:"0"`
+
 	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
 	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
 	// score is their warmest single relationship. `single_threaded_ours` reads the same
@@ -52874,7 +52879,8 @@ type HealthDimension struct {
 	//   `at`, the last of the two.
 	// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 	// - `last_met`: in touch through a meeting `days` days ago.
-	// - `single_threaded`: in touch, but one contact carries the whole account.
+	// - `single_threaded`: in touch, but only `count` contacts carry the whole account, at most
+	//   the published `account_coverage.max_engaged_seats`.
 	// - `several_contacts`: `count` contacts here are in touch with us.
 	// - `deals_all_stalled`: all `count` open deals have stalled.
 	// - `deals_some_stalled`: `count` of `total` open deals have stalled.
@@ -52896,7 +52902,8 @@ type HealthDimensionRating string
 //     `at`, the last of the two.
 //   - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 //   - `last_met`: in touch through a meeting `days` days ago.
-//   - `single_threaded`: in touch, but one contact carries the whole account.
+//   - `single_threaded`: in touch, but only `count` contacts carry the whole account, at most
+//     the published `account_coverage.max_engaged_seats`.
 //   - `several_contacts`: `count` contacts here are in touch with us.
 //   - `deals_all_stalled`: all `count` open deals have stalled.
 //   - `deals_some_stalled`: `count` of `total` open deals have stalled.
@@ -73390,7 +73397,9 @@ type WeeklyScorecardDealBlock struct {
 	// stage: a median of nothing is absent, never zero.
 	MedianDaysInStage *int `json:"median_days_in_stage,omitempty" minimum:"0"`
 
-	// MultiThreaded Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
+	// MultiThreaded Open deals with more distinct contacts in the last 30 days than the published
+	// `account_coverage.max_engaged_seats` allows a single-threaded deal (default: two or
+	// more), as of when the week was frozen. Thirty rather than
 	// the review's own week: the risk measured is the single point of failure, and a deal
 	// worked steadily for a month is multi-threaded whether or not the second contact
 	// happened to appear in these seven days.

@@ -3520,6 +3520,8 @@ export const en = {
   // about. Two sentences, no dash (VOICE-RULE-5).
   "common.individualPerformanceOff":
     "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two. A forecast is withheld in full if any of its groups would show one colleague’s figures.",
+  "common.ownerNotMeasurable":
+    "This owner’s figures are outside what you may measure. Remove the owner filter, or ask an administrator to widen your reach.",
   "common.permissionDenied":
     "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   // The licensing ceiling, decided before any role is consulted: a read seat is
@@ -4167,8 +4169,10 @@ export const en = {
   "co.health.reason.lastMetToday": "Last met them today.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
   "co.health.reason.lastMet_other": "Last met them {days} days ago.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "In contact, but one contact carries the whole company relationship.",
+  "co.health.reason.singleThreaded_other":
+    "In contact, but only {count} contacts carry the whole company relationship.",
   "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
   "co.health.reason.severalContacts_other":
     "{count} contacts here are in touch.",
@@ -6353,6 +6357,9 @@ export const en = {
   "deal.committee.missing.secondContact": "Only one contact. Add a second one.",
   "deal.committee.missing.secondEngaged":
     "Fewer than two engaged. Reach a second contact.",
+  "deal.committee.missing.anotherContact": "Too few contacts. Add another one.",
+  "deal.committee.missing.anotherEngaged":
+    "Too few engaged. Reach another contact.",
   "deal.committee.foot": "{named} named · {engaged} of {named} engaged",
   "deal.brief.title": "What this deal is",
   "deal.brief.byModel": "Written by Margince from the customer’s email",

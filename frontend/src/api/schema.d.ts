@@ -24640,8 +24640,8 @@ export interface paths {
          *     the same test the deal-health composite uses — one definition, so two screens
          *     cannot disagree about the same deal.
          *
-         *     Risk kinds and their sources: `single_threaded_theirs` is REPORT-PARAM-1
-         *     verbatim (fewer than two engaged contacts); `single_threaded_ours` is
+         *     Risk kinds and their sources: `single_threaded_theirs` is a touched deal
+         *     with at most `max_engaged_seats` engaged contacts; `single_threaded_ours` is
          *     GRAPH-RISK-1, a statement about OUR coverage rather than the customer's, which
          *     is why it carries its own id; `coverage_gap` is a deal with seats but no engaged
          *     champion — a well-threaded deal nobody inside is arguing for.
@@ -36455,7 +36455,8 @@ export interface components {
          *       `at`, the last of the two.
          *     - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
          *     - `last_met`: in touch through a meeting `days` days ago.
-         *     - `single_threaded`: in touch, but one contact carries the whole account.
+         *     - `single_threaded`: in touch, but only `count` contacts carry the whole account, at most
+         *       the published `account_coverage.max_engaged_seats`.
          *     - `several_contacts`: `count` contacts here are in touch with us.
          *     - `deals_all_stalled`: all `count` open deals have stalled.
          *     - `deals_some_stalled`: `count` of `total` open deals have stalled.
@@ -36504,7 +36505,7 @@ export interface components {
             last_meeting_precision?: components["schemas"]["OccurredPrecision"];
             /** @description How many contacts here have interacted at all — the account's real surface. */
             active_contacts?: number | null;
-            /** @description The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account. */
+            /** @description The relationship rests on no more contacts in touch than the published `account_coverage.max_engaged_seats` allows, the rule a deal's single-threaded finding follows too. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account. */
             single_threaded?: boolean | null;
             /** @description Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities. */
             open_commitments?: number | null;
@@ -39839,6 +39840,12 @@ export interface components {
              */
             lines?: components["schemas"]["DealCoverageLine"][];
             risks: components["schemas"]["DealCoverageRisk"][];
+            /**
+             * @description The published `account_coverage.max_engaged_seats` that `single_threaded_theirs` was
+             *     judged at: a touched deal with this many engaged contacts, or fewer, is single-threaded.
+             *     Absent when the edge sections are withheld, since no finding is judged then.
+             */
+            max_engaged_seats?: number;
             /**
              * @description The sections withheld for lack of the `relationship` grant — so a client can say
              *     "you can't see this" instead of "there is none". Never returned absent, and empty
@@ -50062,7 +50069,7 @@ export interface components {
         };
         /** @description What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints. */
         AccountCoverageThresholds: {
-            /** @description A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1. */
+            /** @description A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. Account coverage and the deal page both judge by it. Default 1. */
             max_engaged_seats?: number;
             /** @description An account with an open deal and no exchange within this many days is untouched. Default 21. */
             untouched_days?: number;
@@ -60172,7 +60179,9 @@ export interface components {
              */
             open: number;
             /**
-             * @description Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
+             * @description Open deals with more distinct contacts in the last 30 days than the published
+             *     `account_coverage.max_engaged_seats` allows a single-threaded deal (default: two or
+             *     more), as of when the week was frozen. Thirty rather than
              *     the review's own week: the risk measured is the single point of failure, and a deal
              *     worked steadily for a month is multi-threaded whether or not the second contact
              *     happened to appear in these seven days.
@@ -64374,7 +64383,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. */
+        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. On the same reads, `code: owner_not_measurable` means a filter names an owner whose figures the caller may not measure. */
         PermissionDenied: {
             headers: {
                 [name: string]: unknown;
@@ -85615,7 +85624,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             /** @description The plan failed validation (out-of-vocabulary field, invalid aggregate). */
             422: {

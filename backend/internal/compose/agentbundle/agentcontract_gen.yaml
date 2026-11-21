@@ -13332,7 +13332,7 @@ paths:
                     base_currency: EUR
                     fiscal_year_start_month: 1
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422':
           description: The plan failed validation (out-of-vocabulary field, invalid aggregate).
@@ -27020,7 +27020,7 @@ components:
             role:
               value: {type: 'https://errors.gradion.com/role_cannot_capture', title: Forbidden, status: 403, code: role_cannot_capture, detail: 'Your role cannot record activities, so this mailbox cannot be captured. Ask an admin to change your role.'}
     PermissionDenied:
-      description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to.'
+      description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. On the same reads, `code: owner_not_measurable` means a filter names an owner whose figures the caller may not measure.'
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
@@ -33992,7 +33992,7 @@ components:
         single_threaded:
           type: [boolean, 'null']
           description: >-
-            The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
+            The relationship rests on no more contacts in touch than the published `account_coverage.max_engaged_seats` allows, the rule a deal's single-threaded finding follows too. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
         open_commitments:
           type: [integer, 'null']
           description: >-
@@ -37610,6 +37610,13 @@ components:
             the edge sections are withheld: absence says nothing about who has talked.
           items: {$ref: '#/components/schemas/DealCoverageLine'}
         risks: {type: array, items: {$ref: '#/components/schemas/DealCoverageRisk'}}
+        max_engaged_seats:
+          type: integer
+          minimum: 0
+          description: |-
+            The published `account_coverage.max_engaged_seats` that `single_threaded_theirs` was
+            judged at: a touched deal with this many engaged contacts, or fewer, is single-threaded.
+            Absent when the edge sections are withheld, since no finding is judged then.
         sections_omitted:
           type: array
           description: |-
@@ -47195,7 +47202,7 @@ components:
       additionalProperties: false
       description: "What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints."
       properties:
-        max_engaged_seats: {type: integer, minimum: 0, maximum: 10, description: "A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1."}
+        max_engaged_seats: {type: integer, minimum: 0, maximum: 10, description: "A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. Account coverage and the deal page both judge by it. Default 1."}
         untouched_days: {type: integer, minimum: 1, maximum: 365, description: "An account with an open deal and no exchange within this many days is untouched. Default 21."}
         silent_days: {type: integer, minimum: 1, maximum: 365, description: "A won account with no exchange within this many days is silent. Default 30."}
         won_within_days: {type: integer, minimum: 1, maximum: 730, description: "How far back a won deal still makes an account a won account. Default 180."}
@@ -56064,7 +56071,9 @@ components:
           type: integer
           minimum: 0
           description: |-
-            Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
+            Open deals with more distinct contacts in the last 30 days than the published
+            `account_coverage.max_engaged_seats` allows a single-threaded deal (default: two or
+            more), as of when the week was frozen. Thirty rather than
             the review's own week: the risk measured is the single point of failure, and a deal
             worked steadily for a month is multi-threaded whether or not the second contact
             happened to appear in these seven days.

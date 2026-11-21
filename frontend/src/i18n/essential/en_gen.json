@@ -1809,6 +1809,7 @@
   "common.gatewayUnavailable": "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
   "common.requestTimedOut": "The server took too long and stopped this request. Try again in a moment.",
   "common.individualPerformanceOff": "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two. A forecast is withheld in full if any of its groups would show one colleague’s figures.",
+  "common.ownerNotMeasurable": "This owner’s figures are outside what you may measure. Remove the owner filter, or ask an administrator to widen your reach.",
   "common.permissionDenied": "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   "common.seatReadOnly": "This seat is read-only, so the request was refused. Ask an administrator to upgrade the seat.",
   "common.versionSkew": "This record changed after you opened it. Reload it to see the change, then make yours again.",

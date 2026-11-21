@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -72,28 +73,28 @@ func (scope *coverageScope) baseValue(ctx context.Context, pop *coveragePopulati
 }
 
 // openDealsOf lists the population's open deals, largest first, with the
-// account each belongs to.
-func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
+// account each belongs to and the deals somebody has touched.
+func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, map[ids.UUID]bool, error) {
 	scope, err := scopedPopulation(ctx, pop)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	amount, err := auth.MaskedColumnSQL(ctx, tableDeal, "amount_minor", "d", "amount_minor", scope.arg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	currency, err := auth.MaskedColumnSQL(ctx, tableDeal, "currency", "d", "currency", scope.arg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	value, err := scope.baseValue(ctx, pop)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	stageName := labeltranslation.SQL(ctx, "s.name", "s.name_translations", scope.arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT d.id, d.name, %s, %s, %s, d.owner_id, d.expected_close_date,
-		       c.id, c.display_name, c.owner_id
+		       c.id, c.display_name, c.owner_id, d.last_activity_at IS NOT NULL
 		  FROM deal d
 		  JOIN stage s ON s.id = d.stage_id
 		  JOIN company c ON c.id = d.company_id AND c.archived_at IS NULL
@@ -102,18 +103,21 @@ func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 		 ORDER BY v.base_minor DESC NULLS LAST, d.id
 		 LIMIT %d`, amount, currency, stageName, value, scope.where, coverageCandidates), scope.args...)
 	if err != nil {
-		return nil, fmt.Errorf("read the population's open deals: %w", err)
+		return nil, nil, fmt.Errorf("read the population's open deals: %w", err)
 	}
 	defer rows.Close()
 	var out []crmcontracts.AccountCoverageRow
+	touched := map[ids.UUID]bool{}
 	for rows.Next() {
 		var row crmcontracts.AccountCoverageRow
 		var deal crmcontracts.AccountCoverageDeal
 		var stage string
 		var closeDate *time.Time
-		if err := rows.Scan(&deal.Id, &deal.Name, &deal.AmountMinor, &deal.Currency, &stage, &deal.OwnerId, &closeDate, &row.Company.Id, &row.Company.Name, &row.Company.OwnerId); err != nil {
-			return nil, fmt.Errorf("read an open deal: %w", err)
+		var wasTouched bool
+		if err := rows.Scan(&deal.Id, &deal.Name, &deal.AmountMinor, &deal.Currency, &stage, &deal.OwnerId, &closeDate, &row.Company.Id, &row.Company.Name, &row.Company.OwnerId, &wasTouched); err != nil {
+			return nil, nil, fmt.Errorf("read an open deal: %w", err)
 		}
+		touched[ids.UUID(deal.Id)] = wasTouched
 		deal.Stage = &stage
 		if closeDate != nil {
 			deal.ExpectedCloseDate = &openapi_types.Date{Time: *closeDate}
@@ -122,7 +126,7 @@ func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 		out = append(out, row)
 	}
 	pop.noteCap(len(out))
-	return out, rows.Err()
+	return out, touched, rows.Err()
 }
 
 // accountsInPipeline lists the accounts with an open deal in the population,
