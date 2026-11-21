@@ -30,6 +30,7 @@ import { useMemberNames } from "../../lib/membernames";
 import type { FilterOp } from "../../lib/segmentpredicate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { clauseWords, moneyText, useSentenceWords } from "./filtersentence";
+import { referencedIdsOfClauses } from "./filtersentence.names";
 
 /** Whether a Live List selects the record, and each clause's verdict. */
 export function LiveExplanation({
@@ -73,9 +74,14 @@ function Verdict({
   entityType,
 }: Readonly<{ node: ListClauseVerdict; entityType: ListRecordType }>) {
   const t = useT();
-  const words = useSentenceWords();
   const vocabulary = useFilterVocabulary(entityType);
   const field = vocabularyField(vocabulary.data, node.field);
+  const words = useSentenceWords(
+    referencedIdsOfClauses(
+      [{ field: node.field ?? "", operand: node.operand }],
+      vocabulary.data?.fields,
+    ),
+  );
   const valueText = useFieldValueText(entityType, colleaguesIn(field, node));
   if (node.join) {
     return (

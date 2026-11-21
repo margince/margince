@@ -131,7 +131,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 - `assurance_exception_pkey`: `unique, btree (id)`
 - `idx_assurance_exception_open`: `btree (status, severity, last_seen_at DESC) WHERE (status = 'open')`
-- `idx_assurance_exception_owner`: `btree (owner_id) WHERE (owner_id IS NOT NULL)`
 - `idx_assurance_exception_subject`: `btree (subject_kind, subject_id)`
 - `uq_assurance_exception_logical_key`: `unique, btree (logical_key)`
 
@@ -367,7 +366,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_task_item_by_task`: `btree (task_activity_id)`
 - `assurance_task_item_once`: `unique, btree (exception_id, cycle_id)`
 - `assurance_task_item_one_task_per_subject`: `gist (cycle_id, subject_kind, subject_id, task_activity_id)`
-- `assurance_task_item_open_in_cycle`: `btree (cycle_id, subject_kind, subject_id) WHERE (state = 'open')`
 - `assurance_task_item_pkey`: `unique, btree (id)`
 - `idx_assurance_task_item_subject_contract`: `btree (subject_contract_id) WHERE (subject_contract_id IS NOT NULL)`
 - `idx_assurance_task_item_subject_deal`: `btree (subject_deal_id) WHERE (subject_deal_id IS NOT NULL)`

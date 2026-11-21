@@ -55,9 +55,6 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 		"them and asked again on every read, never served as stored. It is deleted with its " +
 		"asker's user row, and a deactivated seat keeps it; a sent edition that copied its " +
 		"question has its own retention ladder",
-	"workflow_run": "one row per automation tick, and auth.LiveIntakeTaskClause reads the planned " +
-		"target of a route_lead run to exclude imported follow-ups. A window here is entangled with " +
-		"that clause rather than free",
 	"assurance_run": "one row per assurance pass over a deal. The verdict is the product; the run " +
 		"is how it was reached",
 	"brief_run": "one row per morning brief composed, which the annotate path locks and writes " +

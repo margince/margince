@@ -174,7 +174,6 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 - `deal_room_engagement_pkey`: `unique, btree (id)`
 - `idx_deal_room_engagement_participant_room`: `btree (participant_id, room_id)`
-- `ix_deal_room_engagement_participant`: `btree (participant_id, occurred_at DESC)`
 - `ix_deal_room_engagement_room`: `btree (room_id, occurred_at DESC)`
 
 **Triggers**

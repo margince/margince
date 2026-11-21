@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 )
 
 // heldRecord is the rule that keeps one kind of record: its table aliased a,
@@ -60,6 +61,16 @@ func heldRecordRule(kind string) (heldRecord, bool) {
 	return heldRecord{}, false
 }
 
+// relayedEventRule is heldRecordRule for a delivered event. The floor protects
+// the activity row and not the event about it, which carries no mail content.
+// So only a legal hold on a linked record keeps an activity's event.
+func relayedEventRule(kind string) (heldRecord, bool) {
+	if kind == "activity" {
+		return heldRecord{from: " FROM activity a", predicate: retentionscope.HeldThroughAnyLink("a.id")}, true
+	}
+	return heldRecordRule(kind)
+}
+
 // RecordCopy is a stored copy of a record's content and the record it was made
 // from. A published event and a rendered webhook body are copies.
 type RecordCopy struct {
@@ -69,15 +80,15 @@ type RecordCopy struct {
 }
 
 // heldCopies answers which copies a hold or floor keeps: those whose record
-// heldRecordRule keeps under floor.
-func heldCopies(ctx context.Context, tx pgx.Tx, copies []RecordCopy, floor FloorPolicy) (map[ids.UUID]bool, error) {
+// the store's rule keeps under floor.
+func heldCopies(ctx context.Context, tx pgx.Tx, copies []RecordCopy, floor FloorPolicy, ruleOf func(kind string) (heldRecord, bool)) (map[ids.UUID]bool, error) {
 	byKind := map[string][]ids.UUID{}
 	for _, c := range copies {
 		byKind[c.EntityType] = append(byKind[c.EntityType], c.EntityID)
 	}
 	held := map[ids.UUID]bool{}
 	for kind, records := range byKind {
-		rule, ok := heldRecordRule(kind)
+		rule, ok := ruleOf(kind)
 		if !ok {
 			continue
 		}
