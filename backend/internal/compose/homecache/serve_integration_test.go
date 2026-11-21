@@ -60,9 +60,7 @@ func recordLogs(t *testing.T) *logRecorder {
 func serveWorklist(ctx context.Context, c *homecache.Cache, reader ids.UUID) error {
 	_, _, err := homecache.Serve(ctx, c, reader, homecache.Worklist, "home",
 		func(context.Context) (crmcontracts.Worklist, error) { return crmcontracts.Worklist{}, nil },
-		func(crmcontracts.Worklist) (*ids.UUID, error) {
-			return nil, nil //nolint:nilnil // an empty Worklist starts no walk, which Serve reads as nil
-		})
+		homecache.NoWalk[crmcontracts.Worklist]())
 	return err
 }
 

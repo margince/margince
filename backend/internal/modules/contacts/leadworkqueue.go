@@ -98,7 +98,7 @@ func readLeadWorkQueue(ctx context.Context, tx pgx.Tx, in ListLeadsInput, active
 	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	asOf := leadSLAClock().UTC()
+	asOf := slaNow(ctx)
 	var cursor *leadQueueCursor
 	if in.Cursor != nil && *in.Cursor != "" {
 		decoded, err := decodeLeadQueueCursor(*in.Cursor)
