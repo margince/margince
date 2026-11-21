@@ -227,7 +227,7 @@ export function historyValue(
   if (field === INDUSTRY_FIELD) {
     return industryWords((key) => translate(ctx.locale, key), value);
   }
-  const dated = historyDate(value, ctx, precision);
+  const dated = historyDate(field, value, ctx, precision);
   if (dated !== undefined) {
     return dated;
   }
@@ -246,9 +246,21 @@ export function historyValue(
   return value;
 }
 
+// The columns a record update writes as a calendar day: the contract's
+// `format: date` fields. historyvalues.test.ts derives them from the contract.
+const CALENDAR_DAY_FIELDS: ReadonlySet<string> = new Set([
+  "ended_at",
+  "expected_close_date",
+  "fx_rate_date",
+  "started_at",
+  "target_end_date",
+  "wait_until",
+]);
+
 // An instant or a `format: date` column, dated as the record page dates it;
-// undefined for a value that is neither.
+// undefined for a value that is neither. Text shaped like a day stays text.
 function historyDate(
+  field: string,
   value: string,
   ctx: HistoryValueCtx,
   precision: OccurredPrecision | undefined,
@@ -256,7 +268,7 @@ function historyDate(
   if (ISO_TIMESTAMP.test(value)) {
     return historyMoment(value, ctx, precision);
   }
-  return isRealCalendarDay(value)
+  return CALENDAR_DAY_FIELDS.has(field) && isRealCalendarDay(value)
     ? formatDateAbbrev(value, ctx.locale, ctx.zone)
     : undefined;
 }

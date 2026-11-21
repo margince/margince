@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { MONEY_ABSENT } from "../format/format";
 import {
+  calendarDayFieldsAnUpdateWrites,
+  fieldsARecordUpdateWrites,
+} from "../testing/updatebodies";
+import {
   type HistoryValueCtx,
   historyValue,
   isMinorUnitField,
@@ -147,6 +151,18 @@ describe("historyValue", () => {
       expect(historyValue("target_end_date", "2026-01-01", ctx({ zone }))).toBe(
         "1 Jan 2026",
       );
+    }
+  });
+
+  // Both ways, from the contract: every `format: date` column an update writes
+  // reads as a day, and no other column's text is mistaken for one.
+  it("dates exactly the columns the contract declares as calendar days", () => {
+    const days = new Set(calendarDayFieldsAnUpdateWrites());
+    expect(days).toContain("target_end_date");
+    const written = [...fieldsARecordUpdateWrites().values()].flat();
+    for (const field of written) {
+      const shown = historyValue(field, "2026-01-01", ctx());
+      expect(shown === "1 Jan 2026", field).toBe(days.has(field));
     }
   });
 
