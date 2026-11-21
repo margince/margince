@@ -2,7 +2,6 @@
   "verb": "resend_member_invite",
   "checks": [
     "user_admin.create|update",
-    "user_admin.read|create|update|delete",
     "user_admin.update"
   ],
   "takes": [

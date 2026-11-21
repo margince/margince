@@ -295,7 +295,8 @@ func renderCallNeeds(b *bytes.Buffer, sections []placedSection, checks toolCheck
 			for _, call := range area.calls {
 				names := make([]string, 0, len(checks.Verbs[call.Verb].Checks))
 				for _, name := range checks.Verbs[call.Verb].Checks {
-					names = append(names, "`"+name+"`")
+					// A pipe inside a table cell would end the cell.
+					names = append(names, "`"+strings.ReplaceAll(name, "|", `\|`)+"`")
 				}
 				fmt.Fprintf(b, "| %s | `%s` | `%s` | %s |\n", area.title, call.call(), call.Verb, strings.Join(names, " "))
 			}
