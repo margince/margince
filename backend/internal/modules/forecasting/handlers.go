@@ -307,7 +307,16 @@ func sufficiencyToWire(in Sufficiency) crmcontracts.ForecastSufficiency {
 		NeededOpenMinor:         &in.NeededOpenMinor,
 		CurrentOpenMinor:        &in.CurrentOpenMinor,
 		CoverageBp:              &in.CoverageBp,
+		ComparableUnpriced:      comparableUnpriced(in.ComparableUnpriced),
 	}
+}
+
+// comparableUnpriced is the median's per-period gaps, absent for a manager call.
+func comparableUnpriced(gaps []int) *[]int {
+	if len(gaps) == 0 {
+		return nil
+	}
+	return &gaps
 }
 
 // requireCalledAmount refuses a call whose body left amount_minor out or sent

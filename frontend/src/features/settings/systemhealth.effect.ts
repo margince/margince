@@ -21,6 +21,7 @@ const effects: Readonly<Record<string, MessageKey>> = {
   search_reindex: "health.effect.search",
   updates_failed: "health.effect.updates",
   updates_review: "health.effect.updates",
+  updates_action: "health.effect.updatesAction",
   recovery_unverified: "health.effect.recovery",
   automatic_routing: "health.effect.automatic",
   receipts_missed: "health.effect.receipts",

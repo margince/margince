@@ -119,6 +119,12 @@ func recordHistoryEntryToWire(e RecordHistoryEntry) crmcontracts.AuditHistoryEnt
 			OtherEntityType: crmcontracts.HistoryEdgeOtherEntityType(e.Edge.OtherEntityType),
 			OtherEntityId:   openapi_types.UUID(e.Edge.OtherEntityID),
 			OtherLabel:      e.Edge.OtherLabel,
+			Role:            e.Edge.Role,
+			PreviousRole:    e.Edge.PreviousRole,
+		}
+		if len(e.Edge.ChangedFields) > 0 {
+			fields := e.Edge.ChangedFields
+			out.Edge.ChangedFields = &fields
 		}
 	}
 	return out

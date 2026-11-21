@@ -552,6 +552,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "dataTasks.status.running": "Đang chạy",
   "dataTasks.status.paused": "Đã tạm dừng",
   "dataTasks.status.done": "Đã hoàn tất",
+  "dataTasks.status.doneWithAction": "Đã hoàn tất, cần xử lý",
   "dataTasks.status.failed": "Có lỗi",
   "dataTasks.action.pause": "Tạm dừng",
   "dataTasks.action.resume": "Tiếp tục",
@@ -568,6 +569,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "dataTasks.blocked.missing_prerequisite":
     "Cần hoàn tất các bản cập nhật bắt buộc trước.",
 
+  "dataTasks.actionRecords_one": "Còn {count} bản ghi cần xử lý",
+  "dataTasks.actionRecords_other": "Còn {count} bản ghi cần xử lý",
   "approval.preview.createEmployer":
     "Tạo công ty còn thiếu và liên kết liên hệ này làm nhân viên.",
   "approval.preview.reuseEmployer": "Liên kết liên hệ này với công ty hiện có.",
@@ -2557,6 +2560,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.reversal.undoneBy": "{undoer} đã hoàn tác",
   "history.reversal.unpaired": "Hoàn tác một thay đổi trước đó",
   "history.edge.marker": "Liên kết",
+  "history.edge.linked": "{subject} đã liên kết {name} với vai trò {role}",
+  "history.edge.roleChanged":
+    "{subject} đã đổi vai trò tại {name} từ {previous} thành {role}",
+  "history.edge.roleSet": "{subject} đã đổi vai trò tại {name} thành {role}",
+  "history.edge.changed": "{subject} đã thay đổi liên kết với {name}: {fields}",
+  "history.edge.unlinked": "{subject} đã hủy liên kết với {name}",
+  "history.edge.roleRemoved": "{subject} đã xóa vai trò {previous} tại {name}",
+  "history.edge.alsoChanged": "cũng đã đổi: {fields}",
   "history.subject.viaClient": "{name} (qua {client})",
   "history.subject.viaAgent": "{name} (qua trợ lý AI)",
   "history.subject.viaConnector": "{name} (qua trình kết nối)",
@@ -2694,6 +2705,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.stage_id": "Giai đoạn",
   "history.field.disqualify_reason_id": "Lý do loại",
   "history.field.trigger": "Xác nhận bởi",
+  "history.field.role": "Vai trò",
+  "history.field.is_current_primary": "Nơi làm việc chính",
+  "history.field.employment_status": "Tình trạng việc làm",
+  "history.field.started_precision": "Độ chính xác ngày bắt đầu",
+  "history.field.ended_precision": "Độ chính xác ngày kết thúc",
   "history.field.win_probability_override": "Xác suất đặt cho deal",
   "history.field.win_probability_set_by": "Xác suất do ai đặt",
   "history.field.fx_rate_date": "Ngày tỷ giá",
@@ -3498,6 +3514,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Máy chủ xử lý quá lâu nên đã dừng yêu cầu này. Hãy thử lại sau giây lát.",
   "common.individualPerformanceOff":
     "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên. Toàn bộ dự báo bị ẩn nếu một nhóm trong đó có thể cho thấy số liệu của riêng một đồng nghiệp.",
+  "common.ownerNotMeasurable":
+    "Bạn không được xem số liệu của người chịu trách nhiệm này. Hãy bỏ bộ lọc theo người chịu trách nhiệm, hoặc liên hệ quản trị viên để mở rộng phạm vi của bạn.",
   "common.permissionDenied":
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
@@ -4087,8 +4105,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.lastMetToday": "Đã họp hôm nay.",
   "co.health.reason.lastMet_one": "Lần họp gần nhất cách đây {days} ngày.",
   "co.health.reason.lastMet_other": "Lần họp gần nhất cách đây {days} ngày.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "Vẫn có liên lạc, nhưng toàn bộ quan hệ với công ty chỉ dựa vào một liên hệ.",
+  "co.health.reason.singleThreaded_other":
+    "Vẫn có liên lạc, nhưng toàn bộ quan hệ với công ty chỉ dựa vào {count} liên hệ.",
   "co.health.reason.severalContacts_one":
     "{count} liên hệ ở đây đang giữ liên lạc.",
   "co.health.reason.severalContacts_other":
@@ -16693,6 +16713,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.pipelineBasisWhy.manager_call": "Đo theo nhận định của kỳ này.",
   "forecast.pipelineBasisWhy.historical_median":
     "Đo theo trung vị của 4 kỳ tương đương gần nhất.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} deal thắng trong các kỳ đó chưa có số tiền hoặc tỷ giá và không nằm trong trung vị.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} deal thắng trong các kỳ đó chưa có số tiền hoặc tỷ giá và không nằm trong trung vị.",
   "forecast.pipelineAbsentTitle": "Không có số liệu độ bao phủ cho kỳ này",
   "forecast.pipelineAbsent.call_withheld":
     "Nhận định của quản lý không hiển thị ở đây, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
@@ -20716,6 +20740,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mới có 1 liên hệ. Thêm liên hệ thứ hai.",
   "deal.committee.missing.secondEngaged":
     "Chưa tới 2 liên hệ đang tương tác. Tiếp cận thêm một liên hệ.",
+  "deal.committee.missing.anotherContact":
+    "Còn quá ít liên hệ. Thêm một liên hệ nữa.",
+  "deal.committee.missing.anotherEngaged":
+    "Còn quá ít liên hệ đang tương tác. Tiếp cận thêm một liên hệ.",
   "deal.committee.foot":
     "{named} người được nêu tên · {engaged}/{named} đang tương tác",
   "deal.brief.title": "Deal này là gì",
@@ -23537,6 +23565,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm kiếm có thể bỏ sót bản ghi cho đến khi chỉ mục bắt kịp. Bản thân các bản ghi vẫn được lưu.",
   "health.effect.updates":
     "Các thay đổi do bản cập nhật này xử lý vẫn chưa hoàn tất. Thay đổi đã lưu vẫn được giữ; một số bản ghi có thể còn giá trị cũ.",
+  "health.effect.updatesAction":
+    "Bản cập nhật đã hoàn tất. Một số bản ghi tìm thấy vẫn đang chờ được xử lý.",
   "health.effect.recovery":
     "Công việc CRM bình thường vẫn có thể tiếp tục. Khi xảy ra sự cố, khôi phục có thể lâu hơn hoặc mất nhiều dữ liệu mới hơn mức mục tiêu cho phép.",
   "health.effect.automatic":
@@ -23736,6 +23766,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.code.updates_retrying":
     "Bản cập nhật dữ liệu đã ghi nhận lần thử khác",
   "health.code.updates_review": "Bản cập nhật dữ liệu cần quản trị viên duyệt",
+  "health.code.updates_action":
+    "Một bản cập nhật dữ liệu đã hoàn tất nhưng còn để lại bản ghi cần được xử lý",
   "health.code.recovery_missing": "Chưa ghi nhận thử khôi phục",
   "health.code.recovery_verified":
     "Diễn tập khôi phục đã ghi nhận đạt mục tiêu",

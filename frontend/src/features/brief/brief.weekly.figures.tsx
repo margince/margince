@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { PartialMark } from "../../components/partialmark";
 import { Badge } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { isoWeekBefore, isoWeekOf } from "../../format/calendarday";
@@ -14,6 +15,7 @@ import {
 import { startOfDayInZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
+import { coverageOfWire } from "../../lib/moneycoverage";
 import {
   figureReading,
   figureValue,
@@ -263,6 +265,7 @@ function HeadlineTile({
         {counted && pipeline && (
           <span className="brief-report-tile-money t-num">
             {formatMoney(pipeline.won_minor, pipeline.currency, locale)}
+            <PartialMark coverage={coverageOfWire(review.pipeline_coverage)} />
           </span>
         )}
       </span>

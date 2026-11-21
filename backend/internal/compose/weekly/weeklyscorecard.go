@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -127,10 +128,18 @@ type DealBlock struct {
 // this week.
 const multiThreadWindow = 30 * 24 * time.Hour
 
-// minStakeholders is how many distinct contacts a deal needs to count as
-// multi-threaded. Two, because the risk being measured is the single point of
-// failure: one contact who leaves takes the deal with them.
-const minStakeholders = 2
+// multiThreadFloor is how many distinct contacts a deal needs to count as
+// multi-threaded: one more than the published threshold allows a
+// single-threaded deal. reporting.SingleThreaded is not called here because
+// its touch arm answers the other question: an untouched deal is not
+// single-threaded, and it is not multi-threaded either.
+func multiThreadFloor(ctx context.Context, tx pgx.Tx) (int, error) {
+	thresholds, _, err := reporting.AccountCoverageThresholds(ctx, tx)
+	if err != nil {
+		return 0, err
+	}
+	return *thresholds.MaxEngagedSeats + 1, nil
+}
 
 // scoreWeek reads both blocks for one rep's closed week.
 //
@@ -328,7 +337,11 @@ func scoreDeals(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
 	sincePos := arg(end.Add(-multiThreadWindow))
-	stakeholdersPos := arg(minStakeholders)
+	stakeholders, err := multiThreadFloor(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	stakeholdersPos := arg(stakeholders)
 	zonePos := arg(zone)
 	// The erasure boundary's vocabulary, bound once and read by the rewind.
 	// privacy owns the list; a literal here would be a second copy of the one

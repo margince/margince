@@ -26,6 +26,10 @@ The executor supplies a system actor and durable run ID for audit attribution. K
 A reviewed task rebuilds its operator from current authority before using ordinary domain writers.
 Keep raw causes and record content out of progress, job arguments, metrics and notices.
 
+A record the step cannot finish without a human is not a failure. Return it in `BatchOut.Action`
+with a reason code and a record reference, and add the reason's sentence and remedy as
+`datatask.action.<reason>.sentence` and `.remedy` in `backend/internal/shared/kernel/systemtext/operatorcopy.go`.
+
 ## Check failures
 
 | Failure | What to change |
@@ -82,8 +86,9 @@ It prints a verdict before the steps:
   estimate that counts input the step keeps would name it on every run.
 - `nothing_inspected`: each finished step that inspected no rows. Such a step proves nothing about
   rows it never saw.
+- `needs_action`: each finished step that left records for someone to act on, with their count.
 
-The command fails unless every step finished and none left rows in its scope.
+The command fails unless every step finished, none left rows in its scope and none needs action.
 
 ## Require a reviewed scope
 

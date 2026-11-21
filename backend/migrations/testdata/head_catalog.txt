@@ -3686,6 +3686,30 @@ public.company_offered_value.source_system text NOT NULL gen=- def=-
 public.company_offered_value.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_offered_value FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field_key": 20000, "offered_value": 20000, "source_system": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"field_key":20000,"offered_value":20000,"source_system":20000}')
 public.company_offered_value.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_offered_value FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field_key": 20000, "offered_value": 20000, "source_system": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"field_key":20000,"offered_value":20000,"source_system":20000}')
 public.company_offered_value_pkey CREATE UNIQUE INDEX company_offered_value_pkey ON public.company_offered_value USING btree (company_id, source_system, field_key)
+public.company_open_pipeline_gaps(as_of date) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner 
+ SELECT r.company_id,
+        coalesce(v.no_value, 0),
+        r.open_deal_count - r.priced_deal_count - coalesce(v.no_value, 0),
+        v.currencies
+   FROM company_open_pipeline_rollup(as_of) r
+   LEFT JOIN LATERAL (
+     SELECT count(*) FILTER (WHERE d.amount_minor IS NULL) AS no_value,
+            string_agg(DISTINCT d.currency, ',' ORDER BY d.currency)
+              FILTER (WHERE d.amount_minor IS NOT NULL
+                        AND d.currency IS DISTINCT FROM base.code
+                        AND NOT EXISTS (
+                          SELECT 1 FROM fx_rate f
+                           WHERE f.from_currency = d.currency
+                             AND f.to_currency = base.code
+                             AND f.rate_date <= as_of)) AS currencies
+       FROM deal d
+       LEFT JOIN LATERAL (
+         SELECT (value #>> '{}')::text AS code
+           FROM setting WHERE key = 'installation.base_currency'
+       ) base ON true
+      WHERE d.company_id = r.company_id AND d.status = 'open' AND d.archived_at IS NULL
+   ) v ON true
+
 public.company_open_pipeline_rollup(as_of date) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner 
  SELECT d.company_id,
     -- The SUM is bounded too, and separately from its summands. sum(bigint)
@@ -4920,6 +4944,7 @@ public.data_task_review.token_hash bytea NOT NULL gen=- def=-
 public.data_task_review_expiry CREATE INDEX data_task_review_expiry ON public.data_task_review USING btree (expires_at)
 public.data_task_review_pkey CREATE UNIQUE INDEX data_task_review_pkey ON public.data_task_review USING btree (token_hash)
 public.data_task_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.data_task_run.action_needed jsonb gen=- def=-
 public.data_task_run.activation jsonb gen=- def=-
 public.data_task_run.batch_limit integer NOT NULL gen=- def=-
 public.data_task_run.batches bigint NOT NULL gen=- def=0
@@ -10706,6 +10731,7 @@ public.team_weekly_review.meetings_held integer NOT NULL gen=- def=0
 public.team_weekly_review.meetings_with_next_step integer NOT NULL gen=- def=0
 public.team_weekly_review.numeric_summary jsonb gen=- def=-
 public.team_weekly_review.pipeline_created_minor bigint gen=- def=-
+public.team_weekly_review.pipeline_gaps jsonb gen=- def=-
 public.team_weekly_review.pipeline_lost_minor bigint gen=- def=-
 public.team_weekly_review.pipeline_won_minor bigint gen=- def=-
 public.team_weekly_review.proposals_accepted integer gen=- def=-
@@ -12075,6 +12101,7 @@ public.weekly_review.narrated_at timestamp with time zone gen=- def=-
 public.weekly_review.narrative text gen=- def=-
 public.weekly_review.numeric_summary jsonb gen=- def=-
 public.weekly_review.pipeline_created_minor bigint gen=- def=-
+public.weekly_review.pipeline_gaps jsonb gen=- def=-
 public.weekly_review.pipeline_lost_minor bigint gen=- def=-
 public.weekly_review.pipeline_won_minor bigint gen=- def=-
 public.weekly_review.prior_review_id uuid gen=- def=-

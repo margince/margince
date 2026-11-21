@@ -29,6 +29,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -139,6 +140,9 @@ type DealCoverage struct {
 	// every seat is unengaged by construction and the findings that follow
 	// from that describe the calendar rather than the deal.
 	EverTouched bool
+	// MaxEngagedSeats is the published single-threading threshold this view
+	// judged at, so the committee card words its gap by it. Zero when withheld.
+	MaxEngagedSeats int
 	// DepartedContactIDs are the stakeholders whose employment at the account
 	// has ended. Gathered rather than folded because it takes a second read,
 	// and carried as ids so the fold stays pure.
@@ -226,6 +230,11 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 		return out, err
 	}
 
+	thresholds, _, err := reporting.AccountCoverageThresholds(ctx, tx)
+	if err != nil {
+		return out, err
+	}
+	out.MaxEngagedSeats = *thresholds.MaxEngagedSeats
 	facts, err := readDealFacts(ctx, tx, dealID)
 	if err != nil {
 		return out, err
@@ -296,25 +305,16 @@ func foldRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 		return nil
 	}
 
-	// REPORT-PARAM-1, verbatim: distinct_engaged_contacts < 2.
-	//
-	// Held back until the deal has been touched at all, for the reason
-	// ourSideMinInteractions exists a few lines down: engagement requires a
-	// two-way exchange inside the window, so before any contact is captured
-	// EVERY seat is unengaged by construction and this fires on every deal
-	// somebody just created. That is a statement about the calendar, not about
-	// the deal, and a warning that is always on is a warning nobody reads.
-	//
-	// The finding still arrives the moment there is something to find: one
-	// captured touch is enough to make the count mean what it says.
-	// A contact may hold several roles on one deal, one seat each.
+	// Judged by reporting.SingleThreaded at the published threshold, the rule
+	// Account coverage reads too. A contact may hold several roles on one deal,
+	// one seat each.
 	engaged := make([]ids.UUID, 0, len(c.Stakeholders))
 	for _, s := range c.Stakeholders {
 		if s.Engaged && !slices.Contains(engaged, s.ContactID) {
 			engaged = append(engaged, s.ContactID)
 		}
 	}
-	if c.EverTouched && len(engaged) < ReportThreadingFloor {
+	if reporting.SingleThreaded(c.EverTouched, len(engaged), c.MaxEngagedSeats) {
 		risks = append(risks, Risk{
 			Kind: RiskSingleThreadedTheirs, DealID: c.DealID, ContactIDs: engaged,
 			Summary: say.Say(riskWords.SingleThreaded),
@@ -422,10 +422,6 @@ func goingCold(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
 		Summary: fmt.Sprintf(say.Say(riskWords.GoingCold), days),
 	}, true
 }
-
-// ReportThreadingFloor is REPORT-PARAM-1's value, named rather than inline so
-// the constant a support conversation quotes is the constant compared against.
-const ReportThreadingFloor = 2
 
 // ourSideConcentration is GRAPH-RISK-1: one colleague holding at least
 // ourSideDominanceShare of at least ourSideMinInteractions interactions.

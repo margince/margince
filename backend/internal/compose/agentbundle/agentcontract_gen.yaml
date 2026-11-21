@@ -185,7 +185,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: Pause, resume, retry or estimate a background correction.
       description: |-
-        Requires data_task:update and the observed ledger version. Retry retains the audit run ID.
+        Requires data_task:update and the observed ledger version. Retry retains the audit run ID. On a failed step it continues from the cursor; on a done step with action_needed it starts the step over, so the records left open are tried again.
 
         Needs the passport permission Change records.
 
@@ -2216,7 +2216,8 @@ paths:
         All money converts to the workspace base currency. An open deal whose currency has no
         stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
         substituting a rate of 1. A won deal is valued at the base amount frozen when it was
-        won; one won deal in the period with no base value makes `closed_won` null.
+        won. `closed_won` adds the won deals that have one, and `closed_won_coverage` says how many
+        it leaves out and why. It is null only when no won deal in the period converts.
         Totals are server-computed and reconcile exactly to their parts — never client-summed.
         Requires read on companies, deals, and activities; figures aggregate every deal
         and activity of each readable company — per-record row visibility within a
@@ -13331,7 +13332,7 @@ paths:
                     base_currency: EUR
                     fiscal_year_start_month: 1
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422':
           description: The plan failed validation (out-of-vocabulary field, invalid aggregate).
@@ -27019,7 +27020,7 @@ components:
             role:
               value: {type: 'https://errors.gradion.com/role_cannot_capture', title: Forbidden, status: 403, code: role_cannot_capture, detail: 'Your role cannot record activities, so this mailbox cannot be captured. Ask an admin to change your role.'}
     PermissionDenied:
-      description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to.'
+      description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. On the same reads, `code: owner_not_measurable` means a filter names an owner whose figures the caller may not measure.'
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
@@ -32842,9 +32843,12 @@ components:
           type: array
           items: {type: string}
         computable: {type: boolean}
+        coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         reason:
           type: [string, 'null']
-          description: Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx".
+          description: >-
+            Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx", "partial_pipeline", or "amount_withheld" when the reader's deal amount or currency is masked.
     Company:
       type: object
       description: A company. Mirrors the `company` table.
@@ -33122,6 +33126,7 @@ components:
           format: date-time
           description: The instant the pipeline is read at. It is the moment of the read, whatever period is named.
         closed_won: {$ref: '#/components/schemas/Money'}
+        closed_won_coverage: {$ref: '#/components/schemas/ReportRowCoverage'}
         closed_won_period: {$ref: '#/components/schemas/CompanyRollupWonPeriod'}
         activity_count_30d: {type: integer}
         activity_window: {$ref: '#/components/schemas/ReportingWindow'}
@@ -33987,7 +33992,7 @@ components:
         single_threaded:
           type: [boolean, 'null']
           description: >-
-            The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
+            The relationship rests on no more contacts in touch than the published `account_coverage.max_engaged_seats` allows, the rule a deal's single-threaded finding follows too. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
         open_commitments:
           type: [integer, 'null']
           description: >-
@@ -37605,6 +37610,13 @@ components:
             the edge sections are withheld: absence says nothing about who has talked.
           items: {$ref: '#/components/schemas/DealCoverageLine'}
         risks: {type: array, items: {$ref: '#/components/schemas/DealCoverageRisk'}}
+        max_engaged_seats:
+          type: integer
+          minimum: 0
+          description: |-
+            The published `account_coverage.max_engaged_seats` that `single_threaded_theirs` was
+            judged at: a touched deal with this many engaged contacts, or fewer, is single-threaded.
+            Absent when the edge sections are withheld, since no finding is judged then.
         sections_omitted:
           type: array
           description: |-
@@ -38622,7 +38634,8 @@ components:
         engaged_seats: {type: integer, description: "Contacts engaged on the deal, for a single-threaded row."}
         named_seats: {type: integer, description: "Contacts named on the deal, engaged or not."}
         open_deals: {type: integer, description: "Open deals on the account, for an untouched row."}
-        open_amount_minor: {type: integer, format: int64, description: "Their amounts, in the installation currency, when every one carries a rate."}
+        open_amount_minor: {type: integer, format: int64, description: "Their amounts that convert, in the installation currency. Absent when none converts. A deal with no rate is left out and counted in `open_amount_coverage`."}
+        open_amount_coverage: {$ref: '#/components/schemas/ReportRowCoverage'}
         won_deal: {$ref: '#/components/schemas/AccountCoverageDeal'}
         last_inbound: {type: string, format: date-time}
         last_outbound: {type: string, format: date-time}
@@ -47189,7 +47202,7 @@ components:
       additionalProperties: false
       description: "What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints."
       properties:
-        max_engaged_seats: {type: integer, minimum: 0, maximum: 10, description: "A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1."}
+        max_engaged_seats: {type: integer, minimum: 0, maximum: 10, description: "A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. Account coverage and the deal page both judge by it. Default 1."}
         untouched_days: {type: integer, minimum: 1, maximum: 365, description: "An account with an open deal and no exchange within this many days is untouched. Default 21."}
         silent_days: {type: integer, minimum: 1, maximum: 365, description: "A won account with no exchange within this many days is silent. Default 30."}
         won_within_days: {type: integer, minimum: 1, maximum: 730, description: "How far back a won deal still makes an account a won account. Default 180."}
@@ -48317,6 +48330,11 @@ components:
       description: >-
         Whether the open pipeline supports the reference landing, and what the reference is.
       properties:
+        comparable_unpriced:
+          type: array
+          items: {type: integer}
+          description: >-
+            For each comparable period behind a historical median, newest first, the won deals its total leaves out for want of an amount or an exchange rate.
         absent:
           type: string
           enum: [insufficient_basis, call_withheld, insufficient_history]
@@ -50189,6 +50207,30 @@ components:
         missing_prerequisites:
           type: array
           items: {type: string}
+        action_needed:
+          $ref: '#/components/schemas/DataTaskActionNeeded'
+    DataTaskActionNeeded:
+      type: object
+      additionalProperties: false
+      description: >-
+        Records a finished step left for someone to act on. The step is still done, so later steps run. Records lists at most 100 of them; count is the total.
+      required: [reason, sentence, remedy, count, records]
+      properties:
+        reason: {type: string, enum: [privacy_reviewer_missing]}
+        sentence: {type: string, description: "What was left open, in the reader's language."}
+        remedy: {type: string, description: "What to do about it, in the reader's language."}
+        count: {type: integer, format: int64, minimum: 0}
+        records:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/DataTaskActionRecord'}
+    DataTaskActionRecord:
+      type: object
+      additionalProperties: false
+      required: [type, id]
+      properties:
+        type: {type: string}
+        id: {type: string, format: uuid}
     SystemHealth:
       type: object
       additionalProperties: false
@@ -50685,9 +50727,9 @@ components:
         masked to the viewer's readable fields — an absent key was hidden, not null.
         `summary` is server-composed plain language in English. A client that
         renders the line in its reader's language builds it from `action` and the
-        actor fields. It falls back to `summary` for an edge row, whose role
-        travels only in the sentence, and for an action or actor kind it does
-        not know.
+        actor fields. For an edge row it builds from `edge.role` and
+        `edge.changed_fields`, and falls back to `summary` when an older server
+        omits them, and for an action or actor kind it does not know.
         Field-level detail lives in before/after for the client to render.
       required: [id, actor_type, actor_id, action, occurred_at, summary]
       properties:
@@ -50762,6 +50804,18 @@ components:
           type: [string, 'null']
           description: >-
             The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it.
+        role:
+          type: [string, 'null']
+          description: >-
+            The role the link was made with (create) or changed to (update), as the reader's field mask allows. Absent when the link has no role, when the reader's mask withholds it, and on an unlink; a client then falls back to `kind` or to `summary`.
+        previous_role:
+          type: [string, 'null']
+          description: The role an update replaced, or removed when `role` is then absent. Set only when the role changed.
+        changed_fields:
+          type: array
+          items: {type: string}
+          description: >-
+            Names of the link fields an update moved, sorted, masked like `role`. Absent on create and unlink. An older server omits it, and the client then shows `summary`.
     Undoability:
       type: object
       description: |-
@@ -50876,6 +50930,29 @@ components:
         derivation_url:
           type: [string, 'null']
           description: Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell.
+    ReportRowCoverage:
+      type: object
+      required: [aggregates, partial, no_value_deals, no_rate_deals, missing_currencies]
+      description: >-
+        What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+      properties:
+        aggregates:
+          type: array
+          items: {type: string}
+          description: The aliases of the row's partial sums, which this coverage qualifies.
+        partial:
+          type: boolean
+          description: True when at least one deal is left out of those sums.
+        no_value_deals:
+          type: integer
+          description: Deals in the group with no amount.
+        no_rate_deals:
+          type: integer
+          description: Deals in the group with an amount whose currency has no exchange rate as of the answer's date.
+        missing_currencies:
+          type: array
+          items: {type: string}
+          description: The currencies with no exchange rate, from the same statement as the sums.
     ReportDerivation:
       type: object
       description: |-
@@ -55610,10 +55687,13 @@ components:
         counts: {$ref: '#/components/schemas/TeamWeeklyCounts'}
         pipeline:
           description: |-
-            What the team's week did to the pipeline. ABSENT when any member's week could not
-            be converted — summing only the ones that did would be a confident number quietly
-            missing a rep.
+            What the team's week did to the pipeline: the members' figures added together. ABSENT when
+            a member's week is unread or has a figure no deal converts into, or members differ in
+            currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+            review was frozen before it said what it leaves out.
           allOf: [{$ref: '#/components/schemas/WeeklyReviewPipeline'}]
+        pipeline_coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         reps_unread:
           type: integer
           minimum: 0
@@ -56015,7 +56095,9 @@ components:
           type: integer
           minimum: 0
           description: |-
-            Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
+            Open deals with more distinct contacts in the last 30 days than the published
+            `account_coverage.max_engaged_seats` allows a single-threaded deal (default: two or
+            more), as of when the week was frozen. Thirty rather than
             the review's own week: the risk measured is the single point of failure, and a deal
             worked steadily for a month is multi-threaded whether or not the second contact
             happened to appear in these seven days.
@@ -56170,6 +56252,8 @@ components:
             What the week did to the pipeline, in the installation's base currency at the rate that
             applied when the review was written.
           allOf: [{$ref: '#/components/schemas/WeeklyReviewPipeline'}]
+        pipeline_coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         prior:
           description: |-
             The same rep's previous review, so a reader can see what CHANGED rather than only what
@@ -58229,7 +58313,8 @@ components:
         value_base_minor:
           type: integer
           format: int64
-          description: The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+          description: The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing, and `value_coverage` counts them.
+        value_coverage: {$ref: '#/components/schemas/ReportRowCoverage'}
         value_moved_base_minor:
           type: integer
           format: int64

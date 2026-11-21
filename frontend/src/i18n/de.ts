@@ -560,6 +560,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "dataTasks.status.running": "Läuft",
   "dataTasks.status.paused": "Pausiert",
   "dataTasks.status.done": "Abgeschlossen",
+  "dataTasks.status.doneWithAction": "Abgeschlossen, Aktion nötig",
   "dataTasks.status.failed": "Fehlgeschlagen",
   "dataTasks.action.pause": "Pausieren",
   "dataTasks.action.resume": "Fortsetzen",
@@ -577,6 +578,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
   "dataTasks.blocked.missing_prerequisite":
     "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
+  "dataTasks.actionRecords_one": "{count} Datensatz noch zu bearbeiten",
+  "dataTasks.actionRecords_other": "{count} Datensätze noch zu bearbeiten",
   "approval.preview.createEmployer":
     "Das fehlende Unternehmen erstellen und als Arbeitgeber dieses Kontakts verknüpfen.",
   "approval.preview.reuseEmployer":
@@ -2633,6 +2636,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.reversal.undoneBy": "Rückgängig gemacht von {undoer}",
   "history.reversal.unpaired": "Macht eine frühere Änderung rückgängig",
   "history.edge.marker": "Verknüpfung",
+  "history.edge.linked": "{subject} hat {name} als {role} verknüpft",
+  "history.edge.roleChanged":
+    "{subject} hat die Rolle bei {name} von {previous} zu {role} geändert",
+  "history.edge.roleSet":
+    "{subject} hat die Rolle bei {name} zu {role} geändert",
+  "history.edge.changed":
+    "{subject} hat die Verknüpfung mit {name} geändert: {fields}",
+  "history.edge.unlinked": "{subject} hat die Verknüpfung mit {name} gelöst",
+  "history.edge.roleRemoved":
+    "{subject} hat die Rolle {previous} bei {name} entfernt",
+  "history.edge.alsoChanged": "außerdem geändert: {fields}",
   "history.subject.viaClient": "{name} (über {client})",
   "history.subject.viaAgent": "{name} (über einen Agenten)",
   "history.subject.viaConnector": "{name} (über einen Connector)",
@@ -2784,6 +2798,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.stage_id": "Phase",
   "history.field.disqualify_reason_id": "Disqualifizierungsgrund",
   "history.field.trigger": "Qualifiziert durch",
+  "history.field.role": "Rolle",
+  "history.field.is_current_primary": "Hauptarbeitgeber",
+  "history.field.employment_status": "Beschäftigungsstatus",
+  "history.field.started_precision": "Genauigkeit des Startdatums",
+  "history.field.ended_precision": "Genauigkeit des Enddatums",
   "history.field.win_probability_override": "Abschlusschance am Deal",
   "history.field.win_probability_set_by": "Abschlusschance gesetzt von",
   "history.field.fx_rate_date": "Datum des Wechselkurses",
@@ -3604,6 +3623,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Server hat zu lange gebraucht und die Anfrage abgebrochen. Versuche es gleich noch einmal.",
   "common.individualPerformanceOff":
     "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben. Eine Prognose wird ganz zurückgehalten, wenn eine ihrer Teilgruppen die Zahlen eines einzelnen Mitglieds zeigen würde.",
+  "common.ownerNotMeasurable":
+    "Die Zahlen dieser verantwortlichen Person darfst du nicht auswerten. Entferne den Filter nach verantwortlicher Person, oder lass deine Reichweite von einem Admin erweitern.",
   "common.permissionDenied":
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
@@ -4216,8 +4237,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.lastMetToday": "Heute getroffen.",
   "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",
   "co.health.reason.lastMet_other": "Zuletzt vor {days} Tagen getroffen.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "In Kontakt, aber ein einziger Kontakt trägt das ganze Unternehmen.",
+  "co.health.reason.singleThreaded_other":
+    "In Kontakt, aber nur {count} Kontakte tragen das ganze Unternehmen.",
   "co.health.reason.severalContacts_one":
     "{count} Kontakt hier steht in Verbindung.",
   "co.health.reason.severalContacts_other":
@@ -17160,6 +17183,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gemessen an der Einschätzung für diesen Zeitraum.",
   "forecast.pipelineBasisWhy.historical_median":
     "Gemessen am Median der letzten 4 vergleichbaren Zeiträume.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} gewonnener Deal dieser Perioden hat keinen Betrag oder Wechselkurs und fehlt im Median.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} gewonnene Deals dieser Perioden haben keinen Betrag oder Wechselkurs und fehlen im Median.",
   "forecast.pipelineAbsentTitle":
     "Keine Pipeline-Abdeckung für diesen Zeitraum",
   "forecast.pipelineAbsent.call_withheld":
@@ -21267,6 +21294,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur ein Kontakt. Füge einen zweiten hinzu.",
   "deal.committee.missing.secondEngaged":
     "Weniger als zwei im Austausch. Erreiche einen zweiten Kontakt.",
+  "deal.committee.missing.anotherContact":
+    "Zu wenige Kontakte. Füge einen weiteren hinzu.",
+  "deal.committee.missing.anotherEngaged":
+    "Zu wenige im Austausch. Erreiche einen weiteren Kontakt.",
   "deal.committee.foot": "{named} benannt · {engaged} von {named} aktiv",
   "deal.brief.title": "Worum es geht",
   "deal.brief.byModel": "Von Margince aus der Mail des Kunden geschrieben",
@@ -24181,6 +24212,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Suche findet möglicherweise nicht alle Datensätze, bis die Indexierung aufgeholt hat. Die Datensätze bleiben gespeichert.",
   "health.effect.updates":
     "Die Änderungen dieser Aktualisierung bleiben unvollständig. Bereits gespeicherte Änderungen bleiben erhalten; einige Datensätze können noch ihre bisherigen Werte haben.",
+  "health.effect.updatesAction":
+    "Die Aktualisierung ist abgeschlossen. Einige gefundene Datensätze warten noch darauf, dass jemand sie bearbeitet.",
   "health.effect.recovery":
     "Die normale CRM-Arbeit kann weitergehen. Bei einem Ausfall kann die Wiederherstellung länger dauern oder mehr neue Daten verlieren, als die Ziele vorsehen.",
   "health.effect.automatic":
@@ -24388,6 +24421,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für eine Datenaktualisierung ist ein weiterer Versuch erfasst",
   "health.code.updates_review":
     "Eine Datenaktualisierung braucht eine Administratorprüfung",
+  "health.code.updates_action":
+    "Eine Datenaktualisierung ist abgeschlossen und hat Datensätze hinterlassen, die jemand bearbeiten muss",
   "health.code.recovery_missing": "Kein Wiederherstellungstest aufgezeichnet",
   "health.code.recovery_verified":
     "Der erfasste Wiederherstellungstest erfüllte seine Ziele",

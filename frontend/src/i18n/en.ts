@@ -528,6 +528,7 @@ export const en = {
   "dataTasks.status.running": "Running",
   "dataTasks.status.paused": "Paused",
   "dataTasks.status.done": "Done",
+  "dataTasks.status.doneWithAction": "Done, action needed",
   "dataTasks.status.failed": "Failed",
   "dataTasks.action.pause": "Pause",
   "dataTasks.action.resume": "Resume",
@@ -543,6 +544,8 @@ export const en = {
   "dataTasks.blocked.earlier_step": "An earlier step must finish first.",
   "dataTasks.blocked.missing_prerequisite":
     "Required updates must finish first.",
+  "dataTasks.actionRecords_one": "{count} record left to act on",
+  "dataTasks.actionRecords_other": "{count} records left to act on",
   "approval.preview.createEmployer":
     "Create the missing company and link this contact as an employee.",
   "approval.preview.reuseEmployer":
@@ -2532,6 +2535,14 @@ export const en = {
   "history.reversal.undoneBy": "Undone by {undoer}",
   "history.reversal.unpaired": "Undoes an earlier change",
   "history.edge.marker": "Link",
+  "history.edge.linked": "{subject} linked {name} as {role}",
+  "history.edge.roleChanged":
+    "{subject} changed the role at {name} from {previous} to {role}",
+  "history.edge.roleSet": "{subject} changed the role at {name} to {role}",
+  "history.edge.changed": "{subject} changed {name}: {fields}",
+  "history.edge.unlinked": "{subject} unlinked {name}",
+  "history.edge.roleRemoved": "{subject} removed the role {previous} at {name}",
+  "history.edge.alsoChanged": "also changed: {fields}",
   "history.subject.viaClient": "{name}, via {client},",
   "history.subject.viaAgent": "{name}, via an agent,",
   "history.subject.viaConnector": "{name}, via a connector,",
@@ -2671,6 +2682,11 @@ export const en = {
   "history.field.stage_id": "Stage",
   "history.field.disqualify_reason_id": "Disqualify reason",
   "history.field.trigger": "Qualified by",
+  "history.field.role": "Role",
+  "history.field.is_current_primary": "Primary employer",
+  "history.field.employment_status": "Employment status",
+  "history.field.started_precision": "Start date precision",
+  "history.field.ended_precision": "End date precision",
   "history.field.win_probability_override": "Probability set on the deal",
   "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",
@@ -3507,6 +3523,8 @@ export const en = {
   // about. Two sentences, no dash (VOICE-RULE-5).
   "common.individualPerformanceOff":
     "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two. A forecast is withheld in full if any of its groups would show one colleague’s figures.",
+  "common.ownerNotMeasurable":
+    "This owner’s figures are outside what you may measure. Remove the owner filter, or ask an administrator to widen your reach.",
   "common.permissionDenied":
     "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   // The licensing ceiling, decided before any role is consulted: a read seat is
@@ -4154,8 +4172,10 @@ export const en = {
   "co.health.reason.lastMetToday": "Last met them today.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
   "co.health.reason.lastMet_other": "Last met them {days} days ago.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "In contact, but one contact carries the whole company relationship.",
+  "co.health.reason.singleThreaded_other":
+    "In contact, but only {count} contacts carry the whole company relationship.",
   "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
   "co.health.reason.severalContacts_other":
     "{count} contacts here are in touch.",
@@ -6340,6 +6360,9 @@ export const en = {
   "deal.committee.missing.secondContact": "Only one contact. Add a second one.",
   "deal.committee.missing.secondEngaged":
     "Fewer than two engaged. Reach a second contact.",
+  "deal.committee.missing.anotherContact": "Too few contacts. Add another one.",
+  "deal.committee.missing.anotherEngaged":
+    "Too few engaged. Reach another contact.",
   "deal.committee.foot": "{named} named · {engaged} of {named} engaged",
   "deal.brief.title": "What this deal is",
   "deal.brief.byModel": "Written by Margince from the customer’s email",
@@ -17013,6 +17036,10 @@ export const en = {
     "Measured against the call for this period.",
   "forecast.pipelineBasisWhy.historical_median":
     "Measured against the median of the last 4 comparable periods.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} won deal in those periods has no amount or exchange rate and is left out of the median.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} won deals in those periods have no amount or exchange rate and are left out of the median.",
   "forecast.pipelineAbsentTitle": "No coverage figure for this period",
   "forecast.pipelineAbsent.call_withheld":
     "The manager’s call is not shown here, and fewer than 4 comparable periods have finished. Measuring against these open deals themselves would always look sufficient.",
@@ -23820,6 +23847,8 @@ export const en = {
     "Search may miss records until indexing catches up. The records themselves remain saved.",
   "health.effect.updates":
     "The changes handled by this update remain incomplete. Already saved changes stay saved; some records may still have their previous values.",
+  "health.effect.updatesAction":
+    "The update finished. Some records it found still wait for someone to act on them.",
   "health.effect.recovery":
     "Normal CRM work can continue. During an outage, restoring service may take longer or lose more recent data than the recovery targets allow.",
   "health.effect.automatic":
@@ -24018,6 +24047,8 @@ export const en = {
   "health.code.updates_failed": "A data update needs technical attention",
   "health.code.updates_retrying": "A data update has another attempt recorded",
   "health.code.updates_review": "A data update needs administrator review",
+  "health.code.updates_action":
+    "A data update finished and left records for someone to act on",
   "health.code.recovery_missing": "No restore test recorded",
   "health.code.recovery_verified":
     "The recorded restore drill met its recovery targets",

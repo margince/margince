@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4555 |
+| Columns | 4557 |
 | Foreign keys | 635 |
 | Owning areas | 40 |
 
@@ -283,7 +283,7 @@ erDiagram
 | [`custom_field`](customfields.md#custom_field) | customfields | 19 | 0 |
 | [`data_subject_request`](consent.md#data_subject_request) | consent | 17 | 1 |
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
-| [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
+| [`data_task_run`](platform.md#data_task_run) | platform | 23 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
 | [`deal`](deals.md#deal) | deals | 49 | 31 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 12 | 1 |
@@ -339,7 +339,7 @@ erDiagram
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |
 | [`graph_contact_edge`](search.md#graph_contact_edge) | search | 10 | 0 |
 | [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 18 | 0 |
-| [`home_read_cache`](compose.md#home_read_cache) | compose | 9 | 0 |
+| [`home_read_cache`](compose.md#home_read_cache) | compose | 8 | 0 |
 | [`home_read_fence`](compose.md#home_read_fence) | compose | 2 | 0 |
 | [`home_read_fence_pending`](compose.md#home_read_fence_pending) | compose | 2 | 0 |
 | [`home_read_forgotten`](compose.md#home_read_forgotten) | compose | 2 | 0 |
@@ -468,7 +468,7 @@ erDiagram
 | [`tax_rate`](deals.md#tax_rate) | deals | 7 | 0 |
 | [`team`](identity.md#team) | identity | 6 | 10 |
 | [`team_membership`](identity.md#team_membership) | identity | 5 | 0 |
-| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 29 | 4 |
+| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 30 | 4 |
 | [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 13 | 0 |
 | [`team_weekly_review_member`](compose.md#team_weekly_review_member) | compose | 5 | 0 |
 | [`team_weekly_review_outlook`](compose.md#team_weekly_review_outlook) | compose | 15 | 0 |
@@ -492,7 +492,7 @@ erDiagram
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |
 | [`weekly_plan`](weeklyplan.md#weekly_plan) | weeklyplan | 12 | 1 |
 | [`weekly_plan_commitment`](weeklyplan.md#weekly_plan_commitment) | weeklyplan | 23 | 0 |
-| [`weekly_review`](compose.md#weekly_review) | compose | 37 | 7 |
+| [`weekly_review`](compose.md#weekly_review) | compose | 38 | 7 |
 | [`weekly_review_deal`](compose.md#weekly_review_deal) | compose | 9 | 0 |
 | [`weekly_review_driver`](compose.md#weekly_review_driver) | compose | 7 | 0 |
 | [`weekly_review_learning`](compose.md#weekly_review_learning) | compose | 6 | 1 |

@@ -138,7 +138,7 @@ func TestARecordHistoryEntryCarriesTheLinkItReversed(t *testing.T) {
 	reversed := ids.MustParse(reversedRowID)
 	row := recordAuditRow{actorType: "human", actorID: "human:x", action: "restore", undidAuditLogID: &reversed}
 
-	entry := recordHistoryEntry(row, nil)
+	entry := recordHistoryEntry(row, nil, nil)
 	if entry.UndidAuditLogID == nil || entry.UndidAuditLogID.String() != reversedRowID {
 		t.Fatalf("entry link = %v, want %s", entry.UndidAuditLogID, reversedRowID)
 	}
@@ -146,7 +146,7 @@ func TestARecordHistoryEntryCarriesTheLinkItReversed(t *testing.T) {
 		wire.UndidAuditLogId.String() != reversedRowID {
 		t.Errorf("wire link = %v, want %s", wire.UndidAuditLogId, reversedRowID)
 	}
-	if recordHistoryEntry(recordAuditRow{action: "update"}, nil).UndidAuditLogID != nil {
+	if recordHistoryEntry(recordAuditRow{action: "update"}, nil, nil).UndidAuditLogID != nil {
 		t.Error("an ordinary update must carry no link")
 	}
 }

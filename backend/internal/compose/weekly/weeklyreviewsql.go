@@ -80,6 +80,7 @@ const reviewSelect = `
 	       meetings_held, meetings_with_next_step,
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
 	       base_currency, prior_review_id,
+	       pipeline_gaps,
 	       coalesce(narrative, ''), narrated_at,
 	       learnings_state, numeric_summary, daily_activity, leads_withheld
 	  FROM weekly_review`
@@ -90,6 +91,7 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 	c := &review.Counts
 	var created, won, lost *int64
 	var currency *string
+	var gaps []byte
 	switch err := row.Scan(&review.ID, &review.UserID, &review.LocalWeekStart,
 		&review.GeneratedAt, &review.AsOf,
 		&c.TasksDue, &c.TasksDone, &c.TasksCarriedOver, &c.TasksCompleted,
@@ -100,6 +102,7 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 		&c.MeetingsHeld, &c.MeetingsWithNextStep,
 		&created, &won, &lost, &currency, &review.PriorReviewID,
+		&gaps,
 		&review.Narrative, &review.NarratedAt, &review.LearningsState, &review.NumericSummary, &review.DailyActivity, &review.LeadsWithheld); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return Review{}, apperrors.ErrNotFound
@@ -115,6 +118,9 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 			CreatedMinor: deref(created), WonMinor: deref(won), LostMinor: deref(lost),
 			Currency: *currency, Known: true,
 		}
+	}
+	if err := scanGaps(gaps, &review.Money); err != nil {
+		return Review{}, err
 	}
 	lines, err := readDealLines(ctx, tx, review.ID)
 	if err != nil {
@@ -280,6 +286,9 @@ func insertReview(ctx context.Context, tx pgx.Tx, review Review) (ids.UUID, bool
 	// The four money columns are written together or not at all — the table's
 	// own CHECK says a figure names its currency and a currency names figures.
 	// An unconvertible week writes four nulls, which is the honest absence.
+	if gaps := gapsOf(review.Money); gaps != nil {
+		add("pipeline_gaps", gaps)
+	}
 	if review.Money.Known {
 		add("pipeline_created_minor", review.Money.CreatedMinor)
 		add("pipeline_won_minor", review.Money.WonMinor)

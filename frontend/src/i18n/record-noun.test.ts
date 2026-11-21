@@ -262,6 +262,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
+    "common.ownerNotMeasurable",
     "common.permissionDenied",
     "deal.notYoursToChange",
     "deals.totalsOwnerNotMeasurable",
@@ -732,6 +733,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "co.roleLabel.influencer",
     "co.roleLabel.user",
     "co.spine.andOthers",
+    "common.ownerNotMeasurable",
     "coverage.risk.champion_left",
     "coverage.risk.coverage_gap",
     "deal.newProjectOwner",
