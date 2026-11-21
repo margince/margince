@@ -8,11 +8,7 @@ import { Calendar, dateOf, type ISODay } from "../../design-system/calendar";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { calendarDay, localDateTimeValue } from "../../format/calendarday";
-import {
-  formatDateAbbrev,
-  formatDateTime,
-  INTL_LOCALE,
-} from "../../format/format";
+import { formatDateAbbrev, formatDateTime } from "../../format/format";
 import { useNow } from "../../format/now";
 import {
   instantAtWallClock,
@@ -114,7 +110,7 @@ function ScheduleSteps({
       ) : (
         <div className="schedule-presets">
           <p className="t-caption">
-            {zoneNameAndOffset(INTL_LOCALE[locale], current, zone)}
+            {zoneNameAndOffset(locale, current, zone)}
           </p>
           {schedulePresets(current, zone).map((preset) => (
             <button

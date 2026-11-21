@@ -11,7 +11,8 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { clockOrBlank, TimeInput } from "../../design-system/timeinput";
-import { formatAnalyticsNumber, INTL_LOCALE } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
+import { dateTimeFormat } from "../../format/formatters";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
@@ -92,7 +93,7 @@ export function ReportingScheduleDialog({
       value: String(index + 1),
       label:
         definition.frequency === "weekly"
-          ? new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+          ? dateTimeFormat(locale, {
               weekday: "long",
               timeZone: "UTC",
             }).format(new Date(Date.UTC(2026, 0, 5 + index)))

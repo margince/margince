@@ -46,6 +46,12 @@ func WithReadInstant(ctx context.Context, now time.Time) context.Context {
 	return withPinnedSLANow(ctx, now.UTC())
 }
 
+// pinSLANow fixes one instant for everything built from ctx. It keeps a pin the
+// caller set, and reads the live clock once only when none is set.
+func pinSLANow(ctx context.Context) context.Context {
+	return withPinnedSLANow(ctx, slaNow(ctx))
+}
+
 // slaNow is the pinned instant, or the live clock for a caller that pinned
 // none — a single-statement read has nothing to agree with.
 func slaNow(ctx context.Context) time.Time {

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { formatMoneyCompact } from "../../format/format";
-import { INTL_LOCALE } from "../../format/intllocale";
+import { numberFormat } from "../../format/formatters";
 import type { Locale } from "../../i18n";
 
 /**
@@ -32,7 +32,7 @@ function joinedRange(
   currency: string,
   locale: Locale,
 ): string {
-  const sign = new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const sign = numberFormat(locale, {
     style: "currency",
     currency,
   })

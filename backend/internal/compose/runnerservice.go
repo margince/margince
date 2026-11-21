@@ -69,6 +69,9 @@ type RunnerService struct {
 	// own goal forbids — so the coverage was only ever there by way of a
 	// prohibited call. Rather than lose it, the lane reaches for the wiring.
 	specByName func(string) (runner.AgentSpec, bool)
+	// seeded remembers today's occurrences this process already inserted, so a
+	// tick after the due hour does not repeat an insert that can only conflict.
+	seeded runner.SeededMemo
 }
 
 // RunnerOption adjusts a RunnerService at construction.
@@ -227,10 +230,18 @@ func (s *RunnerService) seedSeats(ctx context.Context, spec runner.AgentSpec, no
 		if !grant.Live() || grant.PassportID == nil {
 			continue
 		}
-		passportID := *grant.PassportID
-		if err := s.store.EnqueueJob(ctx, spec.Name, spec.TriggerRef(now, grant.UserID), &passportID, due); err != nil {
-			failures = append(failures, fmt.Errorf("seat %s: %w", grant.UserID, err))
+		// The grants are still read every tick. A seat that grants during the
+		// day is not in the memo yet, so it gets today's job.
+		triggerRef := spec.TriggerRef(now, grant.UserID)
+		if s.seeded.Has(now, spec.Name, triggerRef) {
+			continue
 		}
+		passportID := *grant.PassportID
+		if err := s.store.EnqueueJob(ctx, spec.Name, triggerRef, &passportID, due); err != nil {
+			failures = append(failures, fmt.Errorf("seat %s: %w", grant.UserID, err))
+			continue
+		}
+		s.seeded.Add(spec.Name, triggerRef)
 	}
 	if len(failures) > 0 {
 		return fmt.Errorf("seeding %s for %d of %d seats: %w",

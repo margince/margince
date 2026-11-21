@@ -148,9 +148,9 @@ export function ResetForm({
               refused password is a working link thrown away. */}
           {failure === "token" &&
             (selfServiceAvailable ? (
-              <button type="button" className="auth-link" onClick={onRestart}>
+              <Button type="button" variant="link" onClick={onRestart}>
                 {t("auth.requestNewLink")}
-              </button>
+              </Button>
             ) : (
               // With no outbound email there is no self-service flow. An admin
               // issued this link by hand, so the next step is to ask that admin.
@@ -168,9 +168,9 @@ export function ResetForm({
         >
           {t("auth.setNewPassword")}
         </Button>
-        <button type="button" className="auth-link" onClick={onBack}>
+        <Button type="button" variant="link" onClick={onBack}>
           {t("auth.backToLogin")}
-        </button>
+        </Button>
       </div>
     </form>
   );

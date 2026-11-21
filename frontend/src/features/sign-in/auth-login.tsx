@@ -200,9 +200,9 @@ export function LoginForm({
           icon={<Lock aria-hidden />}
           labelEnd={
             resetAvailable ? (
-              <button type="button" className="auth-link" onClick={onForgot}>
+              <Button type="button" variant="link" onClick={onForgot}>
                 {t("auth.forgotLink")}
-              </button>
+              </Button>
             ) : undefined
           }
           error={passwordError}
@@ -327,9 +327,9 @@ export function ForgotForm({
         >
           {t("auth.sendResetLink")}
         </Button>
-        <button type="button" className="auth-link" onClick={onBack}>
+        <Button type="button" variant="link" onClick={onBack}>
           {t("auth.backToLogin")}
-        </button>
+        </Button>
       </div>
     </form>
   );

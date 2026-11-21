@@ -125,7 +125,7 @@ describe("DealRoomTab", () => {
       await screen.findByRole("button", { name: "Open a Deal Room" }),
     );
     expect(await screen.findByLabelText(/Room title/)).toHaveAttribute(
-      "maxlength",
+      "data-character-limit",
       "120",
     );
   });

@@ -64,6 +64,10 @@ type worklistCursor struct {
 	// Refusing it would break every walk in flight at the moment this shipped,
 	// to no reader's benefit.
 	Snapshot ids.UUID `json:"s,omitempty"`
+	// Ranked is At counted in ranked rows on a first page that froze a walk.
+	// At counts the walk's members, so a kept page whose walk ended pages on from
+	// Ranked instead.
+	Ranked int `json:"o,omitempty"`
 	// Rest is where each backlog source stands once the ranked rows ran out.
 	// Nil until then.
 	Rest *backlogCursor `json:"r,omitempty"`
@@ -140,11 +144,12 @@ func normalizedFilter(filter string) string {
 // the backlog ended early) is worse than the case it guards against.
 //
 // Held by: TestACursorRoundTripsThePositionItWasMintedAt.
-func encodeCursor(at int, scope, filter string, owner, snapshot ids.UUID, rest *backlogCursor) string {
+func encodeCursor(at int, scope, filter string, owner ids.UUID, walk walkState, rest *backlogCursor) string {
 	token, err := storekit.EncodeSigned(worklistCursor{
 		At:       at,
 		Params:   fingerprint(scope, filter, owner),
-		Snapshot: snapshot,
+		Snapshot: walk.id,
+		Ranked:   walk.offset,
 		Rest:     rest,
 	}, cursorKey())
 	if err != nil {
