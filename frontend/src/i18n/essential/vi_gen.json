@@ -4089,6 +4089,7 @@
   "settings.scope.installation": "Bản cài đặt",
   "settings.scopeAria": "Áp dụng cho: {scope}",
   "settings.scopeAriaMixed": "Các cài đặt trên trang này ảnh hưởng đến những đối tượng khác nhau; mỗi cài đặt ghi rõ đối tượng.",
+  "settings.pageLoading": "Đang tải {page}…",
   "settings.seatRefused": "Tài khoản của bạn chỉ có quyền xem. Liên hệ quản trị viên để được cấp tài khoản đầy đủ quyền.",
   "settings.tab.company": "Hồ sơ công ty",
   "settings.tab.authentication": "Đăng nhập và bảo mật",

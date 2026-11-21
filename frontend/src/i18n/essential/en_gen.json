@@ -4089,6 +4089,7 @@
   "settings.scope.installation": "Installation",
   "settings.scopeAria": "Applies to: {scope}",
   "settings.scopeAriaMixed": "Settings on this page affect different people; each one states which.",
+  "settings.pageLoading": "Loading {page}…",
   "settings.seatRefused": "Your seat is read-only. Ask an admin for a full seat.",
   "settings.tab.company": "Company profile",
   "settings.tab.authentication": "Sign-in and security",

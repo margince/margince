@@ -4089,6 +4089,7 @@
   "settings.scope.installation": "Installation",
   "settings.scopeAria": "Gilt für: {scope}",
   "settings.scopeAriaMixed": "Einstellungen auf dieser Seite betreffen unterschiedliche Personen. Jede Einstellung nennt, wen sie betrifft.",
+  "settings.pageLoading": "{page} wird geladen…",
   "settings.seatRefused": "Du hast einen Leseplatz. Frage einen Admin nach einem vollen Platz.",
   "settings.tab.company": "Unternehmensprofil",
   "settings.tab.authentication": "Anmeldung und Sicherheit",

@@ -2,20 +2,45 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  within,
+} from "@testing-library/react";
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordTabs } from "../design-system/recordtabs";
-import { useHash, useRoute } from "../lib/router";
+import { en } from "../i18n/en";
+import { samePage, useHash, useRoute } from "../lib/router";
 import { useReportShownAddress } from "../lib/screenaddress";
 import { forgetScrollMemory, keepPlaceOnNextMove } from "../lib/scrollmemory";
 import { ignoreSearch, render } from "../testing/shellharness";
 import { Shell } from "./shell";
 
 // The routed screen's part of the contract: it names the address it shows.
-function Showing({ address }: Readonly<{ address: string }>) {
-  useReportShownAddress(address);
+function Showing({
+  address,
+  pending = false,
+}: Readonly<{ address: string; pending?: boolean }>) {
+  useReportShownAddress(address, pending);
   return <p>{address}</p>;
+}
+
+// A screen whose next page is still loading: it stays on its page until Land.
+function Loading({ from }: Readonly<{ from: string }>) {
+  const live = useHash();
+  const [address, setAddress] = useState(from);
+  return (
+    <>
+      <Showing address={address} pending={!samePage(address, live)} />
+      <button type="button" onClick={() => setAddress(live)}>
+        Land
+      </button>
+    </>
+  );
 }
 
 // A screen that is never held: it shows whatever the bar says.
@@ -97,6 +122,7 @@ async function moveTo(hash: string, state: unknown = null) {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   forgetScrollMemory();
   window.history.replaceState(null, "", "#/");
 });
@@ -223,5 +249,130 @@ describe("the content column's place", () => {
     // The same deal opened again, from search.
     await moveTo("#/deals/d-1?from=search");
     expect(column().scrollTop).toBe(0);
+  });
+});
+
+function main(): HTMLElement {
+  const column = document.querySelector<HTMLElement>("main");
+  if (!column) throw new Error("the shell drew no main column");
+  return column;
+}
+
+function trail(): string[] {
+  const nav = screen.getByRole("navigation", {
+    name: en["shell.breadcrumbAria"],
+  });
+  return within(nav)
+    .getAllByRole("listitem")
+    .map((stop) => stop.textContent ?? "");
+}
+
+function wait(): HTMLElement {
+  const region = document.querySelector<HTMLElement>(".pagewait");
+  if (!region) throw new Error("the shell drew no page wait");
+  return region;
+}
+
+function activeRow(): Element | null {
+  return document.querySelector("nav.rail a.navitem.active");
+}
+
+const LOADING_SCHEDULED = en["settings.pageLoading"].replace(
+  "{page}",
+  en["nav.scheduled"],
+);
+
+describe("the chrome while the next page loads", () => {
+  it("names the page still on screen, once", async () => {
+    window.history.replaceState(null, "", "#/analytics");
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <Loading from="#/analytics" />
+      </Shell>,
+    );
+
+    await moveTo("#/scheduled");
+
+    const headings = screen.getAllByRole("heading", { level: 1 });
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      "Analytics",
+    ]);
+    expect(trail()).toEqual(["Analytics"]);
+    expect(document.title.startsWith("Analytics ·")).toBe(true);
+    expect(activeRow()?.textContent).toBe("Analytics");
+    expect(activeRow()).toHaveAttribute("aria-current", "page");
+  });
+
+  it("shows the wait only after 200 ms, and drops it when the page lands", async () => {
+    vi.useFakeTimers();
+    window.history.replaceState(null, "", "#/analytics");
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <Loading from="#/analytics" />
+      </Shell>,
+    );
+    await moveTo("#/scheduled");
+
+    act(() => vi.advanceTimersByTime(199));
+    expect(main()).not.toHaveAttribute("aria-busy");
+    expect(document.querySelector(".pagewait-line")).toBeNull();
+    expect(wait()).toHaveTextContent("");
+
+    act(() => vi.advanceTimersByTime(1));
+    expect(main()).toHaveAttribute("aria-busy", "true");
+    expect(document.querySelector(".pagewait-line")).not.toBeNull();
+    expect(wait()).toHaveAttribute("role", "status");
+    expect(wait()).toHaveTextContent(LOADING_SCHEDULED);
+
+    fireEvent.click(screen.getByRole("button", { name: "Land" }));
+    expect(main()).not.toHaveAttribute("aria-busy");
+    expect(document.querySelector(".pagewait-line")).toBeNull();
+    expect(
+      screen.getByRole("heading", { level: 1, name: en["nav.scheduled"] }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no wait for a move that lands inside 200 ms", async () => {
+    vi.useFakeTimers();
+    window.history.replaceState(null, "", "#/analytics");
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <Loading from="#/analytics" />
+      </Shell>,
+    );
+    await moveTo("#/scheduled");
+    act(() => vi.advanceTimersByTime(150));
+    fireEvent.click(screen.getByRole("button", { name: "Land" }));
+
+    act(() => vi.advanceTimersByTime(1000));
+    expect(main()).not.toHaveAttribute("aria-busy");
+    expect(document.querySelector(".pagewait-line")).toBeNull();
+  });
+
+  it("names the bar's page before any screen has reported", () => {
+    window.history.replaceState(null, "", "#/analytics");
+    render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Analytics" }),
+    ).toBeInTheDocument();
+    expect(activeRow()?.textContent).toBe("Analytics");
+    expect(main()).not.toHaveAttribute("aria-busy");
+  });
+
+  it("keeps the reading column of the page on screen", async () => {
+    window.history.replaceState(null, "", "#/settings/voice");
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <Loading from="#/settings/voice" />
+      </Shell>,
+    );
+    expect(main()).toHaveClass("main-gridded");
+
+    await moveTo("#/contacts");
+    expect(main()).toHaveClass("main-gridded");
+
+    fireEvent.click(screen.getByRole("button", { name: "Land" }));
+    expect(main()).not.toHaveClass("main-gridded");
   });
 });

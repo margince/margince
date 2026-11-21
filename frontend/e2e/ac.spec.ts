@@ -416,6 +416,39 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await expect(page.locator("main")).not.toContainText("privacy");
 });
 
+// While the next page's code loads, the chrome names the page on screen. After
+// 200 ms the frame is busy and names the page on its way.
+test("AC-shell-1l: a page still loading keeps the old page's name and says it is loading", async ({
+  page,
+}) => {
+  await page.goto("/#/analytics");
+  const heading = page.getByRole("heading", { level: 1 });
+  await expect(heading).toHaveText(de["nav.analytics"]);
+  await settleAnimations(page);
+
+  const held: (() => Promise<void>)[] = [];
+  await page.route("**/assets/**/*.js", (route) => {
+    held.push(() => route.continue());
+  });
+  await page.evaluate(() => {
+    window.location.hash = "#/settings/privacy";
+  });
+
+  await expect(page.locator("main")).toHaveAttribute("aria-busy", "true");
+  await expect(page.locator(".pagewait")).toHaveText(
+    de["settings.pageLoading"].replace("{page}", de["nav.settings"]),
+  );
+  await expect(heading).toHaveCount(1);
+  await expect(heading).toHaveText(de["nav.analytics"]);
+  expect(await page.title()).toMatch(new RegExp(`^${de["nav.analytics"]} · `));
+  await expectNoAaViolations(page, "analytics, leaving for settings/privacy");
+
+  await page.unroute("**/assets/**/*.js");
+  for (const release of held) await release();
+  await expect(heading).toHaveText(de["settings.tab.privacy"]);
+  await expect(page.locator("main")).not.toHaveAttribute("aria-busy");
+});
+
 test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async ({
   page,
 }) => {

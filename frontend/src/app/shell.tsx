@@ -8,14 +8,15 @@ import {
 } from "react";
 import { PageAsideProvider } from "../components/pageaside";
 import { PageHeadSlot } from "../components/pageheadaction";
+import { PageWait, usePageWait } from "../design-system/pagewait";
 import { ComposeDockProvider } from "../features/mail/composedock";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { useFirstScreenSettled } from "../lib/journeymarks";
 import { routeIdentity } from "../lib/routeidentity";
-import { parseHash, useLiveHash, useRoute } from "../lib/router";
-import { ShownAddressSink } from "../lib/screenaddress";
+import { parseHash, type Route, useLiveHash, useRoute } from "../lib/router";
+import { ShownAddressSink, type ShownScreen } from "../lib/screenaddress";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { useShortcutDispatcher, useShortcutHandler } from "../lib/shortcuts";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
@@ -29,7 +30,8 @@ import { InstallHint } from "./installhint";
 import { LicenseBanner } from "./licensebanner";
 import { type NavCounts, RAIL_LESS_SCREENS } from "./nav";
 import { NavWalkProvider, useNavWalk } from "./navlevel";
-import { isRecordPage, useReadingColumn } from "./readingcolumn";
+import { usePageName, useRouteSubject } from "./pagemeta";
+import { isRecordPage, readingColumn } from "./readingcolumn";
 import { usePublishedScrollerHeight } from "./scrollerheight";
 import { TopBar } from "./topbar";
 import "./shell.css";
@@ -117,21 +119,16 @@ export function Shell({
   counts?: ShellCounts;
   onOpenSearch: () => void;
 }>) {
-  const route = useRoute();
-  const railless = RAIL_LESS_SCREENS.has(route.screen);
-  // An extension unit's page is REACHED from settings and says so in its trail
-  // (`Settings / <unit>`), so it keeps the settings level in the sidebar. It did
-  // not: the rail fell back to the destinations, and following "Open" on a
-  // settings card swapped the whole sidebar out from under a reader whose URL
-  // and breadcrumb still said Settings. `activeRowFor` in app/nav.ts has always
-  // answered `settings` for a unit route; this is the other half of it.
-  //
-  // Conditioned on the descriptor RESOLVING, like the page title's own branch:
-  // `#/ext/nonesuch` is a genuinely unknown page and belongs to nothing.
-  const onUnitPage =
-    route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
-  const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
-  const { gridded, griddedRecord } = useReadingColumn(route);
+  const live = useRoute();
+  const liveHash = useLiveHash();
+  const [shown, setShown] = useState<ShownScreen | null>(null);
+  // The chrome names the page whose content is on screen. It lags the bar while
+  // the next page loads or a draft holds this one.
+  const route = shown ? parseHash(shown.address) : live;
+  const railless = RAIL_LESS_SCREENS.has(live.screen);
+  const leveled = isLeveled(route);
+  const { gridded, griddedRecord } = readingColumn(route);
+  const waiting = usePageWait(shown?.pending ?? false);
   const [collapsed, setCollapsed] = useState(
     () => readStored(STORAGE_KEYS.sidebarCollapsed) === "1",
   );
@@ -140,7 +137,7 @@ export function Shell({
   // focus. The shell holds it because the shell outlives every rail: the rail on
   // a section route is a different component, mounted on the way in and gone
   // again on the way out.
-  const walk = useNavWalk(route, !railless && !leveled);
+  const walk = useNavWalk(live, !railless && !isLeveled(live));
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   // A page opens at its top. The document never scrolls; the content column
@@ -149,9 +146,7 @@ export function Shell({
   // Keyed by the ADDRESS the routed screen shows, not the bar: a screen held
   // past a move is still the one in the column. The whole address, so Back
   // between two entries that differ only in dials restores each.
-  const [shown, setShown] = useState<string | null>(null);
-  const live = useLiveHash();
-  const address = shown ?? live;
+  const address = shown?.address ?? liveHash;
   // A new page opens at its top and a page met again where it was left. Another
   // tab of the record on screen keeps the reader's place.
   useScrollMemory(scroller, address, { view: recordShown(address) });
@@ -192,7 +187,7 @@ export function Shell({
               request in flight and nothing else. Unlinked, because these
               routes carry no navigation and a reader mid-flow has a place to
               lose. */}
-          {route.screen === "onboarding" && <CaptureChip linked={false} />}
+          {live.screen === "onboarding" && <CaptureChip linked={false} />}
           <div className="scroll" ref={scroller}>
             {screen}
           </div>
@@ -228,7 +223,10 @@ export function Shell({
               <WorkspaceRail {...railProps} />
             )}
           </NavWalkProvider>
-          <main className={mainClasses(gridded, griddedRecord)}>
+          <main
+            className={mainClasses(gridded, griddedRecord)}
+            aria-busy={waiting || undefined}
+          >
             {leveled ? (
               <SettingsTopBar
                 route={route}
@@ -244,6 +242,7 @@ export function Shell({
                 onOpenSearch={onOpenSearch}
               />
             )}
+            <PageArriving route={live} waiting={waiting} />
             {/* Mounted from the start: it holds the outage watcher, and a
                 known offline state shows in the first paint. */}
             <ConnectivityBanner />
@@ -296,6 +295,28 @@ function ShellBanners({
       <LicenseBanner />
       <InstallHint scroller={scroller} />
     </>
+  );
+}
+
+// A unit's page is reached from settings and its trail says so, so it keeps the
+// settings level. `#/ext/nonesuch` resolves to no unit and is an unknown page.
+function isLeveled(route: Route): boolean {
+  const onUnitPage =
+    route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
+  return route.screen === SETTINGS_SCREEN || onUnitPage;
+}
+
+// A record whose name is still being read is named by its list, not its id.
+function PageArriving({
+  route,
+  waiting,
+}: Readonly<{ route: Route; waiting: boolean }>) {
+  const t = useT();
+  const subject = useRouteSubject(route);
+  const list = usePageName(route.screen);
+  const page = subject === route.id ? list : subject;
+  return (
+    <PageWait waiting={waiting} label={t("settings.pageLoading", { page })} />
   );
 }
 
