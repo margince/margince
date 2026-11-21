@@ -28,13 +28,12 @@ prompt: |
   much. Did we have it in the past, what happened, how did we react, what should
   I be prepared for? Is there something we can learn? Check in our CRM.
 
-must_call:
-  - search_context
 may_call:
   - query_workspace
   - catch_me_up_on
   - read_record
   - search_records
+  - search_context
 
 # WHAT IS A REGEX HERE AND WHAT IS A JUDGE, and why.
 #

@@ -27,9 +27,10 @@ prompt: |
   ,Köln,201-500,DE
   Alpenblick Sensorik GmbH,München,11-50,DE
 
-must_call:
-  - preview_import
 may_call:
+  # The dry run is the product's way to show the numbers first; the answer and
+  # the end state below are the test.
+  - preview_import
   # NOT commit_import, and its absence is the case. Criterion 1 is that the
   # numbers are shown BEFORE anything is written, and the prose half now fails a
   # run that reports the import as done — so permitting the tool that does it

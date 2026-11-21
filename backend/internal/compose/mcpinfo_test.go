@@ -37,6 +37,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/mcpe2e"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -89,6 +90,10 @@ type mcpInfo struct {
 	// Instructions are what server/discover tells every client's model before
 	// any tool's own text; the MCP end-to-end verdicts stamp them.
 	Instructions string `json:"instructions"`
+	// ActionCatalog is what read_workspace topic=actions answers for each
+	// router: every route action's body as a model reads it. The verdicts
+	// stamp it per router, since tools/list carries none of it.
+	ActionCatalog map[string]json.RawMessage `json:"action_catalog"`
 }
 
 // mcpInfoTotals is the arithmetic a reviewer would otherwise do by hand.
@@ -155,6 +160,7 @@ func TestPublishedMCPSurfaceMatchesWhatAClientIsServed(t *testing.T) {
 	doc := mcpInfoDocument(t, tools, resources)
 	doc.Documents = publishedDocumentBodies(t, resources, views)
 	doc.Instructions = servedInstructions(t, views)
+	doc.ActionCatalog = servedActionCatalog(t)
 	rendered, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		t.Fatalf("rendering the served surface: %v", err)
@@ -384,17 +390,11 @@ func mcpCall(t *testing.T, method, extraParams, name string, views *apps.Provide
 	if envelope.Error != nil {
 		t.Fatalf("%s answered an error: %s", method, envelope.Error)
 	}
-	// Re-marshal through a generic value so the artifact's key order is JSON's
-	// own and not the handler's struct order — the file is compared byte for
-	// byte, and a field reordered in Go would otherwise read as a changed
-	// surface.
-	var canonical any
-	if err := json.Unmarshal(envelope.Result, &canonical); err != nil {
-		t.Fatalf("canonicalising %s: %v", method, err)
-	}
-	stable, err := json.Marshal(canonical)
+	// The file is compared byte for byte, so a field reordered in Go must not
+	// read as a changed surface.
+	stable, err := mcpe2e.CanonicalJSON(envelope.Result)
 	if err != nil {
-		t.Fatalf("re-encoding %s: %v", method, err)
+		t.Fatalf("canonicalising %s: %v", method, err)
 	}
 	return stable
 }
@@ -533,4 +533,26 @@ func truncateLine(line string) string {
 		return line
 	}
 	return line[:limit] + "…"
+}
+
+// servedActionCatalog reads every router's action catalog through the tool
+// that serves it, re-encoded so the file holds JSON's own key order.
+func servedActionCatalog(t *testing.T) map[string]json.RawMessage {
+	t.Helper()
+	registry := NewRegistry(nil, SendPath{})
+	routers := registry.ActionCatalogRouters()
+	if len(routers) == 0 {
+		t.Fatal("no router serves an action catalog")
+	}
+	catalog := make(map[string]json.RawMessage, len(routers))
+	for _, router := range routers {
+		answer, err := registry.ActionCatalog(router)
+		if err != nil {
+			t.Fatalf("the %s action catalog: %v", router, err)
+		}
+		if catalog[router], err = mcpe2e.CanonicalJSON(answer); err != nil {
+			t.Fatalf("the %s action catalog does not decode: %v", router, err)
+		}
+	}
+	return catalog
 }
