@@ -292,7 +292,7 @@ The best samples are emails you sent, then proposals and posts, then the written
 
 **Learn from sent mail** reads only mail sent from your own mailbox, never a colleague's mail or a copy of it. It leaves out mail kept private to its participants, and mail whose subject marks it confidential. From each mail it keeps only what you wrote: quoted replies, forwards and signatures are cut. Each mail becomes one sample, named by its subject and date. A sample you remove stays out when you choose the button again.
 
-Margince reads a PDF or Word document to its text in the browser before it sends anything. It skips a file with no text in it. It names a file it cannot open (one with a password, or one that is broken), so you can paste its text in instead. A file can hold up to about 1 MB of text; a larger one is named and left out, so you can split it into smaller files.
+Margince reads a PDF or Word document to its text in the browser before it sends anything. It skips a file with no text in it. It names a file it cannot open (one with a password, or one that is broken), so you can paste its text in instead. A file can hold up to about 1 MB of text. A larger one is named and left out, so you can split it into smaller files.
 
 When at least half of a file comes from named speakers, Margince reads it as a conversation. The page asks which speaker is you, and keeps only your parts. Under that share, the file counts as plain text and is taken whole. So an email with a line that opens with a heading and a colon, such as "Frage: …", is not asked about.
 

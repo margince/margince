@@ -494,7 +494,7 @@ describe("the LinkedIn row", () => {
     expect(screen.queryByRole("button", { name: "Add profile" })).toBeNull();
   });
 
-  // Add can be pressed before the account read answers; the dialog then takes
+  // Add can be pressed before the account read answers. The dialog then takes
   // the stored profile, unless the reader has typed one of their own.
   it("fills an open dialog with the profile the account read brings back late", async () => {
     let answer = (_: Response) => {};
@@ -523,8 +523,8 @@ describe("the LinkedIn row", () => {
     );
   });
 
-  // A read that was already on its way when the save landed answers for the
-  // time before the save, so it must not replace the saved profile.
+  // A read already on its way when the save landed describes the time before
+  // it. It must not replace the saved profile.
   it("keeps a saved profile when an older account read answers after it", async () => {
     let answer = (_: Response) => {};
     stub({

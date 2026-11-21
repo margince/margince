@@ -475,7 +475,7 @@ export function useVoiceCorpus({
     addPaste,
     answerSpeaker,
     /** True while any probe, ingest, removal or speaker question is still
-     * open — a build starting now would misrepresent what the voice is made of. */
+     * open: a build starting now would misrepresent what the voice is made of. */
     busy: probesInFlight > 0 || asks.length > 0 || removing !== null,
     /** Each source of the latest pick the corpus could not add; cleared
      * when the reader hands over the next file, paste or speaker answer. */

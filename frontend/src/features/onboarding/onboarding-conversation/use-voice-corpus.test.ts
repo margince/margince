@@ -191,8 +191,8 @@ describe("useVoiceCorpus — refusals with no reason of their own", () => {
       expect(result.current.failures).toHaveLength(2);
     });
     expect(
-      result.current.failures.map((failure) => failure.params?.name).sort(),
-    ).toEqual(["first.txt", "second.txt"]);
+      result.current.failures.map((failure) => failure.params?.name),
+    ).toEqual(expect.arrayContaining(["first.txt", "second.txt"]));
   });
 });
 
