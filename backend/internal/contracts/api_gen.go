@@ -1339,6 +1339,7 @@ const (
 	AiActivityKindCaptureCounterpartyVerdict    AiActivityKind = "capture_counterparty_verdict"
 	AiActivityKindCertJudge                     AiActivityKind = "cert_judge"
 	AiActivityKindChatSummary                   AiActivityKind = "chat_summary"
+	AiActivityKindChatTaskReading               AiActivityKind = "chat_task_reading"
 	AiActivityKindColdStart                     AiActivityKind = "cold_start"
 	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
@@ -1390,6 +1391,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCertJudge:
 		return true
 	case AiActivityKindChatSummary:
+		return true
+	case AiActivityKindChatTaskReading:
 		return true
 	case AiActivityKindColdStart:
 		return true
@@ -1940,6 +1943,7 @@ const (
 	AiTaskCaptureCounterpartyVerdict    AiTask = "capture_counterparty_verdict"
 	AiTaskCertJudge                     AiTask = "cert_judge"
 	AiTaskChatSummary                   AiTask = "chat_summary"
+	AiTaskChatTaskReading               AiTask = "chat_task_reading"
 	AiTaskColdStart                     AiTask = "cold_start"
 	AiTaskCorpusAsk                     AiTask = "corpus_ask"
 	AiTaskDealHealth                    AiTask = "deal_health"
@@ -1990,6 +1994,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskCertJudge:
 		return true
 	case AiTaskChatSummary:
+		return true
+	case AiTaskChatTaskReading:
 		return true
 	case AiTaskColdStart:
 		return true
@@ -12610,6 +12616,48 @@ func (e DraftSteeringLanguage) Valid() bool {
 	case DraftSteeringLanguageEn:
 		return true
 	case DraftSteeringLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EditAccessRequestRecordType.
+const (
+	EditAccessRequestRecordTypeCompany EditAccessRequestRecordType = "company"
+	EditAccessRequestRecordTypeContact EditAccessRequestRecordType = "contact"
+	EditAccessRequestRecordTypeDeal    EditAccessRequestRecordType = "deal"
+	EditAccessRequestRecordTypeLead    EditAccessRequestRecordType = "lead"
+	EditAccessRequestRecordTypeProject EditAccessRequestRecordType = "project"
+)
+
+// Valid indicates whether the value is a known member of the EditAccessRequestRecordType enum.
+func (e EditAccessRequestRecordType) Valid() bool {
+	switch e {
+	case EditAccessRequestRecordTypeCompany:
+		return true
+	case EditAccessRequestRecordTypeContact:
+		return true
+	case EditAccessRequestRecordTypeDeal:
+		return true
+	case EditAccessRequestRecordTypeLead:
+		return true
+	case EditAccessRequestRecordTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EditAccessRequestStatus.
+const (
+	EditAccessRequestStatusPending EditAccessRequestStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the EditAccessRequestStatus enum.
+func (e EditAccessRequestStatus) Valid() bool {
+	switch e {
+	case EditAccessRequestStatusPending:
 		return true
 	default:
 		return false
@@ -23260,6 +23308,7 @@ const (
 	SchedulingProfileBlockerCalendarUnavailable SchedulingProfileBlocker = "calendar_unavailable"
 	SchedulingProfileBlockerNoCalendar          SchedulingProfileBlocker = "no_calendar"
 	SchedulingProfileBlockerNone                SchedulingProfileBlocker = "none"
+	SchedulingProfileBlockerTeamNotReady        SchedulingProfileBlocker = "team_not_ready"
 )
 
 // Valid indicates whether the value is a known member of the SchedulingProfileBlocker enum.
@@ -23272,6 +23321,8 @@ func (e SchedulingProfileBlocker) Valid() bool {
 	case SchedulingProfileBlockerNoCalendar:
 		return true
 	case SchedulingProfileBlockerNone:
+		return true
+	case SchedulingProfileBlockerTeamNotReady:
 		return true
 	default:
 		return false
@@ -23293,6 +23344,66 @@ func (e SchedulingProfileProvider) Valid() bool {
 	case SchedulingProfileProviderGcal:
 		return true
 	case SchedulingProfileProviderGraphcal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingTeamAnswerState.
+const (
+	SchedulingTeamAnswerStateConfirmed SchedulingTeamAnswerState = "confirmed"
+	SchedulingTeamAnswerStateLeft      SchedulingTeamAnswerState = "left"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamAnswerState enum.
+func (e SchedulingTeamAnswerState) Valid() bool {
+	switch e {
+	case SchedulingTeamAnswerStateConfirmed:
+		return true
+	case SchedulingTeamAnswerStateLeft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingTeamMemberState.
+const (
+	SchedulingTeamMemberStateConfirmed   SchedulingTeamMemberState = "confirmed"
+	SchedulingTeamMemberStateLeft        SchedulingTeamMemberState = "left"
+	SchedulingTeamMemberStatePending     SchedulingTeamMemberState = "pending"
+	SchedulingTeamMemberStateUnavailable SchedulingTeamMemberState = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamMemberState enum.
+func (e SchedulingTeamMemberState) Valid() bool {
+	switch e {
+	case SchedulingTeamMemberStateConfirmed:
+		return true
+	case SchedulingTeamMemberStateLeft:
+		return true
+	case SchedulingTeamMemberStatePending:
+		return true
+	case SchedulingTeamMemberStateUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingTeamRequestState.
+const (
+	SchedulingTeamRequestStateConfirmed SchedulingTeamRequestState = "confirmed"
+	SchedulingTeamRequestStatePending   SchedulingTeamRequestState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamRequestState enum.
+func (e SchedulingTeamRequestState) Valid() bool {
+	switch e {
+	case SchedulingTeamRequestStateConfirmed:
+		return true
+	case SchedulingTeamRequestStatePending:
 		return true
 	default:
 		return false
@@ -37019,9 +37130,9 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
-	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact: the name or
-	// number the chat header shows when neither agrees with that contact. Null when
-	// they agree, when the header shows neither, and for every other reading.
+	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+	// name or number the chat header shows when neither agrees with that record. Null
+	// when they agree, when the header shows neither, on a deal, and for every other reading.
 	// `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
 	OtherCounterparty *string `json:"other_counterparty,omitempty"`
 
@@ -50421,6 +50532,24 @@ type DraftSteering struct {
 // DraftSteeringLanguage The language the caller chose for the draft. It outranks every language the server would read from the correspondence, the addressee, the rep and the installation, and the greeting, register, provenance notice and deterministic fallback all follow it. Absent leaves the choice to the server, which reads it from the correspondence. The server keeps no choice between calls, so a rewrite that should stay in the chosen language names it again. A code outside this list is `422` on `language`.
 type DraftSteeringLanguage string
 
+// EditAccessRequest defines model for EditAccessRequest.
+type EditAccessRequest struct {
+	ApprovalId openapi_types.UUID `json:"approval_id"`
+	ExpiresAt  time.Time          `json:"expires_at"`
+
+	// OwnerId The owner the request is put to.
+	OwnerId    openapi_types.UUID          `json:"owner_id"`
+	RecordId   openapi_types.UUID          `json:"record_id"`
+	RecordType EditAccessRequestRecordType `json:"record_type"`
+	Status     EditAccessRequestStatus     `json:"status"`
+}
+
+// EditAccessRequestRecordType defines model for EditAccessRequest.RecordType.
+type EditAccessRequestRecordType string
+
+// EditAccessRequestStatus defines model for EditAccessRequest.Status.
+type EditAccessRequestStatus string
+
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
 // `change_mode` are decided by the same authority that would execute the write, so a
 // control this block offers is a control the write will accept.
@@ -51537,7 +51666,7 @@ type FileChatCaptureRequest struct {
 	// ChannelProvider The messaging app the chat happened in.
 	ChannelProvider ProviderRef `json:"channel_provider"`
 
-	// ConfirmOtherCounterparty The caller confirms the chat belongs on this contact although its header shows
+	// ConfirmOtherCounterparty The caller confirms the chat belongs on this record although its header shows
 	// someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
 	// is refused with 409.
 	ConfirmOtherCounterparty *bool `json:"confirm_other_counterparty,omitempty"`
@@ -60130,7 +60259,7 @@ type PageInfo struct {
 	// NextCursor Opaque cursor for the next page, or null if none.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
-	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means.
+	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company and lead lists count on the first page only and send no total with a cursor, so a client keeps the first page's total while it loads further pages.
 	Total *int `json:"total,omitempty" minimum:"0"`
 }
 
@@ -66160,7 +66289,9 @@ type SchedulingProfile struct {
 	// Blocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
 	// the page names no calendar (a page saved before the profile existed reads this way).
 	// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
-	// the connection is gone or refused. Answered on the host's own profile read only.
+	// the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
+	// left, or has no calendar Margince can read; `team_members` says which. Answered on the
+	// host's own profile read only.
 	Blocker           *SchedulingProfileBlocker `json:"blocker,omitempty"`
 	BlockingCalendars *[]string                 `json:"blocking_calendars,omitempty"`
 	BufferMinutes     int                       `json:"buffer_minutes" maximum:"120" minimum:"0"`
@@ -66191,7 +66322,14 @@ type SchedulingProfile struct {
 	PublicUrl   *string `json:"public_url,omitempty"`
 	ReplaceLink *bool   `json:"replace_link,omitempty"`
 	Slug        *string `json:"slug,omitempty"`
-	Title       string  `json:"title"`
+
+	// TeamMembers Colleagues who must attend every meeting booked through this page. Guests see only the
+	// times when the host and every member are free, inside each one's own working hours, and
+	// each booking invites every member. A member named here starts as `pending` and the page
+	// takes no bookings until every member has confirmed. Only `user_id` is read from a
+	// request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+	TeamMembers *[]SchedulingTeamMember `json:"team_members,omitempty"`
+	Title       string                  `json:"title"`
 
 	// UseDefaultTitle Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording.
 	UseDefaultTitle *bool `json:"use_default_title,omitempty"`
@@ -66203,11 +66341,56 @@ type SchedulingProfile struct {
 // SchedulingProfileBlocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
 // the page names no calendar (a page saved before the profile existed reads this way).
 // `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
-// the connection is gone or refused. Answered on the host's own profile read only.
+// the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
+// left, or has no calendar Margince can read; `team_members` says which. Answered on the
+// host's own profile read only.
 type SchedulingProfileBlocker string
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
+
+// SchedulingTeamAnswer defines model for SchedulingTeamAnswer.
+type SchedulingTeamAnswer struct {
+	State SchedulingTeamAnswerState `json:"state"`
+}
+
+// SchedulingTeamAnswerState defines model for SchedulingTeamAnswer.State.
+type SchedulingTeamAnswerState string
+
+// SchedulingTeamCandidate defines model for SchedulingTeamCandidate.
+type SchedulingTeamCandidate struct {
+	Name   string             `json:"name"`
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// SchedulingTeamMember defines model for SchedulingTeamMember.
+type SchedulingTeamMember struct {
+	Name *string `json:"name,omitempty"`
+
+	// State `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
+	// `left`: the member left the link; remove them to take bookings again. `unavailable`:
+	// the member left the workspace or Margince cannot read their calendar.
+	State  *SchedulingTeamMemberState `json:"state,omitempty"`
+	UserId openapi_types.UUID         `json:"user_id"`
+}
+
+// SchedulingTeamMemberState `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
+// `left`: the member left the link; remove them to take bookings again. `unavailable`:
+// the member left the workspace or Margince cannot read their calendar.
+type SchedulingTeamMemberState string
+
+// SchedulingTeamRequest defines model for SchedulingTeamRequest.
+type SchedulingTeamRequest struct {
+	HostName   string                     `json:"host_name"`
+	HostUserId openapi_types.UUID         `json:"host_user_id"`
+	State      SchedulingTeamRequestState `json:"state"`
+
+	// Title The meeting title the link offers.
+	Title string `json:"title"`
+}
+
+// SchedulingTeamRequestState defines model for SchedulingTeamRequest.State.
+type SchedulingTeamRequestState string
 
 // SdrHandoffCohort defines model for SdrHandoffCohort.
 type SdrHandoffCohort struct {
@@ -76942,6 +77125,17 @@ type KeepDomainQuestionJSONBody struct {
 type PurgeCaptureExclusionParams struct {
 	// Preview Report what would be destroyed and change nothing.
 	Preview *bool `form:"preview,omitempty" json:"preview,omitempty"`
+
+	// ExpectDestroyed The `destroyed` count a preview showed. With the two below, it binds the purge to what the
+	// caller saw: when the current selection differs, nothing is destroyed and the answer is 409.
+	// Send all three or none; ignored on a preview.
+	ExpectDestroyed *int `form:"expect_destroyed,omitempty" json:"expect_destroyed,omitempty" minimum:"0"`
+
+	// ExpectReleased The `released` count the preview showed.
+	ExpectReleased *int `form:"expect_released,omitempty" json:"expect_released,omitempty" minimum:"0"`
+
+	// ExpectAnonymised The `anonymised` count the preview showed.
+	ExpectAnonymised *int `form:"expect_anonymised,omitempty" json:"expect_anonymised,omitempty" minimum:"0"`
 }
 
 // ListHeldThreadsParams defines parameters for ListHeldThreads.
@@ -82770,6 +82964,35 @@ type ClaimRecordParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// RequestEditAccessParams defines parameters for RequestEditAccess.
+type RequestEditAccessParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // OfferOwnershipTransferParams defines parameters for OfferOwnershipTransfer.
 type OfferOwnershipTransferParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -85783,6 +86006,9 @@ type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
 
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
+
+// AnswerSchedulingTeamRequestJSONRequestBody defines body for AnswerSchedulingTeamRequest for application/json ContentType.
+type AnswerSchedulingTeamRequestJSONRequestBody = SchedulingTeamAnswer
 
 // ReassignHandoffJSONRequestBody defines body for ReassignHandoff for application/json ContentType.
 type ReassignHandoffJSONRequestBody = HandoffAssigneeInput
@@ -100117,7 +100343,7 @@ type ServerInterface interface {
 	// Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
 	// (POST /attachments/{id}/extraction:accept)
 	AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
-	// File a chat screenshot on its contact as one message activity, with the image attached.
+	// File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
 	// (POST /attachments/{id}/extraction:file-chat)
 	FileChatCapture(w http.ResponseWriter, r *http.Request, id Id)
 	// One named reading of this attachment, for a screen polling the reading it started.
@@ -102304,6 +102530,15 @@ type ServerInterface interface {
 	// Take ownership of a customer record.
 	// (POST /records/{record_type}/{id}/claim)
 	ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams)
+	// Withdraw the caller's open request for edit access to this record.
+	// (DELETE /records/{record_type}/{id}/edit-access-request)
+	WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// The caller's open request for edit access to this record.
+	// (GET /records/{record_type}/{id}/edit-access-request)
+	GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// Ask a record's owner for edit access.
+	// (POST /records/{record_type}/{id}/edit-access-request)
+	RequestEditAccess(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestEditAccessParams)
 	// Withdraw the caller's open offer of this record.
 	// (DELETE /records/{record_type}/{id}/ownership-offer)
 	WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
@@ -102463,6 +102698,15 @@ type ServerInterface interface {
 	// Create a personal, expiring invitation without reserving time or sending mail.
 	// (POST /scheduling/proposals)
 	CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams)
+	// List the colleagues the caller may name on their booking link.
+	// (GET /scheduling/team-candidates)
+	ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request)
+	// List the colleagues' booking links that name the caller.
+	// (GET /scheduling/team-requests)
+	ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request)
+	// Confirm or leave a colleague's booking link that names the caller.
+	// (PUT /scheduling/team-requests/{host_user_id})
+	AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID)
 	// Read the current receiver and reassignment version of a prospect handoff.
 	// (GET /sdr-handoffs/{id}/assignee)
 	GetHandoffAssignee(w http.ResponseWriter, r *http.Request, id Id)
@@ -104056,7 +104300,7 @@ func (_ Unimplemented) AcceptAttachmentExtraction(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// File a chat screenshot on its contact as one message activity, with the image attached.
+// File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
 // (POST /attachments/{id}/extraction:file-chat)
 func (_ Unimplemented) FileChatCapture(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108430,6 +108674,24 @@ func (_ Unimplemented) ClaimRecord(w http.ResponseWriter, r *http.Request, recor
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Withdraw the caller's open request for edit access to this record.
+// (DELETE /records/{record_type}/{id}/edit-access-request)
+func (_ Unimplemented) WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's open request for edit access to this record.
+// (GET /records/{record_type}/{id}/edit-access-request)
+func (_ Unimplemented) GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask a record's owner for edit access.
+// (POST /records/{record_type}/{id}/edit-access-request)
+func (_ Unimplemented) RequestEditAccess(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestEditAccessParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Withdraw the caller's open offer of this record.
 // (DELETE /records/{record_type}/{id}/ownership-offer)
 func (_ Unimplemented) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
@@ -108745,6 +109007,24 @@ func (_ Unimplemented) ListMeetingProposals(w http.ResponseWriter, r *http.Reque
 // Create a personal, expiring invitation without reserving time or sending mail.
 // (POST /scheduling/proposals)
 func (_ Unimplemented) CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the colleagues the caller may name on their booking link.
+// (GET /scheduling/team-candidates)
+func (_ Unimplemented) ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the colleagues' booking links that name the caller.
+// (GET /scheduling/team-requests)
+func (_ Unimplemented) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm or leave a colleague's booking link that names the caller.
+// (PUT /scheduling/team-requests/{host_user_id})
+func (_ Unimplemented) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -121175,6 +121455,45 @@ func (siw *ServerInterfaceWrapper) PurgeCaptureExclusion(w http.ResponseWriter, 
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "preview"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "preview", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "expect_destroyed" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "expect_destroyed", r.URL.Query(), &params.ExpectDestroyed, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "expect_destroyed"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expect_destroyed", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "expect_released" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "expect_released", r.URL.Query(), &params.ExpectReleased, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "expect_released"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expect_released", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "expect_anonymised" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "expect_anonymised", r.URL.Query(), &params.ExpectAnonymised, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "expect_anonymised"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expect_anonymised", Err: err})
 		}
 		return
 	}
@@ -150299,6 +150618,159 @@ func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// WithdrawEditAccessRequest operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithdrawEditAccessRequest(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEditAccessRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetEditAccessRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEditAccessRequest(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestEditAccess operation middleware
+func (siw *ServerInterfaceWrapper) RequestEditAccess(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RequestEditAccessParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestEditAccess(w, r, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // WithdrawOwnershipOffer operation middleware
 func (siw *ServerInterfaceWrapper) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request) {
 
@@ -152747,6 +153219,82 @@ func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateMeetingProposal(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSchedulingTeamCandidates operation middleware
+func (siw *ServerInterfaceWrapper) ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchedulingTeamCandidates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSchedulingTeamRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchedulingTeamRequests(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerSchedulingTeamRequest operation middleware
+func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_user_id" -------------
+	var hostUserId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_user_id", chi.URLParam(r, "host_user_id"), &hostUserId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_user_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerSchedulingTeamRequest(w, r, hostUserId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -161996,6 +162544,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/records/{record_type}/{id}/claim", wrapper.ClaimRecord)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/records/{record_type}/{id}/edit-access-request", wrapper.WithdrawEditAccessRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{id}/edit-access-request", wrapper.GetEditAccessRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/{record_type}/{id}/edit-access-request", wrapper.RequestEditAccess)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/records/{record_type}/{id}/ownership-offer", wrapper.WithdrawOwnershipOffer)
 	})
 	r.Group(func(r chi.Router) {
@@ -162153,6 +162710,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/scheduling/proposals", wrapper.CreateMeetingProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/team-candidates", wrapper.ListSchedulingTeamCandidates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/team-requests", wrapper.ListSchedulingTeamRequests)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/team-requests/{host_user_id}", wrapper.AnswerSchedulingTeamRequest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/sdr-handoffs/{id}/assignee", wrapper.GetHandoffAssignee)

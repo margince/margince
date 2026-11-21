@@ -5,11 +5,11 @@ import { useState } from "react";
 import type { components } from "../../api/schema";
 import { ContactCaseReview } from "../../components/contactcase";
 import { Button, Card } from "../../design-system/atoms";
-import { INTL_LOCALE } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { WorklistItem } from "./worklist.queries";
 import "./worklist.pair.css";
+import { listFormat } from "../../format/formatters";
 
 type AttentionContactCase = components["schemas"]["AttentionContactCase"];
 
@@ -40,7 +40,7 @@ export function ContactCaseDecision({
   const [open, setOpen] = useState(false);
   const contactCase = item.contact_case;
   if (!contactCase) return null;
-  const names = new Intl.ListFormat(INTL_LOCALE[locale], {
+  const names = listFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format(contactCase.owners);

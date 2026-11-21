@@ -92,6 +92,10 @@ const DATE_ONLY =
 export const browserZoneSites: { file: string; why: string }[] = [
   { file: "features/deals/buyerroomframe.tsx", why: PUBLIC },
   {
+    file: "format/formatters.ts",
+    why: "A date formatter asked with no zone keeps the old Intl behaviour and reads the browser's clock. The zone goes into the cache key, so a changed browser zone builds a new formatter.",
+  },
+  {
     file: "format/timezoneoptions.ts",
     why: "The time zone list always offers the browser's own zone, so a reader can pick the clock they are on. It renders no time in it.",
   },

@@ -926,7 +926,7 @@ export const en = {
   "reporting.arrivedOn": "Arrived on",
   "reporting.enteredOn": "Entered the stage on",
   "reporting.accruedOn": "Earned on",
-  "reporting.introducedOn": "Introduced on",
+  "reporting.introductionCountedOn": "Made or recorded on",
   "reporting.bookedOn": "Booked on",
   "reporting.commissionAmount": "Commission",
   "reporting.hoursUnit": "Hours",
@@ -2394,6 +2394,7 @@ export const en = {
   "systemJob.rbac_defaults": "Extension starting permissions",
   "systemJob.release_version": "Release check",
   "systemJob.report_schedule": "Scheduled reports",
+  "systemJob.chat_task_reader": "Chat and open tasks",
   "systemJob.request_settlement": "Request settlement",
   "systemJob.restore_drill": "Restore drill record",
   "systemJob.risk_verdict": "Deal risk check",
@@ -4870,6 +4871,7 @@ export const en = {
   "approval.kind.site_lead": "Add contact from website",
   "approval.kind.capture_counterparty": "Add contact from mail",
   "approval.kind.ownership_transfer": "Hand over a record",
+  "approval.kind.edit_access": "Give edit access",
   "approval.kind.contact_share": "Share a contact",
   "approval.kind.legal_review_request": "Legal review requested",
   "approval.kind.task_due_date": "Check a due date",
@@ -7929,6 +7931,8 @@ export const en = {
   "chatCapture.readBadge": "Copied from the screenshot by AI",
   "chatCapture.channel": "Chat app",
   "chatCapture.file": "File on this contact",
+  "chatCapture.fileOnLead": "File on this lead",
+  "chatCapture.fileOnDeal": "File on this deal",
   "chatCapture.fileFailed": "The chat could not be filed",
 
   // Adding one. The "About" wording is doing real work: it decides whether the
@@ -8196,6 +8200,13 @@ export const en = {
   "handover.withdraw": "Withdraw request",
   "handover.sent": "Request sent to {owner}",
   "handover.withdrawn": "Request withdrawn",
+  // Asking a record's owner for edit access; the owner stays the owner.
+  "editAccess.ask": "Ask {owner} for edit access",
+  "editAccess.requested":
+    "You asked {owner} for edit access. The request stays open until {date}.",
+  "editAccess.withdraw": "Withdraw edit access request",
+  "editAccess.sent": "Edit access requested from {owner}",
+  "editAccess.withdrawn": "Edit access request withdrawn",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Hand over to…",
   "handover.offerTo": "Hand over to",
@@ -12993,10 +13004,10 @@ export const en = {
   "connectors.imapSecretHint":
     "Use an app-specific password. It is stored in the key vault and used to read mail on a schedule until you disconnect, which deletes it.",
   "connectors.imapSubmitCta": "Connect",
-  "connectors.imapNeeded": "Required fields",
-  "connectors.imapStillNeeded": "Required: {fields}",
-  "connectors.imapRange": "From {min} to {max}",
-  "connectors.imapOutOfRange": "Out of range: {fields}",
+  "connectors.imapHostName":
+    "Enter the server name only, such as imap.example.com.",
+  "connectors.imapSecretEmptied":
+    "Emptied after the failed attempt. Enter it again.",
   "connectors.imapLoginRejected":
     "The mailbox rejected these credentials. Check host, email and app password.",
   "connectors.imapUnreachable":
@@ -17250,6 +17261,7 @@ export const en = {
     "Meetings appear on contacts and deals, and your booking link offers only your free times.",
   "connectFlow.calendarImap": "Not available over IMAP.",
   "connectFlow.pickService": "Tick Mail, Calendar or both.",
+  "connectFlow.pickMail": "Tick Mail.",
   "connectFlow.importLabel": "Import past email",
   "connectFlow.importNone": "None",
   "connectFlow.importAfter":
@@ -17859,10 +17871,9 @@ export const en = {
   "aiTasks.embeddingsEdit":
     "Search and retrieval has no thinking level or timeouts to set. Change its provider and model on the Embedding model row under Model tiers.",
   "workingHours.unsetTitle": "Not set yet",
-  "workingHours.unset":
-    "Customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.",
+  "workingHours.unset": "Guests are offered 09:00 to 17:00, Monday to Friday.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
-  "workingHours.narrowed": "Customers have fewer times to choose from.",
+  "workingHours.narrowed": "Guests have fewer times to choose from.",
   "workingHours.day.1": "Monday",
   "workingHours.day.2": "Tuesday",
   "workingHours.day.3": "Wednesday",
@@ -18203,6 +18214,9 @@ export const en = {
   "capturePurge.preview": "Check first",
   "capturePurge.confirm": "Delete permanently",
   "capturePurge.done": "Close",
+  "capturePurge.recheck": "Check again",
+  "capturePurge.changed":
+    "The mail changed since the check. Check the count below before deleting.",
   "capturePurge.failed":
     "The deletion did not finish. Some messages may already have been destroyed. Check again to see what is left.",
   "capturePurge.refused": "The deletion was refused, so nothing was destroyed.",
@@ -18253,7 +18267,12 @@ export const en = {
   "captureExclusions.containersUnreadableBody":
     "The mail provider did not answer, so this list may be missing folders. Try again in a moment, or keep senders out by address or domain instead.",
   "captureExclusions.kindLabel": "Kind",
-  "captureExclusions.addLabel": "Exclude address or domain",
+  "captureExclusions.title.address": "Exclude an address",
+  "captureExclusions.title.domain": "Exclude a domain",
+  "captureExclusions.title.container": "Exclude a folder or label",
+  "captureExclusions.field.address": "Address",
+  "captureExclusions.field.domain": "Domain",
+  "captureExclusions.noMailbox": "Connect a mailbox first.",
   "captureExclusions.placeholder.address": "name@example.com",
   "captureExclusions.placeholder.domain": "example.com",
   "captureExclusions.add": "Exclude",
@@ -22691,6 +22710,32 @@ export const en = {
   "scheduling.replaceAliasHelp":
     "Your short address {url} stops working too. You can choose it again afterwards.",
   "scheduling.replaceConfirmTitle": "Replace link address?",
+  "scheduling.team.title": "Colleagues on this link",
+  "scheduling.team.foot":
+    "Guests see only the times when you and every colleague here are free, in each colleague’s own working hours. Each booking invites every colleague.",
+  "scheduling.team.add": "Add a colleague",
+  "scheduling.team.addHelp":
+    "Only colleagues with a connected calendar are offered. Each one confirms before the link takes bookings.",
+  "scheduling.team.full":
+    "This link names five colleagues, which is the most it can hold.",
+  "scheduling.team.choose": "Choose a colleague",
+  "scheduling.team.noneToAdd": "No other colleague has a connected calendar",
+  "scheduling.team.remove": "Remove",
+  "scheduling.team.pending": "Waiting for confirmation",
+  "scheduling.team.confirmed": "Confirmed",
+  "scheduling.team.left": "Left the link",
+  "scheduling.team.unavailable":
+    "Not available: no longer a member, or calendar not readable",
+  "scheduling.team.requestsTitle": "Colleagues’ links that name you",
+  "scheduling.team.requestLabel": "{title} with {name}",
+  "scheduling.team.requestPending":
+    "Confirm to let guests book times when you are free. You are invited to every meeting booked through this link.",
+  "scheduling.team.requestConfirmed":
+    "Guests book times when you are free. You are invited to every meeting booked through this link.",
+  "scheduling.team.confirm": "Confirm",
+  "scheduling.team.leave": "Leave",
+  "worklist.untitled.booking_health_team_not_ready":
+    "Your booking page is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
   "scheduling.personalLinksFoot":
     "Meeting one specific person? Open their contact and choose Book a meeting to send a few times or a personal link that only they can use.",
   "scheduling.liveNoInvitesTitle": "Guests can book, but no invitations go out",
@@ -22834,6 +22879,7 @@ export const en = {
   "saveBar.save": "Save",
   "saveBar.discard": "Discard",
   "saveBar.unsaved": "Unsaved changes",
+  "saveBar.offered": "Save to make these yours.",
   "saveBar.invalid": "Fix the marked fields to save.",
   "privacy.typeErasePrompt": "Type this word to confirm:",
   "aiFigures.window.24h": "24 h",
@@ -23273,6 +23319,7 @@ export const en = {
     "Checking whether the reply answered the request",
   "aiTask.name.rewrite": "Rewriting",
   "aiTask.name.chat_summary": "Chat channel summary",
+  "aiTask.name.chat_task_reading": "Chat and open tasks",
   "aiTask.name.signal_extract": "Signal extraction",
   "aiTask.name.site_extract": "Website research",
   "aiTask.name.site_fact_extract": "Website fact extraction",

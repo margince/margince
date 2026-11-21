@@ -95,6 +95,7 @@ export function useFolderOptions(enabled: boolean) {
   } = useMailboxes(enabled);
   const containers = useContainers(mailboxes, enabled);
   return {
+    mailboxCount: mailboxes.length,
     options: mailboxes.flatMap((mailbox, index) =>
       (containers[index]?.data?.containers ?? []).map((container) => ({
         value: `${mailbox.id}/${mailbox.provider}:${container.id}`,
@@ -134,11 +135,18 @@ export function usePurgeExclusion() {
     mutationFn: async (input: {
       id: string;
       preview: boolean;
+      // The counts the preview showed; the server destroys nothing if they moved.
+      expected?: PurgeOutcome;
     }): Promise<PurgeOutcome> => {
       const { data, error } = await api.POST("/capture/exclusions/{id}/purge", {
         params: {
           path: { id: input.id },
-          query: { preview: input.preview },
+          query: {
+            preview: input.preview,
+            expect_destroyed: input.expected?.destroyed,
+            expect_released: input.expected?.released,
+            expect_anonymised: input.expected?.anonymised,
+          },
         },
       });
       if (error || !data) {

@@ -158,6 +158,9 @@ func StageEvidenceDomains(pool *pgxpool.Pool) ownDomainReader {
 // HandleEvent routes one envelope. An event this consumer does not care about
 // answers nil so the group keeps flowing.
 func (t *StageEvidenceTrigger) HandleEvent(ctx context.Context, env events.Envelope) error {
+	if !events.StageEvidenceTypes.Has(env.Type) {
+		return nil
+	}
 	// Older than the window is replayed history, not news. Writing evidence
 	// from it would place a row against a stage the deal reached long
 	// afterwards, so skipping is nil rather than an error — an error would

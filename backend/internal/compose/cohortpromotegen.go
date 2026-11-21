@@ -80,14 +80,9 @@ func NewCohortPromoteGen(pool *pgxpool.Pool, store *contacts.Store, log *slog.Lo
 // not care about answers nil, so the group keeps flowing rather than wedging on
 // somebody else's traffic.
 func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.Type != contactObject || env.Entity.ID == ids.Nil {
-		return nil
-	}
 	// Every event that can leave a live contact holding addresses whose mail is
-	// not yet on their record. An archive needs no reaction: the repair only
-	// ever ADDS a link, and an archived contact is not a record anybody is
-	// asking to complete.
-	if !contactGainedAddresses(env.Type) {
+	// not yet on their record. The repair only adds links, so an archive needs none.
+	if !events.CohortPromoteTypes.Has(env.Type) || env.Entity.Type != contactObject || env.Entity.ID == ids.Nil {
 		return nil
 	}
 	// The repair reads mail the workspace already holds and attaches it to a
@@ -142,20 +137,11 @@ func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope)
 // holding an address whose mail is not on their record yet — created, renamed
 // or re-addressed, absorbed by a merge, or brought back.
 func contactGainedAddresses(eventType string) bool {
-	switch eventType {
-	case contactCreatedEvent, contactUpdatedEvent, contactMergedEvent, contactRestoredEvent:
-		return true
-	}
-	return false
+	return events.CohortPromoteTypes.Has(eventType)
 }
 
-// The contact events this repair reacts to. Spelled beside the predicate that
-// reads them rather than at each case, so a fifth event is added in one place.
-const (
-	contactUpdatedEvent  = "contact.updated"
-	contactMergedEvent   = "contact.merged"
-	contactRestoredEvent = "contact.restored"
-)
+// contactMergedEvent names the merged-away contact as its entity.
+const contactMergedEvent = "contact.merged"
 
 // cohortPromoteActor names this consumer in captured_by and in the audit trail,
 // so a link that appeared without anybody clicking is attributable to the pass

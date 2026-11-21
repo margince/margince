@@ -89,7 +89,7 @@ way.
   The job hands on an empty name, with a warning.
 
 These runs can push: a pull request from a branch of this repository, a merge queue run, and a run
-started by hand. The `ci-image` jobs of `cache-warm.yml` and `lint-cache.yml` push on `main`.
+started by hand. The `ci-image` jobs of `cache-warm.yml` and `lint-cache.yml` push on `main` and `develop`.
 While the package needs a login to pull, every such run builds again.
 
 An empty name runs each job on the runner. The steps marked

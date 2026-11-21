@@ -54,6 +54,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `configgenerated_test.go` | H3 | The configuration files written from the settings registry are the ones its generator writes now. |
 | `configpresets_test.go` | H3 | Every preset under config/presets/ is a binding the parser accepts. |
 | `consentnoconnectioncopy_test.go` | H3 | A rep reads the guard's "no connection" reason in their own language, from the web app's copy. |
+| `consumergrouptypes_test.go` | H3 | The subscriber acks every event type a consumer group does not declare before the group's handler runs. |
 | `consumergroupwiring_test.go` | H3 | Every lane the worker starts is a group the catalog declares. |
 | `contextanchorenum_test.go` | H3 | GET /records/{entity\_type}/{id}/context accepts the record types the search module can anchor a context read on (every searchable type but the text-only ones), and the contract has to say the same set. |
 | `contractadmission_test.go` | H3 | A route the contract declares `security: []` is reachable without a session. |
@@ -652,6 +653,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `fxconversioncallers_test.go` | H2 | Converting money to the base currency happens in one place, and this fails when a second appears. |
 | `googleconnectorregistration_test.go` | H2 | The Google connectors are built for the registry in one function, because putting one into the registry is a decision about reachability and that decision has been wrong once. |
 | `guardedversion_test.go` | H2 | A nil version is the request's answer, never the call site's. |
+| `handlercheckarm_test.go` | H2 | A handler answers only the CHECK it names. |
 | `harnesstransport_test.go` | H2 | A harness transport stays in the harness: only the cert lane hands the router a client of its own, and only an allowlisted directory shells out. |
 | `individualperformancefloor_test.go` | H2 | The small-group floor of "Show individual performance" is compared in one function, belowFloor, and nowhere else. |
 | `integrationmigrateonce_test.go` | H2 | Every file the integration lane compiles migrates the schema once per test process and resets between tests, rather than migrating on every setup. |

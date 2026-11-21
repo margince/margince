@@ -243,5 +243,12 @@ func accessSeeders(s sweepSeed) map[string]func() string {
 			s.call("POST", "/v1/records/company/"+company+"/ownership-request", integration.AnyMap{}, nil, nil)
 			return company
 		},
+		// The same ask for edit access, on a company of its own.
+		"edit_asked_company": func() string {
+			company := s.post("/v1/companies", integration.AnyMap{"display_name": "Sweep " + ids.NewV7().String(), "source": "manual", "owner_id": s.create["user"]()})
+			defer s.asRoles("rep")()
+			s.call("POST", "/v1/records/company/"+company+"/edit-access-request", nil, nil, nil)
+			return company
+		},
 	}
 }

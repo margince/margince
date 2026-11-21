@@ -378,6 +378,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PUT /scheduling/profile` | putSchedulingProfile | Configure and activate the caller's booking page. | Change records | at once |
 | `PUT /scheduling/profile/alias` | putSchedulingAlias | Choose, change or clear the caller's friendly booking address. | Change records | at once |
 | `POST /scheduling/profile/shared` | markBookingPageShared | Record that the caller shared their booking link. | Change records | at once |
+| `GET /scheduling/team-candidates` | listSchedulingTeamCandidates | List the colleagues the caller may name on their booking link. | Read records | at once |
+| `GET /scheduling/team-requests` | listSchedulingTeamRequests | List the colleagues' booking links that name the caller. | Read records | at once |
 | `POST /scheduling/invitations` | createMeetingInvitation | Reserve a meeting and request a calendar-native invitation. | Send messages | waits for approval |
 | `GET /scheduling/invitations/{id}` | getMeetingInvitation | Read invitation delivery and calendar state. | Read records | at once |
 | `PATCH /scheduling/invitations/{id}` | changeMeetingInvitation | Reschedule, cancel or retry an invitation through its original calendar event. | Send messages | at once |
@@ -685,6 +687,9 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /records/{record_type}/{id}/ownership-request` | requestOwnershipTransfer | Ask a record's owner to hand it over to the caller. | Change records | at once |
 | `GET /records/{record_type}/{id}/ownership-request` | getOwnershipRequest | The caller's open request to be handed this record. | Read records | at once |
 | `DELETE /records/{record_type}/{id}/ownership-request` | withdrawOwnershipRequest | Withdraw the caller's open request to be handed this record. | Change records | at once |
+| `POST /records/{record_type}/{id}/edit-access-request` | requestEditAccess | Ask a record's owner for edit access. | Change records | at once |
+| `GET /records/{record_type}/{id}/edit-access-request` | getEditAccessRequest | The caller's open request for edit access to this record. | Read records | at once |
+| `DELETE /records/{record_type}/{id}/edit-access-request` | withdrawEditAccessRequest | Withdraw the caller's open request for edit access to this record. | Change records | at once |
 | `POST /records/{record_type}/{id}/ownership-offer` | offerOwnershipTransfer | Offer the caller's own record to a colleague. | Change records | at once |
 | `GET /records/{record_type}/{id}/ownership-offer` | getOwnershipOffer | The caller's open offer of this record. | Read records | at once |
 | `DELETE /records/{record_type}/{id}/ownership-offer` | withdrawOwnershipOffer | Withdraw the caller's open offer of this record. | Change records | at once |

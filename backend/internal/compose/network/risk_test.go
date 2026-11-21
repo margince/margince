@@ -308,6 +308,17 @@ func TestGoingColdFiresOnTheReportingWindowAndOnlyWhileTheDealIsOpen(t *testing.
 	}
 }
 
+func TestGoingColdIsSilencedByAPauseOrAMeetingAheadAsStalledIs(t *testing.T) {
+	cover := DealCoverage{
+		DealID: ids.NewV7(), Status: dealStatusOpen, LastTouchAt: daysAgo(41),
+		TouchedAsOf: testNow, Zone: time.UTC, QuietSuppressed: true,
+		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
+	}
+	if kinds(foldRisks(cover, testEnglish))[RiskGoingCold] {
+		t.Error("a paused deal, or one with a meeting booked, 41 days silent was flagged going cold; stalled says it is not quiet")
+	}
+}
+
 func TestGoingColdCountsTheCalendarSoTheChipAndTheCardAgree(t *testing.T) {
 	// The window is counted in CALENDAR days, and this is the case that says
 	// which counting is in force. The tests above cannot: their fixture builds

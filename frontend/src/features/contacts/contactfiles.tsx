@@ -9,6 +9,7 @@ import {
   CATEGORY_LABELS,
   categoryCuts,
 } from "../../components/attachmenttile";
+import { ChatCapture } from "../../components/chatcapture";
 import { Button } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -20,7 +21,6 @@ import {
 import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { ContactChatCapture } from "./contactchatcapture";
 import "./contact360.css";
 import { contactFilesKey } from "../../lib/attachmentkeys";
 
@@ -126,9 +126,8 @@ export function ContactFilesTab({
   return (
     <div className="record-stack">
       {capturing && (
-        <ContactChatCapture
-          contactId={contactId}
-          contactName={contactName}
+        <ChatCapture
+          record={{ type: "contact", id: contactId, name: contactName }}
           onClose={() => setCapturing(false)}
         />
       )}

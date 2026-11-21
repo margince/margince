@@ -3,33 +3,47 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
-import { Badge, Button, Field } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
+import { Badge, Button, Field } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import {
   ConnectAiFirst,
   isAiNotConnected,
   useConnectAiGate,
-} from "../../design-system/connectai";
-import { Checkbox, Textarea } from "../../design-system/field";
-import { FileDropzone } from "../../design-system/filedropzone";
-import { Panel, PanelBody } from "../../design-system/panel";
-import { Select } from "../../design-system/select";
-import { SurfaceState } from "../../design-system/surfacestate";
-import { useT } from "../../i18n";
-import { loggedActivityKeys } from "../../lib/activitykeys";
-import { fileListKeys } from "../../lib/attachmentkeys";
-import { uploadAttachment } from "../../lib/attachmentupload";
-import { useChannelProviderOptions } from "../../lib/channelproviders";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+} from "../design-system/connectai";
+import { Checkbox, Textarea } from "../design-system/field";
+import { FileDropzone } from "../design-system/filedropzone";
+import { Panel, PanelBody } from "../design-system/panel";
+import { Select } from "../design-system/select";
+import { SurfaceState } from "../design-system/surfacestate";
+import { useT } from "../i18n";
+import { loggedActivityKeys } from "../lib/activitykeys";
+import { fileListKeys } from "../lib/attachmentkeys";
+import { uploadAttachment } from "../lib/attachmentupload";
+import { useChannelProviderOptions } from "../lib/channelproviders";
+import { problemMessageOf, unwrap } from "../lib/problem";
 
-// Capturing a chat from a screenshot pasted on a contact. The image is stored
-// on the contact, read for its messages, and shown for the reader to check.
-// Only "File on this contact" writes the message; until then the screenshot
-// is a document on the contact, and Discard archives it.
+// Capturing a chat from a screenshot pasted on a contact, lead or deal. The
+// image is stored on the record, read for its messages, and shown for the
+// reader to check. Only the file button writes the message; until then the
+// screenshot is a document on the record, and Discard archives it.
 
 type Reading = components["schemas"]["AttachmentExtraction"];
+
+/** The record a chat is filed on. The name is the one a mismatched chat
+ *  header is warned against. */
+export type ChatRecord = Readonly<{
+  type: "contact" | "lead" | "deal";
+  id: string;
+  name: string;
+}>;
+
+const FILE_LABEL = {
+  contact: "chatCapture.file",
+  lead: "chatCapture.fileOnLead",
+  deal: "chatCapture.fileOnDeal",
+} as const;
 type Started = Readonly<{ attachmentId: string; readingId: string }>;
 
 // How often a running reading is asked about. A screenshot reads in seconds,
@@ -70,14 +84,14 @@ function useChatReading(started: Started | undefined) {
   });
 }
 
-// Store the screenshot on the contact and start reading it for a chat.
-function useStartReading(contactId: string, onStored: (id: string) => void) {
+// Store the screenshot on the record and start reading it for a chat.
+function useStartReading(record: ChatRecord, onStored: (id: string) => void) {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (file: File): Promise<Started> => {
       const stored = await uploadAttachment(
-        { entityType: "contact", entityId: contactId },
+        { entityType: record.type, entityId: record.id },
         file,
       );
       if (!stored) {
@@ -94,24 +108,23 @@ function useStartReading(contactId: string, onStored: (id: string) => void) {
     },
     onSettled: () =>
       Promise.all(
-        fileListKeys({ entityType: "contact", entityId: contactId }).map(
+        fileListKeys({ entityType: record.type, entityId: record.id }).map(
           (queryKey) => queryClient.invalidateQueries({ queryKey }),
         ),
       ),
   });
 }
 
-export function ContactChatCapture({
-  contactId,
-  contactName,
+export function ChatCapture({
+  record,
   onClose,
-}: Readonly<{ contactId: string; contactName: string; onClose: () => void }>) {
+}: Readonly<{ record: ChatRecord; onClose: () => void }>) {
   const t = useT();
   // Known as soon as the bytes are stored, so Discard reaches a screenshot
   // whose reading could not be started.
   const [attachmentId, setAttachmentId] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const start = useStartReading(contactId, setAttachmentId);
+  const start = useStartReading(record, setAttachmentId);
   const aiGate = useConnectAiGate("chat-capture-ai");
   const reading = useChatReading(start.data);
   const discard = useMutation({
@@ -126,7 +139,7 @@ export function ContactChatCapture({
     },
     onSuccess: () => {
       for (const queryKey of fileListKeys(
-        { entityType: "contact", entityId: contactId },
+        { entityType: record.type, entityId: record.id },
         "removed",
       )) {
         queryClient.invalidateQueries({ queryKey });
@@ -188,8 +201,7 @@ export function ContactChatCapture({
         )}
         {start.data && finished && (
           <ChatReview
-            contactId={contactId}
-            contactName={contactName}
+            record={record}
             attachmentId={start.data.attachmentId}
             reading={read}
             onFiled={onClose}
@@ -208,14 +220,12 @@ export function ContactChatCapture({
 // The finished reading, for the reader to check and file. The text starts as
 // what the model copied and is marked so; a change makes it the reader's own.
 function ChatReview({
-  contactId,
-  contactName,
+  record,
   attachmentId,
   reading,
   onFiled,
 }: Readonly<{
-  contactId: string;
-  contactName: string;
+  record: ChatRecord;
   attachmentId: string;
   reading: Reading;
   onFiled: () => void;
@@ -253,12 +263,14 @@ function ChatReview({
         }),
       ),
     onSuccess: (filed) => {
-      // The screenshot moves from the contact onto the new message, which
-      // the contact's list still shows through the message's link.
+      // The screenshot moves from the record onto the new message, which
+      // the record's list still shows through the message's link. The chat
+      // may also have finished or moved one of the record's tasks.
       for (const queryKey of [
-        ...loggedActivityKeys("message", "contact", contactId),
+        ...loggedActivityKeys("message", record.type, record.id),
+        ...loggedActivityKeys("task", record.type, record.id),
         ...fileListKeys(
-          { entityType: "contact", entityId: contactId },
+          { entityType: record.type, entityId: record.id },
           "moved",
         ),
         ...fileListKeys({
@@ -291,11 +303,11 @@ function ChatReview({
           tone="warning"
           title={t("chatCapture.otherCounterparty", {
             shows: other,
-            contact: contactName,
+            contact: record.name,
           })}
         >
           <Checkbox
-            label={t("chatCapture.confirmOther", { contact: contactName })}
+            label={t("chatCapture.confirmOther", { contact: record.name })}
             checked={confirmedOther}
             onChange={(event) => setConfirmedOther(event.target.checked)}
           />
@@ -346,7 +358,7 @@ function ChatReview({
           }
           onClick={() => file.mutate()}
         >
-          {t("chatCapture.file")}
+          {t(FILE_LABEL[record.type])}
         </Button>
       </div>
     </>

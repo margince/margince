@@ -373,7 +373,7 @@ erDiagram
 | [`mail_draft`](activities.md#mail_draft) | activities | 23 | 0 |
 | [`maskable_field`](identity.md#maskable_field) | identity | 2 | 1 |
 | [`meeting_calendar_episode`](activities.md#meeting_calendar_episode) | activities | 5 | 0 |
-| [`meeting_invitation`](activities.md#meeting_invitation) | activities | 21 | 1 |
+| [`meeting_invitation`](activities.md#meeting_invitation) | activities | 22 | 1 |
 | [`meeting_proposal`](activities.md#meeting_proposal) | activities | 9 | 0 |
 | [`meeting_readiness`](activities.md#meeting_readiness) | activities | 9 | 0 |
 | [`mfa_challenge_spent`](identity.md#mfa_challenge_spent) | identity | 2 | 0 |

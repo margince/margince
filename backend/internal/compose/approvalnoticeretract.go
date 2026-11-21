@@ -36,7 +36,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -66,7 +65,7 @@ func NewApprovalNoticeRetract(
 // HandleEvent routes one envelope. Anything that is not an approval decision
 // answers nil, so the consumer group keeps flowing.
 func (r *ApprovalNoticeRetract) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Type != string(crmcontracts.ApprovalDecided) || env.Entity.ID == ids.Nil {
+	if !events.ApprovalNoticeRetractTypes.Has(env.Type) || env.Entity.ID == ids.Nil {
 		return nil
 	}
 	// The envelope carries no tenant, and the subscriber binds none: without

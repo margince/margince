@@ -279,15 +279,18 @@ which does not mean it delivers to a process that keeps running. A worker that s
 and write leaves an entity with no embedding row. The vector arm cannot see it until something
 embeds it again. Without a sweep, it would wait until a user confirmed a reindex they never asked for.
 
-- **`embed_drift_sweep`** is the dispatcher. It runs every **15 minutes**, starts one job per
-  workspace, and does no tenant work itself. The contract states the budget. An empty pass is a
-  small number of `NOT EXISTS` checks per workspace, each on an index. And 15 minutes is how long a
-  lost embed event may keep a record out of vector search.
-- **`embed_drift_workspace`** is the pass for one workspace. It has no time limit: the pending set
-  limits the pass, and the time limit per call of the model lane limits each embed. It has three
-  attempts, because the next dispatcher run *is* the real retry.
+- **`embed_drift_sweep`** runs every **15 minutes** and walks the live workspaces itself. It has no
+  time limit. The pending set limits the pass, and the time limit per call of the model lane limits
+  each embed.
+- **Most passes** read only the `activity`, `contact` and `company` rows written in the last hour,
+  through an index on `created_at` or `updated_at`. They read the small `deal`, `lead` and `project`
+  tables in full. So a lost embed event for a new row keeps it out of vector search for up to 15
+  minutes.
+- **The first pass of each UTC day** in a worker process reads every live row of these tables. It
+  finds an edit to a mail whose event was lost. It also finds a row that may now be embedded with no
+  write of its own, such as a mail whose audience was settled. Those wait up to a day.
 
-Both are declared in `backend/api/jobs.yaml`. `compose/embeddriftsweep.go` registers them under a
+It is declared in `backend/api/jobs.yaml`. `compose/embeddriftsweep.go` registers it under a
 rule the contract's `when: [Embedder]` cannot state. The lane must also have a *binding* (an
 `EmbedIdentity()` that is not empty). A lane that is set but has no binding writes no marker, so there
 is nothing to check a row against.

@@ -3,14 +3,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { components } from "../../api/schema";
-import { LocaleProvider } from "../../i18n";
-import { en } from "../../i18n/en";
+import type { components } from "../api/schema";
+import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import {
   contactDocuments,
   PROBED_CONTACT_ID,
-} from "../../testing/contactdocuments";
-import { ContactChatCapture } from "./contactchatcapture";
+} from "../testing/contactdocuments";
+import { ChatCapture, type ChatRecord } from "./chatcapture";
 
 type Reading = components["schemas"]["AttachmentExtraction"];
 
@@ -77,13 +77,15 @@ function stubServer(
       const contactList = docs?.answer(request.method, url);
       if (contactList) return contactList;
       const { pathname } = url;
-      const text = request.headers.get("content-type")?.includes("json")
-        ? await request.text()
-        : "";
+      const type = request.headers.get("content-type") ?? "";
+      const text = type.includes("json") ? await request.text() : "";
+      const form = type.includes("multipart")
+        ? { entity_type: (await request.formData()).get("entity_type") }
+        : null;
       sent.push({
         method: request.method,
         path: pathname,
-        body: text ? JSON.parse(text) : null,
+        body: text ? JSON.parse(text) : form,
       });
       if (pathname === "/v1/channel-providers") {
         return json({
@@ -137,7 +139,11 @@ function stubServer(
   return sent;
 }
 
-function show(onClose = vi.fn(), docs?: ReturnType<typeof contactDocuments>) {
+function show(
+  onClose = vi.fn(),
+  docs?: ReturnType<typeof contactDocuments>,
+  record?: ChatRecord,
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -145,9 +151,14 @@ function show(onClose = vi.fn(), docs?: ReturnType<typeof contactDocuments>) {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         {docs?.strip}
-        <ContactChatCapture
-          contactId={docs ? PROBED_CONTACT_ID : "c-1"}
-          contactName="Lena Hoffmann"
+        <ChatCapture
+          record={
+            record ?? {
+              type: "contact",
+              id: docs ? PROBED_CONTACT_ID : "c-1",
+              name: "Lena Hoffmann",
+            }
+          }
           onClose={onClose}
         />
       </LocaleProvider>
@@ -183,6 +194,31 @@ afterEach(() => {
 });
 
 describe("capturing a chat from a screenshot", () => {
+  it.each([
+    ["lead", "chatCapture.fileOnLead"],
+    ["deal", "chatCapture.fileOnDeal"],
+  ] as const)(
+    "stores the screenshot on a %s and files it there",
+    async (type, label) => {
+      const sent = stubServer(DONE);
+      const onClose = show(vi.fn(), undefined, {
+        type,
+        id: "r-1",
+        name: "Lena Hoffmann",
+      });
+      const user = await pickScreenshot();
+
+      await user.click(await screen.findByRole("button", { name: en[label] }));
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      expect(
+        sent.find((s) => s.path === "/v1/attachments" && s.method === "POST")
+          ?.body,
+      ).toEqual({ entity_type: type });
+      expect(filings(sent)).toHaveLength(1);
+    },
+  );
+
   it("reads the screenshot for a chat and files nothing until the reader confirms", async () => {
     const sent = stubServer(DONE);
     const onClose = show();

@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/duequestion"
+	"github.com/margince/margince/backend/internal/compose/editaccess"
 	"github.com/margince/margince/backend/internal/compose/employerchange"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -79,6 +80,7 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc,
 		newContactsStore(InstallationDB(pool)).WithShareRequests(contactShareRequests(pool))))
 	svc.WithEffect(contactShareKind, contactShareAcceptEffect(svc, identity.NewServiceFor(InstallationDB(pool))))
+	editaccess.Register(svc, InstallationDB(pool), identity.NewServiceFor(InstallationDB(pool)))
 	// Both halves: the colleague who asked is told how their request ended.
 	transfers := newOwnershipTransfers(pool)
 	svc.WithEffect(ownershipTransferKind, ownershipTransferAcceptEffect(svc, transfers))
@@ -115,8 +117,8 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 // sweep is a worker job — and a hook registered only on the deciding one
 // would be absent exactly where the expiry happens.
 func expiringApprovalsService(pool *pgxpool.Pool) *approvals.Service {
-	return NewApprovalsService(InstallationDB(pool)).
-		WithExpiredEffect(ownershipTransferKind, expireTransferEffect())
+	return editaccess.RegisterExpiry(NewApprovalsService(InstallationDB(pool)).
+		WithExpiredEffect(ownershipTransferKind, expireTransferEffect()))
 }
 
 // coldstartAcceptEffect builds the approvals.ApprovedEffect compose

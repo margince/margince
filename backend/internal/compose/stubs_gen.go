@@ -3699,6 +3699,18 @@ func (stubs) ClaimRecord(w nethttp.ResponseWriter, r *nethttp.Request, recordTyp
 	httperr.NotImplemented(w, r, "ClaimRecord")
 }
 
+func (stubs) WithdrawEditAccessRequest(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "WithdrawEditAccessRequest")
+}
+
+func (stubs) GetEditAccessRequest(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetEditAccessRequest")
+}
+
+func (stubs) RequestEditAccess(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id, params crmcontracts.RequestEditAccessParams) {
+	httperr.NotImplemented(w, r, "RequestEditAccess")
+}
+
 func (stubs) WithdrawOwnershipOffer(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "WithdrawOwnershipOffer")
 }
@@ -3909,6 +3921,18 @@ func (stubs) ListMeetingProposals(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) CreateMeetingProposal(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateMeetingProposalParams) {
 	httperr.NotImplemented(w, r, "CreateMeetingProposal")
+}
+
+func (stubs) ListSchedulingTeamCandidates(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListSchedulingTeamCandidates")
+}
+
+func (stubs) ListSchedulingTeamRequests(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListSchedulingTeamRequests")
+}
+
+func (stubs) AnswerSchedulingTeamRequest(w nethttp.ResponseWriter, r *nethttp.Request, hostUserId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AnswerSchedulingTeamRequest")
 }
 
 func (stubs) GetHandoffAssignee(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

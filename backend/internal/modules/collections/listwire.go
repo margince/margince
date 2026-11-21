@@ -23,13 +23,9 @@ func (s *Store) ListsPage(ctx context.Context, filter ListFilter) (crmcontracts.
 	if err != nil {
 		return crmcontracts.ListListResponse{}, err
 	}
-	summaries := make([]*listSummary, 0, len(lists))
-	for _, l := range lists {
-		summary, err := s.summarize(ctx, l)
-		if err != nil {
-			return crmcontracts.ListListResponse{}, err
-		}
-		summaries = append(summaries, &summary)
+	summaries, err := s.summarize(ctx, lists)
+	if err != nil {
+		return crmcontracts.ListListResponse{}, err
 	}
 	if err := s.observedFor(ctx, summaries); err != nil {
 		return crmcontracts.ListListResponse{}, err
@@ -52,11 +48,12 @@ func (s *Store) ListView(ctx context.Context, id ids.ListID) (crmcontracts.List,
 
 // view summarizes a list row the caller just read or wrote.
 func (s *Store) view(ctx context.Context, l listRow) (crmcontracts.List, error) {
-	summary, err := s.summarize(ctx, l)
+	summaries, err := s.summarize(ctx, []listRow{l})
 	if err != nil {
 		return crmcontracts.List{}, err
 	}
-	if err := s.observedFor(ctx, []*listSummary{&summary}); err != nil {
+	summary := summaries[0]
+	if err := s.observedFor(ctx, summaries); err != nil {
 		return crmcontracts.List{}, err
 	}
 	if summary.Joined, err = s.joinedSinceVisit(ctx, l); err != nil {
@@ -72,7 +69,7 @@ func (s *Store) view(ctx context.Context, l listRow) (crmcontracts.List, error) 
 	if summary.Dependencies, err = s.Dependencies(ctx, l.ID); err != nil {
 		return crmcontracts.List{}, err
 	}
-	return wireList(summary), nil
+	return wireList(*summary), nil
 }
 
 // CreateListView makes a list and answers it.

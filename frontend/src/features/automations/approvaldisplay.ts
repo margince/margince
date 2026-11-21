@@ -124,6 +124,7 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     ],
     // A colleague's request: the summary names who asked and what it moves.
     contact_share: [],
+    edit_access: [],
     legal_review_request: [],
     task_due_date: [
       { field: "summary", label: "approval.field.step", as: "text" },

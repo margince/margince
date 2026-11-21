@@ -12,7 +12,8 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
-import { formatNumber, INTL_LOCALE } from "../../format/format";
+import { formatNumber } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import type { User } from "./users-members";
@@ -47,7 +48,7 @@ function useRecordsPhrase() {
           count: formatNumber(counts[kind], locale),
         }),
     );
-    return new Intl.ListFormat(INTL_LOCALE[locale], {
+    return listFormat(locale, {
       style: "long",
       type: "conjunction",
     }).format(parts);

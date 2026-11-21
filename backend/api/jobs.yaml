@@ -826,9 +826,13 @@ kinds:
     cadence: 15m
     registration: {when: [Embedder], absent: registers_nothing}
     reason: >-
-      An empty pass is six indexed NOT-EXISTS probes per workspace, so a short
-      cadence is cheap; fifteen minutes is how long a lost embed event may keep
-      a record out of semantic search. The when: above is the weaker of the two
+      Most passes read only the activity, contact and company rows written in
+      the last hour, through the indexes on created_at or updated_at, plus the
+      small deal, lead and project tables in full; fifteen minutes is how long
+      a lost embed event for a new row may keep it out of semantic search. The
+      first pass of each UTC day in a worker process reads every live row of all
+      six tables, which finds an edit whose event was lost and a row that became
+      embeddable without a write of its own. The when: above is the weaker of the two
       conditions addEmbedDriftSweepJob actually applies, and deliberately so:
       the lane must also be BOUND (a non-empty EmbedIdentity), which is a
       runtime method rather than a JobRunnerConfig field and so cannot be

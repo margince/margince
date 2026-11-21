@@ -6,15 +6,15 @@ import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../../testing/story-utils";
-import { ContactChatCapture } from "./contactchatcapture";
+} from "../testing/story-utils";
+import { ChatCapture } from "./chatcapture";
 
-const meta: Meta<typeof ContactChatCapture> = {
-  title: "Records/Contact 360/Capture chat",
-  component: ContactChatCapture,
+const meta: Meta<typeof ChatCapture> = {
+  title: "Records/Capture chat",
+  component: ChatCapture,
 };
 export default meta;
-type Story = StoryObj<typeof ContactChatCapture>;
+type Story = StoryObj<typeof ChatCapture>;
 export const ChooseProvider: Story = {
   render: () => {
     installFetchStub({
@@ -28,9 +28,8 @@ export const ChooseProvider: Story = {
     });
     return (
       <StoryProviders>
-        <ContactChatCapture
-          contactId="p1"
-          contactName="Ada Weber"
+        <ChatCapture
+          record={{ type: "contact", id: "p1", name: "Ada Weber" }}
           onClose={() => undefined}
         />
       </StoryProviders>

@@ -1,0 +1,12 @@
+{
+  "verb": "request_edit_access",
+  "checks": [
+    "contact.read",
+    "contact.update",
+    "scope-narrower-than:all"
+  ],
+  "takes": [
+    "company",
+    "stranger_contact"
+  ]
+}

@@ -14,7 +14,7 @@ func TestSweepWorkspaceEmbeddingDriftNoOpsOnAnUnboundEmbedLane(t *testing.T) {
 	// The guard must fire before any store read: a nil pool proves the
 	// sweep never touches the database for an unbound lane (a query here
 	// would nil-panic, not fail an assertion).
-	healed, err := NewStore(nil).SweepWorkspaceEmbeddingDrift(context.Background(), ids.WorkspaceID{}, unboundEmbedder{})
+	healed, err := NewStore(nil).SweepWorkspaceEmbeddingDrift(context.Background(), ids.WorkspaceID{}, unboundEmbedder{}, DriftFull)
 	if err != nil {
 		t.Fatalf("SweepWorkspaceEmbeddingDrift on an unbound lane: %v", err)
 	}

@@ -950,7 +950,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Ngày đến",
   "reporting.enteredOn": "Ngày vào giai đoạn",
   "reporting.accruedOn": "Ngày ghi nhận",
-  "reporting.introducedOn": "Ngày giới thiệu",
+  "reporting.introductionCountedOn": "Ngày giới thiệu hoặc ghi nhận",
   "reporting.bookedOn": "Ngày đặt",
   "reporting.commissionAmount": "Hoa hồng",
   "reporting.hoursUnit": "Giờ",
@@ -2417,6 +2417,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.rbac_defaults": "Quyền khởi đầu của tiện ích mở rộng",
   "systemJob.release_version": "Kiểm tra bản phát hành",
   "systemJob.report_schedule": "Báo cáo theo lịch",
+  "systemJob.chat_task_reader": "Cuộc trò chuyện và việc cần làm đang mở",
   "systemJob.request_settlement": "Hoàn tất yêu cầu",
   "systemJob.restore_drill": "Bản ghi diễn tập khôi phục",
   "systemJob.risk_verdict": "Kiểm tra rủi ro deal",
@@ -4798,6 +4799,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.site_lead": "Thêm liên hệ từ trang web",
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
   "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
+  "approval.kind.edit_access": "Cấp quyền chỉnh sửa",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
   "approval.kind.legal_review_request": "Yêu cầu rà soát pháp lý",
   "approval.kind.task_due_date": "Kiểm tra hạn",
@@ -7736,6 +7738,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "chatCapture.readBadge": "AI sao chép từ ảnh chụp màn hình",
   "chatCapture.channel": "Ứng dụng chat",
   "chatCapture.file": "Lưu vào liên hệ này",
+  "chatCapture.fileOnLead": "Lưu vào lead này",
+  "chatCapture.fileOnDeal": "Lưu vào deal này",
   "chatCapture.fileFailed": "Không lưu được cuộc trò chuyện",
 
   // Thêm một tài liệu. Câu hỏi "Thuộc về đâu" mới là quyết định thật: chỉ tài
@@ -7997,6 +8001,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "handover.withdraw": "Rút lại đề nghị",
   "handover.sent": "Đã gửi đề nghị tới {owner}",
   "handover.withdrawn": "Đã rút lại đề nghị",
+  // Asking a record's owner for edit access; the owner stays the owner.
+  "editAccess.ask": "Xin {owner} quyền chỉnh sửa",
+  "editAccess.requested":
+    "Bạn đã xin {owner} quyền chỉnh sửa. Yêu cầu còn hiệu lực đến {date}.",
+  "editAccess.withdraw": "Rút yêu cầu quyền chỉnh sửa",
+  "editAccess.sent": "Đã xin {owner} quyền chỉnh sửa",
+  "editAccess.withdrawn": "Đã rút yêu cầu quyền chỉnh sửa",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Chuyển giao cho…",
   "handover.offerTo": "Giao cho",
@@ -12723,10 +12734,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.imapSecretHint":
     "Dùng mật khẩu riêng cho ứng dụng. Mật khẩu được lưu trong kho khóa và dùng để đọc thư theo lịch cho đến khi ngắt kết nối; ngắt kết nối sẽ xóa mật khẩu.",
   "connectors.imapSubmitCta": "Kết nối",
-  "connectors.imapNeeded": "Trường bắt buộc",
-  "connectors.imapStillNeeded": "Bắt buộc: {fields}",
-  "connectors.imapRange": "Từ {min} đến {max}",
-  "connectors.imapOutOfRange": "Ngoài phạm vi: {fields}",
+  "connectors.imapHostName": "Chỉ nhập tên máy chủ, ví dụ imap.example.com.",
+  "connectors.imapSecretEmptied": "Đã xóa sau lần thử lỗi. Hãy nhập lại.",
   "connectors.imapLoginRejected":
     "Hộp thư từ chối thông tin đăng nhập này. Kiểm tra máy chủ, email và mật khẩu ứng dụng.",
   "connectors.imapUnreachable":
@@ -16939,6 +16948,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cuộc họp xuất hiện trên liên hệ và giao dịch, và liên kết đặt lịch của bạn chỉ đưa ra những giờ bạn rảnh.",
   "connectFlow.calendarImap": "Không khả dụng qua IMAP.",
   "connectFlow.pickService": "Chọn Thư, Lịch hoặc cả hai.",
+  "connectFlow.pickMail": "Chọn Thư.",
   "connectFlow.importLabel": "Nhập email cũ",
   "connectFlow.importNone": "Không nhập",
   "connectFlow.importAfter":
@@ -17554,7 +17564,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm kiếm và truy xuất không có mức suy nghĩ hay thời gian chờ để thiết lập. Đổi nhà cung cấp và mô hình ở dòng Mô hình embedding trong Cấp mô hình.",
   "workingHours.unsetTitle": "Chưa thiết lập",
   "workingHours.unset":
-    "Khách hàng được đề xuất khung 09:00 đến 17:00, thứ Hai đến thứ Sáu, theo múi giờ của bản cài đặt.",
+    "Khách hàng được đề xuất khung 09:00 đến 17:00, thứ Hai đến thứ Sáu.",
   "workingHours.narrowedTitle": "Ít giờ nhận đặt lịch hơn",
   "workingHours.narrowed": "Khách hàng có ít khung giờ để chọn hơn.",
   "workingHours.day.1": "Thứ Hai",
@@ -17894,6 +17904,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "capturePurge.preview": "Kiểm tra trước",
   "capturePurge.confirm": "Xóa vĩnh viễn",
   "capturePurge.done": "Đóng",
+  "capturePurge.recheck": "Kiểm tra lại",
+  "capturePurge.changed":
+    "Thư đã thay đổi kể từ lần kiểm tra. Hãy xem số lượng bên dưới trước khi xóa.",
   "capturePurge.failed":
     "Chưa xóa xong. Một số thư có thể đã bị xóa vĩnh viễn. Kiểm tra lại để xem còn lại những gì.",
   "capturePurge.refused":
@@ -17945,7 +17958,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.containersUnreadableBody":
     "Nhà cung cấp thư không phản hồi, nên danh sách này có thể thiếu thư mục. Thử lại sau giây lát, hoặc loại trừ theo địa chỉ hay tên miền.",
   "captureExclusions.kindLabel": "Loại",
-  "captureExclusions.addLabel": "Loại trừ địa chỉ hoặc tên miền",
+  "captureExclusions.title.address": "Loại trừ một địa chỉ",
+  "captureExclusions.title.domain": "Loại trừ một tên miền",
+  "captureExclusions.title.container": "Loại trừ một thư mục hoặc nhãn",
+  "captureExclusions.field.address": "Địa chỉ",
+  "captureExclusions.field.domain": "Tên miền",
+  "captureExclusions.noMailbox": "Hãy kết nối hộp thư trước.",
   "captureExclusions.placeholder.address": "ten@example.com",
   "captureExclusions.placeholder.domain": "vidu.com",
   "captureExclusions.add": "Loại trừ",
@@ -22402,6 +22420,31 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.replaceAliasHelp":
     "Địa chỉ ngắn {url} của bạn cũng ngừng hoạt động. Bạn có thể chọn lại sau đó.",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
+  "scheduling.team.title": "Đồng nghiệp trên liên kết này",
+  "scheduling.team.foot":
+    "Khách chỉ thấy những khung giờ mà bạn và mọi đồng nghiệp ở đây đều rảnh, theo giờ làm việc riêng của từng đồng nghiệp. Mỗi lượt đặt lịch đều mời tất cả đồng nghiệp.",
+  "scheduling.team.add": "Thêm đồng nghiệp",
+  "scheduling.team.addHelp":
+    "Chỉ hiện những đồng nghiệp đã kết nối lịch. Mỗi đồng nghiệp phải xác nhận trước khi liên kết nhận lượt đặt lịch.",
+  "scheduling.team.full": "Liên kết này đã có năm đồng nghiệp, là số tối đa.",
+  "scheduling.team.choose": "Chọn đồng nghiệp",
+  "scheduling.team.noneToAdd": "Không có đồng nghiệp nào khác đã kết nối lịch",
+  "scheduling.team.remove": "Gỡ",
+  "scheduling.team.pending": "Đang chờ xác nhận",
+  "scheduling.team.confirmed": "Đã xác nhận",
+  "scheduling.team.left": "Đã rời liên kết",
+  "scheduling.team.unavailable":
+    "Không khả dụng: không còn là thành viên hoặc không đọc được lịch",
+  "scheduling.team.requestsTitle": "Liên kết của đồng nghiệp có tên bạn",
+  "scheduling.team.requestLabel": "{title} với {name}",
+  "scheduling.team.requestPending":
+    "Xác nhận để khách đặt được những khung giờ bạn rảnh. Bạn được mời vào mọi cuộc họp đặt qua liên kết này.",
+  "scheduling.team.requestConfirmed":
+    "Khách đặt những khung giờ bạn rảnh. Bạn được mời vào mọi cuộc họp đặt qua liên kết này.",
+  "scheduling.team.confirm": "Xác nhận",
+  "scheduling.team.leave": "Rời",
+  "worklist.untitled.booking_health_team_not_ready":
+    "Trang đặt lịch của bạn đang tạm dừng: một đồng nghiệp trên đó chưa xác nhận, đã rời đi hoặc không có lịch đọc được",
   "scheduling.personalLinksFoot":
     "Hẹn với một người cụ thể? Mở liên hệ của họ và chọn Đặt cuộc hẹn để gửi vài khung giờ hoặc một liên kết riêng chỉ họ dùng được.",
   "scheduling.liveNoInvitesTitle":
@@ -22544,6 +22587,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "saveBar.save": "Lưu",
   "saveBar.discard": "Hủy thay đổi",
   "saveBar.unsaved": "Thay đổi chưa lưu",
+  "saveBar.offered": "Lưu để giữ các giá trị này.",
   "saveBar.invalid": "Sửa các ô được đánh dấu để lưu.",
   "privacy.typeErasePrompt": "Nhập từ này để xác nhận:",
   "aiFigures.window.24h": "24 giờ",
@@ -22985,6 +23029,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.request_settlement": "Kiểm tra yêu cầu đã được giải đáp",
   "aiTask.name.rewrite": "Viết lại",
   "aiTask.name.chat_summary": "Tóm tắt kênh chat",
+  "aiTask.name.chat_task_reading": "Cuộc trò chuyện và việc cần làm đang mở",
   "aiTask.name.signal_extract": "Trích xuất tín hiệu từ cuộc trao đổi",
   "aiTask.name.site_extract": "Phân tích chuyên sâu trang web",
   "aiTask.name.site_fact_extract": "Trích xuất thông tin từ trang web",

@@ -8107,6 +8107,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scheduling/team-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the colleagues the caller may name on their booking link.
+         * @description A colleague is offered when they are a live member other than the caller and their own
+         *     booking settings name a calendar connection Margince can read. A colleague without one is
+         *     left out, so a time a team link offers is free for everyone on it.
+         */
+        get: operations["listSchedulingTeamCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/team-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the colleagues' booking links that name the caller.
+         * @description Each live booking link that names the caller as a team member, with whether the caller
+         *     confirmed it. A link that the caller left is not listed.
+         */
+        get: operations["listSchedulingTeamRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/team-requests/{host_user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_user_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Confirm or leave a colleague's booking link that names the caller.
+         * @description `confirmed` lets the link read the caller's free time and put the caller on each meeting
+         *     booked through it. `left` takes the caller off: the link stops taking bookings until its
+         *     owner removes the caller, and the owner sees why. Answers 404 when no live link of that
+         *     colleague names the caller.
+         */
+        put: operations["answerSchedulingTeamRequest"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scheduling/invitations": {
         parameters: {
             query?: never;
@@ -8155,7 +8223,9 @@ export interface paths {
          * Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
          * @description With reliable=true, reads live calendar occupancy and applies bookable hours,
          *     notice, buffers and booking horizon. Without it, returns CRM-only availability
-         *     for compatibility. This read never books or sends an invitation.
+         *     for compatibility. This read never books or sends an invitation. It reads the named
+         *     host alone: the colleagues a booking link names are not counted, so a time it returns
+         *     may still be taken for one of them.
          */
         get: operations["getAvailability"];
         put?: never;
@@ -19791,6 +19861,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/records/{record_type}/{id}/edit-access-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company" | "deal" | "lead" | "project";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** The caller's open request for edit access to this record. */
+        get: operations["getEditAccessRequest"];
+        put?: never;
+        /**
+         * Ask a record's owner for edit access.
+         * @description For a record the caller can see but not change, because a colleague owns it. The request is an
+         *     `edit_access` approval in the owner's inbox; only the owner can decide it, and it stays open for
+         *     7 days. Only the owner can approve it, in person; their agent may decline it. When the owner
+         *     approves, the caller gets a write share on the record and the owner stays its owner. The caller is
+         *     told when it is declined or expires, or closed because the record changed owner. A second press
+         *     while a request is open answers that request with `200`; a new request answers `201`. `409` names
+         *     why nothing can be asked for: `unowned`, `already_yours_to_change`, `owner_unavailable` (the owner
+         *     is suspended or has left; ask an administrator), or `declined` (this owner declined the same
+         *     request before).
+         */
+        post: operations["requestEditAccess"];
+        /**
+         * Withdraw the caller's open request for edit access to this record.
+         * @description The card leaves the owner's inbox. `404` when the caller has no open request.
+         */
+        delete: operations["withdrawEditAccessRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/ownership-offer": {
         parameters: {
             query?: never;
@@ -25681,18 +25788,25 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * File a chat screenshot on its contact as one message activity, with the image attached.
+         * File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
          * @description The confirm step after a `chat_capture` reading of a screenshot uploaded to a
-         *     contact. It writes one `message` activity linked to that contact, on the channel
-         *     named, with `body` as its text, and moves the image from the contact onto the
-         *     activity. Nothing is written before this call: the reading never files anything.
+         *     contact, lead or deal. It writes one `message` activity linked to that record, on
+         *     the channel named, with `body` as its text, and moves the image from the record
+         *     onto the activity. Nothing is written before this call: the reading never files anything.
+         *
+         *     With a `chat_task_reading` model set up, the filed text is then read against the
+         *     caller's own open tasks on that record. A task the chat settles is marked done, or
+         *     moved to the day the chat names, by Margince on the caller's behalf, with the chat
+         *     line it rests on as evidence. The change shows in Done for you with Undo, and the
+         *     same chat never changes that task again. An unsure reading, or no model, changes
+         *     no task, and a failed reading never refuses the filing.
          *
          *     When `body` is the reading's own text unchanged, the activity is written by the
          *     reader on behalf of the caller, which is how the product marks text a model
          *     read. A body the caller typed or changed is the caller's own. An empty body is
          *     allowed, so a screenshot the model could not read is still filed.
          *
-         *     Requires UPDATE on the contact and CREATE on activities. The reading named must
+         *     Requires UPDATE on the record and CREATE on activities. The reading named must
          *     belong to this file, be a `chat_capture` reading, and be finished; otherwise
          *     422. `channel_provider` must be a registered provider (`GET /v1/channel-providers`).
          *     A second call with the same reading answers the activity the first one wrote.
@@ -34025,7 +34139,7 @@ export interface components {
             /** @description Opaque cursor for the next page, or null if none. */
             next_cursor?: string | null;
             has_more: boolean;
-            /** @description How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. */
+            /** @description How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company and lead lists count on the first page only and send no total with a cursor, so a client keeps the first page's total while it loads further pages. */
             total?: number;
         };
         /** @description Provenance carried on every captured/user-entered domain row (data-model §1.6). */
@@ -43206,10 +43320,50 @@ export interface components {
              * @description Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
              *     the page names no calendar (a page saved before the profile existed reads this way).
              *     `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
-             *     the connection is gone or refused. Answered on the host's own profile read only.
+             *     the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
+             *     left, or has no calendar Margince can read; `team_members` says which. Answered on the
+             *     host's own profile read only.
              * @enum {string}
              */
-            readonly blocker?: "none" | "no_calendar" | "calendar_read_only" | "calendar_unavailable";
+            readonly blocker?: "none" | "no_calendar" | "calendar_read_only" | "calendar_unavailable" | "team_not_ready";
+            /**
+             * @description Colleagues who must attend every meeting booked through this page. Guests see only the
+             *     times when the host and every member are free, inside each one's own working hours, and
+             *     each booking invites every member. A member named here starts as `pending` and the page
+             *     takes no bookings until every member has confirmed. Only `user_id` is read from a
+             *     request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+             */
+            team_members?: components["schemas"]["SchedulingTeamMember"][];
+        };
+        SchedulingTeamMember: {
+            /** Format: uuid */
+            user_id: string;
+            readonly name?: string;
+            /**
+             * @description `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
+             *     `left`: the member left the link; remove them to take bookings again. `unavailable`:
+             *     the member left the workspace or Margince cannot read their calendar.
+             * @enum {string}
+             */
+            readonly state?: "pending" | "confirmed" | "left" | "unavailable";
+        };
+        SchedulingTeamCandidate: {
+            /** Format: uuid */
+            user_id: string;
+            name: string;
+        };
+        SchedulingTeamRequest: {
+            /** Format: uuid */
+            host_user_id: string;
+            host_name: string;
+            /** @description The meeting title the link offers. */
+            title: string;
+            /** @enum {string} */
+            state: "pending" | "confirmed";
+        };
+        SchedulingTeamAnswer: {
+            /** @enum {string} */
+            state: "confirmed" | "left";
         };
         SchedulingAliasRequest: {
             /** @description The friendly address to claim; empty clears it. Validated and normalized by the server. */
@@ -44729,9 +44883,9 @@ export interface components {
             /** Format: date-time */
             finished_at?: string | null;
             /**
-             * @description For a finished `chat_capture` reading of a screenshot on a contact: the name or
-             *     number the chat header shows when neither agrees with that contact. Null when
-             *     they agree, when the header shows neither, and for every other reading.
+             * @description For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+             *     name or number the chat header shows when neither agrees with that record. Null
+             *     when they agree, when the header shows neither, on a deal, and for every other reading.
              *     `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
              */
             other_counterparty?: string | null;
@@ -44755,7 +44909,7 @@ export interface components {
             /** @description The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone. */
             body?: string | null;
             /**
-             * @description The caller confirms the chat belongs on this contact although its header shows
+             * @description The caller confirms the chat belongs on this record although its header shows
              *     someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
              *     is refused with 409.
              * @default false
@@ -53298,7 +53452,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "chat_task_reading" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -53324,7 +53478,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "chat_summary";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "chat_summary" | "chat_task_reading";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -55763,6 +55917,23 @@ export interface components {
              * @description The colleague the offer is put to.
              */
             to_id: string;
+            /** @enum {string} */
+            status: "pending";
+            /** Format: date-time */
+            expires_at: string;
+        };
+        EditAccessRequest: {
+            /** Format: uuid */
+            approval_id: string;
+            /** @enum {string} */
+            record_type: "contact" | "company" | "deal" | "lead" | "project";
+            /** Format: uuid */
+            record_id: string;
+            /**
+             * Format: uuid
+             * @description The owner the request is put to.
+             */
+            owner_id: string;
             /** @enum {string} */
             status: "pending";
             /** Format: date-time */
@@ -77240,6 +77411,99 @@ export interface operations {
             };
         };
     };
+    listSchedulingTeamCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The colleagues who may be named, by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingTeamCandidate"][];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listSchedulingTeamRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The links that name the caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingTeamRequest"][];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    answerSchedulingTeamRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingTeamAnswer"];
+            };
+        };
+        responses: {
+            /** @description The answer is recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     createMeetingInvitation: {
         parameters: {
             query?: never;
@@ -87057,6 +87321,16 @@ export interface operations {
             query?: {
                 /** @description Report what would be destroyed and change nothing. */
                 preview?: boolean;
+                /**
+                 * @description The `destroyed` count a preview showed. With the two below, it binds the purge to what the
+                 *     caller saw: when the current selection differs, nothing is destroyed and the answer is 409.
+                 *     Send all three or none; ignored on a preview.
+                 */
+                expect_destroyed?: number;
+                /** @description The `released` count the preview showed. */
+                expect_released?: number;
+                /** @description The `anonymised` count the preview showed. */
+                expect_anonymised?: number;
             };
             header?: never;
             path: {
@@ -87079,6 +87353,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -94980,6 +95255,131 @@ export interface operations {
             header?: never;
             path: {
                 record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request is withdrawn. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getEditAccessRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company" | "deal" | "lead" | "project";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's open request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditAccessRequest"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    requestEditAccess: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                record_type: "contact" | "company" | "deal" | "lead" | "project";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request already open for this record and caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditAccessRequest"];
+                };
+            };
+            /** @description The request is in the owner's inbox. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditAccessRequest"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`, `declined`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    withdrawEditAccessRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company" | "deal" | "lead" | "project";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -103999,7 +104399,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The chat's header shows someone other than the contact, and `confirm_other_counterparty` was not set. */
+            /** @description The chat's header shows someone other than the contact or lead, and `confirm_other_counterparty` was not set. */
             409: {
                 headers: {
                     [name: string]: unknown;

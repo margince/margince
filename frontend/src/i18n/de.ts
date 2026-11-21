@@ -976,7 +976,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Eingegangen am",
   "reporting.enteredOn": "In die Phase gekommen am",
   "reporting.accruedOn": "Angefallen am",
-  "reporting.introducedOn": "Vorgestellt am",
+  "reporting.introductionCountedOn": "Vorgestellt oder erfasst am",
   "reporting.bookedOn": "Gebucht am",
   "reporting.commissionAmount": "Provision",
   "reporting.hoursUnit": "Stunden",
@@ -2489,6 +2489,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.rbac_defaults": "Anfangsberechtigungen der Erweiterungen",
   "systemJob.release_version": "Versionsprüfung",
   "systemJob.report_schedule": "Geplante Berichte",
+  "systemJob.chat_task_reader": "Chat und offene Aufgaben",
   "systemJob.request_settlement": "Abschluss von Anfragen",
   "systemJob.restore_drill": "Eintrag eines Wiederherstellungstests",
   "systemJob.risk_verdict": "Prüfung des Deal-Risikos",
@@ -4926,6 +4927,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.site_lead": "Kontakt von der Website erstellen",
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
+  "approval.kind.edit_access": "Schreibzugriff geben",
   "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
@@ -7923,6 +7925,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "chatCapture.readBadge": "Von der KI aus dem Screenshot übernommen",
   "chatCapture.channel": "Chat-App",
   "chatCapture.file": "Beim Kontakt ablegen",
+  "chatCapture.fileOnLead": "Beim Lead ablegen",
+  "chatCapture.fileOnDeal": "Beim Deal ablegen",
   "chatCapture.fileFailed": "Der Chat konnte nicht abgelegt werden",
 
   // Ein Dokument hinzufügen. Die Frage „Wozu gehört es?" trägt die eigentliche
@@ -8197,6 +8201,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "handover.withdraw": "Anfrage zurückziehen",
   "handover.sent": "Anfrage an {owner} gesendet",
   "handover.withdrawn": "Anfrage zurückgezogen",
+  // Asking a record's owner for edit access; the owner stays the owner.
+  "editAccess.ask": "{owner} um Schreibzugriff bitten",
+  "editAccess.requested":
+    "Du hast {owner} um Schreibzugriff gebeten. Die Anfrage bleibt bis {date} offen.",
+  "editAccess.withdraw": "Anfrage zum Schreibzugriff zurückziehen",
+  "editAccess.sent": "Schreibzugriff bei {owner} angefragt",
+  "editAccess.withdrawn": "Anfrage zum Schreibzugriff zurückgezogen",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Übergeben an…",
   "handover.offerTo": "Übergeben an",
@@ -13065,10 +13076,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.imapSecretHint":
     "Verwende ein App-spezifisches Passwort. Das Passwort wird im Schlüsseltresor gespeichert und nach Zeitplan zum Lesen der E-Mails genutzt, bis du das Postfach trennst. Beim Trennen wird das Passwort gelöscht.",
   "connectors.imapSubmitCta": "Verbinden",
-  "connectors.imapNeeded": "Pflichtfelder",
-  "connectors.imapStillNeeded": "Erforderlich: {fields}",
-  "connectors.imapRange": "Von {min} bis {max}",
-  "connectors.imapOutOfRange": "Außerhalb des Bereichs: {fields}",
+  "connectors.imapHostName":
+    "Gib nur den Servernamen ein, zum Beispiel imap.example.com.",
+  "connectors.imapSecretEmptied":
+    "Nach dem Fehlversuch geleert. Gib es erneut ein.",
   "connectors.imapLoginRejected":
     "Das Postfach hat diese Zugangsdaten abgelehnt. Prüfe Server, E-Mail-Adresse und App-Passwort.",
   "connectors.imapUnreachable":
@@ -17404,6 +17415,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Termine erscheinen bei Kontakten und Deals, und dein Buchungslink bietet nur deine freien Zeiten an.",
   "connectFlow.calendarImap": "Über IMAP nicht verfügbar.",
   "connectFlow.pickService": "Wähle E-Mail, Kalender oder beides.",
+  "connectFlow.pickMail": "Wähle E-Mail.",
   "connectFlow.importLabel": "Ältere E-Mails importieren",
   "connectFlow.importNone": "Keine",
   "connectFlow.importAfter":
@@ -18030,7 +18042,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Suche und Abruf haben keine Denkstufe und keine Zeitlimits. Anbieter und Modell änderst du in der Zeile „Embedding-Modell“ unter Modellstufen.",
   "workingHours.unsetTitle": "Noch nicht festgelegt",
   "workingHours.unset":
-    "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, in der Zeitzone der Installation angeboten.",
+    "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, angeboten.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
   "workingHours.narrowed": "Für Buchungen stehen weniger Zeiten zur Auswahl.",
   "workingHours.day.1": "Montag",
@@ -18380,6 +18392,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "capturePurge.preview": "Zuerst prüfen",
   "capturePurge.confirm": "Endgültig löschen",
   "capturePurge.done": "Schließen",
+  "capturePurge.recheck": "Erneut prüfen",
+  "capturePurge.changed":
+    "Die E-Mails haben sich seit der Prüfung geändert. Prüfe die Anzahl unten, bevor du löschst.",
   "capturePurge.failed":
     "Die Löschung konnte nicht abgeschlossen werden. Einige Nachrichten wurden möglicherweise bereits vernichtet. Prüfe erneut, was noch vorhanden ist.",
   "capturePurge.refused":
@@ -18433,7 +18448,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.containersUnreadableBody":
     "In dieser Liste fehlen möglicherweise Ordner, da der E-Mail-Anbieter nicht geantwortet hat. Bitte versuche es gleich erneut oder schließe E-Mails nach Absendeadresse oder Domain aus.",
   "captureExclusions.kindLabel": "Typ",
-  "captureExclusions.addLabel": "Adresse oder Domain ausschließen",
+  "captureExclusions.title.address": "Adresse ausschließen",
+  "captureExclusions.title.domain": "Domain ausschließen",
+  "captureExclusions.title.container": "Ordner oder Label ausschließen",
+  "captureExclusions.field.address": "Adresse",
+  "captureExclusions.field.domain": "Domain",
+  "captureExclusions.noMailbox": "Verbinde zuerst ein Postfach.",
   "captureExclusions.placeholder.address": "name@beispiel.example",
   "captureExclusions.placeholder.domain": "beispiel.example",
   "captureExclusions.add": "Ausschließen",
@@ -23017,6 +23037,33 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.replaceAliasHelp":
     "Deine Kurzadresse {url} funktioniert dann auch nicht mehr. Du kannst sie danach wieder wählen.",
   "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
+  "scheduling.team.title": "Teammitglieder auf diesem Link",
+  "scheduling.team.foot":
+    "Gäste sehen nur Zeiten, in denen du und alle Teammitglieder hier frei sind, jeweils in deren eigenen Arbeitszeiten. Jede Buchung lädt alle Teammitglieder ein.",
+  "scheduling.team.add": "Teammitglied hinzufügen",
+  "scheduling.team.addHelp":
+    "Angeboten werden nur Mitglieder mit verbundenem Kalender. Jedes Teammitglied bestätigt, bevor der Link Buchungen annimmt.",
+  "scheduling.team.full":
+    "Dieser Link nennt bereits fünf Teammitglieder, mehr geht nicht.",
+  "scheduling.team.choose": "Teammitglied wählen",
+  "scheduling.team.noneToAdd":
+    "Kein anderes Mitglied hat einen verbundenen Kalender",
+  "scheduling.team.remove": "Entfernen",
+  "scheduling.team.pending": "Wartet auf Bestätigung",
+  "scheduling.team.confirmed": "Bestätigt",
+  "scheduling.team.left": "Hat den Link verlassen",
+  "scheduling.team.unavailable":
+    "Nicht verfügbar: kein Mitglied mehr oder Kalender nicht lesbar",
+  "scheduling.team.requestsTitle": "Links anderer Mitglieder, die dich nennen",
+  "scheduling.team.requestLabel": "{title} mit {name}",
+  "scheduling.team.requestPending":
+    "Bestätige, damit Gäste Zeiten buchen können, in denen du frei bist. Du wirst zu jedem Termin eingeladen, der über diesen Link gebucht wird.",
+  "scheduling.team.requestConfirmed":
+    "Gäste buchen Zeiten, in denen du frei bist. Du wirst zu jedem Termin eingeladen, der über diesen Link gebucht wird.",
+  "scheduling.team.confirm": "Bestätigen",
+  "scheduling.team.leave": "Verlassen",
+  "worklist.untitled.booking_health_team_not_ready":
+    "Deine Buchungsseite ist pausiert: Ein Teammitglied hat nicht bestätigt, hat den Link verlassen oder hat keinen lesbaren Kalender",
   "scheduling.personalLinksFoot":
     "Termin mit einer bestimmten Person? Öffne ihren Kontakt und wähle Termin buchen, um einige Zeiten oder einen persönlichen Link zu senden, den nur sie nutzen kann.",
   "scheduling.liveNoInvitesTitle":
@@ -23163,6 +23210,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "saveBar.save": "Speichern",
   "saveBar.discard": "Verwerfen",
   "saveBar.unsaved": "Ungespeicherte Änderungen",
+  "saveBar.offered": "Speichere, um diese Werte zu übernehmen.",
   "saveBar.invalid": "Korrigiere die markierten Felder, um zu speichern.",
   "privacy.typeErasePrompt": "Gib zur Bestätigung dieses Wort ein:",
   "aiFigures.window": "Zeitraum",
@@ -23614,6 +23662,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.rewrite": "Umformulieren",
   "aiTask.name.chat_summary": "Zusammenfassung eines Chat-Kanals",
+  "aiTask.name.chat_task_reading": "Chat und offene Aufgaben",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
   "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",
