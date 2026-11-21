@@ -30,7 +30,7 @@ func UnlinkedApprovalHistoryPageTx(ctx context.Context, tx pgx.Tx, after, until 
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
-	entries, err := legacyAuditEntries(ctx, tx, after, until, limit)
+	entries, err := legacyAuditEntries(ctx, tx, after, until, limit, []string{approvalEntity}, false)
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
@@ -38,7 +38,7 @@ func UnlinkedApprovalHistoryPageTx(ctx context.Context, tx pgx.Tx, after, until 
 	named := map[ids.UUID]bool{}
 	for _, entry := range entries {
 		page.Scanned = append(page.Scanned, entry.id)
-		if !entry.needed || entry.kind != approvalEntity {
+		if !entry.needed {
 			continue
 		}
 		match, linked, err := legacyAuditSubject(ctx, tx, entry)
