@@ -107,8 +107,9 @@ func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, f
 	if err != nil {
 		return nil, false, err
 	}
+	// No calendar to read is a step the host can take, never a missing grant.
 	if profile.Provider == "" || s.calendar == nil {
-		return nil, false, apperrors.ErrPermissionDenied
+		return nil, false, errCalendarNotConnected()
 	}
 	if err := s.calendar.Check(ctx, host, string(profile.Provider)); err != nil {
 		return nil, false, err
