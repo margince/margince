@@ -135,9 +135,9 @@ func mayReadLiveCalendar(ctx context.Context, host ids.UserID) error {
 	return nil
 }
 
-// calendarReadable asks calendarBlocker, the one readiness decision, and says
-// the answer as a refusal: the host connects a calendar, or the installation
-// has no calendar service and only an operator can fix that.
+// calendarReadable asks calendarBlocker, the one readiness decision, and words
+// the answer as a refusal. The host can connect a calendar, but only an
+// operator can add a missing calendar service.
 func (s *Store) calendarReadable(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) error {
 	blocker, err := s.calendarBlocker(ctx, host, profile)
 	if err != nil {
