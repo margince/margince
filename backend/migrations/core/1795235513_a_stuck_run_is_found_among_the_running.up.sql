@@ -1,4 +1,5 @@
 -- pgmigrate:no-transaction
+SET lock_timeout = '2s';
 -- Every scheduler tick closes the runs left 'running' past their grace. Without
 -- this index that statement reads all of agent_run, which only grows.
 --
@@ -8,3 +9,4 @@
 -- failed build left behind.
 DROP INDEX CONCURRENTLY IF EXISTS idx_agent_run_running;
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_agent_run_running ON agent_run (id) WHERE status = 'running';
+RESET lock_timeout;
