@@ -15,8 +15,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -41,59 +39,62 @@ type seatGrants struct {
 	perms principal.Permissions
 }
 
-// loadGrantsFor resolves several seats in three set-based reads, for a caller
-// judging many seats at once; loadGrants is this with one seat, so a seat
-// resolves the same way whichever door asks. A seat with no role assignment
-// gets the zero grants: absent from the reads, it holds nothing.
+// loadGrantsFor resolves several seats in one batch of set-based reads.
+// loadGrants is this with one seat, so a seat resolves the same way whichever
+// door asks. A seat with no role assignment gets the zero grants.
 func loadGrantsFor(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]seatGrants, error) {
-	docs, roles, teams, err := loadRolesAndTeams(ctx, tx, users)
+	read, err := loadSeatReads(ctx, tx, users)
 	if err != nil {
 		return nil, err
 	}
-	// Masks are keyed by role set: most seats share one of a handful.
-	masks := map[string][]principal.FieldMask{}
 	out := make(map[ids.UUID]seatGrants, len(users))
 	for _, user := range users {
-		g := seatGrants{roles: roles[user], teams: teams[user], perms: policy.Merge(docs[user])}
-		key := strings.Join(slices.Sorted(slices.Values(g.roles)), ",")
-		m, seen := masks[key]
-		if !seen {
-			if m, err = loadFieldMasks(ctx, tx, g.roles); err != nil {
-				return nil, err
-			}
-			masks[key] = m
-		}
-		g.perms.FieldMasks = m
+		g := seatGrants{roles: read.roles[user], teams: read.teams[user], perms: policy.Merge(read.docs[user])}
+		g.perms.FieldMasks = read.masks[user]
 		out[user] = g
 	}
 	return out, nil
 }
 
-// loadRolesAndTeams sends the role and team reads in one exchange: neither
-// needs the other's answer, so a seat's grants cost one round trip, not two.
-func loadRolesAndTeams(ctx context.Context, tx pgx.Tx, users []ids.UUID) (docs map[ids.UUID]map[string]policy.Document, roles map[ids.UUID][]string, teams map[ids.UUID][]ids.TeamID, err error) {
+// seatReads is what loadSeatReads answers, keyed by seat.
+type seatReads struct {
+	docs  map[ids.UUID]map[string]policy.Document
+	roles map[ids.UUID][]string
+	teams map[ids.UUID][]ids.TeamID
+	masks map[ids.UUID][]principal.FieldMask
+}
+
+// loadSeatReads sends the role, team and field-mask reads in one exchange: none
+// needs another's answer, so a seat's grants cost one round trip, not three.
+func loadSeatReads(ctx context.Context, tx pgx.Tx, users []ids.UUID) (read seatReads, err error) {
 	var batch pgx.Batch
 	batch.Queue(roleDocumentsSQL, users)
 	batch.Queue(liveTeamsSQL, users)
+	batch.Queue(seatFieldMasksSQL, users)
 	results := tx.SendBatch(ctx, &batch)
 	defer func() { err = errors.Join(err, results.Close()) }()
 	roleRows, err := results.Query()
 	if err != nil {
-		return nil, nil, nil, err
+		return seatReads{}, err
 	}
-	docs, roles, err = scanRoleDocuments(roleRows)
-	if err != nil {
-		return nil, nil, nil, err
+	if read.docs, read.roles, err = scanRoleDocuments(roleRows); err != nil {
+		return seatReads{}, err
 	}
 	teamRows, err := results.Query()
 	if err != nil {
-		return nil, nil, nil, err
+		return seatReads{}, err
 	}
-	teams, err = scanLiveTeams(teamRows)
+	if read.teams, err = scanLiveTeams(teamRows); err != nil {
+		return seatReads{}, err
+	}
+	maskRows, err := results.Query()
 	if err != nil {
-		return nil, nil, nil, err
+		return seatReads{}, err
 	}
-	return docs, roles, teams, nil
+	if read.masks, err = scanSeatFieldMasks(maskRows); err != nil {
+		return seatReads{}, err
+	}
+	return read, nil
 }
 
 // roleDocumentsSQL reads live roles only: an archived role grants nothing.
@@ -142,6 +143,27 @@ func scanRoleDocuments(rows pgx.Rows) (map[ids.UUID]map[string]policy.Document, 
 		docs[user][key] = doc
 	}
 	return docs, roles, rows.Err()
+}
+
+// seatFieldMasksSQL is loadFieldMasks for many seats: per seat, the union over
+// the live roles roleDocumentsSQL reads, distinct and in the same order.
+const seatFieldMasksSQL = `SELECT DISTINCT ra.user_id, fm.object, fm.field, fm.condition
+  FROM role_assignment ra JOIN role r ON r.id = ra.role_id JOIN field_mask fm ON fm.role_key = r.key
+  WHERE ra.user_id = ANY($1) AND r.archived_at IS NULL
+  ORDER BY ra.user_id, fm.object, fm.field, fm.condition`
+
+func scanSeatFieldMasks(rows pgx.Rows) (map[ids.UUID][]principal.FieldMask, error) {
+	defer rows.Close()
+	out := map[ids.UUID][]principal.FieldMask{}
+	for rows.Next() {
+		var user ids.UUID
+		var m principal.FieldMask
+		if err := rows.Scan(&user, &m.Object, &m.Field, &m.Condition); err != nil {
+			return nil, err
+		}
+		out[user] = append(out[user], m)
+	}
+	return out, rows.Err()
 }
 
 // liveTeamsSQL reads live teams only. An archived team keeps its membership

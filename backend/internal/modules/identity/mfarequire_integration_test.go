@@ -16,8 +16,15 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// mfaAlwaysRequired is the admission reader with require-MFA on, which a stored
+// row would turn on for every test sharing this database.
+func mfaAlwaysRequired(ctx context.Context, tx pgx.Tx) (AdmissionSettings, error) {
+	allowed, err := IndividualPerformanceTx(ctx, tx)
+	return AdmissionSettings{IndividualPerformance: allowed, RequireMFA: true}, err
+}
+
 func (e *revocationEnv) requireMFAOn() {
-	e.svc.requireMFA = func(context.Context, pgx.Tx) (bool, error) { return true, nil }
+	e.svc.admissionSettings = mfaAlwaysRequired
 }
 
 func TestRequireMFAFlagsAMemberWithNoFactorAndClearsOnEnrolment(t *testing.T) {
@@ -73,7 +80,7 @@ func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
 	e.enrolMemberMFA(t)
 
 	bare := NewServiceFor(e.svc.db)
-	bare.requireMFA = func(context.Context, pgx.Tx) (bool, error) { return true, nil }
+	bare.admissionSettings = mfaAlwaysRequired
 
 	// Password login never answers the 202 challenge state: a challenge this
 	// service could not verify would be a lockout, not a factor.
@@ -176,7 +183,7 @@ func TestRequireMFATrustsTheProviderAndAsksThePasswordPath(t *testing.T) {
 func TestRequireMFAOffLeavesTheMemberUnconfined(t *testing.T) {
 	e := setupRevocationEnv(t, "require-mfa-off")
 	e.withVault()
-	// requireMFA left nil: no enforcement, and no per-request enrolment check.
+	// admissionSettings left nil: no enforcement, and no per-request enrolment check.
 	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("login: %v", err)
