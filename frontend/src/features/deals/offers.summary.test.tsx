@@ -31,6 +31,9 @@ function renderHeader(shown: Offer) {
       if (path.endsWith("/me")) {
         return Response.json({ user: { id: "u1" }, authorization: {} });
       }
+      if (path.endsWith("/offer-templates/tpl-old")) {
+        return Response.json({ id: "tpl-old", name: "Retired terms" });
+      }
       if (path.endsWith("/offer-templates")) {
         return Response.json({
           data: [{ id: "tpl-1", name: "Standard terms" }],
@@ -84,4 +87,19 @@ it("shows the offer's revision, valid-until day, intro and terms", async () => {
   expect(screen.getByText("01/08/2026")).toBeInTheDocument();
   expect(screen.getByText(/here is our offer/)).toBeInTheDocument();
   expect(screen.getByText("Payable in 30 days.")).toBeInTheDocument();
+});
+
+// The list holds the newest hundred live templates; an offer may name another.
+it("names a sent offer's template by its id, without reading the list", async () => {
+  const { paths } = renderHeader(
+    offer({ status: "sent", template_id: "tpl-old" }),
+  );
+  expect(await screen.findByText("Retired terms")).toBeInTheDocument();
+  expect(paths.filter((p) => p.endsWith("/offer-templates"))).toEqual([]);
+});
+
+it("names a draft's template by its id when the list does not hold it", async () => {
+  const { paths } = renderHeader(offer({ template_id: "tpl-old" }));
+  expect(await screen.findByText("Retired terms")).toBeInTheDocument();
+  expect(paths.filter((p) => p.includes("/offer-templates"))).toHaveLength(2);
 });

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../../api/client";
 import { EntityRef } from "../../components/entityref";
 import { DataTable } from "../../design-system/datatable";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
@@ -9,9 +11,12 @@ import { lineBillingPhrase } from "../../format/billingphrase";
 import { formatDate, formatMoney, formatNumber } from "../../format/format";
 import { unitLabel } from "../../format/productunit";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useHealthScope } from "../../lib/healthscope";
 import { useLegalEntities } from "../../lib/legalentities.queries";
+import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import type { Offer, OfferLineItem } from "./offers";
+import { isOpenDraft } from "./offers.actions";
 import { useOfferTemplates } from "./offers.header";
 
 // The buyer's name as the offer froze it on send; a draft has no snapshot yet,
@@ -21,17 +26,43 @@ function snapshotName(offer: Offer): string | undefined {
   return typeof name === "string" ? name : undefined;
 }
 
+/**
+ * The template the offer names. A draft's page reads the template list for its
+ * header form anyway, so a draft looks there first. Any other offer, or a
+ * template the list leaves out, is read by its id.
+ */
+function useOfferTemplate(offer: Offer) {
+  const id = offer.template_id;
+  const draft = isOpenDraft(offer);
+  const scope = useHealthScope();
+  const list = useOfferTemplates(draft && id != null);
+  const listed = list.data?.find((each) => each.id === id);
+  const byId = useQuery({
+    queryKey: ["offer-template", id, scope ?? ""],
+    enabled:
+      id != null &&
+      scope !== undefined &&
+      (!draft || (list.isSuccess && listed === undefined)),
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/offer-templates/{id}", {
+          params: { path: { id: id ?? "" } },
+        }),
+      ),
+  });
+  return listed ?? byId.data;
+}
+
 /** What the offer says beyond its lines, readable in every status. */
 export function OfferHeaderFields({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
   const entities = useLegalEntities(offer.legal_entity_id != null).data;
-  const templates = useOfferTemplates(offer.template_id != null).data;
+  const template = useOfferTemplate(offer);
   const issuer = entities?.find(
     (entity) => entity.id === offer.legal_entity_id,
   );
-  const template = templates?.find((each) => each.id === offer.template_id);
   return (
     <FieldGrid>
       <FieldRow label={t("offer.deal")}>
