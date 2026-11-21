@@ -357,19 +357,19 @@ removes nothing in Margince.
 and chooses how far back to go.
 
 **Contacts.** Mail that came in only through a shared mailbox adds no contact,
-company or lead. A sender with no contact stays filed under nothing. It is
-filed under records that already exist.
+company or lead. A sender with no contact stays filed under nothing.
 
-**Work from it.** Such mail can still make work. That is a reply reminder, a row on the
-waiting list, a follow-up on a promise, or a question about its deal.
-One colleague gets each, picked in this order:
+**Work from it.** Such mail can still make work for one colleague. The first
+that fits gets it. That is the owner of the contact it came from or went to.
+Next comes the owner of that contact's company, then the mailbox's backup owner.
 
-1. The owner of the contact it came from, or went to.
-2. The owner of that contact's company.
-3. The mailbox's backup owner, if an admin named one.
+The colleague must be able to hold work and must already read the mail.
+Held and shared mail follow the same rules:
 
-The colleague must be able to hold work and must already read the mail. When
-nobody fits, the mail makes no work. Held mail gets no reply reminder.
+- A reply reminder needs the AI to find a request. It reads held mail for that unless **Check private mail for requests** is off.
+- A waiting-list row does not depend on that switch.
+- A follow-up on a promise needs the AI to read the thread, so it follows that switch too.
+- The question about the deal is asked for held mail too. Only that colleague sees it.
 
 When you open such an email, the reason under its subject says **In a shared
 mailbox**. The line below it names the mailbox and the team that reads it.
