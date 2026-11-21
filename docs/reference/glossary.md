@@ -122,6 +122,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |
+| WSL | Windows Subsystem for Linux, which runs a Linux system on Windows. |
 | ymd | The date order year, month, day, as a setting value. |
 | Zapier | An automation tool that can start a task when a webhook arrives. |
 | ZIP | A file format that packs many files into one. |

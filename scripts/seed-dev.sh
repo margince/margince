@@ -24,6 +24,8 @@ set -euo pipefail
 # database nobody is looking at. An explicit API_BASE still wins.
 # shellcheck source=scripts/lib-devstate.sh
 . "$(git rev-parse --show-toplevel)/scripts/lib-devstate.sh"
+# shellcheck source=scripts/lib-devready.sh
+. "$(git rev-parse --show-toplevel)/scripts/lib-devready.sh"
 API_BASE="${API_BASE:-$(dev_app_base_url)}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
@@ -211,8 +213,7 @@ rotate_admin_password_via_detour() {
 }
 
 echo "== seed-dev: API reachability =="
-curl -fsS --max-time 10 "$API_BASE/readyz" >/dev/null 2>&1 \
-  || fail "$API_BASE/readyz is not answering — start the stack first (make dev)"
+dev_require_app "$API_BASE" || exit 1
 echo "  OK: $API_BASE is up"
 
 echo "== seed-dev: demo installation =="
