@@ -7,6 +7,7 @@
 package dealcoverage
 
 import (
+	"slices"
 	"strings"
 )
 
@@ -41,8 +42,8 @@ func Attach(covered []string, baseValueSQL, currencySQL string, selects, columns
 		"count(CASE WHEN " + noRate + " THEN 1 END)",
 		"string_agg(DISTINCT " + currencySQL + ", ',' ORDER BY " + currencySQL + ") FILTER (WHERE " + noRate + ")",
 	}
-	return append(selects[:len(selects):len(selects)], terms...),
-		append(columns[:len(columns):len(columns)], colNoValue, colNoRate, colCurrencies)
+	return append(slices.Clip(selects), terms...),
+		append(slices.Clip(columns), colNoValue, colNoRate, colCurrencies)
 }
 
 // Fold moves each row's coverage columns into one `coverage` object naming the

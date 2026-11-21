@@ -34,8 +34,7 @@ func Ordered(ctx context.Context, db *database.DB, object, sort string, matched 
 	var cursor *string
 	for {
 		page, next, err := listPage(ctx, db, object, listQuery{sort: &sort, only: only, cursor: cursor})
-		var refused *storekit.SortError
-		if errors.As(err, &refused) {
+		if _, ok := errors.AsType[*storekit.SortError](err); ok {
 			return matched, nil
 		}
 		if err != nil {
