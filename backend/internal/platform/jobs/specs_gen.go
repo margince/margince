@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "09c83ec6f96b05a2a2978f108b20c792473c13eba71faabc542db666280d65e5"
+const JobContractHash = "d5143749bea908bb8adc90221dbc9074a5f286cb23c74df8dd8aa954ba76cc04"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -986,7 +986,17 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"StageEvidenceBrain"}},
-		Args:         []ArgField{{Name: "ActivityID"}, {Name: "DealID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "ActivityID"}, {Name: "DealID"}, {Name: "RereadFor"}, {Name: "Workspace"}},
+	},
+	"stage_evidence_reread": {
+		Kind:         "stage_evidence_reread",
+		GoType:       "StageEvidenceRereadArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"StageEvidenceBrain"}, AbsentRegistersAnyway: true},
+		Args:         []ArgField{{Name: "After"}, {Name: "Domain", Scalar: true, Reason: "The removed own domain is an installation setting the admin list already showed; it names no contact and carries no mail content."}, {Name: "Removal"}, {Name: "Workspace"}},
 	},
 	"stored_object_reap": {
 		Kind:         "stored_object_reap",

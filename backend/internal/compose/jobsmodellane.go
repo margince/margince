@@ -42,6 +42,7 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 		addDeclaredWorker[StageEvidenceReadArgs](reg,
 			newStageEvidenceReadWorker(pool, cfg.StageEvidenceBrain, log))
 	}
+	addDeclaredWorker[StageEvidenceRereadArgs](reg, newStageEvidenceRereadWorker(pool, cfg.StageEvidenceBrain != nil, log))
 	addDeclaredWorker[AccountScanArgs](reg, newAccountScanWorker(pool, cfg.AccountScanBrain, cfg.AccountScanRoutingVersion, log))
 	addDeclaredWorker[GeocodeCompanyArgs](reg, newGeocodeWorker(pool, cfg.Geocoder))
 	addDeclaredWorker[CheckCompanyVatArgs](reg, newVatCheckWorker(pool, cfg.VatChecker, nil))

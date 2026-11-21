@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -52,6 +53,19 @@ type OwnDomain struct {
 type OwnDomainStore struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
+	// removed, when set, runs in the transaction that removes a domain.
+	removed OwnDomainRemoved
+}
+
+// OwnDomainRemoved is told a confirmed domain left the list, with the id of
+// the audit row that records it. Its error rolls the removal back.
+type OwnDomainRemoved func(ctx context.Context, tx pgx.Tx, domain string, removal ids.UUID) error
+
+// WithRemoved is the store telling follow of each removal it commits.
+func (s *OwnDomainStore) WithRemoved(follow OwnDomainRemoved) *OwnDomainStore {
+	c := *s
+	c.removed = follow
+	return &c
 }
 
 // NewOwnDomainStore builds the store over the app pool.
@@ -271,21 +285,26 @@ func (s *OwnDomainStore) Remove(ctx context.Context, raw string) error {
 		}
 		// The domain IS the key now (ADR-0091 §8 phase D): one installation, one
 		// list, and the unique index the insert above conflicts on says the same.
-		tag, err := tx.Exec(ctx,
-			`DELETE FROM workspace_email_domain WHERE domain = $1`, domain)
+		var counted bool
+		err := tx.QueryRow(ctx,
+			`DELETE FROM workspace_email_domain WHERE domain = $1 RETURNING verified`, domain).Scan(&counted)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("capture: removing own domain: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			return nil
 		}
 		// "archive", not a delete verb: the audit vocabulary is closed (0018)
 		// and withdrawing a registry entry IS retiring it — the same reading
 		// the consumer-mail list settled on.
-		_, err = storekit.Audit(ctx, tx, "archive", captureSettingsObject,
+		removal, err := storekit.Audit(ctx, tx, "archive", captureSettingsObject,
 			storekit.MustWorkspace(ctx),
 			map[string]any{auditKeyOwnDomain: domain}, nil)
-		return err
+		// A candidate nobody confirmed never counted as ours, so nothing follows.
+		if err != nil || s.removed == nil || !counted {
+			return err
+		}
+		return s.removed(ctx, tx, domain, removal)
 	})
 }
 
