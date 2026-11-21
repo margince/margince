@@ -173,7 +173,7 @@ Margince does not destroy a record just because it is old. Each starting rule ar
 
 **Stored message originals** are the copies that capture keeps of every message it filed, apart from the timeline entry made from each one. On a large mailbox they take the most storage. An original is never destroyed while the law still says its mail must be kept. The timeline entry stays, so the same message cannot be captured again.
 
-If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." One fixed time limit still runs with no rule: traces of AI embedding calls end after 90 days (below).
+If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." Four fixed time limits still run with no rule (below).
 
 ### What each retention window counts from
 Most records have two clocks, and a rule acts only once both are past its window. One clock is the date the record carries. The other is how long the record has been in Margince. So a record you import is not removed on the day it arrives because it was old somewhere else.
@@ -235,9 +235,9 @@ A rule can hold a **Lawful basis** if you like (the Article 6 reason for the tim
 
 Enabled rules act each time the retention pass runs, as the panel says: "Enabled policies act on the data retention schedule." The pass runs once a day by default. An Admin or Ops user can change that from hourly to weekly: in **Settings → System health**, open **All schedules** and set **Data retention**, in seconds. A rule shows a badge only when it is not acting: "Disabled" or "Paused by retain-only mode". Each pass works on up to 200 records for each rule, so years of old records take many passes to clear.
 
-### One window nobody can change
+### Windows nobody can change
 
-Traces of AI embedding calls are kept for **90 days**, fixed. This runs with or without a rule, and no admin can edit it.
+These four run with or without a rule, and no admin can edit them. Traces of AI embedding calls are kept for **90 days**, and traces of every other AI call for **400 days**. Error and skip entries of the system log are kept for **90 days**. Its sign-in, password reset and mailbox credential entries are kept for **400 days**, and every other entry of it is kept. Traces of AI answers that still have their stored content are kept past their window. Retain-only mode keeps all these system log entries, and it still removes old traces that have no stored content.
 
 ### Turning a retention policy off, versus deleting it
 

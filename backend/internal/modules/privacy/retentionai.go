@@ -84,43 +84,58 @@ func (s *RetentionService) eraseVoiceSignalContent(ctx context.Context, id ids.U
 	})
 }
 
-// evaluateEmbedCallRetention deletes the embedding call traces past the fixed
-// embedCallRetention cap, a set per transaction, and records the pass once.
-// They are engine telemetry with no subject, so no row gets its own audit.
+// evaluateCallRetention deletes the call traces past their fixed caps, a set
+// per transaction, and records each pass once. They are engine telemetry with
+// no subject, so no row gets its own audit.
 //
-// retainOnly narrows it to the payload-free rows; see embedCallWithoutPayload.
-func (s *RetentionService) evaluateEmbedCallRetention(ctx context.Context, retainOnly bool) error {
-	if s.pruneEmbedCalls == nil {
-		s.log.Warn("retention: embedding call traces are kept, because their prune was not supplied")
+// An answer trace with a stored payload always stays. The payload has its own
+// retention rule, and deleting the trace would take the payload with it.
+func (s *RetentionService) evaluateCallRetention(ctx context.Context) error {
+	if s.pruneEmbedCalls == nil || s.pruneAnswerCalls == nil {
+		s.log.Warn("retention: call traces are kept, because their prunes were not supplied")
 		return nil
 	}
-	cutoff := time.Now().AddDate(0, 0, -embedCallRetention)
+	if err := s.pruneCalls(ctx, s.pruneEmbedCalls, embedCallPrune, embedCallRetention, false); err != nil {
+		return err
+	}
+	return s.pruneCalls(ctx, s.pruneAnswerCalls, answerCallPrune, answerCallRetention, true)
+}
+
+// pruneCalls reads the retain-only posture in each batch's transaction. A
+// switch to retain-only during a long pass then holds from the next batch.
+func (s *RetentionService) pruneCalls(ctx context.Context, prune CallPrune, rows string, days int, keepWithPayload bool) error {
+	cutoff := time.Now().AddDate(0, 0, -days)
 	var total int64
 	for {
 		var removed int64
-		err := s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
-			removed, err = s.pruneEmbedCalls(ctx, tx, cutoff, operationalPruneBatch, retainOnly)
+		err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+			retainOnly, err := retainOnlyTx(ctx, tx)
+			if err != nil {
+				return err
+			}
+			removed, err = prune(ctx, tx, cutoff, operationalPruneBatch, keepWithPayload || retainOnly)
 			return err
 		})
 		if err != nil {
-			return fmt.Errorf("retention ai_call/embedding: %w", err)
+			return fmt.Errorf("retention %s: %w", rows, err)
 		}
 		total += removed
 		if removed < operationalPruneBatch {
 			break
 		}
 	}
-	return s.recordPrune(ctx, embedCallPrune, total, embedCallRetention)
+	return s.recordPrune(ctx, rows, total, days)
 }
 
-// EmbedCallPrune removes up to limit embedding call traces from before
-// cutoff. keepWithPayload leaves a trace that still has a stored payload.
-type EmbedCallPrune func(ctx context.Context, tx pgx.Tx, cutoff time.Time, limit int, keepWithPayload bool) (int64, error)
+// CallPrune removes up to limit call traces of its kinds from before cutoff.
+// keepWithPayload leaves a trace that still has a stored payload.
+type CallPrune func(ctx context.Context, tx pgx.Tx, cutoff time.Time, limit int, keepWithPayload bool) (int64, error)
 
-// WithEmbedCallPrune returns a service that ages out embedding call traces.
-// The ai module owns the table and supplies the delete.
-func (s *RetentionService) WithEmbedCallPrune(prune EmbedCallPrune) *RetentionService {
+// WithCallPrunes returns a service that ages out call traces: the embedding
+// ones, then the completion and decision ones. The ai module owns the table
+// and supplies both deletes.
+func (s *RetentionService) WithCallPrunes(embedding, answers CallPrune) *RetentionService {
 	out := *s
-	out.pruneEmbedCalls = prune
+	out.pruneEmbedCalls, out.pruneAnswerCalls = embedding, answers
 	return &out
 }
