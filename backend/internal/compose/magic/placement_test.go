@@ -15,7 +15,7 @@ import (
 func offerUpdate(before, after string) entry {
 	label, parent, parentType := "Northwind renewal", ids.NewV7(), typeDeal
 	return entry{
-		ID: ids.NewV7(), OccurredAt: time.Now(), Action: actionUpdate, EntityType: childOffer,
+		ID: ids.NewV7(), OccurredAt: time.Date(2026, 11, 2, 9, 0, 0, 0, time.UTC), Action: actionUpdate, EntityType: childOffer,
 		EntityID: ids.NewV7(), ActorType: "agent", ActorID: "agent:test", Label: &label,
 		Before: []byte(before), After: []byte(after), ParentType: &parentType, ParentID: &parent,
 	}

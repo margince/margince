@@ -5,14 +5,13 @@ package magic
 
 // Records with no page of their own, placed on the record they belong to.
 //
-// An offer, a contract or a file has no page a reader can open, so a line about
-// one names and links its deal, company, contact or project. The child's own
-// read rule and the parent's row scope must both admit the row. A row that
-// fails either is not served, and the reader is not told it exists.
+// An offer, a contract or a file has no page a reader can open. A line about
+// one names and links its deal, company, contact or project instead. The
+// child's own read rule and the parent's row scope must both admit the row.
 //
-// The line shows the sentence and the parent's name, never the child's images.
-// A child type has no field allowlist and no field mask of its own, so its
-// images could carry what the reader may not read.
+// The line never shows the child's images. A child type has no field
+// allowlist and no field mask, so its images could carry what the reader may
+// not read.
 
 import (
 	"context"
@@ -59,8 +58,8 @@ const (
 	childAttachment   = "attachment"
 )
 
-// placements is every child type the done lane can place, in the order a row
-// tries them. A contract with a deal is placed on the deal, one without on its
+// placements lists where the done lane places each child type, in the order a
+// row tries them. A contract with a deal is placed on the deal, one without on its
 // company, as the contract's own visibility anchors it.
 var placements = []placement{
 	{child: childOffer, parent: typeDeal, grant: childOffer, on: "e.id = placed.deal_id"},
@@ -122,7 +121,7 @@ func describePlaced(e entry) (description, bool) {
 	return description{summary: crmcontracts.MagicSentence{Key: key}}, true
 }
 
-// doneForPlacements reads the placed children's machine actions in ONE scan of
+// doneForPlacements reads the placed children's machine actions in one scan of
 // the window. Each row joins the one placement its type names, and that join
 // carries both gates. Up to fourteen reads of the window would be the
 // alternative, each scanning the same rows.

@@ -6,8 +6,8 @@
 package integration
 
 // An offer, a contract or a file has no page of its own. Done for you names and
-// links the record it belongs to, on Home and in the Worklist alike, and only
-// for a reader who may see both.
+// links the record it belongs to, on Home and in the Worklist alike. It does so
+// only for a reader who may see both.
 
 import (
 	"context"
@@ -117,7 +117,7 @@ func placedWriters(f placedFixture) map[string]func(t *testing.T) (key string, p
 			return "magic.action.create_attachment", f.company
 		},
 		"intro_request": func(t *testing.T) (string, ids.UUID) {
-			_, err := introductions.NewStore(e.DB(), time.Now).Record(f.writer(t), introductions.NewRecorded{
+			_, err := introductions.NewStore(e.DB(), func() time.Time { return clocktest.Now(t) }).Record(f.writer(t), introductions.NewRecorded{
 				ContactID: f.contact, IntroducerUser: e.Rep1, IntroducedUser: e.Rep2,
 				On: clocktest.Now(t), Channel: string(crmcontracts.IntroRecordedChannelIntroRecordedChannelEmail),
 			})
@@ -212,8 +212,8 @@ func TestDoneForYouHidesAChildOnARecordTheReaderDoesNotWorkOn(t *testing.T) {
 	}
 }
 
-// A teammate works on the records but may not see a company or contact its
-// owner keeps private, so the file and the introduction on them stay hidden.
+// A teammate works on the records but may not see a private company or contact.
+// The file and the introduction on them stay hidden from that teammate.
 func TestDoneForYouHidesAChildOnARecordKeptPrivateFromTheReader(t *testing.T) {
 	f := newPlacedFixture(t)
 	writers := placedWriters(f)
@@ -237,9 +237,9 @@ func TestDoneForYouHidesAChildOnARecordKeptPrivateFromTheReader(t *testing.T) {
 	}
 }
 
-// The child's own grant is asked as well as the parent's: a seat that may not
-// read offers sees no offer line, and keeps the file on its company. Without
-// the deal grant, nothing placed on a deal shows.
+// The child's own grant is asked as well as the parent's. A seat that may not
+// read offers sees no offer line and keeps the file on its company. Without the
+// deal grant, nothing placed on a deal shows.
 func TestDoneForYouHidesAChildWhoseOwnGrantTheReaderLacks(t *testing.T) {
 	f := newPlacedFixture(t)
 	writeEveryChild(t, f)
@@ -298,7 +298,7 @@ func TestAPlacedChildLeavesTheUnplacedCount(t *testing.T) {
 // contact is not shown it.
 func TestDoneForYouHidesAnIntroductionAskFromAColleagueOutsideIt(t *testing.T) {
 	f := newPlacedFixture(t)
-	_, err := introductions.NewStore(f.e.DB(), time.Now).Create(f.writer(t), introductions.NewRequest{
+	_, err := introductions.NewStore(f.e.DB(), func() time.Time { return clocktest.Now(t) }).Create(f.writer(t), introductions.NewRequest{
 		ContactID: f.contact, IntroducerUser: f.e.AdminUser, RouteType: "direct",
 		InternalReason: "they run procurement", DueAt: clocktest.Now(t).AddDate(0, 0, 7),
 	})
