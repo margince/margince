@@ -24,31 +24,18 @@ import {
 } from "./offers.cells";
 import { TAX_CATEGORY_LABEL } from "./taxcategory";
 
-type LineField = keyof UpdateOfferLineItemRequest;
-
 export type LineRefusals = ReturnType<typeof useLineRefusals>;
 
 /**
  * The server's last refusal per line, shown in that line's row until the line
- * next saves. A text cell keeps the refused text in its draft. The billing
- * cell has no draft to fall back on, so a refused billing field takes a new
- * key and mounts again on the value the server still holds. The counts only
- * grow, so a refusal elsewhere never remounts a cell in use.
+ * next saves. Each cell keeps the refused value itself, so a refusal never
+ * mounts a cell again.
  */
 export function useLineRefusals() {
   const [errors, setErrors] = useState<ReadonlyMap<string, string>>(new Map());
-  const [resets, setResets] = useState<ReadonlyMap<string, number>>(new Map());
   return {
-    refuse: (lineItemId: string, fields: readonly string[], reason: string) => {
+    refuse: (lineItemId: string, reason: string) => {
       setErrors((prev) => new Map(prev).set(lineItemId, reason));
-      setResets((prev) => {
-        const next = new Map(prev);
-        for (const field of fields) {
-          const key = `${lineItemId}:${field}`;
-          next.set(key, (next.get(key) ?? 0) + 1);
-        }
-        return next;
-      });
     },
     settle: (lineItemId: string) => {
       setErrors((prev) => {
@@ -61,8 +48,6 @@ export function useLineRefusals() {
       });
     },
     errorOf: (lineItemId: string) => errors.get(lineItemId),
-    cellKey: (line: OfferLineItem, field: LineField) =>
-      `${field}:${resets.get(`${line.id}:${field}`) ?? 0}`,
   };
 }
 
@@ -232,14 +217,9 @@ export function EditableLineTable({
       header: t("product.billingModel"),
       render: (line: OfferLineItem) => (
         <BillingCell
-          key={refusals.cellKey(line, "billing_model")}
           line={line}
           label={(column) => cellLabel(column, line)}
-          onSave={(patch) =>
-            // BillingCell reads undefined as no answer; the row shows the
-            // refusal and the key above mounts the cell again.
-            onSave(line.id, patch).catch(() => undefined)
-          }
+          onSave={save(line)}
         />
       ),
     },

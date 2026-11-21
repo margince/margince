@@ -88,18 +88,22 @@ export function OfferLineBillingFields({
   value,
   onChange,
   label,
+  invalid,
   onTermTyped,
   onTermBlur,
 }: Readonly<{
   value: LineBilling;
   onChange: (next: LineBilling) => void;
   label?: (column: string) => string;
+  // The server refused the values shown; its reason stands in the line's row.
+  invalid?: boolean;
   // Where the term is saved on blur: typing reaches onTermTyped, not onChange.
   onTermTyped?: (intervalCount: string) => void;
   onTermBlur?: () => void;
 }>) {
   const t = useT();
   const recurring = value.billingModel === "recurring";
+  const refused = invalid ? { "aria-invalid": true } : {};
   const typed =
     onTermTyped ??
     ((intervalCount: string) => onChange({ ...value, intervalCount }));
@@ -109,6 +113,7 @@ export function OfferLineBillingFields({
         {(control) => (
           <Select
             {...control}
+            {...refused}
             value={value.billingModel}
             onChange={(picked) => onChange(withBillingModel(value, picked))}
             options={billingModelOptions(t)}
@@ -123,6 +128,7 @@ export function OfferLineBillingFields({
           {(control) => (
             <Select
               {...control}
+              {...refused}
               value={value.billingIntervalMonths}
               onChange={(picked) =>
                 onChange({ ...value, billingIntervalMonths: picked })
@@ -137,6 +143,7 @@ export function OfferLineBillingFields({
           {(control) => (
             <input
               {...control}
+              {...refused}
               type="number"
               min="1"
               step="1"
@@ -281,18 +288,21 @@ export function BillingCell({
 }: Readonly<{
   line: OfferLineItem;
   label: (column: string) => string;
-  // Settles once the server has answered this save.
+  // Settles once the server has taken this save, and rejects on a refusal.
   onSave: (patch: UpdateOfferLineItemRequest) => Promise<unknown>;
 }>) {
   const saved = lineBillingOf(line);
   const [value, setValue] = useState(saved);
   const [base, setBase] = useState(saved);
-  // Each field's edit count, the count last sent, and the count an answer
-  // has confirmed. A field is the reader's own until its newest edit is
-  // confirmed, even when an answer happens to hold the same value.
+  // Each field's edit count, the count last sent, the count an answer has
+  // confirmed, and the count any answer, a refusal included, has reached. A
+  // field is the reader's own until its newest edit is confirmed, so a refused
+  // value stays in the cell.
   const [edits, setEdits] = useState(NO_EDITS);
   const [sentEdits, setSentEdits] = useState(NO_EDITS);
   const [answered, setAnswered] = useState(NO_EDITS);
+  const [settled, setSettled] = useState(NO_EDITS);
+  const [refused, setRefused] = useState(false);
   const [lastSent, setLastSent] = useState(saved);
   const own = (field: BillingField) => edits[field] > answered[field];
   if (!sameBilling(base, saved)) {
@@ -308,6 +318,7 @@ export function BillingCell({
   const change = (next: LineBilling) => {
     const gens = bumped(edits, value, next);
     setEdits(gens);
+    setRefused(false);
     setValue(next);
     return gens;
   };
@@ -325,8 +336,14 @@ export function BillingCell({
       setSentEdits(gens);
       setLastSent(next);
       void onSave(patch).then(
-        (answer) =>
-          answer !== undefined && setAnswered((prev) => latest(prev, gens)),
+        () => {
+          setAnswered((prev) => latest(prev, gens));
+          setSettled((prev) => latest(prev, gens));
+        },
+        () => {
+          setSettled((prev) => latest(prev, gens));
+          setRefused(true);
+        },
       );
     }
   };
@@ -335,12 +352,14 @@ export function BillingCell({
       <OfferLineBillingFields
         value={value}
         label={label}
+        invalid={refused}
         onChange={commit}
         onTermTyped={(intervalCount) => change({ ...value, intervalCount })}
         onTermBlur={() => {
           // While a term is on its way, the next one is measured against it,
-          // not against the saved term the answer is about to replace.
-          const waiting = sentEdits.intervalCount > answered.intervalCount;
+          // not against the saved term the answer is about to replace. A
+          // refused term is no longer on its way, so leaving it sends it again.
+          const waiting = sentEdits.intervalCount > settled.intervalCount;
           const against = waiting ? lastSent : saved;
           if (value.intervalCount !== against.intervalCount) {
             commit(value);

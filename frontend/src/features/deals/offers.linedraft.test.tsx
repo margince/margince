@@ -305,3 +305,47 @@ describe("an offer line cell", () => {
     expect(screen.queryByText("Change was not saved")).toBeNull();
   });
 });
+
+describe("the billing cell", () => {
+  it("keeps a refused term, shows the server's reason in its row, and sends it again on the next blur", async () => {
+    const { held, state } = stubServer({
+      ...baseLine,
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: 4,
+    });
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+    const term = screen.getByRole("spinbutton", { name: "Periods, line 1" });
+    const refusedTerm = {
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: 0,
+    };
+
+    await typeInto(user, term as HTMLInputElement, "0", true);
+    await user.tab();
+    await waitFor(() => expect(held).toHaveLength(1));
+    expect(held[0].patch).toEqual(refusedTerm);
+    await answer(held[0], 422);
+
+    const row = screen.getByTestId("line-row-li-1");
+    expect(await within(row).findByText(REFUSAL)).toBeTruthy();
+    expect(screen.queryByText("Change was not saved")).toBeNull();
+    expect(screen.getByRole("spinbutton", { name: "Periods, line 1" })).toBe(
+      term,
+    );
+    expect(term).toHaveProperty("value", "0");
+    expect(term.getAttribute("aria-invalid")).toBe("true");
+
+    await user.click(term);
+    await user.tab();
+    await waitFor(() => expect(held).toHaveLength(2));
+    expect(held[1].patch).toEqual(refusedTerm);
+    await answer(held[1]);
+    await waitFor(() => expect(within(row).queryByText(REFUSAL)).toBeNull());
+    expect(term.getAttribute("aria-invalid")).toBeNull();
+    expect(state.line).toMatchObject({ interval_count: 0 });
+  });
+});

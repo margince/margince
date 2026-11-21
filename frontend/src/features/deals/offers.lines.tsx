@@ -136,10 +136,9 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       applyOffer(data);
       refusals.settle(lineItemId);
     },
-    onError: (error, { lineItemId, patch }) => {
+    onError: (error, { lineItemId }) => {
       refusals.refuse(
         lineItemId,
-        Object.keys(patch),
         problemCodeOf(error) === "conflict"
           ? t("offer.positionTaken")
           : problemMessageOf(error, t, undefined, labels),
@@ -161,7 +160,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       refusals.settle(lineItemId);
     },
     onError: (error, lineItemId) => {
-      refusals.refuse(lineItemId, [], problemMessageOf(error, t));
+      refusals.refuse(lineItemId, problemMessageOf(error, t));
     },
   });
 
