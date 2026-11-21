@@ -23,7 +23,7 @@ func TestTheEmptyRenewalStarterIsSwitchedOffAndNothingElseIs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	before := namespaceThroughVersion(t, core, "1795259684")
+	before := namespaceThroughVersion(t, core, "1795270192")
 	if _, err := dbmigrate.Up(ctx, conn, before); err != nil {
 		t.Fatalf("up: %v", err)
 	}
