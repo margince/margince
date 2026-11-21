@@ -87,30 +87,57 @@ func (d *recencyDates) apply(r *RelationshipStrength) {
 	r.LastInboundPrecision, r.LastOutboundPrecision = deref(d.inboundPrecision), deref(d.outboundPrecision)
 }
 
-// liveStrengths folds the contacts from their history at now: the recency read,
-// then the window read for those whose last interaction falls in the window.
-// A contact with nothing qualifying is absent.
+// foldScope is what a fold reads: the rows admitted at admit, narrowed to one
+// project by within when set. With before set it reads only rows dated before
+// it, and its window ends there. The comparison fold reads the past that way.
+type foldScope struct {
+	admit  time.Time
+	before *time.Time
+	within *ids.ProjectID
+}
+
+// windowStart is where the scope's 90-day window begins.
+func (f foldScope) windowStart() time.Time {
+	end := f.admit
+	if f.before != nil {
+		end = *f.before
+	}
+	return end.AddDate(0, 0, -relStrengthWindowDays)
+}
+
+// narrowSQL is the scope's filters beyond admission, for rows aliased a.
+func (f foldScope) narrowSQL(arg func(any) int) string {
+	narrow := ""
+	if f.within != nil {
+		narrow += " AND " + activityWithinProject("a", arg(*f.within))
+	}
+	if f.before != nil {
+		narrow += " AND " + occurredday.BeforeSQL("a", fmt.Sprintf("$%d", arg(*f.before)))
+	}
+	return narrow
+}
+
+// liveStrengths folds the contacts from their history in scope: the recency
+// read, then the window read for those whose last interaction falls in the
+// window. A contact with nothing qualifying is absent.
 func liveStrengths(
-	ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, now time.Time, within *ids.ProjectID,
+	ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, scope foldScope,
 ) (map[ids.ContactID]*RelationshipStrength, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	contactsPos, nowPos := arg(contacts), arg(now)
-	scoreWithin := ""
-	if within != nil {
-		scoreWithin = " AND " + activityWithinProject("a", arg(*within))
-	}
+	contactsPos, admitPos := arg(contacts), arg(scope.admit)
+	narrow := scope.narrowSQL(arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT l.contact_id, `+strengthRecencySQL("l.contact_id")+`
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id
-		 WHERE l.contact_id = ANY($%d) AND `+strengthAdmittedSQL(fmt.Sprintf("$%d::timestamptz", nowPos))+scoreWithin+`
+		 WHERE l.contact_id = ANY($%d) AND `+strengthAdmittedSQL(fmt.Sprintf("$%d::timestamptz", admitPos))+narrow+`
 		 GROUP BY l.contact_id`, contactsPos), args...)
 	if err != nil {
 		return nil, err
 	}
 	byContact := map[ids.ContactID]*RelationshipStrength{}
-	windowStart := now.AddDate(0, 0, -relStrengthWindowDays)
+	windowStart := scope.windowStart()
 	var warm []ids.ContactID
 	var engaged []*time.Time
 	for rows.Next() {
@@ -134,27 +161,24 @@ func liveStrengths(
 	if len(warm) == 0 {
 		return byContact, nil
 	}
-	return byContact, windowRead(ctx, tx, warm, engaged, windowStart, now, within, byContact)
+	return byContact, windowRead(ctx, tx, warm, engaged, scope, byContact)
 }
 
 // windowRead fills the window counts of each warm contact, paired with when
 // it last took part.
 func windowRead(
 	ctx context.Context, tx pgx.Tx, warm []ids.ContactID, engaged []*time.Time,
-	windowStart, now time.Time, within *ids.ProjectID, byContact map[ids.ContactID]*RelationshipStrength,
+	scope foldScope, byContact map[ids.ContactID]*RelationshipStrength,
 ) error {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactsPos, engagedPos := arg(warm), arg(engaged)
-	from, at := fmt.Sprintf("$%d", arg(windowStart)), fmt.Sprintf("$%d::timestamptz", arg(now))
-	scoreWithin := ""
-	if within != nil {
-		scoreWithin = " AND " + activityWithinProject("a", arg(*within))
-	}
+	from, at := fmt.Sprintf("$%d", arg(scope.windowStart())), fmt.Sprintf("$%d::timestamptz", arg(scope.admit))
+	narrow := scope.narrowSQL(arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT w.contact_id, c.*
 		  FROM unnest($%d::uuid[], $%d::timestamptz[]) AS w(contact_id, engaged_at)
-		 CROSS JOIN LATERAL (`+strengthWindowSQL("w.contact_id", "w.engaged_at", from, at, "", scoreWithin)+`) c`,
+		 CROSS JOIN LATERAL (`+strengthWindowSQL("w.contact_id", "w.engaged_at", from, at, "", narrow)+`) c`,
 		contactsPos, engagedPos), args...)
 	if err != nil {
 		return err

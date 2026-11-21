@@ -194,10 +194,11 @@ func changeInputs(
 }
 
 // changeInputsFor is changeInputs for a set of contacts. It runs the shared
-// fold at now and at the start of the comparison window, both narrowed by the
-// same within. Narrowing only one would report the narrowing as the change. The earlier
-// fold reads only what had happened by then, so it does not inherit today's
-// recency. A contact with no qualifying interaction is absent.
+// fold over all history and over the rows dated before the comparison
+// instant, both narrowed by the same within. Narrowing only one would report
+// the narrowing as the change. The earlier fold's last touch is then the last
+// one before that instant, so it does not inherit today's recency. A contact
+// with no qualifying interaction is absent.
 func changeInputsFor(
 	ctx context.Context, tx pgx.Tx, contacts []ids.ContactID,
 	now time.Time, within *ids.ProjectID,
@@ -206,11 +207,12 @@ func changeInputsFor(
 	if len(contacts) == 0 {
 		return out, nil
 	}
-	current, err := liveStrengths(ctx, tx, contacts, now, within)
+	current, err := liveStrengths(ctx, tx, contacts, foldScope{admit: now, within: within})
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading contacts' relationship history: %w", err)
 	}
-	previous, err := liveStrengths(ctx, tx, contacts, now.AddDate(0, 0, -relstrength.ComparisonDays), within)
+	asOf := now.AddDate(0, 0, -relstrength.ComparisonDays)
+	previous, err := liveStrengths(ctx, tx, contacts, foldScope{admit: now, before: &asOf, within: within})
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading contacts' relationship history: %w", err)
 	}

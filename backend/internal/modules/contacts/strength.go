@@ -266,7 +266,7 @@ func contactStrengths(
 	ctx context.Context, tx pgx.Tx, contacts []ids.ContactID,
 	now time.Time, within *ids.ProjectID,
 ) ([]ContactStrength, error) {
-	byContact, err := liveStrengths(ctx, tx, contacts, now, within)
+	byContact, err := liveStrengths(ctx, tx, contacts, foldScope{admit: now, within: within})
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func strengthInputs(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	now time.Time, within *ids.ProjectID, out *RelationshipStrength,
 ) error {
-	folded, err := liveStrengths(ctx, tx, []ids.ContactID{contactID}, now, within)
+	folded, err := liveStrengths(ctx, tx, []ids.ContactID{contactID}, foldScope{admit: now, within: within})
 	if err != nil {
 		return err
 	}
