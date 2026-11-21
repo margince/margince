@@ -73,8 +73,11 @@ func TestEveryRouteBodyFieldIsServedWithItsWordsAndItsAgentRule(t *testing.T) {
 			continue
 		}
 		described++
-		served := servedBodyField(t, f.route, f.name)
-		if got, want := strings.Fields(served["description"].(string)), strings.Fields(f.schema.Description); !slices.Equal(got, want) {
+		served, ok := servedBodyField(t, f.route, f.name)["description"].(string)
+		if !ok {
+			t.Fatalf("%s %s: the catalog serves a description that is not text", f.route, f.name)
+		}
+		if got, want := strings.Fields(served), strings.Fields(f.schema.Description); !slices.Equal(got, want) {
 			t.Errorf("%s %s: the catalog serves %q, want the contract's words %q", f.route, f.name, strings.Join(got, " "), strings.Join(want, " "))
 		}
 	}
@@ -113,8 +116,12 @@ func TestAnAgentIsOfferedTheTimezoneSourcesTheServiceAccepts(t *testing.T) {
 	if gated := routeVerbShapes[route].AgentValues["source"]; !slices.Equal(gated, enforced) {
 		t.Errorf("the agent gate holds source to %v, and the service accepts %v", gated, enforced)
 	}
+	served, ok := servedBodyField(t, route, "source")["enum"].([]any)
+	if !ok {
+		t.Fatalf("the catalog offers source with no enum list: %v", servedBodyField(t, route, "source"))
+	}
 	var offered []string
-	for _, value := range servedBodyField(t, route, "source")["enum"].([]any) {
+	for _, value := range served {
 		word, _ := value.(string)
 		offered = append(offered, word)
 	}

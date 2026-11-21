@@ -37,6 +37,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/mcpe2e"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -389,17 +390,11 @@ func mcpCall(t *testing.T, method, extraParams, name string, views *apps.Provide
 	if envelope.Error != nil {
 		t.Fatalf("%s answered an error: %s", method, envelope.Error)
 	}
-	// Re-marshal through a generic value so the artifact's key order is JSON's
-	// own and not the handler's struct order — the file is compared byte for
-	// byte, and a field reordered in Go would otherwise read as a changed
-	// surface.
-	var canonical any
-	if err := json.Unmarshal(envelope.Result, &canonical); err != nil {
-		t.Fatalf("canonicalising %s: %v", method, err)
-	}
-	stable, err := json.Marshal(canonical)
+	// The file is compared byte for byte, so a field reordered in Go must not
+	// read as a changed surface.
+	stable, err := mcpe2e.CanonicalJSON(envelope.Result)
 	if err != nil {
-		t.Fatalf("re-encoding %s: %v", method, err)
+		t.Fatalf("canonicalising %s: %v", method, err)
 	}
 	return stable
 }
@@ -555,12 +550,8 @@ func servedActionCatalog(t *testing.T) map[string]json.RawMessage {
 		if err != nil {
 			t.Fatalf("the %s action catalog: %v", router, err)
 		}
-		var canonical any
-		if err := json.Unmarshal(answer, &canonical); err != nil {
+		if catalog[router], err = mcpe2e.CanonicalJSON(answer); err != nil {
 			t.Fatalf("the %s action catalog does not decode: %v", router, err)
-		}
-		if catalog[router], err = json.Marshal(canonical); err != nil {
-			t.Fatal(err)
 		}
 	}
 	return catalog

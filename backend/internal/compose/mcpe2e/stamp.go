@@ -129,21 +129,18 @@ func (in *inputs) loadMCP(root string) error {
 	}
 	in.instructions = digest([]byte(info.Instructions))
 	for _, entry := range info.Tools.Tools {
-		// Re-encoded, so the digest reads the entry and not how the file was
-		// laid out: the generator's indentation is not tool copy.
-		var parsed map[string]any
-		if err := json.Unmarshal(entry, &parsed); err != nil {
-			return fmt.Errorf("%s: a tool entry: %w", mcpInfoFile, err)
-		}
-		canonical, err := json.Marshal(parsed)
+		// The generator's indentation is not tool copy.
+		canonical, err := CanonicalJSON(entry)
 		if err != nil {
 			return fmt.Errorf("%s: a tool entry: %w", mcpInfoFile, err)
 		}
-		name, named := parsed["name"].(string)
-		if !named {
-			return fmt.Errorf("%s: a tool entry has no name", mcpInfoFile)
+		var named struct {
+			Name string `json:"name"`
 		}
-		in.tools[name] = canonical
+		if err := json.Unmarshal(entry, &named); err != nil || named.Name == "" {
+			return fmt.Errorf("%s: a tool entry has no name (%v)", mcpInfoFile, err)
+		}
+		in.tools[named.Name] = canonical
 	}
 	if len(in.tools) == 0 {
 		return fmt.Errorf("%s lists no tools", mcpInfoFile)
@@ -152,7 +149,7 @@ func (in *inputs) loadMCP(root string) error {
 		return fmt.Errorf("%s publishes no action catalog to stamp", mcpInfoFile)
 	}
 	for router, answer := range info.ActionCatalog {
-		canonical, err := canonicalJSON(answer)
+		canonical, err := CanonicalJSON(answer)
 		if err != nil {
 			return fmt.Errorf("%s: the %s action catalog: %w", mcpInfoFile, router, err)
 		}
@@ -178,9 +175,9 @@ func (in *inputs) loadMCP(root string) error {
 // name no tool can take.
 const catalogEntry = "actions of "
 
-// canonicalJSON re-encodes a document so its digest reads the content and not
-// how the file was laid out.
-func canonicalJSON(raw json.RawMessage) (json.RawMessage, error) {
+// CanonicalJSON re-encodes a document in JSON's own key order and layout. A
+// digest or a byte comparison then reads the content, not how it was written.
+func CanonicalJSON(raw json.RawMessage) (json.RawMessage, error) {
 	var parsed any
 	if err := json.Unmarshal(raw, &parsed); err != nil {
 		return nil, err
