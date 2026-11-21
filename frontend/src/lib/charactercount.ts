@@ -9,3 +9,16 @@
 export function characterCount(text: string): number {
   return [...text].length;
 }
+
+/**
+ * graphemes splits `text` into what a reader sees as one character, so a cut
+ * never splits a flag, a joined emoji or an accent. Code points stand in where
+ * the browser has no Intl.Segmenter.
+ */
+export function graphemes(text: string): string[] {
+  if (typeof Intl.Segmenter !== "function") {
+    return Array.from(text);
+  }
+  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  return Array.from(segmenter.segment(text), (part) => part.segment);
+}

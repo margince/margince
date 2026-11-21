@@ -392,6 +392,11 @@
 .auth-footer .btn-link[aria-pressed="true"] {
   color: var(--textPrimary);
 }
+/* The sign-in links sit in a label row and a stacked column sized for bare
+   text, so they drop the link's 2px of block padding to keep that spacing. */
+.auth-task .btn.btn-link {
+  padding-block: 0;
+}
 
 /* Bottom row of the task region's grid, on every outcome. In flow rather than
    pinned, so it cannot land on top of the card at 200% zoom — and width-matched

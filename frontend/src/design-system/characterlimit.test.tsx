@@ -47,10 +47,11 @@ describe.each([
     expect(screen.getByRole("status").textContent).toBe(`${LETTERS}🚀`);
   });
 
-  it("takes nothing past the limit", async () => {
+  it("takes nothing past the limit, on screen and in the form", async () => {
     render(<Controlled multiline={multiline} start={`${LETTERS}🚀`} />);
-    await userEvent.type(box(), "b");
+    await userEvent.type(box(), "bc");
     expect(box().value).toBe(`${LETTERS}🚀`);
+    expect(screen.getByRole("status").textContent).toBe(`${LETTERS}🚀`);
   });
 
   it("sets no native limit, which counts UTF-16 units", () => {
@@ -84,5 +85,43 @@ describe("an edit that does not fit", () => {
     fireEvent.compositionEnd(element);
     expect(element.value).toBe(`${LETTERS}v`);
     expect(screen.getByRole("status").textContent).toBe(`${LETTERS}v`);
+  });
+
+  it("never splits a joined emoji or a letter from its mark", async () => {
+    const user = userEvent.setup();
+    render(<Controlled start={"a".repeat(118)} />);
+    await user.click(box());
+    await user.paste("👩‍👩‍👧");
+    expect(box().value).toBe("a".repeat(118));
+    await user.paste("be\u0301");
+    expect(box().value).toBe(`${"a".repeat(118)}b`);
+  });
+});
+
+// A value stored before the limit, or under a wider one, may be longer than it.
+// As with the native attribute, an edit may not add to it and loses nothing.
+describe("a value already over the limit", () => {
+  const STORED = "a".repeat(130);
+
+  it("keeps the rest of the value when a character is deleted", async () => {
+    const user = userEvent.setup();
+    render(<Controlled start={STORED} />);
+    await user.click(box());
+    box().setSelectionRange(5, 5);
+    await user.keyboard("{Backspace}");
+    expect(box().value).toBe("a".repeat(129));
+    await user.keyboard("x");
+    expect(box().value).toBe("a".repeat(129));
+    expect(screen.getByRole("status").textContent).toBe("a".repeat(129));
+  });
+
+  it("refuses a character typed inside it and keeps the rest", async () => {
+    const user = userEvent.setup();
+    render(<Controlled start={STORED} />);
+    await user.click(box());
+    box().setSelectionRange(5, 5);
+    await user.keyboard("x");
+    expect(box().value).toBe(STORED);
+    expect(screen.getByRole("status").textContent).toBe(STORED);
   });
 });

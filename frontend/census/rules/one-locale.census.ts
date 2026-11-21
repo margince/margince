@@ -360,8 +360,8 @@ const pinnedLocales: { file: string; why: string }[] = [
     why: "An MCP app document is inlined whole into a page this product does not own. Importing INTL_LOCALE would be cheap; what is missing is the locale to look it up WITH — no LocaleProvider stands above the document and no signed-in reader's choice reaches inside it, so there is nothing to index the mapping by. The host browser's own locale is the honest remaining answer, and the file says so at the subject.",
   },
   {
-    file: "design-system/relationshipmap.layout.ts",
-    why: "fitLabel segments a label into graphemes only to find where a cut may fall. Extended grapheme clusters are defined by Unicode and do not vary by locale, and nothing is formatted for a reader.",
+    file: "lib/charactercount.ts",
+    why: "graphemes segments text only to find where a cut may fall, for a map label or a text limit. Extended grapheme clusters are defined by Unicode and do not vary by locale, and nothing is formatted for a reader.",
   },
   {
     file: "mcp-apps/values.test.ts",

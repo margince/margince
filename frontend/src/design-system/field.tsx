@@ -18,12 +18,18 @@ export function TextInput({
   maxLength,
   onChange,
   onCompositionEnd,
+  onFocus,
   ...props
 }: ComponentPropsWithRef<"input">) {
   return (
     <input
       {...props}
-      {...withCharacterLimit({ maxLength, onChange, onCompositionEnd })}
+      {...withCharacterLimit({
+        maxLength,
+        onChange,
+        onCompositionEnd,
+        onFocus,
+      })}
       className={`input ${props.className ?? ""}`.trim()}
     />
   );
@@ -74,6 +80,7 @@ export function Textarea({
   maxLength,
   onChange,
   onCompositionEnd,
+  onFocus,
   ...props
 }: ComponentPropsWithRef<"textarea"> & Readonly<{ grow?: boolean }>) {
   // `grow` sizes the box to its text in CSS alone: no measuring on each key.
@@ -82,7 +89,12 @@ export function Textarea({
     <textarea
       rows={grow ? 3 : undefined}
       {...props}
-      {...withCharacterLimit({ maxLength, onChange, onCompositionEnd })}
+      {...withCharacterLimit({
+        maxLength,
+        onChange,
+        onCompositionEnd,
+        onFocus,
+      })}
       className={[grow ? "textarea textarea-grow" : "textarea", props.className]
         .filter(Boolean)
         .join(" ")}
