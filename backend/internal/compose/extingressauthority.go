@@ -156,27 +156,13 @@ func memberConnectedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.U
 	return memberConsentedTx(ctx, tx, unit, member)
 }
 
-// liveMemberAuthority resolves what the member may do RIGHT NOW.
-//
-// Resolved per call rather than carried on the connection, which is what makes
-// a demotion take effect immediately: a member whose grants narrowed since they
-// connected lands less from the next record onward, and one who is archived,
-// suspended or gone lands nothing — identity's resolver answers ErrNotFound for
-// all three rather than an empty-but-valid authority, so the grant dies with
-// them exactly as a connector's does.
-//
-// ONE snapshot for both ceilings. Read separately, a role change and a seat
-// change crossing between the two reads compose an authority the member never
-// held — permissions from before with a seat from after — and capture would
-// then admit a write against a pair that never existed. EffectiveAuthority
-// reads both inside identity's own live-user transaction.
-//
-// The resolver is built from the pool at the call. That is the tree's own idiom
-// for a dependency the pool fully determines, and it is why the runtime binding
-// needs no entry for it.
-func liveMemberAuthority(ctx context.Context, pool *pgxpool.Pool, workspace, member ids.UUID) (authz.RBAC, principal.SeatType, error) {
+// liveMemberPrincipal resolves what the member may do now, per call, so a
+// demotion binds from the next record. An archived, suspended or gone member
+// answers ErrNotFound and lands nothing. The pool-built resolver is why the
+// runtime binding needs no entry for it.
+func liveMemberPrincipal(ctx context.Context, pool *pgxpool.Pool, workspace, member ids.UUID) (principal.Principal, error) {
 	if pool == nil {
-		return authz.RBAC{}, "", errExtensionRuntimeUnwired
+		return principal.Principal{}, errExtensionRuntimeUnwired
 	}
-	return identity.NewService(pool).EffectiveAuthority(ctx, workspace, member)
+	return authz.MemberPrincipal(ctx, identity.NewService(pool), workspace, member)
 }
