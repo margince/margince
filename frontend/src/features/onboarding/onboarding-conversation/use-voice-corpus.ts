@@ -489,6 +489,8 @@ export function useVoiceCorpus({
      * open: a build starting now would misrepresent what the voice is made of. */
     busy:
       probesInFlight > 0 || asks.length > 0 || removing !== null || meterStale,
+    /** True while no fresh summary has answered for the last removal. */
+    meterStale,
     /** Each source of the latest pick the corpus could not add; cleared
      * when the reader hands over the next file, paste or speaker answer. */
     failures,

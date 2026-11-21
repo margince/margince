@@ -295,6 +295,7 @@ function VoiceSurface({
     return (
       <VoiceCollectScene
         summary={corpus.summary}
+        meterKnown={!corpus.meterStale}
         manifest={corpus.manifest}
         failures={corpus.failures}
         fileRef={fileRef}

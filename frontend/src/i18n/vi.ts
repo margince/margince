@@ -13247,6 +13247,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "voice.kinds.docBody": "Bất kỳ văn bản nào bạn tự viết",
   "ob.conv.voice.meterLabel": "Tiến độ tới mức tối thiểu {min} từ",
   "ob.conv.voice.meterProgress": "{words} trên {min} từ",
+  "ob.conv.voice.meterUnknown":
+    "Không có số từ. Số từ sẽ cập nhật khi bạn thêm mẫu tiếp theo.",
   "ob.conv.voice.meterReady":
     "{words} từ: đủ để dựng. Thêm từ sẽ giúp kết quả tốt hơn.",
   "ob.conv.voice.footReady":

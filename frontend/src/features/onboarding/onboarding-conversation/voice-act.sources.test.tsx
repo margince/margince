@@ -185,6 +185,27 @@ describe("the Sources list on the voice step", () => {
     expect(requestsTo(calls, "/builds", "POST")).toHaveLength(0);
   });
 
+  it("shows the word count as unavailable, not the old number, when the meter cannot be read", async () => {
+    stubApi({ afterRemoveStatus: 500 });
+    const user = userEvent.setup();
+    render(
+      <Resumed
+        words={1052}
+        sources={[
+          stored({ id: "s1", source_label: "offer.pdf", word_count: 701 }),
+          stored({ id: "s2", source_label: "notes.txt", word_count: 351 }),
+        ]}
+      />,
+    );
+    expect(screen.getAllByText(/1,052/).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: "Remove offer.pdf" }));
+    expect(
+      await screen.findByText(en["ob.conv.voice.meterUnknown"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(/1,052/)).toBeNull();
+  });
+
   it("names two pasted texts by their own opening words", async () => {
     stubApi({
       ingests: [

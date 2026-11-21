@@ -90,12 +90,20 @@ function useFloorReachedAnnouncement(ready: boolean, words: number): string {
 function VoiceCorpusFloorMeter({
   words,
   ready,
-}: Readonly<{ words: number; ready: boolean }>) {
+}: Readonly<{ words: number | null; ready: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const announcement = useFloorReachedAnnouncement(ready, words);
-  const shown = formatNumber(words, locale);
+  const announcement = useFloorReachedAnnouncement(ready, words ?? 0);
+  const shown = formatNumber(words ?? 0, locale);
   const floor = formatNumber(VOICE_MIN_WORDS, locale);
+  // An unknown count states no figure rather than the last one it held.
+  if (words === null) {
+    return (
+      <p className="ob-voice-meter-line t-sub">
+        {t("ob.conv.voice.meterUnknown")}
+      </p>
+    );
+  }
   return (
     <div className="ob-voice-meter">
       <Meter
@@ -138,9 +146,9 @@ function IntakeRefusals({
 function VoicePrintCard({
   words,
   ready,
-}: Readonly<{ words: number; ready: boolean }>) {
+}: Readonly<{ words: number | null; ready: boolean }>) {
   const t = useT();
-  const fraction = Math.min(words, VOICE_MIN_WORDS) / VOICE_MIN_WORDS;
+  const fraction = Math.min(words ?? 0, VOICE_MIN_WORDS) / VOICE_MIN_WORDS;
   return (
     <section className="ob-voice-print">
       <Eyebrow>{t("ob.conv.voice.printLabel")}</Eyebrow>
@@ -175,6 +183,7 @@ export function VoiceCollectScene({
   onBuild,
   onSkip,
   canBuild,
+  meterKnown = true,
   startPending,
   startError,
 }: Readonly<{
@@ -190,6 +199,8 @@ export function VoiceCollectScene({
   onBuild: () => void;
   onSkip: () => void;
   canBuild: boolean;
+  /** False while the corpus count is unknown, so no stale figure is shown. */
+  meterKnown?: boolean;
   startPending: boolean;
   startError: ReactNode;
 }>) {
@@ -205,11 +216,12 @@ export function VoiceCollectScene({
   // An early press names what is still missing; the foot already states the
   // floor, and saying it twice side by side reads as a glitch.
   const shortBy = VOICE_MIN_WORDS - words;
-  const buildBlocker = floorCleared
-    ? t("ob.conv.voice.waitForSamples")
-    : plural("ob.conv.voice.floorShort", shortBy, {
-        words: formatNumber(shortBy, locale),
-      });
+  const buildBlocker =
+    floorCleared || !meterKnown
+      ? t("ob.conv.voice.waitForSamples")
+      : plural("ob.conv.voice.floorShort", shortBy, {
+          words: formatNumber(shortBy, locale),
+        });
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const pasteOpener = useRef<HTMLButtonElement>(null);
@@ -340,8 +352,14 @@ export function VoiceCollectScene({
           <ErrorLine>{startError}</ErrorLine>
         </div>
         <div className="ob-voice-collect-side">
-          <VoicePrintCard words={words} ready={floorCleared} />
-          <VoiceDistillPanel manifest={manifest} summary={summary} />
+          <VoicePrintCard
+            words={meterKnown ? words : null}
+            ready={floorCleared}
+          />
+          <VoiceDistillPanel
+            manifest={manifest}
+            summary={meterKnown ? summary : null}
+          />
         </div>
       </div>
 

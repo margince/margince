@@ -13605,6 +13605,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "voice.kinds.docBody": "Jeder Text, den du selbst geschrieben hast",
   "ob.conv.voice.meterLabel": "Fortschritt zum Minimum von {min} Wörtern",
   "ob.conv.voice.meterProgress": "{words} von {min} Wörtern",
+  "ob.conv.voice.meterUnknown":
+    "Wortzahl nicht verfügbar. Mit der nächsten Schreibprobe wird sie aktualisiert.",
   "ob.conv.voice.meterReady":
     "{words} Wörter: genug für den Aufbau. Mehr Wörter verbessern das Stilprofil.",
   "ob.conv.voice.footReady":

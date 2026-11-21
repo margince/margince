@@ -13536,6 +13536,8 @@ export const en = {
   "voice.kinds.docBody": "Any text you wrote yourself",
   "ob.conv.voice.meterLabel": "Progress toward the {min}-word minimum",
   "ob.conv.voice.meterProgress": "{words} of {min} words",
+  "ob.conv.voice.meterUnknown":
+    "Word count unavailable. It updates when you add the next sample.",
   "ob.conv.voice.meterReady":
     "{words} words: enough to build. More words improve it.",
   "ob.conv.voice.footReady":
