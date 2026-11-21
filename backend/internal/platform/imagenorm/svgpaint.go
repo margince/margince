@@ -15,7 +15,11 @@ import (
 // selectors in <style>. resolveSVGPaint rewrites both into forms it reads, so
 // the mark draws as a browser draws it.
 
-const svgDefaultColor = "#000000"
+const (
+	svgDefaultColor = "#000000"
+	svgStopColor    = "stop-color"
+	svgStyleAttr    = "style"
+)
 
 // svgMaxPaintBytes bounds one substituted value: it is copied into every use,
 // so its length multiplies into the rewritten document.
@@ -33,15 +37,15 @@ var (
 	// Any other url() is refused, so the rewrite names no external resource.
 	svgSafePaint   = regexp.MustCompile(`^(?:[#A-Za-z0-9 .,%+-]+|(?:rgba?|hsla?)\([0-9 .,%+-]+\)|url\(#[A-Za-z0-9_.:-]+\))$`)
 	svgCSSComment  = regexp.MustCompile(`(?s)/\*.*?\*/`)
-	svgCurrentAttr = map[string]bool{"fill": true, "stroke": true, "stop-color": true, "flood-color": true, "lighting-color": true}
+	svgCurrentAttr = map[string]bool{"fill": true, "stroke": true, svgStopColor: true, "flood-color": true, "lighting-color": true}
 )
 
 // svgCascadedProps are the properties a selector rule is inlined for.
-var svgCascadedProps = []string{"fill", "stroke", "stop-color", "flood-color", "lighting-color"}
+var svgCascadedProps = []string{"fill", "stroke", svgStopColor, "flood-color", "lighting-color"}
 
 // svgAttrOnlyProps are read by the renderer from attributes alone, never from
 // style, so a selector's value for them is written as an attribute.
-var svgAttrOnlyProps = map[string]bool{"stop-color": true}
+var svgAttrOnlyProps = map[string]bool{svgStopColor: true}
 
 // svgCommentMark replaces a CSS comment. It fails svgSafePaint, so a value
 // that is only valid once a comment is removed (u/**/rl) is dropped.
@@ -96,12 +100,12 @@ func resolveSVGPaint(src []byte) ([]byte, error) {
 		var replacement []byte
 		switch t := token.(type) {
 		case xml.StartElement:
-			if strings.EqualFold(t.Name.Local, "style") {
+			if strings.EqualFold(t.Name.Local, svgStyleAttr) {
 				styleDepth++
 			}
 			replacement = paintedStartTag(src[start:end], t, rules, scan.color)
 		case xml.EndElement:
-			if strings.EqualFold(t.Name.Local, "style") {
+			if strings.EqualFold(t.Name.Local, svgStyleAttr) {
 				styleDepth--
 			}
 		case xml.CharData:
@@ -141,11 +145,11 @@ func scanSVGPaint(src []byte) (*svgPaintScan, bool) {
 				rootSeen = true
 				scan.color = svgRootColor(t.Attr)
 			}
-			if strings.EqualFold(t.Name.Local, "style") {
+			if strings.EqualFold(t.Name.Local, svgStyleAttr) {
 				styleDepth++
 			}
 		case xml.EndElement:
-			if strings.EqualFold(t.Name.Local, "style") {
+			if strings.EqualFold(t.Name.Local, svgStyleAttr) {
 				styleDepth--
 			}
 		case xml.CharData:
@@ -165,7 +169,7 @@ func svgRootColor(attrs []xml.Attr) string {
 		switch strings.ToLower(attr.Name.Local) {
 		case "color":
 			color = strings.TrimSpace(attr.Value)
-		case "style":
+		case svgStyleAttr:
 			if decl, ok := parseSVGDeclarations(attr.Value)["color"]; ok {
 				color = decl.value
 			}
@@ -255,6 +259,22 @@ func resolveStyleValues(block, color string) (string, bool) {
 
 // paintedStartTag returns the rewritten start tag, or nil when it needs no change.
 func paintedStartTag(raw []byte, tag xml.StartElement, rules svgSelectorPaint, color string) []byte {
+	matched := matchedSelectorPaint(tag, rules)
+	attrs, style, changed := resolveAttributes(tag.Attr, matched, color)
+	style, resolved := resolveStyleValues(style, color)
+	if !changed && !resolved && len(matched) == 0 {
+		return nil
+	}
+	if len(matched) > 0 || style != "" {
+		value := selectorStyle(matched, color, false) + strings.TrimRight(style, "; ") + ";" + selectorStyle(matched, color, true)
+		attrs = append(attrs, xml.Attr{Name: xml.Name{Local: svgStyleAttr}, Value: value})
+	}
+	return serializeStartTag(tag.Name, attrs, bytes.HasSuffix(raw, []byte("/>")))
+}
+
+// matchedSelectorPaint is the paint the tag and id rules give this element,
+// the id rule ranking above the tag rule.
+func matchedSelectorPaint(tag xml.StartElement, rules svgSelectorPaint) map[string]svgDecl {
 	matched := map[string]svgDecl{}
 	mergeDecl(matched, rules.byTag[strings.ToLower(tag.Name.Local)])
 	for _, attr := range tag.Attr {
@@ -262,13 +282,18 @@ func paintedStartTag(raw []byte, tag xml.StartElement, rules svgSelectorPaint, c
 			mergeDecl(matched, rules.byID[attr.Value])
 		}
 	}
-	changed := len(matched) > 0
-	attrs := make([]xml.Attr, 0, len(tag.Attr)+1)
-	style := ""
-	for _, attr := range tag.Attr {
+	return matched
+}
+
+// resolveAttributes returns the element's attributes without its style, which
+// comes back apart, with currentColor resolved and attribute-only selector
+// paint added. changed reports an attribute that was rewritten or added.
+func resolveAttributes(in []xml.Attr, matched map[string]svgDecl, color string) (attrs []xml.Attr, style string, changed bool) {
+	attrs = make([]xml.Attr, 0, len(in)+1)
+	for _, attr := range in {
 		name := strings.ToLower(attr.Name.Local)
 		switch {
-		case attr.Name.Space == "" && name == "style":
+		case attr.Name.Space == "" && name == svgStyleAttr:
 			style = attr.Value
 			continue
 		case svgAttrOnlyProps[name] && matched[name].value != "":
@@ -284,15 +309,7 @@ func paintedStartTag(raw []byte, tag xml.StartElement, rules svgSelectorPaint, c
 			attrs = append(attrs, xml.Attr{Name: xml.Name{Local: key}, Value: resolvedPaint(decl.value, color)})
 		}
 	}
-	style, resolved := resolveStyleValues(style, color)
-	if !changed && !resolved {
-		return nil
-	}
-	if len(matched) > 0 || style != "" {
-		value := selectorStyle(matched, color, false) + strings.TrimRight(style, "; ") + ";" + selectorStyle(matched, color, true)
-		attrs = append(attrs, xml.Attr{Name: xml.Name{Local: "style"}, Value: value})
-	}
-	return serializeStartTag(tag.Name, attrs, bytes.HasSuffix(raw, []byte("/>")))
+	return attrs, style, changed
 }
 
 // selectorStyle writes the matched paint of one importance. The renderer reads

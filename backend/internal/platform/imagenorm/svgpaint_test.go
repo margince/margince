@@ -62,11 +62,17 @@ func TestDecodeAppliesElementAndIdSelectorsToTheShapesTheyMatch(t *testing.T) {
 		"class still works": {`<svg ` + paintOpen + `><style>.a{fill:#ff6600}</style>` + wholeCanvasCircle + ` class="a"/></svg>`, orange},
 		"id beats element":  {`<svg ` + paintOpen + `><style>circle{fill:#0000ff} #mark{fill:#ff6600}</style>` + wholeCanvasCircle + ` id="mark"/></svg>`, orange},
 		"inline style beats the selector": {
-			`<svg ` + paintOpen + `><style>circle{fill:#0000ff}</style>` + wholeCanvasCircle + ` style="fill:#ff6600"/></svg>`, orange},
+			`<svg ` + paintOpen + `><style>circle{fill:#0000ff}</style>` + wholeCanvasCircle + ` style="fill:#ff6600"/></svg>`,
+			orange,
+		},
 		"selector beats the presentation attribute": {
-			`<svg ` + paintOpen + `><style>circle{fill:#0000ff}</style>` + wholeCanvasCircle + ` fill="#ff6600"/></svg>`, blue},
+			`<svg ` + paintOpen + `><style>circle{fill:#0000ff}</style>` + wholeCanvasCircle + ` fill="#ff6600"/></svg>`,
+			blue,
+		},
 		"selector paints currentColor": {
-			`<svg ` + paintOpen + ` color="#ff6600"><style>circle{fill:currentColor}</style>` + wholeCanvasCircle + `/></svg>`, orange},
+			`<svg ` + paintOpen + ` color="#ff6600"><style>circle{fill:currentColor}</style>` + wholeCanvasCircle + `/></svg>`,
+			orange,
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
