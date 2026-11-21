@@ -238,9 +238,9 @@ func (d *threadDocuments) fetch(ctx context.Context, id ids.UUID) ([]byte, strin
 }
 
 // excerpt parses the bytes under the file's own time bound. A parse failure is
-// the file's and marks it unreadable; the caller's own cancellation is not, and
-// defers the thread. The PDF engine compiles before the bound starts: on a busy
-// host the compile alone can outlast it, and no file is to blame for that.
+// the file's and marks it unreadable. The caller's own cancellation is not, and
+// defers the thread. The PDF engine compiles before the bound starts, because
+// on a busy host the compile alone can outlast it.
 func (d *threadDocuments) excerpt(ctx context.Context, doc *capture.ThreadDocument, raw []byte, mediaType string) error {
 	if capture.IsThreadImage(doc.Filename, mediaType) {
 		doc.Unreadable = true
