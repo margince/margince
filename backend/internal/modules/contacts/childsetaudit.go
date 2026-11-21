@@ -4,12 +4,8 @@
 package contacts
 
 // A contact's emails and phones and a company's domains live in tables of
-// their own, so Put back judges them by the audit trail. The latest later entry
-// that names the key holds the current value.
-//
-// A writer that leaves the key out is invisible to that judgement, and
-// replaying an earlier entry would drop its rows. TestEveryWriterOfAChildSetAuditsItsKey
-// fails a writer that never reaches one of the three doors below.
+// their own. The doors below put a set into an audit image in the one shape
+// the history screen and the restore replay read.
 
 import (
 	"context"
@@ -29,23 +25,20 @@ const (
 )
 
 // recordEmails puts a contact's address set into an audit image pair.
-//
-//gate:child-set-audit-door
+
 func recordEmails(before, after map[string]any, was, now *[]crmcontracts.ContactEmail) {
 	before[auditKeyEmails], after[auditKeyEmails] = was, now
 }
 
 // recordPhones puts a contact's number set into an audit image pair.
-//
-//gate:child-set-audit-door
+
 func recordPhones(before, after map[string]any, was, now *[]crmcontracts.ContactPhone) {
 	before[auditKeyPhones], after[auditKeyPhones] = was, now
 }
 
 // recordDomains puts a company's domain set into an audit image pair, in the
 // rows readLiveDomains and domainSummaries produce.
-//
-//gate:child-set-audit-door
+
 func recordDomains(before, after map[string]any, was, now []map[string]any) {
 	before[auditKeyDomains], after[auditKeyDomains] = was, now
 }
@@ -117,28 +110,21 @@ func sameDomainRows(a, b []map[string]any) bool {
 	return slices.Equal(keys(a), keys(b))
 }
 
-// mergedDomainsSeen is the domains of both companies of a merge before it
-// moves them.
-type mergedDomainsSeen struct{ source, target companyDomainsSeen }
-
-func seeMergedDomains(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) (mergedDomainsSeen, error) {
-	source, err := seeCompanyDomains(ctx, tx, sourceID)
-	if err != nil {
-		return mergedDomainsSeen{}, err
+// touchChildSetParent moves the owning record's version after a write that
+// changed only its child rows. Without it a Put back judged before the write
+// can run after it with a version that still matches, and replace the set.
+func touchChildSetParent(ctx context.Context, tx pgx.Tx, entity string, id ids.UUID) error {
+	var query string
+	switch entity {
+	case contactEntity:
+		query = `UPDATE contact SET version = version + 1 WHERE id = $1`
+	case entityCompany:
+		query = `UPDATE company SET version = version + 1 WHERE id = $1`
+	default:
+		return fmt.Errorf("contacts: %q has no child sets to touch", entity)
 	}
-	target, err := seeCompanyDomains(ctx, tx, targetID)
-	return mergedDomainsSeen{source: source, target: target}, err
-}
-
-// mergedContactSetsSeen is the emails and phones of both contacts of a merge
-// before it moves them.
-type mergedContactSetsSeen struct{ source, target contactSetsSeen }
-
-func seeMergedContactSets(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (mergedContactSetsSeen, error) {
-	source, err := seeContactSets(ctx, tx, sourceID)
-	if err != nil {
-		return mergedContactSetsSeen{}, err
+	if _, err := tx.Exec(ctx, query, id); err != nil {
+		return fmt.Errorf("contacts: marking the %s changed by its child rows: %w", entity, err)
 	}
-	target, err := seeContactSets(ctx, tx, targetID)
-	return mergedContactSetsSeen{source: source, target: target}, err
+	return nil
 }

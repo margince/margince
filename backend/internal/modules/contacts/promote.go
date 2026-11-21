@@ -449,6 +449,9 @@ func carryLeadPhone(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, cont
 	if err := insertContactPhones(ctx, tx, contactID, lead.Source, by, phones); err != nil {
 		return err
 	}
+	if err := touchChildSetParent(ctx, tx, contactEntity, contactID.UUID); err != nil {
+		return err
+	}
 	before, after := map[string]any{}, map[string]any{}
 	if err := seen.recordContactSetChange(ctx, tx, contactID, before, after); err != nil || len(after) == 0 {
 		return err

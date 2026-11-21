@@ -204,10 +204,6 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err := s.bindRequestsToTheirAddressesTx(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
-	sets, err := seeMergedContactSets(ctx, tx, sourceID, targetID)
-	if err != nil {
-		return crmcontracts.Contact{}, nil, err
-	}
 	if err := yieldPreferredSlots(ctx, tx, sourceID, targetID, prefer); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
@@ -228,7 +224,7 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 		return crmcontracts.Contact{}, nil, err
 	}
 	if err := settleContactMerge(ctx, tx, tgtLock, buildSurvivorshipPatch(tgt, src, sourceID, prefer),
-		sourceID, targetID, counts, sets, prefer.wonBy(sourceID)); err != nil {
+		sourceID, targetID, counts, prefer.wonBy(sourceID)); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
 	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
@@ -241,7 +237,7 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 // settleContactMerge applies the survivorship patch, retires the merged-away
 // contact and audits the merge.
 func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock, p *storekit.Patch,
-	sourceID, targetID ids.ContactID, counts relinkCounts, sets mergedContactSetsSeen, won []string,
+	sourceID, targetID ids.ContactID, counts relinkCounts, won []string,
 ) error {
 	if !p.Empty() {
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
@@ -253,21 +249,18 @@ func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock
 	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("retire merged-away contact: %w", err)
 	}
-	return auditContactMerge(ctx, tx, sourceID, targetID, counts, sets, p, won)
+	return auditContactMerge(ctx, tx, sourceID, targetID, counts, p, won)
 }
 
 // auditContactMerge records the merge on both rows and emits contact.merged.
-func auditContactMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, counts relinkCounts, sets mergedContactSetsSeen, p *storekit.Patch, won []string) error {
-	sourceBefore := map[string]any{auditKeyMergedInto: nil}
-	sourceAfter := map[string]any{
-		auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(p.After()),
-		auditKeyRelinkedEmails: counts.Emails, auditKeyRelinkedPhones: counts.Phones,
-		auditKeyRelinkedRelationships: counts.Relationships, auditKeyRelinkedActivityLinks: counts.ActivityLinks,
-	}
-	if err := sets.source.recordContactSetChange(ctx, tx, sourceID, sourceBefore, sourceAfter); err != nil {
-		return err
-	}
-	auditID, err := storekit.Audit(ctx, tx, "merge", contactEntity, sourceID.UUID, sourceBefore, sourceAfter)
+func auditContactMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, counts relinkCounts, p *storekit.Patch, won []string) error {
+	auditID, err := storekit.Audit(ctx, tx, "merge", contactEntity, sourceID.UUID,
+		map[string]any{auditKeyMergedInto: nil},
+		map[string]any{
+			auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(p.After()),
+			auditKeyRelinkedEmails: counts.Emails, auditKeyRelinkedPhones: counts.Phones,
+			auditKeyRelinkedRelationships: counts.Relationships, auditKeyRelinkedActivityLinks: counts.ActivityLinks,
+		})
 	if err != nil {
 		return fmt.Errorf("audit contact merge: %w", err)
 	}
@@ -288,9 +281,6 @@ func auditContactMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Co
 	}
 	maps.Copy(before, p.Before())
 	maps.Copy(after, p.After())
-	if err := sets.target.recordContactSetChange(ctx, tx, targetID, before, after); err != nil {
-		return err
-	}
 	if _, err := storekit.Audit(ctx, tx, "merge", contactEntity, targetID.UUID, before, after); err != nil {
 		return fmt.Errorf("audit contact merge on the survivor: %w", err)
 	}

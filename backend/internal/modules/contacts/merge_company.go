@@ -100,10 +100,6 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	domains, err := seeMergedDomains(ctx, tx, sourceID, targetID)
-	if err != nil {
-		return crmcontracts.Company{}, err
-	}
 	targetIsPartner, err := relinkCompanyAssociations(ctx, tx, sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Company{}, err
@@ -118,7 +114,7 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	out, err := finalizeCompanyMerge(ctx, tx, sourceID, targetID, filled, domains, active)
+	out, err := finalizeCompanyMerge(ctx, tx, sourceID, targetID, filled, active)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -215,13 +211,10 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 // finalizeCompanyMerge retires the merged-away company and records the merge on the
 // write shape — audit row plus company.merged event in the one
 // transaction — then returns the reloaded survivor.
-func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, filled map[string]any, domains mergedDomainsSeen, active []fieldcatalog.Column) (crmcontracts.Company, error) {
-	sourceBefore := map[string]any{auditKeyMergedInto: nil}
-	sourceAfter := map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(filled)}
-	if err := domains.source.recordCompanyDomainChange(ctx, tx, sourceID, sourceBefore, sourceAfter); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	auditID, err := storekit.Audit(ctx, tx, "merge", "company", sourceID.UUID, sourceBefore, sourceAfter)
+func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, filled map[string]any, active []fieldcatalog.Column) (crmcontracts.Company, error) {
+	auditID, err := storekit.Audit(ctx, tx, "merge", "company", sourceID.UUID,
+		map[string]any{auditKeyMergedInto: nil},
+		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(filled)})
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("audit company merge: %w", err)
 	}
@@ -235,9 +228,6 @@ func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 	after := map[string]any{auditKeyMergedFrom: sourceID.UUID}
 	maps.Copy(before, heldNothing(filled))
 	maps.Copy(after, filled)
-	if err := domains.target.recordCompanyDomainChange(ctx, tx, targetID, before, after); err != nil {
-		return crmcontracts.Company{}, err
-	}
 	if _, err := storekit.Audit(ctx, tx, "merge", "company", targetID.UUID, before, after); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("audit company merge on the survivor: %w", err)
 	}

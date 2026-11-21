@@ -175,10 +175,8 @@ func (s *Store) adoptDomainIntoCompany(
 	// could replace the domain set and silently drop the domain just added,
 	// with no conflict to notice. The same bump an ordinary domain replace-set
 	// makes, for the same reason.
-	if _, err := tx.Exec(ctx,
-		`UPDATE company SET version = version + 1 WHERE id = $1`,
-		companyID); err != nil {
-		return nil, fmt.Errorf("contacts: marking the company changed by an adopted domain: %w", err)
+	if err := touchChildSetParent(ctx, tx, entityCompany, companyID.UUID); err != nil {
+		return nil, err
 	}
 	beforeImage, afterImage := map[string]any{}, map[string]any{}
 	if err := seen.recordCompanyDomainChange(ctx, tx, companyID, beforeImage, afterImage); err != nil {

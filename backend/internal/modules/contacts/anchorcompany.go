@@ -392,9 +392,6 @@ type anchorTarget struct {
 	before  map[string]any
 	// rows are the profile-field rows behind the columns, read with before.
 	rows map[string]profileFieldRow
-	// domains are the company's domains as the save found them. A website can
-	// move the primary one.
-	domains companyDomainsSeen
 	// named is true when this save wrote the anchor's display name.
 	named bool
 }
@@ -445,10 +442,6 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 	if err != nil {
 		return anchorTarget{}, err
 	}
-	domains, err := seeCompanyDomains(ctx, tx, companyID)
-	if err != nil {
-		return anchorTarget{}, err
-	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE company SET display_name = $2
 		 WHERE id = $1 AND display_name IS DISTINCT FROM $2`,
@@ -465,5 +458,5 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 			return anchorTarget{}, err
 		}
 	}
-	return anchorTarget{id: companyID, before: before, rows: rows, domains: domains, named: tag.RowsAffected() > 0}, nil
+	return anchorTarget{id: companyID, before: before, rows: rows, named: tag.RowsAffected() > 0}, nil
 }

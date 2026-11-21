@@ -324,6 +324,9 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 	if err != nil {
 		return err
 	}
+	if err := touchChildSetParent(ctx, tx, entityContact, contactID.UUID); err != nil {
+		return err
+	}
 	if !revived {
 		// The row stopped being ours to revive between the read and here. The
 		// replacement is already retired, so refusing leaves the contact one
