@@ -11,26 +11,14 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/importkeys"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// linkedInClaimed reports whether the store refused a write because another
-// live company or lead holds its LinkedIn URL.
-func linkedInClaimed(err error) bool {
-	if _, ok := errors.AsType[*contacts.DuplicateCompanyLinkedInError](err); ok {
-		return true
-	}
-	_, ok := errors.AsType[*contacts.DuplicateLeadLinkedInError](err)
-	return ok
-}
 
 // keysOf spells the keys a row of this writer's type holds, the way the store
 // compares them. A company's LinkedIn URL and domain compare without case. A
@@ -59,50 +47,21 @@ func (w *csvWriters) claimRow(row migration.Row, typed map[string]any) {
 	w.links.claims.Claim(w.object, w.keysOf(row, typed))
 }
 
-// keyCheck is one key the create door refuses: held by an earlier row of the
-// run, or by a stored record.
-type keyCheck struct {
-	why    migration.Reason
-	inFile bool
-	stored func() (bool, error)
+// movedKeyFields are the columns whose change moves a key.
+var movedKeyFields = map[string]importkeys.Kind{fieldEmail: importkeys.Email, fieldLinkedIn: importkeys.LinkedIn, fieldDomain: importkeys.Domain}
+
+// movedKeyRefusal says why an update cannot move a key onto its record, or the
+// zero reason. The test run and the import both ask before they write, so the
+// preview promises only an update the import makes.
+func (w *csvWriters) movedKeyRefusal(ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any, changed map[string]string) (migration.Reason, error) {
+	return importkeys.MovedKeyWhy(ctx, w.pool, w.links.claims, w.object, id, w.keysOf(row, typed), importkeys.MovedKinds(changed, movedKeyFields))
 }
 
 // keyChecks are the refusals the create door of the row's type makes, in its order.
-func (w *csvWriters) keyChecks(ctx context.Context, row migration.Row, typed map[string]any) []keyCheck {
-	keys, ledger := w.keysOf(row, typed), w.links.claims
-	email, url := strings.TrimSpace(textFields(row.Fields)[fieldEmail]), keys[importkeys.LinkedIn]
-	linkedIn := keyCheck{
-		linkedInClaimedWhy, ledger.Held(importkeys.LinkedIn, url, w.object),
-		func() (bool, error) { return importkeys.LinkedInHeld(ctx, w.pool, w.object, url) },
-	}
-	switch w.object {
-	case migration.ObjectContact:
-		return []keyCheck{{
-			contactEmailClaimedWhy,
-			ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectContact, migration.ObjectLead),
-			func() (bool, error) { return w.contactEmailAlreadyHeld(ctx, row) },
-		}}
-	case migration.ObjectLead:
-		return []keyCheck{
-			{
-				naturalKeyTakenWhy, ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectLead),
-				func() (bool, error) { return importkeys.LeadEmailHeld(ctx, w.pool, email) },
-			},
-			linkedIn,
-			{
-				contactHoldsLeadWhy, ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectContact) ||
-					ledger.Held(importkeys.LinkedIn, url, migration.ObjectContact),
-				func() (bool, error) { return importkeys.ContactHoldsLeadKeys(ctx, w.pool, email, url) },
-			},
-		}
-	case migration.ObjectCompany:
-		domain := keys[importkeys.Domain]
-		return []keyCheck{{
-			domainClaimedWhy, ledger.Held(importkeys.Domain, domain, migration.ObjectCompany),
-			func() (bool, error) { return importkeys.DomainHeld(ctx, w.pool, domain) },
-		}, linkedIn}
-	}
-	return nil
+func (w *csvWriters) keyChecks(ctx context.Context, row migration.Row, typed map[string]any) []importkeys.KeyCheck {
+	email := strings.TrimSpace(textFields(row.Fields)[fieldEmail])
+	return importkeys.CreateKeyChecks(ctx, w.pool, w.links.claims, w.object, w.keysOf(row, typed), email,
+		func() (bool, error) { return w.contactEmailAlreadyHeld(ctx, row) })
 }
 
 // newRecordRefusal says why the row cannot land as a new record, or the zero
@@ -117,15 +76,15 @@ func (w *csvWriters) newRecordRefusal(ctx context.Context, row migration.Row, ty
 		return companyNameEmptyWhy, nil
 	}
 	for _, check := range w.keyChecks(ctx, row, typed) {
-		if check.inFile {
-			return check.why, nil
+		if check.InFile {
+			return check.Why, nil
 		}
-		held, err := check.stored()
+		held, err := check.Stored()
 		if err != nil {
 			return migration.Reason{}, err
 		}
 		if held {
-			return check.why, nil
+			return check.Why, nil
 		}
 	}
 	return migration.Reason{}, nil
