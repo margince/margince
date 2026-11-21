@@ -125,6 +125,9 @@ type DealCoverage struct {
 	// as "do not judge" exactly as it reads a zero LastTouchAt: a fixture that
 	// never described a clock has not described a cold deal either.
 	TouchedAsOf time.Time
+	// QuietSuppressed says a running pause or a meeting booked ahead silences
+	// going-cold, as it silences "stalled" (deals.QuietSuppressed).
+	QuietSuppressed bool
 	// Zone is the installation zone going-cold counts its days in, the zone the
 	// reader sees the touch date in. Unset on a coverage built by hand, which
 	// goingCold reads as "do not judge" like a zero TouchedAsOf.
@@ -229,7 +232,7 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 	}
 	out.Status, out.LastTouchAt, out.EverTouched = facts.status, facts.lastTouchAt, facts.everTouched
 	out.LastTouchDateOnly = facts.lastTouchDateOnly
-	out.TouchedAsOf = facts.asOf
+	out.TouchedAsOf, out.QuietSuppressed = facts.asOf, facts.quietSuppressed
 	if out.Zone, err = identity.ZoneAppliedTx(ctx, tx); err != nil {
 		return out, err
 	}
@@ -405,6 +408,9 @@ func departureRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 // built by hand described no clock, so it described no silence either.
 func goingCold(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
 	if c.Status != dealStatusOpen || c.LastTouchAt.IsZero() || c.TouchedAsOf.IsZero() || c.Zone == nil {
+		return Risk{}, false
+	}
+	if c.QuietSuppressed {
 		return Risk{}, false
 	}
 	days := occurredday.DaysSince(occurredday.Moment{At: c.LastTouchAt, DateOnly: c.LastTouchDateOnly}, c.TouchedAsOf, c.Zone)

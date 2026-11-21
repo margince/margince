@@ -231,12 +231,10 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 		return internalFaultAdvice
 	}
 
-	// A classified refusal is not a fault of ours, so it is not logged as
-	// one — except where a sentinel wrapped a driver failure, which is. In
-	// that case Classify has already withheld the driver's text from Detail,
-	// so the operator's half is logged and the agent still sees only the
-	// sentinel's own words.
-	if fault.InfraCause != nil {
+	// A classified refusal is not our fault and is logged as a refusal. A
+	// driver failure answered as a 5xx is ours. Classify has already withheld
+	// the driver's text from Detail either way.
+	if fault.InfraCause != nil && !fault.CallersToFix() {
 		s.log.Error("mcp: tool call failed", "tool", tool, "err", fault.InfraCause)
 	} else {
 		s.log.Warn("mcp: tool call refused", "tool", tool, "code", fault.Code, "err", err)

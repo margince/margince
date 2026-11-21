@@ -276,7 +276,7 @@ func DeriveSlug(label string) string {
 // ColumnName derives the cf_-prefixed physical column identifier from slug
 // (CUSTOM-FIELDS-PARAM-3) — never client-supplied, immutable once live.
 func ColumnName(slug string) string {
-	return "cf_" + slug
+	return storekit.CustomColumnPrefix + slug
 }
 
 var identifierRe = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
@@ -399,7 +399,7 @@ func BuildDDL(object, columnName string, spec FieldSpec) (string, error) {
 // boundary, so they carry the same defense-in-depth check rather than
 // trust an upstream caller.
 func typedCheckConstraintClause(columnName, fieldType string, options []string) (checkName, clause string, err error) {
-	checkName = columnName + "_check"
+	checkName = storekit.PicklistConstraint(columnName)
 	if !validIdentifier(checkName) {
 		return "", "", fmt.Errorf("customfields: invalid check-constraint identifier %q", checkName)
 	}
