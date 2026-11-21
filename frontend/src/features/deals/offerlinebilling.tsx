@@ -240,18 +240,41 @@ function sameBilling(a: LineBilling, b: LineBilling): boolean {
   );
 }
 
+type BillingField = keyof LineBilling;
+
+const BILLING_FIELDS: readonly BillingField[] = [
+  "billingModel",
+  "billingIntervalMonths",
+  "intervalCount",
+];
+
+// The fields the reader changed whose value no saved answer has shown yet.
+function editedSince(
+  edited: ReadonlySet<BillingField>,
+  before: LineBilling,
+  after: LineBilling,
+): ReadonlySet<BillingField> {
+  const next = new Set(edited);
+  for (const field of BILLING_FIELDS) {
+    if (before[field] !== after[field]) next.add(field);
+  }
+  return next;
+}
+
+// A newer answer moves each control the reader has not edited. An edited one
+// stays, and its mark clears once an answer shows the value it holds.
 function reconciled(
   value: LineBilling,
-  base: LineBilling,
+  edited: ReadonlySet<BillingField>,
   saved: LineBilling,
-): LineBilling {
-  const pick = (field: keyof LineBilling) =>
-    value[field] === base[field] ? saved[field] : value[field];
-  return {
-    billingModel: pick("billingModel"),
-    billingIntervalMonths: pick("billingIntervalMonths"),
-    intervalCount: pick("intervalCount"),
-  };
+): [LineBilling, ReadonlySet<BillingField>] {
+  const next = { ...value };
+  const still = new Set<BillingField>();
+  for (const field of BILLING_FIELDS) {
+    if (!edited.has(field)) next[field] = saved[field];
+    else if (saved[field] !== value[field]) still.add(field);
+  }
+  return [next, still];
 }
 
 // The three controls in a line's row: a pick saves at once, the term on blur.
@@ -266,22 +289,29 @@ export function BillingCell({
 }>) {
   const saved = lineBillingOf(line);
   const [value, setValue] = useState(saved);
-  // The saved terms the controls last took. A newer answer moves each control
-  // the reader has not changed since, and keeps one still being edited.
+  // Typed back to the old value, a field still counts as edited.
+  const [edited, setEdited] = useState<ReadonlySet<BillingField>>(new Set());
   const [base, setBase] = useState(saved);
   if (!sameBilling(base, saved)) {
+    const [next, still] = reconciled(value, edited, saved);
     setBase(saved);
-    setValue(reconciled(value, base, saved));
+    setValue(next);
+    setEdited(still);
   }
+  const change = (next: LineBilling) => {
+    setEdited(editedSince(edited, value, next));
+    setValue(next);
+  };
   const commit = (next: LineBilling) => {
     const patch = lineBillingPatch(next);
     // A line just made recurring waits for its period; a saved period is put
     // back, since the server keeps it until another one is picked.
     if (!patch && line.billing_interval_months) {
-      setValue(lineBillingOf(line));
+      setValue(saved);
+      setEdited(new Set());
       return;
     }
-    setValue(next);
+    change(next);
     if (patch) {
       onSave(patch);
     }
@@ -292,10 +322,15 @@ export function BillingCell({
         value={value}
         label={label}
         onChange={commit}
-        onTermTyped={(intervalCount) => setValue({ ...value, intervalCount })}
+        onTermTyped={(intervalCount) => change({ ...value, intervalCount })}
         onTermBlur={() => {
-          if (value.intervalCount !== lineBillingOf(line).intervalCount) {
+          if (value.intervalCount !== saved.intervalCount) {
             commit(value);
+          } else if (edited.has("intervalCount")) {
+            // Left at the saved term: nothing is waiting for an answer.
+            const rest = new Set(edited);
+            rest.delete("intervalCount");
+            setEdited(rest);
           }
         }}
       />

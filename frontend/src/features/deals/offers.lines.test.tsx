@@ -461,6 +461,50 @@ describe("a line's billing", () => {
     expect(sent[1]).toMatchObject({ interval_count: 12 });
   });
 
+  it("keeps a term typed back to its old value while an earlier term is answered", async () => {
+    const quarterly: OfferLineItem = {
+      ...line1,
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: 4,
+    };
+    const sent: unknown[] = [];
+    const answers: ((response: Response) => void)[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ offer: ["read", "update"] }),
+      "GET /offers/o-1": () => jsonResponse(draft([quarterly])),
+      "PATCH /offers/o-1/line-items/li-1": (body) => {
+        sent.push(body);
+        return new Promise<Response>((resolve) => answers.push(resolve));
+      },
+    });
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+    const periods = () =>
+      screen.getByRole("spinbutton", { name: "Periods, line 1" });
+
+    await user.clear(periods());
+    await user.type(periods(), "6");
+    await user.tab();
+    await waitFor(() => expect(sent).toHaveLength(1));
+    await user.clear(periods());
+    await user.type(periods(), "4");
+    const six: OfferLineItem = {
+      ...quarterly,
+      interval_count: 6,
+      line_total_minor: 4321,
+      version: 2,
+    };
+    answers[0](jsonResponse(draft([six])));
+
+    expect(await screen.findByText("€43.21")).toBeTruthy();
+    expect(periods()).toHaveProperty("value", "4");
+    await user.tab();
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]).toMatchObject({ interval_count: 4 });
+  });
+
   it("saves a line made recurring only once it has a period", async () => {
     const calls = serve(draft([line1]), () => ({
       status: 200,
