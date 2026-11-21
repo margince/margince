@@ -267,7 +267,7 @@ Also called: bulk reassign, hand over accounts, transfer deals, a colleague left
 ### What can I do to several records at once?
 The bar for many rows on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and **Archive**. On **Deals** it also offers **Move to stage** (open stages only). On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**).
 
-**Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do; your own company is never archived. A change of more than 10 records shows a "Large change" warning. You cannot win or lose many deals at once. After a change, the message that says how many changed has an **Undo** button. You cannot change custom fields on many records at once.
+**Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do; your own company is never archived. A change of more than 10 records shows a "Large change" warning. You cannot win or lose many deals at once. After a change, the message that says how many changed has an **Undo** button, except after **Move to stage** and **Disqualify**, which cannot be undone in bulk. **Move to stage** names the stage and says how many deals move and how many are already there before it moves anything. You cannot change custom fields on many records at once.
 
 Also called: bulk actions, mass archive, bulk disqualify.
 

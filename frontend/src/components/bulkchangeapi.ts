@@ -14,6 +14,9 @@ type BulkChangePreview = components["schemas"]["BulkChangePreview"];
 
 /** The contract's bound on one bulk selection (`BulkChangePreviewRequest.items`). */
 export const BULK_MAX_ITEMS = 500;
+
+/** More rows than this is a Large change; the server holds the same line (bulkConfirmAbove). */
+export const BULK_CONFIRM_ABOVE = 10;
 type BulkChangeResult = components["schemas"]["BulkChangeResult"];
 
 // The one request body both halves send. The preview and the execute must name

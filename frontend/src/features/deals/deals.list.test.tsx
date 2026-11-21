@@ -284,6 +284,11 @@ describe("DealsScreen", () => {
       "Proposal",
     );
     await user.click(screen.getByRole("button", { name: "Move" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Move",
+      }),
+    );
 
     // One write, for the row that moves.
     await waitFor(() => expect(advances.length).toBe(1));

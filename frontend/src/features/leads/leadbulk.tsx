@@ -312,7 +312,8 @@ export function LeadBulkBar({
         }))}
       />
       <Button
-        disabled={run.isPending || leads.length === 0}
+        disabled={leads.length === 0}
+        pending={run.isPending && run.variables?.action.kind === "disqualify"}
         // The same requirement, and the same sentence, as the single-lead
         // dialog: a batch closed with no reason is exactly what the
         // administered list exists to prevent.

@@ -3,8 +3,11 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { BULK_CONFIRM_ABOVE } from "../../components/bulkchangeapi";
 import { BulkVerbs } from "../../components/bulkverbs";
 import { Button } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
+import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
@@ -30,6 +33,10 @@ export type DealBulkOutcome = { id: string; name: string; error?: string };
  * holds; a row that moved under the reader answers 409, is reported by name,
  * and can be retried once the list has refetched.
  *
+ * Move first says how many deals move and how many are already there, and
+ * warns past ten rows. Nothing is written until Confirm. There is no Undo,
+ * because the server has no bulk stage verb to undo with.
+ *
  * Only OPEN stages are offered. Closing a deal asks for a lost reason and
  * freezes an exchange rate, and doing that to a dozen deals behind one button
  * — with one reason standing for all of them — is not a thing this bar should
@@ -53,6 +60,7 @@ export function DealBulkBar({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [stageId, setStageId] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const [outcomes, setOutcomes] = useState<readonly DealBulkOutcome[]>([]);
   const openStages = stages.filter((stage) => stage.semantic === "open");
 
@@ -161,16 +169,19 @@ export function DealBulkBar({
       .filter(Boolean)
       .join(" ");
 
+  // The dialog and Confirm both read these rows, so the preview cannot name
+  // a row the move does not touch.
+  const toStageName =
+    openStages.find((stage) => stage.id === stageId)?.name ?? "";
+  const rowsToMove = deals.filter((deal) => deal.stage_id !== stageId);
+
   const moveStage = () => {
     // A deal already in the target stage is left alone. The server treats
     // every advance as a transition: it writes a stage-history row and emits
     // deal.stage_changed without asking whether anything moved. One sent for
     // a row already there would record a move that never happened, in the
     // table the velocity reports read.
-    const rows = deals.filter((deal) => deal.stage_id !== stageId);
-    const toStageName =
-      openStages.find((stage) => stage.id === stageId)?.name ?? "";
-    if (rows.length === 0) {
+    if (rowsToMove.length === 0) {
       // Nothing ran, so the selection stays for another stage.
       toast.show(
         plural(
@@ -182,11 +193,16 @@ export function DealBulkBar({
       );
       return;
     }
+    setConfirming(true);
+  };
+
+  const confirmMove = () => {
+    setConfirming(false);
     move.mutate({
-      rows,
+      rows: rowsToMove,
       toStageId: stageId,
       toStageName,
-      alreadyThere: deals.length - rows.length,
+      alreadyThere: deals.length - rowsToMove.length,
     });
   };
 
@@ -221,7 +237,8 @@ export function DealBulkBar({
               }))}
             />
             <Button
-              disabled={move.isPending || deals.length === 0 || stageId === ""}
+              disabled={deals.length === 0 || stageId === ""}
+              pending={move.isPending}
               reasonId={reasonId}
               onClick={moveStage}
             >
@@ -230,6 +247,37 @@ export function DealBulkBar({
           </>
         )}
       </BulkVerbs>
+      <ConfirmModal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={plural(
+          "deals.bulkMoveTitle",
+          rowsToMove.length,
+          count(rowsToMove.length, toStageName),
+        )}
+        confirmLabel={t("deals.bulkMove")}
+        onConfirm={confirmMove}
+        pending={move.isPending}
+      >
+        {rowsToMove.length > BULK_CONFIRM_ABOVE && (
+          <Callout tone="warning" title={t("bulk.largeTitle")}>
+            {t("bulk.largeBody")}
+          </Callout>
+        )}
+        <p>
+          {plural(
+            "deals.bulkMoveWill",
+            rowsToMove.length,
+            count(rowsToMove.length, toStageName),
+          )}
+          {deals.length > rowsToMove.length &&
+            ` ${plural(
+              "deals.bulkAlreadyThere",
+              deals.length - rowsToMove.length,
+              count(deals.length - rowsToMove.length, toStageName),
+            )}`}
+        </p>
+      </ConfirmModal>
       {failed.length > 0 && (
         <ErrorLine inline>
           {t("deals.bulkFailed", {
