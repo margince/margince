@@ -47,6 +47,8 @@ DROP FUNCTION IF EXISTS unfold_contact_strength_dates();
 DROP FUNCTION IF EXISTS contact_strength_dates_among(uuid, uuid[]);
 DROP FUNCTION IF EXISTS contact_strength_dates(uuid);
 
+DROP INDEX IF EXISTS idx_contact_strength_unfolded;
+
 ALTER TABLE contact
     DROP COLUMN IF EXISTS strength_folded,
     DROP COLUMN IF EXISTS strength_last_outbound_day,

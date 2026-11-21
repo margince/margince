@@ -33,6 +33,11 @@ ALTER TABLE contact
 
 ALTER TABLE contact ALTER COLUMN strength_folded SET DEFAULT true;
 
+-- The clock refold finds the contacts still to fold through this index, so a
+-- pass reads only those, not the whole table.
+CREATE INDEX IF NOT EXISTS idx_contact_strength_unfolded ON contact (id)
+    WHERE NOT strength_folded AND archived_at IS NULL;
+
 COMMENT ON COLUMN contact.strength_last_inbound_day IS
     'Whether strength_last_inbound_at names a day entry rather than an instant. NULL when the date is NULL.';
 COMMENT ON COLUMN contact.strength_last_outbound_day IS
