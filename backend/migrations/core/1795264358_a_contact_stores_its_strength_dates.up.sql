@@ -484,8 +484,8 @@ BEGIN
     FROM changed_from o
     JOIN changed_to n ON n.id = o.id
     JOIN activity_link l ON l.activity_id = n.id AND l.contact_id IS NOT NULL
-   WHERE (o.archived_at, o.audience, o.bulk_mail_attested, o.calendar_method, o.call_outcome, o.counterparty_email, o.direction, o.forwarded_to_self, o.internal_mail_authorization, o.kind, o.meeting_status, o.occurred_at, o.occurred_precision, o.origin, o.sender_is_machine, o.source_activity_id, o.source_id, o.source_system, o.thread_key)
-         IS DISTINCT FROM (n.archived_at, n.audience, n.bulk_mail_attested, n.calendar_method, n.call_outcome, n.counterparty_email, n.direction, n.forwarded_to_self, n.internal_mail_authorization, n.kind, n.meeting_status, n.occurred_at, n.occurred_precision, n.origin, n.sender_is_machine, n.source_activity_id, n.source_id, n.source_system, n.thread_key);
+   WHERE (o.archived_at, o.audience, o.bulk_mail_attested, o.calendar_method, o.call_outcome, o.counterparty_email, o.direction, o.forwarded_to_self, o.internal_mail_authorization, o.kind, o.meeting_status, o.occurred_at, o.occurred_precision, o.origin, o.restricted_at, o.sender_is_machine, o.source_activity_id, o.source_id, o.source_system, o.thread_key)
+         IS DISTINCT FROM (n.archived_at, n.audience, n.bulk_mail_attested, n.calendar_method, n.call_outcome, n.counterparty_email, n.direction, n.forwarded_to_self, n.internal_mail_authorization, n.kind, n.meeting_status, n.occurred_at, n.occurred_precision, n.origin, n.restricted_at, n.sender_is_machine, n.source_activity_id, n.source_id, n.source_system, n.thread_key);
   PERFORM touch_contact_strength_dates(c, a, w);
   RETURN NULL;
 END;
