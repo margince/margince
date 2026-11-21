@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isImeCommit } from "../lib/imecommit";
@@ -25,9 +25,6 @@ const KIND_LABEL: Readonly<Record<ActivityKind, MessageKey>> = {
   note: "timeline.filters.kind.note",
   task: "timeline.filters.kind.task",
 };
-
-// Long enough that a word typed at a normal pace is one request.
-const SEARCH_PAUSE_MS = 300;
 
 function isActivityKind(value: string): value is ActivityKind {
   return ACTIVITY_KINDS.some((kind) => kind === value);
@@ -75,10 +72,16 @@ export function TimelineFilterBar({
     setDraft(value.q ?? "");
   }
   const [composing, setComposing] = useState(false);
-  const settled = useSettledValue(draft, SEARCH_PAUSE_MS);
+  const settled = useSettledValue(draft);
+  const lastCommitted = useRef(value.q ?? "");
+  useEffect(() => {
+    lastCommitted.current = value.q ?? "";
+  }, [value.q]);
   const commitSearch = (text: string) => {
-    if (text.trim() !== (value.q ?? "")) {
-      onChange({ ...value, q: text.trim() });
+    const q = text.trim();
+    if (q !== lastCommitted.current) {
+      lastCommitted.current = q;
+      onChange({ ...value, q });
     }
   };
   // Only a pause on the text still in the box commits. A pause that ended
@@ -114,7 +117,10 @@ export function TimelineFilterBar({
           aria-label={t("timeline.filters.search")}
           placeholder={t("timeline.filters.search")}
           onChange={(event) => setDraft(event.target.value)}
-          onBlur={() => commitSearch(draft)}
+          onBlur={() => {
+            setComposing(false);
+            commitSearch(draft);
+          }}
           onCompositionStart={() => setComposing(true)}
           onCompositionEnd={() => setComposing(false)}
           onKeyDown={(event) => {

@@ -25,7 +25,7 @@ type Story = StoryObj<typeof TimelineFilterBar>;
 
 /**
  * Live, because the bar's own state is half its behaviour. The search box holds
- * a DRAFT that commits after a 300 ms pause, or at once on Enter or blur.
+ * a DRAFT that commits after a short pause, or at once on Enter or blur.
  * A filter reset from outside has to clear that draft. A box still showing the
  * previous record's word would claim a search that is not running.
  *
