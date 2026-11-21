@@ -438,6 +438,7 @@ function CurrentAct({
           dispatch={dispatch}
           initialSummary={voice.data?.summary ?? null}
           initialSources={voice.data?.sources ?? []}
+          initialMeterStale={voice.data?.meterStale === true}
         />
       );
     case "basis":

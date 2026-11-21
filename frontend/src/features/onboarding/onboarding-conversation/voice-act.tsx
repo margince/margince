@@ -48,6 +48,8 @@ type VoiceActProps = Readonly<{
   initialSummary?: CorpusSummary | null;
   /** The samples that meter counts; empty fresh. */
   initialSources?: readonly CorpusSource[];
+  /** Whether that meter is unknown since a removal; false fresh. */
+  initialMeterStale?: boolean;
 }>;
 
 export function VoiceAct({
@@ -55,6 +57,7 @@ export function VoiceAct({
   dispatch,
   initialSummary,
   initialSources,
+  initialMeterStale,
 }: VoiceActProps) {
   const t = useT();
   const machine = useRef(state);
@@ -64,6 +67,7 @@ export function VoiceAct({
     dispatch,
     initialSummary,
     initialSources,
+    initialMeterStale,
   });
   const build = useVoiceBuild({ dispatch, machine });
   const fileRef = useRef<HTMLInputElement>(null);

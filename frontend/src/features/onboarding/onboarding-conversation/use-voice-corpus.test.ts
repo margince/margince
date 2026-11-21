@@ -450,4 +450,94 @@ describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => 
         ?.total_words,
     ).toBe(0);
   });
+
+  it("keeps the meter unknown for the step that opens again after both reads failed", async () => {
+    stubApi({
+      ingests: [{ stats: documentStats, summary: summaryOf(900) }],
+      afterRemoveStatus: 500,
+    });
+    const client = new QueryClient();
+    client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, {
+      built: false,
+      summary: null,
+      sources: [],
+    });
+    const wrapper = ({ children }: Readonly<{ children: ReactNode }>) =>
+      createElement(QueryClientProvider, { client }, children);
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const first = renderHook(
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
+      { wrapper },
+    );
+    act(() => {
+      first.result.current.addPaste("A paragraph I actually wrote.", "Pasted");
+    });
+    await waitFor(() => expect(first.result.current.manifest).toHaveLength(1));
+    const [added] = first.result.current.manifest;
+    if (added) {
+      act(() => first.result.current.removeSample(added));
+    }
+    await waitFor(() => expect(first.result.current.meterStale).toBe(true));
+    first.unmount();
+
+    const probe = client.getQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY);
+    const again = renderHook(
+      () =>
+        useVoiceCorpus({
+          state: collectingState,
+          dispatch,
+          initialSummary: probe?.summary ?? null,
+          initialMeterStale: probe?.meterStale === true,
+        }),
+      { wrapper },
+    );
+    expect(again.result.current.meterStale).toBe(true);
+    expect(again.result.current.busy).toBe(true);
+  });
+
+  it("lets no ingest issued before a landed removal clear the unknown meter", async () => {
+    const late = gate();
+    const calls = stubApi({
+      ingests: [
+        { stats: documentStats, summary: summaryOf(900) },
+        { stats: documentStats, summary: summaryOf(1800), release: late.held },
+      ],
+      afterRemoveStatus: 500,
+    });
+    const client = new QueryClient();
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const { result } = renderHook(
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
+      {
+        wrapper: ({ children }) =>
+          createElement(QueryClientProvider, { client }, children),
+      },
+    );
+    act(() => {
+      result.current.addPaste("A paragraph I actually wrote.", "Pasted");
+    });
+    await waitFor(() => expect(result.current.manifest).toHaveLength(1));
+    act(() => {
+      result.current.addPaste("Another paragraph of mine.", "Pasted");
+    });
+    await waitFor(() =>
+      expect(
+        calls.filter(
+          (call) =>
+            call.method === "POST" &&
+            new URL(call.url).pathname.endsWith("/sources"),
+        ),
+      ).toHaveLength(2),
+    );
+    const [added] = result.current.manifest;
+    if (added) {
+      act(() => result.current.removeSample(added));
+    }
+    await waitFor(() => expect(result.current.meterStale).toBe(true));
+
+    late.open();
+    await waitFor(() => expect(result.current.manifest).toHaveLength(1));
+    expect(result.current.meterStale).toBe(true);
+    expect(result.current.busy).toBe(true);
+  });
 });

@@ -27,6 +27,8 @@ export type VoiceRestoreProbe = Readonly<{
   summary: CorpusSummary | null;
   /** The samples the meter counts, so the step lists them after a reload. */
   sources: readonly CorpusSource[];
+  /** True once a removal landed and no read since has told the new count. */
+  meterStale?: boolean;
 }>;
 
 /** The probe's query key; the voice step writes each corpus change into it,

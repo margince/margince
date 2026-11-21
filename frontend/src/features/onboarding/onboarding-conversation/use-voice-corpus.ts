@@ -29,6 +29,7 @@ import {
   patchVoiceProbe,
   refreshedProbeSummary,
 } from "./restore";
+import { SummaryOrder } from "./summary-order";
 import { excerptLines } from "./voice-excerpts";
 import { type CorpusManifestEntry, storedEntry } from "./voice-manifest";
 import { refusalEntry, skipKeys } from "./voice-refusal-line";
@@ -70,6 +71,8 @@ type UseVoiceCorpusArgs = Readonly<{
   /** The restore probe's samples, so the list a reload shows matches the
    * meter. Only included rows: an excluded one is not in the count. */
   initialSources?: readonly CorpusSource[];
+  /** The probe's word that the last summary read failed after a removal. */
+  initialMeterStale?: boolean;
 }>;
 
 export function useVoiceCorpus({
@@ -77,6 +80,7 @@ export function useVoiceCorpus({
   dispatch,
   initialSummary = null,
   initialSources = [],
+  initialMeterStale = false,
 }: UseVoiceCorpusArgs) {
   const { locale } = useLocale();
   const t = useT();
@@ -86,7 +90,7 @@ export function useVoiceCorpus({
     initialSources.filter((source) => source.included).map(storedEntry),
   );
   const [removing, setRemoving] = useState<string | null>(null);
-  const [meterStale, setMeterStale] = useState(false);
+  const [meterStale, setMeterStale] = useState(initialMeterStale);
   const [asks, setAsks] = useState<readonly SpeakerAsk[]>([]);
   const [probesInFlight, setProbesInFlight] = useState(0);
   const [failures, setFailures] = useState<readonly VoiceIngestFailure[]>([]);
@@ -154,13 +158,9 @@ export function useVoiceCorpus({
     [say, noteFailure],
   );
 
-  // Concurrent ingests can settle out of order; each request is stamped at
-  // issue time and only the newest-by-request-order summary may drive the
-  // meter and the word-growth narration. Every response's summary is
-  // authoritative for the corpus AT that request — a stale one arriving
-  // late must not roll the displayed totals (and the build gate) backwards.
-  const ingestSeq = useRef(0);
-  const appliedSummarySeq = useRef(0);
+  // Each write is stamped when issued; only the newest summary drives the
+  // meter and the word-growth narration, so a late one never rolls it back.
+  const [order] = useState(() => new SummaryOrder());
 
   const patchProbe = useCallback(
     (change: ProbeChange) => patchVoiceProbe(queryClient, change),
@@ -170,19 +170,17 @@ export function useVoiceCorpus({
   const recordIngest = useCallback(
     (seq: number, outcome: Ingested, reactionKey: MessageKey) => {
       const { ref, source, stats, summary: next } = outcome;
-      const newest = seq > appliedSummarySeq.current;
+      const newest = order.take(seq);
       // The probe outlives this step, so Back finds the sample even if the
       // reader left before the server answered.
       patchProbe((old) => ({
         summary: newest ? next : old.summary,
+        meterStale: newest ? false : old.meterStale,
         sources: [
           ...old.sources.filter((stored) => stored.source_ref !== ref),
           source,
         ],
       }));
-      if (newest) {
-        appliedSummarySeq.current = seq;
-      }
       if (!mounted.current) {
         return;
       }
@@ -212,7 +210,7 @@ export function useVoiceCorpus({
       setSummary(next);
       setMeterStale(false);
     },
-    [locale, queue, say, patchProbe],
+    [locale, queue, say, patchProbe, order],
   );
 
   // One place the conversation learns what an intake attempt ended as: the
@@ -276,8 +274,7 @@ export function useVoiceCorpus({
       setProbesInFlight((count) => count + 1);
       let seq = 0;
       start(() => {
-        ingestSeq.current += 1;
-        seq = ingestSeq.current;
+        seq = order.issue();
         return seq;
       })
         .then((outcome) => applyOutcome(seq, outcome, reactionKey))
@@ -292,7 +289,7 @@ export function useVoiceCorpus({
           }
         });
     },
-    [applyOutcome, sayUnexpectedFailure],
+    [applyOutcome, sayUnexpectedFailure, order],
   );
 
   // One intake for all three entry paths: the attach button, a drop onto the
@@ -410,31 +407,30 @@ export function useVoiceCorpus({
   // ingest issued before it, as a later ingest would.
   const applyRemovalSummary = useCallback(
     (seq: number, next: CorpusSummary) => {
-      if (seq <= appliedSummarySeq.current) {
+      if (!order.take(seq)) {
         return;
       }
-      appliedSummarySeq.current = seq;
-      patchProbe(() => ({ summary: next }));
+      patchProbe(() => ({ summary: next, meterStale: false }));
       if (mounted.current) {
         summaryRef.current = next;
         setSummary(next);
         setMeterStale(false);
       }
     },
-    [patchProbe],
+    [patchProbe, order],
   );
 
   const removeSample = useCallback(
     (entry: CorpusManifestEntry) => {
       setFailures([]);
       setRemoving(entry.ref);
-      ingestSeq.current += 1;
-      const seq = ingestSeq.current;
+      const seq = order.issue();
       removeSource(entry.id, entry.version)
         .then(
           (profileId) => {
             // Gone at the server once the DELETE lands, whatever the meter
             // read after it answers, and whether or not the step is still open.
+            order.removed(seq);
             patchProbe((old) => ({
               sources: old.sources.filter((source) => source.id !== entry.id),
             }));
@@ -447,6 +443,7 @@ export function useVoiceCorpus({
               (next) => applyRemovalSummary(seq, next),
               // The meter still counts the removed words, so Build waits for a fresh read.
               () => {
+                patchProbe(() => ({ meterStale: true }));
                 if (mounted.current) setMeterStale(true);
                 return refreshedProbeSummary(queryClient).then(
                   (next) => next && applyRemovalSummary(seq, next),
@@ -473,7 +470,7 @@ export function useVoiceCorpus({
           }
         });
     },
-    [applyRemovalSummary, noteFailure, patchProbe, queryClient, t],
+    [applyRemovalSummary, noteFailure, patchProbe, queryClient, t, order],
   );
 
   return {
