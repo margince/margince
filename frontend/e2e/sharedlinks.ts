@@ -16,8 +16,8 @@ export const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
   expires_at: `2026-04-0${index + 1}T09:00:00Z`,
 }));
 
-// The analytics forecast for a reader who may share it, with the drawer open
-// from its trigger by the KEYBOARD, so every caller starts from the same place.
+// The analytics forecast for a reader who may share it. The drawer opens from
+// its trigger by the keyboard, so every caller starts from the same place.
 // The rail offers Analytics only to a reader who may read the forecast.
 export async function openSharedLinks(page: Page) {
   await servePrincipal(

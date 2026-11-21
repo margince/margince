@@ -22,10 +22,9 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
-// The same panel under the dark palette. It is the one surface where the
-// stylesheet paints a fill of its own at this width — the well's ground and the
-// notch's — and tokens.css publishes dark as its own set of values, so passing
-// in light says nothing about it.
+// The same panel under the dark palette. At this width the stylesheet paints
+// fills of its own here (the well's ground and the notch's). tokens.css
+// publishes dark as its own set of values, so a pass in light says nothing about it.
 test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark", () => {
   test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
 
@@ -72,8 +71,8 @@ test.describe("WCAG 2.2 AA (axe), the cold start's ignition at 390px", () => {
   }
 });
 
-// A phone at 200% text holds a question taller than the room, and the board is
-// the one box that scrolls: a keyboard reader has to be able to land on it.
+// A phone at 200% text holds a question taller than the room. The board is the
+// one box that scrolls, so a keyboard reader has to be able to land on it.
 test.describe("the cold start's board on a phone at 200% text", () => {
   test.use({ viewport: { width: 320, height: 568 } });
 
@@ -109,8 +108,8 @@ test.describe("the cold start's board on a phone at 200% text", () => {
       document.documentElement.style.fontSize = "200%";
     });
     await expectBoardReachable(page);
-    // The Core's row is what a room this short against its text gives up —
-    // folded, never unmounted, or its WebGL loop restarts on the way back.
+    // A room this short against its text gives up the Core's row. It is folded,
+    // never unmounted, or its WebGL loop restarts on the way back.
     await expect(page.locator(".ob-stage-core")).toHaveCount(1);
     await expect(page.locator(".ob-stage-core")).toBeHidden();
     // The ignition is the widest step: the sealed badge and the capability
@@ -120,8 +119,8 @@ test.describe("the cold start's board on a phone at 200% text", () => {
     await expectBoardReachable(page);
   });
 
-  // The same window at the text size it was built for keeps the Core: the fold
-  // is measured against the reader's text, not against the phone.
+  // The same window at the default text size keeps the Core: the fold is
+  // measured against the reader's text, not against the phone.
   test("keeps the Core at the default text size", async ({ page }) => {
     await mockApi(page, { journey: "unconfigured" });
     await page.goto("/#/onboarding");
@@ -130,30 +129,27 @@ test.describe("the cold start's board on a phone at 200% text", () => {
   });
 });
 
-// The addresses this product answers that carry a VIEW as well as a
+// The addresses this product answers that carry a view as well as a
 // destination: a narrowed list, a record's tab, the decided queue, one report.
-// They are swept separately from CORE_SCREENS because each is a state a reader
-// reaches rather than a nav entry, and each draws chrome the bare screen does
-// not — the chips the filter fills in, the tab strip's pressed control, the
-// pager once a page is named.
+// They are swept apart from CORE_SCREENS because a reader reaches each as a
+// state, not as a nav entry. Each draws chrome the bare screen does not: the
+// chips the filter fills in, the tab strip's pressed control, the pager.
 const ADDRESSED_VIEWS = [
   "companies?q=brandt&sort=name",
   "companies/o-brandt/tasks",
   "analytics/forecast",
   "analytics/pipeline",
   "analytics/questions",
-  // The three record headers whose verbs are icon-only: the name a sighted
-  // reader gets on hover is not the name axe checks, so what is swept here is
-  // the other half — that every square carries an accessible name at all, and
-  // that a header of squares still meets AA on its own ground. A glyph with no
-  // name is the one way this pattern fails silently, and it fails for exactly
-  // the readers who cannot see the glyph.
+  // The three record headers whose verbs are icon-only. The name a sighted
+  // reader gets on hover is not the name axe checks. So this sweep checks that
+  // every square carries an accessible name, and that a header of squares
+  // still meets AA on its own ground. A glyph with no name fails silently, and
+  // it fails for the readers who cannot see the glyph.
   "contacts/p-anna",
   "deals/d-fleet",
-  // The results screen with hits on it. It was in NEITHER sweep while it grew
-  // groups, a type filter and links per row — and it is the surface a reader
-  // arrives at by searching, so it is one of the few nobody navigates TO on
-  // purpose and everybody lands on.
+  // The results screen with hits on it: groups, a type filter and links per
+  // row. A reader lands on it by searching, not through the nav, so no other
+  // sweep reaches it.
   "search/brandt",
   "projects/pr-fleet",
   // A focused filter page names itself, so the shell's heading stands down:
@@ -161,26 +157,19 @@ const ADDRESSED_VIEWS = [
   "filters/companies",
 ];
 
-// The SAME sweep under the dark palette, which the suite measured by accident
-// for as long as the scheme went unpinned: a run inherited whichever palette
-// the machine reported, so one afternoon read light locally and dark on CI and
-// the lane presented as flaky. It was two palettes.
+// The same sweep under the dark palette. The scheme is pinned, because an
+// unpinned run inherits whichever palette the machine reports.
 //
-// It is a second block rather than a second tag on the block above because the
-// palettes are not the same subject. tokens.css publishes dark as its own set
-// of values — the accent lightens to the ADR-0040 mandate and the surfaces
-// darken — so a screen can pass in one and fail in the other with no markup
-// between them different. Eight findings across six screens were live here
-// when this block was written, every one of them accent-coloured text on an
-// accent-tinted fill, and none of them visible to the light sweep.
+// It is a second block, not a second tag on the block above, because the two
+// palettes are different subjects. tokens.css publishes dark as its own set of
+// values: the accent lightens to the ADR-0040 mandate and the surfaces darken.
+// So a screen can pass in one palette and fail in the other with the same markup.
 test.describe("B-EP09.21: WCAG 2.2 AA (axe), dark palette", () => {
   test.use({ colorScheme: "dark" });
 
   // Both lists, not just the nav entries. A record header drawn as icon-only
-  // squares sits on the accent-tinted grounds this palette lightens, and the
-  // eight findings this block was written for were every one of them
-  // accent-coloured text on an accent-tinted fill — invisible to the light
-  // sweep, with no markup between the two different.
+  // squares sits on the accent-tinted grounds this palette lightens.
+  // Accent-coloured text on an accent-tinted fill fails here and passes in light.
   for (const screen of [...CORE_SCREENS, ...ADDRESSED_VIEWS]) {
     test(`no AA violations on #/${screen} in dark`, async ({ page }) => {
       await page.goto(`/#/${screen}`);
@@ -193,15 +182,13 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), dark palette", () => {
   }
 });
 
-// EXACTLY one h1 per route, which axe does not answer: `page-has-heading-one`
-// asks whether there is AT LEAST one, and two page titles in one document is
-// the failure a reader navigating by heading actually meets — they cannot tell
-// which is the page.
+// One h1 per route, which axe does not answer: `page-has-heading-one` asks
+// whether there is at least one. Two page titles in one document leave a
+// reader who navigates by heading unable to tell which is the page.
 //
-// Across both route lists rather than the three routes AC-shell-1k names, so a
-// new route inherits the check instead of needing somebody to remember it.
-// That test keeps its own cases: it asserts WHICH heading wins on a record,
-// which is a claim about the identity block rather than about the count.
+// Across both route lists, not only the three routes AC-shell-1k names, so a
+// new route inherits the check. That test keeps its own cases: it asserts
+// which heading wins on a record, a claim about the identity block.
 test.describe("one page heading per route", () => {
   for (const screen of [...CORE_SCREENS, ...ADDRESSED_VIEWS]) {
     test(`#/${screen} has exactly one h1`, async ({ page }) => {
@@ -223,9 +210,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       await page.goto(`/#/${screen}`);
       await page.waitForLoadState("networkidle");
       // Before measuring anything: a page that threw during render has almost
-      // no accessibility tree to fault, so a crash used to read as a clean
-      // sweep. #/settings/maintenance scored zero violations while showing the
-      // app error boundary.
+      // no accessibility tree to fault, so a crash would read as a clean sweep.
       await expectShellRendered(page);
       await expectSettingsViewLanded(page, screen);
       await settleAnimations(page);
@@ -234,8 +219,8 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   }
 
   // The results screen with hits on it, in the light palette. ADDRESSED_VIEWS
-  // above reaches it in dark alone, and the two sweeps disagree by design —
-  // this is the half where an accent-coloured link on a light card is judged.
+  // above reaches it in dark alone. This half judges an accent-coloured link
+  // on a light card.
   test("no AA violations on the search results screen", async ({ page }) => {
     await page.goto("/#/search/brandt");
     await page.waitForLoadState("networkidle");
@@ -245,9 +230,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectNoAaViolations(page, "search/brandt");
   });
 
-  // The narrowed screen is a DIFFERENT arrangement, not the same one shorter:
-  // one group, a pressed pill, and — when the narrowing finds nothing — an
-  // empty state under a filter row that has to stay operable.
+  // The narrowed screen is a different arrangement: one group and a pressed
+  // pill. When the narrowing finds nothing, it shows an empty state under a
+  // filter row that has to stay operable.
   test("no AA violations on a narrowed search", async ({ page }) => {
     await page.goto("/#/search/brandt");
     await page.waitForLoadState("networkidle");
@@ -260,9 +245,8 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectNoAaViolations(page, "search/brandt (narrowed to products)");
   });
 
-  // The ⌘K palette is a modal, and no sweep in this file had ever opened one:
-  // every axe pass above measures a page with the dialog closed, so the
-  // surface a reader reaches from any screen in the product was unmeasured.
+  // The ⌘K palette is a modal, and every other axe pass in this file measures
+  // a page with the dialog closed. A reader reaches it from any screen.
   test("no AA violations with the command palette open", async ({ page }) => {
     await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
@@ -346,8 +330,8 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectNoAaViolations(page, "analytics — a row's explain drawer open");
   });
 
-  // The Questions section with a question asked and one of its rows opened:
-  // the builder's rows of pickers, the answer table and the drawer it opens
+  // The Questions section with a question asked and one of its rows opened.
+  // The builder's rows of pickers, the answer table and the drawer it opens
   // are three surfaces the closed tab never draws. The engine's three routes
   // are stubbed here because the shared mock answers no analytics question.
   test("no AA violations on an asked question with its drawer open", async ({
@@ -419,8 +403,8 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     );
   });
 
-  // The forecast's Shared links drawer with rows in it, and the confirmation a
-  // row's Close link stacks over it: the closed page sweeps only the trigger.
+  // The forecast's Shared links drawer with rows in it, and the confirmation
+  // that a row's Close link stacks over it. The closed page sweeps only the trigger.
   // The mock's admin holds no forecast grant, so this reader is given one.
   test("no AA violations with the shared links drawer open", async ({
     page,
@@ -446,11 +430,10 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectNoAaViolations(page, "analytics/forecast — close link asked");
   });
 
-  // A list header FOLDS its verbs into one overflow menu below 1100px
-  // (design-system/listsurface.tsx), which is a different arrangement rather
-  // than the same one narrower: the buttons are inside a disclosure, so the
-  // trigger owes a name and the panel owes a relationship to it. The wide sweep
-  // above cannot see any of that.
+  // A list header folds its verbs into one overflow menu below 1100px
+  // (design-system/listsurface.tsx). The buttons are then inside a disclosure,
+  // so the trigger owes a name and the panel owes a relationship to it. The
+  // wide sweep above cannot see any of that.
   test("no AA violations on a list header folded into its menu", async ({
     page,
   }) => {
@@ -460,8 +443,8 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectShellRendered(page);
     await settleAnimations(page);
     // Opened, because a closed disclosure hides the controls this exists to
-    // check — `OverflowMenu` keeps them mounted and `hidden`, and axe skips a
-    // hidden subtree exactly as a reader does.
+    // check. `OverflowMenu` keeps them mounted and `hidden`, and axe skips a
+    // hidden subtree as a reader does.
     //
     // German, like every other name this suite reaches for: the app under test
     // runs in it.
@@ -475,12 +458,10 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   // An address whose whole meaning is "the create form is open", at the width
   // where the verb that opens it has folded into a menu.
   //
-  // Not an axe case — a FUNCTIONAL one, and it sits here because this is the
-  // only block that drives the folded arrangement. `CreateAction` reads its
-  // opening state once, at mount, and the menu used to defer its children to
-  // the first press: so this route opened nothing at all below 1100px, and
-  // pressing the menu then opened a form nobody had asked for. Invisible in a
-  // screenshot and green in every other lane.
+  // A functional case, not an axe one. It sits here because this is the only
+  // block that drives the folded arrangement. `CreateAction` reads its opening
+  // state once, at mount, so the menu must mount its children before the
+  // first press, or this route opens nothing below 1100px.
   test("#/deals/new opens the create form with the verbs folded", async ({
     page,
   }) => {
@@ -488,8 +469,8 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await page.goto("/#/deals/new");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
-    // The dialog, without anything being pressed. The heading rather than the
-    // button: the button is what the ROUTE stands in for, and asserting on it
+    // The dialog, without anything being pressed. The heading, not the
+    // button: the route stands in for the button, and asserting on the button
     // would pass over a form that never opened.
     await expect(
       page.getByRole("dialog").getByRole("heading", { name: "Neuer Deal" }),
@@ -506,23 +487,17 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     });
   }
 
-  // The company record route (#/companies/<id>) is not one of CORE_SCREENS —
-  // it takes an id rather than a bare nav destination, and CORE_SCREENS names
-  // the fixed nav surface — so it gets its own test rather than reshaping that
-  // list for one parameterised route.
+  // The company record route (#/companies/<id>) takes an id, and CORE_SCREENS
+  // names only the fixed nav surface. So it gets its own test.
   //
-  // This mock harness has no /companies/{id}/360 route, and its fallback
-  // answers an empty PAGE with 200 rather than 404 — so the read the record
-  // depends on for its strip, tabs bodies and rail succeeds with a body that
-  // carries none of the fields a 360 promises. The page renders in its own
-  // honest failure state throughout: the header, the tab strip and every
-  // section's "could not be loaded" wording, never a blank or a spinner stuck
-  // mid-load. That is still real chrome worth a sweep, and the wrong-shaped
-  // 200 is worth MORE than the 404 this comment used to claim — it is how a
-  // reader meets a server one release out of step, and it caught a card that
-  // read a promised field without guarding it and took the whole page down.
-  // This covers the shell around the record, not the loaded content a live
-  // run would need to reach.
+  // This mock harness has no /companies/{id}/360 route. Its fallback answers
+  // an empty page with 200, not 404. So the 360 read succeeds with a body that
+  // carries none of the fields a 360 promises. The page renders its own failure
+  // state, never a blank or a stuck spinner. That state shows the header, the
+  // tab strip and each section's "could not be loaded" wording.
+  // A wrong-shaped 200 is how a reader meets a server one release out of step.
+  // A card that reads a promised field without a guard takes the page down.
+  // This covers the shell around the record, not the loaded content.
   test("no AA violations on #/companies/<id>", async ({ page }) => {
     await page.goto("/#/companies/o-brandt");
     await page.waitForLoadState("networkidle");
@@ -534,16 +509,13 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectNoAaViolations(page, "companies/o-brandt");
   });
 
-  // The transient confirmation, swept while it is ON SCREEN.
+  // The transient confirmation, swept while it is on screen.
   //
-  // Every other case in this file sweeps a settled page, and a toast is by
-  // definition not on one — it arrives after a write and takes itself away
-  // again. So it is swept where it actually appears, over a record page, with
-  // the contrast of its own dark plate and the reachability of what it carries
-  // both in scope. The qualify confirmation is the one to use because its body
-  // carries a LINK to the contact that was just created: a control inside a
-  // message is the case where "can a keyboard reader get to it, and back out of
-  // it" has an answer worth having.
+  // Every other case in this file sweeps a settled page. A toast arrives after
+  // a write and takes itself away again, so it is swept where it appears, over
+  // a record page. In scope: the contrast of its dark plate and the reach of
+  // what it carries. The qualify confirmation carries a link to the new contact.
+  // A control inside a message is where keyboard reach is worth testing.
   test("no AA violations while a confirmation is on screen", async ({
     page,
   }) => {
@@ -561,27 +533,26 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expect(said).toBeVisible();
 
     // Keyboard, before the sweep: the link the message carries is reachable,
-    // and reaching it STOPS the withdrawal — a control that walks out from
-    // under the focus ring three and a half seconds after a reader tabbed to it
-    // is a control they cannot use (WCAG 2.2.1).
-    // A LINK: `EntityRef` is an anchor over the app's own hash route, so the
-    // record opens the ways a link does — a new tab, a bookmark, the keyboard.
-    // Which is the point here — it is focusable either way, and this test is
-    // about whether a keyboard reader can reach it and keep it.
+    // and reaching it stops the withdrawal. A control that leaves the focus
+    // ring seconds after a reader tabbed to it cannot be used (WCAG 2.2.1).
+    // `EntityRef` is an anchor over the app's own hash route, so the record
+    // opens the ways a link does: a new tab, a bookmark, the keyboard.
+    // It is focusable either way; this test checks a keyboard reader can reach
+    // it and keep it.
     const carried = said.getByRole("link").first();
     await carried.focus();
     await expect(carried).toBeFocused();
     await page.waitForTimeout(4000);
     await expect(said).toBeVisible();
 
-    // `settleAnimations` is what every other sweep in this file runs first, and
-    // it applies here too: the toast rises into place on `.arrive`, and axe
-    // reading a half-faded plate measures a colour nothing is ever drawn in.
+    // `settleAnimations` runs first here as in every other sweep in this file.
+    // The toast rises into place on `.arrive`, and axe reading a half-faded
+    // plate measures a colour nothing is ever drawn in.
     await settleAnimations(page);
     await expectNoAaViolations(page, "leads/l-1 (confirmation on screen)");
 
     // And the way out, from inside the message rather than from its own
-    // buttons — the distinction a body-carried control is the whole reason for.
+    // buttons, since the message carries a control.
     await page.keyboard.press("Escape");
     await expect(said).toBeHidden();
   });
@@ -603,12 +574,11 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectNoAaViolations(page, "home (offline banner)");
   });
 
-  // The lead record (#/leads/<id>), for the same reason and on the same terms
-  // as the company one above: an id-bearing route CORE_SCREENS does not name.
-  // Unlike that one the harness answers this read properly, so the sweep
-  // reaches the loaded page — the readings strip, the ladder with its refused
-  // steps, the rail's folded score section and the details grid's hover-to-edit
-  // rows, which is where this page keeps its interactive controls.
+  // The lead record (#/leads/<id>), for the same reason as the company one
+  // above: an id-bearing route CORE_SCREENS does not name. Here the harness
+  // answers the read, so the sweep reaches the loaded page. That covers the
+  // readings strip, the ladder with its refused steps and the rail's folded
+  // score section. It also covers the details grid's hover-to-edit rows.
   test("no AA violations on #/leads/<id>", async ({ page }) => {
     await page.goto("/#/leads/l-1");
     await page.waitForLoadState("networkidle");

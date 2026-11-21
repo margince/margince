@@ -71,10 +71,10 @@ test("the shared links drawer is worked by the keyboard alone", async ({
   await expect(trigger).toBeFocused();
 });
 
-// The contact header's access chip, OPEN. Its panel is portalled over the page
-// and carries the record's one radio group, so neither the closed-header sweeps
-// above nor the chip's own unit suite judges it: contrast of the sentence and
-// the switch on the popover ground, the group's name, and focus landing inside.
+// The contact header's access chip, open. Its panel is portalled over the page
+// and carries the record's one radio group. Neither the closed-header sweeps
+// above nor the chip's own unit suite judges it. This test checks the contrast
+// of the sentence and switch, the group's name, and focus landing inside.
 // The route answers the contact as shared and owned by the session's own user,
 // who may write it: the case that draws the switch.
 test.describe("the contact's access panel, open", () => {

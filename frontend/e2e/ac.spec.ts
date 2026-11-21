@@ -15,11 +15,10 @@ test.beforeAll(async () => {
   await loadLocale("de");
 });
 
-// B-EP09.22a/b: the AC-<screen>-N criteria as named tests — a failing test
-// names the criterion it breaks. Includes the cross-cutting invariants
-// (rail + ⌘K present, 🟡 confirm-first, provenance rendered), the 390px
-// no-horizontal-scroll sweep (§3.8), the WCAG 2.2 AA axe gate (B-EP09.21)
-// and PERF-1's held-read claim for a record open.
+// B-EP09.22a/b: the AC-<screen>-N criteria as named tests, so a failing test
+// names the criterion it breaks. Also covered: the cross-cutting invariants
+// (rail and ⌘K present, 🟡 confirm-first, provenance rendered).
+// Also the 390px no-horizontal-scroll sweep and PERF-1's held-read claim for a record open.
 
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
@@ -541,15 +540,10 @@ test.describe("§3.8: 390px mobile", () => {
     await expectNoAaViolations(page, "brief — the agent's panel (390px)");
   });
 
-  // AC-shell-8, restated against the taskbar. It described the record-scoped Ask
-  // composer on a floating button, which the agent surfaces no longer offer —
-  // but the sentence that button carried is a promise about what the agent can
-  // REACH, and row scope still bounds it. Deleting the control deleted the
-  // promise from the product and left the property in place, which is the wrong
-  // direction: a guarantee nobody is told about is one nobody can rely on.
-  //
-  // So the criterion is now about the claim rather than about its container,
-  // and it is asserted on the surface a reader meets the agent on.
+  // AC-shell-8, restated against the taskbar. The criterion is the promise
+  // about what the agent can reach, which row scope bounds. A reader cannot
+  // rely on a guarantee nobody states, so the panel where a reader meets the
+  // agent must state it.
   test("AC-shell-8: the agent's panel states what the agent can reach", async ({
     page,
   }) => {
@@ -565,10 +559,9 @@ test.describe("§3.8: 390px mobile", () => {
     ).toBeVisible();
   });
 
-  // The whole keyboard path this surface has: it opens from the bar, Escape
-  // closes it from inside, and focus lands back on the control that opened it
-  // rather than on <body> — from where the next Tab starts at the top of a page
-  // the reader had not left.
+  // The whole keyboard path of this panel: it opens from the bar, and Escape
+  // closes it from inside. Focus lands back on the control that opened it.
+  // Focus on <body> would start the next Tab at the top of the page.
   test("the agent's panel closes on Escape and hands focus back to the orb", async ({
     page,
   }) => {

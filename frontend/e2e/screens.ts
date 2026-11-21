@@ -9,16 +9,14 @@ import { SETTINGS_PAGES } from "../src/lib/settingscatalog";
 /**
  * Every settings page, with no exclusion.
  *
- * There was one — `reset`, whose page needs the deployment to arm
- * `data_reset_available`. That is a fixture fact rather than a product one:
- * `seed.ts` mocks `/me` and can say the deployment arms it, and RENDERING the
- * danger zone resets nothing (the POST waits for a reader to type the workspace
- * name). Excluding it left the one settings page carrying an irreversible verb
- * out of the 390px sweep, both axe passes and the heading check.
+ * `reset` stays in, though its page needs the deployment to arm
+ * `data_reset_available`. `seed.ts` mocks `/me` to say it is armed. Rendering
+ * the danger zone resets nothing, because the POST waits for a reader to type
+ * the workspace name. It is the only settings page with an irreversible
+ * action, so the sweeps and the heading check must read it.
  *
- * A page this principal cannot open is now a BUG in the grants above, and
- * `expectSettingsViewLanded` turns it into a failure rather than a silently
- * shorter census.
+ * A page this principal cannot open is a bug in `E2E_ADMIN_GRANTS`.
+ * `expectSettingsViewLanded` fails on it rather than shortening the census.
  */
 const SWEPT_SETTINGS_PAGES = SETTINGS_PAGES.map((page) => page.id);
 
@@ -27,47 +25,34 @@ export const CORE_SCREENS = [
   "contacts",
   "companies",
   "deals",
-  // The lead queue. It was in neither sweep while it grew a bulk-selection
-  // bar, a board and a toolbar of its own — and it is the one record list
-  // whose primary surface a reader can swap under the same address, so the
-  // 390px pass has two layouts to find a horizontal scroll in rather than one.
+  // The lead queue has its own bulk-selection bar, board and toolbar. A reader
+  // can swap its main view under the same address, so the 390px pass has two
+  // layouts to check for sideways scroll.
   "leads",
-  // Filters & views. It is a rail destination AC-shell-1 already asserts by
-  // name, and it was in neither sweep — so the one screen in the product whose
-  // body is a nested editor grew clause rows, an operator control and a preview
-  // table with nobody measuring them at 390px or against axe. It is also the
-  // screen most able to be WIDE: a clause is a row of three controls, and a
-  // second level of nesting indents it again.
+  // Filters & views: its body is a nested editor of clause rows, an operator
+  // control and a preview table. It is the screen most likely to grow wide:
+  // a clause is a row of three controls, and each level of nesting indents it.
   "filters",
   "worklist",
-  // Projects and Partners. Both are rail-or-off-rail list screens that now
-  // print the page's name inside their table header, and both were in neither
-  // sweep — so the two screens where that header is NOT measured were the two
-  // whose header this change rewrote. The sweep follows the surface.
+  // Projects and Partners print the page's name inside their table header,
+  // so the sweeps measure that header here.
   "projects",
   "partners",
   "analytics",
   "settings",
   // Settings is many pages behind one route (SETTINGS_PAGES in
-  // lib/settingscatalog.ts), and a bare `settings` resolves to Account,
-  // the shortest of them. Sweeping that alone and calling settings covered is
-  // how the widest page in the product went unmeasured: `fields` carries two
-  // full list surfaces with their own toolbars, `integrations` four
-  // installation-wide cards, `members` a roster of rows that each end in two
-  // buttons. These are where a narrow viewport actually breaks.
+  // lib/settingscatalog.ts), and a bare `settings` resolves to Account, the
+  // shortest of them. The others are where a narrow viewport breaks. `fields`
+  // carries two list surfaces with toolbars, `integrations` four cards,
+  // `members` rows that each end in two buttons.
   //
-  // DERIVED from the catalog, not written out. The list that stood here went
-  // stale twice — once claiming twelve while three pages were in neither sweep,
-  // and again when the catalog was split and six of its ids were renamed under
-  // it. A census that can fall short reports PASS on the smaller tree, which is
-  // the one failure mode a sweep must not have.
+  // The list is derived from the catalog, not written out. A hand-written list
+  // can fall short, and a short census reports a pass on the smaller tree.
   //
-  // The blocker that kept it hand-written is gone in both halves.
-  // `settingscatalog.ts` is pure data and imports like `../src/i18n/de` above,
-  // so reading the ids pulls no screen module through Playwright's transform.
-  // And E2E_ADMIN_GRANTS now carries the thirteen settings objects, so this
-  // principal opens every page named below — without that, each ungranted page
-  // would land on the access boundary and report a page the run never read.
+  // `settingscatalog.ts` is pure data, so importing it pulls no screen module
+  // through Playwright's transform. E2E_ADMIN_GRANTS carries every settings
+  // object, so this principal opens every page. An ungranted page would land
+  // on the access boundary and report a page the run never read.
   ...SWEPT_SETTINGS_PAGES.map((page) => `settings/${page}`),
 ];
 
@@ -75,11 +60,8 @@ export const CORE_SCREENS = [
  * The settings page the address named is the one on screen.
  *
  * An address naming a page this mock's grants do not cover lands on the access
- * boundary and renders perfectly — clean axe, no overflow, and the census one
- * page longer than the tree it actually read. Two of the three pages this list
- * gained were doing exactly that. The active row in the settings level carries
- * the tab it points at, which is the cheapest thing on screen that can tell the
- * two apart.
+ * boundary, which renders cleanly. Axe and overflow then pass on a page the run
+ * never meant to read, and the census counts one page too many.
  */
 export async function expectSettingsViewLanded(page: Page, view: string) {
   if (!view.startsWith("settings/")) {
@@ -99,12 +81,10 @@ export async function expectSettingsViewLanded(page: Page, view: string) {
 /**
  * The page rendered, rather than the app error boundary standing in for it.
  *
- * Both sweeps below measure what is on screen, and a page that threw during
- * render puts almost nothing there: `settings/maintenance` crashed on a
- * malformed `/admin/job-health` payload and scored zero axe violations and zero
- * overflow — a dead page passing every check. The rail is the cheapest proof
- * the shell survived, because the boundary is mounted ABOVE it (main.tsx): if
- * the fallback is showing, the rail is gone.
+ * Both sweeps measure what is on screen. A page that threw during render puts
+ * almost nothing there, so it scores zero axe violations and zero overflow.
+ * The error boundary is mounted above the rail (main.tsx), so a visible rail
+ * proves the shell survived.
  */
 export async function expectShellRendered(page: Page) {
   await expect(page.locator("nav.rail")).toBeVisible();

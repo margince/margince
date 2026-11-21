@@ -21,13 +21,11 @@ test.beforeEach(async ({ page }) => {
 /**
  * The one account affordance, at the foot of the sidebar.
  *
- * Scoped to the top bar's trailing cluster rather than found by name alone:
- * WHERE it is is half of what the restructure promises — the contact sits at the
- * end of the session strip, opposite the trail that says where you are — and a
- * second account control appearing anywhere else would still satisfy a bare
- * name lookup. The name itself is deliberately a substring: the trigger carries
- * who is signed in into its accessible name (WCAG 2.5.3), so it reads
- * "<contact> — Konto".
+ * Scoped to the top bar's trailing cluster, because its place is part of the
+ * contract: the end of the session strip, opposite the trail.
+ * A bare name lookup would also pass for a second account control elsewhere.
+ * The name is a substring because the accessible name also carries who is
+ * signed in (WCAG 2.5.3).
  */
 function accountTrigger(page: Page) {
   return page.locator(".topbar .topbar-trail").getByRole("button", {
@@ -52,25 +50,21 @@ const primaryDestinations = [
   "Umsatzziele",
 ];
 
-// settleAnimations' own case, because the gap it closes is invisible to every
-// other test in this file: none of them touches a WAAPI-driven control before
-// sweeping, so all of them pass whether or not an in-flight animation is
-// settled.
+// settleAnimations' own case. No other test here touches a WAAPI-driven control
+// before sweeping, so they pass whether or not an in-flight animation settles.
 //
-// The design system's Select drives its ~140ms open through the Web Animations
-// API and reads prefers-reduced-motion AT RENDER TIME, so a test that clicks
-// the control and then emulates has started something the media query cannot
-// call off. Reproduced here directly rather than through a screen, so the case
-// is about the harness and not about whichever surface happens to carry a
-// Select today.
+// The design system's Select animates its ~140ms open through the Web Animations
+// API. It reads prefers-reduced-motion at render time, so emulating after a
+// click cannot stop that animation.
+// The case runs on a bare element so it tests the harness, not whichever
+// screen carries a Select today.
 test("the settle waits for an animation already in flight to land", async ({
   page,
 }) => {
   await page.goto("/#/home");
-  // Anchored before the animation starts, because the page's OWN boot carries
-  // finite work — the Core's fallback dress transitions its opacity out over
-  // 300ms once the canvas takes over — and a settle that ran during boot would
-  // be reporting that rather than the animation this case is about.
+  // Anchored before the animation starts, because boot has finite animations of
+  // its own (the Core's fallback dress fades out over 300ms).
+  // A settle during boot would report those instead of the case's animation.
   await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
     primaryDestinations.length,
   );
@@ -78,15 +72,15 @@ test("the settle waits for an animation already in flight to land", async ({
 
   await page.evaluate(() => {
     // What Select does: a finite WAAPI animation on a real element, started
-    // BEFORE reduced motion is emulated. `animation: none` does not govern it.
+    // before reduced motion is emulated. `animation: none` does not govern it.
     document.body.animate([{ opacity: 1 }, { opacity: 0.5 }], {
       duration: 140,
       iterations: 1,
     });
   });
 
-  // Without the landing wait this fails on that animation, mid-flight, which is
-  // the flake #5298 recorded — and axe would have read the frame it was at.
+  // Without the landing wait this fails mid-flight, and axe would read a frame
+  // of the animation.
   await settleAnimations(page);
 });
 
@@ -94,11 +88,10 @@ test("AC-shell-1: the rail renders the primary destinations in order", async ({
   page,
 }) => {
   await page.goto("/#/home");
-  // evaluateAll never waits — anchor on the rendered count first, or the
-  // read races the auth splash and sees an empty rail.
-  // Scoped to the level the panel is showing: the DESTINATIONS are its rows,
-  // while the foot's Settings door rides the same `.navitem` geometry without
-  // being one of them.
+  // evaluateAll never waits. Anchor on the rendered count first, or the read
+  // races the auth splash and sees an empty rail.
+  // Scoped to the shown level: its rows are the destinations.
+  // The foot's Settings door shares the `.navitem` class but is not one of them.
   await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
     primaryDestinations.length,
   );
@@ -128,10 +121,10 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
 });
 
 // One page-level heading per railed page, and it names the page. On a list, a
-// report or a settings surface the shell's page head mints it. On a RECORD the
-// record's own identity block IS it, and the head prints the trail back
-// instead — the name at heading level twice would leave a screen reader
-// choosing between two page titles for the same record.
+// report or a settings surface the shell's page head mints it.
+// On a record the record's own identity block is the heading, and the head
+// prints the trail back instead.
+// Two h1s with the same name would give a screen reader two page titles.
 test("AC-shell-1k: one h1 per railed page, and on a record it is the record's own", async ({
   page,
 }) => {
@@ -143,18 +136,16 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await expect(heading).toHaveCount(1);
   await expect(heading).toHaveText("Anna Weber");
   await expect(page.locator(".record-split-head h1")).toHaveText("Anna Weber");
-  // The trail that leads back to the list stands in the top bar, where it is
-  // true of the page rather than part of the document the reader is reading.
+  // The trail back to the list stands in the top bar, outside the document the
+  // reader is reading.
   await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Kontakte");
   await expect(page.locator('.topbar [aria-current="page"]')).toHaveText(
     "Anna Weber",
   );
 
-  // An id segment that names no record is the screen's own state, so it is named
-  // in WORDS and never as the slug it is addressed by: #/settings/privacy is the
-  // privacy surface, and the heading over the level's first group carries "Settings" — the
-  // page said that word twice while naming the surface never. "privacy" itself
-  // is a route slug no reader should ever be shown.
+  // An id segment that names no record is named in words, never as its slug.
+  // The h1 names the privacy surface; "Settings" belongs to the rail heading.
+  // "privacy" is a route slug no reader should see.
   await page.goto("/#/settings/privacy");
   const settingsHeading = page.getByRole("heading", { level: 1 });
   await expect(settingsHeading).toHaveCount(1);
@@ -172,9 +163,8 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
   await page.keyboard.press("ControlOrMeta+k");
   const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   await expect(input).toBeFocused();
-  // "Pipeline" is the word this row used to print, kept as its alias — typing it
-  // still has to land on the screen, or a relabeled destination becomes
-  // unreachable for everyone who knows it by its old name.
+  // "Pipeline" is the row's old label, kept as an alias.
+  // Typing it must still land on the screen for readers who know the old name.
   await input.fill("Pipeline");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/#\/deals$/);
@@ -201,13 +191,12 @@ test("AC-shell-7: the top bar's search opens the palette, and Enter on a row clo
   const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   const topbar = page.locator(".topbar");
   // One search affordance in the product, and it is the centre of the session
-  // strip. A BUTTON, never a field: the palette owns the query, and a second
-  // input taking one here is exactly what this criterion forbids.
+  // strip. It is a button, never a field: the palette owns the query, and this
+  // criterion forbids a second input taking one here.
   await expect(topbar.locator("input")).toHaveCount(0);
   await topbar.locator(".topbar-search").click();
   await expect(input).toBeVisible();
-  // And it is not a destination of its own — the links AC-shell-1 counts are
-  // unchanged by search leaving the sidebar.
+  // Search is not a destination, so the links AC-shell-1 counts stay unchanged.
   await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
     primaryDestinations.length,
   );
@@ -217,15 +206,12 @@ test("AC-shell-7: the top bar's search opens the palette, and Enter on a row clo
   await expect(input).toHaveCount(0);
 });
 
-// The account menu carries what belongs to the CONTACT rather than to the page:
-// the one door into Settings, the appearance they read in, and the way out. It
-// is the product's only settings door now — the sidebar carries destinations and
-// nothing else — so a second one appearing anywhere is the regression, not a
-// second row inside here.
+// The account menu carries what belongs to the signed-in user, not the page:
+// the door into Settings, the appearance, and the way out.
+// It is the only settings door, because the sidebar carries destinations only.
 //
-// Appearance sits here rather than on a settings page because it is the one
-// preference a reader changes to see the thing they are looking at differently,
-// and walking to a settings tab to do it means leaving what they were reading.
+// Appearance sits here too, because a reader changes it to see the current
+// screen differently. Going to a settings tab would mean leaving that screen.
 test("features/10 §7: the account menu holds the settings door, the appearance choice and the way out", async ({
   page,
 }) => {
@@ -480,11 +466,10 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
 }) => {
   await page.goto("/#/home");
   await expect(page.locator('nav.rail a[aria-label="Kontakte"]')).toBeVisible();
-  // The language is a preference of this contact rather than a destination, so it
-  // lives on Settings → Account; the account block at the sidebar foot carries
-  // the three places it can take you and nothing that changes a setting. Three
-  // locales ship, so the control is a list rather than a toggle — a toggle
-  // cannot say where the next click lands.
+  // The language is a preference, not a destination, so it lives on
+  // Settings → Account.
+  // Three locales ship, so the control is a list: a toggle cannot say where the
+  // next click lands.
   await page.goto("/#/settings/account");
   // A card title on the page, so the check below reads chrome the language
   // control does not draw itself.
@@ -498,17 +483,16 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
     .getByRole("region", { name: de["saveBar.unsaved"] })
     .getByRole("button", { name: de["saveBar.save"], exact: true })
     .click();
-  // The surface around the control follows the choice, not just the control's
-  // own face: every word on it is rendered from the catalog that just changed.
+  // The whole page follows the choice, not only the control, because every word
+  // on it comes from the catalog that just changed.
   await expect(
     page.getByRole("heading", { name: en["account.signInCard"] }),
   ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Language" })).toBeVisible();
 });
 
-// Appearance is chosen from Settings AND from the account menu — one setting
-// with two doors, because it is the setting a reader changes most often and from
-// wherever they happen to be standing.
+// Appearance is chosen from Settings and from the account menu.
+// It is the setting a reader changes most often, from wherever they are.
 //
 // The language control beside it has to still be there, or an account card that
 // failed to render entirely would pass this.
@@ -527,12 +511,11 @@ test("features/10 §7: Settings → Account offers language and appearance", asy
  * Where the language control's focus contract is actually testable.
  *
  * The jsdom suite (`src/design-system/select.test.tsx`) asserts the same
- * restoration, but jsdom does not move `document.activeElement` when the focused
- * node is detached — so a list that closed WITHOUT handing focus back would still
- * read as focused there. Only a browser blanks the selection to `<body>`, which
- * is exactly the stranding these two tests exist to catch: this is the only
- * in-app control for changing language, so its reader is the one least able to
- * recover from being dropped at the top of the document.
+ * restoration, but jsdom keeps `document.activeElement` on a detached node.
+ * There, a list that closed without handing focus back still reads as focused.
+ * Only a browser drops focus to `<body>`, and these two tests catch that.
+ * This is the only in-app language control, so its reader is least able to
+ * recover from losing focus.
  */
 test("features/10 §7: Escape closes the language list back onto its control", async ({
   page,
@@ -557,8 +540,8 @@ test("features/10 §7: Tab closes the language list and carries on", async ({
   await expect(list).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(list).toHaveCount(0);
-  // Tab says the reader is leaving, so focus must land on the next control —
-  // neither back on the trigger they just left nor nowhere at all.
+  // Tab means the reader is leaving, so focus lands on the next control.
+  // It must land neither on the trigger nor nowhere.
   await expect(trigger).not.toBeFocused();
   await expect(page.locator("body")).not.toBeFocused();
 });

@@ -7,52 +7,36 @@ import { expect, type Page } from "@playwright/test";
 /**
  * Settle the page's motion before measuring the colours it paints.
  *
- * A contrast check reads the colours that are painted, and an element mid-fade
- * paints a blend: the login screen's staggered entry made axe see the runtime
- * line at #bfc3c1 on #fafbfa (1.71:1) instead of its settled #36433d on #eef1f0
- * (8.9:1), so the sweep failed or passed depending on how fast the machine got
- * to `networkidle`.
+ * A contrast check reads the painted colours, and an element mid-fade paints a
+ * blend. Axe would then measure a ratio no reader sees, and the result would
+ * depend on the machine's speed.
  *
- * WAITING for `getAnimations()` to report every finite animation finished
- * cannot settle a page. That set is empty both BEFORE the first entrance starts
- * and AFTER the last one ends, and `[].every()` is true of an empty set, so the
- * wait returns on a page whose content has not begun arriving. On a loaded
- * runner that is the ordinary outcome rather than a rare one: `.wrap > *` holds
- * each block back by up to five steps of `--stagger-enter` before fading it in
- * over `--dur-enter`, and a whole screen of half-painted text is what such a
- * wait hands to axe.
+ * Waiting for `getAnimations()` to report every finite animation finished
+ * cannot settle a page. That set is empty both before the first entrance starts
+ * and after the last one ends. `[].every()` is true of an empty set, so the
+ * wait can return before content arrives. `.wrap > *` holds each block back by
+ * up to five steps of `--stagger-enter` before it fades in.
  *
- * Reduced motion settles it instead. The design system answers that with
- * `animation: none` on every arrival, which lands the content already mounted
- * AND the content still to mount at its resting colour, leaving no window to
- * race. The assertions are the half that cannot pass vacuously: an arrival that
- * outlives the guard fails here, naming itself, rather than being measured
- * mid-flight.
+ * Reduced motion settles it instead. The design system answers it with
+ * `animation: none` on every arrival. Content already mounted and content still
+ * to mount both land at their resting colour. The assertions below cannot pass
+ * vacuously: an arrival that outlives the guard fails here and names itself.
  */
 export async function settleAnimations(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  // Reduced motion stops the NEXT animation; it cannot call off one already in
-  // flight. The design system's Select drives its open through the Web
-  // Animations API, gated by usePrefersReducedMotion() AT RENDER TIME — so a
-  // test that clicks the control and then emulates has already started an
-  // animation the media query has no say over, and CSS `animation: none` does
-  // not govern a WAAPI one the way it governs a keyframe.
+  // Reduced motion stops the next animation, not one already in flight. The
+  // design system's Select opens through the Web Animations API. It checks
+  // usePrefersReducedMotion() at render time. A test that clicks first and
+  // emulates after has started an animation the media query cannot stop.
+  // CSS `animation: none` does not govern a WAAPI animation either.
   //
-  // So the in-flight ones are awaited to their resting frame, which is what a
-  // settled page means — and each is asked whether it HAS one rather than being
-  // raced against a clock. A perpetual animation never resolves `finished`, so
-  // it is left for the finding below to name; a finite one always resolves, so
-  // waiting on it needs no budget.
+  // So each in-flight animation is awaited to its resting frame. Only finite
+  // animations are awaited, judged by their own timing and not by a clock. A
+  // perpetual one never resolves `finished`, so the check below names it.
+  // A wall-clock budget cannot tell "perpetual" from "slow" on a loaded runner.
   //
-  // That distinction is the whole of this wait. A wall-clock budget cannot tell
-  // "perpetual" from "slow", so on a loaded runner it expired while the page's
-  // own boot arrivals were still landing and handed the assertion four running
-  // animations to report — the settle returning early, dressed as a finding.
-  // The animation's own timing can tell them apart on any machine at any load.
-  //
-  // allSettled rather than all: a cancelled animation REJECTS `finished`, and
-  // that is a settled outcome here — the animation is over, which is all this
-  // waits for.
+  // allSettled rather than all: a cancelled animation rejects `finished`, and
+  // a cancelled animation is over, which is all this waits for.
   //
   // One look is not enough: a boot transition can start after it. So the wait
   // repeats until a pass finds no finite clock-driven animation running. The
@@ -107,10 +91,9 @@ export async function settleAnimations(page: Page) {
             ? describe(effect.target)
             : "an element the effect does not name";
         }),
-      // The guard itself, read off the cascade rather than off the clock: an
-      // arrival that still names an animation here will fade whenever it
-      // mounts, including after this check has run. Timing cannot see that one;
-      // the computed style can.
+      // The guard itself, read off the cascade rather than off the clock. An
+      // arrival that still names an animation here fades whenever it mounts,
+      // even after this check. Only the computed style shows that.
       stillArriving: [...document.querySelectorAll(".arrive, .wrap > *")]
         .filter((element) => getComputedStyle(element).animationName !== "none")
         .map(describe),
@@ -127,36 +110,27 @@ export async function settleAnimations(page: Page) {
 }
 
 /**
- * The AA sweep of one page: assert what axe DECIDED, report what it could not.
+ * The AA sweep of one page: assert what axe decided, report what it could not.
  *
- * `violations` is the gate, and it stays the gate. `incomplete` is deliberately
- * reported rather than asserted, and the reason is what the word means: axe
- * puts a node there when it cannot reach a verdict at all — a colour over a
- * gradient or an image, a pseudo-element, or (the case in this tree) a `.cf-count`
- * whose "content [is] too short to determine if it is actual text content".
- * None of those become decidable by fixing the page, so a blanket
- * `expect(incomplete).toEqual([])` could only be satisfied by deleting the
- * assertion again — and a gate that gets weakened once teaches everyone that
- * gates get weakened.
+ * `violations` is the gate. `incomplete` is reported rather than asserted. Axe
+ * puts a node there when it cannot reach a verdict at all. Examples are a
+ * colour over a gradient or image, a pseudo-element, or a `.cf-count` too
+ * short to count as text. Fixing the page cannot make those decidable, so
+ * asserting `incomplete` empty would fail for good.
  *
- * So the undecided findings are PRINTED, with axe's own reason attached, on a
- * line a human reading the run can see. That is a real gap and it is stated as
- * one: an incomplete `color-contrast` is a colour nobody has verified, and the
- * only thing standing behind those today is the token law in tokens.css — there
- * are two neutral inks, `--textPrimary` and `--textSecondary`, and nothing
- * quieter than the second.
+ * So the undecided findings are printed with axe's own reason, where a human
+ * reading the run can see them. An incomplete `color-contrast` is a colour
+ * nobody has verified. The token rule in tokens.css covers those today. It has
+ * two neutral inks, `--textPrimary` and `--textSecondary`, and nothing quieter.
  */
-// What a colour-contrast check carries when it could MEASURE the pair. Axe
-// types `data` as unknown and fills it per check, so a rule that is not
-// colour-contrast carries something else entirely and colour-contrast itself
-// omits these when it could not resolve a background — the "partially overlaps
-// other elements" findings are exactly that shape.
+// What a colour-contrast check carries when it could measure the pair. Axe
+// types `data` as unknown and fills it per check. Other rules carry something
+// else. Colour-contrast omits these when it could not resolve a background,
+// as in the "partially overlaps other elements" findings.
 //
-// All four are required together rather than each defaulting, because a
-// half-filled reading is what this reporting exists to prevent: "#5e6c65 on
-// undefined = undefined:1" reads like a measurement and is not one, and it
-// would be believed. A check that cannot fill them falls back to axe's own
-// sentence, which at least says why.
+// All four are required together, with no defaults. A half-filled reading such
+// as "#5e6c65 on undefined = undefined:1" looks like a measurement and is not
+// one. A check that cannot fill them falls back to axe's own sentence.
 type ContrastReading = Readonly<{
   fgColor: string;
   bgColor: string;
@@ -180,23 +154,19 @@ function isContrastReading(data: unknown): data is ContrastReading {
   );
 }
 
-// HEADING_RULES are run BESIDE the WCAG tags rather than inside them, because
-// axe tags both `best-practice` only. Neither carries a WCAG tag, so the tag
-// list below ran neither on any route: the sweep read a smaller rule set than
-// "the axe sweep is green" implies, with no failing assertion to say so.
+// HEADING_RULES run beside the WCAG tags rather than inside them. Axe tags
+// both rules `best-practice` only, so the WCAG tag list never runs them.
 //
-// By id rather than by adding the `best-practice` tag, which would widen the
-// sweep well past headings in one step. These two are the measured gap;
-// adopting the rest of best-practice is a separate decision with its own tail.
+// They are named by id rather than by the `best-practice` tag. That tag would
+// widen the sweep well past headings, which is a separate decision.
 const HEADING_RULES = ["heading-order", "page-has-heading-one"];
 
-// TWO ANALYSES, and it has to be two.
+// Two analyses, and it has to be two.
 //
-// `AxeBuilder.withRules` does not ADD to `withTags` — it sets
-// `runOnly: {type: "rule"}`, replacing the tag selection outright, and the
-// library's own doc says the two cannot be combined. Chaining them narrows the
-// sweep from every WCAG rule to these two, which is a worse version of the
-// defect this exists to fix and would have reported PASS the whole way.
+// `AxeBuilder.withRules` does not add to `withTags`. It sets
+// `runOnly: {type: "rule"}` and replaces the tag selection. The library's own
+// doc says the two cannot be combined. Chaining them would narrow the sweep
+// from every WCAG rule to these two, and it would still pass.
 //
 // So the tags run, the rules run, and the violations are read together.
 async function axeFindings(page: Page) {
@@ -227,16 +197,12 @@ export async function expectNoAaViolations(page: Page, screen: string) {
       `axe could not decide ${undecided.length} finding(s) on #/${screen}; a human has to:\n  ${undecided.join("\n  ")}`,
     );
   }
-  // A violation names the SELECTOR and nothing else, which is unactionable for
-  // the one class of failure this sweep actually produces: a contrast finding
-  // that appears on CI and on no developer's machine. Four runs named four
-  // different screens and every finding was small meta text, and none of them
-  // said what colours were measured — so there was nothing to compare against
-  // the tokens, and the investigation ran on hypotheses instead of readings.
+  // A violation names only the selector. That cannot explain a contrast
+  // finding that shows on CI and on no developer's machine.
   //
-  // Axe already computed the pair. Reporting it costs nothing on a green run
-  // and turns a red one into evidence: the resolved theme, the two colours and
-  // the ratio, beside the threshold that rejected them.
+  // Axe already computed the pair. Reporting it costs nothing on a green run.
+  // A red run then shows the resolved theme, the two colours and the ratio,
+  // beside the threshold that rejected them.
   const failures = results.violations.flatMap((violation) =>
     violation.nodes.map((node) => {
       const detail = node.any
@@ -250,9 +216,9 @@ export async function expectNoAaViolations(page: Page, screen: string) {
     }),
   );
   if (failures.length > 0) {
-    // The document's own theme, not the emulated scheme: a stamped
-    // `data-theme` outranks `prefers-color-scheme`, so the scheme a test asked
-    // for is not proof of the palette it got.
+    // The document's own theme, not the emulated scheme. A stamped
+    // `data-theme` outranks `prefers-color-scheme`, so the requested scheme
+    // does not prove the palette.
     const painted = await page.evaluate(() => ({
       dataTheme: document.documentElement.getAttribute("data-theme"),
       prefersDark: window.matchMedia("(prefers-color-scheme: dark)").matches,
