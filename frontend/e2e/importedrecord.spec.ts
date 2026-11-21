@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import { copy } from "./copy";
+import { sectionControl } from "./foldedtabs";
 import { mockApi } from "./seed";
 
 /**
@@ -30,7 +31,9 @@ for (const [record, route, tab] of [
   }) => {
     await page.goto(route);
     if (tab) {
-      await page.getByRole("button", { name: tab, exact: true }).click();
+      const strip = page.locator(".recordtabs-strip");
+      await expect(strip).toBeVisible();
+      await (await sectionControl(page, strip, tab)).click();
     }
 
     await expect(page.getByText(IMPORTED).first()).toBeVisible();

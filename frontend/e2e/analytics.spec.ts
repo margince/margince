@@ -1,6 +1,7 @@
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
+import { foldedTabs, sectionControl } from "./foldedtabs";
 import { mockApi } from "./seed";
 
 /**
@@ -44,25 +45,6 @@ async function openAnalytics(page: Page, section?: string) {
   await page.goto(`/#/analytics${section ? `/${section}` : ""}`, {
     waitUntil: "networkidle",
   });
-}
-
-/**
- * The open "More" panel holding the tabs the row is too narrow for, or null
- * when every tab fits. Its entries are as much the strip's as the drawn tabs.
- */
-async function foldedTabs(page: Page, strip: Locator) {
-  const more = strip.getByRole("button", { name: t("record.tabs.moreLabel") });
-  if ((await more.count()) === 0) return null;
-  if ((await more.getAttribute("aria-expanded")) !== "true") await more.click();
-  return page.locator(`[id="${await more.getAttribute("aria-controls")}"]`);
-}
-
-/** The control that opens a section: its tab, or its entry under "More". */
-async function sectionControl(page: Page, strip: Locator, name: string) {
-  const tab = strip.getByRole("button", { name, exact: true });
-  if (await tab.isVisible()) return tab;
-  const folded = await foldedTabs(page, strip);
-  return (folded ?? strip).getByRole("button", { name, exact: true });
 }
 
 test.describe("Analytics sections", () => {

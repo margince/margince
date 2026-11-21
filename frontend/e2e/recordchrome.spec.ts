@@ -190,7 +190,7 @@ test.describe("the record's column holds still", () => {
 
   // The sweep's company has no counted sections, so no tab held the hidden
   // ", " before its count, and only that span escaped a static strip.
-  test("does not pan sideways on a company whose counted tabs overflow the strip at 390px", async ({
+  test("does not pan sideways on a company whose counted tabs are too many for the strip at 390px", async ({
     page,
   }) => {
     const empty = { data: [], page: { has_more: false, total: 0 } };
@@ -214,11 +214,18 @@ test.describe("the record's column holds still", () => {
     const measured = await strip.evaluate((element) => ({
       overflow: element.scrollWidth - element.clientWidth,
       hiddenText: element.querySelectorAll(".sr-only").length,
+      tabsOnRow: element.querySelectorAll("[data-tab]").length,
     }));
     expect(
+      await strip
+        .getByRole("button", { name: de["record.tabs.moreLabel"] })
+        .count(),
+      "the tabs are too many for the row, so some fold behind More",
+    ).toBe(1);
+    expect(
       measured.overflow,
-      "the strip fits, so nothing sits past its edge",
-    ).toBeGreaterThan(0);
+      "a folded strip holds nothing past its edge",
+    ).toBeLessThanOrEqual(0);
     expect(
       measured.hiddenText,
       "no tab holds a count's hidden separator",

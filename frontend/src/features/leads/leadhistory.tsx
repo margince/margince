@@ -102,6 +102,7 @@ export function LeadHistoryTab({
     ),
   });
   const dials = useLeadHistoryDials({
+    recordId: lead.id,
     filter,
     onFilter: setFilter,
     filters,
