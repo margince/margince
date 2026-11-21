@@ -25,8 +25,9 @@ type ErrorLineProps = Readonly<
  * straight; `children` takes a sentence the caller already translated.
  * `inline` draws a `<span>`, for a refusal that sits in its control's row.
  * `standing` drops the alert: a state true when the surface drew is not news.
- * The parent spaces it: the line owns no margin. Inside a dialog an alerting
- * line scrolls itself into view, since a pinned footer's save fails off-screen.
+ * The parent spaces it: the line owns no margin. Inside a dialog or the
+ * onboarding board an alerting line scrolls itself into view. The control that
+ * failed is pinned outside what scrolls, and the line is not.
  */
 export function ErrorLine({
   error,
@@ -68,6 +69,9 @@ export function ErrorLine({
   );
 }
 
+// The scrolling surfaces whose actions are pinned outside the scrolled part.
+const SCROLLED_SURFACES = ".modal, .ob-stage-board";
+
 // Keyed on the thrown value, new per failed attempt, so an identical refusal
 // still scrolls; `children` is a new element every render, so it keys on text.
 function useScrolledIntoDialogView(standing: boolean, failure: unknown) {
@@ -80,7 +84,7 @@ function useScrolledIntoDialogView(standing: boolean, failure: unknown) {
       return;
     }
     shown.current = said;
-    const dialog = line.current?.closest(".modal");
+    const dialog = line.current?.closest(SCROLLED_SURFACES);
     if (!standing && line.current && dialog) {
       line.current.style.scrollMarginBlockEnd = `${pinnedFootOver(line.current, dialog)}px`;
       // jsdom has no scrollIntoView; the browser always does.

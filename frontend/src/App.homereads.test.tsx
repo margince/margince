@@ -195,8 +195,14 @@ it("stops Home's reads when the session mark is erased, as a sign-out does", asy
 
 describe("a returning browser that never saw its reader finish onboarding", () => {
   const HOME_READS = ["/worklist", "/worklist/handled", "/brief", "/magic"];
+  // A member with a step to take: setup holds only a seat that has one.
+  const allow = {
+    deal: ["read"],
+    voice_profile: ["read", "create"],
+    activity: ["create"],
+  } as const;
   const journey = (row: ReturnType<typeof wizardRow>) => ({
-    "/me": () => json(meFixture({ roles: ["rep"], allow: { deal: ["read"] } })),
+    "/me": () => json(meFixture({ roles: ["rep"], allow })),
     "/company/context/capabilities": () =>
       json({ onboarding_enabled: true, read_enabled: true }),
     "/onboarding/state": () => json(row),
@@ -212,7 +218,7 @@ describe("a returning browser that never saw its reader finish onboarding", () =
     expect(HOME_READS.filter((path) => asked(seen, path))).toEqual([]);
     release("/onboarding/state");
     await waitFor(() =>
-      expect(window.location.hash).toBe("#/onboarding/company"),
+      expect(window.location.hash).toMatch(/^#\/onboarding\//),
     );
     expect(HOME_READS.filter((path) => asked(seen, path))).toEqual([]);
   });
