@@ -54055,7 +54055,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
-            /** @description The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a name past 120 characters `422 too_long`. */
+            /** @description The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;

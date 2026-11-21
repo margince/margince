@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
@@ -105,8 +106,9 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := profileNameFault("profile.display_name", req.Profile.DisplayName); err != nil {
-		httperr.Write(w, r, err)
+	// The company record judges the length, as for PUT /company.
+	if refused := values.CompanyNameMissing("profile.display_name", req.Profile.DisplayName); refused != nil {
+		httperr.Write(w, r, refused)
 		return
 	}
 	for _, required := range []struct {

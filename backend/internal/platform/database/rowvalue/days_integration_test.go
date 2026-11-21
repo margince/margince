@@ -13,7 +13,7 @@ import (
 
 // A date column and a timestamp at the same midnight UTC: only the date is a
 // calendar day, so only it leaves as YYYY-MM-DD.
-func TestADayReaderSpellsADateAsItsDayAndLeavesAnInstantAlone(t *testing.T) {
+func TestAReaderSpellsADateAsItsDayAndLeavesAnInstantAlone(t *testing.T) {
 	ctx := context.Background()
 	pool := censusPool(ctx, t)
 	rows, err := pool.Query(ctx,
@@ -25,7 +25,7 @@ func TestADayReaderSpellsADateAsItsDayAndLeavesAnInstantAlone(t *testing.T) {
 	if !rows.Next() {
 		t.Fatalf("the query returned no row: %v", rows.Err())
 	}
-	values, err := NewDayReader().Values(rows)
+	values, err := NewReader().Values(rows)
 	if err != nil {
 		t.Fatal(err)
 	}

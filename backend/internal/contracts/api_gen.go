@@ -43508,7 +43508,7 @@ type CompanyProfileInput struct {
 	CustomerPains    *string `json:"customer_pains,omitempty"`
 	DesiredOutcomes  *string `json:"desired_outcomes,omitempty"`
 
-	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a name past 120 characters `422 too_long`.
+	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.
 	DisplayName string  `json:"display_name"`
 	History     *string `json:"history,omitempty"`
 	Icp         *string `json:"icp,omitempty"`

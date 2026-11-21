@@ -29,7 +29,7 @@ import {
 import { useScrollMemory } from "../lib/scrollmemory";
 import {
   currentParams,
-  useAddressMovedFromOutside,
+  useNarrowedFromOutside,
   useUrlParams,
 } from "../lib/urlstate";
 import type {
@@ -195,7 +195,7 @@ export function ListTable<Row>({
   // Read here rather than threaded through ListState: it is the only dial the
   // table owns by default.
   const [params, setParams] = useUrlParams();
-  const addressMovedFromOutside = useAddressMovedFromOutside();
+  const narrowedFromOutside = useNarrowedFromOutside(JSON.stringify(query));
   // Where the reader was in the rows, which the shell cannot remember for them.
   // A full-height list takes the overflow itself, so the page column the shell
   // watches is at zero on every one of these screens. Back then returned
@@ -483,7 +483,7 @@ export function ListTable<Row>({
       onPage={(next) =>
         setParams(withListPage(currentParams(), next, state.paramScope))
       }
-      keepsPage={addressMovedFromOutside}
+      keepsPage={narrowedFromOutside}
       bodyRef={rowsScroller}
       widthsKey={layoutKey}
       body={body}

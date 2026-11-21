@@ -95,7 +95,44 @@ describe("a link to a later page of the list on screen", () => {
   });
 });
 
+describe("Back to a later page the pager opened", () => {
+  it("stays on that page after a link narrowed the list", async () => {
+    renderListAt("#/contacts");
+    await screen.findByText("Contact 1");
+    // The writer the pager's press goes through.
+    await act(async () => replaceDial("page", "3"));
+    await screen.findByText("Contact 51");
+    await followLink("#/contacts?q=x");
+    await screen.findByText("Contact 1");
+
+    await act(async () => {
+      globalThis.history.back();
+      await new Promise((settled) => setTimeout(settled, 0));
+    });
+
+    expect(await screen.findByText("Contact 51")).toBeInTheDocument();
+    expect(globalThis.location.hash).toBe("#/contacts?page=3");
+  });
+});
+
 describe("a dial the reader turns on a later page", () => {
+  it("starts at page one after a link that named only the page", async () => {
+    renderListAt("#/contacts");
+    await screen.findByText("Contact 1");
+    await followLink("#/contacts?page=3");
+    await screen.findByText("Contact 51");
+    vi.useFakeTimers();
+
+    fireEvent.change(screen.getByPlaceholderText("Search"), {
+      target: { value: "b" },
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+    });
+
+    expect(globalThis.location.hash).toBe("#/contacts?q=b");
+  });
+
   it("starts the narrowed list at page one", async () => {
     renderListAt("#/contacts?q=a");
     await screen.findByText("Contact 1");

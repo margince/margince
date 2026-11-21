@@ -6,7 +6,9 @@
 package collections
 
 import (
+	"io"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -26,7 +28,10 @@ func TestAFilterPreviewSendsADateAsItsDayAndATimestampAsAnInstant(t *testing.T) 
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
 	}
-	column, _ := field["column_name"].(string)
+	column, named := field["column_name"].(string)
+	if !named || column == "" {
+		t.Fatalf("created field carries no column_name: %v", field)
+	}
 	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
 		"linkedin_url": apptest.ContactProfile(),
 		"full_name":    "Day Subject", "source": "manual", column: "2025-12-01",
@@ -48,4 +53,28 @@ func TestAFilterPreviewSendsADateAsItsDayAndATimestampAsAnInstant(t *testing.T) 
 	if _, err := time.Parse(time.RFC3339Nano, created); !isText || err != nil {
 		t.Errorf("created_at went out as %#v, want an RFC 3339 instant", got.Rows[0]["created_at"])
 	}
+	// The full bundle writes the same column as the same day.
+	contacts := integration.BundleEntries(t, bundle(t, e))["contact.csv"]
+	if days := integration.CSVColumn(t, contacts, column); !slices.Equal(days, []string{"2025-12-01"}) {
+		t.Errorf("the bundle's contact.csv holds %s = %v, want the day 2025-12-01", column, days)
+	}
+}
+
+func bundle(t *testing.T, e *apptest.AppEnv) []byte {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, e.TS.URL+"/v1/exports/bundle", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	//nolint:bodyclose // apptest.CloseBody closes it in the deferred call below, which the checker cannot follow across the helper.
+	resp, err := e.Client.Do(req)
+	if err != nil {
+		t.Fatalf("bundle request: %v", err)
+	}
+	defer apptest.CloseBody(t, resp)
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("bundle → %d, %v; want 200", resp.StatusCode, err)
+	}
+	return raw
 }

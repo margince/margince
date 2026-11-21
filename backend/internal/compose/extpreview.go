@@ -58,7 +58,7 @@ func extensionPreviewRows(ctx context.Context, tx pgx.Tx, engine storekit.Query,
 	}
 	defer pgRows.Close()
 	var rows [][]any
-	reader := rowvalue.NewDayReader()
+	reader := rowvalue.NewReader()
 	for pgRows.Next() {
 		values, err := reader.Values(pgRows)
 		if err != nil {

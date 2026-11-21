@@ -1,5 +1,6 @@
 import { useCallback, useContext, useMemo, useRef } from "react";
 import {
+  addressMovedFromOutside,
   announceAddressChanged,
   navigateReplacing,
   type Route,
@@ -136,30 +137,25 @@ export function replaceParams(params: UrlParams): void {
     return;
   }
   globalThis.history.replaceState(globalThis.history.state, "", next);
-  lastDialWrite = next;
   // Told directly rather than waited for: `hashchange` arrives a task later, and
   // in that gap the list would still be reading the dials the reader has just
   // changed — one fetch for the previous query before the one they asked for.
   announceAddressChanged();
 }
 
-// The address the last dial write left in the bar. Any other address came
-// from a link, a typed address or history.
-let lastDialWrite: string | undefined;
-
 /**
- * For a list whose narrowing just changed: whether the address moved with it,
- * by a link, history or typing rather than a dial. Such an address names its
- * page. Typing in a search box narrows before the address moves at all.
+ * For a list whose narrowing just changed: whether the address brought the
+ * change, by a link, history or typing rather than a dial. Such an address
+ * names its page. `narrowedBy` is the narrowing the address spells, without the
+ * page, so typing in a search box or a page-only link moves nothing here.
  */
-export function useAddressMovedFromOutside(): () => boolean {
-  const seen = useRef(globalThis.location.hash);
+export function useNarrowedFromOutside(narrowedBy: string): () => boolean {
+  const checked = useRef(narrowedBy);
   return useCallback(() => {
-    const now = globalThis.location.hash;
-    const moved = now !== seen.current;
-    seen.current = now;
-    return moved && now !== lastDialWrite;
-  }, []);
+    const moved = narrowedBy !== checked.current;
+    checked.current = narrowedBy;
+    return moved && addressMovedFromOutside();
+  }, [narrowedBy]);
 }
 
 /**
