@@ -591,7 +591,7 @@ func TestAPageThatDropsItsEndedWalkResumesAfterAGroupWithoutASkip(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	next := walkFrom(t, unwalked, day, 10, decodedCursor(t, *kept.NextCursor))
+	next := walkFrom(t, svc, day, 10, decodedCursor(t, *kept.NextCursor))
 
 	var paged, whole []string
 	for _, row := range append(first.Queue, next.Queue...) {

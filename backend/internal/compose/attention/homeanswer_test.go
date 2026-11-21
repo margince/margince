@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -95,8 +96,14 @@ func TestAKeptPageWhoseWalkEndedPagesOnFromItsRankedOffset(t *testing.T) {
 		t.Errorf("the cursor resumes at %d with walk %s and ranked %d, want 2, none and 0", cursor.At, cursor.Snapshot, cursor.Ranked)
 	}
 
-	older := encodeCursor(5, scopeMine, "", ids.UUID{}, walkState{id: walk.id, carried: true}, nil)
-	if _, err := pagedWithoutWalk(crmcontracts.Worklist{NextCursor: &older}); !errors.Is(err, errNoRankedOffset) {
-		t.Errorf("a cursor with no ranked offset answered %v, want errNoRankedOffset", err)
+	unranked := walkState{id: walk.id, carried: true}
+	for name, rest := range map[string]*backlogCursor{
+		"without a backlog position": nil,
+		"with a backlog position":    {At: map[string]string{"tasks": ""}},
+	} {
+		older := encodeCursor(5, scopeMine, "", ids.UUID{}, unranked, rest)
+		if _, err := pagedWithoutWalk(crmcontracts.Worklist{NextCursor: &older}); !errors.Is(err, homecache.ErrReadFresh) {
+			t.Errorf("an older cursor %s answered %v, want homecache.ErrReadFresh", name, err)
+		}
 	}
 }

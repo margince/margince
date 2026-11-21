@@ -100,6 +100,10 @@ type Walk[A Answer] struct {
 	Ended func(A) (A, error)
 }
 
+// ErrReadFresh is Walk.Ended's expected refusal: the kept answer cannot page on
+// without its walk, so Serve reads fresh and logs nothing.
+var ErrReadFresh = errors.New("homecache: the kept answer is read fresh")
+
 // NoWalk is the Walk of an answer that never starts one.
 func NoWalk[A Answer]() Walk[A] {
 	return Walk[A]{
@@ -161,7 +165,9 @@ func Serve[A Answer](
 	}
 	if hit && standing.WalkEnded {
 		if kept, err = walk.Ended(kept); err != nil {
-			logFault(ctx, "a kept Home answer could not drop its ended walk; reading it fresh", read, err)
+			if !errors.Is(err, ErrReadFresh) {
+				logFault(ctx, "a kept Home answer could not drop its ended walk; reading it fresh", read, err)
+			}
 			hit = false
 		}
 	}

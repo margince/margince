@@ -5,7 +5,6 @@ package attention
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -83,9 +82,6 @@ func (s *Service) homeKey(ctx context.Context, q worklistQuestion) (string, bool
 		loc.String(), day.Format(time.DateOnly), !q.owner.IsZero(), pageLimit(q.limit), systemtext.Locale(ctx), q.home), true, nil
 }
 
-// errNoRankedOffset refuses a kept page whose cursor cannot page on without its walk.
-var errNoRankedOffset = errors.New("attention: the kept page's cursor holds no ranked offset")
-
 // homeWalk is the walk Home's first page starts. A kept page outlives it.
 var homeWalk = homecache.Walk[crmcontracts.Worklist]{Started: walkStartedBy, Ended: pagedWithoutWalk}
 
@@ -122,8 +118,9 @@ func pagedWithoutWalk(out crmcontracts.Worklist) (crmcontracts.Worklist, error) 
 		return out, nil
 	}
 	// A token from a build that did not mint Ranked has no offset to page on.
-	if cursor.Ranked == 0 && cursor.Rest == nil {
-		return out, errNoRankedOffset
+	// Only a page with no ranked rows has both at zero.
+	if cursor.Ranked == 0 && cursor.At != 0 {
+		return out, homecache.ErrReadFresh
 	}
 	cursor.At, cursor.Ranked, cursor.Snapshot = cursor.Ranked, 0, ids.UUID{}
 	token, err := storekit.EncodeSigned(cursor, cursorKey())
