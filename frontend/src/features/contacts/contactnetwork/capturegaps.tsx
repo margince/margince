@@ -10,6 +10,7 @@ import { ErrorLine } from "../../../design-system/errorline";
 import { formatNumber } from "../../../format/format";
 import { useLocale, usePlural, useT } from "../../../i18n";
 import { unwrap } from "../../../lib/problem";
+import { lastReadFailed } from "../readfailed";
 
 /**
  * useContactCaptureGaps reads the colleagues who are on a contact's threads
@@ -25,19 +26,15 @@ function useContactCaptureGaps(id: string) {
   });
 }
 
-// The last answer was a failure, also while a retry runs. The notice's own
-// mount starts one, and hiding the failure then would drop its Retry.
-function readFailed(network: ReturnType<typeof useContactCaptureGaps>) {
-  return network.errorUpdatedAt > network.dataUpdatedAt;
-}
-
 /**
  * Whether CaptureGapsNotice draws anything, for a host that must not frame
  * nothing. It reads the notice's own query, so it asks the server nothing new.
  */
 export function useCaptureGapsShown(contactId: string): boolean {
   const network = useContactCaptureGaps(contactId);
-  return readFailed(network) || (network.data?.capture_gaps ?? []).length > 0;
+  return (
+    lastReadFailed(network) || (network.data?.capture_gaps ?? []).length > 0
+  );
 }
 
 /**
@@ -54,7 +51,7 @@ export function CaptureGapsNotice({
   const plural = usePlural();
   const { locale } = useLocale();
   const network = useContactCaptureGaps(contactId);
-  if (readFailed(network)) {
+  if (lastReadFailed(network)) {
     return (
       <ErrorLine
         actions={

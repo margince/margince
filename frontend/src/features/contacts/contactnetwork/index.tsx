@@ -27,6 +27,7 @@ import { availabilityLabel, RoutesPanel } from "../contactroutes";
 import { IntroAsksPanel, isOpenAsk } from "../introasks";
 import { IntroDrawer } from "../introdrawer";
 import { type IntroRequest, useIntroRequests } from "../introrequests";
+import { lastReadFailed } from "../readfailed";
 import { RecordIntroductionButton } from "../recordintroduction";
 import { CaptureGapsNotice, useCaptureGapsShown } from "./capturegaps";
 import { useNetworkReadings } from "./decision";
@@ -121,6 +122,7 @@ function NetworkChapters({
   const t = useT();
   const { locale } = useLocale();
   const asks = useIntroRequests(contactId);
+  const asksFailed = lastReadFailed(asks);
   const [focus, setFocus] = useState<string | null>(null);
   const [asking, setAsking] = useState<RouteCandidate | undefined>();
   const baseId = useId();
@@ -143,8 +145,8 @@ function NetworkChapters({
     change: moved.change,
     changeWithheld: moved.withheld,
     open: read.open,
-    openPending: asks.isPending,
-    openUnread: asks.isError,
+    openPending: asks.isPending && !asksFailed,
+    openUnread: asksFailed,
   });
 
   const wayIn = wayInParts({
@@ -220,9 +222,9 @@ function NetworkChapters({
           read={read}
           view={view}
           settledAsks={settledAsks}
-          // Still true while a retry runs, so the card holding the Retry is
-          // not taken away by the read its own mount starts.
-          asksFailed={asks.errorUpdatedAt > asks.dataUpdatedAt}
+          // The panel's own mount reads again, and the card holding the
+          // Retry must outlast that read.
+          asksFailed={asksFailed}
         />
 
         {asking ? (

@@ -24,6 +24,7 @@ import { CitedDocument } from "./citeddocument";
 import { AnswerView } from "./corpusanswer";
 import { type Corpus, useAsk, useAskableSets } from "./corpusaskqueries";
 import "./corpusask.css";
+import { characterCount } from "../../lib/charactercount";
 import { problemMessageOf } from "../../lib/problem";
 
 // Asking a document set a question, in the reader's own words.
@@ -86,9 +87,9 @@ export function AskMarginceModal({
   const sets = useAskableSets(canAsk && open);
   const [corpusId, setCorpusId] = useState("");
   const [question, setQuestion] = useState("");
-  // Code points, because the server counts runes: "😀" is one, not two units.
-  // No `maxLength`, which counts units; the error and Ask hold the limit.
-  const questionLength = [...question].length;
+  // No `maxLength`: the error and Ask hold the limit, so a long paste stays
+  // whole for the reader to shorten.
+  const questionLength = characterCount(question);
   const tooLong = questionLength > QUESTION_MAX;
   // Which citation the document pane is showing, by its position in the answer.
   // Null is "nothing picked yet", which is a different pane from "picked one

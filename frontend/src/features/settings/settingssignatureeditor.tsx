@@ -6,6 +6,7 @@ import { SignatureHtml } from "../../components/signaturehtml";
 import { Field, Textarea, TextInput } from "../../design-system/atoms";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { characterCount } from "../../lib/charactercount";
 
 // The server's cap on personal HTML, counted on the trimmed raw input.
 // backend/gates/frontendsignaturecap_test.go fails when it and the contract disagree.
@@ -43,8 +44,7 @@ export function SignatureFields({
   const plural = usePlural();
   const { locale } = useLocale();
   const max = formatNumber(SIGNATURE_HTML_MAX_CHARS, locale);
-  // Code points, because the server counts runes: "𝐀" is one, not two units.
-  const count = [...shown.html.trim()].length;
+  const count = characterCount(shown.html.trim());
   const counter = count > SIGNATURE_HTML_MAX_CHARS * COUNTER_FROM && (
     <span
       className={count > SIGNATURE_HTML_MAX_CHARS ? "field-error" : undefined}

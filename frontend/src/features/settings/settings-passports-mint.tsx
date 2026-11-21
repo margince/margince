@@ -22,6 +22,7 @@ import { Heading } from "../../design-system/heading";
 import { WriteRefused } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { characterCount } from "../../lib/charactercount";
 import { throwProblem } from "../../lib/problem";
 import { resetToSignedOut } from "../../lib/session";
 import { MintedPassport } from "./settings.passportuse";
@@ -38,7 +39,7 @@ function scopeLabelKey(scope: PassportScope): MessageKey {
 // The server counts the trimmed name in code points, so the form does too.
 const PASSPORT_LABEL_MAX = 120;
 const nameTooLong = (label: string) =>
-  Array.from(label.trim()).length > PASSPORT_LABEL_MAX;
+  characterCount(label.trim()) > PASSPORT_LABEL_MAX;
 
 // Why New passport cannot be pressed yet, or undefined when it can.
 function mintRefusal(

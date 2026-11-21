@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { characterCount } from "../../lib/charactercount";
 import { throwProblem } from "../../lib/problem";
 import type { RewriteVerb } from "../../lib/rewrites";
 import type { RelinkKind } from "./composerelink";
@@ -221,7 +222,7 @@ export function rewriteBlock(
   limit = REWRITE_OF_MAX,
 ): "formatted" | "long" | null {
   if (hasRepFormatting(body.html)) return "formatted";
-  return [...body.text.trim()].length > limit ? "long" : null;
+  return characterCount(body.text.trim()) > limit ? "long" : null;
 }
 
 // The words a draft call is asked to revise: the body on screen, whoever wrote

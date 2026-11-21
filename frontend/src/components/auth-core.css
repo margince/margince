@@ -338,33 +338,16 @@
   gap: var(--gapActions);
 }
 .auth-actions .btn {
-  width: 100%;
-  min-height: 48px;
   /* Overrides the atom's `white-space: nowrap`. A nowrap label in a full-width
      button cannot overflow the button — it widens it, and the card with it, until
-     the surface is wider than the viewport. `min-height` rather than `height` is
-     what makes wrapping safe here: a second line grows the control instead of
-     being clipped by it. */
+     the surface is wider than the viewport. */
   white-space: normal;
 }
-/* A link, not a button: no padding, so it sits on the same line as the text
-   beside it and its baseline is the row's baseline. The focus ring is offset
-   instead, which is what the padding was buying. */
-.auth-link {
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  color: var(--accentText);
-  padding: 0;
-}
-.auth-link:hover,
-.auth-link:focus-visible {
-  text-decoration: underline;
-}
-.auth-link:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-  border-radius: var(--r-sm);
+/* A text link in the column keeps its own height. `min-height` rather than
+   `height` lets a second line grow the control instead of being clipped. */
+.auth-actions .btn:not(.btn-link) {
+  width: 100%;
+  min-height: 48px;
 }
 
 /* A rejected credential, a rate limit, an unreachable server: one surface. */
@@ -406,7 +389,7 @@
   gap: var(--space-2);
   margin-top: auto;
 }
-.auth-footer .auth-link[aria-pressed="true"] {
+.auth-footer .btn-link[aria-pressed="true"] {
   color: var(--textPrimary);
 }
 

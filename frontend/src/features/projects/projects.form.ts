@@ -26,6 +26,8 @@ export {
   PROJECT_PHASES,
 } from "../../format/projectphase";
 
+import { characterCount } from "../../lib/charactercount";
+
 type CreateProjectRequest = components["schemas"]["CreateProjectRequest"];
 type UpdateProjectRequest = components["schemas"]["UpdateProjectRequest"];
 
@@ -47,10 +49,10 @@ export function projectFields(
       key: "name",
       label: "project.name",
       required: true,
-      // No native `maxLength`: it counts UTF-16 units. The server trims, then
-      // counts characters, and so does this refusal, which holds Save.
+      // No `maxLength`: the server trims before it counts, and so does this
+      // refusal, which holds Save.
       validate: (value) =>
-        [...trimServerSpace(value)].length > TEXT_LIMITS.label
+        characterCount(trimServerSpace(value)) > TEXT_LIMITS.label
           ? faultSentenceFor(
               {
                 field: "name",
