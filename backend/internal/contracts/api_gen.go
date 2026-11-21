@@ -8458,6 +8458,24 @@ func (e ContactCaseOwnerSeat) Valid() bool {
 	}
 }
 
+// Defines values for ContactCaseOwnerStatus.
+const (
+	ContactCaseOwnerStatusActive  ContactCaseOwnerStatus = "active"
+	ContactCaseOwnerStatusInvited ContactCaseOwnerStatus = "invited"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseOwnerStatus enum.
+func (e ContactCaseOwnerStatus) Valid() bool {
+	switch e {
+	case ContactCaseOwnerStatusActive:
+		return true
+	case ContactCaseOwnerStatusInvited:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactCaseShareAccess.
 const (
 	ContactCaseShareAccessRead  ContactCaseShareAccess = "read"
@@ -45281,11 +45299,17 @@ type ContactCaseOwner struct {
 	MemberIds []openapi_types.UUID `json:"member_ids"`
 	Name      string               `json:"name"`
 	Seat      ContactCaseOwnerSeat `json:"seat"`
-	UserId    openapi_types.UUID   `json:"user_id"`
+
+	// Status `invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.
+	Status ContactCaseOwnerStatus `json:"status"`
+	UserId openapi_types.UUID     `json:"user_id"`
 }
 
 // ContactCaseOwnerSeat defines model for ContactCaseOwner.Seat.
 type ContactCaseOwnerSeat string
+
+// ContactCaseOwnerStatus `invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.
+type ContactCaseOwnerStatus string
 
 // ContactCasePreference Where the selected members disagree, the member whose value the remaining contact takes.
 // Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.

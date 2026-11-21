@@ -32379,6 +32379,11 @@ export interface components {
             name: string;
             /** @enum {string} */
             seat: "full" | "read";
+            /**
+             * @description `invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.
+             * @enum {string}
+             */
+            status: "active" | "invited";
             member_ids: string[];
         };
         ContactCaseResolution: {

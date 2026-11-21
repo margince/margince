@@ -454,3 +454,22 @@ func (p *Patch) ApplyLocked(ctx context.Context, tx pgx.Tx, lock RowLock) error 
 	}
 	return nil
 }
+
+// TouchLocked moves a held row's version and updated_at after a write changed
+// only what hangs off it. A merge that moves addresses onto it is one. The
+// table's trigger does the bump. A client holding the old version then meets a
+// conflict on its next write.
+func TouchLocked(ctx context.Context, tx pgx.Tx, lock RowLock) error {
+	if lock.table == "" {
+		return errors.New("storekit: TouchLocked requires a lock minted by LockRow or LockPair")
+	}
+	tag, err := tx.Exec(ctx,
+		fmt.Sprintf(`UPDATE %s SET updated_at = updated_at WHERE id = $1%s`, lock.table, liveClause(lock.archived)), lock.id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return apperrors.ErrNotFound
+	}
+	return nil
+}
