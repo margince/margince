@@ -12,7 +12,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
-import { meFixture } from "../../../testing/mefixture";
+import { en } from "../../../i18n/en";
+import { type GrantSpec, meFixture } from "../../../testing/mefixture";
 import { OnboardingScreen } from "../onboarding";
 
 // The restore matrix of the conversational shell: which act a reload lands
@@ -127,6 +128,8 @@ type StubOptions = {
   voiceProfiles?: { id: string }[];
   voiceVersions?: { profile_version: number; status: string }[];
   corpusWords?: number;
+  /** GET .../sources rows: the samples behind `corpusWords`. */
+  sources?: { id: string; source_label: string; word_count: number }[];
   /** Words a live paste ingest (POST .../sources) adds on top of
    * `corpusWords`; every GET afterward reports the grown total. */
   pasteWords?: number;
@@ -138,6 +141,12 @@ type StubOptions = {
   proposal?: Proposal;
   /** GET /me roles; an admin unless the case says otherwise. */
   roles?: string[];
+  /** Whether /me grants voice_profile create; granted unless a case says no. */
+  voiceGrant?: boolean;
+  /** The /me grants in full, where a case needs more than the voice grant. */
+  allow?: GrantSpec;
+  /** A failing status for GET /voice-profiles. */
+  voiceListStatus?: number;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -250,6 +259,9 @@ function stubApi(options: StubOptions = {}) {
           : jsonResponse({ detail: "no company yet" }, 404);
       }
       if (path.endsWith("/voice-profiles") && request.method === "GET") {
+        if (options.voiceListStatus !== undefined) {
+          return jsonResponse({ code: "internal" }, options.voiceListStatus);
+        }
         return jsonResponse({ data: options.voiceProfiles ?? [], page: {} });
       }
       if (path.includes("/voice-profiles/") && path.endsWith("/versions")) {
@@ -274,6 +286,7 @@ function stubApi(options: StubOptions = {}) {
         const added = options.pasteWords ?? 0;
         wordsNow += added;
         return jsonResponse({
+          source: { id: "src-new", version: 1 },
           ingest_stats: { kept_words: added, input_words: added },
           summary: {
             total_words: wordsNow,
@@ -287,7 +300,12 @@ function stubApi(options: StubOptions = {}) {
       }
       if (path.includes("/voice-profiles/") && path.endsWith("/sources")) {
         return jsonResponse({
-          data: [],
+          data: (options.sources ?? []).map((row) => ({
+            ...row,
+            source_ref: `voice:upload:${row.id}`,
+            included: true,
+            version: 1,
+          })),
           summary: {
             total_words: wordsNow,
             target_words: 30000,
@@ -312,10 +330,15 @@ function stubApi(options: StubOptions = {}) {
       if (path.endsWith("/passports") && request.method === "GET") {
         return jsonResponse({ data: [] });
       }
-      // No grants, so the reporting basis stays unchangeable. The role is
-      // admin, meFixture's default, unless a case names another.
+      // Only the voice grant, so the reporting basis stays unchangeable. The
+      // role is admin, meFixture's default, unless a case names another.
       if (path.endsWith("/me") && request.method === "GET") {
-        return jsonResponse(meFixture({ allow: {}, roles: options.roles }));
+        const allow: GrantSpec =
+          options.allow ??
+          (options.voiceGrant === false
+            ? {}
+            : { voice_profile: ["read", "create"] });
+        return jsonResponse(meFixture({ allow, roles: options.roles }));
       }
       throw new Error(`unstubbed request: ${request.method} ${request.url}`);
     }),
@@ -394,6 +417,25 @@ describe("restore into the conversational shell", () => {
     ).toBeTruthy();
   });
 
+  it("a reload lists the samples the meter counts, each one removable", async () => {
+    stubApi({
+      state: stateRow({ step: "voice" }),
+      company: savedProfile,
+      voiceProfiles: [{ id: "018f3a1b-0000-7000-8000-0000000000f1" }],
+      corpusWords: 701,
+      sources: [
+        { id: "s1", source_label: "offer.pdf", word_count: 350 },
+        { id: "s2", source_label: "notes.txt", word_count: 351 },
+      ],
+    });
+    render(<OnboardingScreen />);
+
+    expect(await screen.findByText("offer.pdf")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Remove notes.txt" }),
+    ).toBeTruthy();
+  });
+
   it("the member path comes from the state row and resumes at the step it names", async () => {
     stubApi({
       state: stateRow({ path: "member", step: "connect" }),
@@ -449,6 +491,54 @@ describe("restore into the conversational shell", () => {
     expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(1);
   });
 
+  it("a role that may not create a voice profile begins at connect, on a one-stop rail", async () => {
+    const calls = stubApi({
+      state: null,
+      roles: ["viewer"],
+      voiceGrant: false,
+    });
+    render(<OnboardingScreen />);
+
+    expect(
+      await screen.findByText("Connect your mail and calendar"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Train your writing voice/)).toBeNull();
+    expect(screen.getByText(/Step 1 of 1/)).toBeTruthy();
+    expect(requestsTo(calls, "/voice-profiles", "POST")).toHaveLength(0);
+  });
+
+  // GET /voice-profiles needs voice_profile read, which a custom role may
+  // leave out while it still lets the member connect mail.
+  it("a seat that may connect mail but not read a voice restores into connect without asking for one", async () => {
+    const calls = stubApi({
+      state: null,
+      roles: ["viewer"],
+      allow: { activity: ["create"] },
+    });
+    render(<OnboardingScreen />);
+
+    expect(
+      await screen.findByText("Connect your mail and calendar"),
+    ).toBeTruthy();
+    expect(requestsTo(calls, "/voice-profiles", "GET")).toHaveLength(0);
+  });
+
+  // Connect is the whole journey for a seat that may read a voice but not
+  // train one. A failed voice read must not hold it.
+  it("a seat that may read but not train a voice reaches connect when the voice read fails", async () => {
+    stubApi({
+      state: null,
+      roles: ["viewer"],
+      allow: { activity: ["create"], voice_profile: ["read"] },
+      voiceListStatus: 500,
+    });
+    render(<OnboardingScreen />);
+
+    expect(
+      await screen.findByText("Connect your mail and calendar"),
+    ).toBeTruthy();
+  });
+
   it("reopens the invite for a creator whose company is confirmed", async () => {
     const calls = stubApi({
       state: stateRow({ step: "invite" }),
@@ -489,6 +579,8 @@ describe("restore into the conversational shell", () => {
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
+    // The write takes its version from the row the restore read.
+    expect(requestsTo(calls, "/onboarding/state", "GET")).toHaveLength(1);
     const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
       .clone()
       .json()) as Record<string, unknown>;
@@ -568,19 +660,18 @@ describe("restore into the conversational shell", () => {
     ).toBeTruthy();
   });
 
-  // Leaving the voice act lands directly on the merged connect screen — mail
-  // and LinkedIn together, no separate network-ask act to pass through — and
-  // checkpoints step "connect" immediately: arriving here already shows
-  // everything, so there is nothing a reload could strand behind it.
-  it("continuing out of the voice act lands on the merged connect screen and checkpoints it on arrival", async () => {
+  // The skip and step "connect" are one write, so a reload after skipping
+  // lands on the connect screen, mail and LinkedIn together.
+  it("skipping the voice act lands on the merged connect screen and checkpoints it on arrival", async () => {
     const calls = stubApi({
-      state: stateRow({ step: "voice", voice_skipped: true }),
+      state: stateRow({ step: "voice" }),
       company: savedProfile,
     });
+    const user = userEvent.setup();
     render(<OnboardingScreen />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Continue" }),
+    await user.click(
+      await screen.findByRole("button", { name: en["ob.conv.voice.skipped"] }),
     );
 
     expect(
@@ -596,25 +687,26 @@ describe("restore into the conversational shell", () => {
     const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
       .clone()
       .json()) as Record<string, unknown>;
-    expect(body.step).toBe("connect");
+    expect(body).toMatchObject({ step: "connect", voice_skipped: true });
   });
 
   it("skipping LinkedIn on the merged screen records no further checkpoint — the arrival already did", async () => {
     const calls = stubApi({
-      state: stateRow({ step: "voice", voice_skipped: true }),
+      state: stateRow({ step: "voice" }),
       company: savedProfile,
     });
+    const user = userEvent.setup();
     render(<OnboardingScreen />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Continue" }),
+    await user.click(
+      await screen.findByRole("button", { name: en["ob.conv.voice.skipped"] }),
     );
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
 
-    await userEvent.click(screen.getByRole("button", { name: "Add profile" }));
-    await userEvent.click(
+    await user.click(screen.getByRole("button", { name: "Add profile" }));
+    await user.click(
       await screen.findByRole("button", { name: "Skip LinkedIn for now" }),
     );
 
@@ -778,13 +870,14 @@ describe("finishing the connect act", () => {
     await waitFor(() => expect(without).not.toBeDisabled());
     await userEvent.click(without);
 
-    // The write failed: the failure is said out loud, nothing moved on.
+    // The write failed: the failure is said out loud, and the address still
+    // names the step.
     expect(
       await screen.findByText(
         /I could not save the setup completion\. Retry\./,
       ),
     ).toBeTruthy();
-    expect(window.location.hash).toBe("");
+    expect(window.location.hash).toBe("#/onboarding/connect");
 
     // The retry succeeds: how the step was left lands as the completion
     // itself, THEN the shell navigates.

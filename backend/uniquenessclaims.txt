@@ -112,6 +112,7 @@ internal/compose/contact360/sectionstimeline.go#func projectScope
 internal/compose/contactbrief/doc.go#package contactbrief
 internal/compose/contactdraft/deterministic.go#type Draft
 internal/compose/contactdraft/fold.go#func ConversationState
+internal/compose/contractshape/routeshadow_test.go#func pathParameters
 internal/compose/costestimate/estimator.go#func expectedUnits
 internal/compose/costestimate/rules.go#type unitRule
 internal/compose/csvfields.go#const fieldFullName
@@ -195,7 +196,6 @@ internal/compose/reportcatalog.go#func catalogFilterNames
 internal/compose/reporterrors.go#const block at const slotGroupBy
 internal/compose/reporterrors.go#const reportFieldNotAllowedCode
 internal/compose/routes.go#func WithUploadLimits
-internal/compose/routeshadow_test.go#func pathParameters
 internal/compose/sendpath.go#func consentGateFor
 internal/compose/sendpreflight_test.go#func sendCapableCases
 internal/compose/sendvoiceoutcome_integration_test.go#type witnessDraftOutcome

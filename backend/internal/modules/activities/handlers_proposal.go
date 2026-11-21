@@ -149,7 +149,7 @@ func (h Handlers) GetPublicProposalAvailability(w http.ResponseWriter, r *http.R
 		return
 	}
 	if err != nil {
-		writeStoreErr(w, r, err)
+		writeGuestAvailabilityErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, struct {

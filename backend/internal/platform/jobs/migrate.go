@@ -39,6 +39,14 @@ BEGIN
 	END IF;
 END $$;`
 
+// tuneRiverJob vacuums the queue table after 2% of it changed, not the default
+// 20%. Every job is several updates and a delete, so its indexes otherwise
+// grow to several times the data. River's migrator creates the table, so the
+// setting lives here and not in a core migration.
+const tuneRiverJob = `ALTER TABLE public.river_job SET (
+	autovacuum_vacuum_scale_factor = 0.02, autovacuum_analyze_scale_factor = 0.02,
+	toast.autovacuum_vacuum_scale_factor = 0.02)`
+
 // Migrate applies River's own schema (river_job, river_leader, …) through
 // its migrator, then grants the runtime role access to it. It runs as the
 // fourth namespace step of cmd/migrate, after core and custom, with the
@@ -55,6 +63,9 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) (applied int, err error) {
 	}
 	if _, err := pool.Exec(ctx, grantRiverTablesToApp); err != nil {
 		return 0, fmt.Errorf("jobs: granting river tables to app role: %w", err)
+	}
+	if _, err := pool.Exec(ctx, tuneRiverJob); err != nil {
+		return 0, fmt.Errorf("jobs: setting river_job's autovacuum thresholds: %w", err)
 	}
 	return len(res.Versions), nil
 }

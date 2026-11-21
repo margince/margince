@@ -334,6 +334,7 @@ describe("onboarding gate", () => {
     session: {
       seat?: "full" | "read";
       roles?: string[];
+      // Absent, the grants are a User's: a voice to train and mail to connect.
       allow?: GrantSpec;
       onboarding?: boolean;
     } = {},
@@ -348,7 +349,10 @@ describe("onboarding gate", () => {
               meFixture({
                 roles: session.roles ?? ["admin"],
                 seat: session.seat,
-                allow: session.allow,
+                allow: session.allow ?? {
+                  voice_profile: ["read", "create"],
+                  activity: ["create"],
+                },
               }),
             ),
             { status: 200, headers: { "Content-Type": "application/json" } },
@@ -508,17 +512,20 @@ describe("onboarding gate", () => {
     "walks a non-admin with %s through the member journey, unasked",
     async (_, journey) => {
       window.location.hash = "#/contacts";
-      stubCompany(403, journey, { roles: ["rep"] });
+      stubCompany(403, journey, {
+        roles: ["rep"],
+        allow: { voice_profile: ["read", "create"] },
+      });
       mount();
       expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
-      expect(window.location.hash).toBe("#/onboarding/company");
+      expect(window.location.hash).toBe("#/onboarding/voice");
       expect(companyReads()).toHaveLength(0);
     },
   );
 
-  // Sign out lives on Settings > Account, so a reader stuck mid-journey can
-  // still leave; the rest of settings waits for the journey to finish.
-  it("lets a non-admin mid-journey reach Settings > Account and Sign out", async () => {
+  // Sign out stands in the onboarding band, so a reader stuck mid-journey can
+  // still leave, and an address that outlived a sign-out opens setup again.
+  it("sends a non-admin mid-journey from Settings > Account to setup, Sign out in reach", async () => {
     window.location.hash = "#/settings/account";
     stubCompany(
       403,
@@ -528,10 +535,12 @@ describe("onboarding gate", () => {
       },
     );
     mount();
+    await waitFor(() =>
+      expect(window.location.hash).toMatch(/^#\/onboarding\//),
+    );
     expect(
       await screen.findByRole("button", { name: "Sign out" }),
     ).toBeTruthy();
-    expect(window.location.hash).toBe("#/settings/account");
   });
 
   it("still sends a non-admin mid-journey away from any other settings page", async () => {
@@ -549,21 +558,55 @@ describe("onboarding gate", () => {
     );
   });
 
-  // ops holds automation:update, so its journey names the configured model:
-  // the model read follows the grant, not the admin role.
-  it("walks an ops seat with no row through the member journey, model named", async () => {
+  // ops holds automation:update, yet its journey reads no site, so the band
+  // names no model: what it shows follows the journey, not the grant.
+  it("walks an ops seat with no row through the member journey, no model chip", async () => {
     window.location.hash = "#/contacts";
     stubCompany(
       403,
       { row: { code: "not_found" }, status: 404 },
-      { roles: ["ops"], allow: { automation: ["update"] } },
+      {
+        roles: ["ops"],
+        allow: { automation: ["update"], voice_profile: ["read", "create"] },
+      },
     );
     mount();
     expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
-    expect(window.location.hash).toBe("#/onboarding/company");
+    expect(window.location.hash).toBe("#/onboarding/voice");
     expect(companyReads()).toHaveLength(0);
+    expect(
+      screen.queryByRole("button", { name: /^Active model and cost:/ }),
+    ).toBeNull();
+  });
+
+  // Read-only may neither train a voice nor connect a mailbox, so setup
+  // holds no step for it and Home opens.
+  it("leaves a Read-only member with no journey row on its route", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      {
+        roles: ["read_only"],
+        allow: { voice_profile: ["read"], activity: ["read"] },
+      },
+    );
+    mount();
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+    expect(requestsEndingIn("/v1/onboarding/state")).toHaveLength(0);
+  });
+
+  it("walks a member who may only connect mail straight to that step", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      { roles: ["rep"], allow: { activity: ["create"] } },
+    );
+    mount();
     await waitFor(() =>
-      expect(requestsEndingIn("/v1/ai/profile")).toHaveLength(1),
+      expect(window.location.hash).toBe("#/onboarding/connect"),
     );
   });
 
@@ -692,7 +735,10 @@ describe("onboarding gate", () => {
     "never marks the next user finished from the last user's answer when %s",
     async (_, signsOut) => {
       window.location.hash = "#/contacts";
-      const first = meFixture({ roles: ["rep"] });
+      const first = meFixture({
+        roles: ["rep"],
+        allow: { voice_profile: ["read", "create"], activity: ["create"] },
+      });
       const next = { ...first, user: { ...first.user, id: "next-user" } };
       let signedIn: typeof first | null = first;
       const rows: string[] = [];
@@ -850,3 +896,6 @@ describe("onboarding gate", () => {
     );
   });
 });
+
+// A member the gate holds reads only the journey: its row once, and none of the
+// full app's reads until finishing lets them in.

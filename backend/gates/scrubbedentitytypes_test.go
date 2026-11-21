@@ -99,7 +99,6 @@ var scrubbedEntityTypes = map[string]bool{
 	// an image.
 	"communication_review":  true,
 	"voice_learning_signal": true,
-	"ai_call":               true,
 	"ai_call_payload":       true,
 	// A stage-evidence row whose quotation of an erased message was cleared.
 	// The weekly review rebuilds a DEAL from its own audit images, never an

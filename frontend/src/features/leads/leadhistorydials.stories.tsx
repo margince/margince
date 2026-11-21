@@ -14,7 +14,13 @@ function Dials({
 }: Readonly<{ initial?: TimelineFilter; initialFilters?: TimelineFilters }>) {
   const [filter, onFilter] = useState<TimelineFilter>(initial);
   const [filters, onFilters] = useState<TimelineFilters>(initialFilters);
-  const dials = useLeadHistoryDials({ filter, onFilter, filters, onFilters });
+  const dials = useLeadHistoryDials({
+    recordId: "lead-1",
+    filter,
+    onFilter,
+    filters,
+    onFilters,
+  });
   return (
     <div>
       {dials.cuts}

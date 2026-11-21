@@ -37,11 +37,12 @@ llm_credential() {
 
 # llm_route_credential <candidate> <via> prints what a route of the multi-vendor
 # lane spends — a variable's NAME, or the CLI login — and never its value. The
-# claude CLI route keeps llm_credential's order unchanged.
+# claude CLI route, and the SDK route that runs the same binary, keep
+# llm_credential's order unchanged.
 llm_route_credential() {
   local candidate="$1" via="$2" name
   case "$candidate/$via" in
-    claude/cli)
+    claude/cli | claude/sdk)
       llm_credential
       return
       ;;

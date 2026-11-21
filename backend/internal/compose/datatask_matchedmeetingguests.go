@@ -5,17 +5,12 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/capture/gcal"
-	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/compose/meetingrosters"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -28,9 +23,9 @@ import (
 
 // matchedMeetingGuestsDataTask gives a meeting that a Google Calendar event
 // resolved onto, an import for instance, the guests the stored event lists.
-// A stored Graph event names no calendar of its own, so it is not read.
+// meetingrosters.GraphGuestsDataTask does the same for Microsoft events.
 func matchedMeetingGuestsDataTask(pool *pgxpool.Pool) datatask.Task {
-	db := InstallationDB(pool)
+	inWorkspace := installationContext(pool)
 	authority := identity.NewService(pool)
 	return datatask.Task{
 		ID: "core/1792998483_matched_meeting_guests", Version: 1,
@@ -40,18 +35,29 @@ func matchedMeetingGuestsDataTask(pool *pgxpool.Pool) datatask.Task {
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: estimateMatchedMeetingOriginals,
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				// The stamping seat's authority is resolved per workspace,
-				// which the executor's system context does not carry.
-				if _, bound := principal.WorkspaceID(ctx); !bound {
-					ws, err := db.Workspace(ctx)
-					if err != nil {
-						return datatask.BatchOut{}, err
-					}
-					ctx = principal.WithWorkspaceID(ctx, ws.UUID)
+				ctx, err := inWorkspace(ctx)
+				if err != nil {
+					return datatask.BatchOut{}, err
 				}
 				return addMatchedMeetingGuestsBatch(ctx, tx, authority, in)
 			},
 		}},
+	}
+}
+
+// installationContext binds the installation's workspace on a data task's
+// system context. A seat's authority is resolved per workspace.
+func installationContext(pool *pgxpool.Pool) func(context.Context) (context.Context, error) {
+	db := InstallationDB(pool)
+	return func(ctx context.Context) (context.Context, error) {
+		if _, bound := principal.WorkspaceID(ctx); bound {
+			return ctx, nil
+		}
+		ws, err := db.Workspace(ctx)
+		if err != nil {
+			return ctx, err
+		}
+		return principal.WithWorkspaceID(ctx, ws.UUID), nil
 	}
 }
 
@@ -96,7 +102,7 @@ func addMatchedMeetingGuestsBatch(ctx context.Context, tx pgx.Tx, authority auth
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
-		added, err := addGuestsFromOriginal(ctx, tx, authority, o.payload, in.RunID)
+		added, err := meetingrosters.AddGuestsFromOriginal(ctx, tx, authority, sourceGCal, o.payload, in.RunID)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
@@ -105,63 +111,6 @@ func addMatchedMeetingGuestsBatch(ctx context.Context, tx pgx.Tx, authority auth
 		}
 	}
 	return datatask.AdvanceUUID(in, scanned, changed)
-}
-
-// addGuestsFromOriginal files one stored event's guests on the meeting its
-// identity names, when the calendar that stored it is the seat that stamps it.
-func addGuestsFromOriginal(ctx context.Context, tx pgx.Tx, authority authz.Resolver, payload []byte, run ids.UUID) (bool, error) {
-	raw, err := decodeStoredOriginal(payload)
-	if err != nil {
-		return false, nil //nolint:nilerr // an original no parser reads is skipped, as live capture skips it
-	}
-	calendar, err := gcal.SelfAddress(raw)
-	if err != nil || calendar == "" {
-		return false, nil //nolint:nilerr // an unreadable original, or one naming no calendar, proves no seat
-	}
-	rec, err := gcal.RecordOf(raw, calendar)
-	if err != nil || !rec.CrossDoorIdentity.Stated() {
-		return false, nil //nolint:nilerr // a drop live capture would make is a drop here too
-	}
-	key := activities.MeetingIdentityKey(rec.CrossDoorIdentity.Series, capture.OccurrenceText(rec.CrossDoorIdentity))
-	meeting, found, err := activities.ResolveIdentity(ctx, tx, activities.IdentityKindMeeting, key)
-	if err != nil || !found {
-		return false, err
-	}
-	seat, stamps, err := stampingCalendarSeat(ctx, tx, meeting, calendar)
-	if err != nil || !stamps {
-		return false, err
-	}
-	added, err := capture.SettleStoredMeetingRosterTx(ctx, tx, authority, sourceGCal, meeting, seat, rec,
-		map[string]any{machineAddressTaggedBy: run.String()})
-	if err != nil || added.Added == 0 {
-		return added.Changed(), err
-	}
-	return true, contacts.FillParticipantNamesTx(ctx, tx, meeting)
-}
-
-// stampingCalendarSeat answers the seat whose Google Calendar stamps the live
-// meeting, and only when that calendar is the one the stored event came from.
-func stampingCalendarSeat(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, calendar string) (ids.UUID, bool, error) {
-	var seat *ids.UUID
-	var label string
-	err := tx.QueryRow(ctx, `
-		SELECT `+auth.ConnectorSeatSQL("a")+`::uuid, coalesce(c.account_label, '')
-		  FROM activity a
-		  LEFT JOIN capture_connection c
-		    ON c.provider = $2 AND c.user_id::text = `+auth.ConnectorSeatSQL("a")+`
-		 WHERE a.id = $1 AND a.kind = 'meeting' AND a.archived_at IS NULL AND a.restricted_at IS NULL
-		   AND split_part(a.captured_by, ':', 2) = $2
-		 LIMIT 1`, meeting, sourceGCal).Scan(&seat, &label)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.Nil, false, nil
-	}
-	if err != nil {
-		return ids.Nil, false, fmt.Errorf("compose: reading the calendar that stamps a matched meeting: %w", err)
-	}
-	if seat == nil || !strings.EqualFold(strings.TrimSpace(label), calendar) {
-		return ids.Nil, false, nil
-	}
-	return *seat, true, nil
 }
 
 func estimateMatchedMeetingOriginals(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {

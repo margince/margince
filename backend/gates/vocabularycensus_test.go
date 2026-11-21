@@ -304,15 +304,13 @@ var namedVocabularyDrift = gatekit.Waive(map[string]string{
 		"so the CHECK does not admit it",
 	"signal_resolution.outcome": "the CHECK also admits acknowledged, which the contract's outcome enum " +
 		"and the extension's do not name",
-	"weekly_review_movement.bar": "the CHECK also admits excluded, not_checked and reinstated, which " +
-		"the contract's bar enum does not name",
 	"weekly_review_outlook.forward_measure": "the CHECK also admits commit_evidence and " +
 		"qualified_commit_evidence, which the contract's measure enum does not name",
 })
 
 // namedVocabularyDriftCeiling is how many named pairs may disagree. It only
 // moves down: fix a pair, delete its waiver, lower this number.
-const namedVocabularyDriftCeiling = 14
+const namedVocabularyDriftCeiling = 13
 
 func TestEveryColumnNamedGoTypeHoldsItsColumnsCheck(t *testing.T) {
 	t.Parallel()
@@ -464,8 +462,6 @@ const sharedByOwnBinding = "each table has its own contract enum and each column
 // repeatedVocabularies waives a group of same-named columns with one value set
 // that no single Go type holds, keyed by repeatedVocabulary.
 var repeatedVocabularies = gatekit.Waive(map[string]string{
-	"bar: weekly_review_driver, weekly_review_movement": "the movement column's contract enum is narrower " +
-		"than its CHECK (namedVocabularyDrift), so both cannot bind to it until that drift is settled",
 	"execution_authority: comms_outbound, communication_decision": "no Go type spells this vocabulary as " +
 		"typed constants, so there is no one type to bind both columns to",
 	"forward_measure: forecast_snapshot, team_weekly_review_outlook, weekly_review_outlook": "the outlook " +
@@ -485,7 +481,7 @@ var repeatedVocabularies = gatekit.Waive(map[string]string{
 
 // repeatedVocabulariesCeiling only moves down: bind a group to one type,
 // delete its waiver, then lower it.
-const repeatedVocabulariesCeiling = 10
+const repeatedVocabulariesCeiling = 9
 
 // unreadArrayCheckCeiling is how many catalog CHECKs hold an `= ANY (ARRAY[…])`
 // list this census does not read as a column's vocabulary. Each states a

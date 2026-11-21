@@ -72,7 +72,6 @@ The 1 table owned by `contracts`, as the migrations build them. [Back to the ent
 - `contract_account_ix`: `btree (company_id, starts_on DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `contract_deal_ix`: `btree (deal_id) WHERE ((deal_id IS NOT NULL) AND (archived_at IS NULL))`
 - `contract_pkey`: `unique, btree (id)`
-- `contract_renewal_due_ix`: `btree (renewal_on) WHERE ((renewal_on IS NOT NULL) AND (archived_at IS NULL))`
 
 **Triggers**
 

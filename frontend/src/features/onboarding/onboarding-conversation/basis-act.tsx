@@ -108,7 +108,7 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
     dispatch({ type: "BASIS_DONE" });
   };
 
-  const stops = railStops(state.memberPath);
+  const stops = railStops(state.memberPath, state.voiceStep);
   const eyebrow = t("ob.conv.scene.step", {
     n: ordinalNumber(stops.findIndex((stop) => stop.key === "basis") + 1),
     m: ordinalNumber(stops.length),

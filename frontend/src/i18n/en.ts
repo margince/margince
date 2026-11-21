@@ -912,6 +912,7 @@ export const en = {
   "reporting.targetStatus": "Target status",
   "reporting.activeTargets": "Active targets",
   "reporting.allTargets": "All targets",
+  "reporting.retiredTargets": "Retired targets",
   "reporting.noTargetsYet":
     "No target is set yet. Team leads, management and admins set targets.",
   "reporting.periodYear": "Year",
@@ -1335,7 +1336,6 @@ export const en = {
   "reporting.setup.unusedItem": "“{phrase}”: {reason}",
   "reporting.setup.fieldName": "Name",
   "reporting.setup.fieldCountry": "Country",
-  "reporting.setup.fieldMetric": "Metric",
   "reporting.setup.fieldChart": "Chart",
   "reporting.describeInitiative": "Describe the initiative",
   "reporting.describeInitiativeHint":
@@ -1421,9 +1421,9 @@ export const en = {
     "Opens Sales review for one product. No setup is needed, and nothing is written.",
   "reporting.noProducts":
     "No live products yet. Add products under Settings to report on them.",
-  "reporting.actualsThrough": "Actuals through {at}",
+  "reporting.actualsThrough": "Actuals through {at} · {zone}",
   "reporting.periodNotStarted":
-    "The period starts {at}; nothing has happened in it yet",
+    "The period starts {at} ({zone}); nothing has happened in it yet",
   "reporting.writtenNoneWon": "No sales won in {period}.",
   "reporting.writtenWon": "Won in {period}: {amount}.",
   "reporting.writtenTarget":
@@ -1658,6 +1658,7 @@ export const en = {
   "reporting.blocks": "Charts and order",
   "reporting.metricUnavailable": "Metric no longer available",
   "reporting.metrics": "Metrics",
+  "reporting.metric": "Metric",
   "reporting.cancel": "Cancel",
   "reporting.saved": "Report saved",
   "reporting.live": "Live report",
@@ -2326,6 +2327,7 @@ export const en = {
   "systemJob.capture_trace_sweep": "Mail trace cleanup",
   "systemJob.capture_which_deal": "Deal question from mail",
   "systemJob.close_date": "Close date check",
+  "systemJob.installation_zone": "Timezone check",
   "systemJob.commission_accrual": "Commission accrual",
   "systemJob.partner_activation": "Partner activation",
   "systemJob.commitment_settle": "Commitment settlement",
@@ -2810,6 +2812,7 @@ export const en = {
 
   "shell.railAria": "Primary navigation",
   "shell.skipToContent": "Skip to content",
+  "shell.pageLoading": "Loading {page}…",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
@@ -3546,6 +3549,8 @@ export const en = {
     "Another company already has this domain, so it was not saved here.",
   "common.duplicate.linkedinUrl":
     "Another lead already has this LinkedIn profile, so it was not saved here.",
+  "common.linkedinProfileInvalid":
+    "This is not a LinkedIn profile address. Enter one such as https://www.linkedin.com/in/your-name.",
   "common.duplicate.slotTaken":
     "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
@@ -4553,9 +4558,10 @@ export const en = {
     "Only when someone confirms the signature. Never taken from the deal’s close date.",
   "contracts.form.save": "Record contract",
   "contracts.form.errNoName": "Enter a contract title.",
+  "contracts.form.errNegativeAmount":
+    "Value and annual recurring revenue cannot be negative.",
   "contracts.form.errTermOrder": "A term cannot end before it starts.",
   "contracts.add": "Add contract",
-  "contracts.rowMenu": "Contract actions",
   "contracts.renew.title": "Renew contract",
   "contracts.renew.hint":
     "Creates a new contract with its own terms and marks this one superseded. Only the counterparty is kept.",
@@ -4665,6 +4671,8 @@ export const en = {
   "deal.lines.description": "Description",
   "deal.lines.quantity": "Quantity",
   "deal.lines.price": "Selling price",
+  "deal.lines.priceInOtherCurrency":
+    "This product is priced in {currency}. Enter its price.",
   "deal.lines.remove": "Remove {name}",
   "deal.lines.editTitle": "Products and services",
   "deal.lines.save": "Save products",
@@ -6459,6 +6467,8 @@ export const en = {
   "deal.standing.figure.offer": "Offer {number} · version {revision}",
   "deal.standing.figure.amountByModel": "Read by Margince from the email",
   "deal.standing.figure.currencyGuessed": "Currency assumed, check it",
+  "deal.standing.figure.offerInProgress":
+    "Offer {number} · version {revision} · {status}",
   "deal.standing.figure.next": "Next step",
   "standing.noneYet": "None yet",
   "deal.standing.figure.daysInStage": "Days in stage",
@@ -7011,6 +7021,7 @@ export const en = {
   "deal.offersEmpty": "No offers yet",
 
   "offer.backToDeal": "Back to deal",
+  "offer.deal": "Deal",
   "offer.totals": "Totals",
   "offer.net": "Net",
   "offer.tax": "Tax",
@@ -7043,26 +7054,33 @@ export const en = {
   "offer.unit": "Unit",
   "offer.unitFromProduct": "From the product",
   "offer.quantity": "Quantity",
+  "offer.unitPriceRequired": "Enter a unit price or pick a product.",
   "offer.unitPrice": "Unit price",
   "offer.discountPct": "Discount %",
   "offer.taxRate": "Tax %",
   "offer.committedPeriods": "Periods",
   "offer.lineTotal": "Line total",
   "offer.unpriced": "unpriced, excluded from total",
-  "offer.removeLine": "Remove",
+  "offer.lineCell": "{column}, line {position}",
+  "offer.removeLineNamed": "Remove line {position}",
   "offer.pickProduct": "Pick product",
   "offer.pickProductConfirm": "Product: {name}",
   "offer.send": "Send",
-  "offer.sendConfirm": "Send this offer to the buyer?",
-  "offer.sendBody": "The offer becomes read-only until the buyer responds.",
+  "offer.sendConfirm": "Mark this offer as sent?",
+  "offer.sendBody":
+    "Nothing is emailed, and this version is locked for good. Render the PDF and send it to the buyer yourself.",
   "offer.accept": "Accept",
   "offer.acceptConfirm": "Mark this offer as accepted?",
   "offer.acceptBody":
     "The deal value and currency are updated to match this offer.",
   "offer.reject": "Reject",
+  "offer.discard": "Discard draft",
+  "offer.discardBody": "The draft is archived and leaves the deal’s offers.",
   "offer.rejectConfirm": "Mark this offer as rejected?",
   "offer.rejectReason": "Reason (optional)",
   "offer.regenerate": "Regenerate revision",
+  "offer.writeUnsure":
+    "Margince could not tell whether that went through. Check the deal’s offers before you try again.",
   "offer.aiDisclosureTitle": "AI-assisted offer",
   "offer.diffAdded_one": "{count} line added",
   "offer.diffAdded_other": "{count} lines added",
@@ -9418,7 +9436,7 @@ export const en = {
   "analytics.meetingsNoShow": "No-show",
   "analytics.meetingsCanceled": "Canceled",
   "analytics.outcomesOwnLensOnly":
-    "This section measures one user’s records. Wider sections cover the rest of the lens.",
+    "This section counts one person’s own records.",
   "analytics.reportWinLoss": "Won and lost",
   "analytics.reportLossEvents": "Every loss, one by one",
   "analytics.reportStageAge": "Time in stage",
@@ -11270,7 +11288,6 @@ export const en = {
   "jobs.kind.capture_backfill_reconcile": "Mail history import recovery",
   "jobs.kind.capture_confidentiality_verdict": "Mail confidentiality check",
   "jobs.kind.capture_counterparty_verdict": "Mail sender check",
-  "jobs.kind.capture_digest": "Morning mail digest",
   "jobs.kind.capture_enrich": "Contact details from signatures",
   "jobs.kind.captured_deal_refile": "File recent captured activity on deals",
   "jobs.kind.captured_deal_refile_sweep": "Recover captured activity filing",
@@ -12625,7 +12642,7 @@ export const en = {
   "ob.s4.microsoftFailed": "Microsoft connection not completed",
   "ob.s4.connectVerifying": "Confirming connection…",
   "ob.s4.connectConfirmFailed": "The connection could not be confirmed.",
-  "ob.s4.connectRetry": "Connect again in Settings under Connections.",
+  "ob.s4.connectRetry": "Select the account again below.",
   "ob.s4.connectDenied": "Access was declined. Nothing was connected.",
   "ob.s4.googleUnverified":
     "If Google warns about an “unverified app”, select Advanced, then Continue. Google’s screen lists exactly what is granted.",
@@ -12738,7 +12755,7 @@ export const en = {
     "It cannot read or annotate your Morning brief. Your records, Worklist and scheduled weekly review remain available.",
   "overnightGrant.saveFailedTitle": "Answer was not saved",
   "overnightGrant.saveFailed":
-    "Everything else is connected. After signing in, set this in Settings under Connections.",
+    "Everything else is connected. After signing in, set this in Settings under Account.",
   "overnightGrant.renewTitle": "Overnight authority expired",
   "overnightGrant.renew":
     "Turn this off and on again to renew it. Until then, your Morning brief is not prepared.",
@@ -13421,21 +13438,21 @@ export const en = {
   "ob.conv.company.confirmed":
     "Company profile confirmed. Every stored value records its source.",
   "ob.conv.manual.chosen": "I will enter it manually.",
-  "ob.conv.voice.skipped": "Skip voice for now.",
+  "ob.conv.voice.skipped": "Skip for now",
   "ob.conv.voice.uploadAdded": "Added {name}.",
   "ob.conv.voice.speakerQuestion":
-    "This transcript has several speakers. Which one is you? Only your own words count.",
+    "“{name}” has several speakers. Which one is you? Only your own words count.",
+  "ob.conv.voice.speakerSkip": "Skip this file",
   "ob.conv.voice.speakerOptionDetail": "words: {words} · turns: {turns}",
   "ob.conv.voice.speakerFoot": "Your choice applies to this file only.",
   "ob.conv.voice.speakerContinue": "Use this speaker",
-  "ob.conv.voice.continueSkippedStatus": "Skipped. Add it later in Settings.",
   "ob.conv.voice.continueFailedStatus":
     "Your material is kept. Retry now, or continue and finish this later.",
   "ob.conv.voice.continueDeferredStatus":
     "No action needed. Continue; the build finishes automatically.",
   "ob.conv.voice.composer": "Paste the text you wrote here",
   "ob.conv.voice.dropHint":
-    "You can also drop files anywhere in this conversation: .txt, .md, .pdf, .docx or a .vtt, .srt or .json transcript.",
+    "You can also drop files anywhere in this conversation: .txt, .md, .pdf, .docx or a .vtt, .srt or .json transcript. Each file must stay just under {limit} as sent. Text with many quotation marks or line breaks reaches that sooner.",
   "ob.conv.voice.fileSkipped":
     "I cannot read {name}. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "ob.conv.voice.fileUnreadable":
@@ -13447,12 +13464,14 @@ export const en = {
   "ob.conv.voice.reactionDocument":
     "Words counted: {words}. All words in this file are yours.",
   "ob.conv.voice.refusalUnattributed":
-    "This looks like a conversation, but I cannot tell which words are yours, so none were counted.",
+    "{name} looks like a conversation, but I cannot tell which words are yours, so none were counted.",
   "ob.conv.voice.refusalSpeaker":
-    "I could not find that speaker in the transcript. Nothing was counted.",
+    "I could not find that speaker in {name}. Nothing was counted.",
   "ob.conv.voice.refusalUnsupported":
-    "I could not parse that file as text or a transcript. Nothing was counted.",
-  "ob.conv.voice.ingestFailed": "I could not add that source: {detail}",
+    "I could not read {name} as text or a transcript. Nothing was counted.",
+  "ob.conv.voice.refusalTooLarge":
+    "{name} is too large to add. A file must stay just under {limit} as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
+  "ob.conv.voice.ingestFailed": "I could not add {name}: {detail}",
   "ob.conv.voice.ingestUnexpected":
     "I could not add that source. Retry shortly.",
   "ob.conv.voice.pasteAdd": "Add to writing samples",
@@ -13476,8 +13495,13 @@ export const en = {
     "Nothing collected yet. Attach a transcript or a text you wrote.",
   "ob.conv.voice.meterWords": "Own words: {words} of {target}",
   "ob.conv.voice.meterBand": "Quality: {band}",
-  "ob.conv.voice.manifestKept": "Kept {kept} of {total} words",
-  "ob.conv.voice.manifestWords": "{words} words",
+  "ob.conv.voice.manifestKept_one": "Kept {kept} of {total} word",
+  "ob.conv.voice.manifestKept_other": "Kept {kept} of {total} words",
+  "ob.conv.voice.manifestWords_one": "{words} word",
+  "ob.conv.voice.manifestWords_other": "{words} words",
+  "ob.conv.voice.floorShort_one": "Add {words} more word to build.",
+  "ob.conv.voice.floorShort_other": "Add {words} more words to build.",
+  "ob.conv.voice.waitForSamples": "Wait until your samples are added.",
   "ob.conv.voice.registerMix": "Registers: {mix}",
   "ob.conv.voice.stageTitle": "Build progress",
   "ob.conv.corpus.words": "Own words in your corpus now: {words}.",
@@ -13593,6 +13617,9 @@ export const en = {
   "ob.conv.voice.browse": "Browse files",
   "ob.conv.voice.pasteInstead": "Paste text instead",
   "ob.conv.voice.sourcesTitle": "Sources",
+  "ob.conv.voice.removeSource": "Remove",
+  "ob.conv.voice.removeSourceNamed": "Remove {name}",
+  "ob.conv.voice.removeFailed": "I could not remove {name}: {detail}",
   "ob.conv.voice.printLabel": "Your voiceprint",
   "voice.kinds.label": "What works best",
   "voice.kinds.best": "Best start",
@@ -13604,6 +13631,8 @@ export const en = {
   "voice.kinds.docBody": "Any text you wrote yourself",
   "ob.conv.voice.meterLabel": "Progress toward the {min}-word minimum",
   "ob.conv.voice.meterProgress": "{words} of {min} words",
+  "ob.conv.voice.meterUnknown":
+    "Word count unavailable. It updates when you add the next sample.",
   "ob.conv.voice.meterReady":
     "{words} words: enough to build. More words improve it.",
   "ob.conv.voice.footReady":
@@ -13714,6 +13743,14 @@ export const en = {
     "Invite the first person who will work here instead, and setup is done.",
   "ob.conv.invite.foot":
     "Voice and accounts can also be set up later in Settings.",
+  // The same question for a seat that may not train a voice: connect is the
+  // one step left.
+  "ob.conv.invite.bodyConnect":
+    "The company is set up. The next step is about you and applies only if you will use Margince.",
+  "ob.conv.invite.yesBodyConnect":
+    "Connect your mailbox and calendar: 1 short step.",
+  "ob.conv.invite.footConnect":
+    "Accounts can also be connected later in Settings.",
   "ob.conv.invite.continue": "Continue",
   "ob.conv.invite.accepted": "Yes, I will be working in it.",
   "ob.conv.invite.declined": "No, I am only setting it up.",
@@ -14891,7 +14928,6 @@ export const en = {
   "audit.kind.customField": "Custom field",
   "audit.kind.activity_review_template": "Activity review template",
   "audit.kind.agent_standing_grant": "Standing agent permission",
-  "audit.kind.ai_call": "AI call",
   "audit.kind.ai_feedback": "AI feedback",
   "audit.kind.ai_model_rate": "AI model price",
   "audit.kind.analytics_share": "Shared report",
@@ -14918,7 +14954,6 @@ export const en = {
   "audit.kind.communication_instruction": "Communication instruction",
   "audit.kind.communication_review": "Communication review",
   "audit.kind.communication_suppression": "Communication block",
-  "audit.kind.company_domain_question_reader": "Company domain question",
   "audit.kind.confirm_token": "Confirmation link",
   "audit.kind.consent_text_version": "Consent text version",
   "audit.kind.contact_acquisition_evidence": "Contact source evidence",
@@ -15135,7 +15170,6 @@ export const en = {
   "settings.scopeAriaMixed":
     "Settings on this page affect different people; each one states which.",
   "settings.readOnlyPageTitle": "Read-only settings",
-  "settings.pageLoading": "Loading {page}…",
   "settings.readOnlyPage": "Your role cannot change these settings.",
   "settings.seatRefused":
     "Your seat is read-only. Ask an admin for a full seat.",
@@ -16050,7 +16084,7 @@ export const en = {
   "settings.voice.addSource": "Add writing samples",
   "settings.voice.addFirstLabel": "First writing sample",
   "settings.voice.dropHint":
-    "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once.",
+    "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once. Each file must stay just under {limit} as sent. Text with many quotation marks or line breaks reaches that sooner.",
   "settings.voice.dropLabel": "Upload files",
   "settings.voice.dropEmpty": "Drop files here, or click to choose",
   "settings.voice.pasteLabel": "Paste text",
@@ -16096,6 +16130,8 @@ export const en = {
   "settings.voice.refusalSpeaker":
     "That speaker was not found in {name}, so nothing was added.",
   "settings.voice.refusalUnsupported": "{name} is in an unsupported format.",
+  "settings.voice.refusalTooLarge":
+    "{name} is too large to add. A file must stay just under {limit} as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
   "settings.voice.buildsTitle": "Builds",
   "settings.voice.buildRowLabel": "Build from samples",
   "settings.voice.building": "Building…",
@@ -16620,6 +16656,7 @@ export const en = {
   "product.unitOtherLabel": "Other unit",
   "product.unitOtherRequired": "Type the unit, or pick one from the list.",
   "product.unitPrice": "Unit price",
+  "product.candidatePrice": "{price} / {unit}",
   "product.currency": "Currency",
   "product.taxRate": "Default tax rate %",
   "product.billingModel": "Billing",
@@ -17493,6 +17530,8 @@ export const en = {
   "ob.conv.connect.useImap": "Use another mail provider",
   "ob.conv.connect.skipCaptionWaiting":
     "Your setup checklist reminds you to connect once {vendor} is ready.",
+  "ob.conv.connect.skipCaptionNotConfigured":
+    "No mailbox can be connected on this installation, so go on without one.",
   "ob.conv.connect.connectedTitle": "{vendor} is connected",
   "ob.conv.connect.calendarNotConnected":
     "Not connected. Connect it now, or later from your setup checklist.",
@@ -17512,6 +17551,7 @@ export const en = {
     "Optional. All of these can be changed later in Settings.",
   "ob.conv.connect.linkedinRow": "Your LinkedIn profile",
   "ob.conv.connect.linkedinAdd": "Add profile",
+  "ob.conv.connect.linkedinChange": "Change",
   "setup.reminder.trigger": "Finish setup",
   "setup.reminder.count": "{done} of {total}",
   "setup.reminder.title": "Finish setting up",
@@ -17566,6 +17606,8 @@ export const en = {
   "setup.caption.calendarSkipped": "Skipped during setup.",
   "setup.caption.calendarNeedsVendor": "Needs Google or Microsoft.",
   "setup.caption.waitsAdmin": "Waits on an administrator.",
+  "setup.caption.registerApp": "Needs your company’s Google or Microsoft app.",
+  "setup.action.registerApp": "Set up app",
   "setup.caption.mailReconnect": "Connection expired.",
   "setup.caption.calendarReconnect": "Expired or cannot add bookings.",
   "setup.caption.voice": "Needs about {n} more words you wrote.",
@@ -23307,6 +23349,7 @@ export const en = {
   "legalReview.closesOn": "Closes {date}",
   "legalReview.back": "All legal reviews",
   "legalReview.packTitle": "Review pack",
+  "legalReview.packDeal": "Deal",
   "legalReview.decideTitle": "Answer",
   "legalReview.ownRequest":
     "You asked for this review, so a colleague answers it.",
@@ -23329,7 +23372,7 @@ export const en = {
   "legalReview.packOffer": "Current offer",
   "legalReview.offerNumber": "Offer",
   "legalReview.offerRevision": "{number}, revision {revision}",
-  "legalReview.offerTotal": "Total",
+  "legalReview.offerTotal": "Gross total",
   "legalReview.offerValidUntil": "Valid until",
   "legalReview.offerTerms": "Terms",
   "legalReview.packNoOffer": "No offer on this deal.",
@@ -23372,6 +23415,8 @@ export const en = {
     "You cannot open this file. Ask the colleague who requested the review.",
   "legalReview.offerLine": "Line {number}",
   "legalReview.offerLineText": "{quantity} × {description} at {price}",
+  "legalReview.offerLineDiscount": "Discount {rate}%",
+  "legalReview.offerLineTax": "Tax {rate}%",
   "legalReview.offerLineRecurring_one": "{cadence} for {count} period",
   "legalReview.offerLineRecurring_other": "{cadence} for {count} periods",
   "legalReview.offerLineStaged": "Proposed, not yet in the total",
@@ -23732,6 +23777,8 @@ export const en = {
   "analytics.overview.chipIndustry": "Industry: {name}",
   "analytics.overview.chipBasis": "Value: {basis}",
   "analytics.overview.profileCompany": "Company sales",
+  "analytics.overview.profileTeam": "Team sales",
+  "analytics.overview.profileSeller": "Seller sales",
   "analytics.overview.profileProduct": "Product sales",
   "analytics.overview.removeFilter": "Remove {filter}",
   "analytics.intervention.scope":
@@ -23855,6 +23902,11 @@ export const en = {
     "Automatic work may reach the wrong colleague, leaving follow-ups with the wrong owner until routing is corrected.",
   "health.effect.receipts":
     "The refusals stand and advertising to these contacts stays stopped. The contacts were not told, which the rules of their country require at once.",
+  "health.effect.zone":
+    "Background work counts its days in UTC until a timezone is chosen again. Near midnight a report can place a moment on a different day than that work does.",
+  "health.zoneNext":
+    "Open Regional and calendar and choose the reporting timezone again.",
+  "health.code.zone_unresolved": "The reporting timezone cannot be read",
   "health.effect.readFailed":
     "This check cannot show the current state. A failed check does not establish that the underlying feature has stopped.",
   "health.reportCopyFailed": "Could not copy the technical report",
@@ -23982,6 +24034,8 @@ export const en = {
     "Record a successful restore drill within the recovery and data-loss targets.",
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
+  "health.recovery.zone":
+    "The server reads the stored reporting timezone again.",
   "health.recovery.receipts":
     "Each refusal in the last 30 days must have a sent receipt, or its alert must be settled.",
   "health.ownerHandoff":
@@ -23995,6 +24049,7 @@ export const en = {
   "health.inspect": "See problem and next step",
   "health.openModels": "Open Models",
   "health.openConnections": "Open Connections",
+  "health.openRegional": "Open Regional and calendar",
   "health.unit.runs": "runs",
   "health.history": "Retained failure history",
   "health.historyWindow":
@@ -24160,7 +24215,7 @@ export const en = {
   "progress.closedRevenue": "Sales won",
   "progress.goal": "Goal",
   "progress.goalLine": "Goal for the period: {goal}",
-  "progress.figuresUpTo": "Figures up to {cutoff}",
+  "progress.figuresUpTo": "Figures up to {cutoff} · {zone}",
   "progress.ofGoalLine": "of {goal} goal",
   "progress.toGo": "{amount} to go",
   "progress.noGoalFor": "No sales goal is published for {period}.",
@@ -24193,8 +24248,8 @@ export const en = {
   "progress.readings": "Revenue readings",
   "progress.productSales": "Product sales",
   "progress.serviceSales": "Services and projects",
-  "progress.planned": "Open pipeline",
-  "progress.plannedAt": "Open deals as of {at}",
+  "progress.planned": "Open pipeline closing in period",
+  "progress.plannedAt": "Open deals as of {at} · {zone}",
   "progress.scenarios": "Where the month may finish",
   "progress.scenario.worst": "Worst case",
   "progress.scenario.worstWhy": "If nothing more closes",
@@ -24283,6 +24338,7 @@ export const en = {
   "goals.history.what": "Change",
   "goals.history.reason": "Reason",
   "goals.history.when": "When",
+  "goals.history.zone": "Times in {zone}",
   "goals.event.draft": "{name} saved a draft",
   "goals.event.published": "{name} published the goals",
   "goals.event.discarded": "{name} discarded the draft",

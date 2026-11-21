@@ -18,13 +18,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// sweepSeed is what a state seed reaches: the app, the pool it notes facts in,
-// and the seeders of the kinds it builds on.
+// sweepSeed is what a state seed reaches: the app, the pool it notes facts in
+// and the seeders of the kinds it builds on. Its owner owns what they make.
 type sweepSeed struct {
 	t      *testing.T
 	e      *apptest.AppEnv
 	pool   *recordPool
 	create map[string]func() string
+	owner  string
 }
 
 // call sends one route as the signed-in admin and stops the sweep on any

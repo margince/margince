@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCanWrite } from "../../lib/capability";
 import { useCompanyContextCapabilities } from "../../lib/companycontextreach";
 import {
   readStored,
   removeStored,
   STORAGE_KEYS,
+  storedInFamily,
   watchStored,
   writeStored,
 } from "../../lib/storage";
@@ -25,34 +27,29 @@ function useRememberedFinished(userId: string | undefined): boolean {
         : watchStored(finishedKey(userId), changed),
     [userId],
   );
-  return useSyncExternalStore(
-    watch,
-    () => userId !== undefined && readStored(finishedKey(userId)) === "1",
+  // Before the session names its user, the marks name this browser's last seat.
+  return useSyncExternalStore(watch, () =>
+    userId === undefined
+      ? storedInFamily(STORAGE_KEYS.onboardingComplete)
+      : readStored(finishedKey(userId)) === "1",
   );
 }
 
-// The second half of the onboarding gate, for a DESCRIBED installation: a
-// human whose own journey — voice, mailbox, preferences — is not recorded as
-// finished is walked through it, a member invited later exactly as the
-// creator was. `wanted` is false for a read seat: it cannot write the
-// checkpoint the journey ends on, and a gate with no exit is a trap. It is
-// false for an undescribed installation too, which the first half already
-// gates. Below the `onboarding` rollout stage there is no journey to walk, only
-// the manual company form, so the gate holds nobody there either.
-//
-// The rollout is asked once the session is `authed`, beside the company read
-// rather than behind it; `pending` still counts it only where the gate needs it.
-// A read that FAILED — the rollout's or the row's — does not gate: the shell
-// renders, and the journey is asked for again on the next load. An unfinished
-// row, or none, does.
+// Holds a reader of a DESCRIBED installation whose journey has a step left to
+// take. Below the rollout stage, or after a FAILED read, nobody is held.
 export function useJourneyProgress(
   authed: boolean,
-  wanted: boolean,
+  described: boolean | undefined,
   userId: string | undefined,
 ): Readonly<{
   pending: boolean;
   unfinished: boolean;
+  remembered: boolean;
 }> {
+  // useCanWrite folds the seat in, and both read false until /me answers.
+  const trainsVoice = useCanWrite("voice_profile", "create");
+  const connectsMail = useCanWrite("activity", "create");
+  const wanted = authed && described === true && (trainsVoice || connectsMail);
   const rollout = useCompanyContextCapabilities(authed);
   const walkable = wanted && rollout.data?.onboarding_enabled === true;
   const progress = useOnboardingProgress(walkable);
@@ -80,5 +77,6 @@ export function useJourneyProgress(
       !remembered &&
       (rollout.isPending || (walkable && progress.isPending)),
     unfinished,
+    remembered,
   };
 }

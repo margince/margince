@@ -152,27 +152,6 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"step": 20000, "status": 20000, "task_id": 20000, "first_release": 20000, "last_error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"first_release":20000,"last_error_class":20000,"status":20000,"step":20000,"task_id":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"step": 20000, "status": 20000, "task_id": 20000, "first_release": 20000, "last_error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"first_release":20000,"last_error_class":20000,"status":20000,"step":20000,"task_id":20000}')`
 
-## data_task_run_history
-
-5 columns · primary key `(run_id)` · referenced by 0 foreign keys
-
-| Column | Type | Required | What it is |
-|---|---|---|---|
-| `preserved_at` | `timestamp with time zone` | yes |  |
-| `progress` | `jsonb` | yes |  |
-| `run_id` | `uuid` | yes |  |
-| `step` | `text` | yes |  |
-| `task_id` | `text` | yes |  |
-
-**Indexes**
-
-- `data_task_run_history_pkey`: `unique, btree (run_id)`
-
-**Triggers**
-
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"step": 20000, "task_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"step":20000,"task_id":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"step": 20000, "task_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"step":20000,"task_id":20000}')`
-
 ## event_outbox
 
 7 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -258,6 +237,30 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"field_name":120,"object_type":20000,"source":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"field_name":120,"object_type":20000,"source":20000}')`
+
+## installation_state
+
+3 columns · primary key `(key)` · referenced by 0 foreign keys
+
+| Column | Type | Required | What it is |
+|---|---|---|---|
+| `key` | `text` | yes |  |
+| `value` | `jsonb` | yes |  |
+| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
+
+**Rules**
+
+- `installation_state_key_present`: `CHECK ((btrim(key) <> ''))`
+- `installation_state_value_is_an_object`: `CHECK ((jsonb_typeof(value) = 'object'))`
+
+**Indexes**
+
+- `installation_state_pkey`: `unique, btree (key)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000}')`
 
 ## report_projection_fence
 
@@ -354,7 +357,6 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `idx_system_log_action`: `btree (action, occurred_at DESC)`
-- `idx_system_log_actor`: `btree (actor_id, occurred_at DESC)`
 - `idx_system_log_time`: `btree (occurred_at DESC)`
 - `idx_system_log_unkeyed_email`: `btree (id) WHERE ((action = 'login') AND (detail ? 'email_hash') AND (NOT (detail ? 'email_key_id')))`
 - `system_log_pkey`: `unique, btree (id)`

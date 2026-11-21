@@ -39,7 +39,11 @@ function renderCompanies(
 ) {
   globalThis.location.hash = startCreating ? "#/companies/new" : "#/companies";
   installFetchStub({
-    "GET /me": meRoute({ company: ["read", "update"] }),
+    "GET /me": meRoute({
+      company: startCreating
+        ? ["read", "create", "update"]
+        : ["read", "update"],
+    }),
     "GET /companies": () =>
       jsonResponse({
         data: rows,

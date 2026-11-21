@@ -28,6 +28,18 @@ services:
   db:
     image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
     restart: unless-stopped
+    # Sized for the smallest supported host, 4 GB that Postgres shares with
+    # every other service. A larger host raises the two memory values in .env.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${POSTGRES_SHARED_BUFFERS:-512MB}
+      - -c
+      - effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-1536MB}
+      - -c
+      - work_mem=16MB
+      - -c
+      - random_page_cost=1.1
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       MARGINCE_OWNER_PW: ${MARGINCE_OWNER_PW:?set MARGINCE_OWNER_PW in .env}

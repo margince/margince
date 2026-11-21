@@ -40,6 +40,7 @@ var typeSamples = map[string]string{
 	"date":        "2026-11-18",
 	"float4":      "0.25",
 	"float8":      "0.92",
+	"halfvec":     "[0.5,1]",
 	"inet":        "192.0.2.1",
 	"int2":        "7",
 	"int4":        "7",

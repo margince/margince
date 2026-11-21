@@ -189,13 +189,21 @@ describe("routeIdentity", () => {
 
   it("leaves a four-segment flow address whole", () => {
     expect(
-      routeIdentity({
-        screen: "onboarding",
-        id: "connect",
-        id2: "ok",
-        id3: "graph",
-      }),
-    ).toBe("#/onboarding/connect/ok/graph");
+      routeIdentity({ screen: "x", id: "fork", id2: "ok", id3: "graph" }),
+    ).toBe("#/x/fork/ok/graph");
+  });
+
+  // The steps are one conversation that holds its own state; a remount on a
+  // step change would restart it.
+  it("names every onboarding step as the one conversation", () => {
+    const steps = [
+      { screen: "onboarding", id: "voice" },
+      { screen: "onboarding", id: "connect", id2: "ok", id3: "graph" },
+    ] as const;
+    expect(steps.map((step) => routeIdentity(step))).toEqual([
+      "#/onboarding",
+      "#/onboarding",
+    ]);
   });
 
   // The identity is an address the router can read back, not a private

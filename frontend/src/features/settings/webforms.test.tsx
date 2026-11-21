@@ -273,7 +273,15 @@ describe("WebFormsCard", () => {
     const backend = backendFor(OPERATOR, [], {
       "GET /v1/products": () =>
         jsonResponse({
-          data: [{ id: "p-suite", name: "Suite" }],
+          data: [
+            {
+              id: "p-suite",
+              name: "Suite",
+              unit: "month",
+              unit_price_minor: 9_900,
+              currency: "EUR",
+            },
+          ],
           page: { next_cursor: null, has_more: false },
         }),
       "POST /v1/web-forms": () =>

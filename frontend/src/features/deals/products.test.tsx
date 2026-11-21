@@ -67,11 +67,13 @@ function productsStub({
   allow,
   seat = "full",
   onPost,
+  onPatch,
   rows = [product],
 }: {
   allow: GrantSpec;
   seat?: "full" | "read";
   onPost?: (body: unknown) => Response;
+  onPatch?: (body: unknown) => Response;
   rows?: readonly object[];
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -84,6 +86,10 @@ function productsStub({
     if (method === "POST" && onPost) {
       const sent = input instanceof Request ? await input.text() : init?.body;
       return onPost(typeof sent === "string" ? JSON.parse(sent) : null);
+    }
+    if (method === "PATCH" && onPatch) {
+      const sent = input instanceof Request ? await input.text() : init?.body;
+      return onPatch(typeof sent === "string" ? JSON.parse(sent) : null);
     }
     return jsonResponse({
       data: rows,
@@ -611,6 +617,59 @@ describe("ProductsAdmin", () => {
       await screen.findByText(
         "Archive this product? Existing offer lines keep their snapshot.",
       ),
+    ).toBeTruthy();
+  });
+
+  it("saves an emptied default tax rate as 0%, as a new product's empty field is", async () => {
+    const patched: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      productsStub({
+        allow: PRODUCT_MANAGER,
+        onPatch: (body) => {
+          patched.push(body);
+          return jsonResponse({ ...product, default_tax_rate: 0 });
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<ProductsAdmin />);
+    await openRowMenu();
+    await user.click(
+      await screen.findByRole("button", { name: "Edit product" }),
+    );
+    const rate = await screen.findByRole("textbox", {
+      name: /Default tax rate/,
+    });
+    expect(rate).toHaveProperty("value", "19");
+    await user.clear(rate);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]).toMatchObject({ default_tax_rate: 0 });
+  });
+
+  it("offers no write on an archived product, which every write would refuse", async () => {
+    vi.stubGlobal(
+      "fetch",
+      productsStub({
+        allow: PRODUCT_MANAGER,
+        rows: [
+          { ...product, archived_at: "2026-06-02T08:00:00Z" },
+          { ...product, id: "p-2", name: "Support Plan" },
+        ],
+      }),
+    );
+    render(<ProductsAdmin />);
+    const archived = within(
+      await screen.findByRole("row", { name: /Consulting Day/ }),
+    );
+    expect(archived.getByText("Archived")).toBeTruthy();
+    expect(rowMenu()).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Actions for Support Plan" }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Archive product" }),
     ).toBeTruthy();
   });
 });

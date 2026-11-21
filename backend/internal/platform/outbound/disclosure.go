@@ -118,6 +118,10 @@ func Disclosures() []Disclosure {
 			Control:  "removing the unit from the installation",
 		},
 		{
+			Product: PolicySourceProduct, Endpoint: "the publishers of the law texts the messaging policy packs cite", Personal: false,
+			Control: "no installation makes this call: the policy-refresh tool sends it when a release is prepared",
+		},
+		{
 			Product: SelfCheckProduct, Endpoint: "this installation's own public address", Personal: false,
 			Control: "not optional: it is how the installation learns whether it is reachable",
 		},

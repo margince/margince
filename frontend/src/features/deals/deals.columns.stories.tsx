@@ -92,7 +92,9 @@ export const PartialCoverage: Story = {
     await expect(
       canvas.getByText("1 deal has no exchange rate (JPY)"),
     ).toBeVisible();
-    await expect(canvas.getByText(/^Rates /)).toBeVisible();
+    await expect(
+      canvas.getByText(translate("en", "board.ratesOn", { date: "1 Oct" })),
+    ).toBeVisible();
     const total = canvas.getByText("€900");
     await expect(total).toBeVisible();
     total.focus();

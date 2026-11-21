@@ -24,12 +24,14 @@ prompt: |
   What are the Körber Sensorik Rollout and the Rheinufer Netzmodernisierung
   deals worth together? And give me a link I can open the Körber one from.
 
-must_call:
-  - search_records|list_records|query_workspace|read_record|read_forecast
-
 may_call:
   - find_records
   - resolve_entities
+  - search_records
+  - list_records
+  - query_workspace
+  - read_record
+  - read_forecast
 
 # The two figures are seed-specific, so an answer that carries both was read
 # from the deals and not recalled.

@@ -107,7 +107,7 @@ their own badge, **Quiet relationship**.
 To import your LinkedIn network, open **Settings**, then **Connections**, and use the **LinkedIn connections** card.
 1. On LinkedIn, open **Settings**, then **Data privacy**, then **Get a copy of your data**, and ask for the archive.
 2. When the download arrives, open the archive and take the file named Connections.csv. Do not edit it.
-3. In Margince, choose **Edit** beside **Your LinkedIn profile URL**, paste your profile address, and choose **Save profile**.
+3. In Margince, choose **Edit** beside **Your LinkedIn profile URL**, paste your profile address, and choose **Save profile**. It must be a LinkedIn profile, such as `https://www.linkedin.com/in/your-name`; another site or a company page is refused.
 4. Choose **Choose Connections.csv** and pick the file. The import starts at once.
 5. Read the counts: **Connections imported**, **Matched to a contact** and **Awaiting confirmation**.
    **Rows skipped (no usable name)** shows only when there are any.

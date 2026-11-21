@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"golang.org/x/sync/semaphore"
 
@@ -184,10 +185,11 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 func (c *Connector) syncFrom(
 	ctx context.Context, access, owner, start string, sink connector.Sink,
 ) (connector.Cursor, error) {
-	ids, deleted, nextHistory, err := c.selectMessages(ctx, access, start)
+	ids, deleted, nextHistory, relisted, err := c.selectMessages(ctx, access, start)
 	if err != nil {
 		return nil, err
 	}
+	var oldestRead time.Time
 	// The owner's own deletions, reported before this round's new mail lands.
 	// Order matters only in the degenerate case — a message deleted and
 	// re-delivered within one history span — and reporting first is the safe
@@ -213,6 +215,16 @@ func (c *Connector) syncFrom(
 		if _, err := captureOne(ctx, msg, sink, c.bounces, owner); err != nil {
 			return nil, err
 		}
+		if !msg.ReceivedAt.IsZero() && (oldestRead.IsZero() || msg.ReceivedAt.Before(oldestRead)) {
+			oldestRead = msg.ReceivedAt
+		}
+	}
+	// Gmail dropped the stored cursor and the bounded list came back full, so
+	// mail older than it was left out. That span is recorded, never skipped silently.
+	if start != "" && relisted && len(ids) >= backfillWindow {
+		if err := connector.RecordLostCursor(ctx, oldestRead); err != nil {
+			return nil, err
+		}
 	}
 
 	if nextHistory == "" {
@@ -228,20 +240,20 @@ func (c *Connector) syncFrom(
 // A BACKFILL reports no deletions, and that is right rather than a gap: it
 // anchors a cursor from the mailbox's current state, so it has no prior state
 // to say anything was removed from.
-func (c *Connector) selectMessages(ctx context.Context, access, start string) (ids, deleted []string, next string, err error) {
+func (c *Connector) selectMessages(ctx context.Context, access, start string) (ids, deleted []string, next string, relisted bool, err error) {
 	if start == "" {
 		anchored, historyID, backfillErr := c.backfill(ctx, access)
-		return anchored, nil, historyID, backfillErr
+		return anchored, nil, historyID, true, backfillErr
 	}
 	added, removed, next, err := c.api.History(ctx, access, start)
 	if errors.Is(err, ErrHistoryGone) {
 		anchored, historyID, backfillErr := c.backfill(ctx, access)
-		return anchored, nil, historyID, backfillErr
+		return anchored, nil, historyID, true, backfillErr
 	}
 	if err != nil {
-		return nil, nil, "", err
+		return nil, nil, "", false, err
 	}
-	return added, removed, next, nil
+	return added, removed, next, false, nil
 }
 
 // backfill anchors the cursor at the mailbox's current historyId and returns

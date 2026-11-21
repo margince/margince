@@ -1,0 +1,96 @@
+{
+  "scenario": "case9_filed_in_the_wrong_place",
+  "criteria": [
+    1,
+    2,
+    3
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "rest",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "0b04410955e95638",
+    "tools": "8b653e7a3d01b493",
+    "instructions": "933a67b45ed0a6ae",
+    "judge": "",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "ran_at": "2026-11-21T15:18:57Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T15:18:57Z"
+  },
+  "usage": {
+    "input_tokens": 42,
+    "output_tokens": 5356,
+    "cache_creation_input_tokens": 41682,
+    "cache_read_input_tokens": 265125,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.2469
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_activities",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "relink_activities",
+        "relink_activity",
+        "skill_file"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_activities",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "relink_activities",
+        "relink_activity",
+        "skill_file"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 20.5,
+      "min": 19,
+      "max": 22
+    },
+    "turns": {
+      "median": 21.5,
+      "min": 20,
+      "max": 23
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 153424.5,
+      "min": 141077,
+      "max": 165772
+    },
+    "output_tokens": {
+      "median": 2678,
+      "min": 2553,
+      "max": 2803
+    },
+    "duration_ms": {
+      "median": 23383.5,
+      "min": 20890,
+      "max": 25877
+    }
+  }
+}

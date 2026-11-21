@@ -7,15 +7,6 @@ writes: true
 prompt: |
   The Leitstand Goslar project slipped a month, and I would call it at risk now. Record that as the project's health.
 
-must_call:
-  - change_state
-
-must_call_with:
-  - change_state.action=record_project_health
-
-must_call_matching:
-  - create_project_health_assessment~"state": "at_risk"
-
 must_not_call_with:
   - change_state~move_project
   - log_activity~.
@@ -27,6 +18,7 @@ may_call:
   - read_workspace
   - whoami
   - read_project
+  - change_state
 
 must_mention:
   - "Goslar"

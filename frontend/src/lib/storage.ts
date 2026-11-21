@@ -67,6 +67,11 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "device",
   },
+  tableDense: {
+    prefix: "margince.table.dense.",
+    area: "local",
+    lifetime: "device",
+  },
   faultsSeen: {
     name: "margince.agent.faults-seen",
     area: "local",
@@ -320,6 +325,18 @@ function registeredAs(area: StorageArea, name: string): Registered | undefined {
     (key) =>
       key.area === area &&
       ("name" in key ? key.name === name : name.startsWith(key.prefix)),
+  );
+}
+
+/** Whether this browser holds any member of the family. */
+export function storedInFamily(family: KeyFamily): boolean {
+  return withStorage(
+    family.area,
+    (storage) =>
+      Array.from({ length: storage.length }, (_, index) =>
+        storage.key(index),
+      ).some((name) => name?.startsWith(family.prefix) === true),
+    false,
   );
 }
 

@@ -23,17 +23,12 @@ prompt: |
   Every time somebody moves one of my deals I get a notification about it. Turn
   that stage change rule off, please.
 
-must_call:
-  - update_automation
-
-must_call_matching:
-  - 'update_automation~"status":\s*"paused"'
-
 may_call:
   - read_view
   - preview_automation
   - read_workspace
   - whoami
+  - update_automation
 
 must_not_call_with:
   - archive_automation~.

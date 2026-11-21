@@ -529,7 +529,8 @@ test.describe("WCAG 2.2 AA (axe)", () => {
       .getByRole("button", { name: /^Qualifizieren/ })
       .click();
 
-    const said = page.getByRole("status");
+    // The toast's own region: the shell's page wait is a status beside it.
+    const said = page.locator(".toast-region").getByRole("status");
     await expect(said).toBeVisible();
 
     // Keyboard, before the sweep: the link the message carries is reachable,

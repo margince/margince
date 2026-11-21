@@ -19,7 +19,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // LocalDayAt is the calendar date the given instant falls on in the
@@ -34,7 +33,7 @@ import (
 //
 // Reporting dates keep the installation clock; delivery uses personal working hours.
 func LocalDayAt(ctx context.Context, tx pgx.Tx, now time.Time) (day time.Time, local time.Time, err error) {
-	zone, err := settings.ApplyTx(ctx, tx, identity.Timezone)
+	zone, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}

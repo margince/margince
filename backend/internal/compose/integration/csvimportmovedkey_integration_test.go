@@ -9,27 +9,37 @@ package integration
 // The holders are the stored records and the rows of the file before it.
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
+)
+
+// The column mappings the moved-key cases import with, one per record type.
+var (
+	movedKeyLeadParts = []AnyMap{{"file": "leads.csv", "object": "lead", "mapping": AnyMap{
+		"ref": "ref", "full_name": "full_name", "email": "email", "linkedin": "linkedin_url",
+	}}}
+	movedKeyContactParts = []AnyMap{{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{
+		"ref": "ref", "full_name": "full_name", "email": "email", "linkedin": "linkedin_url",
+	}}}
+	movedKeyCompanyParts = []AnyMap{{"file": "companies.csv", "object": "company", "mapping": AnyMap{
+		"ref": "ref", "id": "id", "name": "display_name", "domain": "domain",
+	}}}
 )
 
 func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
-	leadParts := []AnyMap{{"file": "leads.csv", "object": "lead", "mapping": AnyMap{
-		"ref": "ref", "full_name": "full_name", "email": "email", "linkedin": "linkedin_url",
-	}}}
-	contactParts := []AnyMap{{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{
-		"ref": "ref", "full_name": "full_name", "email": "email", "linkedin": "linkedin_url",
-	}}}
-	companyParts := []AnyMap{{"file": "companies.csv", "object": "company", "mapping": AnyMap{
-		"ref": "ref", "id": "id", "name": "display_name", "domain": "domain",
-	}}}
 	for _, tc := range []struct {
 		name  string
 		file  func(first, second string) string
 		prior map[string]string
+		// link runs after the prior import, for a state no import writes.
+		link  func(t *testing.T, e *apptest.AppEnv)
 		parts []AnyMap
 		want  []string
 	}{{
@@ -67,6 +77,32 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 		},
 		want: []string{"created=0 updated=0 unchanged=0 skipped=1", "leads.csv:2:natural_key_taken"},
 	}, {
+		name:  "a stored lead holds the address a later row moves a contact onto",
+		prior: map[string]string{"contacts.csv": "ref,full_name,email\nc1,Ada One,ada@moved.test\n"},
+		parts: []AnyMap{{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{"ref": "ref", "full_name": "full_name", "email": "email"}}},
+		file: func(_, _ string) string {
+			return "ref,full_name,email\nc1,Ada One,held-lead@moved.test\n"
+		},
+		want: []string{"created=0 updated=0 unchanged=0 skipped=1", "contacts.csv:2:contact_email_held"},
+	}, {
+		name:  "a lead takes an address of the contact it was worked from",
+		prior: map[string]string{"leads.csv": "ref,full_name,email\nl1,Lee One,lee-own@moved.test\n"},
+		link: func(t *testing.T, e *apptest.AppEnv) {
+			contact := createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Worked From", "emails": []AnyMap{
+				{"email": "worked-from@moved.test", "email_type": "work", "is_primary": true},
+			}})
+			// Older leads carry this link; no door writes it today.
+			if _, err := e.Pool.Exec(context.Background(),
+				`UPDATE lead SET from_contact_id = $1 WHERE email = 'lee-own@moved.test'`, contact); err != nil {
+				t.Fatalf("linking the lead to its contact: %v", err)
+			}
+		},
+		parts: []AnyMap{{"file": "leads.csv", "object": "lead", "mapping": AnyMap{"ref": "ref", "full_name": "full_name", "email": "email"}}},
+		file: func(_, _ string) string {
+			return "ref,full_name,email\nl1,Lee One,worked-from@moved.test\n"
+		},
+		want: []string{"created=0 updated=1 unchanged=0 skipped=0"},
+	}, {
 		name:  "a stored company holds the LinkedIn URL a later row moves another company onto",
 		parts: []AnyMap{{"file": "companies.csv", "object": "company", "mapping": AnyMap{"ref": "ref", "id": "id", "name": "display_name", "linkedin": "linkedin_url"}}},
 		file: func(first, _ string) string {
@@ -76,7 +112,7 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 	}, {
 		name:  "a stored contact holds the address a later row moves a lead onto",
 		prior: map[string]string{"leads.csv": "ref,full_name,email,linkedin\nl1,Lee One,lee@moved.test,\n"},
-		parts: leadParts,
+		parts: movedKeyLeadParts,
 		file: func(_, _ string) string {
 			return "ref,full_name,email,linkedin\nl1,Lee One,held@moved.test,\n"
 		},
@@ -84,7 +120,7 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 	}, {
 		name:  "a stored contact holds the profile a later row moves a lead onto",
 		prior: map[string]string{"leads.csv": "ref,full_name,email,linkedin\nl1,Lee One,lee@moved.test,\n"},
-		parts: leadParts,
+		parts: movedKeyLeadParts,
 		file: func(_, _ string) string {
 			return "ref,full_name,email,linkedin\nl1,Lee One,lee@moved.test,https://www.linkedin.com/in/held-profile\n"
 		},
@@ -92,14 +128,14 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 	}, {
 		name:  "a stored lead holds the profile a later row moves a contact onto",
 		prior: map[string]string{"contacts.csv": "ref,full_name,email,linkedin\nc1,Ada One,ada@moved.test,\n"},
-		parts: contactParts,
+		parts: movedKeyContactParts,
 		file: func(_, _ string) string {
 			return "ref,full_name,email,linkedin\nc1,Ada One,ada@moved.test,https://www.linkedin.com/in/held-lead-profile\n"
 		},
 		want: []string{"created=0 updated=0 unchanged=0 skipped=1", "contacts.csv:2:contact_email_held"},
 	}, {
 		name:  "an archived company holds no domain",
-		parts: companyParts,
+		parts: movedKeyCompanyParts,
 		file: func(first, _ string) string {
 			return "ref,id,name,domain\nk1," + first + ",Stored One,archived.test\n"
 		},
@@ -107,7 +143,7 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 	}, {
 		name:  "a Unicode address and its punycode twin are one address",
 		prior: map[string]string{"contacts.csv": "ref,full_name,email,linkedin\nc2,Ada Two,ada2@moved.test,\n"},
-		parts: contactParts,
+		parts: movedKeyContactParts,
 		file: func(_, _ string) string {
 			return "ref,full_name,email,linkedin\nc1,Ada One,info@b\u00fccher.example,\nc2,Ada Two,info@xn--bcher-kva.example,\n"
 		},
@@ -140,10 +176,13 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 			}
 			parts := tc.parts
 			if parts == nil {
-				parts = companyParts
+				parts = movedKeyCompanyParts
 			}
 			if tc.prior != nil {
 				approveAndRead(t, e, stageBundle(t, e, uploadZip(t, e, "prior.zip", zipBytes(t, tc.prior)).SourceRef, "moved", parts).ID)
+			}
+			if tc.link != nil {
+				tc.link(t, e)
 			}
 			files := map[string]string{parts[0]["file"].(string): tc.file(first, second)}
 			run := stageBundle(t, e, uploadZip(t, e, "moved.zip", zipBytes(t, files)).SourceRef, "moved", parts)
@@ -184,5 +223,43 @@ func TestAResumedCommitClaimsNothingForARefusedMovedKeyRow(t *testing.T) {
 	approveAndRead(t, e, run.ID)
 	if committed := verdicts(readImportReport(t, e, run.ID)); !slices.Equal(committed, predicted) {
 		t.Fatalf("import = %v, test run said %v", committed, predicted)
+	}
+}
+
+// importedReport lands one file as its own run when approve is set, and
+// answers the run's report either way.
+func importedReport(t *testing.T, e *apptest.AppEnv, object, csv string, mapping map[string]string, approve bool) importReportDTO {
+	t.Helper()
+	profile, _ := importjobtest.UploadCSV(t, e, object, csv)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, object, profile.SourceRef, mapping)
+	if approve {
+		if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
+			t.Fatalf("approve → %d, want 202", status)
+		}
+	}
+	var report importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report → %d, want 200", status)
+	}
+	return report
+}
+
+// A row that moves its key onto a free value previews as the update the
+// commit makes. The preview leaves the stored key where it was.
+func TestCSVImportPreviewsAnUpdateForARowThatMovesAFreeKey(t *testing.T) {
+	e := setupImportApp(t)
+	mapping := map[string]string{"Ref": "ref", "Email": "email", "Full Name": "full_name"}
+	importedReport(t, e, "lead", "Ref,Email,Full Name\nR-1,first@moved.example,First\n", mapping, true)
+	const moved = "Ref,Email,Full Name\nR-1,free@moved.example,First\n"
+
+	for range 2 {
+		predicted := importedReport(t, e, "lead", moved, mapping, false).Disposition
+		if predicted.Updated != 1 || predicted.Skipped != 0 {
+			t.Fatalf("predicted %+v, want one update: a preview that wrote would call the second one unchanged", predicted)
+		}
+	}
+	delivered := importedReport(t, e, "lead", moved, mapping, true).Disposition
+	if delivered.Updated != 1 {
+		t.Errorf("delivered %+v, want one update", delivered)
 	}
 }

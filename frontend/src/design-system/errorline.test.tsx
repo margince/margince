@@ -172,6 +172,18 @@ describe("ErrorLine in a dialog", () => {
     expect(screen.getByRole("alert").style.scrollMarginBlockEnd).toBe("100px");
   });
 
+  // The onboarding board scrolls while the rail with its buttons stays put.
+  // A line drawn at the board's foot would otherwise fail below the fold.
+  it("scrolls itself into view when it arrives inside the onboarding board", () => {
+    const scroll = watchScrolls();
+    inEnglish(
+      <div className="ob-stage-board">
+        <ErrorLine>The source could not be added.</ErrorLine>
+      </div>,
+    );
+    expect(scroll).toHaveBeenCalledTimes(1);
+  });
+
   it("leaves the page where it is outside a dialog, and for a standing state", () => {
     const scroll = watchScrolls();
     inEnglish(

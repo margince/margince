@@ -74,7 +74,6 @@ func (a *aiActivityEnv) build(c change) aiactivity.Change {
 		QueuedAt:      a.queuedAt,
 		StaleAfter:    c.staleAfter,
 		DegradeReason: c.degradeReason,
-		EventID:       ids.NewV7(),
 	}
 	started := a.queuedAt.Add(time.Second)
 	finished := a.queuedAt.Add(2 * time.Second)
